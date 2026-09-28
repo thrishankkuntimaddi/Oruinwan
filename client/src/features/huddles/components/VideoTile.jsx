@@ -10,7 +10,7 @@ export default function VideoTile({ stream, name = '', isLocal = false, cameraOn
     }, [stream, hasVideo]);
 
     return (
-        <div data-testid={isLocal ? 'video-tile-local' : 'video-tile-remote'} className="relative bg-black/60 rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+        <div data-testid={isLocal ? 'video-tile-local' : 'video-tile-remote'} style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', borderRadius: '2px', background: hasVideo ? '#000' : 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {hasVideo ? (
                 // Audio plays through the hidden <audio> element, so every video is muted.
                 <video
@@ -22,11 +22,11 @@ export default function VideoTile({ stream, name = '', isLocal = false, cameraOn
                     style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
                 />
             ) : (
-                <div className="h-10 w-10 rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-semibold">
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600 }}>
                     {(name || '?').charAt(0).toUpperCase()}
                 </div>
             )}
-            <span className="absolute bottom-1 left-1.5 text-[10px] text-white/80 bg-black/40 px-1 rounded">
+            <span style={{ position: 'absolute', bottom: 4, left: 6, fontSize: '10px', color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '0 4px', borderRadius: '2px' }}>
                 {isLocal ? 'You' : name}
             </span>
         </div>

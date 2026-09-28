@@ -130,6 +130,26 @@ const DECLARATIONS = [
       required: ['title', 'startsAt'],
     },
   },
+  {
+    name: 'remember_about_user',
+    description: 'Save a lasting fact or preference about the user for future chats, e.g. their role, team, timezone or how they like answers. Only when the user asks you to remember something or clearly states a lasting preference.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fact: { type: 'string', description: 'One short sentence, written about the user, e.g. "Leads the design team" or "Prefers short answers"' },
+      },
+      required: ['fact'],
+    },
+  },
+  {
+    name: 'forget_about_user',
+    description: 'Delete saved facts about the user that match a phrase. Only when the user asks you to forget something.',
+    parameters: {
+      type: 'object',
+      properties: { about: { type: 'string', description: 'Words identifying what to forget, e.g. "timezone"' } },
+      required: ['about'],
+    },
+  },
 ];
 
 const ACTION_FOR = {
@@ -145,6 +165,8 @@ const ACTION_FOR = {
   list_recent_notes: 'listRecentNotes',
   search_workspace: 'searchWorkspace',
   schedule_meeting: 'scheduleMeeting',
+  remember_about_user: 'rememberAboutUser',
+  forget_about_user: 'forgetAboutUser',
 };
 
 /**

@@ -205,14 +205,27 @@ async function searchWorkspace({ query }, ctx) {
     if (!query?.trim()) return fail('query is required');
     const { error } = await membership(ctx);
     if (error) return error;
+
+    // Meaning-based search over notes, tasks and knowledge pages the user can see.
+    try {
+        const knowledge = require('../src/features/ai/ai.knowledge.service');
+        const results = await knowledge.search(ctx.workspaceId, ctx.userId, query, { k: 8, minScore: 0.45, shared: !!ctx.shared, channelId: ctx.channelId || null });
+        return { success: true, results: results.map(r => ({ type: r.type, id: r.id, title: r.title, snippet: r.snippet.slice(0, 200), relevance: r.score })) };
+    } catch (err) {
+        logger.warn({ err: err.message }, '[aiActions] semantic search unavailable, using keyword search');
+    }
+
+    // Keyword fallback (engine unreachable). Same visibility rules as above.
     const terms = query.trim().split(/\s+/).slice(0, 6).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const regex = new RegExp(terms.join('|'), 'i');
+    const { visibleRefs } = require('../src/features/ai/ai.knowledge.service');
+    const refs = await visibleRefs(ctx.workspaceId, ctx.userId, { shared: !!ctx.shared, channelId: ctx.channelId || null });
     let KnowledgePage = null;
     try { KnowledgePage = require('../src/features/knowledge/KnowledgePage'); } catch { /* optional */ }
     const [pages, notes, tasks] = await Promise.all([
-        KnowledgePage ? KnowledgePage.find({ workspaceId: ctx.workspaceId, isDeleted: { $ne: true }, $or: [{ title: regex }, { content: regex }] }).limit(5).select('title content').lean() : [],
-        Note.find({ workspace: ctx.workspaceId, isArchived: { $ne: true }, $or: [{ owner: ctx.userId }, { sharedWith: ctx.userId }, { isPublic: true }], $and: [{ $or: [{ title: regex }, { content: regex }] }] }).limit(5).select('title content').lean(),
-        Task.find({ workspace: ctx.workspaceId, deleted: { $ne: true }, $or: [{ title: regex }, { description: regex }] }).limit(5).select('title status priority dueDate').lean(),
+        KnowledgePage ? KnowledgePage.find({ _id: { $in: refs }, $or: [{ title: regex }, { content: regex }] }).limit(5).select('title content').lean() : [],
+        Note.find({ _id: { $in: refs }, $or: [{ title: regex }, { content: regex }] }).limit(5).select('title content').lean(),
+        Task.find({ _id: { $in: refs }, $or: [{ title: regex }, { description: regex }] }).limit(5).select('title status priority dueDate').lean(),
     ]);
     const snippet = (s) => String(s || '').replace(/\s+/g, ' ').slice(0, 240);
     return {
@@ -258,7 +271,36 @@ async function scheduleMeeting({ title, startsAt, durationMinutes = 30, particip
     return { success: true, meetingId: String(meeting._id), title: meeting.title, startTime: meeting.startTime, duration: meeting.duration };
 }
 
+/* ── Personal memory (private to the user; see ai.memory.service) ─────── */
+
+// Assistant-saved memories apply everywhere; users can scope them in Settings → AI.
+async function rememberAboutUser({ fact }, ctx) {
+    if (!fact || !String(fact).trim()) return fail('fact is required');
+    if (ctx.shared) return fail('Memories can only be saved in your private assistant chat.');
+    const memory = require('../src/features/ai/ai.memory.service');
+    try {
+        const saved = await memory.add(ctx.userId, {
+            text: fact,
+            scope: 'everywhere',
+            source: 'assistant',
+        });
+        return { success: true, remembered: saved.text, scope: saved.scope };
+    } catch (err) {
+        return fail(err.message);
+    }
+}
+
+async function forgetAboutUser({ about }, ctx) {
+    if (!about || !String(about).trim()) return fail('about is required');
+    if (ctx.shared) return fail('Memories can only be changed in your private assistant chat.');
+    const memory = require('../src/features/ai/ai.memory.service');
+    const res = await memory.forgetMatching(ctx.userId, ctx.workspaceId, about);
+    return { success: true, forgotten: res.deleted, count: res.deleted.length };
+}
+
 module.exports = {
+    rememberAboutUser,
+    forgetAboutUser,
     getCurrentWorkspace,
     getUserChannels,
     getWorkspaceMembers,

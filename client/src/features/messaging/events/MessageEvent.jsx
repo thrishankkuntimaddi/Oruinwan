@@ -5,6 +5,7 @@ import { getAvatarUrl } from '../../../utils/avatarUtils';
 import ChecklistMessage from '../ChecklistMessage';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAutoTranslateLang } from '../../../utils/autoTranslate';
+import { useDateFormatter } from '../../../hooks/useUserPreferences';
 
 
 function MessageEvent({
@@ -23,6 +24,8 @@ function MessageEvent({
 }) {
     
     const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
+    // Message times follow Settings → Language & region (time zone, 12/24-hour).
+    const formatTime = useDateFormatter().time;
     
     
     
@@ -280,6 +283,5 @@ function MessageEvent({
 
 const EMPTY_SET = new Set();
 const noop = () => { };
-const formatTime = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 export default MessageEvent;

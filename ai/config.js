@@ -33,6 +33,8 @@ module.exports = {
   models: {
     ...(byProvider[provider === 'claude' ? 'anthropic' : provider] || byProvider.local_llm),
     byProvider,
+    /** Optional coding model for code reviews on the local engine (empty = use the chat model). */
+    code: env.LOCAL_LLM_CODE_MODEL || '',
     /** Embedding model for workspace knowledge search (served by the same local runtime). */
     embed: env.LOCAL_EMBED_MODEL || 'nomic-embed-text',
   },

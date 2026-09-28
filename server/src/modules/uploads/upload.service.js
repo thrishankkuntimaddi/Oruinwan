@@ -227,4 +227,15 @@ async function streamGCSFile(gcsPath, req, res, options = {}) {
     }
 }
 
-module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle };
+/** Delete a stored object (and its local .meta.json). Missing objects are ignored. */
+async function deleteObject(objectPath) {
+    if (storageDriver() === 'gcs') {
+        await storageClient.bucket(BUCKET_NAME).file(objectPath).delete({ ignoreNotFound: true });
+        return;
+    }
+    const full = localPath(objectPath);
+    await fs.promises.rm(full, { force: true });
+    await fs.promises.rm(`${full}.meta.json`, { force: true });
+}
+
+module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle, deleteObject };

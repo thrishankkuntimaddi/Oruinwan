@@ -4,21 +4,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, ChevronDown } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Puzzle, ChevronDown, Plus } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
-
-const ICON_MAP_LG = {
-    rocket: <Rocket size={18} />, briefcase: <Briefcase size={18} />, zap: <Zap size={18} />,
-    palette: <Palette size={18} />, microscope: <Microscope size={18} />, globe: <Globe size={18} />,
-    shield: <Shield size={18} />, trend: <TrendingUp size={18} />, bulb: <Lightbulb size={18} />,
-    flame: <Flame size={18} />, target: <Target size={18} />, trophy: <Trophy size={18} />,
-};
-const ICON_MAP_SM = {
-    rocket: <Rocket size={13} />, briefcase: <Briefcase size={13} />, zap: <Zap size={13} />,
-    palette: <Palette size={13} />, microscope: <Microscope size={13} />, globe: <Globe size={13} />,
-    shield: <Shield size={13} />, trend: <TrendingUp size={13} />, bulb: <Lightbulb size={13} />,
-    flame: <Flame size={13} />, target: <Target size={13} />, trophy: <Trophy size={13} />,
-};
+import { WorkspaceIcon } from "../../utils/workspaceIcons";
+import { COUNT_BADGE_STYLE } from "../../features/notifications/notificationTypes";
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -41,6 +30,13 @@ const IconSidebar = ({ onProfileClick }) => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (!showWorkspaceMenu) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setShowWorkspaceMenu(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showWorkspaceMenu]);
 
     const isActive = (itemPath) => {
         if (!workspaceId) return false;
@@ -91,14 +87,14 @@ const IconSidebar = ({ onProfileClick }) => {
                     title={activeWorkspace?.name || 'Switch Workspace'}
                     style={{
                         width: '36px', height: '36px', borderRadius: '2px', border: 'none', cursor: 'pointer',
-                        backgroundColor: activeWorkspace?.color || '#b8956a',
+                        backgroundColor: activeWorkspace?.color || 'var(--accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', position: 'relative', transition: 'opacity 150ms ease',
                     }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
-                    {ICON_MAP_LG[activeWorkspace?.icon] || ICON_MAP_LG.rocket}
+                    <WorkspaceIcon icon={activeWorkspace?.icon} size={18} />
 
                     {}
                     <div style={{
@@ -143,15 +139,26 @@ const IconSidebar = ({ onProfileClick }) => {
                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                     onMouseLeave={e => e.currentTarget.style.background = ws.id === activeWorkspace?.id ? 'var(--bg-hover)' : 'none'}
                                 >
-                                    <div style={{ width: '22px', height: '22px', borderRadius: '2px', backgroundColor: ws.color || '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                                        {ICON_MAP_SM[ws.icon] || ICON_MAP_SM.rocket}
+                                    <div style={{ width: '22px', height: '22px', borderRadius: '2px', backgroundColor: ws.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                                        <WorkspaceIcon icon={ws.icon} size={13} />
                                     </div>
-                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>{ws.name}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
                                     {ws.id === activeWorkspace?.id && (
                                         <div style={{ marginLeft: 'auto', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
                                     )}
                                 </button>
                             ))}
+                        </div>
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '4px 0' }}>
+                            <button
+                                onClick={() => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); }}
+                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', transition: '150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                            >
+                                <span style={{ width: '22px', height: '22px', borderRadius: '2px', border: '1px dashed var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={12} /></span>
+                                Create workspace
+                            </button>
                         </div>
                     </div>
                 )}
@@ -180,7 +187,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                 )}
                                 {item.icon}
                                 {badgeFor(item.path) > 0 && (
-                                    <span style={{ position: 'absolute', top: '4px', right: '4px', minWidth: '14px', height: '14px', padding: '0 3px', borderRadius: '99px', background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)', pointerEvents: 'none' }}>
+                                    <span style={{ ...COUNT_BADGE_STYLE, position: 'absolute', top: '4px', right: '4px', minWidth: '14px', height: '14px', fontFamily: 'var(--font)', pointerEvents: 'none' }}>
                                         {badgeFor(item.path) > 99 ? '99+' : badgeFor(item.path)}
                                     </span>
                                 )}

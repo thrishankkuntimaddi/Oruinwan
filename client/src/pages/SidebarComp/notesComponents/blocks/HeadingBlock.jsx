@@ -45,10 +45,10 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                             display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px',
                             fontWeight: 700, color: 'var(--text-muted)', background: 'transparent',
                             border: 'none', cursor: 'pointer', opacity: 0, width: '32px',
-                            transition: 'all 150ms ease', fontFamily: 'monospace',
+                            transition: 'all 150ms ease', fontFamily: 'var(--font)',
                         }}
                         className="group-hover:!opacity-100"
-                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         H{level}<ChevronDown size={9} />
@@ -65,9 +65,9 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                                     onClick={() => setLevel(l)}
                                     style={{
                                         width: '100%', textAlign: 'left', padding: '7px 12px',
-                                        fontSize: '12px', fontWeight: 700, background: l === level ? 'rgba(184,149,106,0.12)' : 'transparent',
-                                        color: l === level ? '#b8956a' : 'var(--text-secondary)',
-                                        border: 'none', cursor: 'pointer', fontFamily: 'monospace', transition: 'background 100ms ease',
+                                        fontSize: '12px', fontWeight: 700, background: l === level ? 'var(--accent-dim)' : 'transparent',
+                                        color: l === level ? 'var(--accent)' : 'var(--text-secondary)',
+                                        border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 100ms ease',
                                     }}
                                     onMouseEnter={e => { if (l !== level) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                     onMouseLeave={e => { if (l !== level) e.currentTarget.style.background = 'transparent'; }}
@@ -88,17 +88,17 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                     placeholder={LEVEL_PLACEHOLDERS[level]}
                     style={{
                         flex: 1, border: 'none', background: 'transparent', outline: 'none',
-                        padding: 0, fontFamily: 'Inter, system-ui, sans-serif',
+                        padding: 0, fontFamily: 'var(--font)',
                         ...LEVEL_STYLES[level],
                     }}
-                    className="placeholder-gray-700 dark:placeholder-gray-700"
+                    className="placeholder:text-[var(--text-muted)]"
                 />
 
                 <button
                     onClick={() => onRemoveBlock(block.id)}
                     style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', flexShrink: 0 }}
                     className="group-hover:!opacity-100"
-                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <Trash2 size={14} />

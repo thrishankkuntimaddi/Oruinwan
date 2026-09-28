@@ -3,7 +3,7 @@ import { isSameLanguage } from '../../../../utils/autoTranslate';
 import { createPortal } from 'react-dom';
 import {
     MessageSquare, Share, Pin, Copy, Trash2, Info, Pencil, Check, X, History, Globe,
-    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2,
+    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2,
 } from 'lucide-react';
 import { getMessageText, hasEditHistory, isBookmarkedBy } from '../../../../utils/messageActionUtils';
 
@@ -228,6 +228,15 @@ const closeMenuEvent = { stopPropagation: () => {} };
  * onSummarizeThread, onShowHistory, infoMessage, editMessage, deleteMessage,
  * isChannelAdmin).
  */
+// Code in a message: a fenced block, or inline code that looks like code.
+const CODE_IN_MESSAGE = /```[\s\S]*?```|`[^`\n]*(?:\(|\)|=|;|=>|\{|\})[^`\n]*`/;
+
+/** Ask Oruinwan AI (side panel) to review the code in a message. */
+function reviewCodeWithAI(text) {
+    const prompt = `Review this code. Point out bugs, security risks and edge cases, and suggest improvements:\n\n${text}`;
+    window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt } }));
+}
+
 export function useMessageToolbar({
     msg, isMe, currentUserId, toolbar = {}, threadCount = 0,
     openMsgMenuId, toggleMsgMenu, onOpenThread, replyToMessage, forwardMessage,
@@ -304,6 +313,7 @@ export function useMessageToolbar({
             toolbar.onRemind && { label: 'Remind me', icon: <Bell size={13} />, onClick: act(() => toolbar.onRemind(msg)) },
             toolbar.onConvertToTask && text && { label: 'Convert to task', icon: <CheckSquare size={13} />, onClick: act(() => toolbar.onConvertToTask(msg)) },
             toolbar.onSummarizeThread && hasReplies && { label: 'Summarize thread', icon: <Sparkles size={13} />, onClick: act(() => toolbar.onSummarizeThread(msg)) },
+            text && CODE_IN_MESSAGE.test(text) && { label: 'Review code with AI', icon: <Code2 size={13} />, onClick: act(() => reviewCodeWithAI(text)) },
         ],
         [
             toolbar.infoMessage && { label: 'Message info', icon: <Info size={13} />, onClick: act(() => toolbar.infoMessage(msg)) },

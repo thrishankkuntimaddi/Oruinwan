@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
-import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Zap, Shield, Check } from 'lucide-react';
+import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Zap, Shield, Check, Loader2 } from 'lucide-react';
+import { WORKSPACE_ICON_OPTIONS, WORKSPACE_COLORS, WorkspaceIcon } from '../../utils/workspaceIcons';
 
 const s = {
     
@@ -43,13 +44,21 @@ function TemplatePicker({ value, onChange }) {
 
 const CreateWorkspaceModal = ({
     isOpen, onClose, createStep, setCreateStep, createData, setCreateData,
-    nameError, setNameError, termsAccepted, setTermsAccepted, onSubmit, getIconComponent, user
+    nameError, setNameError, termsAccepted, setTermsAccepted, onSubmit, user, submitting = false,
 }) => {
     useEffect(() => {
         if (isOpen) { document.body.style.overflow = 'hidden'; }
         else { document.body.style.overflow = 'unset'; }
         return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
+
+    // Esc closes the wizard (not while the workspace is being created).
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape' && !submitting) onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, onClose, submitting]);
 
     if (!isOpen) return null;
 
@@ -61,7 +70,7 @@ const CreateWorkspaceModal = ({
     ];
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-4" style={{ background: 'var(--bg-overlay)' }} role="dialog" aria-modal="true" aria-label="Create workspace">
             <div className="fixed inset-0 flex flex-col md:relative md:inset-auto md:flex-row md:max-w-5xl md:min-h-[580px] md:h-[80vh]" style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', fontFamily: 'var(--font)', width: '100%' }}>
 
                 {}
@@ -91,7 +100,7 @@ const CreateWorkspaceModal = ({
                                     <div style={{
                                         width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0,
                                         background: createStep === st.step ? 'var(--accent)' : createStep > st.step ? 'var(--state-success)' : 'var(--bg-active)',
-                                        color: (createStep === st.step || createStep > st.step) ? '#0c0c0c' : 'var(--text-muted)',
+                                        color: (createStep === st.step || createStep > st.step) ? 'var(--bg-base)' : 'var(--text-muted)',
                                     }}>
                                         {createStep > st.step ? <CheckCircle2 size={13} /> : st.step}
                                     </div>
@@ -136,6 +145,11 @@ const CreateWorkspaceModal = ({
                     {}
                     <div className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ padding: '24px 32px', minHeight: 0 }}>
                         <form id="create-workspace-form" onSubmit={onSubmit} style={{ maxWidth: '640px', margin: '0 auto' }}>
+                            {nameError && createStep > 1 && (
+                                <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', marginBottom: '20px', border: '1px solid var(--state-danger)', borderRadius: '2px', color: 'var(--state-danger)', fontSize: '12px', fontWeight: 500 }}>
+                                    <AlertCircle size={14} style={{ flexShrink: 0 }} /> {nameError}
+                                </div>
+                            )}
 
                             {}
                             {createStep === 1 && (
@@ -177,11 +191,10 @@ const CreateWorkspaceModal = ({
                                         <div>
                                             <label style={s.label}>Choose an Icon</label>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                                {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame', 'microscope', 'shield', 'lightbulb', 'sparkles'].map(iconName => {
-                                                    const IconCmp = getIconComponent(iconName);
+                                                {WORKSPACE_ICON_OPTIONS.slice(0, 12).map(({ id: iconName, name, Icon: IconCmp }) => {
                                                     const active = createData.icon === iconName;
                                                     return (
-                                                        <button key={iconName} type="button"
+                                                        <button key={iconName} type="button" title={name} aria-label={name} aria-pressed={active}
                                                             onClick={() => setCreateData({ ...createData, icon: iconName })}
                                                             style={{ aspectRatio: '1', borderRadius: '2px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, background: active ? 'var(--accent-dim)' : 'var(--bg-surface)', color: active ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '150ms ease' }}
                                                             onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
@@ -210,7 +223,7 @@ const CreateWorkspaceModal = ({
                                             <div>
                                                 <label style={s.label}>Preset Colors</label>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                                                    {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e'].map(color => (
+                                                    {WORKSPACE_COLORS.map(color => (
                                                         <button key={color} type="button"
                                                             onClick={() => setCreateData({ ...createData, color })}
                                                             style={{ aspectRatio: '1', borderRadius: '2px', backgroundColor: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: createData.color === color ? '2px solid var(--text-primary)' : '2px solid transparent', cursor: 'pointer', transition: '150ms ease', opacity: createData.color === color ? 1 : 0.75 }}
@@ -250,7 +263,7 @@ const CreateWorkspaceModal = ({
                                             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '20px', display: 'block' }}>Live Preview</span>
                                             <div style={{ width: '100%', maxWidth: '240px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '20px' }}>
                                                 <div style={{ width: '40px', height: '40px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', marginBottom: '12px', backgroundColor: createData.color, transition: 'background-color 300ms ease' }}>
-                                                    {React.createElement(getIconComponent(createData.icon), { size: 20 })}
+                                                    <WorkspaceIcon icon={createData.icon} size={20} />
                                                 </div>
                                                 <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>{createData.name || 'Workspace Name'}</h3>
                                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px' }}>Your new workspace</p>
@@ -305,7 +318,7 @@ const CreateWorkspaceModal = ({
                                                 <div style={{ paddingTop: '16px', marginTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
                                                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
                                                         <div style={{ marginTop: '1px', width: '16px', height: '16px', borderRadius: '2px', border: `1px solid ${termsAccepted ? 'var(--accent)' : 'var(--border-accent)'}`, background: termsAccepted ? 'var(--accent)' : 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: '150ms ease' }}>
-                                                            {termsAccepted && <Check size={11} strokeWidth={3} style={{ color: '#0c0c0c' }} />}
+                                                            {termsAccepted && <Check size={11} strokeWidth={3} style={{ color: 'var(--bg-base)' }} />}
                                                         </div>
                                                         <input type="checkbox" style={{ display: 'none' }} checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} />
                                                         <div style={{ fontSize: '12px' }}>
@@ -338,7 +351,7 @@ const CreateWorkspaceModal = ({
                                                 onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                                                 onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                             />
-                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Separate multiple emails with commas.</p>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Separate emails with commas or new lines.</p>
                                         </div>
 
                                         <div className="hidden md:flex" style={{ flexDirection: 'column', justifyContent: 'center', padding: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
@@ -392,12 +405,12 @@ const CreateWorkspaceModal = ({
                                 Next <span className="hidden md:inline">Step</span> <ArrowRight size={15} />
                             </button>
                         ) : (
-                            <button onClick={onSubmit}
-                                style={{ height: '36px', padding: '0 20px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            <button onClick={onSubmit} disabled={submitting}
+                                style={{ height: '36px', padding: '0 20px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font)', transition: '150ms ease' }}
                                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.color = 'var(--accent-hover)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent-dim)'; e.currentTarget.style.color = 'var(--accent)'; }}
                             >
-                                <Rocket size={15} /> Launch <span className="hidden md:inline">Workspace</span>
+                                {submitting ? <Loader2 size={15} className="animate-spin" /> : <Rocket size={15} />} {submitting ? 'Creating…' : <>Launch <span className="hidden md:inline">Workspace</span></>}
                             </button>
                         )}
                     </div>

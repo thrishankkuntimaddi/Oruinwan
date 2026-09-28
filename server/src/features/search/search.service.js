@@ -8,7 +8,9 @@ const Task         = require('../../../models/Task');
 const Note         = require('../../../models/Note');
 const WorkspaceFile = require('../files/WorkspaceFile');
 const KnowledgePage = require('../knowledge/KnowledgePage');
+const DMSession    = require('../../../models/DMSession');
 const logger       = require('../../../utils/logger');
+const { safeRegex } = require('../../shared/utils/escapeRegex');
 
 const gateway = require('../../../../ai/api/ai.gateway');
 
@@ -148,7 +150,7 @@ async function searchChannels(workspaceId, userId, searchRegex, { dateFilter, li
 
 async function searchContacts(workspaceId, userId, searchRegex, { limit, offset } = {}) {
     try {
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await Workspace.findById(workspaceId).select('company members').lean();
         if (!workspace) return [];
 
         let userQuery;
@@ -159,7 +161,9 @@ async function searchContacts(workspaceId, userId, searchRegex, { limit, offset 
                 $or: [{ username: searchRegex }, { name: searchRegex }, { email: searchRegex }],
             };
         } else {
-            const memberIds = (workspace.members || []).map(m => m.user || m).filter(Boolean);
+            const memberIds = (workspace.members || [])
+                .filter(m => !m.status || m.status === 'active')
+                .map(m => m.user || m).filter(Boolean);
             userQuery = {
                 _id: { $in: memberIds, $ne: userId },
                 $or: [{ username: searchRegex }, { name: searchRegex }, { email: searchRegex }],
@@ -187,38 +191,54 @@ async function searchContacts(workspaceId, userId, searchRegex, { limit, offset 
     }
 }
 
-async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, channelId, limit, offset } = {}) {
+/**
+ * Channels (the caller is a member of) and DM sessions (the caller participates
+ * in) inside the workspace. Used to apply visibility in the DB query itself so
+ * skip/limit paginate over results the caller may actually see.
+ */
+async function accessibleScopes(workspaceId, userId) {
+    const [channels, dms] = await Promise.all([
+        Channel.find({ workspace: workspaceId, 'members.user': userId }).select('_id').lean(),
+        DMSession.find({ workspace: workspaceId, participants: userId }).select('_id').lean(),
+    ]);
+    return {
+        channelIds: (channels || []).map(c => c._id),
+        dmIds: (dms || []).map(d => d._id),
+    };
+}
+exports.accessibleScopes = accessibleScopes;
+
+async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, channelId, limit, offset, scopes } = {}) {
     try {
+        const { channelIds, dmIds } = scopes || await accessibleScopes(workspaceId, userId);
+        let channelScope = channelIds;
+        if (channelId) {
+            channelScope = channelIds.filter(id => String(id) === String(channelId));
+        }
+        const parentScope = [{ channel: { $in: channelScope } }];
+        if (!channelId) parentScope.push({ dm: { $in: dmIds } });
+
         const query = {
             workspace: workspaceId,
             text: searchRegex,
-            $or: [{ channel: { $exists: true } }, { dm: { $exists: true } }],
+            isDeleted: { $ne: true },
+            isDeletedUniversally: { $ne: true },
+            hiddenFor: { $ne: userId },
+            deletedFor: { $ne: userId },
+            $or: parentScope,
         };
         if (dateFilter) query.createdAt = dateFilter;
-        if (channelId)  query.channel = channelId;
 
         const messages = await Message.find(query)
             .sort({ createdAt: -1 })
             .skip(offset || 0)
             .limit(limit || 10)
             .populate('sender', 'username profilePicture')
-            .populate('channel', 'name isPrivate members')
+            .populate('channel', 'name isPrivate')
             .populate({ path: 'dm', populate: { path: 'participants', select: 'username' } })
             .lean();
 
-        const accessible = messages.filter(msg => {
-            if (msg.channel) {
-                return msg.channel.members?.some(m => {
-                    const mid = m.user ? m.user.toString() : m.toString();
-                    return mid === userId.toString();
-                });
-            } else if (msg.dm) {
-                return msg.dm.participants?.some(p => p._id.toString() === userId.toString());
-            }
-            return false;
-        });
-
-        return accessible.map(msg => {
+        return messages.filter(msg => msg.channel || msg.dm).map(msg => {
             const isChannel = !!msg.channel;
             const parentName = isChannel
                 ? msg.channel.name
@@ -245,13 +265,20 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
     }
 }
 
-async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset } = {}) {
+async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset, scopes } = {}) {
     try {
+        const { channelIds } = scopes || await accessibleScopes(workspaceId, userId);
         const query = {
             workspace: workspaceId,
-            deleted: false,
+            deleted: { $ne: true },
+            deletedFor: { $ne: userId },
             $or: [{ title: searchRegex }, { description: searchRegex }, { tags: searchRegex }],
-            $and: [{ $or: [{ visibility: 'workspace' }, { createdBy: userId }, { assignedTo: userId }] }],
+            $and: [{ $or: [
+                { visibility: 'workspace' },
+                { visibility: 'channel', channel: { $in: channelIds } },
+                { createdBy: userId },
+                { assignedTo: userId },
+            ] }],
         };
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
@@ -275,6 +302,7 @@ async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags,
                 status: t.status,
                 priority: t.priority,
                 dueDate: t.dueDate,
+                visibility: t.visibility,
                 tags: t.tags || [],
                 createdBy: { id: t.createdBy._id, name: t.createdBy.username, profilePicture: t.createdBy.profilePicture },
                 assignedTo: (t.assignedTo || []).filter(u => u != null).map(u => ({ id: u._id, name: u.username, profilePicture: u.profilePicture })),
@@ -419,13 +447,15 @@ async function searchAll(params) {
     }
 
     const searchTerm  = query.trim();
-    const searchRegex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const searchRegex = safeRegex(searchTerm);
     const dateFilter  = buildDateFilter(from, to);
     const pagination  = { limit: Math.min(limit, 50), offset: Math.max(offset, 0) };
     const tagList     = Array.isArray(tags) ? tags : (tags ? [tags] : []);
-    const opts        = { dateFilter, channelId, tags: tagList, ...pagination };
+    const needsScopes = !type || type === 'all' || type === 'message' || type === 'task';
+    const scopes      = needsScopes ? await accessibleScopes(workspaceId, userId) : null;
+    const opts        = { dateFilter, channelId, tags: tagList, scopes, ...pagination };
 
-    
+
     const runAll      = !type || type === 'all';
     const runMessages = runAll || type === 'message';
     const runFiles    = runAll || type === 'file';
@@ -470,3 +500,11 @@ async function searchAll(params) {
     return { ...allResults, query: searchTerm, total };
 }
 exports.searchAll = searchAll;
+
+exports.searchMessages  = searchMessages;
+exports.searchFiles     = searchFiles;
+exports.searchContacts  = searchContacts;
+exports.searchChannels  = searchChannels;
+exports.searchTasks     = searchTasks;
+exports.searchNotes     = searchNotes;
+exports.searchKnowledge = searchKnowledge;

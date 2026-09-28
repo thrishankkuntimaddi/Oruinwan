@@ -3,6 +3,20 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const apiKeyMiddleware = require('./apiKey.middleware');
 const logger = require('../../../utils/logger');
+const { isValidId } = require('../../shared/utils/workspaceAccess');
+
+/**
+ * Public REST API, authenticated by X-Api-Key (see apiKey.middleware).
+ * Every route requires a key scope (key.permissions includes it, or '*').
+ * Errors are { message }.
+ *
+ *   GET  /messages   messages:read   channel message metadata only (content is E2EE)
+ *   GET  /tasks      tasks:read
+ *   POST /tasks      tasks:write     created as the key's creator (must still be a member)
+ *   GET  /files      files:read      non-deleted workspace files
+ *   GET  /users      users:read      active members
+ *   GET  /channels   channels:read   non-private, non-archived channels
+ */
 
 const publicApiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -12,7 +26,7 @@ const publicApiLimiter = rateLimit({
   legacyHeaders: false,
   validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
   handler: (req, res) => {
-    res.status(429).json({ error: 'Rate limit exceeded. Max 100 requests/minute per API key.' });
+    res.status(429).json({ message: 'Rate limit exceeded. Max 100 requests/minute per API key.' });
   }
 });
 
@@ -24,146 +38,236 @@ router.use((req, res, next) => {
   next();
 });
 
-router.get('/messages', async (req, res) => {
+function requireScope(scope) {
+  return (req, res, next) => {
+    const perms = Array.isArray(req.apiKeyDoc?.permissions) ? req.apiKeyDoc.permissions : [];
+    if (perms.includes('*') || perms.includes(scope)) return next();
+    return res.status(403).json({ message: `API key does not have the ${scope} permission` });
+  };
+}
+
+function parseLimit(raw, def = 50, max = 100) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n <= 0) return def;
+  return Math.min(n, max);
+}
+
+/** Ids of the workspace's public (non-private, non-archived) channels. */
+async function publicChannelIds(workspaceId) {
+  const Channel = require('../channels/channel.model');
+  const rows = await Channel.find({ workspace: workspaceId, isPrivate: { $ne: true }, isArchived: { $ne: true } })
+    .select('_id').lean();
+  return rows.map(r => String(r._id));
+}
+
+router.get('/messages', requireScope('messages:read'), async (req, res) => {
   try {
-    const mongoose = require('mongoose');
-    const db = mongoose.connection.db;
-    const { limit = 50, channelId } = req.query;
+    const Message = require('../../modules/messages/message.model');
+    const { channelId } = req.query;
+    const limit = parseLimit(req.query.limit);
 
-    
-    const InternalMessage = require('../../../models/InternalMessage');
-    const query = { workspaceId: req.workspaceId };
-    if (channelId) query.channelId = channelId;
+    const allowed = await publicChannelIds(req.workspaceId);
+    let channels = allowed;
+    if (channelId !== undefined) {
+      if (!isValidId(channelId)) return res.status(400).json({ message: 'Invalid channelId' });
+      if (!allowed.includes(String(channelId))) return res.status(404).json({ message: 'Channel not found' });
+      channels = [String(channelId)];
+    }
 
-    const messages = await InternalMessage.find(query)
+    const messages = await Message.find({
+      workspace: req.workspaceId,
+      channel: { $in: channels },
+      isDeleted: { $ne: true },
+      isDeletedUniversally: { $ne: true },
+      deletedAt: null,
+      type: { $ne: 'system' },
+    })
       .sort({ createdAt: -1 })
-      .limit(Math.min(Number(limit), 100))
-      .select('content sender channelId createdAt type')
-      .populate('sender', 'username firstName lastName')
+      .limit(limit)
+      .select('channel sender type parentId replyCount createdAt editedAt payload.isEncrypted attachments.type')
+      .populate('sender', 'username')
       .lean();
 
-    res.json({ messages, count: messages.length });
+    // Messages are end-to-end encrypted: only ids and metadata leave the server.
+    const out = messages.map(m => ({
+      id: String(m._id),
+      channelId: m.channel ? String(m.channel) : null,
+      sender: m.sender ? { id: String(m.sender._id || m.sender), username: m.sender.username } : null,
+      type: m.type,
+      parentId: m.parentId ? String(m.parentId) : null,
+      replyCount: m.replyCount || 0,
+      attachmentCount: Array.isArray(m.attachments) ? m.attachments.length : 0,
+      isEncrypted: !!m.payload?.isEncrypted,
+      createdAt: m.createdAt,
+      editedAt: m.editedAt || null,
+    }));
+
+    res.json({ messages: out, count: out.length });
   } catch (err) {
     logger.error('[PublicAPI] GET /messages error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch messages' });
+    res.status(500).json({ message: 'Failed to fetch messages' });
   }
 });
 
-router.get('/tasks', async (req, res) => {
+const TASK_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
+const TASK_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];
+
+router.get('/tasks', requireScope('tasks:read'), async (req, res) => {
   try {
     const Task = require('../../../models/Task');
-    const { status, limit = 50 } = req.query;
+    const { status } = req.query;
+    const limit = parseLimit(req.query.limit);
 
-    const query = { workspaceId: req.workspaceId, deletedAt: null };
-    if (status) query.status = status;
+    const query = { workspace: req.workspaceId, deleted: { $ne: true } };
+    if (status !== undefined) {
+      if (!TASK_STATUSES.includes(status)) {
+        return res.status(400).json({ message: `Invalid status. One of: ${TASK_STATUSES.join(', ')}` });
+      }
+      query.status = status;
+    }
 
     const tasks = await Task.find(query)
       .sort({ createdAt: -1 })
-      .limit(Math.min(Number(limit), 100))
-      .select('title description status priority assignee dueDate createdAt')
-      .populate('assignee', 'username firstName lastName')
+      .limit(limit)
+      .select('title description status priority assignedTo dueDate createdAt issueKey')
+      .populate('assignedTo', 'username')
       .lean();
 
     res.json({ tasks, count: tasks.length });
   } catch (err) {
     logger.error('[PublicAPI] GET /tasks error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    res.status(500).json({ message: 'Failed to fetch tasks' });
   }
 });
 
-router.post('/tasks', async (req, res) => {
+router.post('/tasks', requireScope('tasks:write'), async (req, res) => {
   try {
-    
-    const perms = req.apiKeyDoc.permissions;
-    if (!perms.includes('tasks:write') && !perms.includes('*')) {
-      return res.status(403).json({ error: 'API key does not have tasks:write permission' });
+    const body = req.body || {};
+    const { title, description, priority, dueDate, status } = body;
+    if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ message: 'title is required' });
+    if (title.length > 500) return res.status(400).json({ message: 'title is too long' });
+    if (description !== undefined && typeof description !== 'string') {
+      return res.status(400).json({ message: 'description must be a string' });
+    }
+    if (priority !== undefined && !TASK_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ message: `Invalid priority. One of: ${TASK_PRIORITIES.join(', ')}` });
+    }
+    if (status !== undefined && (!TASK_STATUSES.includes(status) || status === 'blocked')) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    let due;
+    if (dueDate !== undefined && dueDate !== null) {
+      due = new Date(dueDate);
+      if (Number.isNaN(due.getTime())) return res.status(400).json({ message: 'Invalid dueDate' });
+    }
+    // assigneeIds (array) or legacy assigneeId (single).
+    let assigneeIds = body.assigneeIds ?? (body.assigneeId ? [body.assigneeId] : []);
+    if (!Array.isArray(assigneeIds) || assigneeIds.some(id => !isValidId(id))) {
+      return res.status(400).json({ message: 'assigneeIds must be an array of user ids' });
     }
 
-    const Task = require('../../../models/Task');
-    const { title, description, priority, dueDate, assigneeId } = req.body;
-    if (!title) return res.status(400).json({ error: 'title is required' });
-
-    const task = await Task.create({
+    const tasksService = require('../tasks/tasks.service');
+    const actorId = String(req.apiKeyDoc.createdBy);
+    const taskData = {
+      workspaceId: String(req.workspaceId),
       title: title.trim(),
       description: description || '',
       priority: priority || 'medium',
-      dueDate: dueDate ? new Date(dueDate) : null,
-      assignee: assigneeId || null,
-      workspaceId: req.workspaceId,
-      status: 'todo',
-      createdBy: req.apiKeyDoc.createdBy
-    });
+      status: status || 'todo',
+      assignmentType: assigneeIds.length ? 'individual' : 'self',
+      assignedToIds: assigneeIds.map(String),
+      taskMode: 'shared',
+    };
+    if (due) taskData.dueDate = due.toISOString();
 
+    const result = await tasksService.createTask(actorId, taskData, req.io || req.app?.get?.('io') || null, req);
+    const task = result?.tasks?.[0] || result?.task || result;
+    try {
+      require('../integrations/webhook.trigger').fire(req.workspaceId, 'task.created', {
+        taskId: task?._id, title: taskData.title, priority: taskData.priority, createdBy: actorId, via: 'api'
+      });
+    } catch { /* webhooks are best-effort */ }
     res.status(201).json({ task });
   } catch (err) {
+    const status = err.statusCode || err.status;
+    if (status && status < 500) return res.status(status).json({ message: err.message });
+    if (err?.name === 'ValidationError' || err?.name === 'CastError') return res.status(400).json({ message: err.message });
     logger.error('[PublicAPI] POST /tasks error:', err.message);
-    res.status(500).json({ error: 'Failed to create task' });
+    res.status(500).json({ message: 'Failed to create task' });
   }
 });
 
-router.get('/files', async (req, res) => {
+router.get('/files', requireScope('files:read'), async (req, res) => {
   try {
-    const WorkspaceFile = require('../../features/files/WorkspaceFile');
-    const { limit = 50 } = req.query;
+    const WorkspaceFile = require('../files/WorkspaceFile');
+    const limit = parseLimit(req.query.limit);
 
-    const files = await WorkspaceFile.find({ workspaceId: req.workspaceId })
+    const files = await WorkspaceFile.find({ workspaceId: req.workspaceId, isDeleted: { $ne: true } })
       .sort({ createdAt: -1 })
-      .limit(Math.min(Number(limit), 100))
-      .select('name mimeType size url channelId createdAt')
+      .limit(limit)
+      .select('name mimeType size url folderId createdAt')
       .lean();
 
     res.json({ files, count: files.length });
   } catch (err) {
     logger.error('[PublicAPI] GET /files error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch files' });
+    res.status(500).json({ message: 'Failed to fetch files' });
   }
 });
 
-router.get('/users', async (req, res) => {
+router.get('/users', requireScope('users:read'), async (req, res) => {
   try {
     const Workspace = require('../../../models/Workspace');
 
     const ws = await Workspace.findById(req.workspaceId)
-      .populate('members.user', 'username firstName lastName avatarUrl email')
+      .populate('members.user', 'username firstName lastName profilePicture')
       .lean();
 
-    if (!ws) return res.status(404).json({ error: 'Workspace not found' });
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    const users = (ws.members || []).map(m => ({
-      id: m.user?._id,
-      username: m.user?.username,
-      firstName: m.user?.firstName,
-      lastName: m.user?.lastName,
-      avatarUrl: m.user?.avatarUrl,
-      role: m.role
-    }));
+    const users = (ws.members || [])
+      .filter(m => m.user && (m.status || 'active') === 'active')
+      .map(m => ({
+        id: m.user._id,
+        username: m.user.username,
+        firstName: m.user.firstName,
+        lastName: m.user.lastName,
+        avatarUrl: m.user.profilePicture || null,
+        role: m.role
+      }));
 
     res.json({ users, count: users.length });
   } catch (err) {
     logger.error('[PublicAPI] GET /users error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 });
 
-router.get('/channels', async (req, res) => {
+router.get('/channels', requireScope('channels:read'), async (req, res) => {
   try {
-    
-    const mongoose = require('mongoose');
-    let channels = [];
-    try {
-      const Channel = mongoose.model('Channel');
-      channels = await Channel.find({ workspace: req.workspaceId, isArchived: { $ne: true } })
-        .select('name description type membersCount createdAt')
-        .lean();
-    } catch {
-      
-      channels = [];
-    }
+    const Channel = require('../channels/channel.model');
+    const channels = await Channel.find({
+      workspace: req.workspaceId,
+      isPrivate: { $ne: true },
+      isArchived: { $ne: true },
+    })
+      .select('name description topic isDefault createdAt members')
+      .lean();
 
-    res.json({ channels, count: channels.length });
+    const out = channels.map(c => ({
+      _id: c._id,
+      name: c.name,
+      description: c.description,
+      topic: c.topic,
+      isDefault: !!c.isDefault,
+      membersCount: Array.isArray(c.members) ? c.members.length : 0,
+      createdAt: c.createdAt,
+    }));
+
+    res.json({ channels: out, count: out.length });
   } catch (err) {
     logger.error('[PublicAPI] GET /channels error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch channels' });
+    res.status(500).json({ message: 'Failed to fetch channels' });
   }
 });
 

@@ -1,28 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2 } from 'lucide-react';
+import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2, Check, AlertCircle } from 'lucide-react';
 import api from '@services/api';
 import logger from '../../../utils/logger';
+import SettingSwitch from '../../../components/ui/SettingSwitch';
 
 const T = {
     bg:          'var(--bg-surface)',
     border:      'var(--border-subtle)',
     borderHover: 'var(--border-default)',
-    accent:      '#b8956a',
+    accent:      'var(--accent)',
     accentBg:    'var(--accent-dim)',
-    accentBorder:'rgba(184,149,106,0.3)',
+    accentBorder:'var(--border-default)',
     text:        'var(--text-primary)',
+    secondary:   'var(--text-secondary)',
     muted:       'var(--text-muted)',
     dim:         'var(--text-muted)',
-    font:        'Inter, system-ui, sans-serif',
+    danger:      'var(--state-danger)',
+    font:        'var(--font)',
 };
 
 const PREF_ITEMS = [
-    { key: 'message',     label: 'Messages & Mentions', description: 'New messages, @mentions, and DMs',                      Icon: MessageCircle, dot: '#38bdf8' },
-    { key: 'threadReply', label: 'Thread Replies',      description: 'Replies in threads you follow',                         Icon: GitBranch,     dot: '#a78bfa' },
-    { key: 'task',        label: 'Tasks',               description: 'Task assignments, updates, and due date reminders',     Icon: CheckSquare,   dot: '#34d399' },
-    { key: 'meeting',     label: 'Meetings',            description: 'Scheduled meetings and reminders',                      Icon: Calendar,      dot: '#fb923c' },
-    { key: 'email',       label: 'Email Notifications', description: 'Receive email for important events (task assigned, meeting)', Icon: Mail,     dot: T.accent  },
-    { key: 'push',        label: 'Desktop Push',        description: 'Browser OS notifications when app is in background',    Icon: Monitor,       dot: '#f472b6' },
+    { key: 'message',     label: 'Messages & Mentions', description: 'New messages, @mentions, and DMs',                      Icon: MessageCircle },
+    { key: 'threadReply', label: 'Thread Replies',      description: 'Replies in threads you follow',                         Icon: GitBranch },
+    { key: 'task',        label: 'Tasks',               description: 'Task assignments, status changes, and due date reminders', Icon: CheckSquare },
+    { key: 'meeting',     label: 'Meetings',            description: 'Scheduled meetings and reminders',                      Icon: Calendar },
+    { key: 'email',       label: 'Email Notifications', description: 'Receive email for important events (task assigned, meeting)', Icon: Mail },
+    { key: 'push',        label: 'Desktop Push',        description: 'Browser OS notifications when app is in background',    Icon: Monitor },
 ];
 
 export default function NotificationPreferences({ workspaceId }) {
@@ -39,7 +42,7 @@ export default function NotificationPreferences({ workspaceId }) {
             const { data } = await api.get('/api/notifications/preferences', { params: { workspaceId } });
             if (data.preferences) setPrefs(p => ({ ...p, ...data.preferences }));
         } catch (err) {
-            setError('Failed to load preferences');
+            setError(err?.response?.data?.message || 'Failed to load preferences');
             logger.error('[NotificationPreferences] fetch error:', err);
         } finally { setLoading(false); }
     }, [workspaceId]);
@@ -57,7 +60,7 @@ export default function NotificationPreferences({ workspaceId }) {
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
         } catch (err) {
-            setError('Failed to save preferences');
+            setError(err?.response?.data?.message || 'Failed to save preferences');
             logger.error('[NotificationPreferences] save error:', err);
         } finally { setSaving(false); }
     };
@@ -87,7 +90,7 @@ export default function NotificationPreferences({ workspaceId }) {
 
             {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {PREF_ITEMS.map(({ key, label, description, Icon, dot }) => (
+                {PREF_ITEMS.map(({ key, label, description, Icon }) => (
                     <div
                         key={key}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: T.bg, border: `1px solid ${T.border}`, transition: '150ms ease', cursor: 'default' }}
@@ -95,44 +98,25 @@ export default function NotificationPreferences({ workspaceId }) {
                         onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                     >
                         {}
-                        <div style={{ flexShrink: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${dot}18`, border: `1px solid ${dot}30` }}>
-                            <Icon size={13} style={{ color: dot }} />
+                        <div style={{ flexShrink: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: `1px solid ${T.borderHover}` }}>
+                            <Icon size={13} style={{ color: T.secondary }} />
                         </div>
 
                         {}
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: '12px', fontWeight: 600, color: T.text, margin: 0 }}>{label}</p>
-                            <p style={{ fontSize: '10px', color: T.muted, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</p>
+                            <p style={{ fontSize: '11px', color: T.secondary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</p>
                         </div>
 
                         {}
-                        <button
-                            onClick={() => handleToggle(key)}
-                            aria-label={`Toggle ${label}`}
-                            style={{
-                                flexShrink: 0, position: 'relative', width: '36px', height: '20px',
-                                borderRadius: '10px', border: 'none', cursor: 'pointer',
-                                background: prefs[key] ? T.accent : 'var(--border-default)',
-                                transition: 'background 200ms ease',
-                                padding: 0,
-                            }}
-                        >
-                            <span style={{
-                                position: 'absolute', top: '3px',
-                                left: prefs[key] ? '19px' : '3px',
-                                width: '14px', height: '14px', borderRadius: '50%',
-                                background: prefs[key] ? '#000' : 'var(--bg-surface)',
-                                transition: 'left 200ms ease',
-                                display: 'block',
-                            }} />
-                        </button>
+                        <SettingSwitch checked={!!prefs[key]} onChange={() => handleToggle(key)} label={label} />
                     </div>
                 ))}
             </div>
 
             {}
             {error && (
-                <p style={{ fontSize: '11px', color: '#f87171', marginTop: '10px', textAlign: 'center' }}>{error}</p>
+                <p role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: T.danger, marginTop: '10px' }}><AlertCircle size={13} /> {error}</p>
             )}
 
             {}
@@ -144,17 +128,18 @@ export default function NotificationPreferences({ workspaceId }) {
                         display: 'flex', alignItems: 'center', gap: '6px',
                         padding: '8px 16px', fontSize: '12px', fontWeight: 700,
                         fontFamily: T.font, cursor: saving ? 'wait' : 'pointer',
-                        background: saved ? '#22c55e' : T.accentBg,
-                        border: `1px solid ${saved ? '#22c55e' : T.accentBorder}`,
-                        color: saved ? '#fff' : T.accent,
+                        background: saved ? T.accentBg : 'var(--accent)',
+                        border: `1px solid ${saved ? T.accentBorder : 'var(--accent)'}`,
+                        color: saved ? T.accent : 'var(--bg-base)',
+                        borderRadius: '2px',
                         transition: 'all 150ms ease',
                         opacity: saving ? 0.7 : 1,
                     }}
-                    onMouseEnter={e => { if (!saving && !saved) e.currentTarget.style.background = 'rgba(184,149,106,0.18)'; }}
-                    onMouseLeave={e => { if (!saving && !saved) e.currentTarget.style.background = T.accentBg; }}
+                    onMouseEnter={e => { if (!saving && !saved) e.currentTarget.style.background = 'var(--accent-hover)'; }}
+                    onMouseLeave={e => { if (!saving && !saved) e.currentTarget.style.background = 'var(--accent)'; }}
                 >
                     {saving ? (<><Loader2 size={12} className="animate-spin" /> Saving...</>) :
-                     saved  ? (<><Save size={12} /> Saved!</>)               :
+                     saved  ? (<><Check size={12} /> Saved</>)               :
                               (<><Save size={12} /> Save Preferences</>)}
                 </button>
             </div>

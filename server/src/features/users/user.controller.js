@@ -231,85 +231,12 @@ exports.checkPhone = async (req, res) => {
     }
 };
 
-exports.deleteAccount = async (req, res) => {
-    try {
-        const userId = req.user.sub;
-
-        
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        
-        if (user.userType === "company" || user.companyId) {
-            return res.status(403).json({
-                message: "Company users cannot delete their accounts. Please contact your administrator."
-            });
-        }
-
-        
-        
-
-        
-        const Message = require("../../modules/messages/message.model.js");
-        const Channel = require("../channels/channel.model.js");
-        const Workspace = require('../../../models/Workspace');
-        const Task = require('../../../models/Task');
-        const Note = require('../../../models/Note');
-
-        logger.info(`🗑️ Deleting account for user: ${user.username} (${userId})`);
-
-        
-        const deletedMessages = await Message.deleteMany({ sender: userId });
-        logger.info(`  Deleted ${deletedMessages.deletedCount} messages`);
-
-        
-        const updatedChannels = await Channel.updateMany(
-            { 'members.user': userId },
-            {
-                $pull: {
-                    members: { user: userId },
-                    admins: userId
-                }
-            }
-        );
-        logger.info(`  Removed from ${updatedChannels.modifiedCount} channels`);
-
-        
-        if (user.personalWorkspace) {
-            await Workspace.findByIdAndDelete(user.personalWorkspace);
-            logger.info(`  Deleted personal workspace`);
-        }
-
-        
-        const DMSession = require('../../../models/DMSession');
-        const deletedDMs = await DMSession.deleteMany({ participants: userId });
-        logger.info(`  Deleted ${deletedDMs.deletedCount} DM sessions`);
-
-        
-        const deletedTasks = await Task.deleteMany({
-            $or: [
-                { assignedTo: userId },
-                { createdBy: userId }
-            ]
-        });
-        logger.info(`  Deleted ${deletedTasks.deletedCount} tasks`);
-
-        
-        const deletedNotes = await Note.deleteMany({ createdBy: userId });
-        logger.info(`  Deleted ${deletedNotes.deletedCount} notes`);
-
-        
-        await user.deleteOne();
-        logger.info(`✅ Account deleted successfully`);
-
-        return res.json({
-            message: "Account deleted successfully",
-            deleted: true
-        });
-    } catch (err) {
-        logger.error("DELETE ACCOUNT ERROR:", err);
-        return res.status(500).json({ message: "Server error" });
-    }
+/**
+ * DELETE /api/users/me — same safe erasure as DELETE /api/compliance/delete-user
+ * (see src/features/security/accountErasure.js). Other people's tasks and DM sessions are
+ * never deleted; the account is anonymised in place.
+ */
+exports.deleteAccount = (req, res) => {
+    const { eraseAndRespond } = require("../security/gdpr.controller");
+    return eraseAndRespond(req, res);
 };

@@ -3,50 +3,121 @@ const logger = require('../../../utils/logger');
 
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
+const { clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
+const { isValidId, assertWorkspaceMember, sendAccessError } = require('../../shared/utils/workspaceAccess');
+const { eraseAccount, ErasureError } = require('./accountErasure');
 
-function tryRequire(path) {
-  try { return require(path); } catch { return null; }
+const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
+const SECRET_FIELDS = User.SENSITIVE_FIELDS || [
+  'passwordHash', 'refreshTokens', 'twoFactorSecret', 'otpCodes', 'inviteToken',
+  'resetPasswordTokenHash', 'verificationTokenHash', 'deviceTokens',
+];
+
+function audit(req, fields) {
+  return AuditLog.create({
+    userId: req.user.sub,
+    resource: 'User',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    category: 'security',
+    severity: 'info',
+    ...fields,
+  }).catch((err) => logger.warn({ err: err.message, action: fields.action }, '[GDPR] audit write failed'));
 }
 
+/**
+ * May `actorId` manage (view/set legal hold on) `target`? Platform staff always; company
+ * owners/admins/co-owners only for users of their own company. Loaded from the DB, never the JWT.
+ */
+async function canManageUser(actorId, target) {
+  const actor = await User.findById(actorId).select('roles companyId companyRole coOwnerOf').lean();
+  if (!actor) return false;
+  if (Array.isArray(actor.roles) && actor.roles.some(r => PLATFORM_ADMIN_ROLES.includes(r))) return true;
+  if (!actor.companyId || !target?.companyId) return false;
+  if (String(actor.companyId) !== String(target.companyId)) return false;
+  const isCoOwner = actor.coOwnerOf && String(actor.coOwnerOf) === String(actor.companyId);
+  return COMPANY_ADMIN_ROLES.includes(actor.companyRole) || !!isCoOwner;
+}
+
+function legalHoldView(userId, user) {
+  return {
+    userId: String(userId),
+    legalHold: user.legalHold || false,
+    reason: user.legalHold ? (user.legalHoldReason || null) : null,
+    setBy: user.legalHold && user.legalHoldSetBy
+      ? { _id: user.legalHoldSetBy._id || user.legalHoldSetBy, username: user.legalHoldSetBy.username || null }
+      : null,
+    setAt: user.legalHold ? (user.legalHoldAt || null) : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Personal data export
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/compliance/export-user -> JSON download:
+ *   { exportedAt, format, profile, preferences, emails, workspaces[{id,name,role}], tasks, notes,
+ *     aiMemories, notificationPreferences{account,workspaces}, auditLogs (last 500) }
+ */
 exports.exportUser = async (req, res) => {
   try {
     const userId = req.user.sub;
     const user = await User.findById(userId)
-      .select('-passwordHash -twoFactorSecret -refreshTokens -verificationTokenHash -resetPasswordTokenHash -inviteToken')
+      .select('-passwordHash -twoFactorSecret -refreshTokens -verificationTokenHash -resetPasswordTokenHash -inviteToken -otpCodes -deviceTokens')
       .lean();
-
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    
-    const Task = tryRequire('../tasks/task.model');
-    const Note = tryRequire('../../../models/Note');
+    const Task = require('../../../models/Task');
+    const Note = require('../../../models/Note');
+    const Workspace = require('../../../models/Workspace');
+    const AIMemory = require('../../models/AIMemory');
+    const NotificationPreference = require('../../modules/notifications/notificationPreference.model');
+    const { serializePreferences } = require('../auth/auth.controller');
 
-    const [tasks, notes, auditLogs] = await Promise.all([
-      Task ? Task.find({ assignedTo: userId }).lean() : [],
-      Note ? Note.find({ owner: userId }).lean() : [],
+    const [tasks, notes, workspaces, aiMemories, workspaceNotificationPrefs, auditLogs] = await Promise.all([
+      Task.find({ $or: [{ createdBy: userId }, { assignedTo: userId }] }).lean(),
+      Note.find({ owner: userId }).lean(),
+      Workspace.find({ 'members.user': userId }).select('name members.user members.role').lean(),
+      AIMemory.find({ user: userId }).select('text workspace source createdAt updatedAt').lean(),
+      NotificationPreference.find({ userId }).lean(),
       AuditLog.find({ userId }).sort({ createdAt: -1 }).limit(500).lean(),
     ]);
 
+    const profile = { ...user };
+    for (const f of SECRET_FIELDS) delete profile[f];
+    delete profile.emails;
+    delete profile.preferences;
+    if (profile.encryption) profile.encryption = { publicKey: profile.encryption.publicKey || null };
+
     const exportData = {
       exportedAt: new Date().toISOString(),
-      exportedBy: userId,
-      userData: user,
+      format: 'oruinwan-personal-export-v1',
+      profile,
+      preferences: serializePreferences(user.preferences),
+      emails: (user.emails || []).map(e => ({
+        email: e.email, verified: !!e.verified, isPrimary: !!e.isPrimary, addedAt: e.addedAt || null,
+      })),
+      workspaces: workspaces.map(ws => ({
+        id: String(ws._id),
+        name: ws.name,
+        role: (ws.members || []).find(m => String(m.user) === String(userId))?.role || 'member',
+      })),
       tasks,
       notes,
+      aiMemories,
+      notificationPreferences: {
+        account: serializePreferences(user.preferences).notifications,
+        workspaces: workspaceNotificationPrefs,
+      },
       auditLogs,
     };
 
-    
-    await AuditLog.create({
-      userId,
+    await audit(req, {
       action: 'compliance.export_user',
-      resource: 'User',
       resourceId: userId,
-      description: 'User requested personal data export (GDPR Art. 20)',
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      category: 'security',
-      severity: 'info',
+      description: 'User requested personal data export',
     });
 
     res.setHeader('Content-Type', 'application/json');
@@ -58,89 +129,96 @@ exports.exportUser = async (req, res) => {
   }
 };
 
-exports.deleteUser = async (req, res) => {
+// ---------------------------------------------------------------------------
+// Erasure
+// ---------------------------------------------------------------------------
+
+/**
+ * Shared by DELETE /api/compliance/delete-user and DELETE /api/users/me.
+ * 200 { message, erased: true } and the auth cookie is cleared;
+ * 403 { message, code: 'COMPANY_MANAGED' | 'LEGAL_HOLD', reason? }; 404 when the user is gone.
+ */
+async function eraseAndRespond(req, res) {
   try {
-    const userId = req.user.sub;
-    const user = await User.findById(userId).select('legalHold legalHoldReason email username');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (user.legalHold) {
-      return res.status(403).json({
-        message: 'Account is under legal hold and cannot be deleted.',
-        reason: user.legalHoldReason || 'Legal hold active',
-      });
-    }
-
-    
-    await AuditLog.create({
-      userId,
-      action: 'compliance.delete_user',
-      resource: 'User',
-      resourceId: userId,
-      description: `GDPR deletion request — email: ${user.email}, username: ${user.username}`,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      category: 'security',
-      severity: 'critical',
-    });
-
-    
-    await User.findByIdAndUpdate(userId, {
-      email: `deleted_${userId}@deleted.chttrix`,
-      username: `[Deleted User]`,
-      passwordHash: null,
-      phone: null,
-      profilePicture: null,
-      profile: {},
-      preferences: {},
-      refreshTokens: [],
-      devices: [],
-      twoFactorSecret: null,
-      twoFactorEnabled: false,
-      ssoId: null,
-      ssoProvider: null,
-      accountStatus: 'removed',
-      isActive: false,
-      deactivatedAt: new Date(),
-    });
-
-    return res.json({ message: 'Account data erased successfully (GDPR Art. 17)' });
+    await eraseAccount(req.user.sub, { req });
+    clearRefreshTokenCookie(res);
+    return res.json({ message: 'Your account and personal data have been erased.', erased: true });
   } catch (err) {
+    if (err instanceof ErasureError) {
+      return res.status(err.status).json({ message: err.message, ...err.extra });
+    }
     logger.error('[GDPR] delete-user error:', err);
-    return res.status(500).json({ message: 'Failed to delete user data' });
+    return res.status(500).json({ message: 'Failed to delete account' });
   }
-};
+}
 
+exports.eraseAndRespond = eraseAndRespond;
+exports.deleteUser = eraseAndRespond;
+
+// ---------------------------------------------------------------------------
+// Workspace export (admins/owners only)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/compliance/export?workspaceId=<id> -> JSON download
+ *   { exportedAt, workspace{id,name,members[{userId,username,role}]}, channels, tasks, notes }
+ * Notes: public workspace notes and the caller's own. Messages are end-to-end encrypted and
+ * are not included.
+ */
 exports.exportWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.query;
-    if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+    const userId = req.user.sub;
+    let access;
+    try {
+      access = await assertWorkspaceMember(workspaceId, userId, { adminOnly: true });
+    } catch (err) {
+      return sendAccessError(res, err);
+    }
 
-    const Task = tryRequire('../tasks/task.model');
-    const Note = tryRequire('../../../models/Note');
+    const Task = require('../../../models/Task');
+    const Note = require('../../../models/Note');
+    const Workspace = require('../../../models/Workspace');
+    const Channel = require('../channels/channel.model');
 
-    const [tasks, notes] = await Promise.all([
-      Task ? Task.find({ workspaceId }).lean() : [],
-      Note ? Note.find({ workspaceId }).lean() : [],
+    const [workspace, channels, tasks, notes] = await Promise.all([
+      Workspace.findById(workspaceId).select('name members').populate('members.user', 'username').lean(),
+      Channel.find({ workspace: workspaceId }).select('name description isPrivate isDefault members.user createdAt').lean(),
+      Task.find({ workspace: workspaceId, deleted: { $ne: true } }).lean(),
+      Note.find({ workspace: workspaceId, $or: [{ isPublic: true }, { owner: userId }] }).lean(),
     ]);
 
     const exportData = {
       exportedAt: new Date().toISOString(),
-      workspaceId,
+      format: 'oruinwan-workspace-export-v1',
+      workspace: {
+        id: String(workspaceId),
+        name: workspace?.name || access.workspace?.name,
+        members: (workspace?.members || []).map(m => ({
+          userId: String(m.user?._id || m.user || ''),
+          username: m.user?.username || null,
+          role: m.role,
+          status: m.status || 'active',
+        })),
+      },
+      channels: channels.map(c => ({
+        id: String(c._id),
+        name: c.name,
+        description: c.description || '',
+        isPrivate: !!c.isPrivate,
+        isDefault: !!c.isDefault,
+        memberCount: (c.members || []).length,
+        createdAt: c.createdAt,
+      })),
       tasks,
       notes,
     };
 
-    await AuditLog.create({
-      userId: req.user.sub,
+    await audit(req, {
       action: 'compliance.export_workspace',
       resource: 'Workspace',
       resourceId: workspaceId,
-      description: `Workspace data export by admin`,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      category: 'security',
-      severity: 'info',
+      description: 'Workspace data export by admin',
     });
 
     res.setHeader('Content-Type', 'application/json');
@@ -152,33 +230,64 @@ exports.exportWorkspace = async (req, res) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Legal hold
+// ---------------------------------------------------------------------------
+
+/** GET /api/compliance/legal-hold/me -> { userId, legalHold, reason, setBy, setAt } */
+exports.getMyLegalHold = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const user = await User.findById(userId)
+      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt')
+      .populate('legalHoldSetBy', 'username')
+      .lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    return res.json(legalHoldView(userId, user));
+  } catch (err) {
+    logger.error('[GDPR] get-my-legal-hold error:', err);
+    return res.status(500).json({ message: 'Failed to fetch legal hold status' });
+  }
+};
+
+/** GET /api/compliance/legal-hold/:userId — self, or an admin who manages that user. */
 exports.getLegalHold = async (req, res) => {
   try {
     const { userId } = req.params;
+    if (userId === 'me' || String(userId) === String(req.user.sub)) return exports.getMyLegalHold(req, res);
+    if (!isValidId(userId)) return res.status(400).json({ message: 'Invalid user id' });
+
     const user = await User.findById(userId)
-      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt username email')
-      .populate('legalHoldSetBy', 'username email')
+      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt companyId')
+      .populate('legalHoldSetBy', 'username')
       .lean();
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    return res.json({
-      userId,
-      legalHold: user.legalHold || false,
-      reason: user.legalHoldReason,
-      setBy: user.legalHoldSetBy,
-      setAt: user.legalHoldAt,
-    });
+    // Same 403 for "not found" and "not yours" so ids cannot be probed.
+    if (!user || !(await canManageUser(req.user.sub, user))) {
+      return res.status(403).json({ message: 'Access denied: only an administrator who manages this user can view their legal hold' });
+    }
+    return res.json(legalHoldView(userId, user));
   } catch (err) {
     logger.error('[GDPR] get-legal-hold error:', err);
     return res.status(500).json({ message: 'Failed to fetch legal hold status' });
   }
 };
 
+/** PATCH /api/compliance/legal-hold/:userId { legalHold: boolean, reason? } — admins who manage that user only. */
 exports.setLegalHold = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { legalHold, reason } = req.body;
+    const { legalHold, reason } = req.body || {};
+    if (!isValidId(userId)) return res.status(400).json({ message: 'Invalid user id' });
     if (typeof legalHold !== 'boolean') {
       return res.status(400).json({ message: 'legalHold must be a boolean' });
+    }
+    if (reason !== undefined && reason !== null && (typeof reason !== 'string' || reason.length > 500)) {
+      return res.status(400).json({ message: 'reason must be a string of at most 500 characters' });
+    }
+
+    const target = await User.findById(userId).select('companyId').lean();
+    if (!target || !(await canManageUser(req.user.sub, target))) {
+      return res.status(403).json({ message: 'Access denied: only an administrator who manages this user can set a legal hold' });
     }
 
     const update = {
@@ -188,40 +297,42 @@ exports.setLegalHold = async (req, res) => {
       legalHoldAt: legalHold ? new Date() : null,
     };
     const user = await User.findByIdAndUpdate(userId, update, { new: true })
-      .select('username email legalHold');
+      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt')
+      .populate('legalHoldSetBy', 'username')
+      .lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    await AuditLog.create({
-      userId: req.user.sub,
+    await audit(req, {
       action: legalHold ? 'compliance.legal_hold_set' : 'compliance.legal_hold_removed',
-      resource: 'User',
       resourceId: userId,
-      description: `Legal hold ${legalHold ? 'set' : 'removed'} on user ${user.email}${reason ? `: ${reason}` : ''}`,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      category: 'security',
+      description: `Legal hold ${legalHold ? 'set' : 'removed'} on user ${userId}${reason ? `: ${reason}` : ''}`,
       severity: legalHold ? 'warning' : 'info',
     });
 
-    return res.json({ message: `Legal hold ${legalHold ? 'set' : 'removed'}`, legalHold: user.legalHold });
+    return res.json({ message: `Legal hold ${legalHold ? 'set' : 'removed'}`, ...legalHoldView(userId, user) });
   } catch (err) {
     logger.error('[GDPR] set-legal-hold error:', err);
     return res.status(500).json({ message: 'Failed to update legal hold' });
   }
 };
 
+// ---------------------------------------------------------------------------
+// Own audit log and retention
+// ---------------------------------------------------------------------------
+
 exports.getAuditLogs = async (req, res) => {
   try {
     const { page = 1, limit = 50, action, from, to } = req.query;
-    const cap = Math.min(parseInt(limit), 200);
-    const skip = (parseInt(page) - 1) * cap;
+    const cap = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNum - 1) * cap;
 
     const filter = { userId: req.user.sub };
-    if (action) filter.action = action;
+    if (action && typeof action === 'string') filter.action = action;
     if (from || to) {
       filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
-      if (to) filter.createdAt.$lte = new Date(to);
+      if (from && !isNaN(new Date(from))) filter.createdAt.$gte = new Date(from);
+      if (to && !isNaN(new Date(to))) filter.createdAt.$lte = new Date(to);
     }
 
     const [logs, total] = await Promise.all([
@@ -232,7 +343,7 @@ exports.getAuditLogs = async (req, res) => {
     return res.json({
       logs,
       total,
-      page: parseInt(page),
+      page: pageNum,
       pages: Math.ceil(total / cap),
     });
   } catch (err) {
@@ -241,37 +352,39 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
+/** GET /api/compliance/retention-policy -> { retentionDays: number | null, legalHold } */
 exports.getRetentionPolicy = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select('retentionDays').lean();
-    return res.json({ retentionDays: user?.retentionDays || null });
+    const user = await User.findById(req.user.sub).select('retentionDays legalHold').lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    return res.json({ retentionDays: user.retentionDays || null, legalHold: !!user.legalHold });
   } catch (err) {
+    logger.error('[GDPR] get-retention error:', err);
     return res.status(500).json({ message: 'Failed to fetch retention policy' });
   }
 };
 
+/** PATCH /api/compliance/retention-policy { retentionDays: integer 1..3650 | null } -> { message, retentionDays } */
 exports.setRetentionPolicy = async (req, res) => {
   try {
-    const { retentionDays } = req.body;
-    if (retentionDays !== null && (typeof retentionDays !== 'number' || retentionDays < 1)) {
-      return res.status(400).json({ message: 'retentionDays must be a positive number or null' });
+    const { retentionDays } = req.body || {};
+    if (retentionDays !== null && !(Number.isInteger(retentionDays) && retentionDays >= 1 && retentionDays <= 3650)) {
+      return res.status(400).json({ message: 'retentionDays must be a whole number from 1 to 3650, or null to keep messages forever' });
     }
-    await User.findByIdAndUpdate(req.user.sub, { retentionDays: retentionDays || null });
+    await User.findByIdAndUpdate(req.user.sub, { retentionDays });
 
-    await AuditLog.create({
-      userId: req.user.sub,
+    await audit(req, {
       action: 'compliance.retention_policy_updated',
-      resource: 'User',
       resourceId: req.user.sub,
-      description: `Retention policy set to ${retentionDays || 'disabled (no limit)'} days`,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      category: 'security',
-      severity: 'info',
+      description: `Retention policy set to ${retentionDays ? `${retentionDays} days` : 'disabled (no limit)'}`,
     });
 
-    return res.json({ message: 'Retention policy updated', retentionDays: retentionDays || null });
+    return res.json({ message: 'Retention policy updated', retentionDays });
   } catch (err) {
+    logger.error('[GDPR] set-retention error:', err);
     return res.status(500).json({ message: 'Failed to update retention policy' });
   }
 };
+
+exports.canManageUser = canManageUser;
+exports.ErasureError = ErasureError;

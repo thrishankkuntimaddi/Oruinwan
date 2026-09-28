@@ -16,6 +16,34 @@ const { normalizeMemberFormat } = require("../../../utils/memberHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
 const messagesService = require("../../modules/messages/messages.service");
 
+const { isValidId, userRoom } = require("../../shared/utils/workspaceAccess");
+
+// Workspace settings a member may see and an admin may change (booleans / numbers only).
+const BOOLEAN_SETTINGS = ['isPrivate', 'allowMemberInvite', 'allowMemberChannelCreation', 'requireAdminApproval', 'isDiscoverable'];
+const NUMBER_SETTINGS = ['autoArchiveInactiveDays'];
+const RULES_MAX = 5000;
+
+function pickSafeSettings(settings) {
+  const src = settings || {};
+  const out = {};
+  for (const k of [...BOOLEAN_SETTINGS, ...NUMBER_SETTINGS]) {
+    if (src[k] !== undefined) out[k] = src[k];
+  }
+  return out;
+}
+
+function countActiveMembers(members) {
+  return (members || []).filter(m => (m.status || 'active') === 'active').length;
+}
+
+// Sockets join `workspace:<id>` (chatHandlers join-workspace); some older
+// listeners used `workspace_<id>`, so emit to both (socket.io de-duplicates).
+function workspaceRooms(id) {
+  return [`workspace:${id}`, `workspace_${id}`];
+}
+
+exports._internal = { pickSafeSettings, countActiveMembers };
+
 exports.createWorkspace = async (req, res) => {
   try {
     const {
@@ -225,15 +253,15 @@ exports.listMyWorkspaces = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    
     const workspacesWithOwner = await Promise.all(
       user.workspaces
-        .filter(ws => ws.workspace) 
+        .filter(ws => ws.workspace)
         .map(async (ws) => {
-          
           const workspace = await Workspace.findById(ws.workspace._id)
             .populate('createdBy', 'username')
             .lean();
+          const members = workspace?.members || ws.workspace.members || [];
+          const mine = members.find(m => String(m.user) === String(userId));
 
           return {
             id: ws.workspace._id,
@@ -242,12 +270,15 @@ exports.listMyWorkspaces = async (req, res) => {
             icon: ws.workspace.icon,
             color: ws.workspace.color || "#2563eb",
             rules: ws.workspace.rules || "",
+            settings: pickSafeSettings(workspace?.settings || ws.workspace.settings),
             type: ws.workspace.type,
-            role: ws.role,
-            memberCount: ws.workspace.members?.length || 0,
+            // The workspace's own members list is authoritative for the role.
+            role: mine?.role || ws.role,
+            membershipStatus: mine ? (mine.status || 'active') : 'removed',
+            memberCount: countActiveMembers(members),
             isPersonal: ws.workspace.type === 'personal',
-            ownerName: workspace?.createdBy?.username || 'Unknown',  
-            isOwner: String(workspace?.createdBy?._id) === String(userId)  
+            ownerName: workspace?.createdBy?.username || 'Unknown',
+            isOwner: String(workspace?.createdBy?._id) === String(userId)
           };
         })
     );
@@ -274,6 +305,18 @@ exports.listWorkspaces = async (req, res) => {
 };
 
 // getWorkspaceMembers is defined once, below (an older duplicate here was always overridden).
+async function deactivateWorkspaceIntegrations(workspaceId) {
+  const ApiKey = require("../developer/apiKey.model");
+  const Bot = require("../developer/bot.model");
+  const Webhook = require("../integrations/webhook.model");
+  await Promise.all([
+    ApiKey.updateMany({ workspaceId }, { $set: { isActive: false } }),
+    Bot.updateMany({ workspaceId }, { $set: { isActive: false } }),
+    Webhook.updateMany({ workspaceId }, { $set: { isActive: false, active: false } }),
+  ]);
+}
+exports._internal.deactivateWorkspaceIntegrations = deactivateWorkspaceIntegrations;
+
 exports.deleteWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -327,9 +370,12 @@ exports.deleteWorkspace = async (req, res) => {
     );
 
     
+    // API keys, bots and webhooks must stop working with the workspace.
+    await deactivateWorkspaceIntegrations(workspaceId);
+
     const io = req.app?.get("io");
     if (io) {
-      io.to(`workspace_${workspaceId}`).emit("workspace-deleted", { workspaceId });
+      io.to(workspaceRooms(workspaceId)).emit("workspace-deleted", { workspaceId });
     }
 
     
@@ -376,6 +422,8 @@ exports.inviteToWorkspace = async (req, res) => {
       for (const email of emailList) {
         
         const userExists = await User.findOne({ email });
+        // Privacy: people who turned discovery off are not confirmed to exist.
+        const revealExists = !!userExists && userExists.preferences?.privacy?.allowDiscovery !== false;
 
         const raw = crypto.randomBytes(32).toString("hex");
         const tokenHash = sha256(raw);
@@ -411,10 +459,10 @@ exports.inviteToWorkspace = async (req, res) => {
             html: template.html,
             text: template.text
           });
-          invites.push({ email, inviteLink, userExists: !!userExists, emailSent: true });
+          invites.push({ email, inviteLink, userExists: revealExists, emailSent: true });
         } catch (emailErr) {
           logger.error({ err: emailErr.message, email }, 'Workspace invite email could not be delivered');
-          invites.push({ email, inviteLink, userExists: !!userExists, emailSent: false, emailError: emailErr.message });
+          invites.push({ email, inviteLink, userExists: revealExists, emailSent: false, emailError: emailErr.message });
         }
       }
 
@@ -480,7 +528,7 @@ exports.getInviteDetails = async (req, res) => {
     }
 
     const workspace = await Workspace.findById(invite.workspace);
-    const memberCount = workspace.members.length;
+    const memberCount = countActiveMembers(workspace.members);
 
     return res.json({
       workspaceName: workspace.name,
@@ -634,7 +682,7 @@ exports.joinWorkspace = async (req, res) => {
     
     const io = req.app.get("io");
     if (io) {
-      io.to(`workspace_${workspace._id.toString()}`).emit("workspace-joined", {
+      io.to(workspaceRooms(workspace._id.toString())).emit("workspace-joined", {
         workspaceId: workspace._id,
         userId: userId,
         username: user.username,
@@ -661,6 +709,7 @@ exports.getWorkspaceMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const userId = req.user?.sub;
+    if (!isValidId(workspaceId)) return res.status(400).json({ message: "Invalid workspaceId" });
 
     const workspace = await Workspace.findById(workspaceId).populate({
       path: 'members.user',
@@ -671,34 +720,74 @@ exports.getWorkspaceMembers = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    
-    const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
+    const isMember = workspace.members.some(m => m.user && String(m.user._id) === String(userId) && (m.status || 'active') === 'active');
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    
+    // Everyone still attached to the workspace (the caller included). Presence
+    // lives in isOnline/status; the membership state in membershipStatus.
     const members = workspace.members
-      .filter(m => String(m.user._id) !== String(userId))
+      .filter(m => m.user && m.status !== 'removed')
       .map(m => ({
-        _id: m.user._id,  
-        username: m.user.username,  
+        _id: m.user._id,
+        username: m.user.username,
         email: m.user.email,
-        phone: m.user.phone,  
-        profilePicture: m.user.profilePicture,  
-        userStatus: m.user.userStatus,  
-        profile: m.user.profile,  
-        // Presence: isOnline is what the clients read; status mirrors it for older callers.
+        phone: m.user.phone,
+        profilePicture: m.user.profilePicture,
+        userStatus: m.user.userStatus,
+        profile: m.user.profile,
         isOnline: !!m.user.isOnline,
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
-        role: m.role
+        role: m.role,
+        membershipStatus: m.status || 'active',
+        joinedAt: m.joinedAt,
+        isCurrentUser: String(m.user._id) === String(userId)
       }));
 
     return res.json({ members });
   } catch (err) {
     logger.error("GET WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.leaveWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.params.id || req.params.workspaceId;
+    const userId = req.user?.sub;
+    if (!isValidId(workspaceId)) return res.status(400).json({ message: "Invalid workspaceId" });
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+
+    const me = workspace.members.find(m => String(m.user) === String(userId) && (m.status || 'active') === 'active');
+    if (!me) return res.status(403).json({ message: "You are not a member of this workspace" });
+    if (me.role === 'owner') {
+      return res.status(400).json({ message: "Transfer ownership before leaving" });
+    }
+
+    await Workspace.updateOne({ _id: workspaceId }, { $pull: { members: { user: userId } } });
+    await Channel.updateMany(
+      { workspace: workspaceId },
+      { $pull: { members: { user: userId }, admins: userId } }
+    );
+    await DMSession.updateMany(
+      { workspace: workspaceId, participants: userId },
+      { $set: { status: "closed" } }
+    );
+    await User.updateOne({ _id: userId }, { $pull: { workspaces: { workspace: workspaceId } } });
+
+    const io = req.app?.get("io");
+    if (io) {
+      io.to(workspaceRooms(workspaceId)).emit("workspace:member-left", { workspaceId: String(workspaceId), userId: String(userId) });
+      io.to(userRoom(userId)).emit("workspace:access-revoked", { workspaceId: String(workspaceId), reason: 'left' });
+    }
+
+    return res.json({ message: "You left the workspace", workspaceId: String(workspaceId) });
+  } catch (err) {
+    return handleError(res, err, "LEAVE WORKSPACE ERROR");
   }
 };
 
@@ -1061,7 +1150,7 @@ exports.renameWorkspace = async (req, res) => {
 
     const io = req.app?.get("io");
     if (io) {
-      io.to(`workspace_${id}`).emit("workspace-updated", {
+      io.to(workspaceRooms(id)).emit("workspace-updated", {
         workspaceId: workspace._id,
         name: workspace.name
       });
@@ -1083,50 +1172,73 @@ exports.renameWorkspace = async (req, res) => {
 exports.updateWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
-    const { icon, description, settings } = req.body;
+    const { icon, description } = req.body || {};
     const userId = req.user?.sub;
+    if (!isValidId(id)) return res.status(400).json({ message: "Invalid workspaceId" });
+
+    // Settings arrive as body.settings.*; top-level keys of the same name are
+    // accepted too (older clients). body.settings wins when both are sent.
+    const body = req.body || {};
+    if (body.settings !== undefined && (body.settings === null || typeof body.settings !== 'object' || Array.isArray(body.settings))) {
+      return res.status(400).json({ message: "settings must be an object" });
+    }
+    const incoming = {};
+    for (const k of [...BOOLEAN_SETTINGS, ...NUMBER_SETTINGS]) {
+      if (body[k] !== undefined) incoming[k] = body[k];
+      if (body.settings && body.settings[k] !== undefined) incoming[k] = body.settings[k];
+    }
+    for (const k of BOOLEAN_SETTINGS) {
+      if (incoming[k] !== undefined && typeof incoming[k] !== 'boolean') {
+        return res.status(400).json({ message: `settings.${k} must be a boolean` });
+      }
+    }
+    if (incoming.autoArchiveInactiveDays !== undefined) {
+      const n = incoming.autoArchiveInactiveDays;
+      if (typeof n !== 'number' || !Number.isInteger(n) || n < 0 || n > 3650) {
+        return res.status(400).json({ message: "settings.autoArchiveInactiveDays must be an integer between 0 and 3650" });
+      }
+    }
+    if (body.rules !== undefined && body.rules !== null) {
+      if (typeof body.rules !== 'string') return res.status(400).json({ message: "rules must be a string" });
+      if (body.rules.length > RULES_MAX) return res.status(400).json({ message: `rules must be at most ${RULES_MAX} characters` });
+    }
+    if (description !== undefined && description !== null && typeof description !== 'string') {
+      return res.status(400).json({ message: "description must be a string" });
+    }
 
     const workspace = await Workspace.findById(id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    
-    const member = workspace.members.find(m => String(m.user) === String(userId));
+    const member = workspace.members.find(m => String(m.user) === String(userId) && (m.status || 'active') === 'active');
     if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
       return res.status(403).json({ message: "Only admins and owners can update workspace settings" });
     }
 
-    
     if (icon !== undefined) workspace.icon = icon;
-    if (req.body.color !== undefined) workspace.color = req.body.color;
-    if (description !== undefined) workspace.description = description;
-    if (settings) {
-      if (settings.allowMemberChannelCreation !== undefined) {
-        workspace.settings.allowMemberChannelCreation = settings.allowMemberChannelCreation;
-      }
-      if (settings.allowMemberInvite !== undefined) {
-        workspace.settings.allowMemberInvite = settings.allowMemberInvite;
-      }
-      if (settings.requireAdminApproval !== undefined) {
-        workspace.settings.requireAdminApproval = settings.requireAdminApproval;
-      }
-      if (settings.isDiscoverable !== undefined) {
-        workspace.settings.isDiscoverable = settings.isDiscoverable;
-      }
+    if (body.color !== undefined) workspace.color = body.color;
+    if (description !== undefined) workspace.description = description || "";
+    if (body.rules !== undefined) workspace.rules = body.rules || "";
+    if (!workspace.settings) workspace.settings = {};
+    for (const [k, v] of Object.entries(incoming)) {
+      workspace.settings[k] = v;
     }
+    if (Object.keys(incoming).length) workspace.markModified('settings');
 
     await workspace.save();
 
+    const safeSettings = pickSafeSettings(workspace.settings);
     const io = req.app?.get("io");
     if (io) {
-      io.to(`workspace_${id}`).emit("workspace-updated", {
+      io.to(workspaceRooms(id)).emit("workspace-updated", {
         workspaceId: workspace._id,
         name: workspace.name,
         icon: workspace.icon,
         color: workspace.color,
         description: workspace.description,
-        settings: workspace.settings
+        rules: workspace.rules || "",
+        settings: safeSettings
       });
     }
 
@@ -1136,8 +1248,10 @@ exports.updateWorkspace = async (req, res) => {
         id: workspace._id,
         name: workspace.name,
         icon: workspace.icon,
+        color: workspace.color,
         description: workspace.description,
-        settings: workspace.settings
+        rules: workspace.rules || "",
+        settings: safeSettings
       }
     });
   } catch (err) {
@@ -1169,7 +1283,7 @@ exports.getWorkspaceStats = async (req, res) => {
     const messageCount = await Message.countDocuments({ workspace: id });
 
     return res.json({
-      memberCount: workspace.members.length,
+      memberCount: countActiveMembers(workspace.members),
       channelCount,
       messageCount,
       createdAt: workspace.createdAt,
@@ -1439,7 +1553,7 @@ exports.getWorkspaceAnalytics = async (req, res) => {
     return res.json({
       workspace: { id: workspace._id, name: workspace.name, createdAt: workspace.createdAt },
       summary: {
-        memberCount: workspace.members.length,
+        memberCount: countActiveMembers(workspace.members),
         channelCount,
         messageCount,
         taskCount,

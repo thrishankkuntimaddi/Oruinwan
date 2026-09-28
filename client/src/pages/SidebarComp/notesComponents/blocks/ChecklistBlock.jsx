@@ -46,17 +46,17 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px 8px' }}>
                     <div style={{ flex: 1, height: '3px', background: 'var(--bg-active)', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', background: pct === 100 ? '#34d399' : '#b8956a', width: `${pct}%`, transition: 'width 500ms ease' }} />
+                        <div style={{ height: '100%', background: pct === 100 ? 'var(--state-success)' : 'var(--accent)', width: `${pct}%`, transition: 'width 500ms ease' }} />
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: pct === 100 ? '#34d399' : 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font)', color: pct === 100 ? 'var(--state-success)' : 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>
                         {done}/{total}
                     </span>
                     <button
                         onClick={() => onRemoveBlock(block.id)}
                         style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
-                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <Trash2 size={12} />
                     </button>
@@ -75,10 +75,10 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                 onClick={() => toggleItem(item.id)}
                                 style={{
                                     flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid #34d399' : '2px solid var(--border-accent)',
-                                    background: item.done ? '#34d399' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: item.done ? 'var(--state-success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', transition: 'all 150ms ease',
                                 }}
-                                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = '#34d399'; }}
+                                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--state-success)'; }}
                                 onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                             >
                                 {item.done && (
@@ -98,7 +98,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                     flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px',
                                     color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',
                                     textDecoration: item.done ? 'line-through' : 'none',
-                                    transition: 'all 200ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+                                    transition: 'all 200ms ease', fontFamily: 'var(--font)',
                                 }}
                             />
 
@@ -106,8 +106,8 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                 onClick={() => removeItem(item.id)}
                                 style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                                 className="group-hover/item:!opacity-100"
-                                onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.15)'}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                             >
                                 <Trash2 size={10} />
                             </button>
@@ -122,9 +122,9 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', width: '100%',
                         textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)',
                         background: 'transparent', border: 'none', borderTop: '1px solid var(--border-subtle)',
-                        cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+                        cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.background = 'rgba(184,149,106,0.04)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-dim)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Plus size={12} /> Add item

@@ -23,31 +23,31 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: '2px', boxShadow: 'var(--card-shadow)', fontFamily: 'var(--font)' }}>
 
         {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', border: '1px solid var(--border-accent)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
             {integration.emoji}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{integration.name}</h2>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'monospace' }}>
-              {integration.categoryLabel}
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {integration.categoryLabel} · Preview
             </span>
           </div>
 
           {}
           {isConnected ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#3a8f6a', background: 'rgba(58,143,106,0.1)', border: '1px solid rgba(58,143,106,0.25)', padding: '3px 10px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3a8f6a', animation: 'pulse 2s infinite' }} />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: 'var(--state-success)', background: 'color-mix(in srgb, var(--state-success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 30%, transparent)', borderRadius: '2px', padding: '3px 10px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--state-success)' }} />
               Connected
             </span>
           ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', padding: '3px 10px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '3px 10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--border-accent)' }} />
               Not Connected
             </span>
@@ -73,9 +73,9 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
           {}
           {showSuccess && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(58,143,106,0.08)', border: '1px solid rgba(58,143,106,0.2)', padding: '10px 14px' }}>
-              <CheckCircle2 size={16} style={{ color: '#3a8f6a', flexShrink: 0 }} />
-              <span style={{ fontSize: '13px', fontWeight: 500, color: '#3a8f6a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'color-mix(in srgb, var(--state-success) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 25%, transparent)', borderRadius: '2px', padding: '10px 14px' }}>
+              <CheckCircle2 size={16} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--state-success)' }}>
                 {isConnected ? `${integration.name} connected successfully!` : `${integration.name} has been disconnected.`}
               </span>
             </div>
@@ -83,13 +83,13 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
           {}
           <div>
-            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
+            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Zap size={11} /> What you can do
             </h3>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {integration.useCases.map((useCase, i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  <ChevronRight size={14} style={{ color: '#b8956a', flexShrink: 0, marginTop: '2px' }} />
+                  <ChevronRight size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '2px' }} />
                   {useCase}
                 </li>
               ))}
@@ -98,7 +98,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
           {}
           <div>
-            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
+            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Shield size={11} /> Permissions required
             </h3>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -114,9 +114,10 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
         {}
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
+          <span style={{ marginRight: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>Preview only — no account is linked.</span>
           <button
             onClick={onClose}
-            style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+            style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
           >
@@ -127,13 +128,13 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
             disabled={loading}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', fontSize: '13px', fontWeight: 700,
-              background: loading ? 'var(--bg-active)' : isConnected ? 'rgba(201,64,64,0.08)' : '#b8956a',
-              border: isConnected ? '1px solid rgba(201,64,64,0.3)' : 'none',
-              color: loading ? 'var(--text-muted)' : isConnected ? '#c94040' : '#000',
+              background: loading ? 'var(--bg-active)' : isConnected ? 'color-mix(in srgb, var(--state-danger) 8%, transparent)' : 'var(--accent)',
+              border: isConnected ? '1px solid color-mix(in srgb, var(--state-danger) 35%, transparent)' : 'none', borderRadius: '2px',
+              color: loading ? 'var(--text-muted)' : isConnected ? 'var(--state-danger)' : '#0c0c0c',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
               transition: 'all 150ms ease',
-              fontFamily: 'Inter, system-ui, sans-serif',
+              fontFamily: 'var(--font)',
             }}
             onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85'; }}
             onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1'; }}

@@ -17,7 +17,6 @@ import CompanyAdminLayout from "./components/layout/CompanyAdminLayout";
 import HomePanel from "./components/home/panels/HomePanel";
 import ChannelsPanel from "./components/layout/panels/ChannelsPanel";
 import MessagesPanel from "./components/layout/panels/MessagesPanel";
-import TasksPanel from "./components/layout/panels/TasksPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
 import FilesPanel from "./components/layout/panels/FilesPanel";
 import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
@@ -371,6 +370,20 @@ function App() {
                               </RequireAuth>
                             }
                           />
+                          <Route
+                            path="/workspace/:workspaceId/tasks/:taskId"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <MyTasks />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
 
                           {}
                           <Route
@@ -577,9 +590,11 @@ function App() {
                                <RequireAuth>
                                  <WorkspaceScope>
                                    <RequireWorkspace>
-                                     <SearchProvider>
-                                       <SearchResultsPage />
-                                     </SearchProvider>
+                                     <MainLayout>
+                                       <SearchProvider>
+                                         <SearchResultsPage />
+                                       </SearchProvider>
+                                     </MainLayout>
                                    </RequireWorkspace>
                                  </WorkspaceScope>
                                </RequireAuth>

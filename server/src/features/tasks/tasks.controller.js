@@ -11,8 +11,13 @@ const _fireWebhook = (workspaceId, event, data) => {
 };
 
 function handleError(res, error) {
-    const statusCode = error.statusCode || 500;
-    const message = error.message || 'Internal server error';
+    let statusCode = error.statusCode || error.status || 500;
+    let message = error.message || 'Internal server error';
+    // Mongoose cast / validation problems are client errors, not 500s.
+    if (statusCode === 500 && (error.name === 'CastError' || error.name === 'ValidationError')) {
+        statusCode = 400;
+    }
+    if (statusCode >= 500) message = 'Internal server error';
 
     
     const response = { message };
@@ -34,13 +39,24 @@ async function getTasks(req, res) {
             status: req.query.status,
             assignedTo: req.query.assignedTo,
             priority: req.query.priority,
-            includeDeleted: req.query.includeDeleted
+            includeDeleted: req.query.includeDeleted,
+            includeSubtasks: req.query.includeSubtasks
         };
 
         const result = await tasksService.getTasks(userId, filters);
         return res.json(result);
     } catch (error) {
         logger.error('GET_TASKS ERROR:', error);
+        return handleError(res, error);
+    }
+}
+
+async function getTask(req, res) {
+    try {
+        const result = await tasksService.getTask(req.user.sub, req.params.id);
+        return res.json(result);
+    } catch (error) {
+        logger.error('GET_TASK ERROR:', error);
         return handleError(res, error);
     }
 }
@@ -64,18 +80,19 @@ async function getMyTasks(req, res) {
 async function createTask(req, res) {
     try {
         const userId = req.user.sub;
-        const taskData = req.body;
+        const taskData = req.body || {};
 
         
         const validation = validator.validateCreateTask(taskData);
         if (!validation.valid) {
-            const error = new Error('Validation failed');
+            const error = new Error((validation.errors || ['Validation failed']).join('; '));
             error.statusCode = 400;
             error.errors = validation.errors;
             throw error;
         }
 
         const result = await tasksService.createTask(userId, taskData, req.io, req);
+        const createdId = result.tasks?.[0]?._id || result.task?._id || result._id;
 
         
         activityService.emit(req, {
@@ -84,7 +101,7 @@ async function createTask(req, res) {
             actor: userId,
             workspaceId: taskData.workspaceId || null,
             payload: {
-                taskId: result.task?._id || result._id,
+                taskId: createdId,
                 title: taskData.title,
                 priority: taskData.priority || 'medium',
             },
@@ -92,7 +109,7 @@ async function createTask(req, res) {
 
         
         _fireWebhook(taskData.workspaceId, 'task.created', {
-            taskId: result.task?._id || result._id,
+            taskId: createdId,
             title: taskData.title,
             priority: taskData.priority || 'medium',
             createdBy: userId
@@ -109,12 +126,12 @@ async function updateTask(req, res) {
     try {
         const userId = req.user.sub;
         const taskId = req.params.id;
-        const updates = req.body;
+        const updates = req.body || {};
 
         
         const validation = validator.validateUpdateTask(updates);
         if (!validation.valid) {
-            const error = new Error('Validation failed');
+            const error = new Error((validation.errors || ['Validation failed']).join('; '));
             error.statusCode = 400;
             error.errors = validation.errors;
             throw error;
@@ -122,22 +139,20 @@ async function updateTask(req, res) {
 
         const result = await tasksService.updateTask(userId, taskId, updates, req.io, req);
 
-        
-        const subtype = updates.status === 'completed' ? 'completed' : 'updated';
+        const workspaceId = result.task?.workspace ? String(result.task.workspace._id || result.task.workspace) : null;
+        const completed = !!result.completed;
         activityService.emit(req, {
             type: 'task',
-            subtype,
+            subtype: completed ? 'completed' : 'updated',
             actor: userId,
-            workspaceId: updates.workspaceId || null,
-            payload: { taskId, title: updates.title, status: updates.status },
+            workspaceId,
+            payload: { taskId, title: result.task?.title, status: result.task?.status },
         }).catch(() => {});
 
-        
-        const webhookEvent = updates.status === 'completed' ? 'task.completed' : 'task.updated';
-        _fireWebhook(updates.workspaceId, webhookEvent, {
+        _fireWebhook(workspaceId, completed ? 'task.completed' : 'task.updated', {
             taskId,
-            title: updates.title,
-            status: updates.status,
+            title: result.task?.title,
+            status: result.task?.status,
             updatedBy: userId
         });
 
@@ -204,12 +219,12 @@ async function requestTransfer(req, res) {
     try {
         const userId = req.user.sub;
         const taskId = req.params.id;
-        const { newAssigneeId, note } = req.body;
+        const { newAssigneeId, note } = req.body || {};
 
         
         const validation = validator.validateTransferRequest({ newAssigneeId, note });
         if (!validation.valid) {
-            const error = new Error('Validation failed');
+            const error = new Error((validation.errors || ['Validation failed']).join('; '));
             error.statusCode = 400;
             error.errors = validation.errors;
             throw error;
@@ -241,12 +256,12 @@ async function createSubtask(req, res) {
     try {
         const userId = req.user.sub;
         const parentId = req.params.id;
-        const subtaskData = req.body;
+        const subtaskData = req.body || {};
 
         
         const validation = validator.validateCreateSubtask(subtaskData);
         if (!validation.valid) {
-            const error = new Error('Validation failed');
+            const error = new Error((validation.errors || ['Validation failed']).join('; '));
             error.statusCode = 400;
             error.errors = validation.errors;
             throw error;
@@ -272,7 +287,7 @@ async function getTaskActivity(req, res) {
         
         const validation = validator.validatePagination(pagination);
         if (!validation.valid) {
-            const error = new Error('Validation failed');
+            const error = new Error((validation.errors || ['Validation failed']).join('; '));
             error.statusCode = 400;
             error.errors = validation.errors;
             throw error;
@@ -289,7 +304,7 @@ async function getTaskActivity(req, res) {
 async function addLink(req, res) {
     try {
         const userId = req.user.sub;
-        const { linkedTaskId, linkType } = req.body;
+        const { linkedTaskId, linkType } = req.body || {};
         if (!linkedTaskId || !linkType) {
             return res.status(400).json({ message: 'linkedTaskId and linkType are required' });
         }
@@ -329,7 +344,7 @@ async function removeWatcher(req, res) {
 
 async function addDependency(req, res) {
     try {
-        const { dependencyTaskId } = req.body;
+        const { dependencyTaskId } = req.body || {};
         if (!dependencyTaskId) return res.status(400).json({ message: 'dependencyTaskId required' });
         const result = await tasksService.addDependency(req.user.sub, req.params.id, dependencyTaskId);
         return res.json(result);
@@ -359,6 +374,7 @@ async function getWorkload(req, res) {
 
 module.exports = {
     getTasks,
+    getTask,
     getMyTasks,
     createTask,
     updateTask,

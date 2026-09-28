@@ -274,7 +274,8 @@ export const AuthProvider = ({ children }) => {
   
   
   
-  const login = async (email, password) => {
+  // `otp` is the authenticator code, sent on the second try when the server answers { requires2FA }.
+  const login = async (email, password, otp) => {
     try {
       
       const deviceMetadata = getDeviceMetadata();
@@ -284,6 +285,7 @@ export const AuthProvider = ({ children }) => {
         {
           email,
           password,
+          ...(otp ? { otp } : {}),
           ...deviceMetadata  
         }
       );

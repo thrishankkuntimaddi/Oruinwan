@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
-import { CircleHelp, Search, BookOpen, Command, Bug, Sparkles, Shield, Briefcase, Settings, LogOut, Bell, Check, UserPlus, MessageSquare, AtSign, X, Bot } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CircleHelp, Search, BookOpen, Command, Bug, Sparkles, Shield, Briefcase, Settings, LogOut, Bell, Check, X, Bot, Loader2, AlertCircle, RefreshCcw } from 'lucide-react';
+import api from '@services/api';
 import { getAvatarUrl } from '../../utils/avatarUtils';
-
-const MOCK_NOTIFS = [
-    { id: 1, type: 'mention', icon: AtSign, title: 'You were mentioned', body: '@you in #general — "Can you review the PR?"', time: '2m ago', read: false },
-    { id: 2, type: 'invite', icon: UserPlus, title: 'Workspace invite', body: 'Alex invited you to join "Design Team"', time: '18m ago', read: false },
-    { id: 3, type: 'message', icon: MessageSquare, title: 'New direct message', body: 'Jordan: "Hey, are you free for a quick call?"', time: '1h ago', read: true },
-    { id: 4, type: 'mention', icon: AtSign, title: 'You were mentioned', body: '@you in #design — "Looks great, LGTM!"', time: '3h ago', read: true },
-];
+import { useSocket } from '../../contexts/SocketContext';
+import { notificationHref } from '../../features/notifications/NotificationsContext';
+import { notificationTypeMeta, timeAgo, COUNT_BADGE_STYLE } from '../../features/notifications/notificationTypes';
 
 const btn = {
     background: 'none', border: 'none', cursor: 'pointer',
@@ -16,38 +14,123 @@ const btn = {
     color: 'var(--text-muted)', fontFamily: 'var(--font)',
 };
 
-const NotificationPanel = () => {
+// Without the display property, so Tailwind's responsive `hidden sm:flex` classes win.
+const { display: _display, ...btnNoDisplay } = btn;
+
+const PER_WORKSPACE = 8;
+const MAX_WORKSPACES = 12;
+
+/**
+ * Bell on /workspaces: the latest real notifications from every workspace the
+ * user is an active member of (GET /api/notifications is per workspace).
+ */
+const NotificationPanel = ({ workspaces = [] }) => {
+    const navigate = useNavigate();
+    const { socket } = useSocket() || {};
     const [open, setOpen] = useState(false);
-    const [notifs, setNotifs] = useState(MOCK_NOTIFS);
-    const unread = notifs.filter(n => !n.read).length;
-    const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-    const dismiss = (id) => setNotifs(prev => prev.filter(n => n.id !== id));
+    const [items, setItems] = useState([]);
+    const [unreadByWs, setUnreadByWs] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const activeWs = useMemo(
+        () => workspaces.filter(ws => !ws.membershipStatus || ws.membershipStatus === 'active').slice(0, MAX_WORKSPACES),
+        [workspaces],
+    );
+    const wsKey = activeWs.map(ws => ws.id).join(',');
+    const nameOf = useMemo(() => Object.fromEntries(activeWs.map(ws => [String(ws.id), ws.name])), [activeWs]);
+
+    const load = useCallback(async () => {
+        if (!activeWs.length) { setItems([]); setUnreadByWs({}); return; }
+        setLoading(true);
+        setError(null);
+        const results = await Promise.allSettled(activeWs.map(ws =>
+            api.get('/api/notifications', { params: { workspaceId: ws.id, limit: PER_WORKSPACE } })
+                .then(({ data }) => ({ ws, data }))));
+        const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+        if (!ok.length && results.length) {
+            const first = results.find(r => r.status === 'rejected');
+            setError(first?.reason?.response?.data?.message || 'Could not load notifications');
+        }
+        setItems(ok
+            .flatMap(({ ws, data }) => (data.notifications || []).map(n => ({ ...n, workspaceId: n.workspaceId || ws.id })))
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 20));
+        setUnreadByWs(Object.fromEntries(ok.map(({ ws, data }) => [String(ws.id), data.unreadCount || 0])));
+        setLoading(false);
+    }, [wsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => { load(); }, [load]);
+
+    // New / read / deleted notifications arrive on the user's socket room.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const events = ['notification:new', 'notification:read', 'notification:read-all', 'notification:deleted', 'notification:cleared'];
+        let timer = null;
+        const onAny = () => { clearTimeout(timer); timer = setTimeout(load, 300); };
+        events.forEach(e => socket.on(e, onAny));
+        return () => { clearTimeout(timer); events.forEach(e => socket.off(e, onAny)); };
+    }, [socket, load]);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [open]);
+
+    const unread = Object.values(unreadByWs).reduce((a, b) => a + b, 0);
+
+    const markRead = async (n) => {
+        if (n.read) return;
+        setItems(prev => prev.map(x => (x._id === n._id ? { ...x, read: true } : x)));
+        setUnreadByWs(prev => ({ ...prev, [String(n.workspaceId)]: Math.max(0, (prev[String(n.workspaceId)] || 0) - 1) }));
+        try { await api.patch(`/api/notifications/${n._id}/read`); } catch { load(); }
+    };
+
+    const open_ = (n) => {
+        markRead(n);
+        const href = notificationHref(n, n.workspaceId);
+        setOpen(false);
+        navigate(href || `/workspace/${n.workspaceId}/notifications`);
+    };
+
+    const markAllRead = async () => {
+        const wsIds = Object.entries(unreadByWs).filter(([, c]) => c > 0).map(([id]) => id);
+        setItems(prev => prev.map(x => ({ ...x, read: true })));
+        setUnreadByWs(prev => Object.fromEntries(Object.keys(prev).map(k => [k, 0])));
+        const res = await Promise.allSettled(wsIds.map(id => api.patch('/api/notifications/read-all', null, { params: { workspaceId: id } })));
+        if (res.some(r => r.status === 'rejected')) load();
+    };
+
+    const dismiss = async (n) => {
+        setItems(prev => prev.filter(x => x._id !== n._id));
+        if (!n.read) setUnreadByWs(prev => ({ ...prev, [String(n.workspaceId)]: Math.max(0, (prev[String(n.workspaceId)] || 0) - 1) }));
+        try { await api.delete(`/api/notifications/${n._id}`); } catch { load(); }
+    };
 
     return (
         <div style={{ position: 'relative' }}>
             <button
-                onClick={() => setOpen(o => !o)}
-                style={{ ...btn, color: open ? 'var(--accent)' : 'var(--text-muted)', background: open ? 'var(--bg-hover)' : 'none' }}
+                onClick={() => { setOpen(o => !o); if (!open) load(); }}
+                style={{ ...btn, position: 'relative', color: open ? 'var(--accent)' : 'var(--text-muted)', background: open ? 'var(--bg-hover)' : 'none' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = open ? 'var(--bg-hover)' : 'none'; e.currentTarget.style.color = open ? 'var(--accent)' : 'var(--text-muted)'; }}
                 title="Notifications"
+                aria-label={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'}
+                aria-expanded={open}
             >
                 <Bell size={18} />
                 {unread > 0 && (
-                    <span style={{
-                        position: 'absolute', top: '1px', right: '1px',
-                        minWidth: '15px', height: '15px', borderRadius: '50%',
-                        background: 'var(--accent)', color: '#0c0c0c',
-                        fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px',
-                    }}>{unread}</span>
+                    <span style={{ ...COUNT_BADGE_STYLE, position: 'absolute', top: '1px', right: '0px' }}>{unread > 99 ? '99+' : unread}</span>
                 )}
             </button>
 
             {open && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setOpen(false)} />}
 
             {open && (
-                <div style={{
-                    position: 'absolute', top: '44px', right: 0, width: '340px',
+                <div role="dialog" aria-label="Notifications" style={{
+                    position: 'fixed', top: '48px', right: '12px', width: '340px', maxWidth: 'calc(100vw - 24px)',
                     background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
                     borderRadius: '2px', zIndex: 100, overflow: 'hidden',
                     animation: 'mfFadeIn 0.15s ease',
@@ -56,7 +139,7 @@ const NotificationPanel = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--text-primary)' }}>
                             <Bell size={13} />
                             <span style={{ fontWeight: 600, fontSize: '12px' }}>Notifications</span>
-                            {unread > 0 && <span style={{ background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '2px' }}>{unread} new</span>}
+                            {unread > 0 && <span style={{ ...COUNT_BADGE_STYLE, padding: '0 5px' }}>{unread} new</span>}
                         </div>
                         {unread > 0 && (
                             <button onClick={markAllRead} style={{ ...btn, padding: '3px', fontSize: '11px', gap: '3px', color: 'var(--text-secondary)', fontWeight: 600 }}
@@ -66,50 +149,56 @@ const NotificationPanel = () => {
                         )}
                     </div>
 
-                    <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                        {notifs.length === 0 ? (
+                    <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                        {loading && items.length === 0 ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                                <Loader2 size={16} className="animate-spin" />
+                            </div>
+                        ) : error && items.length === 0 ? (
+                            <div role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '32px 16px', textAlign: 'center' }}>
+                                <AlertCircle size={20} style={{ color: 'var(--state-danger)' }} />
+                                <p style={{ fontSize: '12px', color: 'var(--text-primary)', margin: 0 }}>Couldn’t load notifications</p>
+                                <button onClick={load} style={{ ...btn, gap: '5px', padding: '5px 12px', fontSize: '11px', color: 'var(--text-primary)', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
+                                    <RefreshCcw size={11} /> Try again
+                                </button>
+                            </div>
+                        ) : items.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
                                 <Bell size={26} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                <p style={{ fontSize: '12px', fontWeight: 500 }}>All caught up!</p>
+                                <p style={{ fontSize: '12px', fontWeight: 500, margin: 0 }}>All caught up!</p>
                             </div>
-                        ) : notifs.map(n => {
-                            const Icon = n.icon;
+                        ) : items.map(n => {
+                            const { Icon, color } = notificationTypeMeta(n.type);
                             return (
-                                <div key={n.id} className="notif-row" style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px',
-                                    borderBottom: '1px solid var(--border-subtle)',
-                                    background: n.read ? 'var(--bg-surface)' : 'var(--bg-hover)',
-                                    transition: '150ms ease', cursor: 'default',
-                                }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = n.read ? 'var(--bg-surface)' : 'var(--bg-hover)'}
+                                <div key={n._id} className="wsn-row" role="button" tabIndex={0}
+                                    onClick={() => open_(n)}
+                                    onKeyDown={e => { if (e.key === 'Enter') open_(n); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px',
+                                        borderBottom: '1px solid var(--border-subtle)',
+                                        background: n.read ? 'var(--bg-surface)' : 'var(--bg-hover)',
+                                        cursor: 'pointer',
+                                    }}
                                 >
-                                    <div style={{ flexShrink: 0, width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+                                    <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color }}>
                                         <Icon size={13} />
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <p style={{ fontSize: '12px', fontWeight: 500, color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{n.title}</p>
+                                            <p style={{ fontSize: '12px', fontWeight: n.read ? 400 : 600, color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{n.title}</p>
                                             {!n.read && <span style={{ flexShrink: 0, width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)' }} />}
                                         </div>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</p>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '3px 0 0', fontWeight: 500 }}>{n.time}</p>
+                                        {n.body && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</p>}
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '3px 0 0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {nameOf[String(n.workspaceId)] || 'Workspace'} · {timeAgo(n.createdAt)}
+                                        </p>
                                     </div>
-                                    <button onClick={() => dismiss(n.id)} className="notif-dismiss"
-                                        style={{ ...btn, padding: '3px', color: 'var(--text-muted)', opacity: 0 }}
-                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                                    ><X size={11} /></button>
+                                    <button onClick={e => { e.stopPropagation(); dismiss(n); }} onKeyDown={e => e.stopPropagation()}
+                                        className="wsn-dismiss" title="Dismiss" aria-label={`Dismiss: ${n.title}`}
+                                    ><X size={12} /></button>
                                 </div>
                             );
                         })}
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '7px 14px', background: 'var(--bg-surface)', textAlign: 'center' }}>
-                        <button style={{ ...btn, padding: '2px', fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-hover)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--accent)'}
-                        >View all notifications</button>
                     </div>
                 </div>
             )}
@@ -117,13 +206,18 @@ const NotificationPanel = () => {
             <style>{`
                 @keyframes mfFadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
                 @keyframes hdrPing { 75%, 100% { transform: scale(2); opacity: 0; } }
-                .notif-row:hover .notif-dismiss { opacity: 1 !important; }
+                .wsn-row { transition: background 150ms ease; outline: none; }
+                .wsn-row:hover, .wsn-row:focus-visible { background: var(--bg-hover) !important; }
+                .wsn-dismiss { flex-shrink: 0; display: flex; padding: 3px; border-radius: 2px; color: var(--text-muted); background: none; border: none; cursor: pointer; opacity: 0; transition: opacity 150ms ease, color 150ms ease; }
+                .wsn-row:hover .wsn-dismiss, .wsn-row:focus-within .wsn-dismiss, .wsn-dismiss:focus-visible { opacity: 1; }
+                .wsn-dismiss:hover { color: var(--text-primary); background: var(--bg-active); }
+                @media (hover: none) { .wsn-dismiss { opacity: 1; } }
             `}</style>
         </div>
     );
 };
 
-const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, onSettingsClick, onLogout, onOwnerConsoleClick, onAdminConsoleClick, onManagerConsoleClick, onAIClick, showAI }) => {
+const Header = ({ workspaces = [], showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, onSettingsClick, onLogout, onOwnerConsoleClick, onAdminConsoleClick, onManagerConsoleClick, onAIClick, showAI }) => {
 
     const iconBtn = (active = false) => ({
         ...btn,
@@ -131,8 +225,9 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
         background: active ? 'var(--bg-hover)' : 'none',
     });
 
+    // No inline display: the `hidden md:flex` classes decide visibility.
     const consoleBtn = {
-        display: 'flex', alignItems: 'center', gap: '6px',
+        alignItems: 'center', gap: '6px',
         fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)',
         background: 'transparent', border: 'none', cursor: 'pointer',
         padding: '6px 10px', borderRadius: '2px', transition: '150ms ease',
@@ -182,7 +277,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                     {}
                     <button onClick={onProfileClick} title="View Profile" className="hidden sm:flex"
-                        style={{ ...btn, gap: '8px', padding: '4px 8px', maxWidth: '160px' }}
+                        style={{ ...btnNoDisplay, gap: '8px', padding: '4px 8px', maxWidth: '160px' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
@@ -194,13 +289,13 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                     </button>
 
                     {}
-                    <button onClick={onProfileClick} title="View Profile" className="sm:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button onClick={onProfileClick} title="View Profile" className="flex sm:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', alignItems: 'center', justifyContent: 'center' }}>
                         <img src={getAvatarUrl(user)} alt={user?.username || 'U'} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
                     </button>
 
                     <div className="hidden md:block" style={{ height: '18px', width: '1px', background: 'var(--border-subtle)', margin: '0 4px' }} />
 
-                    <NotificationPanel />
+                    <NotificationPanel workspaces={workspaces} />
 
                     <button onClick={onSettingsClick} style={iconBtn()} title="Settings"
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}

@@ -17,7 +17,7 @@ async function updateUserPreferences(userId, workspaceId, updates) {
     const allowedFields = ['message', 'threadReply', 'task', 'meeting', 'email', 'push'];
     const sanitized = {};
     for (const key of allowedFields) {
-        if (updates[key] !== undefined) sanitized[key] = Boolean(updates[key]);
+        if (typeof updates[key] === "boolean") sanitized[key] = updates[key];
     }
 
     const prefs = await NotificationPreference.findOneAndUpdate(

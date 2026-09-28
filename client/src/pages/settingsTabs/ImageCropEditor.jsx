@@ -1,37 +1,51 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { Button, IconButton } from './settingsUi';
+import './account/account.css';
 
-const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
+const CANVAS_SIZE = 320;
+
+/**
+ * Square crop editor for profile photos: drag to move, slider to zoom,
+ * rotate in 90° steps. Calls onConfirm with a JPEG blob of `outputSize` px.
+ */
+const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400, busy = false }) => {
     const canvasRef = useRef(null);
     const imgRef = useRef(null);
 
+    const [baseZoom, setBaseZoom] = useState(1);
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [dragging, setDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [imgNaturalSize, setImgNaturalSize] = useState({ w: 1, h: 1 });
     const [ready, setReady] = useState(false);
+    const [failed, setFailed] = useState(false);
 
-    const CANVAS_SIZE = 320; 
-
-    
     useEffect(() => {
+        setReady(false);
+        setFailed(false);
         const img = new Image();
         img.onload = () => {
             imgRef.current = img;
-            setImgNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-            
-            const minDim = Math.min(img.naturalWidth, img.naturalHeight);
-            const initZoom = CANVAS_SIZE / minDim;
-            setZoom(initZoom);
+            const fit = CANVAS_SIZE / Math.min(img.naturalWidth, img.naturalHeight);
+            setBaseZoom(fit);
+            setZoom(fit);
             setOffset({ x: 0, y: 0 });
+            setRotation(0);
             setReady(true);
         };
+        img.onerror = () => setFailed(true);
         img.src = src;
     }, [src]);
 
-    
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape' && !busy) onCancel?.(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [busy, onCancel]);
+
     const draw = useCallback(() => {
         if (!canvasRef.current || !imgRef.current || !ready) return;
         const ctx = canvasRef.current.getContext('2d');
@@ -40,24 +54,18 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
         ctx.save();
         ctx.translate(CANVAS_SIZE / 2 + offset.x, CANVAS_SIZE / 2 + offset.y);
         ctx.rotate((rotation * Math.PI) / 180);
-
         const w = imgRef.current.naturalWidth * zoom;
         const h = imgRef.current.naturalHeight * zoom;
         ctx.drawImage(imgRef.current, -w / 2, -h / 2, w, h);
         ctx.restore();
 
-        
+        // Dim everything outside the circle the avatar is shown in.
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-        ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE / 2 - 2, 0, Math.PI * 2);
+        ctx.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.arc(CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE / 2 - 2, 0, Math.PI * 2, true);
         ctx.fill();
-        ctx.restore();
-
-        
-        ctx.save();
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -68,121 +76,104 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
 
     useEffect(() => { draw(); }, [draw]);
 
-    
-    const onMouseDown = (e) => {
-        setDragging(true);
-        setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
-    };
-    const onMouseMove = (e) => {
-        if (!dragging) return;
-        setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    };
-    const onMouseUp = () => setDragging(false);
-
-    
-    const onTouchStart = (e) => {
-        const t = e.touches[0];
-        setDragging(true);
-        setDragStart({ x: t.clientX - offset.x, y: t.clientY - offset.y });
-    };
-    const onTouchMove = (e) => {
-        if (!dragging) return;
-        const t = e.touches[0];
-        setOffset({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
+    // The canvas may be shown smaller than its pixel size on narrow screens.
+    const scaleOf = () => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        return rect && rect.width ? CANVAS_SIZE / rect.width : 1;
     };
 
-    
+    const startDrag = (x, y) => {
+        const s = scaleOf();
+        setDragging(true);
+        setDragStart({ x: x * s - offset.x, y: y * s - offset.y });
+    };
+    const moveDrag = (x, y) => {
+        if (!dragging) return;
+        const s = scaleOf();
+        setOffset({ x: x * s - dragStart.x, y: y * s - dragStart.y });
+    };
+    const endDrag = () => setDragging(false);
+
+    const minZoom = baseZoom * 0.5;
+    const maxZoom = baseZoom * 4;
+    const zoomBy = (factor) => setZoom((z) => Math.max(minZoom, Math.min(maxZoom, z * factor)));
+
     const handleConfirm = () => {
         if (!imgRef.current) return;
         const out = document.createElement('canvas');
         out.width = outputSize;
         out.height = outputSize;
         const ctx = out.getContext('2d');
+        // JPEG has no transparency: give transparent images a white background, not black.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outputSize, outputSize);
 
         const scale = outputSize / CANVAS_SIZE;
         ctx.translate(outputSize / 2 + offset.x * scale, outputSize / 2 + offset.y * scale);
         ctx.rotate((rotation * Math.PI) / 180);
-
         const w = imgRef.current.naturalWidth * zoom * scale;
         const h = imgRef.current.naturalHeight * zoom * scale;
         ctx.drawImage(imgRef.current, -w / 2, -h / 2, w, h);
 
-        out.toBlob(
-            (blob) => { if (blob) onConfirm(blob); },
-            'image/jpeg', 0.92
-        );
+        out.toBlob((blob) => { if (blob) onConfirm(blob); }, 'image/jpeg', 0.92);
     };
 
-    const zoomBy = (delta) => setZoom(z => Math.max(0.2, Math.min(5, z + delta)));
-
-    return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">Crop & Edit Photo</h3>
-                    <button onClick={onCancel} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                        <X size={16} />
-                    </button>
-                </div>
-
-                {}
-                <div className="flex items-center justify-center bg-gray-900 py-6 px-6">
-                    <canvas
-                        ref={canvasRef}
-                        width={CANVAS_SIZE}
-                        height={CANVAS_SIZE}
-                        className="rounded-2xl cursor-grab active:cursor-grabbing"
-                        style={{ touchAction: 'none' }}
-                        onMouseDown={onMouseDown}
-                        onMouseMove={onMouseMove}
-                        onMouseUp={onMouseUp}
-                        onMouseLeave={onMouseUp}
-                        onTouchStart={onTouchStart}
-                        onTouchMove={onTouchMove}
-                        onTouchEnd={onMouseUp}
-                    />
-                </div>
-
-                <p className="text-center text-[11px] text-gray-400 py-2">Drag to reposition · Scroll or use buttons to zoom</p>
-
-                {}
-                <div className="px-5 py-3 space-y-3 border-t border-gray-200 dark:border-gray-800">
-                    {}
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => zoomBy(-0.1)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                            <ZoomOut size={15} />
-                        </button>
-                        <input
-                            type="range"
-                            min="0.3"
-                            max="4"
-                            step="0.05"
-                            value={zoom}
-                            onChange={e => setZoom(parseFloat(e.target.value))}
-                            className="flex-1 h-1.5 accent-blue-600"
-                        />
-                        <button onClick={() => zoomBy(0.1)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                            <ZoomIn size={15} />
-                        </button>
-                        <button onClick={() => setRotation(r => (r + 90) % 360)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
-                            <RotateCw size={15} />
-                        </button>
+    return createPortal(
+        <div className="stg">
+            <div className="stg-dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onCancel?.(); }}>
+                <div className="stg-dialog" role="dialog" aria-modal="true" aria-labelledby="stg-acc-crop-title">
+                    <h3 id="stg-acc-crop-title">Crop photo</h3>
+                    <div className="stg-dialog-body">
+                        {failed ? 'This image could not be opened. Try a JPG or PNG.' : 'Drag to reposition. Use the slider to zoom.'}
                     </div>
 
-                    {}
-                    <div className="flex gap-2">
-                        <button onClick={onCancel}
-                            className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-[12.5px] font-semibold rounded-lg transition-colors">
-                            Cancel
-                        </button>
-                        <button onClick={handleConfirm}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors">
-                            <Check size={14} /> Apply Crop
-                        </button>
+                    {!failed && (
+                        <>
+                            <div className="stg-acc-crop-stage">
+                                <canvas
+                                    ref={canvasRef}
+                                    width={CANVAS_SIZE}
+                                    height={CANVAS_SIZE}
+                                    aria-label="Crop area"
+                                    onMouseDown={(e) => startDrag(e.clientX, e.clientY)}
+                                    onMouseMove={(e) => moveDrag(e.clientX, e.clientY)}
+                                    onMouseUp={endDrag}
+                                    onMouseLeave={endDrag}
+                                    onTouchStart={(e) => startDrag(e.touches[0].clientX, e.touches[0].clientY)}
+                                    onTouchMove={(e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY)}
+                                    onTouchEnd={endDrag}
+                                />
+                            </div>
+                            <div className="stg-acc-crop-tools">
+                                <IconButton label="Zoom out" onClick={() => zoomBy(1 / 1.15)} disabled={!ready}><ZoomOut size={15} /></IconButton>
+                                <input
+                                    type="range"
+                                    aria-label="Zoom"
+                                    min={minZoom}
+                                    max={maxZoom}
+                                    step={(maxZoom - minZoom) / 100 || 0.01}
+                                    value={zoom}
+                                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                    disabled={!ready}
+                                />
+                                <IconButton label="Zoom in" onClick={() => zoomBy(1.15)} disabled={!ready}><ZoomIn size={15} /></IconButton>
+                                <IconButton label="Rotate" onClick={() => setRotation((r) => (r + 90) % 360)} disabled={!ready}><RotateCw size={15} /></IconButton>
+                            </div>
+                        </>
+                    )}
+
+                    <div className="stg-dialog-actions">
+                        <Button variant="ghost" onClick={onCancel} disabled={busy}>Cancel</Button>
+                        {!failed && (
+                            <Button variant="primary" onClick={handleConfirm} loading={busy} disabled={!ready}>
+                                {busy ? 'Uploading…' : 'Save photo'}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 };
 

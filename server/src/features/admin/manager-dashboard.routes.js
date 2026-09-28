@@ -378,40 +378,85 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
     }
 });
 
+// ── Manager task scope ──────────────────────────────────────────────────────
+// A manager sees tasks created by or assigned to members of the departments
+// they manage (company owners/admins: any department of their company), minus
+// private tasks they are not party to.
+const COMPANY_WIDE_ROLES = ['owner', 'admin'];
+
+async function _managerContext(req) {
+    const userId = String(req.user.sub || req.user._id);
+    const manager = await User.findById(userId).select('companyId companyRole managedDepartments coOwnerOf').lean();
+    if (!manager) return null;
+    const companyWide = COMPANY_WIDE_ROLES.includes(manager.companyRole) ||
+        (manager.coOwnerOf && manager.companyId && String(manager.coOwnerOf) === String(manager.companyId));
+    return { userId, manager, companyWide };
+}
+
+async function _managesDepartment(ctx, departmentId) {
+    const dept = await Department.findById(departmentId).select('company head managers').lean();
+    if (!dept) return { dept: null, allowed: false };
+    if (!ctx.manager.companyId || String(dept.company) !== String(ctx.manager.companyId)) return { dept, allowed: false };
+    if (ctx.companyWide) return { dept, allowed: true };
+    const allowed = (ctx.manager.managedDepartments || []).map(String).includes(String(departmentId)) ||
+        (dept.managers || []).map(String).includes(ctx.userId) ||
+        (dept.head && String(dept.head) === ctx.userId);
+    return { dept, allowed };
+}
+
+async function _managedDepartmentIds(ctx) {
+    if (!ctx.manager.companyId) return [];
+    const query = ctx.companyWide
+        ? { company: ctx.manager.companyId }
+        : {
+            company: ctx.manager.companyId,
+            $or: [
+                { _id: { $in: ctx.manager.managedDepartments || [] } },
+                { managers: ctx.userId },
+                { head: ctx.userId },
+            ],
+        };
+    return (await Department.find(query).select('_id').lean()).map(d => d._id);
+}
+
+function _taskScopeFilter(memberIds, managerId) {
+    const mid = new mongoose.Types.ObjectId(String(managerId));
+    return {
+        deleted: { $ne: true },
+        $and: [
+            { $or: [{ assignedTo: { $in: memberIds } }, { createdBy: { $in: memberIds } }] },
+            { $or: [{ visibility: { $ne: 'private' } }, { createdBy: mid }, { assignedTo: mid }] },
+        ],
+    };
+}
+
 router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
         const { departmentId } = req.params;
-        const userId = req.user.sub || req.user._id;
 
-        
         if (!isValidObjectId(departmentId)) {
             return res.status(400).json({ success: false, message: 'Invalid department ID' });
         }
 
-        
+        const ctx = await _managerContext(req);
+        if (!ctx) return res.status(401).json({ message: 'User not found' });
+        const { dept, allowed } = await _managesDepartment(ctx, departmentId);
+        if (!dept) return res.status(404).json({ message: 'Department not found' });
+        if (!allowed) return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+
         const members = await User.find({
             departments: departmentId,
             accountStatus: { $ne: 'removed' }
         }).select('_id');
         const memberIds = members.map(m => m._id);
+        memberIds.push(new mongoose.Types.ObjectId(ctx.userId));
 
-        
-        memberIds.push(userId);
-
-        
-        const allTasks = await Task.find({
-            $or: [
-                { assignedTo: { $in: memberIds } },
-                { createdBy: { $in: memberIds } }
-            ],
-            deleted: { $ne: true }
-        })
+        const allTasks = await Task.find(_taskScopeFilter(memberIds, ctx.userId))
             .populate('assignedTo', 'username email profilePicture')
             .populate('createdBy', 'username email')
             .sort({ createdAt: -1 })
             .lean();
 
-        
         const now = new Date();
         const tasks = {
             open: allTasks.filter(t => ['backlog', 'todo'].includes(t.status)),
@@ -425,27 +470,50 @@ router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res)
         res.json({ tasks, total: allTasks.length });
     } catch (error) {
         logger.error('Manager Tasks GET Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const { title, description, priority, dueDate, assignedTo } = req.body;
+        const { title, description, priority, dueDate, assignedTo } = req.body || {};
 
         if (!title?.trim()) {
             return res.status(400).json({ message: 'Task title is required' });
         }
 
-        const user = await User.findById(userId).select('companyId').lean();
+        const { departmentId } = req.params;
+        if (!isValidObjectId(departmentId)) {
+            return res.status(400).json({ message: 'Invalid department ID' });
+        }
+        const ctx = await _managerContext(req);
+        if (!ctx) return res.status(401).json({ message: 'User not found' });
+        const { dept, allowed } = await _managesDepartment(ctx, departmentId);
+        if (!dept) return res.status(404).json({ message: 'Department not found' });
+        if (!allowed) return res.status(403).json({ message: 'Access denied: You do not manage this department' });
+
+        // Assignees must be the manager or members of this department.
+        const assignees = [...new Set((Array.isArray(assignedTo) ? assignedTo : assignedTo ? [assignedTo] : []).map(String))];
+        if (assignees.some(id => !isValidObjectId(id))) {
+            return res.status(400).json({ message: 'Invalid assignee id' });
+        }
+        const others = assignees.filter(id => id !== String(userId));
+        if (others.length) {
+            const inDept = await User.countDocuments({ _id: { $in: others }, departments: departmentId, accountStatus: { $ne: 'removed' } });
+            if (inDept !== others.length) {
+                return res.status(400).json({ message: 'Assignees must be members of this department' });
+            }
+        }
+
+        const user = ctx.manager;
 
         const task = new Task({
             title: title.trim(),
             description: description || '',
-            priority: priority || 'medium',
+            priority: ['lowest', 'low', 'medium', 'high', 'highest'].includes(priority) ? priority : 'medium',
             dueDate: dueDate || null,
-            assignedTo: assignedTo || [],
+            assignedTo: assignees,
             createdBy: userId,
             company: user?.companyId || null,
             status: 'todo',
@@ -461,18 +529,21 @@ router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res
         res.status(201).json({ task, message: 'Task created successfully' });
     } catch (error) {
         logger.error('Manager Tasks POST Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        if (error.name === 'ValidationError' || error.name === 'CastError') {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
 router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, res) => {
     try {
         const { taskId } = req.params;
-        const { status } = req.body;
+        const { status, blockedReason, completionNote } = req.body || {};
+
+        if (!isValidObjectId(taskId)) return res.status(404).json({ message: 'Task not found' });
 
         const validStatuses = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
-
-        
         const statusMap = { 'in-progress': 'in_progress', 'done': 'done', 'open': 'todo' };
         const normalizedStatus = statusMap[status] || status;
 
@@ -480,21 +551,80 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
             return res.status(400).json({ message: `Invalid status: ${status}` });
         }
 
-        const task = await Task.findByIdAndUpdate(
-            taskId,
-            {
-                status: normalizedStatus,
-                ...(normalizedStatus === 'done' ? { completedAt: new Date() } : {})
-            },
-            { new: true }
-        ).populate('assignedTo', 'username email profilePicture');
+        const ctx = await _managerContext(req);
+        if (!ctx) return res.status(401).json({ message: 'User not found' });
 
-        if (!task) return res.status(404).json({ message: 'Task not found' });
+        const task = await Task.findById(taskId);
+        if (!task || task.deleted) return res.status(404).json({ message: 'Task not found' });
 
+        // Scope: the manager is party to the task, or it is a non-private task
+        // created by / assigned to a member of a department they manage.
+        const isParty = String(task.createdBy) === ctx.userId || (task.assignedTo || []).some(a => String(a) === ctx.userId);
+        let inScope = isParty;
+        if (!inScope && task.visibility !== 'private') {
+            const deptIds = await _managedDepartmentIds(ctx);
+            if (deptIds.length) {
+                const people = [task.createdBy, ...(task.assignedTo || [])];
+                inScope = (await User.countDocuments({ _id: { $in: people }, departments: { $in: deptIds } })) > 0;
+            }
+        }
+        if (!inScope) return res.status(403).json({ message: 'Access denied: this task is outside your team' });
+
+        const { isValidTransition, getAllowedTransitions, validateBlocked } = require('../../../utils/workflowValidator');
+        const previousStatus = task.status;
+        if (normalizedStatus !== previousStatus) {
+            if (!isValidTransition(previousStatus, normalizedStatus)) {
+                return res.status(400).json({
+                    message: `Invalid status transition from "${previousStatus}" to "${normalizedStatus}"`,
+                    allowedTransitions: getAllowedTransitions(previousStatus),
+                });
+            }
+            const reason = typeof blockedReason === 'string' ? blockedReason.trim() : '';
+            const blocked = validateBlocked(normalizedStatus, reason);
+            if (!blocked.valid) return res.status(400).json({ message: blocked.error });
+
+            task.previousStatus = previousStatus;
+            task.status = normalizedStatus;
+            if (normalizedStatus === 'blocked') {
+                task.blockedReason = reason;
+                task.blockedBy = ctx.userId;
+                task.blockedAt = new Date();
+            } else {
+                task.blockedReason = null;
+                task.blockedBy = null;
+                task.blockedAt = null;
+            }
+            if (normalizedStatus === 'done') {
+                task.completedAt = new Date();
+                task.completedBy = ctx.userId;
+                task.completionNote = typeof completionNote === 'string' ? completionNote.slice(0, 2000) : '';
+            } else if (previousStatus === 'done') {
+                task.completedAt = null;
+                task.completedBy = null;
+                task.completionNote = '';
+            }
+            await task.save();
+
+            try {
+                const TaskActivity = require('../../../models/TaskActivity');
+                await TaskActivity.create({
+                    task: task._id, user: ctx.userId, action: 'status_changed', field: 'status',
+                    from: previousStatus, to: normalizedStatus, metadata: { via: 'manager_dashboard' },
+                });
+            } catch (err) {
+                logger.warn({ err }, '[manager tasks] activity not recorded');
+            }
+
+            const shared = require('../tasks/tasks.shared');
+            const payload = await shared.loadTaskForClient(task._id);
+            await shared.emitToTaskAudience(req.io || req.app?.get('io'), task, 'task-updated', payload);
+        }
+
+        await task.populate('assignedTo', 'username email profilePicture');
         res.json({ task, message: 'Task status updated' });
     } catch (error) {
         logger.error('Manager Tasks PATCH Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

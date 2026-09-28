@@ -1,5 +1,59 @@
 const Notification = require('./notification.model');
+const Workspace = require('../../../models/Workspace');
 const logger = require('../../../utils/logger');
+const { isValidId } = require('../../shared/utils/workspaceAccess');
+
+// Human labels for task enums shown in notification texts.
+const TASK_STATUS_LABELS = {
+    backlog: 'Backlog',
+    todo: 'To do',
+    in_progress: 'In progress',
+    review: 'In review',
+    blocked: 'Blocked',
+    done: 'Done',
+    cancelled: 'Cancelled',
+};
+const TASK_PRIORITY_LABELS = {
+    lowest: 'Lowest',
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    highest: 'Highest',
+};
+
+function humanize(key) {
+    const s = String(key || '').replace(/_/g, ' ').trim();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+function statusLabel(status) {
+    return TASK_STATUS_LABELS[status] || humanize(status);
+}
+function priorityLabel(priority) {
+    return TASK_PRIORITY_LABELS[priority] || humanize(priority);
+}
+
+/** Client route for a task inside its workspace. */
+function taskLink(workspaceId, taskId) {
+    if (!workspaceId) return null;
+    const ws = String(workspaceId?._id || workspaceId);
+    return taskId ? `/workspace/${ws}/tasks/${taskId}` : `/workspace/${ws}/tasks`;
+}
+
+/**
+ * Set of user ids that are active members of an active workspace, or null
+ * when the id is malformed / the workspace does not exist.
+ */
+async function activeMemberIds(workspaceIdOrDoc) {
+    const workspaceId = workspaceIdOrDoc && workspaceIdOrDoc._id ? workspaceIdOrDoc._id : workspaceIdOrDoc;
+    if (!isValidId(workspaceId)) return null;
+    const ws = await Workspace.findOne({ _id: workspaceId, isActive: { $ne: false } })
+        .select('members.user members.status')
+        .lean();
+    if (!ws) return null;
+    return new Set((ws.members || [])
+        .filter(m => (m.status || 'active') === 'active')
+        .map(m => String(m.user?._id || m.user)));
+}
 
 // Which per-workspace preference toggle governs each notification type.
 // Types missing here are always delivered (digest, integration alerts...).
@@ -12,6 +66,7 @@ const PREF_KEY_BY_TYPE = {
     thread_reply: 'threadReply',
     task_assigned: 'task',
     task_comment: 'task',
+    task_status: 'task',
     task_due_soon: 'task',
     task_updated: 'task',
     task_removed: 'task',
@@ -42,9 +97,13 @@ function emitToUser(io, userId, event, payload) {
  * preferences (in-app toggle per category, push toggle). Returns null when
  * the recipient opted out or on error, so callers never need to guard.
  */
-async function create(io, { recipient, workspaceId, type, title, body = '', link = null, meta = {}, push }) {
+async function create(io, { recipient, workspaceId, type, title, body = '', link = null, meta = {}, push }, { members } = {}) {
     try {
         if (!recipient || !workspaceId) return null;
+
+        // Workspace notifications only ever go to active members of that workspace.
+        const memberSet = members !== undefined ? members : await activeMemberIds(workspaceId);
+        if (!memberSet || !memberSet.has(String(recipient))) return null;
 
         const prefs = await loadPrefs(recipient, workspaceId);
         const prefKey = PREF_KEY_BY_TYPE[type];
@@ -83,8 +142,17 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
 
 async function createMany(io, recipients, payload) {
     const unique = [...new Set((recipients || []).filter(Boolean).map(String))];
+    if (!unique.length || !payload?.workspaceId) return [];
+    let members;
+    try {
+        members = await activeMemberIds(payload.workspaceId);
+    } catch (err) {
+        logger.error('[notificationService.createMany] Error:', err.message);
+        return [];
+    }
+    if (!members) return [];
     const results = await Promise.allSettled(
-        unique.map(recipientId => create(io, { ...payload, recipient: recipientId }))
+        unique.map(recipientId => create(io, { ...payload, recipient: recipientId }, { members }))
     );
     return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
 }
@@ -134,7 +202,7 @@ async function taskAssigned(io, { assigneeId, assignerUsername, workspaceId, tas
         type: 'task_assigned',
         title: `${assignerUsername} assigned you a task`,
         body: taskTitle,
-        link: taskId ? `/tasks/${taskId}` : null,
+        link: taskLink(workspaceId, taskId),
         meta: { assignerUsername, taskTitle, taskId },
     });
 }
@@ -146,7 +214,7 @@ async function taskComment(io, { recipientId, commenterUsername, workspaceId, ta
         type: 'task_comment',
         title: `${commenterUsername} commented on a task`,
         body: taskTitle,
-        link: taskId ? `/tasks/${taskId}` : null,
+        link: taskLink(workspaceId, taskId),
         meta: { commenterUsername, taskTitle, taskId },
     });
 }
@@ -154,11 +222,11 @@ async function taskComment(io, { recipientId, commenterUsername, workspaceId, ta
 async function taskStatusChanged(io, { recipientIds, changerUsername, workspaceId, taskTitle, taskId, from, to }) {
     return createMany(io, recipientIds, {
         workspaceId,
-        type: 'task_comment',
+        type: 'task_status',
         title: `${changerUsername} moved "${taskTitle}"`,
-        body: `${from || 'todo'} → ${to}`,
-        link: taskId ? `/tasks/${taskId}` : null,
-        meta: { changerUsername, taskTitle, taskId, from, to, kind: 'status' },
+        body: `${statusLabel(from || 'todo')} → ${statusLabel(to)}`,
+        link: taskLink(workspaceId, taskId),
+        meta: { changerUsername, taskTitle, taskId, from, to, fromLabel: statusLabel(from || 'todo'), toLabel: statusLabel(to), kind: 'status' },
         push: false,
     });
 }
@@ -169,7 +237,7 @@ async function taskUpdated(io, { recipientIds, actorUsername, workspaceId, taskT
         type: 'task_updated',
         title: `${actorUsername} updated "${taskTitle}"`,
         body: summary || 'Task details changed',
-        link: taskId ? `/tasks/${taskId}` : null,
+        link: taskLink(workspaceId, taskId),
         meta: { actorUsername, taskTitle, taskId, kind },
         push: false,
     });
@@ -181,7 +249,7 @@ async function taskRemoved(io, { recipientIds, actorUsername, workspaceId, taskT
         type: 'task_removed',
         title: reason === 'deleted' ? `${actorUsername} deleted "${taskTitle}"` : `${actorUsername} unassigned you from "${taskTitle}"`,
         body: reason === 'deleted' ? 'The task was removed' : 'You are no longer assigned to this task',
-        link: reason === 'deleted' ? '/tasks' : (taskId ? `/tasks/${taskId}` : null),
+        link: reason === 'deleted' ? taskLink(workspaceId, null) : taskLink(workspaceId, taskId),
         meta: { actorUsername, taskTitle, taskId, reason },
     });
 }
@@ -192,7 +260,7 @@ async function taskTransfer(io, { recipientIds, requesterUsername, workspaceId, 
         type: 'task_transfer',
         title: `${requesterUsername} requested a transfer`,
         body: `"${taskTitle}" → ${toUsername}${note ? ` · ${note}` : ''}`,
-        link: taskId ? `/tasks/${taskId}` : null,
+        link: taskLink(workspaceId, taskId),
         meta: { requesterUsername, toUsername, taskTitle, taskId, note },
     });
 }
@@ -281,6 +349,12 @@ async function threadReply(io, { followerIds, senderUsername, workspaceId, chann
 
 module.exports = {
     PREF_KEY_BY_TYPE,
+    TASK_STATUS_LABELS,
+    TASK_PRIORITY_LABELS,
+    statusLabel,
+    priorityLabel,
+    taskLink,
+    activeMemberIds,
     emitToUser,
     create,
     createMany,

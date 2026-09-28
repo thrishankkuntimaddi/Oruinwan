@@ -35,6 +35,7 @@ import ThreadSummaryModal from './modals/ThreadSummaryModal.jsx';
 import MessageDiffViewer from '../MessageDiffViewer.jsx';
 import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.jsx';
 import { encryptMessageForSending } from '../../../services/messageEncryptionService';
+import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -48,6 +49,7 @@ import HuddleOverlay from '../../huddles/components/HuddleOverlay.jsx';
 
 import './chatWindow.css';
 import logger from '../../../utils/logger';
+import { getUserPreferences } from '../../../hooks/useUserPreferences';
 
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
@@ -772,6 +774,19 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     // Opening a conversation (or returning to the tab while it is open) marks
     // it read everywhere: server readBy, this tab's badge, other tabs/devices.
+    // Loaded messages as plaintext (decrypted on this device) for Oruinwan AI.
+    function decryptedTranscript() {
+        return (conversationRef.current?.events || [])
+            .filter(e => e && (e.type === 'message' || !e.type))
+            .map(e => ({
+                id: e.id,
+                sender: e.sender?.username || (typeof e.sender === 'string' ? e.sender : 'User'),
+                text: e.decryptedContent || e.text || e.payload?.text || '',
+                isMe: String(e.sender?._id || e.sender) === String(currentUserId),
+            }))
+            .filter(m => m.text);
+    }
+
     // Expose the open conversation (decrypted) to Oruinwan AI.
     const aiCtx = useAIContext();
     const setAIConversation = aiCtx?.setConversation;
@@ -781,18 +796,22 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             id: String(conversationId),
             type: conversationType,
             name: chat?.name || '',
-            getMessages: () => (conversationRef.current?.events || [])
-                .filter(e => e && (e.type === 'message' || !e.type))
-                .map(e => ({
-                    id: e.id,
-                    sender: e.sender?.username || (typeof e.sender === 'string' ? e.sender : 'User'),
-                    text: e.decryptedContent || e.text || e.payload?.text || '',
-                    isMe: String(e.sender?._id || e.sender) === String(currentUserId),
-                }))
-                .filter(m => m.text),
+            getMessages: () => decryptedTranscript(),
         });
         return () => setAIConversation(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setAIConversation, conversationId, conversationType, chat?.name, currentUserId]);
+
+    // Oruinwan AI as a participant: @ai / @Oruinwan in a message gets an answer
+    // here, streamed live to everyone in the conversation.
+    const conversationAI = useConversationAI({
+        socket: rawSocket,
+        conversationId,
+        conversationType,
+        workspaceId: workspaceId || activeWorkspace?.id || activeWorkspace?._id || null,
+        currentUserId,
+        onError: (msg) => showToast(msg, 'error'),
+    });
 
     const notifCtx = useNotifications();
     const clearConversationUnread = notifCtx?.clearConversationUnread;
@@ -805,7 +824,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             clearConversationUnread?.(conversationType, String(conversationId));
             if (rawSocket?.connected && latestEventId !== lastMessageIdRef.current) {
                 lastMessageIdRef.current = latestEventId;
-                rawSocket.emit('mark-chat-read', { type: conversationType, id: conversationId });
+                // Always sent so our own unread counts clear; with read receipts off
+                // (Settings → Privacy) `receipts: false` asks the server not to tell others.
+                const receipts = getUserPreferences().privacy.readReceipts !== false;
+                rawSocket.emit('mark-chat-read', { type: conversationType, id: conversationId, receipts });
             }
         };
         markRead();
@@ -995,13 +1017,26 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
             setReplyingTo(null);
             setNewMessage('');
+
+            // Addressed to the AI: an @mention, or a follow-up right after it answered me
+            // (unless I'm now talking to a person).
+            const followUp = conversationAI.isFollowUp(null) && !mentionsPerson(mentionText);
+            if (conversationAI.isFollowUp(null) && mentionsPerson(mentionText)) conversationAI.endFollowUp(null);
+            if (mentionsAI(markdown) || followUp) {
+                conversationAI.ask({
+                    prompt: markdown,
+                    triggerMessageId: result.message?._id || null,
+                    messages: [...decryptedTranscript(), { sender: user?.username || 'Me', text: markdown, isMe: true }],
+                    conversationName: chat?.name,
+                });
+            }
         } else {
             showToast(result.message || result.error || 'Failed to send message', 'error');
         }
 
         return result;
-        
-    }, [actions, replyingTo, showToast]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, user?.username]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1192,9 +1227,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         }
     }, [location?.state?.openTabId, tabs]);
 
-    const handleThreadOpen = useCallback((message) => {
-        setActiveThread(message);
+    // One side panel at a time inside the conversation: thread, saved, pinned or reminders.
+    const openSidePanel = useCallback((name) => {
+        setShowBookmarks(name === 'bookmarks');
+        setShowPinned(name === 'pinned');
+        setShowReminders(name === 'reminders');
+        if (name !== 'thread') setActiveThread(null);
     }, []);
+
+    const handleThreadOpen = useCallback((message) => {
+        openSidePanel('thread');
+        setActiveThread(message);
+    }, [openSidePanel]);
 
     
     const handleThreadClose = useCallback(() => {
@@ -1551,9 +1595,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onStartHuddle={features.huddles ? () => startOrJoinCall(false) : undefined}
                 onStartVideoCall={features.huddles ? () => startOrJoinCall(true) : undefined}
                 huddleActive={huddle.active}
-                onShowBookmarks={() => setShowBookmarks(true)}
-                onShowReminders={() => setShowReminders(true)}
-                onShowPinned={(chat?.type === 'channel' || chat?.type === 'dm') ? () => setShowPinned(true) : undefined}
+                onShowBookmarks={() => (showBookmarks ? setShowBookmarks(false) : openSidePanel('bookmarks'))}
+                onShowReminders={() => (showReminders ? setShowReminders(false) : openSidePanel('reminders'))}
+                onShowPinned={(chat?.type === 'channel' || chat?.type === 'dm') ? () => (showPinned ? setShowPinned(false) : openSidePanel('pinned')) : undefined}
             />
 
             {}
@@ -1573,6 +1617,19 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             {}
             <CentralContentView
                 typingUsers={typingUsers}
+                aiLiveReplies={conversationAI.mainReplies}
+                sidePanel={showReminders ? (
+                    <RemindersPanel onClose={() => setShowReminders(false)} />
+                ) : showPinned && (chat?.type === 'channel' || chat?.type === 'dm') ? (
+                    <PinnedMessagesPanel
+                        channelId={chat.type === 'channel' ? chat.id : undefined}
+                        dmSessionId={chat.type === 'dm' ? chat.id : undefined}
+                        currentUserId={currentUserId}
+                        onClose={() => setShowPinned(false)}
+                        onJump={(id) => jumpToLoadedMessage(id)}
+                    />
+                ) : null}
+                aiFollowUp={conversationAI.isFollowUp(null) ? { onStop: () => conversationAI.endFollowUp(null) } : null}
                 
                 activeTab={activeTab}
                 tabs={tabs}
@@ -1780,7 +1837,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 />
             )}
             {}
-            {showReminders && <RemindersPanel onClose={() => setShowReminders(false)} />}
             {showChecklistModal && (
                 <CreateChecklistModal
                     onClose={() => setShowChecklistModal(false)}
@@ -1801,15 +1857,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                             }, currentUserId);
                         }
                     }}
-                />
-            )}
-            {showPinned && (chat?.type === 'channel' || chat?.type === 'dm') && (
-                <PinnedMessagesPanel
-                    channelId={chat.type === 'channel' ? chat.id : undefined}
-                    dmSessionId={chat.type === 'dm' ? chat.id : undefined}
-                    currentUserId={currentUserId}
-                    onClose={() => setShowPinned(false)}
-                    onJump={(id) => { setShowPinned(false); jumpToLoadedMessage(id); }}
                 />
             )}
             {(chat?.type === 'channel' || chat?.type === 'dm') && (

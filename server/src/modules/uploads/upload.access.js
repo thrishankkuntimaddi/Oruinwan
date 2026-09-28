@@ -5,6 +5,14 @@ const mongoose = require('mongoose');
 // (avatars and company logos are rendered next to names across the app).
 const SHARED_PREFIXES = ['profiles/', 'company-logos/'];
 
+/**
+ * Avatars and logos are rendered by plain <img> tags, which cannot send an Authorization
+ * header. In production they live in a public bucket; with the local storage driver they
+ * are served through /uploads/file, so these folders are readable without a token too
+ * (object names are random UUIDs, not guessable).
+ */
+const isPublicObject = (gcsPath) => typeof gcsPath === 'string' && SHARED_PREFIXES.some((p) => gcsPath.startsWith(p));
+
 function idEq(a, b) {
     return a != null && b != null && String(a) === String(b);
 }
@@ -90,4 +98,4 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     return false;
 }
 
-module.exports = { canAccessFile };
+module.exports = { isPublicObject, canAccessFile };

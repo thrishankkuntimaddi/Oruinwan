@@ -1,40 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, RefreshCw } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { PRIORITY_META, taskErrorMessage } from '../../utils/taskMeta';
+import { UserAvatar } from './taskUi';
 
-function initials(user) {
-  if (!user) return '?';
-  const name = user.username || user.firstName || '';
-  return name.charAt(0).toUpperCase() || '?';
-}
 
 const T = {
   bg: 'var(--bg-base)', bar: 'var(--bg-hover)', border: 'var(--border-subtle)',
-  text: 'var(--text-primary)', muted: 'var(--text-muted)', accent: '#b8956a',
+  text: 'var(--text-primary)', muted: 'var(--text-secondary)', accent: 'var(--accent)',
   font: 'Inter, system-ui, sans-serif',
 };
 
-function avatarColor(name) {
-  const colors = ['#b8956a', '#8b5cf6', '#22c55e', '#f97316', '#3b82f6', '#06b6d4', '#ec4899'];
-  if (!name) return colors[0];
-  return colors[name.charCodeAt(0) % colors.length];
-}
 
-function formatTime(seconds) {
-  if (!seconds) return '';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
 
 function WorkloadRow({ item, maxCount }) {
   const pct = maxCount > 0 ? Math.round((item.count / maxCount) * 100) : 0;
   const name = item.user?.username || item.user?.firstName || 'Unknown';
-  const bgColor = avatarColor(name);
 
-  const barColor = pct > 75 ? '#ef4444' : pct > 50 ? '#f97316' : T.accent;
+  const barColor = pct > 75 ? 'var(--state-danger)' : pct > 50 ? PRIORITY_META.high.color : T.accent;
 
   return (
     <div
@@ -42,12 +26,7 @@ function WorkloadRow({ item, maxCount }) {
       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      <div
-        style={{ width: '28px', height: '28px', borderRadius: '50%', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}
-        title={name}
-      >
-        {initials(item.user)}
-      </div>
+      <UserAvatar user={{ id: item.userId || item.user?._id, username: name, profilePicture: item.user?.profilePicture }} size={28} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
@@ -81,7 +60,7 @@ export default function WorkloadPanel({ workspaceId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchWorkload = async () => {
+  const fetchWorkload = useCallback(async () => {
     if (!workspaceId) {
       setError('No workspace selected.');
       return;
@@ -93,17 +72,17 @@ export default function WorkloadPanel({ workspaceId }) {
       const res = await api.get(`/api/v2/tasks/workload?workspaceId=${workspaceId}`);
       setWorkload(res.data.workload || []);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to load workload data.';
+      const msg = taskErrorMessage(err, 'Failed to load workload data.');
       setError(msg);
       showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, showToast]);
 
   useEffect(() => {
     fetchWorkload();
-  }, [workspaceId]); 
+  }, [fetchWorkload]);
 
   const maxCount = workload.reduce((max, item) => Math.max(max, item.count), 0);
   const totalTasks = workload.reduce((sum, item) => sum + item.count, 0);
@@ -113,7 +92,7 @@ export default function WorkloadPanel({ workspaceId }) {
       {}
       <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Users size={14} style={{ color: T.accent }} />
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Team Workload</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: T.text }}>Team workload</span>
         {!loading && workload.length > 0 && (
           <span style={{ fontSize: '11px', color: T.muted }}>
             — {workload.length} member(s) · {totalTasks} task(s) total
@@ -137,8 +116,8 @@ export default function WorkloadPanel({ workspaceId }) {
         <div style={{ flexShrink: 0, padding: '6px 16px', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
           {[
             { color: T.accent, label: 'Normal (≤50%)' },
-            { color: '#f97316', label: 'Heavy (51-75%)' },
-            { color: '#ef4444', label: 'Overloaded (>75%)' },
+            { color: PRIORITY_META.high.color, label: 'Heavy (51-75%)' },
+            { color: 'var(--state-danger)', label: 'Overloaded (>75%)' },
           ].map(l => (
             <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: l.color }} />
@@ -158,7 +137,7 @@ export default function WorkloadPanel({ workspaceId }) {
         )}
         {error && !loading && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '160px', gap: '8px' }}>
-            <p style={{ fontSize: '13px', color: '#f87171', fontFamily: T.font }}>{error}</p>
+            <p style={{ fontSize: '13px', color: 'var(--state-danger)', fontFamily: T.font }}>{error}</p>
             <button onClick={fetchWorkload} style={{ fontSize: '11px', color: T.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: T.font }}>Retry</button>
           </div>
         )}
@@ -166,7 +145,7 @@ export default function WorkloadPanel({ workspaceId }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '192px', gap: '8px' }}>
             <Users size={28} style={{ opacity: 0.2, color: T.muted }} />
             <p style={{ fontSize: '13px', color: T.muted, fontFamily: T.font }}>No assigned tasks in this workspace</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: T.font }}>Assign tasks to team members to see workload here</p>
+            <p style={{ fontSize: '11px', color: T.muted, fontFamily: T.font }}>Assign tasks to team members to see workload here</p>
           </div>
         )}
         {!loading && !error && workload.map(item => (

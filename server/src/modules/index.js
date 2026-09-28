@@ -16,6 +16,7 @@ const MODULES = [
     require('./threads'),
     require('./notifications'),
     require('./huddles'),
+    require('./meetings'),
 ];
 
 function registerModules(ctx) {

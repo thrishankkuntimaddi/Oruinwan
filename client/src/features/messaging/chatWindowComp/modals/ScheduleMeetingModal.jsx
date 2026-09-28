@@ -14,10 +14,23 @@ const inputStyle = {
     boxSizing: 'border-box',
 };
 
-export default function ScheduleMeetingModal({ onSchedule, onClose, conversationId, conversationType }) {
+const pad = (n) => String(n).padStart(2, '0');
+/** YYYY-MM-DD in the user's local time zone (toISOString would give the UTC date). */
+const localDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/** Default slot: the next full hour (tomorrow when that crosses midnight). */
+function nextFullHour() {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return { date: localDate(d), hour: pad(d.getHours()) };
+}
+
+export default function ScheduleMeetingModal({ onSchedule, onClose }) {
+    const [defaults] = useState(nextFullHour);
     const [title,      setTitle]      = useState('');
-    const [startDate,  setStartDate]  = useState('');
-    const [startHour,  setStartHour]  = useState('09');
+    const [startDate,  setStartDate]  = useState(defaults.date);
+    const [startHour,  setStartHour]  = useState(defaults.hour);
     const [startMin,   setStartMin]   = useState('00');
     const [duration,   setDuration]   = useState(30);
     const [meetingLink,setMeetingLink]= useState('');
@@ -36,6 +49,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
         if (!title.trim()) { setError('A title is required.'); return; }
         const isoTime = buildISO();
         if (!isoTime) { setError('Please set a valid date and time.'); return; }
+        if (new Date(isoTime).getTime() < Date.now() - 60000) { setError('Pick a time in the future.'); return; }
         if (meetingLink && !/^https?:\/\//i.test(meetingLink)) {
             setError('Meeting link must start with http:// or https://'); return;
         }
@@ -48,7 +62,9 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                 participants: [],
             });
             onClose();
-        } catch { setError('Failed to schedule meeting. Please try again.'); }
+        } catch (err) {
+            setError(err?.response?.data?.message || err?.message || 'Failed to schedule meeting. Please try again.');
+        }
         finally { setSubmitting(false); }
     }
 
@@ -117,8 +133,9 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         <input
                             type="date" value={startDate}
                             onChange={e => setStartDate(e.target.value)}
-                            min={new Date().toISOString().slice(0, 10)}
-                            style={{ ...inputStyle, colorScheme: 'dark' }}
+                            min={localDate(new Date())}
+                            // Native date picker follows the app theme (html.light), not the OS.
+                            style={{ ...inputStyle, colorScheme: document.documentElement.classList.contains('light') ? 'light' : 'dark' }}
                             onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
                             onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                         />

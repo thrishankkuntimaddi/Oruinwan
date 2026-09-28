@@ -19,7 +19,11 @@ async function _dispatch(workspaceId, event, data) {
   const hooks = await Webhook.find({
     workspaceId,
     isActive: true,
-    event: { $in: [event, '*'] }
+    // New rows store `events: [..]`; legacy rows only have `event`.
+    $or: [
+      { events: { $in: [event, '*'] } },
+      { event: { $in: [event, '*'] } }
+    ]
   }).lean();
 
   if (!hooks.length) return;
@@ -102,4 +106,47 @@ function _sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-module.exports = { fire };
+function _headers(event, signature, deliveryId) {
+  return {
+    'Content-Type': 'application/json',
+    'X-Chttrix-Event': event,
+    'X-Chttrix-Signature': signature,
+    'X-Chttrix-Delivery': deliveryId
+  };
+}
+
+/**
+ * Send one signed `webhook.test` payload to `hook.url` (no retries).
+ * Resolves { status, ok } — status is the HTTP status of the receiver, or 0
+ * when it could not be reached.
+ */
+async function sendTest(hook, { triggeredBy } = {}) {
+  const payload = {
+    event: 'webhook.test',
+    workspaceId: String(hook.workspaceId),
+    data: { webhookId: String(hook._id), message: 'This is a test delivery.', triggeredBy: triggeredBy ? String(triggeredBy) : undefined },
+    timestamp: new Date().toISOString()
+  };
+  // Sign exactly the bytes we send.
+  const body = JSON.stringify(payload);
+  const signature = _sign(body, hook.secret);
+  let status = 0;
+  try {
+    const response = await axios.post(hook.url, body, {
+      timeout: 8000,
+      maxRedirects: 0,
+      validateStatus: () => true,
+      headers: _headers(payload.event, signature, String(hook._id))
+    });
+    status = response.status;
+  } catch (err) {
+    status = err.response?.status || 0;
+  }
+  const ok = status >= 200 && status < 300;
+  try {
+    await Webhook.findByIdAndUpdate(hook._id, { lastTriggeredAt: new Date(), lastStatusCode: status });
+  } catch { /* stats are best-effort */ }
+  return { status, ok };
+}
+
+module.exports = { fire, sendTest, _sign };

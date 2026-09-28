@@ -1,47 +1,27 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    Bell, AtSign, UserPlus, Check, MessageCircle, GitBranch,
-    Trash2, RefreshCcw, Loader2, ExternalLink, Settings,
-    ChevronDown, X, Calendar, Zap, Brain, AlertTriangle
+    Bell, Check, Trash2, RefreshCcw, Loader2, ExternalLink, Settings,
+    ChevronDown, X, AlertCircle,
 } from 'lucide-react';
-import { useNotifications } from '../features/notifications/NotificationsContext';
+import { useNotifications, notificationHref } from '../features/notifications/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
+import { notificationTypeMeta, timeAgo, COUNT_BADGE_STYLE } from '../features/notifications/notificationTypes';
 
 const T = {
     bg:          'var(--bg-base)',
     surface:     'var(--bg-surface)',
     border:      'var(--border-subtle)',
     borderHover: 'var(--border-default)',
-    accent:      '#b8956a',
+    accent:      'var(--accent)',
     accentBg:    'var(--accent-dim)',
+    danger:      'var(--state-danger)',
     text:        'var(--text-primary)',
+    secondary:   'var(--text-secondary)',
     muted:       'var(--text-muted)',
     dim:         'var(--text-muted)',
-    font:        'Inter, system-ui, sans-serif',
-};
-
-const TYPE_META = {
-    mention:          { label: 'Mention',     Icon: AtSign,       dot: '#a78bfa', tabKey: 'mentions' },
-    dm:               { label: 'Message',     Icon: MessageCircle,dot: '#38bdf8', tabKey: 'messages' },
-    task_assigned:    { label: 'Task',        Icon: Check,        dot: '#34d399', tabKey: 'tasks' },
-    task_comment:     { label: 'Task',        Icon: MessageCircle,dot: '#fbbf24', tabKey: 'tasks' },
-    task_due_soon:    { label: 'Due Soon',    Icon: Bell,         dot: '#fb923c', tabKey: 'tasks' },
-    task_updated:     { label: 'Task',        Icon: Check,        dot: '#38bdf8', tabKey: 'tasks' },
-    task_removed:     { label: 'Task',        Icon: AlertTriangle,dot: '#f87171', tabKey: 'tasks' },
-    task_transfer:    { label: 'Transfer',    Icon: GitBranch,    dot: '#fbbf24', tabKey: 'tasks' },
-    note_shared:      { label: 'Note',        Icon: Zap,          dot: '#a78bfa', tabKey: 'all' },
-    member_joined:    { label: 'Team',        Icon: UserPlus,     dot: '#34d399', tabKey: 'team' },
-    channel_pinned:   { label: 'Channel',     Icon: Bell,         dot: '#c084fc', tabKey: 'all' },
-    huddle_started:   { label: 'Huddle',      Icon: Bell,         dot: '#f87171', tabKey: 'all' },
-    schedule_created: { label: 'Meeting',     Icon: Calendar,     dot: '#fb923c', tabKey: 'all' },
-    meeting_reminder: { label: 'Meeting',     Icon: Calendar,     dot: '#f87171', tabKey: 'all' },
-    reaction:         { label: 'Reaction',    Icon: Bell,         dot: '#f472b6', tabKey: 'all' },
-    thread_reply:     { label: 'Thread',      Icon: GitBranch,    dot: '#c084fc', tabKey: 'messages' },
-    integration_alert:{ label: 'Integration', Icon: AlertTriangle,dot: T.accent,  tabKey: 'all' },
-    ai_suggestion:    { label: 'AI',          Icon: Brain,        dot: '#a78bfa', tabKey: 'all' },
-    digest:           { label: 'Digest',      Icon: Zap,          dot: '#38bdf8', tabKey: 'all' },
+    font:        'var(--font)',
 };
 
 const TABS = [
@@ -53,17 +33,6 @@ const TABS = [
     { key: 'team',     label: 'Team' },
     { key: 'settings', label: 'Settings', Icon: Settings },
 ];
-
-function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    return d === 1 ? 'yesterday' : `${d}d ago`;
-}
 
 function groupByDay(notifications) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -83,25 +52,34 @@ export default function NotificationsPage() {
     const { workspaceId } = useParams();
     const { activeWorkspace } = useWorkspace();
     const {
-        notifications, unreadCount, loading, hasMore,
+        notifications, unreadCount, loading, error, hasMore,
         loadMore, refresh, markRead, markAllRead, dismiss, clearAll,
     } = useNotifications();
 
     const [activeTab, setActiveTab] = useState('all');
     const [hoveredId, setHoveredId] = useState(null);
+    const [confirmClear, setConfirmClear] = useState(false);
+    const [clearing, setClearing] = useState(false);
+
+    const doClearAll = async () => {
+        setClearing(true);
+        const ok = await clearAll();
+        setClearing(false);
+        if (ok !== false) setConfirmClear(false);
+    };
 
     const filtered = notifications.filter(n => {
         if (activeTab === 'all') return true;
         if (activeTab === 'unread') return !n.read;
-        const meta = TYPE_META[n.type];
-        return meta?.tabKey === activeTab;
+        return notificationTypeMeta(n.type).tab === activeTab;
     });
 
     const groups = groupByDay(filtered);
 
     const handleClick = useCallback((n) => {
         if (!n.read) markRead(n._id);
-        if (n.link) navigate(`/workspace/${workspaceId}${n.link}`);
+        const href = notificationHref(n, workspaceId);
+        if (href) navigate(href);
     }, [markRead, navigate, workspaceId]);
 
     const renderGroup = (label, items) => {
@@ -116,23 +94,29 @@ export default function NotificationsPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     {items.map(n => {
-                        const meta = TYPE_META[n.type] || TYPE_META.channel_pinned;
-                        const { Icon, dot, label: typeLabel } = meta;
+                        const { Icon, color: dot, label: typeLabel } = notificationTypeMeta(n.type);
                         const isHovered = hoveredId === n._id;
+                        const href = notificationHref(n, workspaceId);
                         return (
                             <div
                                 key={n._id}
                                 onClick={() => handleClick(n)}
                                 onMouseEnter={() => setHoveredId(n._id)}
                                 onMouseLeave={() => setHoveredId(null)}
+                                onFocus={() => setHoveredId(n._id)}
+                                onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHoveredId(null); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleClick(n); }}
+                                tabIndex={0}
+                                role="button"
                                 style={{
                                     display: 'flex', alignItems: 'flex-start', gap: '12px',
                                     padding: '10px 14px',
                                     background: n.read
                                         ? (isHovered ? 'var(--bg-hover)' : 'transparent')
-                                        : (isHovered ? 'var(--accent-dim)' : 'rgba(184,149,106,0.04)'),
-                                    border: `1px solid ${n.read ? (isHovered ? T.borderHover : T.border) : 'rgba(184,149,106,0.15)'}`,
-                                    cursor: n.link ? 'pointer' : 'default',
+                                        : (isHovered ? 'var(--bg-hover)' : 'var(--highlight-bg-weak)'),
+                                    border: `1px solid ${isHovered ? T.borderHover : T.border}`,
+                                    cursor: href ? 'pointer' : 'default',
+                                    outline: 'none',
                                     transition: 'all 150ms ease',
                                     position: 'relative',
                                 }}
@@ -146,8 +130,8 @@ export default function NotificationsPage() {
                                 <div style={{
                                     flexShrink: 0, width: '34px', height: '34px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: `${dot}18`,
-                                    border: `1px solid ${dot}30`,
+                                    background: 'var(--bg-active)',
+                                    border: `1px solid ${T.borderHover}`,
                                 }}>
                                     <Icon size={15} style={{ color: dot }} />
                                 </div>
@@ -179,9 +163,10 @@ export default function NotificationsPage() {
 
                                         {}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: isHovered ? 1 : 0, transition: 'opacity 150ms ease', flexShrink: 0 }}>
-                                            {n.link && (
+                                            {href && (
                                                 <button
                                                     title="Open"
+                                                    aria-label="Open"
                                                     onClick={e => { e.stopPropagation(); handleClick(n); }}
                                                     style={{ padding: '4px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                                                     onMouseEnter={e => e.currentTarget.style.color = T.accent}
@@ -192,9 +177,10 @@ export default function NotificationsPage() {
                                             )}
                                             <button
                                                 title="Dismiss"
+                                                aria-label={`Dismiss: ${n.title}`}
                                                 onClick={e => { e.stopPropagation(); dismiss(n._id); }}
                                                 style={{ padding: '4px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
-                                                onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                                                onMouseEnter={e => e.currentTarget.style.color = T.danger}
                                                 onMouseLeave={e => e.currentTarget.style.color = T.muted}
                                             >
                                                 <X size={12} />
@@ -217,13 +203,13 @@ export default function NotificationsPage() {
             <div style={{ flexShrink: 0, background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '16px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '760px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid rgba(184,149,106,0.2)` }}>
+                        <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid ${T.borderHover}` }}>
                             <Bell size={17} style={{ color: T.accent }} />
                         </div>
                         <div>
                             <h1 style={{ fontSize: '17px', fontWeight: 700, color: T.text, margin: 0 }}>Notifications</h1>
                             <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>
-                                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                                {error && notifications.length === 0 ? 'Couldn’t load notifications' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
                                 {activeWorkspace?.name ? ` · ${activeWorkspace.name}` : ''}
                             </p>
                         </div>
@@ -244,23 +230,42 @@ export default function NotificationsPage() {
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllRead}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: T.accentBg, border: `1px solid rgba(184,149,106,0.3)`, color: T.accent, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(184,149,106,0.18)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = T.accentBg; }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: T.accentBg, border: `1px solid ${T.borderHover}`, color: T.accent, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = T.borderHover; }}
                             >
                                 <Check size={13} /> Mark all read
                             </button>
                         )}
 
-                        {notifications.length > 0 && (
+                        {notifications.length > 0 && !confirmClear && (
                             <button
-                                onClick={clearAll}
+                                onClick={() => setConfirmClear(true)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.3)'; }}
+                                onMouseEnter={e => { e.currentTarget.style.color = T.danger; e.currentTarget.style.borderColor = T.danger; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
                             >
                                 <Trash2 size={13} /> Clear all
                             </button>
+                        )}
+                        {confirmClear && (
+                            <div role="alertdialog" aria-label="Clear all notifications?" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 3px 3px 10px', border: `1px solid ${T.borderHover}`, background: 'var(--bg-active)' }}>
+                                <span style={{ fontSize: '12px', color: T.text }}>Clear all notifications?</span>
+                                <button
+                                    onClick={() => setConfirmClear(false)}
+                                    disabled={clearing}
+                                    style={{ padding: '4px 10px', fontSize: '12px', background: 'transparent', border: `1px solid ${T.border}`, color: T.secondary, cursor: 'pointer', fontFamily: T.font }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={doClearAll}
+                                    disabled={clearing}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, background: T.danger, border: `1px solid ${T.danger}`, color: 'var(--bg-base)', cursor: clearing ? 'wait' : 'pointer', fontFamily: T.font }}
+                                >
+                                    {clearing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Clear
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -288,8 +293,8 @@ export default function NotificationsPage() {
                                 {tab.Icon && <tab.Icon size={12} />}
                                 {tab.label}
                                 {tab.key === 'unread' && unreadCount > 0 && (
-                                    <span style={{ padding: '1px 5px', fontSize: '9px', fontWeight: 700, background: T.accent, color: '#000' }}>
-                                        {unreadCount}
+                                    <span style={COUNT_BADGE_STYLE}>
+                                        {unreadCount > 99 ? '99+' : unreadCount}
                                     </span>
                                 )}
                             </button>
@@ -311,6 +316,20 @@ export default function NotificationsPage() {
                                 <Loader2 size={28} className="animate-spin" style={{ color: T.accent }} />
                                 <p style={{ fontSize: '13px', fontFamily: T.font }}>Loading notifications…</p>
                             </div>
+                        ) : error && notifications.length === 0 ? (
+                            <div role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '10px' }}>
+                                <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-hover)', border: `1px solid ${T.border}` }}>
+                                    <AlertCircle size={24} style={{ color: T.danger }} />
+                                </div>
+                                <p style={{ fontSize: '14px', fontWeight: 600, color: T.text, fontFamily: T.font, margin: 0 }}>Couldn’t load notifications</p>
+                                <p style={{ fontSize: '12px', color: T.secondary, fontFamily: T.font, margin: 0 }}>{error}</p>
+                                <button
+                                    onClick={refresh}
+                                    style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', fontSize: '12px', fontWeight: 500, color: T.text, background: 'var(--bg-active)', border: `1px solid ${T.borderHover}`, cursor: 'pointer', fontFamily: T.font }}
+                                >
+                                    <RefreshCcw size={13} /> Try again
+                                </button>
+                            </div>
                         ) : filtered.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '12px' }}>
                                 <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-hover)', border: `1px solid ${T.border}` }}>
@@ -320,7 +339,7 @@ export default function NotificationsPage() {
                                     {activeTab === 'all' ? 'No notifications yet' : `No ${activeTab} notifications`}
                                 </p>
                                 <p style={{ fontSize: '12px', color: T.dim, fontFamily: T.font }}>
-                                    {activeTab === 'all' ? "You're all caught up! 🎉" : 'Try a different filter'}
+                                    {activeTab === 'all' ? "You're all caught up." : 'Try a different filter'}
                                 </p>
                             </div>
                         ) : (

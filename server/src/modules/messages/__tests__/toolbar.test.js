@@ -11,8 +11,14 @@ const Channel = require('../../../features/channels/channel.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 const Task = require('../../../../models/Task');
+const User = require('../../../../models/User');
+const TaskActivity = require('../../../../models/TaskActivity');
+const IssueKeyCounter = require('../../../features/tasks/issue-key-counter.model');
 
 jest.mock('../message.model.js');
+jest.mock('../../../../models/User');
+jest.mock('../../../../models/TaskActivity');
+jest.mock('../../../features/tasks/issue-key-counter.model');
 jest.mock('../../../features/channels/channel.model.js');
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');
@@ -175,10 +181,22 @@ describe('message toolbar', () => {
     });
 
     describe('convertToTask', () => {
+        function mockTaskDeps({ companyId = oid(51), wsCompany = null } = {}) {
+            Workspace.findById = jest.fn(() => query({
+                _id: WS, name: 'Acme', company: wsCompany,
+                members: [{ user: SENDER, status: 'active' }, { user: OTHER, status: 'active' }],
+            }));
+            User.findById = jest.fn(() => query({ _id: OTHER, companyId, username: 'bob' }));
+            IssueKeyCounter.nextKey = jest.fn().mockResolvedValue('ACME-7');
+            TaskActivity.create = jest.fn().mockResolvedValue({});
+            Task.findById = jest.fn(() => query(null));
+        }
+
         it('ignores a client-supplied workspaceId and links the task to the message', async () => {
             Message.findById = jest.fn(() => query(makeDoc({ company: oid(50), linkedTaskId: null })));
             Message.findByIdAndUpdate = jest.fn().mockResolvedValue({});
             Task.create = jest.fn(async (data) => ({ _id: oid(60), ...data }));
+            mockTaskDeps({ companyId: oid(50) });
 
             const task = await messagesService.convertToTask(
                 MSG, OTHER, { title: 'Ship it', workspaceId: OTHER_WS, priority: 'high' }, null
@@ -196,11 +214,44 @@ describe('message toolbar', () => {
             expect(Message.findByIdAndUpdate).toHaveBeenCalledWith(MSG, { $set: { linkedTaskId: oid(60) } });
         });
 
+        it('gives the task the message channel, an issue key, a created activity and emits task-created', async () => {
+            Message.findById = jest.fn(() => query(makeDoc({ company: oid(50), linkedTaskId: null })));
+            Message.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+            Task.create = jest.fn(async (data) => ({ _id: oid(60), ...data }));
+            mockTaskDeps({ companyId: oid(52), wsCompany: oid(53) });
+            const emit = jest.fn();
+            const io = { to: jest.fn(() => ({ emit })) };
+
+            await messagesService.convertToTask(MSG, OTHER, { title: 'Ship it', assigneeIds: [SENDER] }, io);
+
+            expect(Task.create).toHaveBeenCalledWith(expect.objectContaining({
+                channel: CH,
+                issueKey: 'ACME-7',
+                company: oid(53), // workspace company, same rule as the Tasks page
+                assignedTo: [SENDER],
+            }));
+            expect(TaskActivity.create).toHaveBeenCalledWith(expect.objectContaining({ task: oid(60), action: 'created', user: OTHER }));
+            const rooms = io.to.mock.calls.map(c => c[0]);
+            expect(rooms).toContainEqual(expect.arrayContaining([`user_${OTHER}`, `user_${SENDER}`]));
+            expect(emit).toHaveBeenCalledWith('task-created', expect.anything());
+        });
+
+        it('creates DM tasks without a channel', async () => {
+            Message.findById = jest.fn(() => query(makeDoc({ channel: null, dm: oid(70), workspace: null, linkedTaskId: null })));
+            DMSession.findById = jest.fn(() => query({ _id: oid(70), participants: [SENDER, OTHER] }));
+            Message.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+            Task.create = jest.fn(async (data) => ({ _id: oid(61), ...data }));
+            mockTaskDeps();
+
+            await messagesService.convertToTask(MSG, OTHER, { title: 'DM task' }, null);
+            expect(Task.create).toHaveBeenCalledWith(expect.objectContaining({ channel: null, workspace: null, taskType: 'personal' }));
+        });
+
         it('requires a title and rejects non-workspace assignees', async () => {
             await expect(messagesService.convertToTask(MSG, OTHER, {}, null)).rejects.toMatchObject({ status: 400 });
 
             Message.findById = jest.fn(() => query(makeDoc({ linkedTaskId: null })));
-            Workspace.findById = jest.fn(() => query({ members: [{ user: OTHER, status: 'active' }] }));
+            Workspace.findById = jest.fn(() => query({ _id: WS, members: [{ user: OTHER, status: 'active' }] }));
             await expect(messagesService.convertToTask(MSG, OTHER, { title: 't', assigneeIds: [OUTSIDER] }, null))
                 .rejects.toMatchObject({ status: 400 });
         });

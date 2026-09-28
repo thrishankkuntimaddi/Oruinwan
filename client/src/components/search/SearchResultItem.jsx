@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { MessageSquare, Paperclip, User, Hash, CheckSquare, FileText, BookOpen, Search, Lock } from 'lucide-react';
 
 function HighlightText({ text, highlight }) {
     if (!text) return null;
@@ -19,14 +20,14 @@ function HighlightText({ text, highlight }) {
 }
 
 const TYPE_ICON = {
-    message:   '💬',
-    file:      '📎',
-    contact:   '👤',
-    user:      '👤',
-    channel:   '#',
-    task:      '✅',
-    note:      '📝',
-    knowledge: '📚',
+    message:   MessageSquare,
+    file:      Paperclip,
+    contact:   User,
+    user:      User,
+    channel:   Hash,
+    task:      CheckSquare,
+    note:      FileText,
+    knowledge: BookOpen,
 };
 
 const TYPE_LABEL = {
@@ -84,35 +85,57 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
     if (!result) return null;
 
     const { type } = result;
-    const icon     = TYPE_ICON[type] || '🔍';
+    const Icon     = TYPE_ICON[type] || Search;
     const typeLabel= TYPE_LABEL[type] || type;
 
     const handleClick = () => {
         if (onClick) return onClick(result);
-        
-        // Open the result inside the current workspace (the old /workspace?x= links had no route).
+
+        // Open the result inside the current workspace.
         const base = `/workspace/${workspaceId}`;
         const id = result.id || result._id;
         switch (type) {
             case 'channel':   navigate(`${base}/channel/${id}`); break;
-            case 'message':
-                if (result.dmId || result.dm) navigate(`${base}/dm/${result.dmId || result.dm}`);
-                else if (result.channelId || result.channel) navigate(`${base}/channel/${result.channelId || result.channel?._id || result.channel}`);
+            case 'message': {
+                const parent = result.parent || {};
+                const parentId = parent.id || result.dmId || result.channelId;
+                if (!parentId) break;
+                const isDm = parent.type ? parent.type === 'dm' : !!result.dmId;
+                navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}`);
                 break;
-            case 'user':      navigate(`${base}/messages`); break;
-            case 'task':      navigate(`${base}/tasks`);    break;
-            case 'note':      navigate(`${base}/notes`);    break;
-            case 'knowledge': navigate(`${base}/knowledge`); break;
-            case 'file':      if (result.url) window.open(result.url, '_blank'); break;
+            }
+            // People: open (or start) the direct message with them.
+            case 'contact':
+            case 'user':      navigate(`${base}/dm/new/${id}`); break;
+            case 'task':      navigate(`${base}/tasks/${id}`); break;
+            case 'note':      navigate(`${base}/notes/${id}`); break;
+            case 'knowledge': navigate(`${base}/knowledge/${id}`); break;
+            case 'file':
+                if (result.url) window.open(result.url, '_blank', 'noopener');
+                else navigate(`${base}/files/${id}`);
+                break;
             default: break;
         }
+        return undefined;
+    };
+
+    const onKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); }
     };
 
     return (
-        <div className={`search-result-item search-result-${type} ${compact ? 'compact' : ''}`} onClick={handleClick}>
+        <div
+            className={`search-result-item search-result-${type} ${compact ? 'compact' : ''}`}
+            onClick={handleClick}
+            onKeyDown={onKeyDown}
+            role="button"
+            tabIndex={0}
+        >
             {}
             <div className="search-result-icon">
-                <span className="search-result-type-icon">{type === 'knowledge' ? (result.icon || '📚') : icon}</span>
+                <span className="search-result-type-icon">
+                    {type === 'channel' && result.isPrivate ? <Lock size={14} /> : <Icon size={14} />}
+                </span>
             </div>
 
             {}
@@ -131,9 +154,10 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                 {}
                 {!compact && (
                     <div className="search-result-meta">
-                        {type === 'message' && result.sender && (
+                        {type === 'message' && (result.sender || result.parent) && (
                             <span className="search-result-sub">
-                                {result.sender.name} in {result.parent?.type === 'channel' ? `#${result.parent.name}` : result.parent?.name}
+                                {result.sender?.name ? `${result.sender.name} in ` : ''}
+                                {result.parent?.type === 'channel' ? `#${result.parent.name || 'channel'}` : `DM · ${result.parent?.name || 'direct message'}`}
                             </span>
                         )}
                         {type === 'file' && (
@@ -144,7 +168,7 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                         )}
                         {type === 'channel' && (
                             <span className="search-result-sub">
-                                {result.isPrivate ? '🔒 Private' : '# Public'} · {result.memberCount} members
+                                {result.isPrivate ? 'Private' : 'Public'} · {result.memberCount} member{result.memberCount === 1 ? '' : 's'}
                                 {result.description && ` · ${result.description}`}
                             </span>
                         )}

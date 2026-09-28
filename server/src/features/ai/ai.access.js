@@ -18,7 +18,7 @@ const resolver = require('./ai.provider.resolver');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const aiLimiter = rateLimit({
+const limiter = rateLimit({
     windowMs: 60 * 1000,
     max: Number(process.env.AI_RATE_LIMIT_PER_MIN || (isProduction ? 40 : 200)),
     standardHeaders: true,
@@ -26,6 +26,16 @@ const aiLimiter = rateLimit({
     keyGenerator: (req) => (req.user?.sub ? `u:${req.user.sub}` : ipKeyGenerator(req.ip)),
     handler: (_req, res) => res.status(429).json({ message: 'Too many AI requests. Please slow down.', code: 'AI_RATE_LIMITED' }),
 });
+
+/**
+ * Per-user AI rate limit, counted once per request even when several AI
+ * routers (all mounted at /api/ai) each apply it on the way to their route.
+ */
+function aiLimiter(req, res, next) {
+    if (req.aiRateCounted) return next();
+    req.aiRateCounted = true;
+    return limiter(req, res, next);
+}
 
 function workspaceIdFrom(req) {
     return req.body?.workspaceId || req.query?.workspaceId || req.params?.workspaceId || null;

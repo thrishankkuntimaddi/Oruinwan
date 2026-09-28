@@ -1,13 +1,9 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  Plus, Search, X, Loader2, CheckCircle2, Clock, Circle,
-  ChevronUp, ChevronDown, Minus, Calendar, User, Flag,
-  AlertTriangle, Trash2, RotateCcw, Activity, ListTodo,
-  LayoutGrid, List, SlidersHorizontal, ChevronRight, ChevronLeft,
-  BookOpen, Inbox, Send, Eye, Archive, Hash, Bell, Zap,
-  GitBranch, Timer, Users
+  Plus, Search, CheckCircle2, Circle, Trash2, RotateCcw, Activity, LayoutGrid, List,
+  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X,
 } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import TaskModal from '../../components/tasksComp/TaskModal';
 import WorkspaceTaskDetailPanel from '../../components/tasksComp/WorkspaceTaskDetailPanel';
@@ -17,989 +13,484 @@ import KanbanBoard from '../../components/tasksComp/KanbanBoard';
 import SprintBoard from '../../components/tasksComp/SprintBoard';
 import TimelineView from '../../components/tasksComp/TimelineView';
 import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
+import {
+  StatusBadge, PriorityTag, IssueTypeIcon, AvatarStack, fmtDate, isOverdue, tint, FONT,
+} from '../../components/tasksComp/taskUi';
 import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
-import api from '@services/api';
-import logger from '../../utils/logger';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useToast } from '../../contexts/ToastContext';
+import { PRIORITIES, PRIORITY_META, priorityLabel, statusLabel, canTransition, isClosed, STATUSES } from '../../utils/taskMeta';
+import { taskAbilities, isCreator, isAssignee, deleteOnlyHides } from '../../utils/taskPermissions';
 
-const JIRA_BLUE = '#b8956a'; 
-const BOARD_BG = 'var(--bg-base)';
-const SIDEBAR_BG = 'var(--bg-surface)';
-const TOOLBAR_BG = 'var(--bg-base)';
-const BORDER_COLOR = 'var(--border-subtle)';
-const TEXT_PRIMARY = 'var(--text-primary)';
-const TEXT_MUTED = 'var(--text-muted)';
-const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.15)';
-
-const STATUS_META = {
-  'To Do':      { bg: 'var(--bg-hover)', color: 'var(--text-muted)', border: 'var(--border-default)' },
-  'In Progress':{ bg: 'rgba(96,165,250,0.12)', color: '#60a5fa',               border: 'rgba(96,165,250,0.25)'  },
-  'Completed':  { bg: 'rgba(52,211,153,0.1)',  color: '#34d399',               border: 'rgba(52,211,153,0.25)'  },
-  'Cancelled':  { bg: 'rgba(248,113,113,0.08)',color: '#f87171',               border: 'rgba(248,113,113,0.2)'  },
-  'Blocked':    { bg: 'rgba(248,113,113,0.1)', color: '#f87171',               border: 'rgba(248,113,113,0.25)' },
-  'In Review':  { bg: 'rgba(167,139,250,0.1)', color: '#a78bfa',               border: 'rgba(167,139,250,0.25)' },
-};
-
-const PRIORITY_META = {
-  Highest: { color: '#CD1317', bg: 'rgba(205,19,23,0.08)' },
-  High: { color: '#E97F33', bg: 'rgba(233,127,51,0.08)' },
-  Medium: { color: '#E2B203', bg: 'rgba(226,178,3,0.08)' },
-  Low: { color: '#3E7FC1', bg: 'rgba(62,127,193,0.08)' },
-  Lowest: { color: '#7A869A', bg: 'rgba(122,134,154,0.08)' },
-  
-  Emergency: { color: '#CD1317', bg: 'rgba(205,19,23,0.08)' },
-};
-
-const BOARD_COLUMNS = [
-  { key: 'To Do', label: 'TO DO', color: '#42526E', headerBg: '#DFE1E6', topColor: '#42526E' },
-  { key: 'In Progress', label: 'IN PROGRESS', color: '#0052CC', headerBg: '#DEEBFF', topColor: '#0052CC' },
-  { key: 'In Review', label: 'IN REVIEW', color: '#6554C0', headerBg: '#EAE6FF', topColor: '#6554C0' },
-  { key: 'Completed', label: 'DONE', color: '#00875A', headerBg: '#E3FCEF', topColor: '#00875A' },
+/* ── Views: one filter per sidebar entry, used for both the list and its count ── */
+const VIEWS = [
+  { key: 'my-tasks', label: 'My Issues', desc: 'Tasks you created for yourself.', Icon: Circle, scope: (t, me) => isCreator(t, me) && isAssignee(t, me) },
+  { key: 'shared-tasks', label: 'Incoming', desc: 'Tasks assigned to you by others.', Icon: Inbox, scope: (t, me) => isAssignee(t, me) && !isCreator(t, me) },
+  { key: 'assigned-tasks', label: 'Given', desc: 'Tasks you created for other people.', Icon: Send, scope: (t, me) => isCreator(t, me) && !isAssignee(t, me) },
+  { key: 'all-tasks', label: 'All Issues', desc: 'Every workspace task you can see.', Icon: Eye, scope: () => true },
+  null,
+  { key: 'completed-tasks', label: 'Completed', desc: 'Done and cancelled tasks.', Icon: CheckCircle2, scope: () => true, closed: true },
+  { key: 'deleted-tasks', label: 'Trash', desc: 'Restore tasks or delete them for good.', Icon: Trash2, trash: true },
 ];
+const VIEW_BY_KEY = Object.fromEntries(VIEWS.filter(Boolean).map((v) => [v.key, v]));
 
-const SIDEBAR_VIEWS = [
-  { key: 'my-tasks', label: 'My Issues', icon: <Circle size={15} /> },
-  { key: 'shared-tasks', label: 'Incoming', icon: <Inbox size={15} /> },
-  { key: 'assigned-tasks', label: 'Given', icon: <Send size={15} /> },
-  { key: 'all-tasks', label: 'All Issues', icon: <Eye size={15} /> },
-  null, 
-  { key: 'completed-tasks', label: 'Completed', icon: <CheckCircle2 size={15} /> },
-  { key: 'deleted-tasks', label: 'Trash', icon: <Trash2 size={15} /> },
-];
+/**
+ * Tasks of one view. `withClosed` keeps done tasks (board/sprint need the Done
+ * column); lists and sidebar counts use the same function without it.
+ */
+function tasksForView(tasks, viewKey, me, { withClosed = false } = {}) {
+  const view = VIEW_BY_KEY[viewKey] || VIEW_BY_KEY['my-tasks'];
+  if (view.trash) return tasks.filter((t) => t.deleted);
+  const inScope = tasks.filter((t) => !t.deleted && !t.isSubtask && view.scope(t, me));
+  if (view.closed) return inScope.filter((t) => isClosed(t.status));
+  return withClosed ? inScope.filter((t) => t.status !== 'cancelled') : inScope.filter((t) => !isClosed(t.status));
+}
 
 const SORT_OPTIONS = [
   { id: 'priority', label: 'Priority' },
-  { id: 'dueDate', label: 'Due Date' },
+  { id: 'dueDate', label: 'Due date' },
   { id: 'status', label: 'Status' },
-  { id: 'a-z', label: 'Alphabetical' },
-  { id: 'newest', label: 'Newest First' },
+  { id: 'a-z', label: 'A–Z' },
+  { id: 'newest', label: 'Newest' },
+];
+const PRIORITY_RANK = Object.fromEntries(PRIORITIES.map((p, i) => [p, PRIORITIES.length - i]));
+const STATUS_RANK = Object.fromEntries(STATUSES.map((s, i) => [s, i]));
+
+const VIEW_MODES = [
+  { key: 'list', Icon: List, label: 'List' },
+  { key: 'board', Icon: LayoutGrid, label: 'Board' },
+  { key: 'sprint', Icon: Activity, label: 'Sprint' },
+  { key: 'timeline', Icon: GitBranch, label: 'Timeline' },
+  { key: 'workload', Icon: Users, label: 'Workload' },
 ];
 
-const PRIORITY_ORDER = { Emergency: 5, Highest: 5, High: 4, Medium: 3, Low: 2, Lowest: 1 };
+const channelKey = (t) => t.channel?.id || 'none';
 
-function PriorityIcon({ priority, size = 14 }) {
-  const p = priority?.toLowerCase();
-  const color = PRIORITY_META[priority]?.color || '#E2B203';
-  if (p === 'highest' || p === 'emergency') return <ChevronUp size={size} strokeWidth={3} style={{ color }} />;
-  if (p === 'high') return <ChevronUp size={size} strokeWidth={2} style={{ color }} />;
-  if (p === 'low') return <ChevronDown size={size} strokeWidth={2} style={{ color }} />;
-  if (p === 'lowest') return <ChevronDown size={size} strokeWidth={3} style={{ color }} />;
-  return <Minus size={size} strokeWidth={2.5} style={{ color }} />;
-}
-
-function StatusBadge({ status }) {
-  const m = STATUS_META[status] || STATUS_META['To Do'];
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '3px 8px', background: m.bg, color: m.color, border: `1px solid ${m.border}` }}>
-      {status === 'To Do' && <Circle size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
-      {status === 'In Progress' && <Clock size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
-      {status === 'Completed' && <CheckCircle2 size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
-      {status}
-    </span>
-  );
-}
-
-function avatarColor(name) {
-  const colors = ['#b8956a', '#60a5fa', '#34d399', '#a78bfa', '#fb923c', '#f472b6', '#38bdf8', '#818cf8'];
-  if (!name) return colors[0];
-  return colors[name.charCodeAt(0) % colors.length];
-}
-function initials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-function fmtDate(d) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-function isOverdue(task) {
-  return task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Completed' && task.status !== 'Cancelled';
-}
-
-const ISSUE_TYPE_META = {
-  epic: { label: 'Epic', color: '#6554C0', bg: '#EAE6FF', Icon: Zap },
-  bug: { label: 'Bug', color: '#FF5630', bg: '#FFEBE6', Icon: AlertTriangle },
-  subtask: { label: 'Subtask', color: '#00B8D9', bg: '#E6FCFF', Icon: CheckCircle2 },
-  task: { label: 'Task', color: '#0052CC', bg: '#DEEBFF', Icon: CheckCircle2 },
-};
-
-function IssueTypeIcon({ type = 'task', size = 11 }) {
-  const meta = ISSUE_TYPE_META[type] || ISSUE_TYPE_META.task;
-  const { Icon, color, bg } = meta;
-  return (
-    <span title={meta.label}
-      className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
-      style={{ width: 16, height: 16, background: bg }}>
-      <Icon size={size} style={{ color }} strokeWidth={2.5} />
-    </span>
-  );
-}
-
-function TransferBanner({ task, onApprove, onReject, onRequest }) {
-  if (task.transferRequest?.status === 'pending') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 12px', marginTop: '6px', fontSize: '12px', background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.22)' }}>
-        <Bell size={12} style={{ marginTop: '1px', flexShrink: 0, color: '#a78bfa' }} />
-        <div style={{ flex: 1 }}>
-          <span style={{ fontWeight: 700, color: '#a78bfa' }}>Transfer Pending</span>
-          <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>→ {task.transferRequest.requestedTo?.username || '?'}</span>
-          {task.transferRequest.note && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>"{task.transferRequest.note}"</p>}
-        </div>
-        {onApprove && (
-          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-            <button onClick={e => { e.stopPropagation(); onApprove(); }}
-              style={{ padding: '3px 10px', fontSize: '10px', fontWeight: 700, color: '#000', background: '#a78bfa', border: 'none', cursor: 'pointer' }}>Approve</button>
-            <button onClick={e => { e.stopPropagation(); onReject(); }}
-              style={{ padding: '3px 8px', fontSize: '10px', color: '#a78bfa', background: 'transparent', border: '1px solid rgba(167,139,250,0.3)', cursor: 'pointer' }}>Reject</button>
-          </div>
-        )}
-      </div>
-    );
-  }
-  return null;
-}
-
-function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, onTransferRequest, onTransferApprove, onTransferReject, onStatusChange }) {
-  const isDeleted = task.deleted;
-  const isCompleted = task.status === 'Completed';
+function ListRow({ task, view, selected, can, onOpen, onDelete, onRestore, onPurge, onTransferRequest, onTransferRespond }) {
+  const done = task.status === 'done';
   const overdue = isOverdue(task);
-  const pMeta = PRIORITY_META[task.priority] || PRIORITY_META.Medium;
-  const isIncoming = view === 'shared-tasks';
-  const isGiven = view === 'assigned-tasks';
-
+  const pendingTransfer = task.transferRequest?.status === 'pending';
   return (
-    <div
-      className="group relative"
-      style={{ background: 'var(--bg-surface)', borderBottom: `1px solid ${BORDER_COLOR}`, cursor: 'pointer', transition: 'background 150ms ease' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-      onClick={() => onEdit(task)}
-    >
-      {}
-      <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full"
-        style={{ background: pMeta.color }} />
+    <div className={`tasks-row tasks-row-body${selected ? ' is-selected' : ''}`} role="button" tabIndex={0}
+      aria-label={task.title}
+      onClick={() => onOpen(task)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(task); }}>
+      <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: PRIORITY_META[task.priority]?.color }} />
+      <span className="tk-col-type"><IssueTypeIcon type={task.issueType} /></span>
 
-      <div className="flex items-center gap-4 px-4 py-3 pl-5">
-        {}
-        <div className="flex-shrink-0">
-          <IssueTypeIcon type={task.issueType || 'task'} size={11} />
-        </div>
-
-        {}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-2">
-            {}
-            {task.issueKey && (
-              <span className="text-[10px] font-mono font-semibold flex-shrink-0 mt-0.5" style={{ color: '#7A869A' }}>
-                {task.issueKey}
-              </span>
-            )}
-            <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through' : ''}`}
-              style={{ color: isCompleted || isDeleted ? 'var(--text-muted)' : TEXT_PRIMARY }}>
-              {task.title}
-            </p>
-          </div>
-
-          {}
-          {task.labels?.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {task.labels.slice(0, 4).map(l => (
-                <span key={l} style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 6px', fontSize: '9px', fontWeight: 600, background: 'rgba(184,149,106,0.12)', color: '#b8956a', border: '1px solid rgba(184,149,106,0.2)' }}>{l}</span>
-              ))}
-            </div>
-          )}
-
-          {}
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            {}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', padding: '1px 6px' }}>
-              <Hash size={9} /> {task.project || 'General'}
-            </span>
-
-            {}
-            <span className="flex items-center gap-0.5 text-[10px] font-semibold"
-              style={{ color: PRIORITY_META[task.priority]?.color || '#E2B203' }}>
-              <PriorityIcon priority={task.priority} size={10} />
-              {task.priority}
-            </span>
-
-            {}
-            {task.dueDate && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: isOverdue(task) ? 'var(--state-danger)' : 'var(--text-muted)' }}>
-                <Calendar size={9} />
-                {fmtDate(task.dueDate)}
-                {isOverdue(task) && ' · Overdue'}
-              </span>
-            )}
-
-            {}
-            {isIncoming && (
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                From: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{task.assigner}</span>
-              </span>
-            )}
-            {isGiven && (
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                To: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{task.assignee}</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {}
-        <div className="flex-shrink-0">
-          <StatusBadge status={task.status} />
-        </div>
-
-        {}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          {isDeleted ? (
-            <>
-              <button onClick={e => { e.stopPropagation(); onRestore(task.id); }}
-                style={{ padding: '6px', color: '#3a8f6a', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(58,143,106,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title="Restore">
-                <RotateCcw size={13} />
-              </button>
-              <button onClick={e => { e.stopPropagation(); onPermanentDelete(task.id); }}
-                style={{ padding: '6px', color: 'var(--state-danger)', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,64,64,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                title="Delete forever">
-                <Trash2 size={13} />
-              </button>
-            </>
-          ) : isIncoming && !isCompleted ? (
-            <>
-              {task.transferRequest?.status !== 'pending' && (
-                <button onClick={e => { e.stopPropagation(); onTransferRequest(task); }}
-                  title="Request transfer"
-                  style={{ padding: '6px', color: '#a78bfa', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,0.1)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <RotateCcw size={13} />
-                </button>
-              )}
-            </>
-          ) : (
-            <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-              style={{ padding: '6px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'all 150ms ease' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; e.currentTarget.style.background = 'rgba(201,64,64,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-              title="Delete">
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
-
-        {}
-        {task.assignee && task.assignee !== 'Self' && (
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-            style={{ background: avatarColor(task.assignee) }}
-            title={task.assignee}>
-            {initials(task.assignee)}
-          </div>
-        )}
-      </div>
-
-      {}
-      {isGiven && task.transferRequest?.status === 'pending' && (
-        <div className="px-5 pb-2">
-          <TransferBanner
-            task={task}
-            onApprove={() => onTransferApprove(task.id)}
-            onReject={() => onTransferReject(task.id)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
-  const overdue = isOverdue(task);
-  const pMeta = PRIORITY_META[task.priority] || PRIORITY_META.Medium;
-
-  return (
-    <div
-      onClick={() => onEdit(task)}
-      className="group rounded-sm cursor-pointer mb-2 relative"
-      style={{ background: 'var(--bg-surface)', boxShadow: CARD_SHADOW, borderLeft: `3px solid ${pMeta.color}` }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-      <div className="px-3 pt-2 pb-2.5">
-        <div className="flex items-start gap-2">
-          <div className="w-3.5 h-3.5 rounded-sm flex items-center justify-center mt-0.5 flex-shrink-0"
-            style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
-            <div className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
-          </div>
-          <p className={`text-sm leading-snug flex-1`} style={{ color: task.status === 'Completed' ? 'var(--text-muted)' : TEXT_PRIMARY, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
+      <div style={{ minWidth: 0, padding: '8px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+          {task.issueKey && <span style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>{task.issueKey}</span>}
+          <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done || task.deleted ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: done ? 'line-through' : 'none' }}>
             {task.title}
-          </p>
-          <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-300 hover:text-red-500 transition-all flex-shrink-0">
-            <X size={11} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', padding: '1px 5px' }}>
-            <Hash size={8} /> {task.project || 'General'}
           </span>
-          <PriorityIcon priority={task.priority} size={12} />
-          {task.dueDate && (
-            <span className={`flex items-center gap-0.5 text-[10px] ${overdue ? 'text-red-600' : 'text-gray-400'}`}>
-              <Calendar size={9} />
-              {fmtDate(task.dueDate).slice(0, 6)}
-            </span>
-          )}
-          <div className="flex-1" />
-          {task.assignee && task.assignee !== 'Self' && (
-            <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
-              style={{ background: avatarColor(task.assignee) }}>
-              {initials(task.assignee)}
-            </div>
-          )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function BoardColumn({ col, tasks, view, onEdit, onDelete }) {
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, background: BOARD_BG }}>
-      <div className="flex items-center gap-2 px-3 py-2.5 flex-shrink-0"
-        style={{ borderTop: `3px solid ${col.topColor}` }}>
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: col.color }}>
-          {col.label}
-        </span>
-        <span className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
-          style={{ background: col.headerBg, color: col.color }}>
-          {tasks.length}
-        </span>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2"
-        style={{ scrollbarWidth: 'thin' }}>
-        {tasks.length === 0 ? (
-          <div className="flex items-center justify-center h-16 opacity-40">
-            <p className="text-xs text-gray-400">No issues</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '11px', color: 'var(--text-secondary)', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {task.channel?.name && <span className="tk-meta-channel">#{task.channel.name}</span>}
+          {view === 'shared-tasks' && task.creator && <span>From <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{task.creator.username}</b></span>}
+          {view === 'assigned-tasks' && task.assignees.length > 0 && <span>To <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{task.assignees.map((a) => a.username).join(', ')}</b></span>}
+          {task.subtasks?.length > 0 && <span>{task.subtasks.filter((s) => s.status === 'done').length}/{task.subtasks.length} subtasks</span>}
+          {pendingTransfer && <span style={{ color: 'var(--accent)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Send size={10} /> Transfer pending</span>}
+          {task.status === 'blocked' && task.blockedReason && <span style={{ color: 'var(--state-danger)', overflow: 'hidden', textOverflow: 'ellipsis' }}>Blocked: {task.blockedReason}</span>}
+          {task.labels?.slice(0, 3).map((l) => <span key={l} style={{ padding: '0 5px', borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--text-primary)' }}>{l}</span>)}
+        </div>
+        {view === 'assigned-tasks' && pendingTransfer && can.handleTransfer && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', padding: '6px 8px', borderRadius: '2px', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 30)}`, fontSize: '11px', color: 'var(--text-primary)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <Bell size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Transfer to <b>{task.transferRequest.requestedTo?.username || 'another member'}</b>{task.transferRequest.note ? ` — “${task.transferRequest.note}”` : ''}
+            </span>
+            <button type="button" className="tk-btn tk-btn-primary" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => onTransferRespond(task.id, 'approve')}>Approve</button>
+            <button type="button" className="tk-btn" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => onTransferRespond(task.id, 'reject')}>Reject</button>
           </div>
-        ) : (
-          tasks.map(t => (
-            <BoardCard key={t.id} task={t} view={view} onEdit={onEdit} onDelete={() => { }} />
-          ))
         )}
       </div>
+
+      <span className="tk-col-channel" style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {task.channel?.name ? `#${task.channel.name}` : '—'}
+      </span>
+      <span className="tk-col-priority"><PriorityTag priority={task.priority} /></span>
+      <span className="tk-col-due" style={{ fontSize: '12px', whiteSpace: 'nowrap', color: overdue ? 'var(--state-danger)' : 'var(--text-secondary)', fontWeight: overdue ? 700 : 400 }}>
+        {task.dueDate ? fmtDate(task.dueDate) : '—'}
+      </span>
+      <span className="tk-col-status" style={{ minWidth: 0 }}><StatusBadge status={task.status} /></span>
+      <span className="tk-col-assignee"><AvatarStack users={task.assignees} size={20} max={3} /></span>
+
+      <span className="tk-col-actions tk-row-actions" onClick={(e) => e.stopPropagation()}>
+        {task.deleted ? (
+          <>
+            {can.restore && <button type="button" className="tk-icon-btn" title="Restore" aria-label="Restore" onClick={() => onRestore(task.id)}><RotateCcw size={13} /></button>}
+            {can.purge && <button type="button" className="tk-icon-btn danger" title="Delete forever" aria-label="Delete forever" onClick={() => onPurge(task)}><Trash2 size={13} /></button>}
+          </>
+        ) : (
+          <>
+            {can.transfer && <button type="button" className="tk-icon-btn" title="Request transfer" aria-label="Request transfer" onClick={() => onTransferRequest(task)}><Send size={13} /></button>}
+            {can.del && <button type="button" className="tk-icon-btn danger" title={can.edit ? 'Move to trash' : 'Remove from my list'} aria-label="Delete" onClick={() => onDelete(task)}><Trash2 size={13} /></button>}
+          </>
+        )}
+      </span>
     </div>
-  );
-}
-
-function StatsStrip({ tasks, currentUserId }) {
-  const active = tasks.filter(t => !t.deleted && t.status !== 'Completed');
-  const overdue = active.filter(t => isOverdue(t));
-  const mine = active.filter(t => String(t.assigneeId) === String(currentUserId) || String(t.assignerId) === String(currentUserId));
-  const completed = tasks.filter(t => t.status === 'Completed').length;
-
-  const stats = [
-    { label: 'Active', value: active.length, color: JIRA_BLUE },
-    { label: 'Overdue', value: overdue.length, color: '#FF5630' },
-    { label: 'Mine', value: mine.length, color: '#6554C0' },
-    { label: 'Completed', value: completed, color: '#00875A' },
-  ];
-
-  return (
-    <div className="flex gap-3 px-5 pb-3 flex-shrink-0">
-      {stats.map(s => (
-        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-hover)', border: `1px solid ${BORDER_COLOR}`, borderRadius: '2px', padding: '6px 10px' }}>
-          <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-          <span style={{ fontSize: '11px', color: TEXT_MUTED, fontWeight: 500 }}>{s.label}</span>
-          <span className="text-sm font-bold" style={{ color: s.color }}>{s.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CreateTaskModal({ initialData, channels, members, onClose, onSubmit, onUpdate }) {
-  return (
-    <TaskModal
-      onClose={onClose}
-      onAddTask={onSubmit}
-      onUpdateTask={onUpdate}
-      initialData={initialData}
-      channels={channels}
-      teamMembers={members}
-    />
   );
 }
 
 export default function MyTasks() {
   const location = useLocation();
   const navigate = useNavigate();
-  const activeView = new URLSearchParams(location.search).get('tab') || 'my-tasks';
+  const requestedView = new URLSearchParams(location.search).get('tab');
+  const activeView = VIEW_BY_KEY[requestedView] ? requestedView : 'my-tasks';
 
-  const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask, handleTransferResponse } = useTasks();
+  const {
+    tasks, loading, refreshing, workspaceId, createTask, updateTask, patchTaskLocal, deleteTask, restoreTask,
+    permanentlyDeleteTask, handleTransferResponse, requestTransfer, fetchTask,
+  } = useTasks();
   const { user } = useAuth();
   const { members, channels } = useContacts();
-  
-  const pathMatch = window.location.pathname.match(/\/workspace\/([^/]+)/);
-  const workspaceId = pathMatch ? pathMatch[1] : null;
-
+  const { activeWorkspace } = useWorkspace();
+  const { showToast } = useToast();
   const isMobile = useIsMobile();
 
-  const [viewMode, setViewMode] = useState('list'); 
+  const currentUserId = user?._id || user?.id;
+  const permCtx = useMemo(() => ({ userId: currentUserId, role: activeWorkspace?.role }), [currentUserId, activeWorkspace?.role]);
+  const abilitiesOf = useCallback((t) => taskAbilities(t, permCtx), [permCtx]);
+
+  const [viewMode, setViewMode] = useState('list');
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('priority');
   const [channelFilter, setChannelFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  
   const [mobileShowList, setMobileShowList] = useState(false);
-  
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [completionTask, setCompletionTask] = useState(null);
-  const [deletionTask, setDeletionTask] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [confirm, setConfirm] = useState(null); // { mode, task, to? }
   const [transferTask, setTransferTask] = useState(null);
 
-  const currentUserId = user?._id || user?.id;
+  useEffect(() => { setChannelFilter('all'); }, [activeView]);
 
-  
-  const viewFiltered = useMemo(() => {
-    const isAssignee = (t) => {
-      if (t.assignees?.length > 0) return t.assignees.some(a => String(a._id || a.id) === String(currentUserId));
-      return String(t.assigneeId) === String(currentUserId);
-    };
-
-    const active = tasks.filter(t => !t.deleted);
-
-    switch (activeView) {
-      case 'my-tasks':
-        return active.filter(t => isAssignee(t) && String(t.assignerId) === String(currentUserId) && t.status !== 'Completed');
-      case 'shared-tasks':
-        return active.filter(t => isAssignee(t) && String(t.assignerId) !== String(currentUserId) && t.status !== 'Completed');
-      case 'assigned-tasks':
-        return active.filter(t => String(t.assignerId) === String(currentUserId) && !isAssignee(t) && t.status !== 'Completed');
-      case 'all-tasks':
-        return active.filter(t => t.status !== 'Completed');
-      case 'completed-tasks':
-        return active.filter(t => t.status === 'Completed');
-      case 'deleted-tasks':
-        return tasks.filter(t => t.deleted);
-      default:
-        return active;
-    }
-  }, [tasks, activeView, currentUserId]);
-
-  
-  const channelCounts = useMemo(() => {
-    const counts = {};
-    viewFiltered.forEach(t => {
-      const ch = t.project || 'General';
-      counts[ch] = (counts[ch] || 0) + 1;
+  // /workspace/:ws/tasks/:taskId (notification links) opens that task's detail panel.
+  const { taskId: routeTaskId } = useParams();
+  useEffect(() => {
+    if (!routeTaskId) return undefined;
+    let cancelled = false;
+    fetchTask(routeTaskId).then((t) => {
+      if (cancelled) return;
+      if (t?.id) setSelectedId(t.id);
+      else showToast('That task is no longer available', 'error');
     });
-    return counts;
-  }, [viewFiltered]);
+    return () => { cancelled = true; };
+  }, [routeTaskId, fetchTask, showToast]);
 
-  
-  const channelNames = useMemo(() => {
-    return Object.keys(channelCounts).sort((a, b) => channelCounts[b] - channelCounts[a]);
-  }, [channelCounts]);
+  const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) || null : null;
 
-  
-  const filtered = useMemo(() => {
-    let list = [...viewFiltered];
+  const counts = useMemo(() => Object.fromEntries(
+    VIEWS.filter(Boolean).map((v) => [v.key, tasksForView(tasks, v.key, currentUserId).length]),
+  ), [tasks, currentUserId]);
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        (t.description || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (channelFilter !== 'all') {
-      list = list.filter(t => (t.project || 'General') === channelFilter);
-    }
-
-    if (priorityFilter !== 'all') {
-      list = list.filter(t => t.priority === priorityFilter);
-    }
-
-    return list.sort((a, b) => {
-      if (sortOrder === 'priority') return (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0);
-      if (sortOrder === 'dueDate') return new Date(a.dueDate || '2099') - new Date(b.dueDate || '2099');
-      if (sortOrder === 'status') return (a.status || '').localeCompare(b.status || '');
-      if (sortOrder === 'a-z') return (a.title || '').localeCompare(b.title || '');
-      if (sortOrder === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      return 0;
+  const applyFilters = useCallback((list, { skipChannel = false } = {}) => {
+    let out = list;
+    const q = search.trim().toLowerCase();
+    if (q) out = out.filter((t) => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q) || (t.issueKey || '').toLowerCase().includes(q));
+    if (!skipChannel && channelFilter !== 'all') out = out.filter((t) => channelKey(t) === channelFilter);
+    if (priorityFilter !== 'all') out = out.filter((t) => t.priority === priorityFilter);
+    return [...out].sort((a, b) => {
+      if (sortOrder === 'priority') return (PRIORITY_RANK[b.priority] || 0) - (PRIORITY_RANK[a.priority] || 0);
+      if (sortOrder === 'dueDate') return new Date(a.dueDate || '2999-01-01') - new Date(b.dueDate || '2999-01-01');
+      if (sortOrder === 'status') return (STATUS_RANK[a.status] ?? 99) - (STATUS_RANK[b.status] ?? 99);
+      if (sortOrder === 'a-z') return a.title.localeCompare(b.title);
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
-  }, [viewFiltered, search, channelFilter, priorityFilter, sortOrder]);
+  }, [search, channelFilter, priorityFilter, sortOrder]);
 
-  
-  const boardGroups = useMemo(() =>
-    Object.fromEntries(BOARD_COLUMNS.map(c => [c.key, filtered.filter(t => t.status === c.key)])),
-    [filtered]
-  );
+  const boardMode = viewMode === 'board' || viewMode === 'sprint';
+  const viewTasks = useMemo(() => tasksForView(tasks, activeView, currentUserId, { withClosed: boardMode }), [tasks, activeView, currentUserId, boardMode]);
+  const shown = useMemo(() => applyFilters(viewTasks), [applyFilters, viewTasks]);
 
-  
-  
-  const handleEdit = useCallback((task) => {
-    setSelectedTask(task);
-  }, []);
+  // Channel sidebar counts follow the other filters (search/priority) but not the channel itself.
+  const channelGroups = useMemo(() => {
+    const groups = new Map();
+    for (const t of applyFilters(viewTasks, { skipChannel: true })) {
+      const key = channelKey(t);
+      const g = groups.get(key) || { key, name: t.channel?.name || 'No channel', count: 0 };
+      g.count += 1;
+      groups.set(key, g);
+    }
+    return [...groups.values()].sort((a, b) => b.count - a.count);
+  }, [applyFilters, viewTasks]);
+  const channelTotal = channelGroups.reduce((n, g) => n + g.count, 0);
 
-  
-  const handlePanelUpdate = useCallback(async (id, updates) => {
-    const updated = await updateTask(id, updates);
-    
-    setSelectedTask(prev => prev?.id === id ? { ...prev, ...updates } : prev);
-  }, [updateTask]);
+  /* ── Actions ── */
+  const openTask = useCallback((t) => setSelectedId(t.id), []);
 
-  
-  const handlePanelDelete = useCallback((id) => {
-    const task = tasks.find(t => t.id === id);
-    setSelectedTask(null);
-    setDeletionTask(task);
-  }, [tasks]);
+  const changeStatus = useCallback((task, to) => {
+    if (!task || task.status === to) return;
+    if (!abilitiesOf(task).status) {
+      showToast('Only the creator, assignees or workspace admins can change this task’s status', 'error');
+      return;
+    }
+    if (!canTransition(task.status, to)) {
+      showToast(`A ${statusLabel(task.status).toLowerCase()} task can’t move to ${statusLabel(to)}`, 'error');
+      return;
+    }
+    if (to === 'blocked') setConfirm({ mode: 'blocked', task, to });
+    else if (to === 'done') setConfirm({ mode: 'completion', task, to });
+    else updateTask(task.id, { status: to });
+  }, [abilitiesOf, showToast, updateTask]);
 
-  const handleCreate = useCallback(async (data) => {
-    await createTask(data);
-    setShowModal(false);
-    setEditingTask(null);
-  }, [createTask]);
+  const askDelete = useCallback((task) => {
+    setConfirm({ mode: deleteOnlyHides(task, permCtx) ? 'hide' : 'deletion', task });
+  }, [permCtx]);
 
-  const handleUpdate = useCallback(async (id, updates) => {
-    await updateTask(id, updates);
-    setShowModal(false);
-    setEditingTask(null);
-  }, [updateTask]);
-
-  const handleDelete = useCallback((id) => {
-    const task = tasks.find(t => t.id === id);
-    setDeletionTask(task);
-  }, [tasks]);
-
-  const handleConfirmDelete = useCallback(() => {
-    if (deletionTask) { deleteTask(deletionTask.id); setDeletionTask(null); }
-  }, [deleteTask, deletionTask]);
-
-  const handleRestore = useCallback((id) => restoreTask(id), [restoreTask]);
-
-  const handlePermanentDelete = useCallback((id) => {
-    if (window.confirm('Delete permanently? This cannot be undone.')) permanentlyDeleteTask(id);
-  }, [permanentlyDeleteTask]);
-
-  const handleTransferApprove = useCallback((id) => handleTransferResponse(id, 'approve'), [handleTransferResponse]);
-  const handleTransferReject = useCallback((id) => handleTransferResponse(id, 'reject'), [handleTransferResponse]);
+  const runConfirm = async (text) => {
+    const { mode, task } = confirm;
+    if (mode === 'blocked') {
+      if (await updateTask(task.id, { status: 'blocked', blockedReason: text })) setConfirm(null);
+      return;
+    }
+    if (mode === 'completion') {
+      const ok = await updateTask(task.id, text ? { status: 'done', completionNote: text } : { status: 'done' });
+      if (ok) setConfirm(null);
+      return;
+    }
+    if (mode === 'deletion' || mode === 'hide') {
+      const ok = await deleteTask(task.id, { hideOnly: mode === 'hide' });
+      if (ok) { setConfirm(null); if (mode === 'hide' && selectedId === task.id) setSelectedId(null); }
+      return;
+    }
+    if (mode === 'purge') {
+      const ok = await permanentlyDeleteTask(task.id);
+      if (ok) { setConfirm(null); if (selectedId === task.id) setSelectedId(null); }
+    }
+  };
 
   const setView = (key) => {
     const params = new URLSearchParams(location.search);
     params.set('tab', key);
     navigate(`?${params.toString()}`, { replace: true });
-    
     if (isMobile) setMobileShowList(true);
   };
 
-  const isDeleted = activeView === 'deleted-tasks';
-  const isCompleted = activeView === 'completed-tasks';
-  const canCreate = !isDeleted && !isCompleted;
+  const view = VIEW_BY_KEY[activeView];
+  const canCreate = !view.trash && !view.closed;
 
-  const viewLabel = {
-    'my-tasks': 'My Issues',
-    'shared-tasks': 'Incoming',
-    'assigned-tasks': 'Given',
-    'all-tasks': 'All Issues',
-    'completed-tasks': 'Completed',
-    'deleted-tasks': 'Trash',
-  }[activeView] || 'Tasks';
-
-  const viewDesc = {
-    'my-tasks': 'Tasks you created and own.',
-    'shared-tasks': 'Tasks assigned to you by others.',
-    'assigned-tasks': 'Tasks you delegated to others.',
-    'all-tasks': 'All workspace tasks visible to you.',
-    'completed-tasks': 'Finished tasks.',
-    'deleted-tasks': 'Trash — restore or delete permanently.',
-  }[activeView] || '';
-
-  
-  
-  useEffect(() => {
-    if (!selectedTask) return;
-    const fresh = tasks.find(t => t.id === selectedTask.id);
-    if (fresh) setSelectedTask(fresh);
-  }, [tasks]); 
-
-  
+  /* ── First load only: skeleton. Later refreshes happen silently. ── */
   if (loading) {
     return (
-      <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
-        <style>{`@keyframes mf-sh{0%,100%{opacity:.35}50%{opacity:.7}}.mf-sh{animation:mf-sh 1.6s ease-in-out infinite}`}</style>
-        <div className="mf-sh" style={{ width: '200px', flexShrink: 0, background: SIDEBAR_BG, borderRight: `1px solid ${BORDER_COLOR}`, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {[100, 80, 90, 70, 85].map((w, i) => (
-            <div key={i} style={{ height: '32px', background: 'var(--bg-hover)', width: `${w}%` }} />
-          ))}
+      <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)' }}>
+        <div className="tk-shimmer" style={{ width: '208px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {[100, 80, 90, 70, 85].map((w, i) => <div key={i} style={{ height: '28px', background: 'var(--bg-hover)', width: `${w}%` }} />)}
         </div>
-        <div className="mf-sh" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', gap: '12px' }}>
+        <div className="tk-shimmer" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', gap: '12px' }}>
           <div style={{ height: '20px', width: '180px', background: 'var(--bg-active)' }} />
-          {[90, 75, 85, 65, 80].map((w, i) => (
-            <div key={i} style={{ height: '48px', background: 'var(--bg-hover)', width: `${w}%` }} />
-          ))}
+          {[90, 75, 85, 65, 80].map((w, i) => <div key={i} style={{ height: '44px', background: 'var(--bg-hover)', width: `${w}%` }} />)}
         </div>
       </div>
     );
   }
 
+  const navButton = (active) => ({
+    width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', borderRadius: '2px',
+    background: active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${active ? tint('var(--accent)', 30) : 'transparent'}`,
+    color: active ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: active ? 600 : 500, fontSize: '13px',
+    fontFamily: FONT, cursor: 'pointer', textAlign: 'left',
+  });
+
+  const emptyText = view.trash ? 'Trash is empty' : (search || channelFilter !== 'all' || priorityFilter !== 'all') ? 'No matching tasks' : 'No tasks here';
+
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
+    <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)', fontFamily: FONT }}>
 
-      {}
-      <div style={{
-        width: isMobile ? '100%' : '200px',
-        flexShrink: 0, background: SIDEBAR_BG,
-        borderRight: isMobile ? 'none' : `1px solid ${BORDER_COLOR}`,
-        display: (isMobile && mobileShowList) ? 'none' : 'flex',
-        flexDirection: 'column', overflowY: 'auto'
+      {/* ── Views sidebar ── */}
+      <nav aria-label="Task views" style={{
+        width: isMobile ? '100%' : '208px', flexShrink: 0, background: 'var(--bg-surface)',
+        borderRight: isMobile ? 'none' : '1px solid var(--border-subtle)',
+        display: (isMobile && mobileShowList) ? 'none' : 'flex', flexDirection: 'column', overflowY: 'auto',
       }}>
-        <div className="px-3 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-2" style={{ color: TEXT_MUTED }}>Tasks</p>
-          <nav className="space-y-0.5">
-            {SIDEBAR_VIEWS.map((v, i) =>
-              v === null
-                ? <div key={i} style={{ height: '1px', background: 'var(--bg-hover)', margin: '6px 8px' }} />
-                : (
-                  <button key={v.key} onClick={() => setView(v.key)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: activeView === v.key ? 'rgba(184,149,106,0.12)' : 'transparent', border: activeView === v.key ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: activeView === v.key ? JIRA_BLUE : 'var(--text-secondary)', fontWeight: activeView === v.key ? 700 : 400, fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                    onMouseEnter={e => { if (activeView !== v.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={e => { if (activeView !== v.key) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <span style={{ color: activeView === v.key ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }}>
-                      {v.icon}
-                    </span>
-                    <span style={{ flex: 1 }}>{v.label}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', color: activeView === v.key ? JIRA_BLUE : 'var(--text-muted)' }}>
-                      {v.key === 'my-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) === String(currentUserId) && t.status !== 'Completed').length}
-                      {v.key === 'shared-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) !== String(currentUserId) && t.assignees?.some(a => String(a._id) === String(currentUserId)) && t.status !== 'Completed').length}
-                      {v.key === 'assigned-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) !== String(currentUserId) && t.status !== 'Completed').length}
-                      {v.key === 'all-tasks' && tasks.filter(t => !t.deleted && t.status !== 'Completed').length}
-                      {v.key === 'completed-tasks' && tasks.filter(t => t.status === 'Completed').length}
-                      {v.key === 'deleted-tasks' && tasks.filter(t => t.deleted).length || undefined}
-                    </span>
-                  </button>
-                )
-            )}
-          </nav>
-
-          {}
-          {channelNames.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: TEXT_MUTED }}>By Channel</p>
-              <div className="space-y-0.5">
-                {}
-                <button onClick={() => setChannelFilter('all')}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === 'all' ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === 'all' ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-secondary)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                  onMouseEnter={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                  onMouseLeave={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <Hash size={10} style={{ color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>All Channels</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-muted)' }}>{viewFiltered.length}</span>
+        <div style={{ padding: '16px 10px' }}>
+          <p className="tk-label" style={{ padding: '0 8px' }}>Tasks</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {VIEWS.map((v, i) => (v === null
+              ? <div key={`sep-${i}`} style={{ height: '1px', background: 'var(--border-subtle)', margin: '6px 8px' }} />
+              : (
+                <button key={v.key} type="button" onClick={() => setView(v.key)} aria-current={activeView === v.key ? 'page' : undefined}
+                  style={navButton(activeView === v.key)}
+                  onMouseEnter={(e) => { if (activeView !== v.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { if (activeView !== v.key) e.currentTarget.style.background = 'transparent'; }}>
+                  <v.Icon size={14} style={{ color: activeView === v.key ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>{v.label}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: activeView === v.key ? 'var(--accent)' : 'var(--text-secondary)' }}>{counts[v.key] || 0}</span>
                 </button>
-                {channelNames.map(ch => (
-                  <button key={ch} onClick={() => setChannelFilter(ch)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === ch ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === ch ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === ch ? JIRA_BLUE : 'var(--text-secondary)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                    onMouseEnter={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <Hash size={10} style={{ color: channelFilter === ch ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch}</span>
-                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === ch ? JIRA_BLUE : 'var(--text-muted)' }}>{channelCounts[ch] || 0}</span>
+              )))}
+          </div>
+
+          {channelGroups.length > 0 && !isMobile && (
+            <div style={{ marginTop: '18px' }}>
+              <p className="tk-label" style={{ padding: '0 8px' }}>By channel</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {[{ key: 'all', name: 'All channels', count: channelTotal }, ...channelGroups].map((g) => (
+                  <button key={g.key} type="button" onClick={() => setChannelFilter(g.key)} aria-pressed={channelFilter === g.key}
+                    style={{ ...navButton(channelFilter === g.key), fontSize: '12px', padding: '5px 10px', gap: '8px' }}
+                    onMouseEnter={(e) => { if (channelFilter !== g.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={(e) => { if (channelFilter !== g.key) e.currentTarget.style.background = 'transparent'; }}>
+                    <Hash size={11} style={{ color: channelFilter === g.key ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>{g.count}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
         </div>
-      </div>
+      </nav>
 
-      {}
-      <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden"
-        style={{ display: (isMobile && !mobileShowList) ? 'none' : 'flex' }}
-      >
-        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      {/* ── Main ── */}
+      <div style={{ flex: 1, minWidth: 0, display: (isMobile && !mobileShowList) ? 'none' : 'flex', overflow: 'hidden' }}>
+        <div className="tasks-main" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          {}
-          <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: isMobile ? '0' : '10px 20px' }}>
-            {isMobile ? (
-              
-              <>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderBottom: `1px solid ${BORDER_COLOR}` }}>
-                  {mobileShowList && (
-                    <button
-                      onClick={() => setMobileShowList(false)}
-                      style={{ display: 'flex', alignItems: 'center', padding: '4px', color: JIRA_BLUE, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                  )}
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: TEXT_PRIMARY, fontFamily: 'Inter, system-ui, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {viewLabel}
-                  </span>
-                  {canCreate && (
-                    <button
-                      onClick={() => { setEditingTask(null); setShowModal(true); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: JIRA_BLUE, border: 'none', color: '#000', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      <Plus size={12} strokeWidth={2.5} /> New
-                    </button>
-                  )}
-                </div>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      placeholder="Search issues…"
-                      style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
-                      onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                      onBlur={e => e.target.style.borderColor = BORDER_COLOR}
-                    />
-                  </div>
-                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '80px' }}>
-                    {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
-                  <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '90px' }}>
-                    <option value="all">All Priority</option>
-                    {['Highest', 'High', 'Medium', 'Low', 'Lowest'].map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-              </>
-            ) : (
-              
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-base font-bold" style={{ color: TEXT_PRIMARY }}>{viewLabel}</h1>
-                  <p className="text-xs" style={{ color: TEXT_MUTED }}>{viewDesc}</p>
-                </div>
-
-                <div className="flex-1" />
-
-                {}
-                <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search issues…"
-                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', padding: '5px 8px 5px 28px', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }}
-                    onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                    onBlur={e => e.target.style.borderColor = BORDER_COLOR}
-                  />
-                </div>
-
-                {}
-                <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-                  style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-
-                {}
-                <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                  style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  <option value="all">All Priorities</option>
-                  {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
-                    <option key={p} value={p}>{p}</option>
-                  )}
-                </select>
-
-                {}
-                <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${BORDER_COLOR}` }}>
-                  {[
-                    { key: 'list',      Icon: List,         title: 'List view' },
-                    { key: 'board',     Icon: LayoutGrid,   title: 'Kanban board' },
-                    { key: 'sprint',    Icon: Activity,     title: 'Sprint board' },
-                    { key: 'timeline',  Icon: GitBranch,    title: 'Timeline' },
-                    { key: 'workload',  Icon: Users,        title: 'Workload' },
-                  ].map(({ key, Icon, title }, idx) => (
-                    <button
-                      key={key}
-                      onClick={() => setViewMode(key)}
-                      title={title}
-                      style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', background: viewMode === key ? 'rgba(184,149,106,0.15)' : 'transparent', color: viewMode === key ? JIRA_BLUE : TEXT_MUTED, borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none', cursor: 'pointer', border: 'none' }}
-                    >
-                      <Icon size={14} />
-                    </button>
-                  ))}
-                </div>
-
-                {canCreate && (
-                  <button onClick={() => { setEditingTask(null); setShowModal(true); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: JIRA_BLUE, border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-                    <Plus size={13} strokeWidth={2.5} /> Create
-                  </button>
-                )}
+          <header className="tasks-header" style={{ position: 'relative', padding: isMobile ? '10px 14px' : undefined }}>
+            {refreshing && (
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: -1, height: '2px', overflow: 'hidden' }}>
+                <div style={{ width: '40%', height: '100%', background: 'var(--accent)', animation: 'tk-progress 1s linear infinite' }} />
               </div>
             )}
-          </div>
-
-          {}
-          {activeView === 'all-tasks' && (
-            <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {[
-                { label: 'Active',    count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
-                { label: 'Overdue',   count: tasks.filter(t => isOverdue(t)).length,                          color: '#f87171' },
-                { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length,              color: '#34d399' },
-                { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length,              color: '#a78bfa' },
-              ].map(s => (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }} />
-                  <span style={{ color: TEXT_MUTED }}>{s.label}</span>
-                  <span style={{ fontWeight: 700, color: s.color }}>{s.count}</span>
-                </div>
-              ))}
-              <div style={{ flex: 1 }} />
-              <span style={{ fontSize: '11px', color: TEXT_MUTED }}>{filtered.length} showing</span>
+            <div className="tasks-header-top">
+              {isMobile && (
+                <button type="button" className="tk-icon-btn" onClick={() => setMobileShowList(false)} aria-label="Back to views"><ChevronLeft size={18} /></button>
+              )}
+              <div className="tasks-header-title">
+                <h1>{view.label}</h1>
+                {!isMobile && <p>{view.desc}</p>}
+              </div>
+              {canCreate && (
+                <button type="button" className="tk-btn tk-btn-primary" onClick={() => setShowModal(true)} style={{ padding: '7px 14px' }}>
+                  <Plus size={13} strokeWidth={2.5} /> Create
+                </button>
+              )}
             </div>
-          )}
+            <div className="tasks-toolbar" role="toolbar" aria-label="Filter and view">
+              <div className="tk-search">
+                <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                <input className="tk-field" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" aria-label="Search tasks" style={{ paddingLeft: '28px', paddingRight: search ? '26px' : undefined }} />
+                {search && <button type="button" className="tk-icon-btn" onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: 22, height: 22 }}><X size={12} /></button>}
+              </div>
+              <select className="tk-field" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="Sort by">
+                {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>Sort: {o.label}</option>)}
+              </select>
+              <select className="tk-field" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} aria-label="Priority filter">
+                <option value="all">All priorities</option>
+                {PRIORITIES.map((p) => <option key={p} value={p}>{priorityLabel(p)}</option>)}
+              </select>
+              <div className="tasks-viewswitch" role="group" aria-label="Layout">
+                {VIEW_MODES.map(({ key, Icon, label }) => (
+                  <button key={key} type="button" onClick={() => setViewMode(key)} aria-pressed={viewMode === key} title={label}>
+                    <Icon size={14} /><span className="tk-vs-label">{label}</span>
+                  </button>
+                ))}
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                {viewMode !== 'workload' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
+              </span>
+            </div>
+          </header>
 
-          {}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {filtered.length === 0 && viewMode !== 'workload' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', background: BOARD_BG }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--bg-hover)', border: `1px solid ${BORDER_COLOR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {isDeleted ? <Trash2 size={22} style={{ color: TEXT_MUTED }} /> : <CheckCircle2 size={22} style={{ color: TEXT_MUTED }} />}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            {viewMode === 'workload' ? (
+              <WorkloadPanel workspaceId={workspaceId} />
+            ) : shown.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '10px', padding: '24px', textAlign: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {view.trash ? <Trash2 size={20} style={{ color: 'var(--text-secondary)' }} /> : <CheckCircle2 size={20} style={{ color: 'var(--text-secondary)' }} />}
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontWeight: 600, fontSize: '13px', color: TEXT_MUTED }}>
-                    {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
-                  </p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
-                  </p>
-                </div>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{emptyText}</p>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {view.trash ? 'Tasks you delete appear here for restoring.' : canCreate ? 'Use Create to add a task.' : ''}
+                </p>
               </div>
             ) : viewMode === 'board' ? (
-              
-              <KanbanBoard
-                tasks={filtered}
-                onTaskClick={handleEdit}
-                onTasksUpdate={() => {}}
-              />
+              <KanbanBoard tasks={shown} onTaskClick={openTask} onStatusChange={changeStatus} canMove={(t) => !t.deleted && abilitiesOf(t).status} />
             ) : viewMode === 'sprint' ? (
-              
-              <SprintBoard
-                tasks={filtered}
-                workspaceId={workspaceId}
-                onTaskClick={handleEdit}
-              />
+              <SprintBoard tasks={shown} workspaceId={workspaceId} onTaskClick={openTask} />
             ) : viewMode === 'timeline' ? (
-              
-              <TimelineView
-                tasks={filtered}
-                onTaskClick={handleEdit}
-              />
-            ) : viewMode === 'workload' ? (
-              
-              <WorkloadPanel workspaceId={workspaceId} />
+              <TimelineView tasks={shown} onTaskClick={openTask} />
             ) : (
-              
-              <div className="h-full overflow-y-auto" style={{ background: BOARD_BG, scrollbarWidth: 'thin' }}>
-                {}
-                <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-active)', borderBottom: `1px solid ${BORDER_COLOR}`, borderTop: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontFamily: 'monospace', zIndex: 10 }}>
-                  <span style={{ width: '16px', flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>Summary</span>
-                  <span style={{ width: '112px', textAlign: 'center' }}>Channel</span>
-                  <span style={{ width: '80px', textAlign: 'center' }}>Priority</span>
-                  <span style={{ width: '96px', textAlign: 'center' }}>Due Date</span>
-                  <span style={{ width: '96px', textAlign: 'center' }}>Status</span>
-                  <span style={{ width: '48px' }} />
+              <div className="tasks-list" style={{ height: '100%', overflowY: 'auto', scrollbarWidth: 'thin' }}>
+                <div className="tasks-row tasks-row-head" role="row">
+                  <span className="tk-col-type" />
+                  <span>Summary</span>
+                  <span className="tk-col-channel">Channel</span>
+                  <span className="tk-col-priority">Priority</span>
+                  <span className="tk-col-due">Due date</span>
+                  <span className="tk-col-status">Status</span>
+                  <span className="tk-col-assignee">Assignee</span>
+                  <span className="tk-col-actions" />
                 </div>
-
-                <div>
-                  {filtered.map(task => (
-                    <ListRow
-                      key={task.id}
-                      task={task}
-                      view={activeView}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onRestore={handleRestore}
-                      onPermanentDelete={handlePermanentDelete}
-                      onTransferRequest={setTransferTask}
-                      onTransferApprove={handleTransferApprove}
-                      onTransferReject={handleTransferReject}
-                    />
-                  ))}
-                </div>
+                {shown.map((task) => (
+                  <ListRow
+                    key={task.id}
+                    task={task}
+                    view={activeView}
+                    selected={task.id === selectedId}
+                    can={abilitiesOf(task)}
+                    onOpen={openTask}
+                    onDelete={askDelete}
+                    onRestore={restoreTask}
+                    onPurge={(t) => setConfirm({ mode: 'purge', task: t })}
+                    onTransferRequest={setTransferTask}
+                    onTransferRespond={handleTransferResponse}
+                  />
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {}
         {selectedTask && (
           <WorkspaceTaskDetailPanel
+            fullScreen={isMobile}
             task={selectedTask}
             members={members || []}
-            onClose={() => setSelectedTask(null)}
-            onUpdate={handlePanelUpdate}
-            onDelete={handlePanelDelete}
+            allTasks={tasks}
+            can={abilitiesOf(selectedTask)}
+            onClose={() => {
+              setSelectedId(null);
+              if (routeTaskId) navigate(`/workspace/${workspaceId}/tasks${location.search}`, { replace: true });
+            }}
+            onUpdate={updateTask}
+            onStatusChange={changeStatus}
+            onDelete={askDelete}
+            onRestore={restoreTask}
+            onRequestTransfer={setTransferTask}
+            onTransferRespond={handleTransferResponse}
+            onPatchLocal={patchTaskLocal}
+            onFetch={fetchTask}
           />
         )}
+      </div>
 
-      </div>{}
-
-      {}
       {showModal && (
-        <CreateTaskModal
-          initialData={editingTask}
+        <TaskModal
           channels={channels || []}
-          members={members || []}
-          onClose={() => { setShowModal(false); setEditingTask(null); }}
-          onSubmit={handleCreate}
-          onUpdate={(id, updates) => handleUpdate(id, updates)}
+          teamMembers={members || []}
+          onClose={() => setShowModal(false)}
+          onAddTask={createTask}
         />
       )}
 
-      {completionTask && (
-        <TaskCompletionModal
-          task={completionTask}
-          onClose={() => setCompletionTask(null)}
-          onConfirm={(note) => { updateTask(completionTask.id, { status: 'Completed', completionNote: note, completedAt: new Date().toISOString() }); setCompletionTask(null); }}
-          mode="completion"
-        />
-      )}
-
-      {deletionTask && (
-        <TaskCompletionModal
-          task={deletionTask}
-          onClose={() => setDeletionTask(null)}
-          onConfirm={handleConfirmDelete}
-          mode="deletion"
-        />
+      {confirm && (
+        <TaskCompletionModal key={`${confirm.mode}-${confirm.task.id}`} task={confirm.task} mode={confirm.mode} onClose={() => setConfirm(null)} onConfirm={runConfirm} />
       )}
 
       {transferTask && (
         <TransferRequestModal
           task={transferTask}
           members={members || []}
+          currentUserId={currentUserId}
           onClose={() => setTransferTask(null)}
           onConfirm={async (newAssigneeId, note) => {
-            try {
-              await api.post(`/api/v2/tasks/${transferTask.id}/transfer-request`, { newAssigneeId, note });
-              setTransferTask(null);
-            } catch (e) { logger.error(e); }
+            const m = (members || []).find((x) => String(x._id || x.id) === String(newAssigneeId));
+            const ok = await requestTransfer(transferTask.id, newAssigneeId, note, m ? { _id: newAssigneeId, username: m.username } : undefined);
+            if (ok) setTransferTask(null);
           }}
         />
       )}

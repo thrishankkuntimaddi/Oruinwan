@@ -120,10 +120,12 @@ const TaskSchema = new mongoose.Schema({
         createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         createdAt: { type: Date, default: Date.now }
     }],
+    // `type` must be wrapped: a bare `type: String` key would turn the whole
+    // element into a String and reject every attachment object.
     attachments: [{
         name: String,
         url: String,
-        type: String,
+        type: { type: String },
         size: Number,
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         uploadedAt: { type: Date, default: Date.now }
@@ -147,6 +149,9 @@ const TaskSchema = new mongoose.Schema({
     deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     deletedAt: { type: Date, default: null },
+
+    revokedAt: { type: Date, default: null },
+    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
     
     timeTracking: {
@@ -237,8 +242,7 @@ TaskSchema.methods.canView = function (userId, userChannels = []) {
     if (this.createdBy.toString() === userIdStr) return true;
     if (this.assignedTo.some(id => id.toString() === userIdStr)) return true;
 
-    
-    if (this.watchers && this.watchers.some(id => id.toString() === userIdStr)) return true;
+    // Watchers get notifications only; watching never grants access.
 
     
     if (this.visibility === "workspace") return true;

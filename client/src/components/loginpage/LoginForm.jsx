@@ -4,7 +4,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '@services/api';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 const GoogleIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -31,6 +31,10 @@ const LoginForm = ({ initialEmail = '' }) => {
     const [formData, setFormData] = useState({ email: initialEmail, password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    // Two-step sign-in: set when the server answers { requires2FA } — { via: 'password' | 'google', googleToken? }.
+    const [twoFactor, setTwoFactor] = useState(null);
+    const [otp, setOtp] = useState('');
+    const [otpError, setOtpError] = useState('');
     const { login, setUser } = useContext(AuthContext);
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -45,7 +49,7 @@ const LoginForm = ({ initialEmail = '' }) => {
         if (!isFormValid) return;
         setLoading(true);
         try {
-            const response = await login(formData.email, formData.password);
+            const response = await login(formData.email, formData.password, twoFactor ? otp : undefined);
             showToast('Login successful!', 'success');
             await new Promise(r => setTimeout(r, 100));
 
@@ -68,40 +72,107 @@ const LoginForm = ({ initialEmail = '' }) => {
                 navigate(`/reactivate?email=${encodeURIComponent(formData.email)}`);
                 return;
             }
+            if (err.response?.data?.requires2FA) {
+                setTwoFactor({ via: 'password' });
+                setOtpError(err.response.data.invalidCode ? err.response.data.message : '');
+                setOtp('');
+                return;
+            }
             showToast(err.message || 'Login failed', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const googleLogin = useGoogleLogin({
-        onSuccess: async tokenResponse => {
-            try {
-                const res = await api.post('/api/auth/google-login', { accessToken: tokenResponse.access_token });
-                localStorage.setItem('accessToken', res.data.accessToken);
-                setUser(res.data.user);
-                showToast('Google login successful!', 'success');
-                if (res.data.requiresPasswordSetup || res.data.isFirstLogin) {
-                    localStorage.setItem('oauthPasswordSetupRequired', 'true');
-                    localStorage.setItem('oauthProvider', 'google');
-                    navigate('/set-password'); return;
-                }
-                const isPlatformAdmin = res.data.user?.roles?.includes('chttrix_admin');
-                if (isPlatformAdmin) navigate('/platform-admin');
-                else if (res.data.user?.companyRole === 'owner') navigate('/owner/dashboard');
-                else navigate('/workspaces');
-            } catch (err) {
-                showToast('Google login failed', 'error');
+    const finishGoogle = (data) => {
+        localStorage.setItem('accessToken', data.accessToken);
+        setUser(data.user);
+        showToast('Google login successful!', 'success');
+        if (data.requiresPasswordSetup || data.isFirstLogin) {
+            localStorage.setItem('oauthPasswordSetupRequired', 'true');
+            localStorage.setItem('oauthProvider', 'google');
+            navigate('/set-password'); return;
+        }
+        const isPlatformAdmin = data.user?.roles?.includes('chttrix_admin');
+        if (isPlatformAdmin) navigate('/platform-admin');
+        else if (data.user?.companyRole === 'owner') navigate('/owner/dashboard');
+        else navigate('/workspaces');
+    };
+
+    const signInWithGoogle = async (googleToken, code) => {
+        try {
+            const res = await api.post('/api/auth/google-login', { accessToken: googleToken, ...(code ? { otp: code } : {}) });
+            finishGoogle(res.data);
+        } catch (err) {
+            const data = err.response?.data;
+            if (data?.requires2FA) {
+                setTwoFactor({ via: 'google', googleToken });
+                setOtpError(data.invalidCode ? data.message : '');
+                setOtp('');
+                return;
             }
-        },
+            if (data?.requiresReactivation) {
+                showToast('Account deactivated. Check your email for reactivation code.', 'info');
+                navigate(`/reactivate?email=${encodeURIComponent(data.email || '')}`);
+                return;
+            }
+            showToast(data?.message || 'Google login failed', 'error');
+        }
+    };
+
+    const googleLogin = useGoogleLogin({
+        onSuccess: tokenResponse => signInWithGoogle(tokenResponse.access_token),
         onError: () => showToast('Login Failed', 'error'),
     });
+
+    const submitCode = async e => {
+        e.preventDefault();
+        if (otp.length !== 6) return;
+        if (twoFactor?.via === 'google') {
+            setLoading(true);
+            try { await signInWithGoogle(twoFactor.googleToken, otp); } finally { setLoading(false); }
+            return;
+        }
+        await handleSubmit(e);
+    };
+
+    const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
 
     const socials = [
         { icon: <GoogleIcon />, label: 'Google', onClick: googleLogin },
         { icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } },
         { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } },
     ];
+
+    if (twoFactor) {
+        return (
+            <div>
+                <div className="orw-auth__panel-head">
+                    <h2>Two-step verification</h2>
+                    <p>Enter the 6-digit code from your authenticator app to finish signing in.</p>
+                </div>
+                <form onSubmit={submitCode} className="orw-form">
+                    <div className="orw-field">
+                        <label className="orw-label" htmlFor={`${uid}-otp`}>Authentication code</label>
+                        <input id={`${uid}-otp`} name="otp" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoFocus
+                            autoComplete="one-time-code" placeholder="000000" data-testid="login-otp"
+                            value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+                            className="orw-input" style={{ letterSpacing: '0.4em', fontSize: 18, textAlign: 'center' }}
+                            aria-invalid={otpError ? 'true' : undefined} aria-describedby={`${uid}-otp-help`} />
+                        <div id={`${uid}-otp-help`} className={otpError ? 'orw-error-text' : 'orw-hint'} role={otpError ? 'alert' : undefined}>
+                            {otpError || 'Open Google Authenticator, Authy or your usual app to see the current code.'}
+                        </div>
+                    </div>
+                    <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={otp.length !== 6 || loading} aria-busy={loading}>
+                        {loading ? 'Verifying…' : <><ShieldCheck size={15} /> Verify and sign in</>}
+                    </button>
+                    <button type="button" className="orw-link" onClick={leaveTwoFactor} style={{ alignSelf: 'center' }}>
+                        <ArrowLeft size={13} /> Use a different account
+                    </button>
+                </form>
+            </div>
+        );
+    }
 
     return (
         <div>

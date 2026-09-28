@@ -61,8 +61,8 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ inviteType: 'link', role: 'member' })
             });
-            if (!response.ok) throw new Error('Failed to generate invite link');
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || 'Failed to generate invite link');
             setInviteLink(data.inviteLink);
         } catch (err) {
             showToast(err.message || 'Failed to generate invite link', 'error');
@@ -78,18 +78,20 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
     };
 
     const handleSendEmails = async () => {
-        if (!emails.trim()) { showToast('Please enter at least one email address', 'warning'); return; }
+        // One address per comma, semicolon, space or line.
+        const list = [...new Set(emails.split(/[\s,;]+/).map(e => e.trim()).filter(Boolean))];
+        if (!list.length) { showToast('Please enter at least one email address', 'warning'); return; }
         setLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invite`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ emails, inviteType: 'email', role })
+                body: JSON.stringify({ emails: list, inviteType: 'email', role })
             });
-            if (!response.ok) { const error = await response.json(); throw new Error(error.message || 'Failed to send invites'); }
+            if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.message || 'Failed to send invites'); }
             setSent(true);
-            showToast('Invitations sent successfully!', 'success');
+            showToast(`Invitation${list.length === 1 ? '' : 's'} sent to ${list.length} ${list.length === 1 ? 'person' : 'people'}`, 'success');
             const refreshResponse = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -108,7 +110,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: 'Revoked by admin' })
             });
-            if (!response.ok) throw new Error('Failed to revoke invite');
+            if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.message || 'Failed to revoke invite'); }
             setPendingInvites(prev => prev.filter(inv => inv._id !== inviteId));
             showToast('Invite revoked successfully', 'success');
         } catch (err) { showToast(err.message || 'Failed to revoke invite', 'error'); }
@@ -258,7 +260,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                         onBlur={e => e.currentTarget.style.borderColor = T.border}
                                     />
                                     <p style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: T.dim, marginTop: '4px' }}>
-                                        <AlertCircle size={11} /> Comma separated emails
+                                        <AlertCircle size={11} /> Separate emails with commas or new lines
                                     </p>
                                 </div>
 

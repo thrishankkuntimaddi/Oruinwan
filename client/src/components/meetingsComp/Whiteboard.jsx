@@ -1,13 +1,29 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Pen, Eraser, Trash2, Palette } from 'lucide-react';
+import { Pen, Eraser, Trash2, Palette, Save, Loader2 } from 'lucide-react';
 import api from '@services/api';
-import { useSocket } from '../../contexts/SocketContext';
+import { useToast } from '../../contexts/ToastContext';
 
 const COLORS = ['#FFFFFF', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#000000'];
+// The drawing surface keeps its own dark "board" colour in both themes (strokes are stored with it).
+const BOARD_BG = '#1a1a2e';
+const FONT = 'Inter, system-ui, sans-serif';
 
-const Whiteboard = ({ meetingId, workspaceId }) => {
+const toolBtn = (active) => ({
+    display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600,
+    borderRadius: '2px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+    background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? '#0c0c0c' : 'var(--text-primary)',
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
+});
+
+/**
+ * Meeting whiteboard. Drawing is local until Save: there is no live stroke
+ * sync, so the UI says so instead of pretending to be shared.
+ */
+const Whiteboard = ({ meetingId }) => {
     const canvasRef = useRef(null);
-    const { socket } = useSocket();
+    const { showToast } = useToast();
+    const [dirty, setDirty] = useState(false);
+    const [savedAt, setSavedAt] = useState(null);
 
     const [tool, setTool] = useState('pen');
     const [color, setColor] = useState('#FFFFFF');
@@ -26,8 +42,8 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
                     setStrokes(data.strokes);
                 }
             })
-            .catch(() => {  });
-    }, [meetingId]);
+            .catch((err) => showToast(err?.response?.data?.message || 'Could not load the whiteboard', 'error'));
+    }, [meetingId, showToast]);
 
     
     const redraw = useCallback((allStrokes) => {
@@ -39,7 +55,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         allStrokes.forEach(stroke => {
             if (!stroke.points?.length) return;
             ctx.beginPath();
-            ctx.strokeStyle = stroke.tool === 'eraser' ? '#1a1a2e' : (stroke.color || '#FFFFFF');
+            ctx.strokeStyle = stroke.tool === 'eraser' ? BOARD_BG : (stroke.color || '#FFFFFF');
             ctx.lineWidth = stroke.tool === 'eraser' ? (stroke.lineWidth * 4) : (stroke.lineWidth || 3);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -53,21 +69,6 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
 
     useEffect(() => { redraw(strokes); }, [strokes, redraw]);
 
-    
-    useEffect(() => {
-        if (!socket || !meetingId) return;
-
-        const onUpdate = (data) => {
-            if (data.meetingId !== meetingId) return;
-            if (data.action === 'clear') {
-                setStrokes([]);
-            } else if (data.stroke) {
-                setStrokes(prev => [...prev, data.stroke]);
-            }
-        };
-        socket.on('whiteboard:update', onUpdate);
-        return () => socket.off('whiteboard:update', onUpdate);
-    }, [socket, meetingId]);
 
     
     const getPos = (e) => {
@@ -97,7 +98,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.beginPath();
-            ctx.strokeStyle = tool === 'eraser' ? '#1a1a2e' : color;
+            ctx.strokeStyle = tool === 'eraser' ? BOARD_BG : color;
             ctx.lineWidth = tool === 'eraser' ? lineWidth * 4 : lineWidth;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -117,83 +118,71 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         const stroke = { tool, color, lineWidth, points: currentPoints };
         setStrokes(prev => [...prev, stroke]);
         setCurrentPoints([]);
-
-        
-        socket?.emit('whiteboard:update', { meetingId, action: 'stroke', stroke });
+        setDirty(true);
     };
 
-    
     const handleClear = () => {
         setStrokes([]);
-        socket?.emit('whiteboard:update', { meetingId, action: 'clear' });
+        setDirty(true);
     };
 
-    
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.post(
-                `/api/v2/collaboration/whiteboard/${meetingId}`,
-                { workspaceId, strokes }
-            );
+            await api.post(`/api/v2/collaboration/whiteboard/${meetingId}`, { strokes });
+            setDirty(false);
+            setSavedAt(new Date());
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not save the whiteboard', 'error');
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-full gap-3">
-            {}
-            <div className="flex items-center gap-2 flex-wrap">
-                <button
-                    onClick={() => setTool('pen')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${tool === 'pen' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', fontFamily: FONT }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Not live: others see your drawing after you save and they reopen this tab.
+                {dirty ? ' You have unsaved changes.' : savedAt ? ` Saved at ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : ''}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => setTool('pen')} style={toolBtn(tool === 'pen')}>
                     <Pen size={13} /> Pen
                 </button>
-                <button
-                    onClick={() => setTool('eraser')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${tool === 'eraser' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                >
+                <button onClick={() => setTool('eraser')} style={toolBtn(tool === 'eraser')}>
                     <Eraser size={13} /> Eraser
                 </button>
 
-                <div className="flex items-center gap-1.5 ml-2">
-                    <Palette size={13} className="text-gray-400" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+                    <Palette size={13} style={{ color: 'var(--text-secondary)' }} />
                     {COLORS.map(c => (
                         <button
                             key={c}
+                            title={`Colour ${c}`}
+                            aria-label={`Colour ${c}`}
                             onClick={() => { setColor(c); setTool('pen'); }}
-                            className={`w-5 h-5 rounded-full border-2 transition-all hover:scale-110 ${color === c && tool === 'pen' ? 'border-indigo-500 scale-110' : 'border-transparent'}`}
-                            style={{ backgroundColor: c }}
+                            style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: color === c && tool === 'pen' ? '2px solid var(--accent)' : '1px solid var(--border-accent)' }}
                         />
                     ))}
                 </div>
 
-                <div className="ml-auto flex gap-2">
-                    <button
-                        onClick={handleClear}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/40 transition-all"
-                    >
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                    <button onClick={handleClear} style={{ ...toolBtn(false), color: 'var(--state-danger)' }}>
                         <Trash2 size={13} /> Clear
                     </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all disabled:opacity-60"
-                    >
+                    <button onClick={handleSave} disabled={saving || !dirty} style={{ ...toolBtn(true), opacity: saving || !dirty ? 0.6 : 1, cursor: saving || !dirty ? 'not-allowed' : 'pointer' }}>
+                        {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                         {saving ? 'Saving…' : 'Save'}
                     </button>
                 </div>
             </div>
 
-            {}
-            <div className="flex-1 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-[#1a1a2e]" style={{ cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}>
+            <div style={{ flex: 1, minHeight: '360px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', background: BOARD_BG, cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}>
                 <canvas
                     ref={canvasRef}
                     width={1200}
                     height={700}
-                    className="w-full h-full"
+                    style={{ width: '100%', height: '100%', display: 'block' }}
                     onMouseDown={onPointerDown}
                     onMouseMove={onPointerMove}
                     onMouseUp={onPointerUp}

@@ -50,11 +50,16 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false 
                 .filter(b => b.username.startsWith(query) && b.username !== query)
             : [];
 
+        // Oruinwan AI can be mentioned anywhere: "@Oruinwan …" gets an answer in the conversation.
+        const assistant = ('oruinwan'.startsWith(query) || 'ai'.startsWith(query)) && query !== 'oruinwan'
+            ? [{ _id: '@oruinwan', username: 'Oruinwan', isBroadcast: true, isAssistant: true, profilePicture: '/icons/oruinwan-128.png', name: 'Ask Oruinwan AI to answer here' }]
+            : [];
+
         // Names starting with the query first, then names containing it.
         const lower = (m) => (m.username || '').toLowerCase();
         const starts = members.filter(m => lower(m).startsWith(query));
         const contains = members.filter(m => !lower(m).startsWith(query) && lower(m).includes(query));
-        const filtered = [...starts, ...contains, ...broadcast].slice(0, 8);
+        const filtered = [...assistant, ...starts, ...contains, ...broadcast].slice(0, 8);
 
         if (filtered.length > 0) {
             setSuggestions(filtered);

@@ -1,227 +1,196 @@
-import React, { useState, useEffect } from 'react';
-import Card from './Card';
+import React, { useEffect, useMemo, useState } from 'react';
+import api from '@services/api';
+import { useToast } from '../../contexts/ToastContext';
 import { SUPPORTED_LANGS } from '../../features/messaging/chatWindowComp/messages/TranslatePopover';
 import { getAutoTranslateLang, setAutoTranslateLang } from '../../utils/autoTranslate';
-import api from '@services/api';
-import { Check, Globe2 } from 'lucide-react';
-import { useToast } from '../../contexts/ToastContext';
+import {
+    REGION_DEFAULTS, DATE_FORMATS, detectedTimeZone, formatDate, formatTime, formatDateTime, zoneOffsetLabel,
+} from '../../utils/userDateFormat';
+import { useApplyPreferences } from '../../hooks/useUserPreferences';
+import {
+    PageIntro, Section, Row, Field, Select, Notice, LoadingState, ErrorState, SaveBar, useSettingsForm,
+} from './settingsUi';
+import './preferences.css';
 
-const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+const ENDPOINT = '/api/auth/me/preferences/region';
+const KEYS = ['language', 'timezone', 'dateFormat', 'timeFormat'];
 
-const selectStyle = {
-    padding: '6px 10px',
-    backgroundColor: 'var(--bg-input)',
-    border: '1px solid var(--border-default)',
-    borderRadius: 2,
-    fontSize: 13,
-    color: 'var(--text-primary)',
-    outline: 'none',
-    maxWidth: 280,
-    width: '100%',
-    transition: 'border-color 150ms ease',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+const FALLBACK_ZONES = [
+    'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Sao_Paulo',
+    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Africa/Lagos', 'Africa/Johannesburg', 'Asia/Dubai',
+    'Asia/Kolkata', 'Asia/Singapore', 'Asia/Shanghai', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
+];
+
+const pick = (data) => {
+    const src = data && typeof data === 'object' ? data : {};
+    const out = { ...REGION_DEFAULTS };
+    KEYS.forEach((k) => { if (typeof src[k] === 'string' && src[k]) out[k] = src[k]; });
+    if (!['12h', '24h'].includes(out.timeFormat)) out.timeFormat = REGION_DEFAULTS.timeFormat;
+    if (!DATE_FORMATS.includes(out.dateFormat)) out.dateFormat = REGION_DEFAULTS.dateFormat;
+    return out;
 };
 
-const labelStyle = {
-    display: 'block',
-    fontSize: 10,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-    color: 'var(--text-muted)',
-    marginBottom: 8,
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-};
+function allTimeZones() {
+    try {
+        const list = Intl.supportedValuesOf?.('timeZone');
+        if (Array.isArray(list) && list.length) return list.includes('UTC') ? list : ['UTC', ...list];
+    } catch { /* older browsers */ }
+    return FALLBACK_ZONES;
+}
 
-const RegionTab = ({ region, setRegion }) => {
-    const [autoLang, setAutoLang] = useState(getAutoTranslateLang());
-    const { showToast } = useToast();
-    const [saving, setSaving] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
-    const [detectedTimezone, setDetectedTimezone] = useState('');
+/** Zones grouped by their area ("America", "Europe"…), each labelled with its current offset. */
+function groupZones(extra) {
+    const now = new Date();
+    const zones = [...allTimeZones()];
+    if (extra && extra !== 'auto' && !zones.includes(extra)) zones.push(extra);
+    const groups = new Map();
+    zones.forEach((z) => {
+        const area = z.includes('/') ? z.split('/')[0] : 'Other';
+        if (!groups.has(area)) groups.set(area, []);
+        const offset = zoneOffsetLabel(z, now);
+        groups.get(area).push({ id: z, label: `${z.replace(/_/g, ' ')}${offset ? ` (${offset})` : ''}` });
+    });
+    return [...groups.entries()].sort(([a], [b]) => (a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b)));
+}
 
+function useNow(intervalMs = 15000) {
+    const [now, setNow] = useState(() => new Date());
     useEffect(() => {
-        try { setDetectedTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { }
-    }, []);
+        const t = setInterval(() => setNow(new Date()), intervalMs);
+        return () => clearInterval(t);
+    }, [intervalMs]);
+    return now;
+}
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.put('/api/auth/me/preferences/region', region);
-            setHasChanges(false);
-            showToast('Region settings saved', 'success');
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to save settings', 'error');
-        } finally { setSaving(false); }
-    };
+const DATE_FORMAT_LABELS = {
+    'MM/DD/YYYY': 'MM/DD/YYYY',
+    'DD/MM/YYYY': 'DD/MM/YYYY',
+    'YYYY-MM-DD': 'YYYY-MM-DD (ISO 8601)',
+    'DD MMM YYYY': 'DD MMM YYYY',
+};
 
-    const update = (key, value) => {
-        setRegion({ ...region, [key]: value });
-        setHasChanges(true);
-    };
+/**
+ * Settings → Language & region. Time zone, date and clock format are saved to
+ * the account and used for timestamps across the app (chat, tasks, notes).
+ * Auto-translate is a per-browser choice and applies immediately.
+ */
+const RegionTab = () => {
+    const { showToast } = useToast();
+    const applyPreferences = useApplyPreferences();
+    const [autoLang, setAutoLang] = useState(getAutoTranslateLang);
+    const detected = useMemo(() => detectedTimeZone(), []);
+    const now = useNow();
 
-    const previewDate = () => {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        switch (region.dateFormat) {
-            case 'MM/DD/YYYY': return `${m}/${d}/${y}`;
-            case 'DD/MM/YYYY': return `${d}/${m}/${y}`;
-            case 'YYYY-MM-DD': return `${y}-${m}-${d}`;
-            case 'DD MMM YYYY': return `${d} ${months[now.getMonth()]} ${y}`;
-            default: return `${m}/${d}/${y}`;
-        }
-    };
+    const form = useSettingsForm({
+        initial: { ...REGION_DEFAULTS },
+        load: async () => pick((await api.get(ENDPOINT)).data),
+        save: async (values) => {
+            // Send every field: older servers replace the whole object on PUT.
+            const { data } = await api.put(ENDPOINT, pick(values));
+            const hasFields = data && typeof data === 'object' && KEYS.some((k) => k in data);
+            return hasFields ? pick({ ...values, ...data }) : pick(values);
+        },
+        onSaved: (next) => {
+            applyPreferences({ region: next });
+            showToast('Language and region saved', 'success');
+        },
+        onError: (msg) => showToast(msg, 'error'),
+    });
+
+    const { values, set } = form;
+    const zoneGroups = useMemo(() => groupZones(values.timezone), [values.timezone]);
+
+    if (form.loading) return <><PageIntro title="Language & region" /><LoadingState label="Loading your region settings…" /></>;
+    if (form.loadError) return <><PageIntro title="Language & region" /><ErrorState message={form.loadError} onRetry={form.reload} /></>;
+
+    const zoneName = values.timezone === 'auto' ? detected : values.timezone;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Card title="Auto-translate" subtitle="Translate other people's messages automatically (uses Oruinwan AI)">
-                <label style={labelStyle}>Translate incoming messages to</label>
-                <select data-testid="auto-translate-lang" value={autoLang} style={selectStyle}
-                    onChange={e => { setAutoLang(e.target.value); setAutoTranslateLang(e.target.value); }}>
-                    <option value="">Off</option>
-                    {[{ code: 'en', label: 'English', flag: '🇬🇧' }, ...SUPPORTED_LANGS].map(l => (
-                        <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
-                    ))}
-                </select>
-            </Card>
+        <>
+            <PageIntro
+                title="Language & region"
+                description="Your time zone and how dates and times are written across Oruinwan."
+            />
 
-            <Card title="Language" subtitle="Display language for the interface">
-                <label style={labelStyle}>Display Language</label>
-                <select
-                    value={region.language}
-                    onChange={e => update('language', e.target.value)}
-                    style={selectStyle}
-                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
-                >
-                    <option value="en">English (US)</option>
-                    <option value="en-gb">English (UK)</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="it">Italiano</option>
-                    <option value="pt">Português</option>
-                    <option value="ru">Русский</option>
-                    <option value="zh">中文 (简体)</option>
-                    <option value="ja">日本語</option>
-                    <option value="ko">한국어</option>
-                    <option value="hi">हिन्दी</option>
-                </select>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, ...S.font }}>
-                    Only English is fully supported. Others coming soon.
-                </p>
-            </Card>
-
-            <Card title="Timezone" subtitle="Set your local timezone for accurate timestamps">
-                {detectedTimezone && (
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginBottom: 12,
-                        padding: '8px 12px',
-                        backgroundColor: 'var(--bg-active)',
-                        border: '1px solid var(--border-default)',
-                        borderLeft: '2px solid var(--accent)',
-                        borderRadius: 2,
-                    }}>
-                        <Globe2 size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', ...S.font }}>
-                            Detected: <strong style={{ color: 'var(--text-primary)' }}>{detectedTimezone}</strong>
+            <Section title="Time zone" pad>
+                <div className="stg-pref-stack">
+                    <Field
+                        id="region-timezone"
+                        label="Time zone"
+                        hint={values.timezone === 'auto' ? `Uses the zone your device reports (${detected}), even when you travel.` : 'Times are shown in this zone on every device.'}
+                    >
+                        <Select
+                            id="region-timezone"
+                            className="stg-pref-select"
+                            value={values.timezone}
+                            onChange={(e) => set('timezone', e.target.value)}
+                            data-testid="region-timezone"
+                        >
+                            <option value="auto">Automatic — {detected.replace(/_/g, ' ')}</option>
+                            {zoneGroups.map(([area, zones]) => (
+                                <optgroup key={area} label={area}>
+                                    {zones.map((z) => <option key={z.id} value={z.id}>{z.label}</option>)}
+                                </optgroup>
+                            ))}
+                        </Select>
+                    </Field>
+                    <div>
+                        <span className="stg-pref-preview" aria-live="polite">
+                            Local time in {zoneName.replace(/_/g, ' ')}
+                            <strong>{formatDateTime(now, values)}</strong>
                         </span>
                     </div>
-                )}
-                <label style={labelStyle}>Timezone</label>
-                <select
-                    value={region.timezone}
-                    onChange={e => update('timezone', e.target.value)}
-                    style={selectStyle}
-                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
-                >
-                    <option value="auto">Auto-detect ({detectedTimezone || 'Unknown'})</option>
-                    <option value="America/New_York">Eastern Time (ET)</option>
-                    <option value="America/Chicago">Central Time (CT)</option>
-                    <option value="America/Denver">Mountain Time (MT)</option>
-                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                    <option value="Europe/London">London (GMT/BST)</option>
-                    <option value="Europe/Paris">Paris (CET)</option>
-                    <option value="Europe/Berlin">Berlin (CET)</option>
-                    <option value="Asia/Dubai">Dubai (GST)</option>
-                    <option value="Asia/Kolkata">India (IST)</option>
-                    <option value="Asia/Shanghai">Shanghai (CST)</option>
-                    <option value="Asia/Tokyo">Tokyo (JST)</option>
-                    <option value="Australia/Sydney">Sydney (AEDT)</option>
-                </select>
-            </Card>
-
-            <Card title="Date Format" subtitle="Customize timestamps across the app">
-                <label style={labelStyle}>Format</label>
-                <select
-                    value={region.dateFormat}
-                    onChange={e => update('dateFormat', e.target.value)}
-                    style={selectStyle}
-                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
-                >
-                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD (ISO 8601)</option>
-                    <option value="DD MMM YYYY">DD MMM YYYY</option>
-                </select>
-                <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 12,
-                    padding: '6px 12px',
-                    backgroundColor: 'var(--bg-active)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 2,
-                }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>Preview:</span>
-                    <span style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        fontFamily: 'monospace',
-                    }}>{previewDate()}</span>
                 </div>
-            </Card>
+            </Section>
 
-            {hasChanges && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '7px 16px',
-                            fontSize: 13,
-                            fontWeight: 500,
-                            color: '#0c0c0c',
-                            backgroundColor: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: 2,
-                            cursor: saving ? 'not-allowed' : 'pointer',
-                            opacity: saving ? 0.5 : 1,
-                            transition: 'background-color 150ms ease',
-                            ...S.font,
-                        }}
-                        onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
-                        onMouseLeave={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
+            <Section title="Date and time format">
+                <Row label="Date format" description={`Today: ${formatDate(now, values)}`} htmlFor="region-date-format" stack>
+                    <Select
+                        id="region-date-format"
+                        value={values.dateFormat}
+                        onChange={(e) => set('dateFormat', e.target.value)}
+                        data-testid="region-date-format"
                     >
-                        <Check size={13} />
-                        {saving ? 'Saving…' : 'Save Settings'}
-                    </button>
-                </div>
+                        {DATE_FORMATS.map((f) => <option key={f} value={f}>{DATE_FORMAT_LABELS[f]}</option>)}
+                    </Select>
+                </Row>
+                <Row label="Clock" description={`Now: ${formatTime(now, values)}`} stack>
+                    <div className="stg-segmented" role="group" aria-label="Clock format">
+                        <button type="button" aria-pressed={values.timeFormat === '12h'} onClick={() => set('timeFormat', '12h')}>12-hour</button>
+                        <button type="button" aria-pressed={values.timeFormat === '24h'} onClick={() => set('timeFormat', '24h')}>24-hour</button>
+                    </div>
+                </Row>
+            </Section>
+
+            <Section title="Language" description="Oruinwan is in English for now.">
+                <Row
+                    label="Auto-translate messages"
+                    description="Translate other people's messages into this language as they arrive (uses Oruinwan AI). Applies to this browser right away."
+                    htmlFor="auto-translate-lang"
+                    stack
+                >
+                    <Select
+                        id="auto-translate-lang"
+                        data-testid="auto-translate-lang"
+                        value={autoLang}
+                        onChange={(e) => { setAutoLang(e.target.value); setAutoTranslateLang(e.target.value); }}
+                    >
+                        <option value="">Off</option>
+                        {[{ code: 'en', label: 'English', flag: '🇬🇧' }, ...SUPPORTED_LANGS].map((l) => (
+                            <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+                        ))}
+                    </Select>
+                </Row>
+            </Section>
+
+            {values.timezone !== 'auto' && values.timezone !== detected && (
+                <Notice tone="info">
+                    Your device is in <strong>{detected.replace(/_/g, ' ')}</strong>; timestamps will use <strong>{values.timezone.replace(/_/g, ' ')}</strong>.
+                </Notice>
             )}
-        </div>
+
+            <SaveBar visible={form.dirty} saving={form.saving} onSave={form.save} onDiscard={form.discard} />
+        </>
     );
 };
 

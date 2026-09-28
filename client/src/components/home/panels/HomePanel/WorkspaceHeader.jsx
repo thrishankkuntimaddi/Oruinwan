@@ -1,15 +1,13 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, Settings2, SquarePen, UserPlus, Settings, Edit3, LogOut, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronRight, Settings2, SquarePen, UserPlus, Settings, Edit3, LogOut, Plus, ArrowLeftRight } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
+import { WorkspaceIcon } from '../../../../utils/workspaceIcons';
 
-const ICON_MAP = {
-    rocket: <Rocket size={18} />, briefcase: <Briefcase size={18} />, zap: <Zap size={18} />,
-    palette: <Palette size={18} />, microscope: <Microscope size={18} />, globe: <Globe size={18} />,
-    shield: <Shield size={18} />, trend: <TrendingUp size={18} />, bulb: <Lightbulb size={18} />,
-    flame: <Flame size={18} />, target: <Target size={18} />, trophy: <Trophy size={18} />,
-};
+const menuItem = { width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' };
+const hoverOn = e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; };
+const hoverOff = e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; };
 
 const WorkspaceHeader = ({
     workspaceName, showWorkspaceMenu, setShowWorkspaceMenu,
@@ -17,8 +15,18 @@ const WorkspaceHeader = ({
     setShowInviteModal, setShowSettingsModal, setShowRenameModal, setNewName,
 }) => {
     const navigate = useNavigate();
-    const { activeWorkspace } = useWorkspace();
+    const { activeWorkspace, workspaces = [], setActiveWorkspace } = useWorkspace();
     const { showToast } = useToast();
+    const [showSwitch, setShowSwitch] = useState(false);
+    const otherWorkspaces = workspaces.filter(ws => String(ws.id) !== String(activeWorkspace?.id) && (ws.membershipStatus || 'active') === 'active');
+
+    // Esc closes the menu; it always reopens with the switcher folded.
+    useEffect(() => {
+        if (!showWorkspaceMenu) { setShowSwitch(false); return undefined; }
+        const onKey = (e) => { if (e.key === 'Escape') setShowWorkspaceMenu(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showWorkspaceMenu, setShowWorkspaceMenu]);
 
     const userRole = activeWorkspace?.role?.toLowerCase() || '';
     const isAdmin = userRole === 'admin' || userRole === 'owner';
@@ -41,6 +49,11 @@ const WorkspaceHeader = ({
             <div
                 style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, cursor: 'pointer', minWidth: 0 }}
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+                role="button"
+                tabIndex={0}
+                aria-haspopup="menu"
+                aria-expanded={showWorkspaceMenu}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowWorkspaceMenu(!showWorkspaceMenu); } }}
             >
                 <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
                     {workspaceName}
@@ -85,8 +98,8 @@ const WorkspaceHeader = ({
                     }}>
                         {}
                         <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-active)' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', backgroundColor: activeWorkspace?.color || '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                                {ICON_MAP[activeWorkspace?.icon?.toLowerCase()] || ICON_MAP.rocket}
+                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', backgroundColor: activeWorkspace?.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                                <WorkspaceIcon icon={activeWorkspace?.icon} size={18} />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -138,7 +151,38 @@ const WorkspaceHeader = ({
                             )}
                         </div>
 
-                        {}
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '4px 0' }}>
+                            <button style={menuItem} onMouseEnter={hoverOn} onMouseLeave={hoverOff}
+                                onClick={() => setShowSwitch(v => !v)} aria-expanded={showSwitch}
+                            >
+                                <ArrowLeftRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                Switch workspace
+                                <ChevronRight size={12} style={{ marginLeft: 'auto', color: 'var(--text-muted)', transition: 'transform 150ms ease', transform: showSwitch ? 'rotate(90deg)' : 'none' }} />
+                            </button>
+                            {showSwitch && (
+                                <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                                    {otherWorkspaces.length === 0 ? (
+                                        <div style={{ padding: '6px 14px 8px 37px', fontSize: '11px', color: 'var(--text-muted)' }}>No other workspaces</div>
+                                    ) : otherWorkspaces.map(ws => (
+                                        <button key={ws.id} style={{ ...menuItem, padding: '6px 14px 6px 34px' }} onMouseEnter={hoverOn} onMouseLeave={hoverOff}
+                                            onClick={() => { setShowWorkspaceMenu(false); setActiveWorkspace?.(ws); navigate(`/workspace/${ws.id}/home`); }}
+                                        >
+                                            <span style={{ width: '18px', height: '18px', borderRadius: '2px', background: ws.color || 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <WorkspaceIcon icon={ws.icon} size={11} />
+                                            </span>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <button style={menuItem} onMouseEnter={hoverOn} onMouseLeave={hoverOff}
+                                onClick={() => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); }}
+                            >
+                                <Plus size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                Create workspace
+                            </button>
+                        </div>
+
                         <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '4px 0' }}>
                             <button
                                 style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}

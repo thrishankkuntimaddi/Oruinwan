@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Crown, Shield, UserCheck, Pause, Play, Trash2, MoreVertical, Search, Loader } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
@@ -24,8 +24,15 @@ const roleBadge = (role) => {
 
 const menuBtn = { width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: '12px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' };
 
-const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberActionLoading = {}, openMemberDropdown, setOpenMemberDropdown, fetchMembers, refreshWorkspace }) => {
+const WARNING = 'var(--color-warning)';
+
+const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadingMembers, memberActionLoading = {}, openMemberDropdown, setOpenMemberDropdown, fetchMembers, refreshWorkspace }) => {
     const { showToast } = useToast();
+    const [filter, setFilter] = useState('');
+    // Admins manage members; only the owner acts on admins; nobody acts on the owner or themselves.
+    const canManage = (m) => isAdmin && !m.isCurrentUser && m.role !== 'owner' && (m.role !== 'admin' || isOwner);
+    const q = filter.trim().toLowerCase();
+    const visible = q ? members.filter(m => `${m.name} ${m.email || ''}`.toLowerCase().includes(q)) : members;
 
     const handleSuspendMember = async (userId) => {
         if (!window.confirm('Suspend this member? They will lose workspace access.')) return;
@@ -93,15 +100,16 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
             {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {member.memberStatus === 'suspended' && (
-                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: '#e59e0c', background: 'rgba(229,158,12,0.1)', border: '1px solid rgba(229,158,12,0.3)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: WARNING, background: 'var(--accent-dim)', border: `1px solid ${WARNING}`, borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Pause size={9} /> Suspended
                     </span>
                 )}
                 {roleBadge(member.role)}
-                {isAdmin && !member.isCurrentUser && (
+                {canManage(member) && (
                     <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
+                            aria-label={`Actions for ${member.name}`}
                             disabled={!!memberActionLoading[member.id]}
                             style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -130,7 +138,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
                                             >
                                                 {member.role === 'admin' ? <><UserCheck size={12} /> Demote to Member</> : <><Shield size={12} /> Promote to Admin</>}
                                             </button>
-                                            <button style={{ ...menuBtn, color: '#e59e0c' }}
+                                            <button style={{ ...menuBtn, color: WARNING }}
                                                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                                 onClick={() => handleSuspendMember(member.id)}
@@ -162,7 +170,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
             {}
             <div style={{ position: 'relative', marginBottom: '16px' }}>
                 <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input type="text" placeholder="Search members…"
+                <input type="text" placeholder="Search members…" value={filter} onChange={e => setFilter(e.target.value)} aria-label="Search members"
                     style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
                     onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                     onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
@@ -174,10 +182,10 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
                     <Loader size={18} className="animate-spin" style={{ color: 'var(--accent)' }} />
                     <span style={{ fontSize: '12px' }}>Loading members…</span>
                 </div>
-            ) : members.length > 0 ? (
+            ) : visible.length > 0 ? (
                 <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '2px', overflow: 'hidden' }}>
                     {ROLE_GROUPS.map(({ role, label, Icon }) => {
-                        const group = members.filter(m => m.role === role);
+                        const group = visible.filter(m => (ROLE_GROUPS.some(g => g.role === m.role) ? m.role : 'member') === role);
                         if (!group.length) return null;
                         return (
                             <div key={role}>
@@ -194,7 +202,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
                 </div>
             ) : (
                 <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed var(--border-default)', borderRadius: '2px' }}>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>No members found</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{q ? `No members match “${filter}”` : 'No members found'}</p>
                 </div>
             )}
         </div>

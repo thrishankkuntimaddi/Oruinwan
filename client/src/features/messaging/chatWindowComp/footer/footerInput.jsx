@@ -79,6 +79,8 @@ export default function FooterInput({
   disabled = false,
   replyingTo = null,
   onCancelReply,
+  // Set while a follow-up with Oruinwan AI is active: { onStop }.
+  aiFollowUp = null,
   members = [],
   recentMessages = [],
   showSmartReply = false,
@@ -148,12 +150,20 @@ export default function FooterInput({
     setHasText(!!editableRef.current.textContent?.trim());
     onChange({ target: { value: html } });
   }, [onChange]);
+  // Register once per mount with a stable handle, so the AI context keeps
+  // composers in mount order (an open thread's composer sits on top). Inserts
+  // are routed by the AI context to the top composer only.
+  const insertTextRef = useRef(insertText);
+  insertTextRef.current = insertText;
+  const registerComposer = aiCtx?.registerComposer;
   useEffect(() => {
-    const onInsert = (e) => insertText(e?.detail?.text);
+    const handle = { insert: (text) => insertTextRef.current(text) };
+    if (registerComposer) return registerComposer(handle);
+    // Outside the AI provider: listen for insert events directly.
+    const onInsert = (e) => handle.insert(e?.detail?.text);
     document.addEventListener('chttrix:composer:insert', onInsert);
-    const unregister = aiCtx?.registerComposer?.({ insert: insertText });
-    return () => { document.removeEventListener('chttrix:composer:insert', onInsert); unregister?.(); };
-  }, [aiCtx, insertText]);
+    return () => document.removeEventListener('chttrix:composer:insert', onInsert);
+  }, [registerComposer]);
 
   const prevMessageRef = useRef(newMessage);
 
@@ -197,6 +207,36 @@ export default function FooterInput({
     document.execCommand(command, false, value);
   };
 
+  // Put an "@Oruinwan" mention chip at the start of the message unless one is there.
+  const insertAIMention = () => {
+    const el = editableRef.current;
+    if (!el) return;
+    el.focus();
+    let chip = el.querySelector('[data-mention="Oruinwan"]');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.className = 'mention-chip inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 cursor-default select-none';
+      chip.contentEditable = 'false';
+      chip.dataset.mention = 'Oruinwan';
+      chip.textContent = '@Oruinwan';
+      const space = document.createTextNode('\u00a0');
+      el.insertBefore(space, el.firstChild);
+      el.insertBefore(chip, space);
+    }
+    // Caret right after the chip (and its trailing space).
+    const sel = window.getSelection();
+    const range = document.createRange();
+    const after = chip.nextSibling;
+    if (after && after.nodeType === Node.TEXT_NODE) range.setStart(after, Math.min(1, after.textContent.length));
+    else range.setStartAfter(chip);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const html = el.innerHTML || '';
+    setHasText(true);
+    onChange({ target: { value: html } });
+  };
+
   const insertFormat = (type) => {
     if (blocked || disabled) return;
     editableRef.current?.focus();
@@ -218,8 +258,9 @@ export default function FooterInput({
         break;
       }
       case "ai":
-        // Open the Oruinwan AI panel; it already knows which conversation is open.
-        window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: {} }));
+        // Address the message to Oruinwan AI: an @Oruinwan chip at the start of
+        // the message (once), caret after it. Sending it gets an answer here.
+        insertAIMention();
         break;
       default: break;
     }
@@ -275,7 +316,9 @@ export default function FooterInput({
         setAppModal(command.name);
         return;
       }
-      if (onSlashCommand?.(command.name, command.args) !== false) {
+      // Only a view that handles slash commands may consume one; without a
+      // handler the text is sent as typed instead of silently disappearing.
+      if (onSlashCommand && onSlashCommand(command.name, command.args) !== false) {
         clear();
         return;
       }
@@ -344,6 +387,20 @@ export default function FooterInput({
       {}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
+      )}
+
+      {aiFollowUp && !replyingTo && (
+        <div role="status" data-testid="ai-follow-up"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 6px', padding: '6px 10px', borderLeft: '2px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '12px', color: 'var(--text-secondary)', borderRadius: '0 2px 2px 0' }}>
+          <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, borderRadius: 2 }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Continuing with Oruinwan AI</strong> · your next message goes to the AI, no mention needed
+          </span>
+          <button type="button" onClick={aiFollowUp.onStop}
+            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '2px 8px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            Stop
+          </button>
+        </div>
       )}
 
       {}
@@ -554,11 +611,12 @@ export default function FooterInput({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertFormat("ai")}
                   style={{ ...toolbarBtnStyle(), padding: '5px' }}
-                  title="AI"
+                  title="Ask Oruinwan AI (adds @Oruinwan to your message)"
+                  aria-label="Ask Oruinwan AI"
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
-                  <img src="/assets/OruinwanAI-logo.png" alt="AI" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.7 }} />
+                  <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', borderRadius: 2 }} />
                 </button>
                 <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
               </>

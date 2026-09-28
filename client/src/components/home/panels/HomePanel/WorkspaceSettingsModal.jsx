@@ -3,6 +3,7 @@ import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 import api from '@services/api';
 import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import InvitationsTab from '../../../workspace/settings/InvitationsTab';
 import MembersTab from '../../../workspace/settings/MembersTab';
@@ -15,10 +16,16 @@ import DataTab from '../../../workspace/settings/DataTab';
 import WorkspaceAnalyticsDashboard from '../../../../pages/workspace-os/WorkspaceAnalyticsDashboard';
 import { useFlag } from '../../../../contexts/FeatureFlagsContext';
 import logger from '../../../../utils/logger';
+import { DEFAULT_WORKSPACE_COLOR } from '../../../../utils/workspaceIcons';
+
+const PERMISSION_KEYS = ['allowMemberChannelCreation', 'allowMemberInvite', 'requireAdminApproval', 'isDiscoverable'];
+const permissionsFrom = (ws) => Object.fromEntries(PERMISSION_KEYS.map(k => [k, !!ws?.settings?.[k]]));
 
 const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setShowDeleteConfirm }) => {
     const { activeWorkspace, refreshWorkspace } = useWorkspace();
     const { showToast } = useToast();
+    const navigate = useNavigate();
+    const [leaving, setLeaving] = useState(false);
     const [activeSettingsTab, setActiveSettingsTab] = useState("General");
 
     
@@ -26,7 +33,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [newWorkspaceName, setNewWorkspaceName] = useState(activeWorkspace?.name || '');
     const [editingIcon, setEditingIcon] = useState(false);
     const [selectedIcon, setSelectedIcon] = useState(activeWorkspace?.icon || 'rocket');
-    const [selectedColor, setSelectedColor] = useState(activeWorkspace?.color || '#2563eb');
+    const [selectedColor, setSelectedColor] = useState(activeWorkspace?.color || DEFAULT_WORKSPACE_COLOR);
     const [savingIcon, setSavingIcon] = useState(false);
     const [savingName, setSavingName] = useState(false);
     const [workspaceRules, setWorkspaceRules] = useState(activeWorkspace?.rules || "");
@@ -34,12 +41,8 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [savingRules, setSavingRules] = useState(false);
 
     
-    const [permissions, setPermissions] = useState({
-        allowMemberChannelCreation: activeWorkspace?.allowMemberChannelCreation || false,
-        allowMemberInvite: activeWorkspace?.allowMemberInvite || false,
-        requireAdminApproval: activeWorkspace?.requireAdminApproval || false,
-        isDiscoverable: activeWorkspace?.isDiscoverable || false,
-    });
+    // Seeded from GET /api/workspaces/my `settings`.
+    const [permissions, setPermissions] = useState(() => permissionsFrom(activeWorkspace));
     const [savingPermissions, setSavingPermissions] = useState(false);
 
     
@@ -52,7 +55,8 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
 
-    const isAdmin = activeWorkspace?.role === 'admin' || activeWorkspace?.role === 'owner';
+    const isOwner = activeWorkspace?.role === 'owner' || !!activeWorkspace?.isOwner;
+    const isAdmin = isOwner || activeWorkspace?.role === 'admin';
     const billingEnabled = useFlag('billing');
     useEffect(() => {
         if (!showSettingsModal) return undefined;
@@ -80,38 +84,35 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         try {
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
             const raw = response.data?.members || response.data || [];
-            const currentUserId = activeWorkspace?.currentUserId;
+            // Presence is `status`/`isOnline`; membership state is `membershipStatus`.
             const normalised = raw.map(m => ({
                 id: m._id || m.id,
                 name: m.username || m.name || m.email || 'Unknown',
                 email: m.email,
                 avatar: m.profilePicture || m.avatar || null,
                 status: m.isOnline ? 'online' : 'offline',
-                memberStatus: m.status || 'active',
+                memberStatus: m.membershipStatus || 'active',
                 role: m.role || 'member',
-                isCurrentUser: currentUserId ? String(m._id || m.id) === String(currentUserId) : false,
+                joinedAt: m.joinedAt,
+                isCurrentUser: !!m.isCurrentUser,
             }));
             setMembers(normalised);
         } catch (error) {
             logger.error('Error fetching members:', error);
+            showToast(error.response?.data?.message || 'Could not load members', 'error');
         } finally {
             setLoadingMembers(false);
         }
-    }, [activeWorkspace?.id, activeWorkspace?.currentUserId]);
+    }, [activeWorkspace?.id, showToast]);
 
     useEffect(() => {
         if (activeWorkspace) {
             setWorkspaceName(activeWorkspace.name || '');
             setNewWorkspaceName(activeWorkspace.name || '');
             setSelectedIcon(activeWorkspace.icon || 'rocket');
-            setSelectedColor(activeWorkspace.color || '#2563eb');
+            setSelectedColor(activeWorkspace.color || DEFAULT_WORKSPACE_COLOR);
             setWorkspaceRules(activeWorkspace.rules || "");
-            setPermissions({
-                allowMemberChannelCreation: activeWorkspace.allowMemberChannelCreation || false,
-                allowMemberInvite: activeWorkspace.allowMemberInvite || false,
-                requireAdminApproval: activeWorkspace.requireAdminApproval || false,
-                isDiscoverable: activeWorkspace.isDiscoverable || false,
-            });
+            setPermissions(permissionsFrom(activeWorkspace));
         }
     }, [activeWorkspace]);
 
@@ -126,7 +127,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         if (!isAdmin) return;
         try {
             setSavingPermissions(true);
-            await api.put(`/api/workspaces/${activeWorkspace.id}`, { [permissionKey]: value });
+            await api.put(`/api/workspaces/${activeWorkspace.id}`, { settings: { [permissionKey]: value } });
             setPermissions(prev => ({ ...prev, [permissionKey]: value }));
             showToast('Permission updated successfully', 'success');
             await refreshWorkspace();
@@ -138,6 +139,21 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         }
     };
 
+    const handleLeave = async () => {
+        if (!activeWorkspace?.id || isOwner) return;
+        setLeaving(true);
+        try {
+            await api.post(`/api/workspaces/${activeWorkspace.id}/leave`);
+            showToast(`You left ${activeWorkspace.name}`, 'success');
+            setShowSettingsModal(false);
+            navigate('/workspaces', { replace: true });
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Could not leave the workspace', 'error');
+        } finally {
+            setLeaving(false);
+        }
+    };
+
     if (!showSettingsModal) return null;
 
     const tabs = isAdmin
@@ -146,13 +162,13 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
+            style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
             onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false); }}
         >
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '800px', height: '580px', display: 'flex', overflow: 'hidden', position: 'relative' }}>
+            <div role="dialog" aria-modal="true" aria-label="Workspace settings" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '860px', height: 'min(640px, calc(100vh - 32px))', display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
                 {}
-                <div style={{ width: '200px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ width: '184px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                     <div style={{ padding: '0 16px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
                         Settings
                     </div>
@@ -179,7 +195,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 </div>
 
                 {}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {}
                     <div style={{ padding: '18px 28px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
@@ -204,6 +220,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                                 savingRules={savingRules} setSavingRules={setSavingRules}
                                 stats={stats} loadingStats={loadingStats}
                                 refreshWorkspace={refreshWorkspace}
+                                isOwner={isOwner} onLeave={handleLeave} leaving={leaving}
                             />
                         )}
                         {activeSettingsTab === "Permissions" && (
@@ -211,7 +228,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                         )}
                         {activeSettingsTab === "Members" && (
                             <MembersTab
-                                activeWorkspace={activeWorkspace} isAdmin={isAdmin}
+                                activeWorkspace={activeWorkspace} isAdmin={isAdmin} isOwner={isOwner}
                                 members={members} loadingMembers={loadingMembers}
                                 memberActionLoading={memberActionLoading}
                                 openMemberDropdown={openMemberDropdown} setOpenMemberDropdown={setOpenMemberDropdown}
@@ -234,7 +251,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                             <DataTab workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} />
                         )}
                         {activeSettingsTab === "Advanced" && (
-                            <AdvancedTab isAdmin={isAdmin} setShowDeleteConfirm={setShowDeleteConfirm} />
+                            <AdvancedTab isOwner={isOwner} setShowDeleteConfirm={setShowDeleteConfirm} />
                         )}
                     </div>
                 </div>

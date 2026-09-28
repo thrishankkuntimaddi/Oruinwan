@@ -1,166 +1,127 @@
 import React from 'react';
 import { Sun, Moon, Laptop, Check } from 'lucide-react';
-import Card from './Card';
-
-const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
+import { PageIntro, Section, Row, SwitchRow } from './settingsUi';
+import './preferences.css';
 
 const THEMES = [
-    {
-        id: 'light',
-        label: 'Light',
-        description: 'Clean & bright',
-        icon: Sun,
-        preview: (
-            <div style={{
-                width: '100%',
-                height: 56,
-                backgroundColor: '#ffffff',
-                border: '1px solid #e5e7eb',
-                borderRadius: 2,
-                display: 'flex',
-                overflow: 'hidden',
-            }}>
-                <div style={{ width: '33%', backgroundColor: '#f3f4f6', borderRight: '1px solid #e5e7eb' }} />
-                <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 6, backgroundColor: '#e5e7eb', borderRadius: 1, width: '75%' }} />
-                    <div style={{ height: 6, backgroundColor: '#e5e7eb', borderRadius: 1, width: '50%' }} />
-                    <div style={{ height: 6, backgroundColor: '#f3f4f6', borderRadius: 1, width: '65%' }} />
-                </div>
-            </div>
-        )
-    },
-    {
-        id: 'dark',
-        label: 'Dark',
-        description: 'Easy at night',
-        icon: Moon,
-        preview: (
-            <div style={{
-                width: '100%',
-                height: 56,
-                backgroundColor: 'var(--bg-base)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 2,
-                display: 'flex',
-                overflow: 'hidden',
-            }}>
-                <div style={{ width: '33%', backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-default)' }} />
-                <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 6, backgroundColor: 'var(--bg-active)', borderRadius: 1, width: '75%' }} />
-                    <div style={{ height: 6, backgroundColor: 'var(--bg-hover)', borderRadius: 1, width: '50%' }} />
-                    <div style={{ height: 6, backgroundColor: 'var(--bg-hover)', borderRadius: 1, width: '65%' }} />
-                </div>
-            </div>
-        )
-    },
-    {
-        id: 'auto',
-        label: 'System',
-        description: 'Follows OS setting',
-        icon: Laptop,
-        preview: (
-            <div style={{
-                width: '100%',
-                height: 56,
-                borderRadius: 2,
-                border: '1px solid var(--border-default)',
-                display: 'flex',
-                overflow: 'hidden',
-                background: 'linear-gradient(90deg, #fff 50%, #0c0c0c 50%)',
-            }}>
-                <div style={{ width: '33%', height: '100%', borderRight: '1px solid var(--border-default)', background: 'linear-gradient(90deg, #f3f4f6 50%, #111111 50%)' }} />
-                <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 6, borderRadius: 1, width: '75%', background: 'linear-gradient(90deg, #e5e7eb 50%, #222222 50%)' }} />
-                    <div style={{ height: 6, borderRadius: 1, width: '50%', background: 'linear-gradient(90deg, #e5e7eb 50%, #222222 50%)' }} />
-                </div>
-            </div>
-        )
-    },
+    { id: 'light', label: 'Light', description: 'Clean and bright', icon: Sun },
+    { id: 'dark', label: 'Dark', description: 'Easy on the eyes at night', icon: Moon },
+    { id: 'auto', label: 'System', description: 'Matches your device, live', icon: Laptop },
 ];
 
-const AppearanceTab = ({ theme, toggleTheme }) => {
+const TEXT_SIZES = [
+    { id: 'small', label: 'Small', px: 13 },
+    { id: 'default', label: 'Default', px: 14 },
+    { id: 'large', label: 'Large', px: 16 },
+    { id: 'larger', label: 'Larger', px: 18 },
+];
+
+/**
+ * Settings → Appearance. Choices apply instantly and are saved to your account
+ * (theme, text size) or to this device (reduce motion) by ThemeContext.
+ */
+const AppearanceTab = () => {
+    const { theme, resolvedTheme, setTheme, textSize, setTextSize, reduceMotion, setReduceMotion } = useTheme();
+    const { showToast } = useToast();
+
+    const warnIfFailed = (ok) => {
+        if (ok === false) showToast('Applied here, but it could not be saved to your account. Try again later.', 'error');
+    };
+
+    const onThemeKey = (e, index) => {
+        const delta = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!delta) return;
+        e.preventDefault();
+        const next = THEMES[(index + delta + THEMES.length) % THEMES.length];
+        Promise.resolve(setTheme(next.id)).then(warnIfFailed);
+        e.currentTarget.parentElement?.children[(index + delta + THEMES.length) % THEMES.length]?.focus();
+    };
+
+    const sample = TEXT_SIZES.find((s) => s.id === textSize) || TEXT_SIZES[1];
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Card title="Interface Theme" subtitle="Choose your preferred color scheme">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    {THEMES.map((mode) => {
-                        const isActive = theme === mode.id;
+        <>
+            <PageIntro title="Appearance" description="How Oruinwan looks on your screens. Changes apply right away." />
+
+            <Section
+                title="Theme"
+                description={theme === 'auto' ? `Following your device — currently ${resolvedTheme}.` : 'Choose a colour scheme.'}
+                pad
+            >
+                <div className="stg-pref-themes" role="radiogroup" aria-label="Theme">
+                    {THEMES.map((mode, index) => {
+                        const active = theme === mode.id;
                         const Icon = mode.icon;
                         return (
                             <button
                                 key={mode.id}
-                                onClick={() => toggleTheme(mode.id)}
-                                style={{
-                                    position: 'relative',
-                                    padding: 12,
-                                    border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-default)'}`,
-                                    borderRadius: 2,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 10,
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    backgroundColor: isActive ? 'rgba(184,149,106,0.06)' : 'var(--bg-surface)',
-                                    transition: 'border-color 150ms ease, background-color 150ms ease',
-                                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                                }}
-                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                                type="button"
+                                role="radio"
+                                aria-checked={active}
+                                tabIndex={active ? 0 : -1}
+                                className="stg-pref-theme"
+                                data-testid={`theme-${mode.id}`}
+                                onClick={() => Promise.resolve(setTheme(mode.id)).then(warnIfFailed)}
+                                onKeyDown={(e) => onThemeKey(e, index)}
                             >
-                                {mode.preview}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Icon
-                                        size={14}
-                                        style={{
-                                            color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-                                            transition: 'color 150ms ease',
-                                        }}
-                                    />
-                                    <div>
-                                        <div style={{
-                                            fontSize: 13,
-                                            fontWeight: 600,
-                                            color: isActive ? 'var(--accent)' : 'var(--text-primary)',
-                                        }}>{mode.label}</div>
-                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{mode.description}</div>
+                                <div className="stg-pref-mock" data-mode={mode.id} aria-hidden="true">
+                                    <div className="stg-pref-mock-side" />
+                                    <div className="stg-pref-mock-body">
+                                        <div className="stg-pref-mock-line" style={{ width: '75%' }} />
+                                        <div className="stg-pref-mock-line" style={{ width: '50%' }} />
+                                        <div className="stg-pref-mock-line" style={{ width: '65%' }} />
                                     </div>
                                 </div>
-                                {isActive && (
-                                    <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                                        <Check size={14} style={{ color: 'var(--accent)' }} />
+                                <div className="stg-pref-theme-label">
+                                    <Icon size={14} />
+                                    <div>
+                                        <div className="stg-pref-theme-name">{mode.label}</div>
+                                        <div className="stg-pref-theme-desc">{mode.description}</div>
                                     </div>
-                                )}
+                                </div>
+                                {active && <Check size={14} className="stg-pref-theme-check" />}
                             </button>
                         );
                     })}
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-                    <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>System</strong> mode follows your OS light/dark preference automatically.
-                </p>
-            </Card>
+            </Section>
 
-            <Card title="Font Size" subtitle="Adjust text density across the app">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 16, textAlign: 'center', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>A</span>
-                    <input
-                        type="range"
-                        min="12"
-                        max="18"
-                        defaultValue="14"
-                        style={{
-                            flex: 1,
-                            height: 4,
-                            accentColor: 'var(--accent)',
-                        }}
-                        onChange={(e) => { document.documentElement.style.fontSize = `${e.target.value}px`; }}
-                    />
-                    <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-secondary)', width: 16, textAlign: 'center', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>A</span>
+            <Section title="Text" description="Readability in conversations.">
+                <Row
+                    label="Message text size"
+                    description="Resizes message text in channels, direct messages and threads. Menus and labels keep their size — use your browser zoom (Ctrl/⌘ +) to scale everything."
+                    stack
+                >
+                    <div className="stg-segmented" role="group" aria-label="Message text size">
+                        {TEXT_SIZES.map((s) => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                aria-pressed={textSize === s.id}
+                                onClick={() => Promise.resolve(setTextSize(s.id)).then(warnIfFailed)}
+                            >
+                                {s.label}
+                            </button>
+                        ))}
+                    </div>
+                </Row>
+                <div className="stg-pref-sample" style={{ fontSize: sample.px, marginBottom: 14 }} aria-label="Preview">
+                    <span className="stg-pref-sample-name">Maya</span>
+                    The launch notes are ready — take a look when you have a minute.
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-                    Changes apply immediately but reset on refresh.
-                </p>
-            </Card>
-        </div>
+            </Section>
+
+            <Section title="Motion">
+                <SwitchRow
+                    label="Reduce motion"
+                    description="Turn off animations and transitions on this device."
+                    checked={reduceMotion}
+                    onChange={setReduceMotion}
+                />
+            </Section>
+        </>
     );
 };
 

@@ -44,6 +44,9 @@ class HuddleRegistry {
     const existing = this.huddles.get(huddleId);
     if (existing) {
       if (existing.scopeKey !== key) return { error: 'HUDDLE_SCOPE_MISMATCH' };
+      // A join can reach the server before the starter's huddle:start; the
+      // start's video flag must still apply to the huddle it created.
+      if (meta.video && !existing.video) existing.video = true;
       return { huddle: existing };
     }
     const huddle = {

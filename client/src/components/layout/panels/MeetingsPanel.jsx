@@ -1,360 +1,394 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
-    Video, Calendar, Clock, Users, ChevronRight, Hash,
-    Plus, Mic, PhoneOutgoing, MoreHorizontal, Radio, History,
-    ExternalLink,
+    Video, Calendar, Clock, ChevronRight, Hash, AtSign,
+    Plus, Mic, MicOff, PhoneOff, Radio, History, ExternalLink,
 } from "lucide-react";
-import { useHuddleContext } from "../../../features/huddles/HuddleContext";
+import {
+    useHuddleContext, meetingIdFromHuddleId,
+} from "../../../features/huddles/HuddleContext";
 import { useToast } from "../../../contexts/ToastContext";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
 import ScheduleMeetingModal from "../../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal";
 
+const FONT = 'Inter, system-ui, sans-serif';
+
+const TABS = [
+    { id: 'live', label: 'Live now' },
+    { id: 'scheduled', label: 'Scheduled' },
+    { id: 'history', label: 'History' },
+];
+
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', cursor: 'pointer', marginTop: '8px', transition: 'background 150ms ease' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{label}</span>
-            {count !== undefined && (
-                <span style={{ padding: '1px 6px', background: 'var(--bg-active)', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{count}</span>
-            )}
+    <button type="button" onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', marginTop: '8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: FONT }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+        <span style={{ color: 'var(--text-muted)', display: 'flex', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{label}</span>
+        {count !== undefined && (
+            <span style={{ padding: '1px 6px', background: 'var(--bg-active)', fontSize: '10px', color: 'var(--text-secondary)', borderRadius: '2px' }}>{count}</span>
+        )}
+    </button>
+);
+
+const LiveDot = ({ size = 6 }) => (
+    <span style={{ position: 'relative', display: 'inline-flex', width: size, height: size, flexShrink: 0 }}>
+        <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--state-success)', opacity: 0.5, animation: 'ping 1.2s cubic-bezier(0,0,0.2,1) infinite' }} />
+        <span style={{ position: 'relative', width: size, height: size, borderRadius: '50%', background: 'var(--state-success)' }} />
+    </span>
+);
+
+const Avatars = ({ people = [] }) => {
+    if (people.length === 0) return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Nobody has joined yet</span>;
+    const names = people.map(p => p.username || 'Someone');
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+            <div style={{ display: 'flex', flexShrink: 0 }}>
+                {people.slice(0, 4).map((p, i) => (
+                    <div key={p.userId || i} title={p.username} style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid var(--bg-surface)', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 700, color: 'var(--text-primary)', marginLeft: i > 0 ? '-5px' : 0 }}>
+                        {(p.username || '?').slice(0, 2).toUpperCase()}
+                    </div>
+                ))}
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2}`}
+            </span>
         </div>
+    );
+};
+
+const cardStyle = (highlight) => ({
+    margin: '0 8px 6px', padding: '10px 12px', border: `1px solid ${highlight ? 'var(--border-accent)' : 'var(--border-subtle)'}`,
+    background: highlight ? 'var(--accent-dim)' : 'var(--bg-surface)', borderRadius: '2px', position: 'relative', overflow: 'hidden', fontFamily: FONT,
+});
+
+const linkBtn = { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: 0, fontSize: '11px', fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'none', fontFamily: FONT, whiteSpace: 'nowrap' };
+
+const primaryBtn = (disabled) => ({
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 12px', background: 'var(--accent)', border: '1px solid var(--accent)', color: '#0c0c0c',
+    fontSize: '12px', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, borderRadius: '2px', fontFamily: FONT, whiteSpace: 'nowrap',
+});
+const secondaryBtn = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 12px', background: 'transparent', border: '1px solid var(--border-accent)',
+    color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '2px', fontFamily: FONT, whiteSpace: 'nowrap',
+};
+
+const EmptyState = ({ icon: Icon, title, text, children }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', textAlign: 'center', fontFamily: FONT }}>
+        <div style={{ width: '40px', height: '40px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+            <Icon size={18} style={{ color: 'var(--text-secondary)' }} />
+        </div>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{title}</p>
+        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: children ? '16px' : 0, maxWidth: '220px', lineHeight: 1.5 }}>{text}</p>
+        {children && <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '200px' }}>{children}</div>}
     </div>
 );
 
-const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, isSelected }) => (
-    <div onClick={onJoin} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: `1px solid ${isSelected ? 'rgba(184,149,106,0.3)' : 'var(--border-subtle)'}`, background: isSelected ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: onJoin ? 'pointer' : 'default', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
-        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: status === 'live' ? '#ef4444' : status === 'past' ? 'var(--border-default)' : '#3b82f6' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-            <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'Inter, system-ui, sans-serif' }}>{title}</h4>
-                {channel && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        <Hash size={9} /><span>{channel}</span>
-                    </div>
-                )}
-            </div>
-            {status === 'live' ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', letterSpacing: '0.08em', flexShrink: 0 }}>
-                    <span style={{ position: 'relative', display: 'flex', width: '6px', height: '6px' }}>
-                        <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s cubic-bezier(0,0,0.2,1) infinite' }} />
-                        <span style={{ position: 'relative', width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
-                    </span> LIVE
+const LiveHuddleCard = ({ huddle, title, onOpen, disabled }) => {
+    const action = huddle.scope === 'channel' ? 'Open channel' : huddle.scope === 'dm' ? 'Open conversation' : 'Join';
+    const ScopeIcon = huddle.scope === 'channel' ? Hash : huddle.scope === 'dm' ? AtSign : Radio;
+    return (
+        <div data-testid="live-huddle-card" style={cardStyle(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <ScopeIcon size={12} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
+                <p style={{ flex: 1, minWidth: 0, fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</p>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--state-success)', flexShrink: 0 }}>
+                    <LiveDot /> LIVE
                 </span>
-            ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', padding: '2px 6px', background: 'var(--bg-hover)', flexShrink: 0 }}>
-                    {status === 'past' ? <History size={9} /> : <Clock size={9} />}<span>{time}</span>
-                </div>
-            )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: '-4px' }}>
-                {participants.slice(0, 4).map((p, i) => (
-                    <div key={i} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid var(--bg-surface)', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#b8956a', marginLeft: i > 0 ? '-4px' : 0 }} title={p.username || p.initials}>
-                        {(p.username || p.initials || '?').slice(0, 2).toUpperCase()}
-                    </div>
-                ))}
-                {participants.length === 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No participants</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                {huddle.scope === 'dm'
+                    ? <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Started by {huddle.startedBy?.username || 'someone'}</span>
+                    : <Avatars people={huddle.participants} />}
+                <button type="button" onClick={onOpen} disabled={disabled} style={{ ...linkBtn, opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                    {action} <ChevronRight size={11} />
+                </button>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const MeetingsPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { workspaceId } = useParams();
     const { showToast } = useToast();
+    const { user } = useAuth();
+    const { activeWorkspace } = useWorkspace();
 
     const {
         active,
         participants,
         muted,
         selectedHuddle,
-        setSelectedHuddle,
         startHuddle,
+        joinHuddle,
         leaveHuddle,
         toggleMute,
         huddleHistory,
         activeWorkspaceHuddles,
+        connecting,
     } = useHuddleContext();
 
     const { meetings, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
-    const [expandedScheduled, setExpandedScheduled] = useState(true);
+    const [expanded, setExpanded] = useState({ live: true, history: true, scheduled: true });
 
-    const activeTab = new URLSearchParams(location.search).get("tab") || "upcoming";
-    const [expanded, setExpanded] = useState({ live: true, workspace: true, history: true });
-    const [starting, setStarting] = useState(false);
+    const rawTab = new URLSearchParams(location.search).get("tab");
+    const activeTab = rawTab === 'history' ? 'history' : rawTab === 'scheduled' ? 'scheduled' : 'live';
+    const onHuddlesPage = location.pathname.includes('/huddles');
+
+    const myId = String(user?.sub || user?._id || user?.id || '');
+    const isWorkspaceAdmin = ['owner', 'admin'].includes(activeWorkspace?.role);
+    const canManage = (m) => isWorkspaceAdmin || String(m.createdBy?._id || m.createdBy || '') === myId;
+
+    const meetingTitles = useMemo(() => Object.fromEntries(meetings.map(m => [String(m._id), m.title])), [meetings]);
+    const titleFor = (h) => {
+        const mid = meetingIdFromHuddleId(h.id);
+        return mid && meetingTitles[mid] ? meetingTitles[mid] : h.title;
+    };
 
     const handleTab = (tab) => {
-        navigate(`/workspace/${workspaceId}/huddles?tab=${tab}`, { replace: true });
+        navigate(`/workspace/${workspaceId}/huddles?tab=${tab}`, { replace: onHuddlesPage });
     };
 
     const toggle = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
     const handleStartInstant = useCallback(async () => {
-        if (starting) return;
-        setStarting(true);
-        try {
-            await startHuddle("Instant Huddle");
-        } catch (err) {
-            showToast("Microphone permission denied. Please allow mic access to start a huddle.", "error");
-        } finally {
-            setStarting(false);
+        if (connecting) return;
+        if (!onHuddlesPage) {
+            navigate(`/workspace/${workspaceId}/huddles?start=1`);
+            return;
         }
-    }, [startHuddle, starting, showToast]);
+        // Errors are shown (with Retry) on the Huddles page itself.
+        try { await startHuddle("Workspace huddle"); } catch { /* shown by the page */ }
+    }, [connecting, onHuddlesPage, navigate, workspaceId, startHuddle]);
 
-    const handleSelectHuddle = (huddleData) => {
-        setSelectedHuddle(huddleData);
-    };
+    const handleOpenLive = useCallback(async (h) => {
+        if (h.scope === 'channel' && h.channelId) {
+            navigate(`/workspace/${workspaceId}/channel/${h.channelId}`);
+            return;
+        }
+        if (h.scope === 'dm' && h.dmId) {
+            navigate(`/workspace/${workspaceId}/dm/${h.dmId}`);
+            return;
+        }
+        const withTitle = { ...h, title: titleFor(h), meetingId: meetingIdFromHuddleId(h.id) };
+        if (!onHuddlesPage) {
+            navigate(`/workspace/${workspaceId}/huddles?join=${encodeURIComponent(h.id)}`);
+            return;
+        }
+        try { await joinHuddle(withTitle); } catch { /* shown by the page */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [navigate, workspaceId, onHuddlesPage, joinHuddle, meetingTitles]);
+
+    const handleJoinScheduled = useCallback((m) => {
+        navigate(`/workspace/${workspaceId}/huddles?meeting=${m._id}`, { state: { meetingTitle: m.title } });
+    }, [navigate, workspaceId]);
 
     const handleScheduleMeeting = useCallback(async (payload) => {
-        try {
-            await createMeeting(payload);
-            showToast("Meeting scheduled!", "success");
-            setShowScheduleModal(false);
-        } catch (err) {
-            showToast(err?.response?.data?.message || "Failed to schedule meeting", "error");
-            throw err;
-        }
+        await createMeeting(payload);
+        showToast("Meeting scheduled", "success");
     }, [createMeeting, showToast]);
 
-    const handleCancelMeeting = useCallback(async (meetingId) => {
+    const handleCancelMeeting = useCallback(async (m) => {
+        if (!window.confirm(`Cancel "${m.title}"? Everyone in the workspace will see it removed.`)) return;
         try {
-            await cancelMeeting(meetingId);
+            await cancelMeeting(m._id);
             showToast("Meeting cancelled", "info");
-        } catch {
-            showToast("Failed to cancel meeting", "error");
+        } catch (err) {
+            showToast(err?.response?.data?.message || "Could not cancel the meeting", "error");
         }
     }, [cancelMeeting, showToast]);
 
     const totalLive = (active ? 1 : 0) + activeWorkspaceHuddles.length;
+    const myTitle = selectedHuddle?.title || 'Your huddle';
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', fontFamily: FONT }}>
 
-            {}
-            <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0 }}>
-                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Voice Huddles</h2>
+            <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', flexShrink: 0 }}>
+                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>Huddles</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <button onClick={handleStartInstant} disabled={starting || active} title="Start Instant Huddle"
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}
-                        onMouseEnter={e => { if (!starting && !active) e.currentTarget.style.color = '#b8956a'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}>
-                        {starting ? <span style={{ display: 'block', width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <Video size={17} />}
+                    <button onClick={handleStartInstant} disabled={!!connecting || active} title={active ? "You are already in a huddle" : "Start a huddle"} aria-label="Start a huddle"
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', color: 'var(--text-secondary)', cursor: connecting || active ? 'not-allowed' : 'pointer', opacity: connecting || active ? 0.5 : 1, display: 'flex' }}
+                        onMouseEnter={e => { if (!connecting && !active) e.currentTarget.style.color = 'var(--accent)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                        <Video size={17} />
                     </button>
-                    <button onClick={() => setShowScheduleModal(true)} title="Schedule a Meeting"
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                    <button onClick={() => setShowScheduleModal(true)} title="Schedule a meeting" aria-label="Schedule a meeting"
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                         <Calendar size={17} />
                     </button>
                 </div>
             </div>
 
-            {}
+            {/* The huddle I'm in */}
             {active && (
-                <div
-                    onClick={() => setSelectedHuddle(prev => prev || { title: "Instant Huddle", status: "live", participants })}
-                    style={{ margin: '10px 10px 0', padding: '10px', border: '1px solid rgba(34,197,94,0.25)', background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', transition: 'all 150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,197,94,0.06)'}
-                >
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Radio size={13} style={{ color: '#fff', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                    </div>
+                <div data-testid="active-huddle-banner"
+                    onClick={() => { if (!onHuddlesPage) navigate(`/workspace/${workspaceId}/huddles`); }}
+                    style={{ margin: '10px 10px 0', padding: '10px', border: '1px solid var(--border-accent)', borderLeft: '3px solid var(--state-success)', background: 'var(--bg-surface)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '10px', cursor: onHuddlesPage ? 'default' : 'pointer' }}>
+                    <LiveDot size={8} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: '12px', fontWeight: 600, color: '#4ade80', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {selectedHuddle?.title || "Instant Huddle"} • Active
+                        <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {myTitle}
                         </p>
-                        <p style={{ fontSize: '10px', color: 'rgba(74,222,128,0.7)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {participants.length} participant{participants.length !== 1 ? "s" : ""} · {muted ? "Muted" : "Unmuted"}
+                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {participants.length} {participants.length === 1 ? 'participant' : 'participants'} · {muted ? 'Muted' : 'Mic on'}
                         </p>
                     </div>
                     <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             title={muted ? "Unmute" : "Mute"}
-                            style={{ padding: '5px', background: muted ? 'rgba(248,113,113,0.15)' : 'rgba(34,197,94,0.15)', border: `1px solid ${muted ? 'rgba(248,113,113,0.25)' : 'rgba(34,197,94,0.25)'}`, color: muted ? '#f87171' : '#4ade80', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            style={{ padding: '5px', display: 'flex', borderRadius: '2px', background: muted ? 'var(--state-danger)' : 'var(--bg-active)', border: `1px solid ${muted ? 'var(--state-danger)' : 'var(--border-default)'}`, color: muted ? '#fff' : 'var(--text-primary)', cursor: 'pointer' }}
                         >
-                            <Mic size={12} />
+                            {muted ? <MicOff size={12} /> : <Mic size={12} />}
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); leaveHuddle(); }}
-                            title="Leave Huddle"
-                            style={{ padding: '5px', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            title="Leave huddle"
+                            style={{ padding: '5px', display: 'flex', borderRadius: '2px', background: 'var(--state-danger)', border: '1px solid var(--state-danger)', color: '#fff', cursor: 'pointer' }}
                         >
-                            <PhoneOutgoing size={12} />
+                            <PhoneOff size={12} />
                         </button>
                     </div>
                 </div>
             )}
 
-            {}
             <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', gap: '2px', padding: '3px' }}>
-                    {[
-                        { id: 'upcoming', label: 'Upcoming' },
-                        { id: 'history', label: 'History' },
-                    ].map(tab => (
-                        <button key={tab.id} onClick={() => handleTab(tab.id)}
-                            style={{ flex: 1, padding: '5px', fontSize: '11px', fontWeight: activeTab === tab.id ? 600 : 400, background: activeTab === tab.id ? 'var(--bg-active)' : 'transparent', border: 'none', color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
+                <div role="tablist" style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', borderRadius: '2px', gap: '2px', padding: '3px' }}>
+                    {TABS.map(tab => (
+                        <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => handleTab(tab.id)}
+                            style={{ flex: 1, padding: '5px 2px', fontSize: '11px', fontWeight: activeTab === tab.id ? 600 : 500, background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent', border: activeTab === tab.id ? '1px solid var(--border-default)' : '1px solid transparent', borderRadius: '2px', color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
                             {tab.label}
+                            {tab.id === 'live' && activeWorkspaceHuddles.length > 0 && ` (${activeWorkspaceHuddles.length})`}
+                            {tab.id === 'scheduled' && meetings.length > 0 && ` (${meetings.length})`}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {}
-            <div className="flex-1 overflow-y-auto custom-scrollbar pb-4 space-y-1">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
 
-                {}
-                {activeTab === "upcoming" && (
-                    <>
-                        {active && selectedHuddle && (
-                            <>
-                                <SectionHeader label="My Huddle" count={participants.length} isOpen={expanded.live} onClick={() => toggle("live")} />
-                                {expanded.live && (
-                                    <MeetingCard title={selectedHuddle.title || "Instant Huddle"} time="Now" status="live" channel={selectedHuddle.channel} participants={participants} isSelected={true} onJoin={() => handleSelectHuddle(selectedHuddle)} />
-                                )}
-                            </>
-                        )}
+                {activeTab === "live" && (
+                    activeWorkspaceHuddles.length === 0 ? (
+                        <EmptyState icon={Radio} title={active ? 'No other live huddles' : 'No live huddles'}
+                            text={active ? 'Nobody else is in a huddle right now.' : 'Start a huddle and your teammates can join from here.'}>
+                            {!active && (
+                                <button onClick={handleStartInstant} disabled={!!connecting} style={primaryBtn(!!connecting)}>
+                                    <Plus size={12} />{connecting ? 'Starting…' : 'Start huddle'}
+                                </button>
+                            )}
+                            <button onClick={() => setShowScheduleModal(true)} style={secondaryBtn}>
+                                <Calendar size={12} /> Schedule
+                            </button>
+                        </EmptyState>
+                    ) : (
+                        <>
+                            <SectionHeader label="Live now" count={activeWorkspaceHuddles.length} isOpen={expanded.live} onClick={() => toggle("live")} />
+                            {expanded.live && activeWorkspaceHuddles.map(h => (
+                                <LiveHuddleCard key={h.id} huddle={h} title={titleFor(h)} disabled={!!connecting} onOpen={() => handleOpenLive(h)} />
+                            ))}
+                        </>
+                    )
+                )}
 
-                        {activeWorkspaceHuddles.length > 0 && (
-                            <>
-                                <SectionHeader label="Live Now" count={activeWorkspaceHuddles.length} isOpen={expanded.workspace} onClick={() => toggle("workspace")} />
-                                {expanded.workspace && activeWorkspaceHuddles.map(h => (
-                                    <MeetingCard key={h.id} title={h.title} time="Now" status="live" channel={h.channel} participants={[]} isSelected={selectedHuddle?.id === h.id} onJoin={() => handleSelectHuddle(h)} />
-                                ))}
-                            </>
-                        )}
-
-                        {meetings.length > 0 && (
-                            <>
-                                <SectionHeader label="Scheduled" count={meetings.length} isOpen={expandedScheduled} onClick={() => setExpandedScheduled(p => !p)} />
-                                {expandedScheduled && meetings.map(m => {
-                                    const start = new Date(m.startTime);
-                                    const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                                    const isLive = m.status === 'live';
-                                    return (
-                                        <div key={m._id} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
-                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
-                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}>
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isLive ? '#ef4444' : '#3b82f6' }} />
-                                            <div style={{ paddingLeft: '6px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
-                                                    {isLive && (
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '1px 5px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', flexShrink: 0 }}>
-                                                            <span style={{ position: 'relative', display: 'flex', width: '5px', height: '5px' }}><span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s ease infinite' }} /><span style={{ position: 'relative', width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444' }} /></span>
-                                                            LIVE
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                                                    <Clock size={9} /><span>{timeStr}</span><span>·</span><span>{m.duration} min</span>
-                                                    {m.createdBy && (<><span>·</span><span style={{ color: 'var(--text-muted)' }}>{m.createdBy.username || m.createdBy.firstName}</span></>)}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '10px' }}>
-                                                    {m.meetingLink && (
-                                                        <a href={m.meetingLink} target="_blank" rel="noopener noreferrer"
-                                                            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: '#b8956a', textDecoration: 'none' }}>
-                                                            <ExternalLink size={8} /> Join
-                                                        </a>
-                                                    )}
-                                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${m._id}`); }}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                                        View Details →
-                                                    </button>
-                                                    <button onClick={() => handleCancelMeeting(m._id)}
-                                                        style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}
-                                                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                {activeTab === "scheduled" && (
+                    meetings.length === 0 ? (
+                        <EmptyState icon={Calendar} title="Nothing scheduled" text="Upcoming meetings in this workspace appear here.">
+                            <button onClick={() => setShowScheduleModal(true)} style={primaryBtn(false)}>
+                                <Calendar size={12} /> Schedule a meeting
+                            </button>
+                        </EmptyState>
+                    ) : (
+                        <>
+                            <SectionHeader label="Scheduled" count={meetings.length} isOpen={expanded.scheduled} onClick={() => toggle("scheduled")} />
+                            {expanded.scheduled && meetings.map(m => {
+                                const start = new Date(m.startTime);
+                                const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                const isLive = m.status === 'live';
+                                return (
+                                    <div key={m._id} data-testid="scheduled-meeting-card" style={cardStyle(false)}>
+                                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isLive ? 'var(--state-success)' : 'var(--accent)' }} />
+                                        <div style={{ paddingLeft: '4px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{m.title}</p>
+                                                {isLive && (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--state-success)', flexShrink: 0 }}>
+                                                        <LiveDot size={5} /> LIVE
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                                <Clock size={10} /><span>{timeStr}</span><span>·</span><span>{m.duration} min</span>
+                                                {m.createdBy && (<><span>·</span><span>{m.createdBy.username || m.createdBy.firstName}</span></>)}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                <button type="button" onClick={() => handleJoinScheduled(m)} style={linkBtn}>
+                                                    <Video size={11} /> Join
+                                                </button>
+                                                {m.meetingLink && (
+                                                    <a href={m.meetingLink} target="_blank" rel="noopener noreferrer" style={linkBtn} title={m.meetingLink}>
+                                                        <ExternalLink size={10} /> Link
+                                                    </a>
+                                                )}
+                                                <button type="button" onClick={() => navigate(`/workspace/${workspaceId}/meetings/${m._id}`)} style={{ ...linkBtn, color: 'var(--text-secondary)' }}>
+                                                    Details
+                                                </button>
+                                                {canManage(m) && (
+                                                    <button type="button" onClick={() => handleCancelMeeting(m)}
+                                                        style={{ ...linkBtn, fontWeight: 500, color: 'var(--text-secondary)', marginLeft: 'auto' }}
+                                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                                                         Cancel
                                                     </button>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </>
-                        )}
-
-                        {}
-                        {!active && activeWorkspaceHuddles.length === 0 && meetings.length === 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
-                                <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                    <Video size={20} style={{ color: '#b8956a' }} />
-                                </div>
-                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}>Start an instant huddle or schedule one</p>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button onClick={handleStartInstant} disabled={starting}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#b8956a', border: 'none', color: '#000', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: starting ? 0.6 : 1 }}>
-                                        <Plus size={12} />{starting ? 'Starting...' : 'Instant Huddle'}
-                                    </button>
-                                    <button onClick={() => setShowScheduleModal(true)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'transparent', border: '1px solid rgba(184,149,106,0.3)', color: '#b8956a', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
-                                        <Calendar size={12} /> Schedule
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </>
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )
                 )}
 
-                {}
                 {activeTab === "history" && (
-                    <>
-                        {huddleHistory.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 16px', textAlign: 'center' }}>
-                                <div style={{ width: '44px', height: '44px', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                    <History size={18} style={{ color: 'var(--text-muted)' }} />
+                    huddleHistory.length === 0 ? (
+                        <EmptyState icon={History} title="No huddle history yet" text="Huddles you leave during this session appear here." />
+                    ) : (
+                        <>
+                            <SectionHeader label="Recent" count={huddleHistory.length} isOpen={expanded.history} onClick={() => toggle("history")} />
+                            {expanded.history && huddleHistory.map((h, i) => (
+                                <div key={`${h.id}-${i}`} style={cardStyle(false)}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                        <p style={{ flex: 1, minWidth: 0, fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title || 'Huddle'}</p>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                                            <History size={10} />
+                                            {h.endTime ? new Date(h.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ''}
+                                        </span>
+                                    </div>
+                                    {h.participants?.length > 0
+                                        ? <Avatars people={h.participants} />
+                                        : <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Nobody else joined</span>}
                                 </div>
-                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No huddle history yet</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Ended huddles will appear here</p>
-                            </div>
-                        ) : (
-                            <>
-                                <SectionHeader label="Recent" count={huddleHistory.length} isOpen={expanded.history} onClick={() => toggle("history")} />
-                                {expanded.history && huddleHistory.map((h, i) => (
-                                    <MeetingCard key={i} title={h.title || "Instant Huddle"} time={h.endTime ? new Date(h.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""} status="past" channel={h.channel} participants={[]} isSelected={false} onJoin={null} />
-                                ))}
-                            </>
-                        )}
-                    </>
+                            ))}
+                        </>
+                    )
                 )}
             </div>
 
-            {}
-            <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                <div style={{ padding: '10px 12px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ padding: '6px', background: 'rgba(184,149,106,0.15)', color: '#b8956a' }}>
-                        <Users size={13} />
-                    </div>
-                    <div>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, system-ui, sans-serif' }}>Live Huddles</p>
-                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {totalLive}<span style={{ fontSize: '11px', fontWeight: 400, color: '#b8956a', marginLeft: '4px' }}>active</span>
-                        </p>
-                    </div>
-                    {active && (
-                        <div style={{ marginLeft: 'auto' }}>
-                            <span style={{ position: 'relative', display: 'flex', width: '10px', height: '10px' }}>
-                                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#22c55e', opacity: 0.6, animation: 'ping 1s cubic-bezier(0,0,0.2,1) infinite' }} />
-                                <span style={{ position: 'relative', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }} />
-                            </span>
-                        </div>
-                    )}
-                </div>
+            <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {totalLive > 0 ? <LiveDot size={7} /> : <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--border-accent)' }} />}
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {totalLive === 0 ? 'No live huddles' : `${totalLive} live ${totalLive === 1 ? 'huddle' : 'huddles'}`}
+                </span>
             </div>
 
-            {}
             {showScheduleModal && (
                 <ScheduleMeetingModal
                     onSchedule={handleScheduleMeeting}

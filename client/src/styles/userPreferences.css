@@ -1,0 +1,23 @@
+/*
+ * App-wide effects of Settings → Appearance. ThemeContext sets the attributes
+ * on <html>: data-text-size="small|default|large|larger" and
+ * data-reduce-motion="true".
+ *
+ * Text size scales message text in chats and threads (.message-content, whose
+ * inline 14px is overridden here; formatting inside it is em-relative).
+ */
+html[data-text-size='small'] .message-content { font-size: 13px !important; }
+html[data-text-size='large'] .message-content { font-size: 16px !important; }
+html[data-text-size='larger'] .message-content { font-size: 18px !important; }
+
+/* Reduce motion: stop animations and transitions (loading spinners keep spinning). */
+html[data-reduce-motion='true'] *:not(.animate-spin):not(.stg-spin),
+html[data-reduce-motion='true'] *::before,
+html[data-reduce-motion='true'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+}

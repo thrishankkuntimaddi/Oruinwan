@@ -2,6 +2,7 @@ import React from 'react';
 import { ConversationStream } from '../../events';
 import FooterInput from '../footer/footerInput.jsx';
 import TypingIndicator from '../TypingIndicator.jsx';
+import { AILiveReplies } from '../../../../components/ai/AILiveReply';
 import ThreadPanel from '../ThreadPanel.jsx';
 import BookmarksPanel from '../panels/BookmarksPanel.jsx';
 import TasksTab from '../tabs/TasksTab.jsx';
@@ -12,6 +13,10 @@ import CanvasDashboardView from './CanvasDashboardView.jsx';
 
 const CentralContentView = ({
     typingUsers = [],
+    aiLiveReplies = [],
+    // Pinned messages / reminders, shown as a side column like the thread panel.
+    sidePanel = null,
+    aiFollowUp = null,
     
     activeTab,
     tabs,
@@ -144,8 +149,10 @@ const CentralContentView = ({
                         />
 
                         <TypingIndicator users={typingUsers} />
+                        <AILiveReplies replies={aiLiveReplies} />
 
                         <FooterInput
+                            aiFollowUp={aiFollowUp}
                             newMessage={newMessage}
                             onChange={onMessageChange}
                             onSend={onSend}
@@ -266,6 +273,8 @@ const CentralContentView = ({
                     inline
                 />
             )}
+
+            {activeTab === 'chat' && sidePanel}
         </div>
     );
 };

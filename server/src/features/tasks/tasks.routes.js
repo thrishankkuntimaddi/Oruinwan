@@ -13,6 +13,14 @@ router.get('/', tasksController.getTasks);
 
 router.get('/my', tasksController.getMyTasks);
 
+// Malformed task ids are "not found", never a 500.
+router.param('id', (req, res, next, id) => {
+    if (!/^[a-f\d]{24}$/i.test(id)) return res.status(404).json({ message: 'Task not found' });
+    return next();
+});
+
+router.get('/:id', tasksController.getTask);
+
 router.post('/', requireWorkspaceFeature('tasks'), requireCompanyPermission('createTasks'), tasksController.createTask);
 
 router.get('/:id/activity', tasksController.getTaskActivity);

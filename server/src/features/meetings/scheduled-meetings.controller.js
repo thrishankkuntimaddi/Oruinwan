@@ -2,78 +2,77 @@
 
 const ScheduledMeeting = require('../../models/ScheduledMeeting');
 const logger = require('../../../utils/logger');
+const { assertWorkspaceMember, isValidId, sendAccessError } = require('../../shared/utils/workspaceAccess');
+const { loadMeetingForUser, canManageMeeting } = require('./meetingAccess');
 
-async function resolveUser(userId) {
-  const User = require('../../../models/User');
-  return User.findById(userId).select('companyId').lean();
+// Scheduled meetings are scoped by workspace. companyId is optional (set from
+// the workspace's company when it has one) so personal workspaces work too.
+// Reading/creating: any active workspace member. Cancelling or deleting: the
+// organiser (createdBy) or a workspace owner/admin.
+
+const POPULATE_CREATED_BY = ['createdBy', 'username firstName lastName avatarUrl'];
+const VALID_STATUSES = ['scheduled', 'live', 'completed', 'cancelled'];
+
+function fail(res, err, fallback) {
+  if (err && err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+  if (err && err.name === 'CastError') return res.status(400).json({ message: 'Invalid id' });
+  logger.error(`[scheduled-meetings] ${fallback}:`, err);
+  return res.status(500).json({ message: fallback });
 }
 
-async function resolveWorkspace(workspaceId, userId) {
-  const WorkspaceModel = require('../../../models/Workspace');
-  return WorkspaceModel.findOne({
-    _id: workspaceId,
-    'members.user': userId,
-  }).select('_id company').lean();
-}
+const activeMemberIds = (ws) => (ws.members || [])
+  .filter(m => (m.status || 'active') === 'active')
+  .map(m => String(m.user?._id || m.user));
 
 async function getScheduledMeetings(req, res) {
   try {
     const { workspaceId, limit = 10 } = req.query;
-    if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
-
-    const dbUser = await resolveUser(req.user.sub);
-    if (!dbUser) return res.status(401).json({ message: 'User not found' });
-
-    const now = new Date();
-    let query = { workspaceId, startTime: { $gte: now }, status: { $in: ['scheduled', 'live'] } };
-
-    
-    
-    
-    const ws = await resolveWorkspace(workspaceId, req.user.sub);
-    if (!ws) return res.status(403).json({ message: 'Access denied' });
-
-    
-    if (dbUser.companyId) {
-      query.companyId = dbUser.companyId;
+    try {
+      await assertWorkspaceMember(workspaceId, req.user.sub);
+    } catch (err) {
+      return sendAccessError(res, err);
     }
 
+    const query = { workspaceId, startTime: { $gte: new Date() }, status: { $in: ['scheduled', 'live'] } };
     const meetings = await ScheduledMeeting.find(query)
       .sort({ startTime: 1 })
-      .limit(Number(limit))
-      .populate('createdBy', 'username firstName lastName avatarUrl')
+      .limit(Math.min(Math.max(Number(limit) || 10, 1), 100))
+      .populate(...POPULATE_CREATED_BY)
       .lean();
 
     res.json({ meetings });
   } catch (err) {
-    logger.error('GET /api/scheduled-meetings error:', err);
-    res.status(500).json({ message: 'Failed to fetch meetings' });
+    fail(res, err, 'Failed to fetch meetings');
   }
 }
 
 async function createScheduledMeeting(req, res) {
   try {
-    const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body;
-    if (!workspaceId || !title || !startTime) {
+    const { workspaceId, channelId, dmSessionId, title, startTime, duration, meetingLink, participants } = req.body || {};
+    if (!workspaceId || typeof title !== 'string' || !title.trim() || !startTime) {
       return res.status(400).json({ message: 'workspaceId, title, and startTime are required' });
     }
+    if (Number.isNaN(new Date(startTime).getTime())) return res.status(400).json({ message: 'Invalid startTime' });
+    if (channelId && !isValidId(channelId)) return res.status(400).json({ message: 'Invalid channelId' });
+    if (dmSessionId && !isValidId(dmSessionId)) return res.status(400).json({ message: 'Invalid dmSessionId' });
+    if (participants !== undefined && !Array.isArray(participants)) {
+      return res.status(400).json({ message: 'participants must be an array of user ids' });
+    }
 
-    
-    const dbUser = await resolveUser(req.user.sub);
-    if (!dbUser) return res.status(401).json({ message: 'User not found' });
-    const companyId = dbUser.companyId || null;
-
-    
-    const WorkspaceModel = require('../../../models/Workspace');
-    let wsQuery = { _id: workspaceId, 'members.user': req.user.sub };
-    
-    if (companyId) wsQuery.company = companyId;
-
-    const ws = await WorkspaceModel.findOne(wsQuery).select('_id members').lean();
-    if (!ws) return res.status(403).json({ message: 'Access denied' });
+    let access;
+    try {
+      access = await assertWorkspaceMember(workspaceId, req.user.sub);
+    } catch (err) {
+      return sendAccessError(res, err);
+    }
+    const ws = access.workspace;
+    const memberIds = activeMemberIds(ws);
+    const memberSet = new Set(memberIds);
+    // Only active members of this workspace can be invited.
+    const participantIds = [...new Set((participants || []).map(String))].filter(id => isValidId(id) && memberSet.has(id));
 
     const meeting = await ScheduledMeeting.create({
-      companyId,          
+      companyId: ws.company || null,
       workspaceId,
       channelId: channelId || null,
       dmSessionId: dmSessionId || null,
@@ -82,90 +81,82 @@ async function createScheduledMeeting(req, res) {
       startTime: new Date(startTime),
       duration: duration || 30,
       meetingLink: meetingLink || null,
-      participants: participants || [],
+      participants: participantIds,
       status: 'scheduled',
     });
 
-    const populated = await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
+    const populated = await meeting.populate(...POPULATE_CREATED_BY);
 
-    
     req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
 
-    
     try {
       const notifService = require('../../modules/notifications/notificationService');
-      if (ws && ws.members) {
-        const recipientIds = ws.members
-          .map(m => (m.user || m).toString())
-          .filter(id => id !== req.user.sub.toString());
-        await notifService.scheduleCreated(req.io, {
-          recipientIds,
-          workspaceId,
-          title: meeting.title,
-          scheduledMeetingId: meeting._id,
-        });
-      }
+      await notifService.scheduleCreated(req.io, {
+        recipientIds: memberIds.filter(id => id !== String(req.user.sub)),
+        workspaceId,
+        title: meeting.title,
+        scheduledMeetingId: meeting._id,
+      });
     } catch (notifErr) {
       logger.error('Notification error on schedule create:', notifErr.message);
     }
 
     res.status(201).json({ meeting: populated });
   } catch (err) {
-    logger.error('POST /api/scheduled-meetings error:', err);
-    res.status(500).json({ message: 'Failed to create meeting' });
+    fail(res, err, 'Failed to create meeting');
   }
 }
 
 async function updateScheduledMeeting(req, res) {
   try {
-    const { status } = req.body;
-    const VALID_STATUSES = ['scheduled', 'live', 'completed', 'cancelled'];
+    const { status } = req.body || {};
     if (!VALID_STATUSES.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    
-    const meeting = await ScheduledMeeting.findById(req.params.id);
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
-
-    
-    const dbUser = await resolveUser(req.user.sub);
-    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
+    let loaded;
+    try {
+      loaded = await loadMeetingForUser(req.params.id, req.user.sub);
+    } catch (err) {
+      return sendAccessError(res, err);
+    }
+    if (status === 'cancelled' && !canManageMeeting(loaded.meeting, req.user.sub, loaded.access)) {
+      return res.status(403).json({ message: 'Only the organizer or a workspace admin can cancel this meeting' });
     }
 
+    const meeting = await ScheduledMeeting.findById(req.params.id);
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
     meeting.status = status;
     await meeting.save();
-    await meeting.populate('createdBy', 'username firstName lastName avatarUrl');
+    await meeting.populate(...POPULATE_CREATED_BY);
 
     req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting });
 
     res.json({ meeting });
   } catch (err) {
-    logger.error('PATCH /api/scheduled-meetings/:id error:', err);
-    res.status(500).json({ message: 'Failed to update meeting' });
+    fail(res, err, 'Failed to update meeting');
   }
 }
 
 async function deleteScheduledMeeting(req, res) {
   try {
-    
-    const meeting = await ScheduledMeeting.findById(req.params.id);
-    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
-
-    const dbUser = await resolveUser(req.user.sub);
-    if (!dbUser || !meeting.companyId || dbUser.companyId.toString() !== meeting.companyId.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
+    let loaded;
+    try {
+      loaded = await loadMeetingForUser(req.params.id, req.user.sub);
+    } catch (err) {
+      return sendAccessError(res, err);
+    }
+    if (!canManageMeeting(loaded.meeting, req.user.sub, loaded.access)) {
+      return res.status(403).json({ message: 'Only the organizer or a workspace admin can delete this meeting' });
     }
 
-    await meeting.deleteOne();
+    await ScheduledMeeting.deleteOne({ _id: req.params.id });
 
-    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:deleted', { meetingId: meeting._id });
+    req.io.to(`workspace:${loaded.meeting.workspaceId}`).emit('schedule:deleted', { meetingId: req.params.id });
 
     res.json({ message: 'Meeting deleted' });
   } catch (err) {
-    logger.error('DELETE /api/scheduled-meetings/:id error:', err);
-    res.status(500).json({ message: 'Failed to delete meeting' });
+    fail(res, err, 'Failed to delete meeting');
   }
 }
 

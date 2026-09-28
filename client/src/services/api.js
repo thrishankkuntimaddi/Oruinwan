@@ -53,6 +53,7 @@ export function refreshAccessToken() {
 const NO_REFRESH_AUTH_PATHS = [
     '/api/auth/refresh',
     '/api/auth/login',
+    '/api/auth/google-login',
     '/api/auth/logout',
     '/api/auth/register',
     '/api/auth/signup',

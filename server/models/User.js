@@ -4,7 +4,10 @@ const RefreshTokenSchema = new mongoose.Schema({
   tokenHash: { type: String, required: true },
   expiresAt: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
-  deviceInfo: { type: String }
+  deviceInfo: { type: String },
+  // Where the session was signed in from, and when it first started (carried across refresh rotation).
+  ip: { type: String, default: null },
+  startedAt: { type: Date, default: null }
 });
 
 const ProfileSchema = new mongoose.Schema(
@@ -29,18 +32,35 @@ const ProfileSchema = new mongoose.Schema(
 
 const PreferencesSchema = new mongoose.Schema({
   theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' },
-  
+
+  appearance: {
+    textSize: { type: String, enum: ['small', 'default', 'large', 'larger'], default: 'default' }
+  },
+
+  // Enforced server-side: see src/features/auth/privacy.service.js.
   privacy: {
     readReceipts: { type: Boolean, default: true },
     typingIndicators: { type: Boolean, default: true },
-    allowDiscovery: { type: Boolean, default: true },
-    dataSharing: { type: Boolean, default: false }
+    allowDiscovery: { type: Boolean, default: true }
   },
-  
+
+  // Values are validated by the API (src/features/auth/accountPreferences.js), not by enums here,
+  // so older stored values never make an unrelated save() fail.
   region: {
     language: { type: String, default: 'en' },
-    timezone: { type: String, default: 'UTC' },
-    dateFormat: { type: String, default: 'MM/DD/YYYY' }
+    timezone: { type: String, default: 'auto' },
+    dateFormat: { type: String, default: 'MM/DD/YYYY' },
+    timeFormat: { type: String, default: '12h' }
+  },
+
+  // Account-level notification settings (workspace toggles live in NotificationPreference).
+  notifications: {
+    emailDigest: { type: Boolean, default: true },
+    marketingEmails: { type: Boolean, default: false },
+    desktopPush: { type: Boolean, default: true },
+    sound: { type: Boolean, default: true },
+    mentionsOnly: { type: Boolean, default: false },
+    dmNotifications: { type: Boolean, default: true }
   }
 }, { _id: false });
 

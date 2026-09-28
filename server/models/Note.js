@@ -34,10 +34,12 @@ const NoteSchema = new mongoose.Schema({
 
     
     attachments: [{
-        name: String,           
-        url: String,            
-        type: String,           
-        size: Number,           
+        name: { type: String },
+        url: { type: String },
+        // Declared explicitly: a bare `type: String` key would make mongoose treat
+        // the whole subdocument as a String and `attachments` as [String].
+        type: { type: String },
+        size: { type: Number },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         uploadedAt: { type: Date, default: Date.now },
         
@@ -73,31 +75,24 @@ NoteSchema.index({ sharedWith: 1 });
 NoteSchema.index({ tags: 1 });
 NoteSchema.index({ channel: 1 });
 
-NoteSchema.methods.canView = function (userId) {
+/**
+ * Access checks. Callers must pass whether `userId` is an active member of the
+ * note's workspace (opts.isWorkspaceMember); nobody outside the workspace can view
+ * or edit, and public notes are visible to members only.
+ */
+NoteSchema.methods.canView = function (userId, opts = {}) {
+    if (!opts.isWorkspaceMember) return false;
     const userIdStr = userId.toString();
-
-    
     if (this.owner.toString() === userIdStr) return true;
-
-    
     if (this.isPublic) return true;
-
-    
-    if (this.sharedWith.some(id => id.toString() === userIdStr)) return true;
-
-    return false;
+    return (this.sharedWith || []).some(id => (id?._id || id).toString() === userIdStr);
 };
 
-NoteSchema.methods.canEdit = function (userId) {
+NoteSchema.methods.canEdit = function (userId, opts = {}) {
+    if (!opts.isWorkspaceMember) return false;
     const userIdStr = userId.toString();
-
-    
     if (this.owner.toString() === userIdStr) return true;
-
-    
-    if (this.allowEditing && this.sharedWith.some(id => id.toString() === userIdStr)) return true;
-
-    return false;
+    return !!this.allowEditing && (this.sharedWith || []).some(id => (id?._id || id).toString() === userIdStr);
 };
 
 NoteSchema.virtual('images').get(function () {

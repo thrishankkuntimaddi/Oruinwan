@@ -8,6 +8,7 @@ import { useDesktopNotification } from './useDesktopNotification';
 import logger from '../../utils/logger';
 import { useToast } from '../../contexts/ToastContext';
 import { decryptTextOrNull } from '../../services/messageEncryptionService';
+import { NOTIFICATION_PREF_DEFAULTS, PREFS_EVENT, fetchAccountNotificationPrefs } from './accountNotificationPrefs';
 
 const NotificationsContext = createContext(null);
 
@@ -30,6 +31,33 @@ function conversationPath(workspaceId, type, id) {
         : `/workspace/${workspaceId}/channel/${id}`;
 }
 
+/**
+ * Where a stored notification points. Task links are absolute
+ * (/workspace/<ws>/tasks/<id>); older ones are relative to the workspace.
+ */
+export function notificationHref(n, workspaceId) {
+    const link = n?.link;
+    if (!link || typeof link !== 'string') return null;
+    if (link.startsWith('/workspace/')) return link;
+    const ws = n.workspaceId || workspaceId;
+    if (!ws) return null;
+    return `/workspace/${ws}${link.startsWith('/') ? link : `/${link}`}`;
+}
+
+/** The conversation open in the URL, if any ({ type: 'dm'|'channel', id }). */
+function conversationInPath(pathname) {
+    const m = /\/(dm|channel)\/([a-f0-9]{24})(?:\/|$)/.exec(pathname || '');
+    return m ? { type: m[1], id: m[2] } : null;
+}
+
+/** Does this stored notification belong to that conversation? */
+function isAboutConversation(n, conv) {
+    if (!conv) return false;
+    const meta = n?.meta || {};
+    if (conv.type === 'dm') return String(meta.dmSessionId || '') === conv.id;
+    return String(meta.channelId || '') === conv.id && !meta.dmSessionId;
+}
+
 /** Is the given conversation the one currently on screen? */
 function isViewing(pathname, type, id) {
     if (!id) return false;
@@ -37,7 +65,7 @@ function isViewing(pathname, type, id) {
 }
 
 export function NotificationsProvider({ children }) {
-    const { addNotificationListener } = useSocket();
+    const { addNotificationListener, socket } = useSocket();
     const { activeWorkspace } = useWorkspace();
     const { accessToken, user } = useAuth();
     const { triggerDesktopNotification } = useDesktopNotification();
@@ -48,6 +76,7 @@ export function NotificationsProvider({ children }) {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [hasMore, setHasMore] = useState(false);
     const [page, setPage] = useState(1);
 
@@ -63,6 +92,19 @@ export function NotificationsProvider({ children }) {
     const currentWorkspaceRef = useRef(workspaceId);
     currentWorkspaceRef.current = workspaceId;
     const seenNotificationIdsRef = useRef(new Set());
+
+    // Account-level alert preferences (Settings → Notifications).
+    const prefsRef = useRef({ ...NOTIFICATION_PREF_DEFAULTS });
+    useEffect(() => {
+        if (!accessToken) return undefined;
+        let cancelled = false;
+        fetchAccountNotificationPrefs()
+            .then((p) => { if (!cancelled) prefsRef.current = p; })
+            .catch((err) => logger.warn('[NotificationsContext] prefs load failed:', err?.message));
+        const onPrefs = (e) => { if (e?.detail) prefsRef.current = { ...prefsRef.current, ...e.detail }; };
+        window.addEventListener(PREFS_EVENT, onPrefs);
+        return () => { cancelled = true; window.removeEventListener(PREFS_EVENT, onPrefs); };
+    }, [accessToken]);
     useEffect(() => {
         seenNotificationIdsRef.current = new Set(notifications.map(n => n._id).filter(Boolean));
     }, [notifications]);
@@ -96,6 +138,7 @@ export function NotificationsProvider({ children }) {
     const fetchNotifications = useCallback(async (pg = 1, append = false) => {
         if (!workspaceId || !accessToken) return;
         setLoading(true);
+        setError(null);
         try {
             const { data } = await api.get('/api/notifications', {
                 params: { workspaceId, page: pg, limit: 30 },
@@ -114,6 +157,7 @@ export function NotificationsProvider({ children }) {
         } catch (err) {
             if (currentWorkspaceRef.current !== workspaceId) return;
             logger.error('[NotificationsContext] fetch error:', err);
+            setError(err?.response?.data?.message || 'Could not load notifications');
         } finally {
             if (currentWorkspaceRef.current === workspaceId) setLoading(false);
         }
@@ -177,11 +221,13 @@ export function NotificationsProvider({ children }) {
     }, [conversationUnread]);
 
     const notifyNative = useCallback((title, body, route = {}) => {
+        const prefs = prefsRef.current;
+        if (!prefs.desktopPush) return;
         try {
             if (window.chttrixDesktop) {
-                window.chttrixDesktop.notify({ type: route.type || 'system', title, body, ...route });
+                window.chttrixDesktop.notify({ type: route.type || 'system', title, body, silent: !prefs.sound, ...route });
             } else {
-                triggerDesktopNotification(title, body);
+                triggerDesktopNotification(title, body, undefined, { silent: !prefs.sound });
             }
         } catch (err) {
             logger.warn('[NotificationsContext] native notification failed:', err);
@@ -210,7 +256,7 @@ export function NotificationsProvider({ children }) {
             setConversationUnread(prev => ({ ...prev, [k]: (prev[k] || 0) + 1 }));
             if (payload.isMention) setMentionedConversations(prev => ({ ...prev, [k]: true }));
 
-            const wantsAlert = type === 'dm' || payload.isMention;
+            const wantsAlert = type === 'dm' ? prefsRef.current.dmNotifications !== false : !!payload.isMention;
             if (!wantsAlert) return;
 
             let text = payload.kindLabel || null;
@@ -258,13 +304,16 @@ export function NotificationsProvider({ children }) {
             setUnreadCount(c => c + 1);
 
             if (notification.type === 'dm' || notification.type === 'mention') return;
+            // "Only mentions and direct messages": everything else stays in the bell only.
+            if (prefsRef.current.mentionsOnly) return;
             const meta = notification.meta || {};
+            const href = notificationHref(notification, workspaceId);
             const isConversational = ['reaction', 'thread_reply'].includes(notification.type);
             if (!isConversational) {
                 showToast(notification.body || '', 'message', 4500, {
                     title: notification.title,
                     key: `notif:${notification.type}`,
-                    onClick: notification.link ? () => navigate(`/workspace/${workspaceId}${notification.link}`) : undefined,
+                    onClick: href ? () => navigate(href) : undefined,
                 });
             }
             if (document.visibilityState !== 'visible') {
@@ -302,16 +351,27 @@ export function NotificationsProvider({ children }) {
         return unsubscribe;
     }, [addNotificationListener, showToast, notifyNative]);
 
+    // Latest rendered list, for counting what an update changes (updaters stay pure).
+    const notificationsRef = useRef(notifications);
+    notificationsRef.current = notifications;
+
+    const readIds = useCallback((ids) => {
+        const set = new Set((ids || []).map(String));
+        if (!set.size) return;
+        const dropped = notificationsRef.current.filter(n => set.has(String(n._id)) && !n.read).length;
+        setNotifications(prev => prev.map(n => (set.has(String(n._id)) && !n.read ? { ...n, read: true } : n)));
+        if (dropped) setUnreadCount(c => Math.max(0, c - dropped));
+    }, []);
+
     const markRead = useCallback(async (notifId) => {
         if (!notifId) return;
         try {
             await api.patch(`/api/notifications/${notifId}/read`);
-            setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
-            setUnreadCount(c => Math.max(0, c - 1));
+            readIds([notifId]);
         } catch (err) {
             logger.error('[NotificationsContext] markRead error:', err);
         }
-    }, []);
+    }, [readIds]);
 
     const markAllRead = useCallback(async () => {
         if (!workspaceId) return;
@@ -321,36 +381,110 @@ export function NotificationsProvider({ children }) {
             setUnreadCount(0);
         } catch (err) {
             logger.error('[NotificationsContext] markAllRead error:', err);
+            showToast(err?.response?.data?.message || 'Could not mark notifications as read', 'error');
         }
-    }, [workspaceId]);
+    }, [workspaceId, showToast]);
+
+    const removeIds = useCallback((ids) => {
+        const set = new Set((ids || []).map(String));
+        if (!set.size) return;
+        const unreadRemoved = notificationsRef.current.filter(n => set.has(String(n._id)) && !n.read).length;
+        setNotifications(prev => prev.filter(n => !set.has(String(n._id))));
+        if (unreadRemoved) setUnreadCount(c => Math.max(0, c - unreadRemoved));
+    }, []);
 
     const dismiss = useCallback(async (notifId) => {
         if (!notifId) return;
         try {
-            const wasUnread = notifications.find(n => n._id === notifId && !n.read);
             await api.delete(`/api/notifications/${notifId}`);
-            setNotifications(prev => prev.filter(n => n._id !== notifId));
-            if (wasUnread) setUnreadCount(c => Math.max(0, c - 1));
+            removeIds([notifId]);
         } catch (err) {
             logger.error('[NotificationsContext] dismiss error:', err);
+            showToast(err?.response?.data?.message || 'Could not dismiss the notification', 'error');
         }
-    }, [notifications]);
+    }, [removeIds, showToast]);
 
     const clearAll = useCallback(async () => {
-        if (!workspaceId) return;
+        if (!workspaceId) return false;
         try {
             await api.delete('/api/notifications', { params: { workspaceId } });
             setNotifications([]);
             setUnreadCount(0);
+            return true;
         } catch (err) {
             logger.error('[NotificationsContext] clearAll error:', err);
+            showToast(err?.response?.data?.message || 'Could not clear notifications', 'error');
+            return false;
         }
-    }, [workspaceId]);
+    }, [workspaceId, showToast]);
+
+    // Keep other tabs/devices in step: the server echoes read/delete/clear to
+    // the user's room. Refetch after a reconnect (events may have been missed).
+    const fetchRef = useRef(fetchNotifications);
+    fetchRef.current = fetchNotifications;
+    useEffect(() => {
+        if (!socket) return undefined;
+        const sameWs = (p) => !p?.workspaceId || String(p.workspaceId) === String(currentWorkspaceRef.current);
+        const onRead = (p) => { if (sameWs(p)) readIds(p?.ids); };
+        const onReadAll = (p) => {
+            if (!sameWs(p)) return;
+            setNotifications(prev => prev.map(n => (n.read ? n : { ...n, read: true })));
+            setUnreadCount(0);
+        };
+        const onDeleted = (p) => { if (sameWs(p)) removeIds(p?.ids); };
+        const onCleared = (p) => {
+            if (!sameWs(p)) return;
+            setNotifications([]);
+            setUnreadCount(0);
+        };
+        let wasDisconnected = false;
+        const onDisconnect = () => { wasDisconnected = true; };
+        const onConnect = () => {
+            if (!wasDisconnected) return;
+            wasDisconnected = false;
+            fetchRef.current(1, false);
+        };
+        socket.on('notification:read', onRead);
+        socket.on('notification:read-all', onReadAll);
+        socket.on('notification:deleted', onDeleted);
+        socket.on('notification:cleared', onCleared);
+        socket.on('disconnect', onDisconnect);
+        socket.on('connect', onConnect);
+        return () => {
+            socket.off('notification:read', onRead);
+            socket.off('notification:read-all', onReadAll);
+            socket.off('notification:deleted', onDeleted);
+            socket.off('notification:cleared', onCleared);
+            socket.off('disconnect', onDisconnect);
+            socket.off('connect', onConnect);
+        };
+    }, [socket, readIds, removeIds]);
+
+    // Opening a conversation reads its bell notifications (DMs, mentions,
+    // replies and reactions there), like opening it clears its unread badge.
+    const autoReadPendingRef = useRef(new Set());
+    const openConversation = conversationInPath(location.pathname);
+    const openConvKey = openConversation ? `${openConversation.type}:${openConversation.id}` : null;
+    useEffect(() => {
+        if (!openConvKey) return;
+        const [type, id] = openConvKey.split(':');
+        const ids = notifications
+            .filter(n => !n.read && n._id && !autoReadPendingRef.current.has(n._id) && isAboutConversation(n, { type, id }))
+            .map(n => n._id);
+        if (!ids.length) return;
+        ids.forEach(nid => autoReadPendingRef.current.add(nid));
+        Promise.allSettled(ids.map(nid => api.patch(`/api/notifications/${nid}/read`)))
+            .then(results => {
+                readIds(ids.filter((_, i) => results[i].status === 'fulfilled'));
+                ids.forEach(nid => autoReadPendingRef.current.delete(nid));
+            });
+    }, [openConvKey, notifications, readIds]);
 
     const value = {
         notifications,
         unreadCount,
         loading,
+        error,
         hasMore,
         loadMore,
         refresh: () => fetchNotifications(1, false),

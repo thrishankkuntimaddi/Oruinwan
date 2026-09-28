@@ -4,6 +4,7 @@ const router = express.Router();
 const requireAuth = require("../../shared/middleware/auth");
 const { getChatList, resetUnread } = require("./chatlist.controller");
 const channelCtrl = require("../channels/channel.controller");
+const { discoverableFilter } = require("../auth/privacy.service");
 
 router.get("/list", requireAuth, getChatList);
 router.post("/reset-unread", requireAuth, resetUnread);
@@ -25,10 +26,16 @@ router.get("/contacts", requireAuth, async (req, res) => {
         const currentUser = await User.findById(currentUserId).select("companyId").lean();
 
         
+        // Personal accounts: people who turned discovery off appear only to those sharing a workspace.
         const query = currentUser?.companyId
             ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
-            
-            : { _id: { $ne: currentUserId }, $or: [{ companyId: null }, { companyId: { $exists: false } }] };
+            : {
+                _id: { $ne: currentUserId },
+                $and: [
+                    { $or: [{ companyId: null }, { companyId: { $exists: false } }] },
+                    await discoverableFilter(currentUserId),
+                ],
+            };
 
         const users = await User.find(query)
             .select("_id username email profilePicture")

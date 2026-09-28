@@ -1,251 +1,268 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Calendar, Users, FileText, CheckSquare, Sparkles,
-    Play, Square, Plus, Trash2, Edit3, Save,
-    Clock, ArrowLeft, Loader2, PenTool, StickyNote,
+    Video, Square, Plus, Trash2, Edit3, Save,
+    ArrowLeft, Loader2, PenTool, StickyNote, ExternalLink,
 } from 'lucide-react';
 import Whiteboard from '../../components/meetingsComp/Whiteboard';
 import BrainstormBoard from '../../components/meetingsComp/BrainstormBoard';
 import { useMeeting, useSharedNotes } from '../../hooks/useMeeting';
 import { useToast } from '../../contexts/ToastContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { meetingConversationPath } from '../../features/huddles/HuddleContext';
 
-const StatusBadge = ({ status }) => {
-    const map = {
-        scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-        live: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-        completed: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-        cancelled: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-    };
-    const pulse = status === 'live';
-    return (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${map[status] || map.scheduled}`}>
-            {pulse && (
-                <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-            )}
-            {status?.charAt(0).toUpperCase() + status?.slice(1)}
-        </span>
-    );
+const FONT = 'Inter, system-ui, sans-serif';
+
+// Shared inline styles, all on the app's theme tokens (light and dark).
+const ui = {
+    card: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' },
+    label: { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)' },
+    input: {
+        width: '100%', padding: '8px 10px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+        borderRadius: '2px', color: 'var(--text-primary)', outline: 'none', fontFamily: FONT, boxSizing: 'border-box',
+    },
+    primary: (disabled) => ({
+        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px', fontWeight: 600,
+        background: 'var(--accent)', color: '#0c0c0c', border: '1px solid var(--accent)', borderRadius: '2px',
+        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, fontFamily: FONT, whiteSpace: 'nowrap',
+    }),
+    secondary: {
+        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px', fontWeight: 600,
+        background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-accent)', borderRadius: '2px',
+        cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+    },
+    danger: {
+        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px', fontWeight: 600,
+        background: 'transparent', color: 'var(--state-danger)', border: '1px solid var(--state-danger)', borderRadius: '2px',
+        cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+    },
+    iconBtn: { display: 'flex', padding: '4px', background: 'none', border: 'none', borderRadius: '2px', color: 'var(--text-secondary)', cursor: 'pointer' },
+    muted: { fontSize: '13px', color: 'var(--text-secondary)' },
 };
+
+const STATUS_TONE = {
+    scheduled: 'var(--accent)',
+    live: 'var(--state-success)',
+    completed: 'var(--text-secondary)',
+    cancelled: 'var(--state-danger)',
+};
+
+const StatusBadge = ({ status = 'scheduled' }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '2px 8px', borderRadius: '2px', border: `1px solid ${STATUS_TONE[status] || STATUS_TONE.scheduled}`, color: STATUS_TONE[status] || STATUS_TONE.scheduled, fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+        {status === 'live' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--state-success)' }} />}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+);
 
 const TabBtn = ({ label, icon: Icon, active, onClick }) => (
     <button
+        role="tab"
+        aria-selected={active}
         onClick={onClick}
-        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${
-            active
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-        }`}
+        style={{
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 12px', fontSize: '13px', fontWeight: active ? 600 : 500,
+            background: 'transparent', border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+            color: active ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+        }}
     >
-        <Icon size={15} />
+        <Icon size={14} />
         {label}
     </button>
 );
 
-const OverviewTab = ({ meeting, onJoin, onEnd, onSuggestTime, suggestLoading }) => {
-    const [suggested, setSuggested] = useState(null);
-    const [suggestErr, setSuggestErr] = useState('');
+/** A short note on how a tab's content is shared, so nothing looks more live than it is. */
+const SyncNote = ({ children, tone = 'muted' }) => (
+    <p style={{ fontSize: '12px', color: tone === 'error' ? 'var(--state-danger)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+        {children}
+    </p>
+);
 
-    const handleSuggest = async () => {
-        setSuggestErr('');
-        try {
-            const result = await onSuggestTime(
-                meeting.participants?.map(p => p._id) || [],
-                meeting.duration || 30
-            );
-            setSuggested(result);
-        } catch {
-            setSuggestErr('Failed to suggest time');
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wide">Start Time</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-white">
-                        {meeting.startTime ? new Date(meeting.startTime).toLocaleString() : '—'}
-                    </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wide">Duration</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-white">{meeting.duration || 30} min</p>
-                </div>
+const OverviewTab = ({ meeting, onJoin, onEnd, joining, inConversation }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            <div style={{ ...ui.card, padding: '14px 16px' }}>
+                <p style={{ ...ui.label, marginBottom: '6px' }}>Start time</p>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {meeting.startTime ? new Date(meeting.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                </p>
             </div>
-
-            {}
-            <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Users size={15} /> Participants ({meeting.participants?.length || 0})
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                    {meeting.participants?.length > 0 ? (
-                        meeting.participants.map(p => (
-                            <span key={p._id} className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm text-gray-700 dark:text-gray-300">
-                                <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white">
-                                    {(p.firstName?.[0] || p.username?.[0] || '?').toUpperCase()}
-                                </div>
-                                {p.firstName ? `${p.firstName} ${p.lastName || ''}` : p.username}
-                            </span>
-                        ))
-                    ) : (
-                        <p className="text-sm text-gray-400">No participants yet</p>
-                    )}
-                </div>
+            <div style={{ ...ui.card, padding: '14px 16px' }}>
+                <p style={{ ...ui.label, marginBottom: '6px' }}>Duration</p>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{meeting.duration || 30} min</p>
             </div>
-
-            {}
-            <div className="flex flex-wrap gap-3">
-                {meeting.status === 'scheduled' && (
-                    <button
-                        onClick={onJoin}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25 hover:scale-[1.02]"
-                    >
-                        <Play size={16} /> Join Meeting
-                    </button>
-                )}
-                {meeting.status === 'live' && (
-                    <>
-                        <button
-                            onClick={onJoin}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25"
-                        >
-                            <Play size={16} /> Join Live
-                        </button>
-                        <button
-                            onClick={onEnd}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all"
-                        >
-                            <Square size={16} /> End Meeting
-                        </button>
-                    </>
-                )}
-                <button
-                    onClick={handleSuggest}
-                    disabled={suggestLoading}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm"
-                >
-                    <Clock size={15} /> Find Time
-                </button>
-            </div>
-
-            {suggested && (
-                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
-                    <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase mb-1">Suggested Slot</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{new Date(suggested.suggestedStart).toLocaleString()} — {new Date(suggested.suggestedEnd).toLocaleTimeString()}</p>
-                    <p className="text-xs text-gray-400 mt-1">{suggested.note}</p>
-                </div>
-            )}
-            {suggestErr && <p className="text-sm text-red-500">{suggestErr}</p>}
         </div>
-    );
-};
+
+        <div>
+            <h4 style={{ ...ui.label, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <Users size={13} /> Participants ({meeting.participants?.length || 0})
+            </h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {meeting.participants?.length > 0 ? (
+                    meeting.participants.map(p => (
+                        <span key={p._id} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 10px 4px 4px', ...ui.card, fontSize: '13px', color: 'var(--text-primary)' }}>
+                            <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>
+                                {(p.firstName?.[0] || p.username?.[0] || '?').toUpperCase()}
+                            </span>
+                            {p.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : p.username}
+                        </span>
+                    ))
+                ) : (
+                    <p style={ui.muted}>Nobody has joined yet.</p>
+                )}
+            </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            {(meeting.status === 'scheduled' || meeting.status === 'live') && (
+                <button onClick={onJoin} disabled={joining} style={ui.primary(joining)} data-testid="meeting-join">
+                    {joining ? <Loader2 size={15} className="animate-spin" /> : <Video size={15} />}
+                    {meeting.status === 'live' ? 'Join huddle' : 'Start huddle'}
+                </button>
+            )}
+            {meeting.meetingLink && (
+                <a href={meeting.meetingLink} target="_blank" rel="noopener noreferrer" style={{ ...ui.secondary, textDecoration: 'none' }}>
+                    <ExternalLink size={14} /> Open meeting link
+                </a>
+            )}
+            {meeting.status === 'live' && (
+                <button onClick={onEnd} style={ui.danger}>
+                    <Square size={14} /> End meeting
+                </button>
+            )}
+        </div>
+        {(meeting.status === 'scheduled' || meeting.status === 'live') && (
+            <SyncNote>
+                {inConversation
+                    ? 'This meeting was scheduled in a conversation; the call happens in that conversation.'
+                    : 'The call is a huddle on the Huddles page. Everyone who joins this meeting lands in the same huddle.'}
+            </SyncNote>
+        )}
+    </div>
+);
 
 const AgendaTab = ({ meeting, onSave }) => {
+    const { showToast } = useToast();
     const [items, setItems] = useState(meeting.agenda || []);
+    const [dirty, setDirty] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [saving, setSaving] = useState(false);
     const [editingIdx, setEditingIdx] = useState(null);
 
+    // Someone else saved the agenda: take it unless I have unsaved changes.
+    useEffect(() => {
+        if (!dirty) setItems(meeting.agenda || []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [meeting.agenda]);
+
+    const change = (fn) => { setItems(fn); setDirty(true); };
+
     const addItem = () => {
         if (!newTitle.trim()) return;
-        setItems(prev => [...prev, { title: newTitle.trim(), notes: '', order: prev.length }]);
+        change(prev => [...prev, { title: newTitle.trim(), notes: '', order: prev.length }]);
         setNewTitle('');
     };
 
-    const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+    const removeItem = (idx) => change(prev => prev.filter((_, i) => i !== idx));
 
     const saveAgenda = async () => {
         setSaving(true);
         try {
             await onSave(items.map((it, i) => ({ ...it, order: i })));
+            setDirty(false);
+            showToast('Agenda saved', 'success');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not save the agenda', 'error');
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex gap-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '760px' }}>
+            <SyncNote>Saved agendas appear for everyone who has this meeting open.</SyncNote>
+            <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                     value={newTitle}
                     onChange={e => setNewTitle(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addItem()}
                     placeholder="Add agenda item…"
-                    className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-white placeholder-gray-400"
+                    style={{ ...ui.input, flex: 1 }}
                 />
-                <button
-                    onClick={addItem}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-1.5 text-sm font-medium"
-                >
-                    <Plus size={15} /> Add
-                </button>
+                <button onClick={addItem} style={ui.secondary}><Plus size={14} /> Add</button>
             </div>
 
-            <div className="space-y-2">
-                {items.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-6">No agenda items yet. Add one above.</p>
-                )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {items.length === 0 && <p style={{ ...ui.muted, textAlign: 'center', padding: '24px 0' }}>No agenda items yet. Add one above.</p>}
                 {items.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold mt-0.5">{idx + 1}</span>
-                        <div className="flex-1">
+                    <div key={idx} style={{ ...ui.card, display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px' }}>
+                        <span style={{ width: '20px', height: '20px', borderRadius: '2px', background: 'var(--bg-active)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>{idx + 1}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             {editingIdx === idx ? (
                                 <input
                                     autoFocus
                                     value={item.title}
-                                    onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, title: e.target.value } : it))}
+                                    onChange={e => change(prev => prev.map((it, i) => i === idx ? { ...it, title: e.target.value } : it))}
                                     onBlur={() => setEditingIdx(null)}
-                                    className="w-full text-sm bg-transparent border-b border-indigo-400 focus:outline-none text-gray-800 dark:text-white"
+                                    onKeyDown={e => e.key === 'Enter' && setEditingIdx(null)}
+                                    style={{ ...ui.input, padding: '4px 6px' }}
                                 />
                             ) : (
-                                <p className="text-sm font-medium text-gray-800 dark:text-white">{item.title}</p>
+                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</p>
                             )}
-                            {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
+                            {item.notes && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{item.notes}</p>}
                         </div>
-                        <div className="flex gap-1">
-                            <button onClick={() => setEditingIdx(idx)} className="p-1 text-gray-400 hover:text-indigo-500 transition-colors">
-                                <Edit3 size={13} />
-                            </button>
-                            <button onClick={() => removeItem(idx)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
-                                <Trash2 size={13} />
-                            </button>
-                        </div>
+                        <button onClick={() => setEditingIdx(idx)} title="Edit item" aria-label="Edit item" style={ui.iconBtn}><Edit3 size={13} /></button>
+                        <button onClick={() => removeItem(idx)} title="Remove item" aria-label="Remove item" style={ui.iconBtn}
+                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}><Trash2 size={13} /></button>
                     </div>
                 ))}
             </div>
 
-            <button
-                onClick={saveAgenda}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition-all disabled:opacity-60"
-            >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                Save Agenda
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button onClick={saveAgenda} disabled={saving || !dirty} style={ui.primary(saving || !dirty)}>
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save agenda
+                </button>
+                {dirty && <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Unsaved changes</span>}
+            </div>
         </div>
     );
 };
 
-const NotesTab = ({ meetingId, initialNotes }) => {
-    const { notes, handleNotesChange } = useSharedNotes(meetingId, initialNotes);
+const NOTES_STATUS = {
+    saving: 'Saving…',
+    saved: 'Saved',
+};
+
+const NotesTab = ({ meetingId, room, fallbackNotes }) => {
+    const { notes, handleNotesChange, status } = useSharedNotes(meetingId, {
+        initialNotes: room.joined ? room.notes : null,
+        joined: room.joined,
+    });
+
+    let note;
+    if (room.error) note = <SyncNote tone="error">{room.error}</SyncNote>;
+    else if (!room.joined) note = <SyncNote><Loader2 size={12} className="animate-spin" /> Connecting to the meeting…</SyncNote>;
+    else if (status.state === 'error') note = <SyncNote tone="error">Not saved: {status.message}</SyncNote>;
+    else note = (
+        <SyncNote>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--state-success)' }} />
+            Everyone with this meeting open sees changes as you type.
+            {NOTES_STATUS[status.state] && <span style={{ marginLeft: 'auto' }}>{NOTES_STATUS[status.state]}</span>}
+        </SyncNote>
+    );
 
     return (
-        <div className="h-full flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Synced in realtime with all meeting participants
-            </div>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {note}
             <textarea
-                value={notes}
+                data-testid="meeting-shared-notes"
+                value={room.joined ? notes : (fallbackNotes || notes)}
                 onChange={e => handleNotesChange(e.target.value)}
-                placeholder="Start typing shared notes… all participants see changes live."
-                className="flex-1 w-full min-h-[300px] p-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-gray-200 placeholder-gray-400 resize-none font-mono leading-relaxed"
+                readOnly={!room.joined}
+                placeholder={room.joined ? 'Start typing shared notes…' : ''}
+                style={{ ...ui.input, flex: 1, minHeight: '320px', padding: '14px', lineHeight: 1.6, resize: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', opacity: room.joined ? 1 : 0.7 }}
             />
         </div>
     );
@@ -263,8 +280,8 @@ const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
         try {
             await onSaveTranscript(transcript);
             showToast('Transcript saved', 'success');
-        } catch {
-            showToast('Failed to save transcript', 'error');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not save the transcript', 'error');
         } finally {
             setSaving(false);
         }
@@ -275,24 +292,20 @@ const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
         try {
             const result = await onGenerateSummary();
             setSummary(result);
-            showToast('Summary generated!', 'success');
-        } catch {
-            showToast('Failed to generate summary', 'error');
+            showToast('Summary generated', 'success');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not generate a summary', 'error');
         } finally {
             setGenerating(false);
         }
     };
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '860px' }}>
             <div>
-                <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Transcript</h4>
-                    <button
-                        onClick={saveTranscript}
-                        disabled={saving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium transition-all"
-                    >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <h4 style={ui.label}>Transcript</h4>
+                    <button onClick={saveTranscript} disabled={saving} style={{ ...ui.secondary, padding: '5px 10px', fontSize: '12px' }}>
                         {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
                     </button>
                 </div>
@@ -300,43 +313,40 @@ const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
                     value={transcript}
                     onChange={e => setTranscript(e.target.value)}
                     placeholder="Paste or type the meeting transcript here…"
-                    className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-gray-200 placeholder-gray-400 resize-none font-mono"
+                    style={{ ...ui.input, height: '160px', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
                 />
             </div>
 
             <div>
-                <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <Sparkles size={14} className="text-amber-500" /> AI Summary
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <h4 style={{ ...ui.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sparkles size={13} style={{ color: 'var(--accent)' }} /> AI summary
                     </h4>
-                    <button
-                        onClick={generateSummary}
-                        disabled={generating}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
+                    <button onClick={generateSummary} disabled={generating} style={ui.primary(generating)}>
                         {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                        {generating ? 'Generating…' : 'Generate Summary'}
+                        {generating ? 'Generating…' : 'Generate summary'}
                     </button>
                 </div>
                 {summary ? (
-                    <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{summary}</p>
+                    <div style={{ ...ui.card, padding: '14px 16px', borderLeft: '3px solid var(--accent)' }}>
+                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{summary}</p>
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-400 text-center py-6">No summary yet. Add a transcript and click "Generate Summary".</p>
+                    <p style={{ ...ui.muted, textAlign: 'center', padding: '24px 0' }}>No summary yet. Add a transcript and click "Generate summary".</p>
                 )}
             </div>
         </div>
     );
 };
 
-const STATUS_COLORS = {
-    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+const ACTION_TONE = {
+    pending: 'var(--text-secondary)',
+    in_progress: 'var(--accent)',
+    done: 'var(--state-success)',
 };
 
 const ActionItemsTab = ({ meeting, onAdd, onUpdate }) => {
+    const { showToast } = useToast();
     const [newText, setNewText] = useState('');
     const [adding, setAdding] = useState(false);
 
@@ -346,6 +356,8 @@ const ActionItemsTab = ({ meeting, onAdd, onUpdate }) => {
         try {
             await onAdd({ text: newText.trim() });
             setNewText('');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not add the action item', 'error');
         } finally {
             setAdding(false);
         }
@@ -353,48 +365,48 @@ const ActionItemsTab = ({ meeting, onAdd, onUpdate }) => {
 
     const cycleStatus = async (item) => {
         const next = { pending: 'in_progress', in_progress: 'done', done: 'pending' };
-        await onUpdate(item._id, { status: next[item.status] || 'pending' });
+        try {
+            await onUpdate(item._id, { status: next[item.status] || 'pending' });
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not update the action item', 'error');
+        }
     };
 
+    const items = meeting.actionItems || [];
+
     return (
-        <div className="space-y-4">
-            <div className="flex gap-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '760px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                     value={newText}
                     onChange={e => setNewText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAdd()}
                     placeholder="Add action item…"
-                    className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-white placeholder-gray-400"
+                    style={{ ...ui.input, flex: 1 }}
                 />
-                <button
-                    onClick={handleAdd}
-                    disabled={adding}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-1.5 text-sm font-medium disabled:opacity-60"
-                >
-                    {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={15} />}
-                    Add
+                <button onClick={handleAdd} disabled={adding} style={ui.secondary}>
+                    {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add
                 </button>
             </div>
 
-            <div className="space-y-2">
-                {meeting.actionItems?.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-6">No action items yet.</p>
-                )}
-                {meeting.actionItems?.map(item => (
-                    <div key={item._id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {items.length === 0 && <p style={{ ...ui.muted, textAlign: 'center', padding: '24px 0' }}>No action items yet.</p>}
+                {items.map(item => (
+                    <div key={item._id} style={{ ...ui.card, display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px' }}>
                         <button
                             onClick={() => cycleStatus(item)}
-                            className={`mt-0.5 px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 ${STATUS_COLORS[item.status] || STATUS_COLORS.pending}`}
+                            title="Change status"
+                            style={{ padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', background: 'transparent', border: `1px solid ${ACTION_TONE[item.status] || ACTION_TONE.pending}`, color: ACTION_TONE[item.status] || ACTION_TONE.pending, cursor: 'pointer', fontFamily: FONT }}
                         >
-                            {item.status?.replace('_', ' ')}
+                            {(item.status || 'pending').replace('_', ' ')}
                         </button>
-                        <div className="flex-1">
-                            <p className={`text-sm font-medium ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-white'}`}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: item.status === 'done' ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: item.status === 'done' ? 'line-through' : 'none' }}>
                                 {item.text}
                             </p>
                             {item.assignedTo && (
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    → {item.assignedTo.firstName || item.assignedTo.username}
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                    Assigned to {item.assignedTo.firstName || item.assignedTo.username}
                                 </p>
                             )}
                         </div>
@@ -408,9 +420,9 @@ const ActionItemsTab = ({ meeting, onAdd, onUpdate }) => {
 const TABS = [
     { id: 'overview', label: 'Overview', icon: Calendar },
     { id: 'agenda', label: 'Agenda', icon: FileText },
-    { id: 'notes', label: 'Shared Notes', icon: Edit3 },
-    { id: 'transcript', label: 'Transcript & Summary', icon: Sparkles },
-    { id: 'actions', label: 'Action Items', icon: CheckSquare },
+    { id: 'notes', label: 'Shared notes', icon: Edit3 },
+    { id: 'transcript', label: 'Transcript & summary', icon: Sparkles },
+    { id: 'actions', label: 'Action items', icon: CheckSquare },
     { id: 'whiteboard', label: 'Whiteboard', icon: PenTool },
     { id: 'brainstorm', label: 'Brainstorm', icon: StickyNote },
 ];
@@ -420,21 +432,24 @@ const MeetingDetailPage = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState('overview');
-    const [suggestLoading, setSuggestLoading] = useState(false);
+    const [joining, setJoining] = useState(false);
 
     const {
-        meeting, loading, error,
-        joinMeeting, endMeeting, updateAgenda, updateTranscript, generateSummary,
-        addActionItem, updateActionItem, suggestTime,
+        meeting, loading, error, room,
+        endMeeting, updateAgenda, updateTranscript, generateSummary,
+        addActionItem, updateActionItem,
     } = useMeeting(meetingId, workspaceId);
 
-    const handleJoin = async () => {
-        try {
-            await joinMeeting();
-            showToast('Joined meeting!', 'success');
-        } catch (err) {
-            showToast(err?.response?.data?.message || 'Failed to join meeting', 'error');
+    // Join = go to the meeting's call: its conversation, or its huddle on the Huddles page.
+    const handleJoin = () => {
+        const path = meetingConversationPath(workspaceId, meeting);
+        if (path) {
+            showToast('Start or join the huddle from the conversation header.', 'info');
+            navigate(path);
+            return;
         }
+        setJoining(true);
+        navigate(`/workspace/${workspaceId}/huddles?meeting=${meetingId}`, { state: { meetingTitle: meeting.title } });
     };
 
     const handleEnd = async () => {
@@ -442,22 +457,16 @@ const MeetingDetailPage = () => {
             await endMeeting();
             showToast('Meeting ended', 'info');
         } catch (err) {
-            showToast('Failed to end meeting', 'error');
+            showToast(err?.response?.data?.message || 'Could not end the meeting', 'error');
         }
-    };
-
-    const handleSuggestTime = async (...args) => {
-        setSuggestLoading(true);
-        try { return await suggestTime(...args); }
-        finally { setSuggestLoading(false); }
     };
 
     if (loading) {
         return (
-            <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={32} className="animate-spin text-indigo-500" />
-                    <p className="text-sm text-gray-500">Loading meeting…</p>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: FONT }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <Loader2 size={28} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                    <p style={ui.muted}>Loading meeting…</p>
                 </div>
             </div>
         );
@@ -465,89 +474,67 @@ const MeetingDetailPage = () => {
 
     if (error || !meeting) {
         return (
-            <div className="h-full flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-950">
-                <p className="text-red-500 text-sm">{error || 'Meeting not found'}</p>
-                <button onClick={() => navigate(-1)} className="text-indigo-500 text-sm hover:underline flex items-center gap-1">
-                    <ArrowLeft size={14} /> Go Back
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', background: 'var(--bg-base)', fontFamily: FONT }}>
+                <p style={{ fontSize: '14px', color: 'var(--state-danger)' }}>{error || 'Meeting not found'}</p>
+                <button onClick={() => navigate(`/workspace/${workspaceId}/huddles?tab=scheduled`)} style={ui.secondary}>
+                    <ArrowLeft size={14} /> Back to huddles
                 </button>
             </div>
         );
     }
 
+    const creator = meeting.createdBy?.firstName
+        ? `${meeting.createdBy.firstName} ${meeting.createdBy.lastName || ''}`.trim()
+        : meeting.createdBy?.username || '—';
+
     return (
-        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 overflow-hidden">
-            {}
-            <header className="flex-none px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-3 mb-2">
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-base)', fontFamily: FONT }}>
+            <header style={{ flexShrink: 0, padding: '14px 24px 0', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <button
-                        onClick={() => navigate(`/workspace/${workspaceId}/huddles`)}
-                        className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                        onClick={() => navigate(`/workspace/${workspaceId}/huddles?tab=scheduled`)}
+                        title="Back to huddles"
+                        aria-label="Back to huddles"
+                        style={{ ...ui.iconBtn, padding: '6px', border: '1px solid var(--border-default)' }}
                     >
-                        <ArrowLeft size={16} />
+                        <ArrowLeft size={15} />
                     </button>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">{meeting.title}</h1>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{meeting.title}</h1>
                             <StatusBadge status={meeting.status} />
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            Created by {meeting.createdBy?.firstName || meeting.createdBy?.username || '—'} ·{' '}
-                            {meeting.startTime ? new Date(meeting.startTime).toLocaleDateString() : ''}
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            Organized by {creator}
+                            {meeting.startTime ? ` · ${new Date(meeting.startTime).toLocaleDateString([], { dateStyle: 'medium' })}` : ''}
                         </p>
                     </div>
                 </div>
 
-                {}
-                <div className="flex gap-1 overflow-x-auto pb-1 mt-2">
+                <div role="tablist" style={{ display: 'flex', gap: '2px', overflowX: 'auto' }}>
                     {TABS.map(tab => (
-                        <TabBtn
-                            key={tab.id}
-                            label={tab.label}
-                            icon={tab.icon}
-                            active={activeTab === tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                        />
+                        <TabBtn key={tab.id} label={tab.label} icon={tab.icon} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} />
                     ))}
                 </div>
             </header>
 
-            {}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
                 {activeTab === 'overview' && (
-                    <OverviewTab
-                        meeting={meeting}
-                        onJoin={handleJoin}
-                        onEnd={handleEnd}
-                        onSuggestTime={handleSuggestTime}
-                        suggestLoading={suggestLoading}
-                    />
+                    <OverviewTab meeting={meeting} onJoin={handleJoin} onEnd={handleEnd} joining={joining} inConversation={!!meetingConversationPath(workspaceId, meeting)} />
                 )}
-                {activeTab === 'agenda' && (
-                    <AgendaTab meeting={meeting} onSave={updateAgenda} />
-                )}
-                {activeTab === 'notes' && (
-                    <NotesTab meetingId={meetingId} initialNotes={meeting.sharedNotes || ''} />
-                )}
+                {activeTab === 'agenda' && <AgendaTab meeting={meeting} onSave={updateAgenda} />}
+                {/* Kept mounted so live edits received here survive switching tabs. */}
+                <div style={{ display: activeTab === 'notes' ? 'block' : 'none', height: '100%' }}>
+                    <NotesTab meetingId={meetingId} room={room} fallbackNotes={meeting.sharedNotes || ''} />
+                </div>
                 {activeTab === 'transcript' && (
-                    <TranscriptTab
-                        meeting={meeting}
-                        onSaveTranscript={updateTranscript}
-                        onGenerateSummary={generateSummary}
-                    />
+                    <TranscriptTab meeting={meeting} onSaveTranscript={updateTranscript} onGenerateSummary={generateSummary} />
                 )}
                 {activeTab === 'actions' && (
-                    <ActionItemsTab
-                        meeting={meeting}
-                        onAdd={addActionItem}
-                        onUpdate={updateActionItem}
-                    />
+                    <ActionItemsTab meeting={meeting} onAdd={addActionItem} onUpdate={updateActionItem} />
                 )}
-                {activeTab === 'whiteboard' && (
-                    <Whiteboard meetingId={meetingId} workspaceId={workspaceId} />
-                )}
-                {activeTab === 'brainstorm' && (
-                    <BrainstormBoard meetingId={meetingId} workspaceId={workspaceId} />
-                )}
+                {activeTab === 'whiteboard' && <Whiteboard meetingId={meetingId} />}
+                {activeTab === 'brainstorm' && <BrainstormBoard meetingId={meetingId} liveReady={room.joined} />}
             </div>
         </div>
     );

@@ -4,113 +4,105 @@ import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useNotifications } from "../../features/notifications/NotificationsContext";
+import { useNotifications, notificationHref } from "../../features/notifications/NotificationsContext";
+import { notificationTypeMeta, timeAgo, COUNT_BADGE_STYLE } from "../../features/notifications/notificationTypes";
 import SearchInlineBar from "../search/SearchInlineBar";
 import MobileBottomNav from "./MobileBottomNav";
 import MobileHomePage from "./MobileHomePage";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink, ChevronLeft } from "lucide-react";
-
-const NOTIF_ICONS = {
-    mention:         { Icon: AtSign,       color: 'var(--text-muted)' },
-    dm:              { Icon: MessageCircle, color: 'var(--text-muted)' },
-    task_assigned:   { Icon: Check,         color: 'var(--state-success)' },
-    task_comment:    { Icon: MessageCircle, color: 'var(--text-muted)' },
-    member_joined:   { Icon: UserPlus,      color: 'var(--state-success)' },
-    channel_pinned:  { Icon: Bell,          color: 'var(--accent)' },
-    huddle_started:  { Icon: Bell,          color: 'var(--state-danger)' },
-    schedule_created:{ Icon: Bell,          color: 'var(--accent)' },
-    reaction:        { Icon: Bell,          color: 'var(--text-secondary)' },
-    thread_reply:    { Icon: MessageCircle, color: 'var(--text-muted)' },
-    task_updated:    { Icon: Check,         color: 'var(--text-secondary)' },
-    task_removed:    { Icon: Trash2,        color: 'var(--state-danger)' },
-    task_transfer:   { Icon: ExternalLink,  color: 'var(--accent)' },
-    task_due_soon:   { Icon: Bell,          color: 'var(--accent)' },
-    note_shared:     { Icon: Sparkles,      color: 'var(--text-secondary)' },
-};
-
-function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
-}
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Bell, CircleHelp, Check, Trash2, ChevronLeft, AlertCircle, RefreshCcw } from "lucide-react";
 
 const WorkspaceNotificationPanel = () => {
     const [open, setOpen] = useState(false);
+    const [confirmClear, setConfirmClear] = useState(false);
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
 
-    
     const notifCtx = useNotifications();
 
     const notifications = notifCtx?.notifications || [];
     const unreadCount = notifCtx?.unreadCount || 0;
     const loading = notifCtx?.loading || false;
+    const error = notifCtx?.error || null;
     const markAllRead = notifCtx?.markAllRead || (() => { });
     const dismiss = notifCtx?.dismiss || (() => { });
     const markRead = notifCtx?.markRead || (() => { });
 
-    
     const preview = notifications.slice(0, 8);
+
+    const close = () => { setOpen(false); setConfirmClear(false); };
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') close(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [open]);
 
     const handleClickNotif = (n) => {
         if (!n.read) markRead(n._id);
-        if (n.link && activeWorkspace?.id) {
-            navigate(`/workspace/${activeWorkspace.id}${n.link}`);
-        }
-        setOpen(false);
+        const href = notificationHref(n, activeWorkspace?.id);
+        if (href) navigate(href);
+        close();
     };
+
+    const doClearAll = async () => {
+        const ok = await notifCtx?.clearAll?.();
+        if (ok !== false) setConfirmClear(false);
+    };
+
+    const footerBtn = { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', padding: 0 };
 
     return (
         <div style={{ position: 'relative' }}>
             <button
-                onClick={() => setOpen(o => !o)}
+                onClick={() => (open ? close() : setOpen(true))}
                 style={{ position: 'relative', padding: '6px', borderRadius: '2px', background: open ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: open ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
                 title="Notifications"
+                aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+                aria-expanded={open}
                 onMouseEnter={e => { if (!open) e.currentTarget.style.color = 'var(--text-primary)'; }}
                 onMouseLeave={e => { if (!open) e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
                 <Bell size={18} strokeWidth={2} />
                 {unreadCount > 0 && (
-                    <span style={{ position: 'absolute', top: '-2px', right: '-2px', minWidth: '15px', height: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '99px', background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, padding: '0 3px' }}>
+                    <span style={{ ...COUNT_BADGE_STYLE, position: 'absolute', top: '-2px', right: '-3px' }}>
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
             </button>
 
-            {open && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setOpen(false)} />}
+            {open && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={close} />}
 
             {open && (
-                <div style={{ position: 'absolute', top: '38px', right: 0, width: '300px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)', fontFamily: 'var(--font)' }}>
+                <div role="dialog" aria-label="Notifications" style={{ position: 'absolute', top: '38px', right: 0, width: '320px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)', fontFamily: 'var(--font)' }}>
 
-                    {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
                             <Bell size={13} />
                             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Notifications</span>
-                            {unreadCount > 0 && <span style={{ background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '99px' }}>{unreadCount} new</span>}
+                            {unreadCount > 0 && <span style={{ ...COUNT_BADGE_STYLE, padding: '0 5px' }}>{unreadCount} new</span>}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {unreadCount > 0 && (
-                                <button onClick={markAllRead} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
-                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                                >
-                                    <Check size={10} /> All read
-                                </button>
-                            )}
-                        </div>
+                        {unreadCount > 0 && (
+                            <button onClick={markAllRead} className="notif-link-btn" style={{ ...footerBtn, color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600 }}>
+                                <Check size={10} /> All read
+                            </button>
+                        )}
                     </div>
 
-                    {}
                     <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                         {loading && notifications.length === 0 ? (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                                 <Loader2 size={16} className="animate-spin" />
+                            </div>
+                        ) : error && notifications.length === 0 ? (
+                            <div role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '32px 16px', textAlign: 'center' }}>
+                                <AlertCircle size={20} style={{ color: 'var(--state-danger)' }} />
+                                <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Couldn’t load notifications</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>{error}</p>
+                                <button onClick={() => notifCtx?.refresh?.()} style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', fontSize: '11px', color: 'var(--text-primary)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                                    <RefreshCcw size={11} /> Try again
+                                </button>
                             </div>
                         ) : preview.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
@@ -119,14 +111,16 @@ const WorkspaceNotificationPanel = () => {
                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>No new notifications</p>
                             </div>
                         ) : preview.map(n => {
-                            const { Icon, color } = NOTIF_ICONS[n.type] || NOTIF_ICONS.channel_pinned;
+                            const { Icon, color } = notificationTypeMeta(n.type);
                             return (
                                 <div
                                     key={n._id}
+                                    className="notif-row"
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => handleClickNotif(n)}
-                                    style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', cursor: 'pointer', transition: '150ms ease', background: n.read ? 'none' : 'var(--bg-hover)', borderBottom: '1px solid var(--border-subtle)' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = n.read ? 'none' : 'var(--bg-hover)'}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleClickNotif(n); }}
+                                    style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', cursor: 'pointer', background: n.read ? 'none' : 'var(--bg-hover)', borderBottom: '1px solid var(--border-subtle)' }}
                                 >
                                     <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
                                         <Icon size={13} />
@@ -141,37 +135,43 @@ const WorkspaceNotificationPanel = () => {
                                     </div>
                                     <button
                                         onClick={e => { e.stopPropagation(); dismiss(n._id); }}
-                                        style={{ flexShrink: 0, padding: '2px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0, transition: '150ms ease' }}
-                                        className="group-hover:opacity-100"
+                                        onKeyDown={e => e.stopPropagation()}
+                                        className="notif-dismiss"
                                         title="Dismiss"
+                                        aria-label={`Dismiss: ${n.title}`}
                                     >
-                                        <X size={11} />
+                                        <X size={12} />
                                     </button>
                                 </div>
                             );
                         })}
                     </div>
 
-                    {}
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
-                        <button
-                            onClick={() => { setOpen(false); navigate(`/workspace/${activeWorkspace?.id}/notifications`); }}
-                            style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                            View all notifications
-                        </button>
-                        {notifications.length > 0 && (
-                            <button
-                                onClick={() => notifCtx?.clearAll?.()}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
-                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                                title="Clear all"
-                            >
-                                <Trash2 size={10} /> Clear all
-                            </button>
+                    <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'var(--bg-surface)', minHeight: '33px', boxSizing: 'border-box' }}>
+                        {confirmClear ? (
+                            <>
+                                <span style={{ fontSize: '11px', color: 'var(--text-primary)' }}>Clear all notifications?</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <button onClick={() => setConfirmClear(false)} className="notif-link-btn" style={{ ...footerBtn, color: 'var(--text-muted)' }}>Cancel</button>
+                                    <button onClick={doClearAll} style={{ ...footerBtn, color: 'var(--state-danger)', fontWeight: 600 }}>
+                                        <Trash2 size={10} /> Clear
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => { close(); navigate(`/workspace/${activeWorkspace?.id}/notifications`); }}
+                                    style={{ ...footerBtn, color: 'var(--accent)', fontWeight: 600 }}
+                                >
+                                    View all notifications
+                                </button>
+                                {notifications.length > 0 && (
+                                    <button onClick={() => setConfirmClear(true)} className="notif-clear-btn" style={{ ...footerBtn, color: 'var(--text-muted)' }} title="Clear all">
+                                        <Trash2 size={10} /> Clear all
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -182,6 +182,18 @@ const WorkspaceNotificationPanel = () => {
                     from { opacity: 0; transform: translateY(-6px) scale(0.97); }
                     to   { opacity: 1; transform: translateY(0) scale(1); }
                 }
+                .notif-row { transition: background 150ms ease; outline: none; }
+                .notif-row:hover, .notif-row:focus-visible { background: var(--bg-hover) !important; }
+                .notif-dismiss {
+                    flex-shrink: 0; display: flex; padding: 3px; border-radius: 2px;
+                    color: var(--text-muted); background: none; border: none; cursor: pointer;
+                    opacity: 0; transition: opacity 150ms ease, color 150ms ease, background 150ms ease;
+                }
+                .notif-row:hover .notif-dismiss, .notif-row:focus-within .notif-dismiss, .notif-dismiss:focus-visible { opacity: 1; }
+                .notif-dismiss:hover { color: var(--text-primary); background: var(--bg-active); }
+                .notif-link-btn:hover { color: var(--text-primary) !important; }
+                .notif-clear-btn:hover { color: var(--state-danger) !important; }
+                @media (hover: none) { .notif-dismiss { opacity: 1; } }
             `}</style>
         </div>
     );
@@ -231,7 +243,7 @@ const MainLayout = ({ children, sidePanel }) => {
         if (p.includes('/notes')    || p.includes('/note/'))    return 'Notes';
         if (p.includes('/files'))                               return 'Files';
         if (p.includes('/knowledge'))                           return 'Knowledge';
-        if (p.includes('/huddles'))                             return 'Meetings';
+        if (p.includes('/huddles'))                             return 'Huddles';
         if (p.includes('/updates'))                             return 'Updates';
         if (p.includes('/apps'))                                return 'Apps';
         if (p.includes('/settings'))                            return 'Settings';

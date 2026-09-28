@@ -2,8 +2,9 @@ function validateCreateNote(data) {
     const errors = [];
 
     
-    if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
-        errors.push('Title is required and must be a non-empty string');
+    // An empty/missing title is stored as 'Untitled'.
+    if (data.title !== undefined && data.title !== null && typeof data.title !== 'string') {
+        errors.push('Title must be a string');
     }
 
     if (data.title && data.title.length > 500) {
@@ -38,9 +39,13 @@ function validateCreateNote(data) {
     }
 
     
-    if (data.tags && !Array.isArray(data.tags)) {
-        errors.push('tags must be an array');
+    if (data.tags && (!Array.isArray(data.tags) || data.tags.some(t => typeof t !== 'string'))) {
+        errors.push('tags must be an array of strings');
     }
+
+    ['isPublic', 'allowEditing'].forEach(f => {
+        if (data[f] !== undefined && typeof data[f] !== 'boolean') errors.push(`${f} must be a boolean`);
+    });
 
     return {
         valid: errors.length === 0,
@@ -53,8 +58,9 @@ function validateUpdateNote(data) {
 
     
     if (data.title !== undefined) {
-        if (typeof data.title !== 'string' || data.title.trim().length === 0) {
-            errors.push('Title must be a non-empty string');
+        // Empty titles are allowed and stored as 'Untitled'.
+        if (typeof data.title !== 'string') {
+            errors.push('Title must be a string');
         }
         if (data.title && data.title.length > 500) {
             errors.push('Title must not exceed 500 characters');
@@ -92,9 +98,13 @@ function validateUpdateNote(data) {
     }
 
     
-    if (data.tags !== undefined && !Array.isArray(data.tags)) {
-        errors.push('tags must be an array');
+    if (data.tags !== undefined && (!Array.isArray(data.tags) || data.tags.some(t => typeof t !== 'string'))) {
+        errors.push('tags must be an array of strings');
     }
+
+    ['allowEditing', 'allowComments'].forEach(f => {
+        if (data[f] !== undefined && typeof data[f] !== 'boolean') errors.push(`${f} must be a boolean`);
+    });
 
     return {
         valid: errors.length === 0,
@@ -105,8 +115,12 @@ function validateUpdateNote(data) {
 function validateShareNote(data) {
     const errors = [];
 
-    if (!data.userIds || !Array.isArray(data.userIds) || data.userIds.length === 0) {
+    // userIds may be empty only when the request just toggles allowEditing.
+    if (!Array.isArray(data.userIds) || (data.userIds.length === 0 && data.allowEditing === undefined)) {
         errors.push('userIds must be a non-empty array');
+    }
+    if (data.allowEditing !== undefined && typeof data.allowEditing !== 'boolean') {
+        errors.push('allowEditing must be a boolean');
     }
 
     return {

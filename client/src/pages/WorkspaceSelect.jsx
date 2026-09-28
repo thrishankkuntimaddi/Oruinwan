@@ -1,10 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-    Rocket, Briefcase, Zap, Palette, Microscope, Globe,
-    Shield, TrendingUp, Lightbulb, Flame, Target, Trophy
-} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import api from '@services/api';
 import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
 import ChttrixAIChat from "../components/ai/ChttrixAIChat/ChttrixAIChat";
@@ -13,6 +10,7 @@ import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import Header from './workspaceSelectComponents/Header.jsx';
 import WorkspaceGrid from "./workspaceSelectComponents/WorkspaceGrid.jsx";
 import CreateWorkspaceModal from "./workspaceSelectComponents/CreateWorkspaceModal.jsx";
+import { DEFAULT_WORKSPACE_COLOR } from "../utils/workspaceIcons";
 import HelpModalsContainer from "./workspaceSelectComponents/HelpModalsContainer.jsx";
 import LoadingState from "./workspaceSelectComponents/LoadingState.jsx";
 import ErrorState from "./workspaceSelectComponents/ErrorState.jsx";
@@ -21,6 +19,8 @@ import logger from '../utils/logger';
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
+    const { showToast } = useToast();
+    const location = useLocation();
 
     
     React.useEffect(() => {
@@ -52,11 +52,20 @@ const WorkspaceSelect = () => {
         name: "",
         adminName: "",
         icon: "rocket",
-        color: "#4f46e5",
+        color: DEFAULT_WORKSPACE_COLOR,
         rules: "",
         invites: ""
     });
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [creating, setCreating] = useState(false);
+
+    // "Create workspace" from the in-workspace switcher lands here with the wizard open.
+    React.useEffect(() => {
+        if (location.state?.createWorkspace) {
+            setIsCreateModalOpen(true);
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, location.pathname, navigate]);
 
     
     const loadWorkspaces = React.useCallback(async () => {
@@ -66,14 +75,17 @@ const WorkspaceSelect = () => {
             const response = await api.get('/api/workspaces/my');
 
             if (response.data.workspaces && response.data.workspaces.length > 0) {
-                setWorkspaces(response.data.workspaces.map(ws => ({
+                // Suspended memberships stay visible (with a badge); removed ones don't.
+                setWorkspaces(response.data.workspaces.filter(ws => !['removed', 'left'].includes(ws.membershipStatus)).map(ws => ({
                     id: ws.id,
                     name: ws.name,
-                    members: ws.memberCount || 1,
-                    icon: ws.icon || "rocket",
-                    color: ws.color || "#4f46e5",
+                    // Active members only (server-side count).
+                    members: typeof ws.memberCount === 'number' ? ws.memberCount : 1,
+                    icon: ws.icon,
+                    color: ws.color || null,
                     type: ws.type,
-                    role: ws.role,
+                    role: ws.isOwner ? 'owner' : ws.role,
+                    membershipStatus: ws.membershipStatus || 'active',
                     ownerName: ws.ownerName,
                     isOwner: ws.isOwner
                 })));
@@ -83,7 +95,7 @@ const WorkspaceSelect = () => {
             setIsLoadingWorkspaces(false);
         } catch (err) {
             logger.error('❌ Error loading workspaces:', err);
-            setLoadError('Failed to load workspaces');
+            setLoadError(err?.response?.data?.message || 'Failed to load workspaces');
             setIsLoadingWorkspaces(false);
         }
     }, []);
@@ -102,20 +114,21 @@ const WorkspaceSelect = () => {
     };
 
     
-    const resetCreateModal = () => {
+    const resetCreateModal = React.useCallback(() => {
         setIsCreateModalOpen(false);
         setCreateStep(1);
         setCreateData({
             name: "",
             adminName: "",
             icon: "rocket",
-            color: "#4f46e5",
+            color: DEFAULT_WORKSPACE_COLOR,
             rules: "",
             invites: ""
         });
         setNameError("");
         setTermsAccepted(false);
-    };
+        setCreating(false);
+    }, []);
 
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
@@ -147,6 +160,9 @@ const WorkspaceSelect = () => {
 
         
         if (createStep === 4) {
+            if (creating) return;
+            setCreating(true);
+            setNameError("");
             try {
 
                 
@@ -161,14 +177,21 @@ const WorkspaceSelect = () => {
                 const newWorkspaceId = res.data.workspace.id;
 
                 
-                if (createData.invites && createData.invites.trim()) {
+                // One address per comma or line.
+                const emails = [...new Set((createData.invites || '')
+                    .split(/[\s,;]+/)
+                    .map(e => e.trim())
+                    .filter(Boolean))];
+                if (emails.length) {
                     try {
                         await api.post(`/api/workspaces/${newWorkspaceId}/invite`, {
-                            emails: createData.invites,
+                            emails,
                             inviteType: 'email'
                         });
+                        showToast(`Invitation${emails.length === 1 ? '' : 's'} sent to ${emails.length} ${emails.length === 1 ? 'person' : 'people'}`, 'success');
                     } catch (inviteError) {
                         logger.error("Failed to send invites", inviteError);
+                        showToast(inviteError.response?.data?.message || 'Workspace created, but the invitations could not be sent', 'error');
                     }
                 }
 
@@ -177,6 +200,7 @@ const WorkspaceSelect = () => {
                 navigate(`/workspace/${newWorkspaceId}/home`);
             } catch (error) {
                 logger.error("Failed to create workspace", error);
+                setCreating(false);
                 if (error.response?.data?.message) {
                     setNameError(error.response.data.message);
                 } else {
@@ -187,19 +211,11 @@ const WorkspaceSelect = () => {
     };
 
     
-    const getIconComponent = (iconName) => {
-        const icons = {
-            rocket: Rocket, briefcase: Briefcase, zap: Zap, palette: Palette,
-            microscope: Microscope, globe: Globe, shield: Shield, trendingUp: TrendingUp,
-            lightbulb: Lightbulb, flame: Flame, target: Target, trophy: Trophy
-        };
-        return icons[iconName] || Rocket;
-    };
-
     return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'var(--font)' }}>
             {}
             <Header
+                workspaces={workspaces}
                 showHelp={showHelp}
                 setShowHelp={setShowHelp}
                 onHelpModalOpen={setActiveHelpModal}
@@ -241,7 +257,6 @@ const WorkspaceSelect = () => {
                         workspaces={workspaces}
                         onWorkspaceClick={handleWorkspaceClick}
                         onCreateClick={() => setIsCreateModalOpen(true)}
-                        getIconComponent={getIconComponent}
                         user={user}
                     />
                 )}
@@ -260,7 +275,7 @@ const WorkspaceSelect = () => {
                 termsAccepted={termsAccepted}
                 setTermsAccepted={setTermsAccepted}
                 onSubmit={handleCreateSubmit}
-                getIconComponent={getIconComponent}
+                submitting={creating}
                 user={user}
             />
 

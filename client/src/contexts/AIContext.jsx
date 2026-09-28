@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
@@ -22,21 +22,40 @@ export function AIProvider({ children }) {
     const [conversation, setConversationState] = useState(null); // { id, type, name, getMessages }
     const [note, setNote] = useState(null);                       // { id, title, getText }
     const [task, setTask] = useState(null);                       // { id, title, description, status, priority, dueDate }
-    const composerRef = useRef(null);                             // { insert(text) }
+    const [thread, setThreadState] = useState(null);              // { parentId, getMessages } while a thread is open
+    // Composers register in mount order; the most recent one (e.g. an open
+    // thread) receives inserts, and closing it hands back to the previous one.
+    const composersRef = useRef([]);                              // [{ insert(text) }]
 
     const setConversation = useCallback((conv) => {
         setConversationState(conv ? { ...conv } : null);
     }, []);
 
+    const setThread = useCallback((t) => {
+        setThreadState(t ? { ...t } : null);
+    }, []);
+
     const registerComposer = useCallback((api) => {
-        composerRef.current = api;
-        return () => { if (composerRef.current === api) composerRef.current = null; };
+        composersRef.current = [...composersRef.current.filter((c) => c !== api), api];
+        return () => { composersRef.current = composersRef.current.filter((c) => c !== api); };
+    }, []);
+    const topComposer = () => composersRef.current[composersRef.current.length - 1] || null;
+
+    // `chttrix:composer:insert` events (aiService.insertIntoComposer) go to the top composer only.
+    useEffect(() => {
+        const onInsert = (e) => topComposer()?.insert(e?.detail?.text);
+        document.addEventListener('chttrix:composer:insert', onInsert);
+        return () => document.removeEventListener('chttrix:composer:insert', onInsert);
     }, []);
 
     /** Plain-data snapshot for /api/ai/chat. */
     const snapshot = useCallback(() => {
         const out = { screen: { route: location.pathname, title: document.title } };
-        if (conversation) {
+        if (conversation && thread) {
+            // An open thread is what the user is looking at: send its replies.
+            const msgs = (thread.getMessages?.() || []).slice(-MAX_TRANSCRIPT);
+            out.conversation = { id: conversation.id, type: conversation.type, name: `${conversation.name || 'conversation'} (thread)`, messages: msgs };
+        } else if (conversation) {
             const msgs = (conversation.getMessages?.() || []).slice(-MAX_TRANSCRIPT);
             out.conversation = { id: conversation.id, type: conversation.type, name: conversation.name, messages: msgs };
         }
@@ -45,17 +64,18 @@ export function AIProvider({ children }) {
         const sel = typeof window !== 'undefined' ? String(window.getSelection?.() || '').trim() : '';
         if (sel && sel.length > 20) out.selection = sel.slice(0, 8000);
         return out;
-    }, [conversation, note, task, location.pathname]);
+    }, [conversation, thread, note, task, location.pathname]);
 
     const value = useMemo(() => ({
         conversation, setConversation,
+        thread, setThread,
         note, setNote,
         task, setTask,
         registerComposer,
-        hasComposer: () => !!composerRef.current,
-        insertIntoComposer: (text) => { composerRef.current?.insert(text); return !!composerRef.current; },
+        hasComposer: () => !!topComposer(),
+        insertIntoComposer: (text) => { const c = topComposer(); c?.insert(text); return !!c; },
         snapshot,
-    }), [conversation, note, task, setConversation, registerComposer, snapshot]);
+    }), [conversation, thread, note, task, setConversation, setThread, registerComposer, snapshot]);
 
     return <AIContext.Provider value={value}>{children}</AIContext.Provider>;
 }

@@ -5,7 +5,7 @@ export const TEMPLATES = [
     
     {
         id: 'blank', category: 'quick',
-        TypeIcon: StickyNote, iconColor: '#64748b', color: '#0f172a', accent: '#334155',
+        TypeIcon: StickyNote,
         label: 'Blank Note', tag: 'EMPTY',
         desc: 'Start from a clean slate with no structure.',
         preview: ['No pre-filled blocks', 'Full freedom to shape', 'Start typing immediately'],
@@ -15,7 +15,7 @@ export const TEMPLATES = [
     
     {
         id: 'projectspec', category: 'project',
-        TypeIcon: FolderKanban, iconColor: '#7dd3fc', color: '#0369a1', accent: '#0284c7',
+        TypeIcon: FolderKanban,
         label: 'Project Spec', tag: 'PLANNING',
         desc: 'Goals, scope, timeline, and open questions.',
         preview: ['Goal & scope sections', 'Milestone table', 'Open questions callout'],
@@ -33,7 +33,7 @@ export const TEMPLATES = [
     },
     {
         id: 'techdesign', category: 'project',
-        TypeIcon: Cpu, iconColor: '#94a3b8', color: '#1e293b', accent: '#334155',
+        TypeIcon: Cpu,
         label: 'Tech Design', tag: 'ENGINEERING',
         desc: 'Architecture decisions, API endpoints, and risk mitigations.',
         preview: ['Overview & architecture', 'API endpoint table', 'Risks callout'],
@@ -51,7 +51,7 @@ export const TEMPLATES = [
     },
     {
         id: 'brainstorm', category: 'project',
-        TypeIcon: Lightbulb, iconColor: '#c4b5fd', color: '#4c1d95', accent: '#6d28d9',
+        TypeIcon: Lightbulb,
         label: 'Brainstorm', tag: 'IDEATION',
         desc: 'Capture every idea fast — refine and group later.',
         preview: ['Problem statement', 'Ideas checklist', 'Alternative approaches toggle'],
@@ -68,7 +68,7 @@ export const TEMPLATES = [
     
     {
         id: 'meeting', category: 'meeting',
-        TypeIcon: Users, iconColor: '#6ee7b7', color: '#065f46', accent: '#059669',
+        TypeIcon: Users,
         label: 'Meeting Notes', tag: 'MEETING',
         desc: 'Date, attendees, agenda, and action items.',
         preview: ['Date / time / location table', 'Attendees checklist', 'Action items'],
@@ -84,7 +84,7 @@ export const TEMPLATES = [
     },
     {
         id: 'sop', category: 'meeting',
-        TypeIcon: ClipboardList, iconColor: '#fcd34d', color: '#92400e', accent: '#d97706',
+        TypeIcon: ClipboardList,
         label: 'SOP', tag: 'PROCESS',
         desc: 'Standard operating procedure with step-by-step toggles.',
         preview: ['Purpose callout', 'Scope & steps', 'Toggle per step'],
@@ -99,7 +99,7 @@ export const TEMPLATES = [
     },
     {
         id: 'announcement', category: 'meeting',
-        TypeIcon: Megaphone, iconColor: '#fda4af', color: '#9f1239', accent: '#e11d48',
+        TypeIcon: Megaphone,
         label: 'Announcement', tag: 'COMMS',
         desc: 'Draft a structured update with what, why, and next steps.',
         preview: ['Draft review callout', 'What / Why / What to do', 'Action checklist'],
@@ -116,7 +116,7 @@ export const TEMPLATES = [
     
     {
         id: 'document', category: 'docs',
-        TypeIcon: FileText, iconColor: '#93c5fd', color: '#1d4ed8', accent: '#3b82f6',
+        TypeIcon: FileText,
         label: 'Document', tag: 'DOCUMENT',
         desc: 'Structured document with overview, details, and next steps.',
         preview: ['Overview H1 header', 'Details & sub-sections', 'Next steps checklist'],
@@ -151,7 +151,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
             style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
-            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', maxHeight: 'calc(100vh - 32px)', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', boxShadow: 'var(--card-shadow)', fontFamily: 'var(--font)' }}>
 
                 {}
                 <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
@@ -170,24 +170,24 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                         width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
                                         padding: '8px 10px', textAlign: 'left', fontSize: '12px',
                                         fontWeight: isActive ? 700 : 500,
-                                        background: isActive ? 'rgba(184,149,106,0.12)' : 'transparent',
-                                        color: isActive ? '#b8956a' : 'var(--text-secondary)',
-                                        border: isActive ? '1px solid rgba(184,149,106,0.22)' : '1px solid transparent',
+                                        background: isActive ? 'var(--accent-dim)' : 'transparent',
+                                        color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                                        border: '1px solid transparent', borderRadius: '2px',
                                         cursor: 'pointer', transition: 'all 150ms ease',
-                                        fontFamily: 'Inter,system-ui,sans-serif', marginBottom: '2px',
+                                        fontFamily: 'var(--font)', marginBottom: '2px',
                                     }}
                                     onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
                                     onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                                 >
                                     <Ic size={13} style={{ flexShrink: 0 }} />
                                     <span style={{ flex: 1 }}>{cat.label}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#b8956a' : 'var(--text-muted)' }}>{count}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}>{count}</span>
                                 </button>
                             );
                         })}
                     </nav>
                     <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-subtle)' }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', margin: 0 }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
                             {TEMPLATES.length} TEMPLATES · {CATEGORIES.length} CATEGORIES
                         </p>
                     </div>
@@ -200,7 +200,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                             {catInfo?.Icon && <catInfo.Icon size={14} style={{ color: 'var(--text-muted)' }} />}
                             <div>
                                 <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>{catInfo?.label}</h3>
-                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', margin: 0 }}>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
                                     {visible.length} TEMPLATE{visible.length !== 1 ? 'S' : ''} AVAILABLE
                                 </p>
                             </div>
@@ -223,24 +223,23 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                         onMouseLeave={() => setHovered(null)}
                                         style={{
                                             textAlign: 'left', overflow: 'hidden',
-                                            border: `1px solid ${isHov ? 'rgba(184,149,106,0.45)' : 'var(--border-default)'}`,
+                                            border: `1px solid ${isHov ? 'var(--border-accent)' : 'var(--border-default)'}`, borderRadius: '2px', fontFamily: 'var(--font)',
                                             background: 'transparent', cursor: 'pointer',
                                             transition: 'all 150ms ease',
-                                            transform: isHov ? 'translateY(-1px)' : 'none',
-                                            boxShadow: isHov ? '0 4px 16px rgba(0,0,0,0.1)' : 'none',
+                                                                                        boxShadow: 'none',
                                         }}>
                                         {}
-                                        <div style={{ padding: '14px 14px 12px', position: 'relative', overflow: 'hidden', backgroundColor: tmpl.color }}>
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: tmpl.accent }} />
+                                        <div style={{ padding: '14px 14px 12px', position: 'relative', overflow: 'hidden', background: isHov ? 'var(--bg-hover)' : 'var(--bg-active)', transition: 'background 150ms ease' }}>
+                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isHov ? 'var(--accent)' : 'var(--border-accent)', transition: 'background 150ms ease' }} />
                                             <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                                                 <div>
-                                                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.55)', display: 'block', marginBottom: '6px', fontFamily: 'monospace' }}>{tmpl.tag}</span>
+                                                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>{tmpl.tag}</span>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                                                        <tmpl.TypeIcon size={17} style={{ color: tmpl.iconColor, flexShrink: 0 }} />
-                                                        <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.2, margin: 0 }}>{tmpl.label}</h4>
+                                                        <tmpl.TypeIcon size={17} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                                        <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0 }}>{tmpl.label}</h4>
                                                     </div>
                                                 </div>
-                                                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)' }}>{tmpl.blocks.length}B</span>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tmpl.blocks.length}B</span>
                                             </div>
                                         </div>
                                         {}
@@ -249,16 +248,16 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                             <div style={{ marginBottom: '14px' }}>
                                                 {tmpl.preview.map((line, i) => (
                                                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
-                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>—</span>
+                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)' }}>—</span>
                                                         <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{line}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                                     {tmpl.blocks.length} BLOCKS
                                                 </span>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace', color: isHov ? '#b8956a' : 'var(--text-muted)', transition: 'color 150ms ease' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: isHov ? 'var(--accent)' : 'var(--text-muted)', transition: 'color 150ms ease' }}>
                                                     USE TEMPLATE <ArrowRight size={11} style={{ transform: isHov ? 'translateX(2px)' : 'none', transition: 'transform 150ms ease' }} />
                                                 </span>
                                             </div>

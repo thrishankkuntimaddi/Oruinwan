@@ -24,8 +24,8 @@ const CALLOUT_TYPES = {
         label: 'Success',
         icon: CheckCircle,
         bar: '#10b981',
-        iconColor: '#34d399',
-        labelColor: '#34d399',
+        iconColor: 'var(--state-success)',
+        labelColor: 'var(--state-success)',
         bg: 'rgba(16,185,129,0.06)',
         border: 'rgba(16,185,129,0.2)',
     },
@@ -33,8 +33,8 @@ const CALLOUT_TYPES = {
         label: 'Error',
         icon: XCircle,
         bar: '#ef4444',
-        iconColor: '#f87171',
-        labelColor: '#f87171',
+        iconColor: 'var(--state-danger)',
+        labelColor: 'var(--state-danger)',
         bg: 'rgba(239,68,68,0.06)',
         border: 'rgba(239,68,68,0.2)',
     },
@@ -88,14 +88,14 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                 {}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'var(--font)' }}>
                         {style.label}
                     </div>
                     <textarea
                         value={block.content}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         placeholder={`Add a ${style.label.toLowerCase()} note...`}
-                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: 'var(--text-primary)', minHeight: '1.6em', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: 'var(--text-primary)', minHeight: '1.6em', fontFamily: 'var(--font)' }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                 </div>
@@ -105,8 +105,8 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     onClick={() => onRemoveBlock(block.id)}
                     style={{ alignSelf: 'flex-start', padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                     className="group-hover:!opacity-100"
-                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <Trash2 size={12} />
                 </button>

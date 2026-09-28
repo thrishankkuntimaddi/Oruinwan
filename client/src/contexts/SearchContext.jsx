@@ -5,6 +5,7 @@ import { searchAll, saveRecentSearch, getRecentSearches } from '../services/sear
 const SearchContext = createContext(null);
 
 const DEBOUNCE_MS = 300;
+const RESULT_KEYS = ['messages', 'files', 'users', 'channels', 'tasks', 'notes', 'knowledge'];
 const EMPTY_RESULTS = {
     messages: [], files: [], users: [], channels: [],
     tasks: [], notes: [], knowledge: [], total: 0, query: '',
@@ -21,6 +22,7 @@ export function SearchProvider({ children }) {
     const [query,          setQueryState]      = useState('');
     const [results,        setResults]         = useState(EMPTY_RESULTS);
     const [loading,        setLoading]         = useState(false);
+    const [loadingMore,    setLoadingMore]     = useState(false);
     const [error,          setError]           = useState(null);
     const [recentSearches, setRecentSearches]  = useState(() => getRecentSearches());
     const [filters,        setFilters]         = useState({
@@ -32,38 +34,70 @@ export function SearchProvider({ children }) {
     const abortRef      = useRef(null);
 
     
-    const runSearch = useCallback(async (q, appliedFilters, wsId) => {
+    const runSearch = useCallback(async (q, appliedFilters, wsId, { append = false } = {}) => {
         if (!q || !q.trim() || !wsId) {
+            if (abortRef.current) abortRef.current.abort();
             setResults(EMPTY_RESULTS);
             setLoading(false);
+            setLoadingMore(false);
             return;
         }
 
-        
         if (abortRef.current) abortRef.current.abort();
-        abortRef.current = new AbortController();
+        const controller = new AbortController();
+        abortRef.current = controller;
 
-        setLoading(true);
+        if (append) setLoadingMore(true); else setLoading(true);
         setError(null);
         try {
-            const data = await searchAll(q, appliedFilters, wsId);
-            setResults(data);
+            const data = await searchAll(q, appliedFilters, wsId, { signal: controller.signal });
+            if (controller.signal.aborted) return;
+            if (append) {
+                // "Load more": add the next page to what is already shown.
+                setResults(prev => {
+                    const merged = { ...prev, query: data.query };
+                    let added = 0;
+                    for (const key of RESULT_KEYS) {
+                        const have = prev[key] || [];
+                        const seen = new Set(have.map(r => String(r.id || r._id)));
+                        const fresh = (data[key] || []).filter(r => !seen.has(String(r.id || r._id)));
+                        added += fresh.length;
+                        merged[key] = [...have, ...fresh];
+                    }
+                    merged.total = (prev.total || 0) + added;
+                    merged.lastPageSize = RESULT_KEYS.reduce((n, k) => n + (data[k] || []).length, 0);
+                    return merged;
+                });
+            } else {
+                setResults({ ...data, lastPageSize: RESULT_KEYS.reduce((n, k) => n + (data[k] || []).length, 0) });
+            }
         } catch (err) {
-            if (err?.code === 'ERR_CANCELED') return; 
-            setError('Search failed. Please try again.');
-            setResults(EMPTY_RESULTS);
+            if (err?.code === 'ERR_CANCELED' || controller.signal.aborted) return;
+            setError(err?.response?.data?.message || 'Search failed. Please try again.');
+            if (!append) setResults(EMPTY_RESULTS);
         } finally {
-            setLoading(false);
+            if (abortRef.current === controller) {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         }
     }, []);
 
-    const setQuery = useCallback((q) => {
+    const setQuery = useCallback((q, { immediate = false } = {}) => {
         setQueryState(q);
         clearTimeout(debounceTimer.current);
+        const fresh = { ...filters, offset: 0 };
+        if (filters.offset) setFilters(fresh);
+        if (immediate) { runSearch(q, fresh, workspaceId); return; }
         debounceTimer.current = setTimeout(() => {
-            runSearch(q, filters, workspaceId);
+            runSearch(q, fresh, workspaceId);
         }, DEBOUNCE_MS);
     }, [filters, workspaceId, runSearch]);
+
+    useEffect(() => () => {
+        clearTimeout(debounceTimer.current);
+        if (abortRef.current) abortRef.current.abort();
+    }, []);
 
     const applyFilters = useCallback((newFilters) => {
         const merged = { ...filters, ...newFilters, offset: 0 };
@@ -75,7 +109,7 @@ export function SearchProvider({ children }) {
         const nextOffset = filters.offset + filters.limit;
         const newFilters = { ...filters, offset: nextOffset };
         setFilters(newFilters);
-        if (query) runSearch(query, newFilters, workspaceId);
+        if (query) runSearch(query, newFilters, workspaceId, { append: true });
     }, [filters, query, workspaceId, runSearch]);
 
     
@@ -114,7 +148,7 @@ export function SearchProvider({ children }) {
 
     return (
         <SearchContext.Provider value={{
-            isOpen, query, results, loading, error,
+            isOpen, query, results, loading, loadingMore, error,
             filters, activeTab, recentSearches, workspaceId,
             setQuery, applyFilters, loadMore,
             openSearch, closeSearch, goToResults,

@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const scheduledMeetingSchema = new mongoose.Schema(
     {
-        
-        
+        // Optional: personal (company-less) workspaces schedule meetings too.
+        // Access is scoped by workspaceId; companyId is copied from the workspace.
         companyId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Company',
-            required: true,
+            default: null,
             index: true,
         },
         workspaceId: {
@@ -129,5 +129,6 @@ const scheduledMeetingSchema = new mongoose.Schema(
 );
 
 scheduledMeetingSchema.index({ companyId: 1, workspaceId: 1, startTime: 1, status: 1 });
+scheduledMeetingSchema.index({ workspaceId: 1, startTime: 1, status: 1 });
 
 module.exports = mongoose.model('ScheduledMeeting', scheduledMeetingSchema);

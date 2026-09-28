@@ -3,6 +3,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext'; 
 import logger from '../utils/logger';
 import { sameId } from './conversationUtils';
+import { getUserPreferences } from './useUserPreferences';
 
 export function useChatSocket(conversationId, conversationType, eventHandler) {
     const { socket } = useSocket();
@@ -86,6 +87,8 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         if (!socket || !conversationId) return;
 
         if (!isTyping) return; // server has no stop-typing event; receivers time out
+        // Settings → Privacy → Typing indicator off: never tell others we're typing.
+        if (getUserPreferences().privacy.typingIndicators === false) return;
         socket.emit('typing', conversationType === 'dm'
             ? { dmSessionId: conversationId }
             : { channelId: conversationId });
@@ -94,6 +97,8 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     
     const markAsRead = useCallback((messageIds) => {
         if (!socket || !conversationId || !messageIds?.length) return;
+        // Settings → Privacy → Read receipts off: don't send per-message read events others see.
+        if (getUserPreferences().privacy.readReceipts === false) return;
 
         socket.emit('messages:mark-read', {
             conversationId,

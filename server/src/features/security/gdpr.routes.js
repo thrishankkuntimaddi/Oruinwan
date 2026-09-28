@@ -8,6 +8,7 @@ const {
   deleteUser,
   exportWorkspace,
   getLegalHold,
+  getMyLegalHold,
   setLegalHold,
   getAuditLogs,
   getRetentionPolicy,
@@ -19,10 +20,13 @@ router.use(requireAuth);
 router.get('/export-user', exportUser);         
 router.delete('/delete-user', deleteUser);       
 
+// Workspace export: workspace owners/admins only (checked in the controller).
 router.get('/export', exportWorkspace);
 
 router.get('/audit-logs', getAuditLogs);
 
+// Own status for anyone; other users and PATCH only for an admin who manages them.
+router.get('/legal-hold/me', getMyLegalHold);
 router.get('/legal-hold/:userId', getLegalHold);
 router.patch('/legal-hold/:userId', setLegalHold);
 

@@ -148,6 +148,41 @@ class OpenAIProvider {
     return out;
   }
 
+  /**
+   * Embeddings (`/embeddings`, OpenAI-compatible). Returns one vector per input.
+   * The local engine serves them with its embedding model (config.models.embed).
+   */
+  async embed(texts, { model, signal } = {}) {
+    const input = (Array.isArray(texts) ? texts : [texts]).map((t) => String(t || '').slice(0, 8000));
+    if (!input.length) return [];
+    const base = this.name === 'local_llm' ? (config.endpoints.embed || this.baseUrl).replace(/\/$/, '') : this.baseUrl;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+    if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
+    try {
+      let res;
+      try {
+        res = await fetch(`${base}/embeddings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+          body: JSON.stringify({ model: model || (this.name === 'local_llm' ? config.models.embed : 'text-embedding-3-small'), input }),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        throw this._networkError(err, controller.signal);
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data?.error?.message || `${this.name} embeddings failed (${res.status})`);
+        err.status = res.status;
+        throw err;
+      }
+      return (data.data || []).sort((a, b) => a.index - b.index).map((d) => d.embedding);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async generateText({ model, prompt, systemInstruction, generationConfig, onToken, signal }) {
     const messages = [];
     if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });

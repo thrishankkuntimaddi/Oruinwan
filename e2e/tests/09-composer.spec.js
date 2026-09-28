@@ -111,9 +111,13 @@ test.describe('composer', () => {
     await expect(overlay).toBeHidden();
   });
 
-  test('the AI button opens the Oruinwan AI panel', async () => {
-    await alice.locator('button[title="AI"]').click();
-    await expect(alice.getByPlaceholder(/ask|message (oruinwan|chttrix) ai|type/i).last()).toBeVisible();
+  test('the AI button addresses the message to Oruinwan AI', async () => {
+    await alice.getByLabel('Ask Oruinwan AI').click();
+    const chip = alice.locator('[contenteditable="true"] [data-mention="Oruinwan"]');
+    await expect(chip).toHaveCount(1);
+    await alice.getByLabel('Ask Oruinwan AI').click(); // never added twice
+    await expect(chip).toHaveCount(1);
+    await chip.evaluate((el) => { el.nextSibling?.remove(); el.remove(); }); // leave the composer empty for the next test
   });
 
   test('voice recorder can be cancelled', async () => {

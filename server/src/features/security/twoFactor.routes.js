@@ -3,29 +3,30 @@ const logger = require('../../../utils/logger');
 
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
-const { authenticator } = require('otplib');
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
+const { otplib, encryptSecret, decryptSecret, verifyTotp } = require('./totp');
 
-const ENCRYPT_KEY = Buffer.from(process.env.SERVER_KEK || process.env.ACCESS_TOKEN_SECRET.slice(0, 64), 'hex');
-
-function encryptSecret(plaintext) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPT_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
+/**
+ * PNG data URL of the otpauth:// QR code, rendered on the server so the secret never goes
+ * to a third-party QR service. Returns null when no QR library is installed.
+ */
+async function qrDataUrlFor(otpauthUrl) {
+  let QRCode;
+  try { QRCode = require('qrcode'); } catch { return null; }
+  try {
+    return await QRCode.toDataURL(otpauthUrl, { errorCorrectionLevel: 'M', margin: 1, width: 240 });
+  } catch (err) {
+    logger.warn({ err: err.message }, '[2FA] QR render failed');
+    return null;
+  }
 }
 
-function decryptSecret(ciphertext) {
-  const [ivHex, tagHex, encHex] = ciphertext.split(':');
-  const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPT_KEY, Buffer.from(ivHex, 'hex'));
-  decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-  return decipher.update(Buffer.from(encHex, 'hex')) + decipher.final('utf8');
-}
-
+/**
+ * POST /api/auth/2fa/setup -> { secret, otpauthUrl, qrDataUrl (PNG data URL or null), message }
+ * Confirm with POST /verify-setup { otp }.
+ */
 router.post('/setup', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).select('username email twoFactorEnabled');
@@ -34,8 +35,9 @@ router.post('/setup', requireAuth, async (req, res) => {
       return res.status(400).json({ message: '2FA is already enabled. Disable it first.' });
     }
 
-    const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(user.email, 'Oruinwan', secret);
+    const secret = otplib.generateSecret();
+    const otpauthUrl = otplib.generateURI({ issuer: 'Oruinwan', label: user.email, secret });
+    const qrDataUrl = await qrDataUrlFor(otpauthUrl);
 
     
     await User.findByIdAndUpdate(req.user.sub, {
@@ -43,8 +45,9 @@ router.post('/setup', requireAuth, async (req, res) => {
     });
 
     return res.json({
-      secret,           
-      otpauthUrl,       
+      secret,
+      otpauthUrl,
+      qrDataUrl,
       message: 'Scan the QR code with your authenticator app, then call /2fa/verify-setup with the OTP to complete setup.'
     });
   } catch (err) {
@@ -64,7 +67,7 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
     if (!user.twoFactorSecret) return res.status(400).json({ message: 'Run /2fa/setup first' });
 
     const secret = decryptSecret(user.twoFactorSecret);
-    const isValid = authenticator.verify({ token: otp, secret });
+    const isValid = await verifyTotp(otp, secret);
     if (!isValid) return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
 
     await User.findByIdAndUpdate(req.user.sub, { twoFactorEnabled: true });
@@ -99,7 +102,7 @@ router.post('/disable', requireAuth, async (req, res) => {
     if (!user.twoFactorEnabled) return res.status(400).json({ message: '2FA is not enabled' });
 
     const secret = decryptSecret(user.twoFactorSecret);
-    const isValid = authenticator.verify({ token: otp, secret });
+    const isValid = await verifyTotp(otp, secret);
     if (!isValid) return res.status(400).json({ message: 'Invalid OTP' });
 
     await User.findByIdAndUpdate(req.user.sub, {
@@ -136,7 +139,7 @@ router.post('/verify', requireAuth, async (req, res) => {
     if (!user.twoFactorEnabled) return res.status(400).json({ message: '2FA is not enabled' });
 
     const secret = decryptSecret(user.twoFactorSecret);
-    const isValid = authenticator.verify({ token: otp, secret });
+    const isValid = await verifyTotp(otp, secret);
     if (!isValid) return res.status(400).json({ message: 'Invalid OTP' });
 
     return res.json({ valid: true, message: 'OTP verified' });

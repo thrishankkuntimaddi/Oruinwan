@@ -13,6 +13,13 @@ router.post('/search', ...member, async (req, res) => {
         const { query, workspaceId } = req.body;
         if (!query)       return res.status(400).json({ message: 'query is required' });
         if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+        // Meaning-based search over what this user can see; keyword search if the engine is unreachable.
+        try {
+            const results = await require('../ai.knowledge.service').search(req.aiWorkspace.id, req.user.sub, String(query).slice(0, 500), { k: 10, minScore: 0.45 });
+            return res.json({ results });
+        } catch (err) {
+            logger.warn('[AI-Knowledge] semantic search unavailable, using keyword search:', err.message);
+        }
         const result = await knowledge.search(query, workspaceId, ctx(req));
         return res.json(result);
     } catch (err) {

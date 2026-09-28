@@ -21,9 +21,7 @@ test.describe('tasks', () => {
     await page.getByRole('button', { name: /^Create$/ }).first().click();
     await page.getByPlaceholder('Task title…').fill(title);
 
-    const channel = page.locator('select').filter({ has: page.locator('option', { hasText: 'Select channel' }) });
-    const firstChannel = await channel.locator('option').nth(1).getAttribute('value');
-    await channel.selectOption(firstChannel);
+    // Channel is optional for a task assigned to yourself; only the due date is set here.
     await page.locator('input[type="date"]').first().fill(isoDate(3));
 
     const created = page.waitForResponse((r) => r.url().includes('/api/v2/tasks') && r.request().method() === 'POST');

@@ -1,20 +1,16 @@
 import React, { useMemo } from 'react';
 import { Calendar, AlertTriangle } from 'lucide-react';
+import { PRIORITY_META, isClosed } from '../../utils/taskMeta';
+import { isOverdue as taskOverdue } from './taskUi';
 
 const T = {
     base: 'var(--bg-base)',
     surface: 'var(--bg-surface)',
     border: 'var(--border-default)',
     text: 'var(--text-primary)',
-    textMuted: 'var(--text-muted)',
-    textDim: 'var(--text-muted)',
-    amber: '#b8956a',
-};
-
-const PRIORITY_COLORS = {
-    highest: '#f87171', high: '#fb923c', medium: '#b8956a',
-    low: '#60a5fa', lowest: 'var(--text-muted)',
-    emergency: '#f87171', urgent: '#f87171',
+    textMuted: 'var(--text-secondary)',
+    textDim: 'var(--text-secondary)',
+    amber: 'var(--accent)',
 };
 
 function getDateRange(tasks) {
@@ -64,8 +60,8 @@ function DayMarkers({ min, max }) {
                 const todayPct = toPercent(Date.now(), min, max);
                 if (todayPct < 0 || todayPct > 100) return null;
                 return (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', background: '#f87171', opacity: 0.7, left: `${todayPct}%` }}>
-                        <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '8px', color: '#f87171', fontWeight: 700, whiteSpace: 'nowrap', fontFamily: 'monospace' }}>Today</span>
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: '1px', background: 'var(--state-danger)', opacity: 0.7, left: `${todayPct}%` }}>
+                        <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '8px', color: 'var(--state-danger)', fontWeight: 700, whiteSpace: 'nowrap', fontFamily: 'monospace' }}>Today</span>
                     </div>
                 );
             })()}
@@ -78,12 +74,12 @@ function TimelineRow({ task, min, max, onClick }) {
         ? new Date(task.startDate).getTime()
         : new Date(task.dueDate || Date.now()).getTime() - 86400000;
     const endTs = task.dueDate ? new Date(task.dueDate).getTime() : startTs + 86400000;
-    const pColor = PRIORITY_COLORS[task.priority?.toLowerCase()] || T.amber;
+    const pColor = PRIORITY_META[task.priority]?.color || T.amber;
 
     const leftPct = Math.max(0, toPercent(startTs, min, max));
     const rightPct = Math.min(100, toPercent(endTs, min, max));
     const widthPct = Math.max(0.5, rightPct - leftPct);
-    const isOverdue = endTs < Date.now() && task.status !== 'done' && task.status !== 'Completed';
+    const isOverdue = taskOverdue(task) && !isClosed(task.status);
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid ${T.border}`, minHeight: '36px', cursor: 'pointer', transition: 'background 150ms ease' }}
@@ -94,7 +90,7 @@ function TimelineRow({ task, min, max, onClick }) {
             <div style={{ width: '192px', flexShrink: 0, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, borderRight: `1px solid ${T.border}` }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: pColor }} />
                 <span style={{ fontSize: '12px', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{task.title}</span>
-                {isOverdue && <AlertTriangle size={9} style={{ color: '#f87171', flexShrink: 0 }} />}
+                {isOverdue && <AlertTriangle size={9} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />}
             </div>
 
             {}
@@ -104,7 +100,7 @@ function TimelineRow({ task, min, max, onClick }) {
                     height: '18px',
                     left: `${leftPct}%`,
                     width: `${widthPct}%`,
-                    background: isOverdue ? '#f87171' : pColor,
+                    background: isOverdue ? 'var(--state-danger)' : pColor,
                     opacity: 0.85,
                     top: '50%',
                     transform: 'translateY(-50%)',
@@ -115,7 +111,7 @@ function TimelineRow({ task, min, max, onClick }) {
                 }}
                     title={`${task.title}\n${new Date(startTs).toDateString()} → ${new Date(endTs).toDateString()}`}>
                     {widthPct > 8 && (
-                        <span style={{ fontSize: '9px', color: '#000', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '9px', color: '#0c0c0c', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {task.title.substring(0, 20)}
                         </span>
                     )}

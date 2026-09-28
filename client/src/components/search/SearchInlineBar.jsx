@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, X, Clock, FileText, MessageSquare, User, Hash, CheckSquare, BookOpen, Loader2 } from 'lucide-react';
-import { searchAll, saveRecentSearch, getRecentSearches } from '../../services/searchService';
+import { Search, X, Clock, FileText, MessageSquare, User, Hash, CheckSquare, BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { searchAll, saveRecentSearch, getRecentSearches, stripMarkdown } from '../../services/searchService';
 import './SearchInlineBar.css';
 
 const TYPE_ICON = {
   message:   <MessageSquare size={13} />,
   file:      <FileText      size={13} />,
   user:      <User          size={13} />,
+  contact:   <User          size={13} />,
   channel:   <Hash          size={13} />,
   task:      <CheckSquare   size={13} />,
   note:      <FileText      size={13} />,
@@ -28,22 +29,29 @@ function flattenResults(results = {}) {
   const order = ['messages', 'users', 'channels', 'files', 'tasks', 'notes', 'knowledge'];
   for (const key of order) {
     const arr = results[key] || [];
-    for (const r of arr.slice(0, 3)) items.push({ ...r, _type: key.replace(/s$/, '') });
+    // People come back as type 'contact'; everything else maps to the singular key.
+    for (const r of arr.slice(0, 3)) items.push({ ...r, _type: key === 'users' ? 'user' : key.replace(/s$/, '') });
     if (items.length >= 9) break;
   }
   return items;
 }
 
 function getLabel(item) {
-  return item.text || item.displayName || item.name || item.title || item.content || '';
+  if (item._type === 'message') return stripMarkdown(item.preview || item.text || '');
+  return item.displayName || item.name || item.title || item.email || '';
 }
 function getMeta(item) {
-  if (item._type === 'message')  return item.channelName ? `#${item.channelName}` : (item.dmName ? `DM · ${item.dmName}` : '');
+  if (item._type === 'message') {
+    const p = item.parent || {};
+    const where = p.type === 'channel' ? `#${p.name || 'channel'}` : (p.id ? `DM · ${p.name || 'direct message'}` : '');
+    return [item.sender?.name, where].filter(Boolean).join(' in ');
+  }
   if (item._type === 'channel')  return item.description || '';
-  if (item._type === 'user')     return item.email || item.role || '';
-  if (item._type === 'file')     return item.type || '';
-  if (item._type === 'task')     return item.status || '';
-  if (item._type === 'note' || item._type === 'knowledge') return item.content?.slice(0, 60) || '';
+  if (item._type === 'user')     return item.email || '';
+  if (item._type === 'file')     return item.mimeType || '';
+  if (item._type === 'task')     return (item.status || '').replace(/_/g, ' ');
+  if (item._type === 'note')     return item.preview || '';
+  if (item._type === 'knowledge') return item.snippet || '';
   return '';
 }
 
@@ -56,6 +64,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
   const [query,   setQuery]   = useState('');
   const [results, setResults] = useState(null);   
   const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
   const [recents, setRecents] = useState(() => getRecentSearches());
   const [cursor,  setCursor]  = useState(-1);
 
@@ -90,14 +99,31 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
 
   
   const runSearch = useCallback((q) => {
-    if (!q.trim() || !wsId) { setResults(null); setLoading(false); return; }
     if (abortRef.current) abortRef.current.abort();
-    abortRef.current = new AbortController();
+    if (!q.trim() || !wsId) { setResults(null); setLoading(false); setError(null); return; }
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
-    searchAll(q, { limit: 5 }, wsId)
-      .then(data => { setResults(data); setLoading(false); })
-      .catch(err => { if (err?.code !== 'ERR_CANCELED') setLoading(false); });
+    setError(null);
+    // Typeahead: keyword only (no AI re-ranking) so it stays fast.
+    searchAll(q, { limit: 5, semantic: false }, wsId, { signal: controller.signal })
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setResults(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        if (err?.code === 'ERR_CANCELED' || controller.signal.aborted) return;
+        setResults(null);
+        setError(err?.response?.data?.message || 'Search failed. Try again.');
+        setLoading(false);
+      });
   }, [wsId]);
+
+  useEffect(() => () => {
+    clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
+  }, []);
 
   const handleChange = (e) => {
     const val = e.target.value;
@@ -115,6 +141,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
   const clear = () => {
     setQuery('');
     setResults(null);
+    setError(null);
     setCursor(-1);
     inputRef.current?.focus();
   };
@@ -137,14 +164,21 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     setResults(null);
     
     const base = `/workspace/${wsId}`;
-    if (item._type === 'channel') navigate(`${base}/channel/${item._id}`);
-    else if (item._type === 'message') navigate(item.dmId ? `${base}/dm/${item.dmId}` : `${base}/channel/${item.channelId || item.channel}`);
-    else if (item._type === 'user') navigate(`${base}/messages`);
-    else if (item._type === 'task') navigate(`${base}/tasks`);
-    else if (item._type === 'file') navigate(`${base}/files`);
-    else if (item._type === 'note') navigate(`${base}/notes`);
-    else if (item._type === 'knowledge') navigate(`${base}/knowledge`);
-    else goToAll(item.text || item.name || query);
+    const id = item.id || item._id;
+    const parent = item.parent || {};
+    if (item._type === 'channel') navigate(`${base}/channel/${id}`);
+    else if (item._type === 'message') {
+      const parentId = parent.id || item.dmId || item.channelId;
+      const isDm = parent.type ? parent.type === 'dm' : !!item.dmId;
+      if (parentId) navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}`);
+      else goToAll(query);
+    }
+    else if (item._type === 'user') navigate(`${base}/dm/new/${id}`);
+    else if (item._type === 'task') navigate(`${base}/tasks/${id}`);
+    else if (item._type === 'file') navigate(`${base}/files/${id}`);
+    else if (item._type === 'note') navigate(`${base}/notes/${id}`);
+    else if (item._type === 'knowledge') navigate(`${base}/knowledge/${id}`);
+    else goToAll(query);
   };
 
   
@@ -164,7 +198,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
   const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
   const showDropdown = open;
   const hasResults = results && flatItems.length > 0;
-  const noResults  = results && flatItems.length === 0 && query.trim();
+  const noResults  = results && flatItems.length === 0 && query.trim() && !error;
 
   return (
     <div className='sib-wrap' ref={wrapRef}>
@@ -236,7 +270,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
             <div className='sib-results-list'>
               {flatItems.map((item, i) => (
                 <button
-                  key={item._id || i}
+                  key={`${item._type}-${item.id || item._id || i}`}
                   className={`sib-result-row ${cursor === i ? 'sib-result-row--active' : ''}`}
                   onClick={() => handleResultClick(item)}
                   onMouseEnter={() => setCursor(i)}
@@ -252,7 +286,10 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
             </div>
           )}
 
-          {}
+          {!loading && error && query.trim() && (
+            <div className='sib-empty sib-error' role='alert'><AlertCircle size={13} /> {error}</div>
+          )}
+
           {!loading && noResults && (
             <div className='sib-empty'>No results for <strong>"{query}"</strong></div>
           )}

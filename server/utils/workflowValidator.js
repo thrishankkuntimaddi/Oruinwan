@@ -1,11 +1,15 @@
+// Keep in sync with client/src/utils/taskMeta.js (TRANSITIONS).
+// Open work can move freely between open states and straight to done;
+// done can be reopened, cancelled can be restored.
+const OPEN = ['backlog', 'todo', 'in_progress', 'review', 'blocked'];
 const WORKFLOW_TRANSITIONS = {
-    backlog:     ['todo', 'in_progress', 'review', 'cancelled'],
-    todo:        ['in_progress', 'review', 'backlog', 'cancelled'],
-    in_progress: ['review', 'blocked', 'todo', 'backlog', 'done', 'cancelled'],
-    review:      ['done', 'in_progress', 'blocked', 'todo'],
-    blocked:     ['in_progress', 'todo', 'review', 'done'],
-    done:        ['todo', 'in_progress'],  
-    cancelled:   ['backlog', 'todo']       
+    backlog:     [...OPEN.filter((s) => s !== 'backlog'), 'done', 'cancelled'],
+    todo:        [...OPEN.filter((s) => s !== 'todo'), 'done', 'cancelled'],
+    in_progress: [...OPEN.filter((s) => s !== 'in_progress'), 'done', 'cancelled'],
+    review:      [...OPEN.filter((s) => s !== 'review'), 'done', 'cancelled'],
+    blocked:     [...OPEN.filter((s) => s !== 'blocked'), 'done', 'cancelled'],
+    done:        ['todo', 'in_progress', 'review'],
+    cancelled:   ['backlog', 'todo'],
 };
 
 function isValidTransition(fromStatus, toStatus) {

@@ -1,24 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AISearchBar   from './AISearchBar';
 import AICommandBox  from './AICommandBox';
-
-function getToken() {
-    
-    return (
-        localStorage.getItem('accessToken') ||
-        localStorage.getItem('token') ||
-        sessionStorage.getItem('accessToken') ||
-        ''
-    );
-}
-
-function getWorkspaceId() {
-    return (
-        localStorage.getItem('currentWorkspaceId') ||
-        localStorage.getItem('workspaceId') ||
-        ''
-    );
-}
+import { useAuth } from '../../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 export const AITriggerButton = ({ onClick, label = '⚡ AI', style = {} }) => (
     <button
@@ -47,18 +31,22 @@ export const AITriggerButton = ({ onClick, label = '⚡ AI', style = {} }) => (
     </button>
 );
 
-export default function AIHub({ workspaceId: propWsId, token: propToken }) {
+/** ⌘/ command launcher and AI search, for signed-in users inside a workspace. */
+export default function AIHub({ workspaceId: propWsId }) {
     const [searchOpen, setSearchOpen]   = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
-
-    const workspaceId = propWsId || getWorkspaceId();
-    const token       = propToken || getToken();
+    const { user } = useAuth() || {};
+    // Rendered app-wide (outside the workspace provider), so the workspace comes from the URL.
+    const { pathname } = useLocation();
+    const workspaceId = propWsId || /\/workspace\/([a-f0-9]{24})/.exec(pathname)?.[1] || null;
+    const enabled = !!user;
 
     const closeSearch  = useCallback(() => setSearchOpen(false),  []);
     const closeCommand = useCallback(() => setCommandOpen(false), []);
 
     
     useEffect(() => {
+        if (!enabled) return undefined;
         const handler = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.code === 'Slash') {
                 e.preventDefault();
@@ -68,20 +56,20 @@ export default function AIHub({ workspaceId: propWsId, token: propToken }) {
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, []);
+    }, [enabled]);
+
+    if (!enabled) return null;
 
     return (
         <>
             {searchOpen  && (
                 <AISearchBar
                     workspaceId={workspaceId}
-                    token={token}
                     onClose={closeSearch}
                 />
             )}
             <AICommandBox
                 workspaceId={workspaceId}
-                token={token}
                 isOpen={commandOpen}
                 onClose={closeCommand}
             />

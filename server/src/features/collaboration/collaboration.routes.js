@@ -6,8 +6,29 @@ const requireAuth = require('../../shared/middleware/auth');
 const Whiteboard = require('./whiteboard.model');
 const Brainstorm = require('./brainstorm.model');
 const logger = require('../../../utils/logger');
+const { requireMeetingAccess } = require('../meetings/meetingAccess');
+const { isValidId } = require('../../shared/utils/workspaceAccess');
 
 router.use(requireAuth);
+
+// Every board belongs to a scheduled meeting: the caller must be an active
+// member of that meeting's workspace (400 malformed id, 404, 403). The
+// workspaceId stored on a board always comes from the meeting, never the body.
+router.use('/whiteboard/:meetingId', requireMeetingAccess('meetingId'));
+router.use('/brainstorm/:meetingId', requireMeetingAccess('meetingId'));
+
+function requireItemId(req, res, next) {
+    if (!isValidId(req.params.itemId)) return res.status(400).json({ message: 'Invalid item id' });
+    next();
+}
+
+function badRequest(err, res) {
+    if (err && (err.name === 'ValidationError' || err.name === 'CastError')) {
+        res.status(400).json({ message: err.name === 'CastError' ? 'Invalid input' : err.message });
+        return true;
+    }
+    return false;
+}
 
 router.get('/whiteboard/:meetingId', async (req, res) => {
     try {
@@ -21,7 +42,9 @@ router.get('/whiteboard/:meetingId', async (req, res) => {
 
 router.post('/whiteboard/:meetingId', async (req, res) => {
     try {
-        const { workspaceId, strokes = [] } = req.body;
+        const { strokes = [] } = req.body || {};
+        if (!Array.isArray(strokes)) return res.status(400).json({ message: 'strokes must be an array' });
+        const workspaceId = req.meeting.workspaceId;
         const wb = await Whiteboard.findOneAndUpdate(
             { meetingId: req.params.meetingId },
             { meetingId: req.params.meetingId, workspaceId, strokes },
@@ -29,6 +52,7 @@ router.post('/whiteboard/:meetingId', async (req, res) => {
         );
         res.json({ strokes: wb.strokes });
     } catch (err) {
+        if (badRequest(err, res)) return;
         logger.error('[Collaboration] POST whiteboard error:', err);
         res.status(500).json({ message: 'Failed to save whiteboard' });
     }
@@ -46,8 +70,9 @@ router.get('/brainstorm/:meetingId', async (req, res) => {
 
 router.post('/brainstorm/:meetingId', async (req, res) => {
     try {
-        const { workspaceId, text, position, color } = req.body;
-        if (!text) return res.status(400).json({ message: 'text is required' });
+        const { text, position, color } = req.body || {};
+        const workspaceId = req.meeting.workspaceId;
+        if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ message: 'text is required' });
 
         const item = {
             text,
@@ -73,21 +98,23 @@ router.post('/brainstorm/:meetingId', async (req, res) => {
 
         res.status(201).json({ item: newItem });
     } catch (err) {
+        if (badRequest(err, res)) return;
         logger.error('[Collaboration] POST brainstorm error:', err);
         res.status(500).json({ message: 'Failed to add brainstorm item' });
     }
 });
 
-router.patch('/brainstorm/:meetingId/:itemId', async (req, res) => {
+router.patch('/brainstorm/:meetingId/:itemId', requireItemId, async (req, res) => {
     try {
         const setPayload = {};
-        const { position, text, color } = req.body;
+        const { position, text, color } = req.body || {};
         if (position) {
             setPayload['items.$.position.x'] = position.x;
             setPayload['items.$.position.y'] = position.y;
         }
         if (text !== undefined) setPayload['items.$.text'] = text;
         if (color !== undefined) setPayload['items.$.color'] = color;
+        if (Object.keys(setPayload).length === 0) return res.status(400).json({ message: 'Nothing to update' });
 
         const board = await Brainstorm.findOneAndUpdate(
             { meetingId: req.params.meetingId, 'items._id': req.params.itemId },
@@ -106,12 +133,13 @@ router.patch('/brainstorm/:meetingId/:itemId', async (req, res) => {
 
         res.json({ item: updatedItem });
     } catch (err) {
+        if (badRequest(err, res)) return;
         logger.error('[Collaboration] PATCH brainstorm error:', err);
         res.status(500).json({ message: 'Failed to update brainstorm item' });
     }
 });
 
-router.delete('/brainstorm/:meetingId/:itemId', async (req, res) => {
+router.delete('/brainstorm/:meetingId/:itemId', requireItemId, async (req, res) => {
     try {
         await Brainstorm.findOneAndUpdate(
             { meetingId: req.params.meetingId },

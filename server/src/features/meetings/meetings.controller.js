@@ -2,64 +2,57 @@
 
 const meetingsService = require('./meetings.service');
 const logger = require('../../../utils/logger');
-const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
+const { assertWorkspaceMember, isValidId, sendAccessError } = require('../../shared/utils/workspaceAccess');
 
-async function resolveCompanyId(req) {
-    const User = require('../../../models/User');
-    const dbUser = await User.findById(req.user.sub).select('companyId').lean();
-    return dbUser?.companyId || null;
-}
+// Every /:id route runs behind requireMeetingAccess('id') (see meetings.routes.js),
+// which rejects malformed ids (400), unknown meetings (404) and callers who are
+// not active members of the meeting's workspace (403). Meetings are scoped by
+// workspace, not company, so personal (company-less) workspaces work too.
 
-async function assertWorkspaceMember(workspaceId, userId, companyId) {
-    const Workspace = require('../../../models/Workspace');
-    const wsQuery = { _id: workspaceId, 'members.user': userId };
-    if (companyId) wsQuery.company = companyId;
-    const ws = await Workspace.findOne(wsQuery).select('_id').lean();
-    return !!ws;
+const ACTION_STATUSES = ['pending', 'in_progress', 'done'];
+
+function fail(res, err, fallback) {
+    if (err && err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+    if (err && err.name === 'CastError') return res.status(400).json({ message: 'Invalid id' });
+    logger.error(`[Meetings] ${fallback}:`, err);
+    return res.status(500).json({ message: fallback });
 }
 
 async function getMeetings(req, res) {
     try {
         const { workspaceId, limit, includeCompleted } = req.query;
-        if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
-
-        const companyId = await resolveCompanyId(req);
-        const allowed = await assertWorkspaceMember(workspaceId, req.user.sub, companyId);
-        if (!allowed) return res.status(403).json({ message: 'Access denied' });
-
+        try {
+            await assertWorkspaceMember(workspaceId, req.user.sub);
+        } catch (err) {
+            return sendAccessError(res, err);
+        }
         const meetings = await meetingsService.getMeetings({
             workspaceId,
             userId: req.user.sub,
-            companyId,
-            limit,
+            limit: Math.min(Math.max(Number(limit) || 20, 1), 100),
             includeCompleted: includeCompleted !== 'false',
         });
         res.json({ meetings });
     } catch (err) {
-        logger.error('[Meetings] getMeetings error:', err);
-        res.status(500).json({ message: 'Failed to fetch meetings' });
+        fail(res, err, 'Failed to fetch meetings');
     }
 }
 
 async function getMeeting(req, res) {
     try {
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.getMeeting(req.params.id, { companyId });
+        const meeting = await meetingsService.getMeeting(req.params.id);
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] getMeeting error:', err);
-        res.status(500).json({ message: 'Failed to fetch meeting' });
+        fail(res, err, 'Failed to fetch meeting');
     }
 }
 
 async function joinMeeting(req, res) {
     try {
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.joinMeeting(req.params.id, req.user.sub, { companyId });
+        const meeting = await meetingsService.joinMeeting(req.params.id, req.user.sub);
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
-        
         req.io.to(`meeting:${req.params.id}`).emit('meeting:joined', {
             meetingId: req.params.id,
             userId: req.user.sub,
@@ -68,19 +61,19 @@ async function joinMeeting(req, res) {
 
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] joinMeeting error:', err);
-        res.status(500).json({ message: 'Failed to join meeting' });
+        fail(res, err, 'Failed to join meeting');
     }
 }
 
 async function endMeeting(req, res) {
     try {
-        const { recordingUrl } = req.body;
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.endMeeting(req.params.id, { companyId, recordingUrl });
+        const { recordingUrl } = req.body || {};
+        if (recordingUrl !== undefined && recordingUrl !== null && typeof recordingUrl !== 'string') {
+            return res.status(400).json({ message: 'recordingUrl must be a string' });
+        }
+        const meeting = await meetingsService.endMeeting(req.params.id, { recordingUrl });
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
-        
         req.io.to(`meeting:${req.params.id}`).emit('meeting:ended', {
             meetingId: req.params.id,
             endedBy: req.user.sub,
@@ -89,21 +82,21 @@ async function endMeeting(req, res) {
 
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] endMeeting error:', err);
-        res.status(500).json({ message: 'Failed to end meeting' });
+        fail(res, err, 'Failed to end meeting');
     }
 }
 
 async function updateAgenda(req, res) {
     try {
-        const { agenda } = req.body;
+        const { agenda } = req.body || {};
         if (!Array.isArray(agenda)) return res.status(400).json({ message: 'agenda must be an array' });
+        if (agenda.some(a => !a || typeof a.title !== 'string' || !a.title.trim())) {
+            return res.status(400).json({ message: 'Every agenda item needs a title' });
+        }
 
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.updateAgenda(req.params.id, agenda, { companyId });
+        const meeting = await meetingsService.updateAgenda(req.params.id, agenda);
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
-        
         req.io.to(`meeting:${req.params.id}`).emit('meeting:agenda_updated', {
             meetingId: req.params.id,
             agenda: meeting.agenda,
@@ -111,86 +104,83 @@ async function updateAgenda(req, res) {
 
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] updateAgenda error:', err);
-        res.status(500).json({ message: 'Failed to update agenda' });
+        fail(res, err, 'Failed to update agenda');
     }
 }
 
 async function updateTranscript(req, res) {
     try {
-        const { transcript } = req.body;
+        const { transcript } = req.body || {};
         if (typeof transcript !== 'string') return res.status(400).json({ message: 'transcript must be a string' });
 
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.updateTranscript(req.params.id, transcript, { companyId });
+        const meeting = await meetingsService.updateTranscript(req.params.id, transcript);
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] updateTranscript error:', err);
-        res.status(500).json({ message: 'Failed to update transcript' });
+        fail(res, err, 'Failed to update transcript');
     }
 }
 
 async function summarizeMeeting(req, res) {
     try {
-        const companyId = await resolveCompanyId(req);
-        const summary = await meetingsService.summarizeMeeting(req.params.id, { companyId });
+        const summary = await meetingsService.summarizeMeeting(req.params.id);
         if (summary === null) return res.status(404).json({ message: 'Meeting not found' });
 
         res.json({ summary });
     } catch (err) {
-        logger.error('[Meetings] summarizeMeeting error:', err);
-        res.status(500).json({ message: 'Failed to generate summary' });
+        fail(res, err, 'Failed to generate summary');
     }
 }
 
 async function suggestTime(req, res) {
     try {
-        const { participantIds = [], durationMinutes = 30 } = req.body;
+        const { participantIds = [], durationMinutes = 30 } = req.body || {};
         const suggestion = await meetingsService.suggestTime({ participantIds, durationMinutes });
         res.json(suggestion);
     } catch (err) {
-        logger.error('[Meetings] suggestTime error:', err);
-        res.status(500).json({ message: 'Failed to suggest time' });
+        fail(res, err, 'Failed to suggest time');
     }
+}
+
+function validateActionItemBody({ assignedTo, status }) {
+    if (assignedTo !== undefined && assignedTo !== null && assignedTo !== '' && !isValidId(assignedTo)) return 'Invalid assignedTo';
+    if (status !== undefined && !ACTION_STATUSES.includes(status)) return `status must be one of ${ACTION_STATUSES.join(', ')}`;
+    return null;
 }
 
 async function addActionItem(req, res) {
     try {
-        const { text, assignedTo, status } = req.body;
-        if (!text) return res.status(400).json({ message: 'text is required' });
+        const { text, assignedTo, status } = req.body || {};
+        if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ message: 'text is required' });
+        const invalid = validateActionItemBody({ assignedTo, status });
+        if (invalid) return res.status(400).json({ message: invalid });
 
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.addActionItem(
-            req.params.id,
-            { text, assignedTo, status },
-            { companyId }
-        );
+        const meeting = await meetingsService.addActionItem(req.params.id, { text, assignedTo: assignedTo || null, status });
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
         res.status(201).json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] addActionItem error:', err);
-        res.status(500).json({ message: 'Failed to add action item' });
+        fail(res, err, 'Failed to add action item');
     }
 }
 
 async function updateActionItem(req, res) {
     try {
-        const companyId = await resolveCompanyId(req);
-        const meeting = await meetingsService.updateActionItem(
-            req.params.id,
-            req.params.aid,
-            req.body,
-            { companyId }
-        );
+        if (!isValidId(req.params.aid)) return res.status(400).json({ message: 'Invalid action item id' });
+        const body = req.body || {};
+        const invalid = validateActionItemBody(body);
+        if (invalid) return res.status(400).json({ message: invalid });
+        if (body.taskId !== undefined && body.taskId !== null && !isValidId(body.taskId)) {
+            return res.status(400).json({ message: 'Invalid taskId' });
+        }
+
+        const meeting = await meetingsService.updateActionItem(req.params.id, req.params.aid, body);
         if (!meeting) return res.status(404).json({ message: 'Meeting or action item not found' });
 
         res.json({ meeting });
     } catch (err) {
-        logger.error('[Meetings] updateActionItem error:', err);
-        res.status(500).json({ message: 'Failed to update action item' });
+        fail(res, err, 'Failed to update action item');
     }
 }
 

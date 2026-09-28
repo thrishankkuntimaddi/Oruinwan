@@ -1,25 +1,34 @@
 const ApiKey = require('./apiKey.model');
 const logger = require('../../../utils/logger');
 
+/**
+ * Authenticates a public-API request by its X-Api-Key header. Sets
+ * req.apiKeyDoc and req.workspaceId. The key's workspace must still be active.
+ * Errors are { message }.
+ */
 module.exports = async function apiKeyMiddleware(req, res, next) {
   try {
     const rawKey = req.headers['x-api-key'];
-    if (!rawKey) {
-      return res.status(401).json({ error: 'Missing X-Api-Key header' });
+    if (!rawKey || typeof rawKey !== 'string') {
+      return res.status(401).json({ message: 'Missing X-Api-Key header' });
     }
 
     const keyHash = ApiKey.hashKey(rawKey);
     const apiKeyDoc = await ApiKey.findOne({ keyHash, isActive: true }).lean();
 
     if (!apiKeyDoc) {
-      return res.status(401).json({ error: 'Invalid or revoked API key' });
+      return res.status(401).json({ message: 'Invalid or revoked API key' });
     }
 
-    
+    const Workspace = require('../../../models/Workspace');
+    const ws = await Workspace.findOne({ _id: apiKeyDoc.workspaceId, isActive: { $ne: false } }).select('_id').lean();
+    if (!ws) {
+      return res.status(401).json({ message: 'Invalid or revoked API key' });
+    }
+
     req.apiKeyDoc = apiKeyDoc;
     req.workspaceId = apiKeyDoc.workspaceId;
 
-    
     ApiKey.findByIdAndUpdate(apiKeyDoc._id, {
       lastUsedAt: new Date(),
       $inc: { usageCount: 1 }
@@ -28,6 +37,6 @@ module.exports = async function apiKeyMiddleware(req, res, next) {
     next();
   } catch (err) {
     logger.error('[APIKey Middleware] Error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };

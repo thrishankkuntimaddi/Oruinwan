@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import api from '../../services/api';
 
-const TYPE_ICONS = { message: '💬', knowledge: '📄', meeting: '📅', default: '🔍' };
-const TYPE_LABELS = { message: 'Message', knowledge: 'Knowledge', meeting: 'Meeting' };
+const TYPE_ICONS = { message: '💬', knowledge: '📄', note: '📝', task: '✅', meeting: '📅', default: '🔍' };
+const TYPE_LABELS = { message: 'Message', knowledge: 'Page', note: 'Note', task: 'Task', meeting: 'Meeting' };
 
-async function apiSearch(query, workspaceId, token) {
-    const res = await fetch('/api/ai/search', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        credentials: 'include',
-        body:    JSON.stringify({ query, workspaceId }),
-    });
-    if (!res.ok) throw new Error('Search failed');
-    return res.json();
+async function apiSearch(query, workspaceId) {
+    const { data } = await api.post('/api/ai/search', { query, workspaceId });
+    return data;
 }
 
-export default function AISearchBar({ workspaceId, token, onClose }) {
+export default function AISearchBar({ workspaceId, onClose }) {
     const [query, setQuery]     = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -38,11 +33,11 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
         if (!q.trim() || q.trim().length < 2) { setResults([]); return; }
         setLoading(true); setError(null);
         try {
-            const data = await apiSearch(q.trim(), workspaceId, token);
+            const data = await apiSearch(q.trim(), workspaceId);
             setResults(data.results || []);
         } catch (e) { setError('Search unavailable'); setResults([]); }
         finally { setLoading(false); }
-    }, [workspaceId, token]);
+    }, [workspaceId]);
 
     const handleChange = (e) => {
         const q = e.target.value;

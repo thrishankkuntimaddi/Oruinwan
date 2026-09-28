@@ -8,6 +8,7 @@ import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2, Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
 import { useToast } from '../../../contexts/ToastContext';
+import { useDateFormatter } from '../../../hooks/useUserPreferences';
 
 function ConversationStream({
     events = [],
@@ -263,27 +264,26 @@ function ConversationStream({
     }, [mainStreamEvents, systemEvents, showThreadsOnly, threadCounts, searchQuery]);
 
     
-    const groupedEvents = useMemo(() => {
+    // Day dividers follow Settings → Language & region (time zone and date order).
+    const dateFmt = useDateFormatter();
+    const { groupedEvents, dayLabels } = useMemo(() => {
         const grouped = {};
+        const labels = {};
         mergedEvents.forEach(event => {
             const raw = event.createdAt || event.payload?.createdAt;
             const date = new Date(raw);
             
             if (!raw || isNaN(date.getTime())) return;
-            const dateKey = date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            const dateKey = dateFmt.dayKey(date);
 
             if (!grouped[dateKey]) {
                 grouped[dateKey] = [];
+                labels[dateKey] = dateFmt.dayHeading(date);
             }
             grouped[dateKey].push(event);
         });
-        return grouped;
-    }, [mergedEvents]);
+        return { groupedEvents: grouped, dayLabels: labels };
+    }, [mergedEvents, dateFmt]);
 
     
     const renderEvent = (event) => {
@@ -553,7 +553,7 @@ function ConversationStream({
                                         e.currentTarget.style.color = 'var(--text-muted)';
                                     }}
                                 >
-                                    {dateKey}
+                                    {dayLabels[dateKey] || dateKey}
                                 </span>
                                 <input
                                     type="date"

@@ -134,64 +134,149 @@ router.post('/webhook/:type', integrationsFlag, async (req, res) => {
   }
 });
 
-router.get('/webhooks', ...member, async (req, res) => {
-  try {
-    const { workspaceId } = req.query;
-    if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
+// ── Outgoing webhooks ────────────────────────────────────────────────────────
+// Members may list; create/toggle/test/delete are for workspace owners/admins.
+// The signing secret is returned once, on create.
 
-    const webhooks = await Webhook.find({ workspaceId })
-      .select('-secret') 
-      .lean();
-    res.json({ webhooks });
+const { assertWorkspaceMember, isValidId, sendAccessError, userIdOf } = require('../../shared/utils/workspaceAccess');
+const webhookTrigger = require('./webhook.trigger');
+
+const wsGate = (adminOnly) => (req, res, next) => {
+  const workspaceId = req.query.workspaceId || req.body?.workspaceId;
+  assertWorkspaceMember(workspaceId, userIdOf(req.user), { adminOnly })
+    .then((access) => { req.webhookAccess = access; next(); })
+    .catch(err => sendAccessError(res, err, next));
+};
+const wsMember = wsGate(false);
+const wsAdmin = wsGate(true);
+
+function publicWebhook(hook) {
+  const { secret: _secret, event: _event, ...rest } = hook;
+  return { ...rest, events: Webhook.eventsOf(hook) };
+}
+
+/** What a plain member sees: no secret, and the URL reduced to its origin (paths/queries often carry tokens). */
+function memberWebhook(hook) {
+  const { url, createdBy: _createdBy, lastStatusCode: _s, failureCount: _f, ...rest } = publicWebhook(hook);
+  let origin = null;
+  try { origin = new URL(url).origin; } catch { /* ignore */ }
+  return { ...rest, url: origin };
+}
+
+const LOCAL_WEBHOOK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Validate a webhook URL: https, or plain http only for localhost / 127.0.0.1 (local testing). */
+function parseWebhookUrl(url) {
+  if (typeof url !== 'string' || !url.trim() || url.length > 2048) return null;
+  let parsed;
+  try { parsed = new URL(url.trim()); } catch { return null; }
+  if (parsed.protocol === 'https:') return parsed;
+  if (parsed.protocol === 'http:' && LOCAL_WEBHOOK_HOSTS.has(parsed.hostname)) return parsed;
+  return null;
+}
+
+/** Load a webhook by :id for an admin of its workspace. Non-members get 404 (no id probing), members 403. */
+async function loadManagedWebhook(req, { hideFromMembers = false } = {}) {
+  const { HttpError } = require('../../shared/utils/workspaceAccess');
+  if (!isValidId(req.params.id)) throw new HttpError(400, 'Invalid webhook id');
+  const hook = await Webhook.findById(req.params.id).lean();
+  if (!hook) throw new HttpError(404, 'Webhook not found');
+  try {
+    await assertWorkspaceMember(hook.workspaceId, userIdOf(req.user), { adminOnly: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err.status === 403 && err.code === 'WORKSPACE_ACCESS_DENIED') throw new HttpError(404, 'Webhook not found');
+    if (err.status === 404) throw new HttpError(404, 'Webhook not found');
+    if (hideFromMembers && err.status === 403) throw new HttpError(404, 'Webhook not found');
+    throw err;
+  }
+  return hook;
+}
+
+router.get('/webhooks/events', (req, res) => {
+  res.json({ events: Webhook.SUPPORTED_WEBHOOK_EVENTS, wildcard: '*' });
+});
+
+// Members may list (secret never included; non-admins see only the URL origin).
+router.get('/webhooks', wsMember, async (req, res) => {
+  try {
+    const webhooks = await Webhook.find({ workspaceId: req.query.workspaceId })
+      .select('-secret')
+      .sort({ createdAt: -1 })
+      .lean();
+    const shape = req.webhookAccess?.isAdmin ? publicWebhook : memberWebhook;
+    res.json({ webhooks: webhooks.map(shape) });
+  } catch (err) {
+    sendAccessError(res, err);
   }
 });
 
-router.post('/webhooks', ...admin, async (req, res) => {
+router.post('/webhooks', wsAdmin, async (req, res) => {
   try {
-    const { workspaceId, event, url } = req.body;
-    if (!workspaceId || !event || !url) {
-      return res.status(400).json({ message: 'workspaceId, event, and url required' });
+    const { workspaceId, url } = req.body || {};
+    let events = req.body?.events;
+    if (events === undefined && req.body?.event !== undefined) events = [req.body.event];
+    if (!Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ message: 'events must be a non-empty array of event names' });
     }
-
-    
-    let parsed;
-    try { parsed = new URL(url); } catch { return res.status(400).json({ message: 'Invalid URL' }); }
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return res.status(400).json({ message: 'Webhook URL must use http or https' });
+    if (events.length > 50 || events.some(e => typeof e !== 'string')) {
+      return res.status(400).json({ message: 'events must be an array of strings' });
     }
+    const allowed = [...Webhook.SUPPORTED_EVENT_NAMES, '*'];
+    const unknown = events.filter(e => !allowed.includes(e));
+    if (unknown.length) {
+      return res.status(400).json({ message: `Unsupported event(s): ${unknown.join(', ')}. Supported: ${allowed.join(', ')}` });
+    }
+    if (!url) return res.status(400).json({ message: 'url is required' });
+    const parsed = parseWebhookUrl(url);
+    if (!parsed) return res.status(400).json({ message: 'Webhook URL must be a valid https URL (plain http is allowed only for localhost)' });
 
     const webhook = await Webhook.create({
       workspaceId,
-      event,
-      url,
+      events: [...new Set(events)],
+      url: parsed.toString(),
       createdBy: req.user.sub
     });
-
-    res.status(201).json({ webhook: { ...webhook.toObject(), secret: webhook.secret } }); 
+    const obj = webhook.toObject();
+    // The signing secret is shown once, here.
+    res.status(201).json({ webhook: { ...publicWebhook(obj), secret: webhook.secret } });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err?.name === 'ValidationError') return res.status(400).json({ message: err.message });
+    sendAccessError(res, err);
   }
 });
 
+router.patch('/webhooks/:id', async (req, res) => {
+  try {
+    const hook = await loadManagedWebhook(req);
+    const active = req.body?.active ?? req.body?.isActive;
+    if (typeof active !== 'boolean') return res.status(400).json({ message: 'active must be a boolean' });
+    const update = { isActive: active };
+    if (active) update.failureCount = 0;
+    const updated = await Webhook.findByIdAndUpdate(hook._id, update, { new: true }).select('-secret').lean();
+    res.json({ webhook: publicWebhook(updated) });
+  } catch (err) {
+    sendAccessError(res, err);
+  }
+});
+
+router.post('/webhooks/:id/test', async (req, res) => {
+  try {
+    const hook = await loadManagedWebhook(req);
+    const result = await webhookTrigger.sendTest(hook, { triggeredBy: req.user.sub });
+    res.json(result);
+  } catch (err) {
+    sendAccessError(res, err);
+  }
+});
+
+// Delete: anyone but an owner/admin of the webhook's workspace gets 404.
 router.delete('/webhooks/:id', async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ message: 'Webhook not found' });
-    }
-    const webhook = await Webhook.findById(req.params.id).select('workspaceId').lean();
-    // Only an owner/admin of the webhook's own workspace may delete it; anyone
-    // else gets the same 404 as for a missing id, so ids cannot be probed.
-    const userId = String(req.user.sub || req.user._id);
-    const workspace = webhook && await Workspace.findOne(
-      { _id: webhook.workspaceId, members: { $elemMatch: { user: userId, status: 'active', role: { $in: ADMIN_ROLES } } } }
-    ).select('_id').lean();
-    if (!webhook || !workspace) return res.status(404).json({ message: 'Webhook not found' });
-    await Webhook.deleteOne({ _id: webhook._id });
+    const hook = await loadManagedWebhook(req, { hideFromMembers: true });
+    await Webhook.deleteOne({ _id: hook._id });
     res.json({ message: 'Webhook deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    sendAccessError(res, err);
   }
 });
 
@@ -209,9 +294,22 @@ router.get('/ai-providers', requireAIAccess(), async (req, res) => {
 
 router.post('/ai-providers/connect', aiAdmin, async (req, res) => {
   try {
-    const { workspaceId, provider, apiKey, config } = req.body;
-    if (!workspaceId || !provider || !apiKey) {
+    const { workspaceId, provider, config } = req.body;
+    let { apiKey } = req.body;
+    // A self-hosted engine (local_llm) usually has no key.
+    if (!workspaceId || !provider || (!apiKey && provider !== 'local_llm')) {
       return res.status(400).json({ message: 'workspaceId, provider, and apiKey required' });
+    }
+    if (provider === 'local_llm') {
+      if (!apiKey) apiKey = '';
+      const baseUrl = config?.baseUrl;
+      if (baseUrl !== undefined && baseUrl !== null && baseUrl !== '') {
+        let u = null;
+        try { u = new URL(String(baseUrl)); } catch { /* invalid */ }
+        if (!u || !['http:', 'https:'].includes(u.protocol)) {
+          return res.status(400).json({ message: 'config.baseUrl must be an http(s) URL' });
+        }
+      }
     }
 
     const record = await aiProviderService.connectProvider({

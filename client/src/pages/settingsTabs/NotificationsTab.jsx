@@ -1,154 +1,195 @@
-import React, { useState } from 'react';
-import Card from './Card';
-import api from '@services/api';
-import { Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { BellRing } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import {
+    NOTIFICATION_PREF_DEFAULTS,
+    fetchAccountNotificationPrefs,
+    saveAccountNotificationPrefs,
+} from '../../features/notifications/accountNotificationPrefs';
+import {
+    PageIntro, Section, Row, SwitchRow, Button, Notice, LoadingState, ErrorState, SaveBar, useSettingsForm,
+} from './settingsUi';
+import './preferences.css';
 
-const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+const supported = () => typeof window !== 'undefined' && 'Notification' in window;
+const currentPermission = () => (supported() ? window.Notification.permission : 'unsupported');
 
-const Toggle = ({ label, description, checked, onChange, disabled }) => {
-    const [hovered, setHovered] = React.useState(false);
-    return (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 0',
-            borderBottom: '1px solid var(--border-subtle)',
-        }}>
-            <div style={{ paddingRight: 24 }}>
-                <div style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: 'var(--text-primary)',
-                    ...S.font,
-                }}>{label}</div>
-                {description && (
-                    <div style={{
-                        fontSize: 12,
-                        color: 'var(--text-secondary)',
-                        marginTop: 3,
-                        lineHeight: 1.5,
-                        ...S.font,
-                    }}>{description}</div>
-                )}
-            </div>
-            <button
-                onClick={() => !disabled && onChange(!checked)}
-                disabled={disabled}
-                style={{
-                    position: 'relative',
-                    flexShrink: 0,
-                    display: 'inline-flex',
-                    height: 20,
-                    width: 36,
-                    borderRadius: 10,
-                    border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`,
-                    backgroundColor: checked ? 'var(--accent)' : 'var(--bg-active)',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    opacity: disabled ? 0.4 : 1,
-                    transition: 'background-color 150ms ease, border-color 150ms ease',
-                    outline: 'none',
-                }}
-            >
-                <span style={{
-                    display: 'inline-block',
-                    height: 14,
-                    width: 14,
-                    borderRadius: '50%',
-                    backgroundColor: checked ? '#0c0c0c' : 'var(--text-muted)',
-                    transform: checked ? 'translateX(17px)' : 'translateX(2px)',
-                    marginTop: 2,
-                    transition: 'transform 150ms ease, background-color 150ms ease',
-                }} />
-            </button>
-        </div>
-    );
-};
-
-const SectionLabel = ({ children }) => (
-    <p style={{
-        fontSize: 10,
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.12em',
-        color: 'var(--text-muted)',
-        marginBottom: 4,
-        marginTop: 4,
-        ...S.font,
-    }}>{children}</p>
-);
-
-const NotificationsTab = ({ notifications, setNotifications }) => {
-    const { showToast } = useToast();
-    const [saving, setSaving] = useState(false);
-    const [hasChanges, setHasChanges] = useState(false);
-
-    const handleSave = async () => {
-        setSaving(true);
+/** Browser notification permission, kept fresh when the user returns to the tab. */
+function useNotificationPermission() {
+    const [permission, setPermission] = useState(currentPermission);
+    useEffect(() => {
+        const refresh = () => setPermission(currentPermission());
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', refresh);
+        let status;
+        // Some browsers report changes made in site settings live.
+        navigator.permissions?.query?.({ name: 'notifications' }).then((s) => {
+            status = s;
+            status.onchange = refresh;
+        }).catch(() => { /* not supported */ });
+        return () => {
+            window.removeEventListener('focus', refresh);
+            document.removeEventListener('visibilitychange', refresh);
+            if (status) status.onchange = null;
+        };
+    }, []);
+    const request = async () => {
+        if (!supported()) return 'unsupported';
         try {
-            await api.put('/api/auth/me/preferences/notifications', notifications);
-            setHasChanges(false);
-            showToast('Notification preferences saved', 'success');
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to save preferences', 'error');
-        } finally { setSaving(false); }
+            const result = await window.Notification.requestPermission();
+            setPermission(result);
+            return result;
+        } catch {
+            setPermission(currentPermission());
+            return currentPermission();
+        }
+    };
+    return [permission, request];
+}
+
+function lastWorkspaceId() {
+    try { return localStorage.getItem('lastWorkspaceId') || ''; } catch { return ''; }
+}
+
+/**
+ * Settings → Notifications (account level). Loads and saves
+ * /api/auth/me/preferences/notifications; per-workspace preferences live on
+ * the workspace Notifications page.
+ */
+const NotificationsTab = () => {
+    const { showToast } = useToast();
+    const [permission, requestPermission] = useNotificationPermission();
+    const workspaceId = lastWorkspaceId();
+
+    const form = useSettingsForm({
+        initial: { ...NOTIFICATION_PREF_DEFAULTS },
+        load: fetchAccountNotificationPrefs,
+        save: (_values, changed) => saveAccountNotificationPrefs(changed),
+        onSaved: () => showToast('Notification preferences saved', 'success'),
+        onError: (msg) => showToast(msg, 'error'),
+    });
+
+    const intro = (
+        <PageIntro
+            title="Notifications"
+            description="How Oruinwan gets your attention. These apply to every workspace; each workspace can fine-tune them."
+        />
+    );
+    if (form.loading) return <>{intro}<LoadingState label="Loading notification preferences…" /></>;
+    if (form.loadError) return <>{intro}<ErrorState message={form.loadError} onRetry={form.reload} /></>;
+
+    const { values, set } = form;
+
+    const allow = async () => {
+        const result = await requestPermission();
+        if (result === 'granted') showToast('Desktop notifications are allowed', 'success');
+        else if (result === 'denied') showToast('Your browser blocked notifications for Oruinwan', 'error');
     };
 
-    const update = (key, value) => {
-        setNotifications({ ...notifications, [key]: value });
-        setHasChanges(true);
+    const sendTest = () => {
+        if (permission !== 'granted') return;
+        try {
+            const n = new window.Notification('Oruinwan', {
+                body: 'Test notification — desktop alerts are working.',
+                icon: '/icons/oruinwan-128.png',
+                silent: !values.sound,
+                tag: 'oruinwan-test',
+            });
+            n.onclick = () => { window.focus(); n.close(); };
+            setTimeout(() => n.close(), 5000);
+        } catch {
+            // Some mobile browsers only allow notifications from a service worker.
+            showToast('This browser can’t show a test notification here.', 'error');
+        }
     };
+
+    let permissionNotice = null;
+    if (values.desktopPush) {
+        if (permission === 'unsupported') {
+            permissionNotice = <Notice tone="info">This browser doesn’t support desktop notifications. You’ll still see alerts inside Oruinwan.</Notice>;
+        } else if (permission === 'default') {
+            permissionNotice = (
+                <Notice tone="warning" action={<Button size="sm" variant="primary" onClick={allow}>Allow in browser</Button>}>
+                    Your browser hasn’t allowed Oruinwan to show notifications yet.
+                </Notice>
+            );
+        } else if (permission === 'denied') {
+            permissionNotice = (
+                <Notice tone="warning">
+                    Notifications are <strong>blocked</strong> by your browser. Click the icon to the left of the address bar,
+                    set <strong>Notifications</strong> to <strong>Allow</strong>, then reload the page.
+                </Notice>
+            );
+        }
+    }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Card title="Push Notifications" subtitle="In-app & browser alerts">
-                <SectionLabel>Messages</SectionLabel>
-                <Toggle label="Direct Messages" description="Alert when someone messages you directly." checked={notifications.dmPush} onChange={v => update('dmPush', v)} />
-                <Toggle label="Mentions" description="Alert when you're @mentioned in a channel." checked={notifications.mentionPush} onChange={v => update('mentionPush', v)} />
-                <Toggle label="Thread Replies" description="Alert when someone replies to your thread." checked={notifications.threadPush} onChange={v => update('threadPush', v)} />
-            </Card>
+        <>
+            {intro}
 
-            <Card title="Email Notifications" subtitle="Delivered to your inbox">
-                <Toggle label="Security Alerts" description="Critical account security notices (recommended)." checked={notifications.securityEmails} onChange={v => update('securityEmails', v)} />
-                <Toggle label="Product Updates" description="New features and improvement announcements." checked={notifications.productUpdates} onChange={v => update('productUpdates', v)} />
-                <Toggle label="Marketing Emails" description="Tips, offers, and Oruinwan news." checked={notifications.marketingEmails} onChange={v => update('marketingEmails', v)} />
-            </Card>
+            <Section
+                title="Alerts"
+                description="Pop-ups inside Oruinwan and on your desktop."
+                action={values.desktopPush && permission === 'granted'
+                    ? <Button size="sm" icon={BellRing} onClick={sendTest}>Send a test</Button>
+                    : null}
+            >
+                <SwitchRow
+                    label="Desktop notifications"
+                    description="Show a system notification when Oruinwan is in the background."
+                    checked={values.desktopPush}
+                    onChange={(v) => set('desktopPush', v)}
+                />
+                {permissionNotice && <div className="stg-pref-row-notice">{permissionNotice}</div>}
+                <SwitchRow
+                    label="Direct messages"
+                    description="Alert me when someone sends me a direct message."
+                    checked={values.dmNotifications}
+                    onChange={(v) => set('dmNotifications', v)}
+                />
+                <SwitchRow
+                    label="Only mentions and direct messages"
+                    description="Mute pop-ups for everything else (tasks, meetings, reactions…). They still appear in the bell."
+                    checked={values.mentionsOnly}
+                    onChange={(v) => set('mentionsOnly', v)}
+                />
+                <SwitchRow
+                    label="Sound"
+                    description="Play the system sound with desktop notifications."
+                    checked={values.sound}
+                    onChange={(v) => set('sound', v)}
+                />
+            </Section>
 
-            <Card title="Sounds" subtitle="Auditory feedback">
-                <Toggle label="Sound Effects" description="Play notification sounds for messages." checked={notifications.soundEffects} onChange={v => update('soundEffects', v)} />
-            </Card>
+            <Section title="Email" description="Delivered to your inbox.">
+                <SwitchRow
+                    label="Activity digest"
+                    description="A summary of what you missed."
+                    checked={values.emailDigest}
+                    onChange={(v) => set('emailDigest', v)}
+                />
+                <SwitchRow
+                    label="Product news"
+                    description="Tips, offers, and Oruinwan news."
+                    checked={values.marketingEmails}
+                    onChange={(v) => set('marketingEmails', v)}
+                />
+            </Section>
 
-            {hasChanges && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '7px 16px',
-                            fontSize: 13,
-                            fontWeight: 500,
-                            color: '#0c0c0c',
-                            backgroundColor: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: 2,
-                            cursor: saving ? 'not-allowed' : 'pointer',
-                            opacity: saving ? 0.5 : 1,
-                            transition: 'background-color 150ms ease',
-                            ...S.font,
-                        }}
-                        onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
-                        onMouseLeave={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
+            {workspaceId && (
+                <Section>
+                    <Row
+                        label="Workspace notifications"
+                        description="Choose which activity notifies you in your current workspace — messages, thread replies, tasks, meetings (Settings tab on the Notifications page)."
                     >
-                        <Check size={13} />
-                        {saving ? 'Saving…' : 'Save Preferences'}
-                    </button>
-                </div>
+                        <Link to={`/workspace/${workspaceId}/notifications`} className="stg-btn stg-pref-linkbtn" data-size="sm">Open</Link>
+                    </Row>
+                </Section>
             )}
-        </div>
+
+            <SaveBar visible={form.dirty} saving={form.saving} onSave={form.save} onDiscard={form.discard} />
+        </>
     );
 };
 

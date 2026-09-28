@@ -1,0 +1,84 @@
+/* Settings → Notifications / Appearance / Language & region / Privacy. Extends settings.css. */
+
+/* Theme cards */
+.stg-pref-themes { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 520px) { .stg-pref-themes { grid-template-columns: 1fr; } }
+
+.stg-pref-theme {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    font: inherit;
+    text-align: left;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--stg-radius);
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+.stg-pref-theme:hover { border-color: var(--border-accent); }
+.stg-pref-theme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stg-pref-theme[aria-checked='true'] { border-color: var(--accent); background: var(--stg-accent-soft); }
+.stg-pref-theme-check { position: absolute; top: 8px; right: 8px; color: var(--accent); }
+.stg-pref-theme-label { display: flex; align-items: center; gap: 8px; }
+.stg-pref-theme-label svg { color: var(--text-muted); flex-shrink: 0; }
+.stg-pref-theme[aria-checked='true'] .stg-pref-theme-label svg { color: var(--accent); }
+.stg-pref-theme-name { font-size: 13px; font-weight: 600; }
+.stg-pref-theme-desc { font-size: 11px; color: var(--text-muted); }
+
+.stg-pref-mock { display: flex; height: 56px; overflow: hidden; border-radius: 2px; border: 1px solid; }
+.stg-pref-mock-side { width: 33%; border-right: 1px solid; }
+.stg-pref-mock-body { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+.stg-pref-mock-line { height: 6px; border-radius: 1px; }
+.stg-pref-mock[data-mode='light'] { background: #ffffff; border-color: #e5e7eb; }
+.stg-pref-mock[data-mode='light'] .stg-pref-mock-side { background: #f3f4f6; border-color: #e5e7eb; }
+.stg-pref-mock[data-mode='light'] .stg-pref-mock-line { background: #e5e7eb; }
+.stg-pref-mock[data-mode='dark'] { background: #0c0c0c; border-color: #262626; }
+.stg-pref-mock[data-mode='dark'] .stg-pref-mock-side { background: #141414; border-color: #262626; }
+.stg-pref-mock[data-mode='dark'] .stg-pref-mock-line { background: #2a2a2a; }
+.stg-pref-mock[data-mode='auto'] { background: linear-gradient(90deg, #fff 50%, #0c0c0c 50%); border-color: var(--border-default); }
+.stg-pref-mock[data-mode='auto'] .stg-pref-mock-side { background: linear-gradient(90deg, #f3f4f6 50%, #141414 50%); border-color: var(--border-default); }
+.stg-pref-mock[data-mode='auto'] .stg-pref-mock-line { background: linear-gradient(90deg, #e5e7eb 50%, #2a2a2a 50%); }
+
+/* Text size sample */
+.stg-pref-sample {
+    margin-top: 12px;
+    padding: 10px 12px;
+    line-height: 1.65;
+    color: var(--text-primary);
+    background: var(--bg-active);
+    border: 1px solid var(--border-default);
+    border-radius: var(--stg-radius);
+}
+.stg-pref-sample-name { display: block; margin-bottom: 2px; font-size: 13px; font-weight: 600; }
+
+/* Live previews (time, date) */
+.stg-pref-preview {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-active);
+    border: 1px solid var(--border-default);
+    border-radius: var(--stg-radius);
+}
+.stg-pref-preview strong { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+.stg-pref-stack { display: flex; flex-direction: column; gap: 14px; }
+.stg-pref-select { max-width: 360px; }
+
+/* Blocked people */
+.stg-pref-person { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.stg-pref-person-text { min-width: 0; }
+.stg-pref-person-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-pref-person-mail { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.stg-pref-link { color: var(--accent); text-decoration: none; }
+.stg-pref-link:hover { text-decoration: underline; }
+.stg-pref-linkbtn { text-decoration: none; }
+.stg-pref-row-notice { padding: 0 0 14px; }

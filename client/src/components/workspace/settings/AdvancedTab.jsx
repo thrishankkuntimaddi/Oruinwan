@@ -1,12 +1,13 @@
 import React from 'react';
 import { AlertTriangle, Lock } from 'lucide-react';
 
-const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
+// Only the owner can delete a workspace (the server enforces the same).
+const AdvancedTab = ({ isOwner, setShowDeleteConfirm }) => (
     <div style={{ fontFamily: 'var(--font)' }}>
-        {isAdmin ? (
-            <div style={{ border: '1px solid rgba(198,60,60,0.25)', borderRadius: '2px', overflow: 'hidden' }}>
+        {isOwner ? (
+            <div style={{ border: '1px solid var(--state-danger)', borderRadius: '2px', overflow: 'hidden' }}>
                 {}
-                <div style={{ padding: '14px 18px', background: 'rgba(198,60,60,0.08)', borderBottom: '1px solid rgba(198,60,60,0.2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: '14px 18px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <AlertTriangle size={15} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
                     <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--state-danger)', margin: 0 }}>Danger Zone</h3>
                 </div>
@@ -16,7 +17,7 @@ const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                         Deleting a workspace is <strong style={{ color: 'var(--text-primary)' }}>permanent</strong> and cannot be undone.
                         All messages, files, and data will be lost forever.{' '}
-                        <strong style={{ color: 'var(--state-danger)' }}>Only administrators can perform this action.</strong>
+                        <strong style={{ color: 'var(--state-danger)' }}>Only the workspace owner can do this.</strong>
                     </p>
                 </div>
 
@@ -28,7 +29,7 @@ const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
                     </div>
                     <button
                         onClick={() => setShowDeleteConfirm(true)}
-                        style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: '#fff', background: 'var(--state-danger)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', flexShrink: 0, transition: '150ms ease' }}
+                        style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--bg-base)', background: 'var(--state-danger)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', flexShrink: 0, transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
@@ -39,8 +40,8 @@ const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
         ) : (
             <div style={{ padding: '32px', textAlign: 'center', border: '1px solid var(--border-subtle)', borderRadius: '2px', background: 'var(--bg-active)' }}>
                 <Lock size={24} style={{ color: 'var(--text-muted)', marginBottom: '10px' }} />
-                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Admin Access Required</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Only workspace administrators can access advanced settings.</p>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Owner only</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Only the workspace owner can delete this workspace.</p>
             </div>
         )}
     </div>

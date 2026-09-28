@@ -1,5 +1,8 @@
-export const formatTime = (iso) =>
-  new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+import { getUserPreferences } from "../../../../hooks/useUserPreferences";
+import { formatTime as formatUserTime } from "../../../../utils/userDateFormat";
+
+/** Clock time in the user's time zone and 12/24-hour choice (Settings → Language & region). */
+export const formatTime = (iso) => formatUserTime(iso, getUserPreferences().region);
 
 export const isSameDay = (aIso, bIso) =>
   new Date(aIso).toDateString() === new Date(bIso).toDateString();

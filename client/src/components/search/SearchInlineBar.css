@@ -194,3 +194,8 @@ mark.sib-highlight {
   color: var(--accent);
   border-radius: 2px; padding: 0 1px;
 }
+
+.sib-error {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--state-danger);
+}

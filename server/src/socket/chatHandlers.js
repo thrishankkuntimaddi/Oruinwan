@@ -7,6 +7,7 @@ const logger = require("../../utils/logger");
 const messagesService = require("../modules/messages/messages.service");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
+const privacyService = require("../features/auth/privacy.service");
 
 
 const activityService = require("../features/activity/activity.service");
@@ -51,6 +52,28 @@ async function loadAuthorizedMessage(messageId, uid, select = "channel dm worksp
     return { message, channel: null, dm, room: `dm:${message.dm}` };
   }
   return null;
+}
+
+/** False when the user turned read receipts off (their reads are not broadcast to others). */
+async function sharesReadReceipts(uid) {
+  try {
+    const privacy = await privacyService.getPrivacy(uid);
+    return privacy.readReceipts !== false;
+  } catch (err) {
+    logger.warn({ err: err.message }, "[PRIVACY] read-receipt preference lookup failed");
+    return true;
+  }
+}
+
+/** False when the user turned typing indicators off. */
+async function sharesTyping(uid) {
+  try {
+    const privacy = await privacyService.getPrivacy(uid);
+    return privacy.typingIndicators !== false;
+  } catch (err) {
+    logger.warn({ err: err.message }, "[PRIVACY] typing preference lookup failed");
+    return true;
+  }
 }
 
 module.exports = function registerChatHandlers(io, socket) {
@@ -266,7 +289,9 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
       const room = `workspace:${workspaceId}`;
-      socket.join(room);
+      // Some emitters (channels, automations, tasks, socketHelpers) use the older
+      // `workspace_<id>` name; join both so those events reach members too.
+      socket.join([room, `workspace_${workspaceId}`]);
       logger.info(`✅ [join-workspace] User ${userId} joined ${room}`);
     } catch (err) {
       logger.error("Error joining workspace room:", err);
@@ -442,10 +467,13 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   
-  socket.on("mark-chat-read", async ({ type, id } = {}) => {
+  // `receipts: false` (or preferences.privacy.readReceipts === false) still records the read
+  // for the reader's own unread counts, but does not tell anyone else.
+  socket.on("mark-chat-read", async ({ type, id, receipts } = {}) => {
     try {
       const readerId = userId;
       if (!id) return;
+      const broadcastRead = receipts !== false && await sharesReadReceipts(readerId);
 
       if (type === "dm") {
         const dm = await DMSession.findById(id).select("participants").lean();
@@ -456,7 +484,9 @@ module.exports = function registerChatHandlers(io, socket) {
           { $addToSet: { readBy: readerId } }
         );
 
-        io.to(`dm:${id}`).emit("read-update", { readerId, dmSessionId: id });
+        if (broadcastRead) {
+          io.to(`dm:${id}`).emit("read-update", { readerId, dmSessionId: id });
+        }
         // Other tabs/devices of the reader drop their unread badge too.
         io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "dm", conversationId: String(id) });
 
@@ -469,7 +499,9 @@ module.exports = function registerChatHandlers(io, socket) {
           { $addToSet: { readBy: readerId } }
         );
 
-        io.to(`channel:${id}`).emit("read-update", { readerId, channelId: id });
+        if (broadcastRead) {
+          io.to(`channel:${id}`).emit("read-update", { readerId, channelId: id });
+        }
         io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "channel", conversationId: String(id) });
       }
     } catch (err) {
@@ -478,7 +510,7 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   
-  socket.on("message-read", async ({ messageId } = {}) => {
+  socket.on("message-read", async ({ messageId, receipts } = {}) => {
     try {
       const readerId = userId;
       const ctx = await loadAuthorizedMessage(messageId, readerId);
@@ -486,7 +518,12 @@ module.exports = function registerChatHandlers(io, socket) {
 
       await Message.updateOne({ _id: messageId }, { $addToSet: { readBy: readerId } });
 
-      io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId] });
+      if (receipts !== false && await sharesReadReceipts(readerId)) {
+        io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId] });
+      } else {
+        // Only the reader's own tabs/devices learn about it.
+        io.to(`user:${readerId}`).emit("read-update", { readerId, messageIds: [messageId] });
+      }
     } catch (err) {
       logger.error("message-read ERROR:", err);
     }
@@ -498,6 +535,9 @@ module.exports = function registerChatHandlers(io, socket) {
       const room = dmSessionId ? `dm:${dmSessionId}` : channelId ? `channel:${channelId}` : null;
       // Only rooms this socket was admitted to (join handlers enforce membership).
       if (!room || !socket.rooms.has(room)) return;
+
+      // Privacy: users who turned typing indicators off are never relayed.
+      if (!(await sharesTyping(userId))) return;
 
       if (socket.data.username === undefined) {
         const u = await User.findById(userId).select("username").lean();

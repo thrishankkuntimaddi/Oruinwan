@@ -31,10 +31,10 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <div style={{ flexShrink: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: open ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', transition: 'background 150ms ease' }}>
+                    <div style={{ flexShrink: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: open ? 'var(--accent-dim)' : 'var(--bg-active)', transition: 'background 150ms ease' }}>
                         <ChevronRight
                             size={12}
-                            style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', color: open ? '#b8956a' : 'rgba(228,228,228,0.35)' }}
+                            style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', color: open ? 'var(--accent)' : 'var(--text-muted)' }}
                         />
                     </div>
                     <input
@@ -43,15 +43,15 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         onChange={e => { e.stopPropagation(); setTitle(e.target.value); }}
                         onClick={e => e.stopPropagation()}
                         placeholder="Section title..."
-                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}
-                        className="placeholder-gray-700"
+                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
+                        className="placeholder:text-[var(--text-muted)]"
                     />
                     <button
                         onClick={e => { e.stopPropagation(); onRemoveBlock(block.id); }}
                         style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
-                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <Trash2 size={11} />
                     </button>
@@ -64,7 +64,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             value={body}
                             onChange={e => setBody(e.target.value)}
                             placeholder="Add content..."
-                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'Inter, system-ui, sans-serif' }}
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'var(--font)' }}
                             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                             autoFocus
                         />

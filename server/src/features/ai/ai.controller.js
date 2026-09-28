@@ -15,6 +15,23 @@ const aiConfig = require('../../../../ai/config');
 const activityService = require('../activity/activity.service');
 const aiSummarizer = require('./ai.summarizer.service');
 const resolver = require('./ai.provider.resolver');
+const conversationAI = require('./ai.conversation.service');
+const memoryService = require('./ai.memory.service');
+const knowledgeService = require('./ai.knowledge.service');
+
+/**
+ * Personal context for the user's private assistant chat: their saved memories
+ * and workspace knowledge relevant to the message (only sources they can see).
+ * Never used for answers posted into shared conversations.
+ */
+async function privateChatExtras(req, message) {
+  const workspaceId = req.aiWorkspace?.id || null;
+  const [memories, knowledge] = await Promise.all([
+    memoryService.promptLines(req.user.sub, workspaceId).catch((err) => { logger.warn({ err }, '[AI] could not load memories'); return []; }),
+    workspaceId ? knowledgeService.contextFor(workspaceId, req.user.sub, message) : [],
+  ]);
+  return { memories, knowledge };
+}
 const AIUsage = require('../../models/AIUsage');
 const Workspace = require('../../../models/Workspace');
 
@@ -101,7 +118,7 @@ exports.chat = async (req, res) => {
   try {
     const payload = chatPayload(req);
     if (!payload.message) return res.status(400).json({ message: 'message is required' });
-    const result = await gateway.chat(payload, ctxFor(req));
+    const result = await gateway.chat(payload, ctxFor(req, await privateChatExtras(req, payload.message)));
     emitActivity(req, 'chat', { prompt: str(payload.message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
     return res.json({ text: result.text, actionsExecuted: result.actionsExecuted || null, provider: result.event?.payload?.provider });
   } catch (err) {
@@ -142,7 +159,9 @@ exports.chatStream = async (req, res) => {
   const ping = setInterval(() => { if (!closed) res.write(': ping\n\n'); }, 15_000);
 
   try {
+    const extras = await privateChatExtras(req, payload.message);
     const result = await gateway.chat(payload, ctxFor(req, {
+      ...extras,
       signal: abort.signal,
       onToken: (t) => send('token', { t }),
       onEvent: (e) => {
@@ -151,7 +170,7 @@ exports.chatStream = async (req, res) => {
       },
     }));
     emitActivity(req, 'chat', { prompt: str(payload.message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
-    send('done', { text: result.text, actionsExecuted: result.actionsExecuted || null, provider: result.event?.payload?.provider });
+    send('done', { text: result.text, actionsExecuted: result.actionsExecuted || null, provider: result.event?.payload?.provider, sources: sourcesOf(extras.knowledge) });
   } catch (err) {
     if (err?.code !== 'AI_ABORTED' && !abort.signal.aborted) {
       logger.error({ err }, '[AI] chat stream failed');
@@ -163,6 +182,11 @@ exports.chatStream = async (req, res) => {
   }
 };
 
+/** Knowledge the answer was grounded on (for "Sources" chips in the panel). */
+function sourcesOf(knowledge) {
+  return (knowledge || []).map((k) => ({ type: k.type, id: k.id, title: k.title }));
+}
+
 /** Map an AI failure to the `{ message, code }` shape used by the stream's error event. */
 function streamError(err) {
   if (err?.code === 'AI_ENGINE_UNAVAILABLE') return { message: 'The Oruinwan AI engine is offline right now. Please try again in a moment.', code: err.code };
@@ -170,6 +194,77 @@ function streamError(err) {
   if (err?.status === 429) return { message: 'The AI is busy. Try again shortly.', code: 'AI_PROVIDER_RATE_LIMITED' };
   return { message: 'The AI could not answer that. Please try again.', code: 'AI_FAILED', ...(isProduction ? {} : { detail: err?.message }) };
 }
+
+/**
+ * Mentioned in a conversation: start an in-conversation reply. The answer is
+ * streamed to the conversation's socket room (`ai:reply`) and then stored as
+ * an encrypted message from the Oruinwan AI account. Responds 202 at once.
+ */
+exports.reply = async (req, res) => {
+  try {
+    const b = req.body || {};
+    const { replyId } = await conversationAI.startReply({
+      conversationType: b.conversationType === 'dm' ? 'dm' : b.conversationType === 'channel' ? 'channel' : null,
+      conversationId: str(b.conversationId, 64),
+      parentId: str(b.parentId, 64) || null,
+      triggerMessageId: str(b.triggerMessageId, 64) || null,
+      conversationName: str(b.conversationName, 100) || undefined,
+      prompt: str(b.prompt, 4000),
+      messages: cleanMessages(b.messages).slice(-40),
+    }, {
+      userId: req.user.sub,
+      workspaceId: req.aiWorkspace?.id || null,
+      workspaceName: req.aiWorkspace?.name,
+      io: req.app?.get('io') || null,
+      req,
+      aiContext: req.aiContext || {},
+    });
+    return res.status(202).json({ replyId });
+  } catch (err) {
+    if (err?.status && err.status < 500) return res.status(err.status).json({ message: err.message, ...(err.code && { code: err.code }) });
+    return sendError(res, err, 'reply');
+  }
+};
+
+/* ── Personal memory (Settings → AI) ───────────────────────────────────── */
+
+function memoryError(res, err) {
+  if (err?.status && err.status < 500) return res.status(err.status).json({ message: err.message, ...(err.code && { code: err.code }) });
+  logger.error({ err }, '[AI] memory request failed');
+  return res.status(500).json({ message: 'Could not update AI memory' });
+}
+
+exports.listMemories = async (req, res) => {
+  try {
+    return res.json({ memories: await memoryService.list(req.user.sub, req.aiWorkspace?.id || null), max: memoryService.MAX_PER_USER });
+  } catch (err) { return memoryError(res, err); }
+};
+
+exports.addMemory = async (req, res) => {
+  try {
+    const { text, scope } = req.body || {};
+    const memory = await memoryService.add(req.user.sub, { text: str(text, 600), scope: scope === 'workspace' ? 'workspace' : 'everywhere', workspaceId: req.aiWorkspace?.id || null, source: 'user' });
+    return res.status(201).json({ memory });
+  } catch (err) { return memoryError(res, err); }
+};
+
+exports.updateMemory = async (req, res) => {
+  try {
+    return res.json({ memory: await memoryService.update(req.user.sub, req.params.id, { text: str(req.body?.text, 600) }) });
+  } catch (err) { return memoryError(res, err); }
+};
+
+exports.deleteMemory = async (req, res) => {
+  try {
+    return res.json(await memoryService.remove(req.user.sub, req.params.id));
+  } catch (err) { return memoryError(res, err); }
+};
+
+exports.clearMemories = async (req, res) => {
+  try {
+    return res.json(await memoryService.clear(req.user.sub));
+  } catch (err) { return memoryError(res, err); }
+};
 
 exports.clearMemory = async (req, res) => {
   gateway.clearMemory({ userId: req.user.sub, workspaceId: req.aiWorkspace?.id || null });
@@ -336,6 +431,17 @@ exports.taskAssist = async (req, res) => {
 
 /* ── Settings / capabilities / usage ───────────────────────────────────── */
 
+/** scheme://host[:port] of an engine URL — never credentials, path or query. */
+function publicEndpoint(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return null;
+  }
+}
+
 async function settingsView(workspaceId) {
   const ws = await Workspace.findById(workspaceId).select('settings.ai').lean();
   const ai = { enabled: true, provider: 'default', model: null, smartReplies: true, ...(ws?.settings?.ai || {}) };
@@ -345,7 +451,7 @@ async function settingsView(workspaceId) {
   return {
     ...ai,
     effective: { provider: resolved.providerName, model: resolved.model || modelsFor(resolved.providerName).chat, source: resolved.source },
-    defaultProvider: { name: aiConfig.provider, configured: !!aiConfig.keys[aiConfig.provider] || aiConfig.provider === 'mock', models: modelsFor(aiConfig.provider) },
+    defaultProvider: { name: aiConfig.provider, configured: !!aiConfig.keys[aiConfig.provider] || aiConfig.provider === 'mock', models: modelsFor(aiConfig.provider), baseUrl: publicEndpoint(aiConfig.endpoints?.[aiConfig.provider === 'claude' ? 'anthropic' : aiConfig.provider]) },
     available: listProviders().filter((n) => n !== 'mock').map((name) => ({ name, models: modelsFor(name), connected: connected.some((c) => c.provider === name && c.status === 'active') })),
     connected,
   };

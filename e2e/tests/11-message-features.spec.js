@@ -47,6 +47,8 @@ test.describe('message features', () => {
   test('the sandbox cannot reach the app', async () => {
     await sendLines(alice, ['```js', 'console.log(typeof localStorage === "undefined" ? "no storage" : (() => { try { return localStorage.getItem("accessToken") || "empty"; } catch (e) { return "blocked"; } })())', '```']);
     const block = bob.getByTestId('code-block').last();
+    // Wait for this message to arrive, or .last() may still be the previous block.
+    await expect(block).toContainText('accessToken');
     await block.getByTitle('Run in sandbox').click();
     await expect(bob.getByTestId('code-output').last()).toHaveText(/blocked|no storage|empty|sandboxed/);
     await expect(bob.getByTestId('code-output').last()).not.toContainText('ey'); // never a token

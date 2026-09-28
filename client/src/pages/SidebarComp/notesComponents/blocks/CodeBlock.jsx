@@ -60,7 +60,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                         <button
                                             key={l}
                                             onClick={() => setLang(l)}
-                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '11px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', background: l === lang ? 'rgba(184,149,106,0.1)' : 'transparent', color: l === lang ? '#b8956a' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', transition: 'background 100ms ease' }}
+                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '11px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', background: l === lang ? 'var(--accent-dim)' : 'transparent', color: l === lang ? 'var(--accent)' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', transition: 'background 100ms ease' }}
                                             onMouseEnter={e => { if (l !== lang) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                             onMouseLeave={e => { if (l !== lang) e.currentTarget.style.background = 'transparent'; }}
                                         >
@@ -80,11 +80,11 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 500,
                                 padding: '4px 10px', background: copied ? 'rgba(52,211,153,0.1)' : 'transparent',
-                                color: copied ? '#34d399' : 'rgba(228,228,228,0.4)', border: `1px solid ${copied ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                                color: copied ? 'var(--state-success)' : 'var(--text-muted)', border: `1px solid ${copied ? 'rgba(52,211,153,0.25)' : 'var(--border-default)'}`,
                                 cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'monospace',
                             }}
-                            onMouseEnter={e => { if (!copied) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; } }}
-                            onMouseLeave={e => { if (!copied) { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; } }}
+                            onMouseEnter={e => { if (!copied) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; } }}
+                            onMouseLeave={e => { if (!copied) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; } }}
                         >
                             {copied ? <><Check size={11} />Copied</> : <><Copy size={11} />Copy</>}
                         </button>
@@ -92,8 +92,8 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             onClick={() => onRemoveBlock(block.id)}
                             style={{ padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                             className="group-hover:!opacity-100"
-                            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                         >
                             <Trash2 size={12} />
                         </button>

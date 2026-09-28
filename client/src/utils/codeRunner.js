@@ -3,8 +3,10 @@
 // storage or the app's DOM. It is removed after the run or after a timeout, and its
 // console output is returned.
 
-const TIMEOUT_MS = 3000;
-const READY_MS = 1000;
+const TIMEOUT_MS = 5000;
+// How long the sandbox may take to start before we assume a security policy
+// (CSP) blocks it. Slow or busy devices can need more than a second.
+const READY_MS = 2500;
 
 function sandboxDocument(id, code) {
     // The snippet travels as a JSON string literal ("<" escaped so it cannot close the

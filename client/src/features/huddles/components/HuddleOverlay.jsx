@@ -34,72 +34,65 @@ export default function HuddleOverlay({
 
     if (!active) return null;
 
+    const btn = {
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px 10px',
+        fontSize: '12px', fontWeight: 600, borderRadius: '2px', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif',
+    };
+    const neutral = { background: 'var(--bg-active)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
+    const off = { background: 'transparent', color: 'var(--state-danger)', border: '1px solid var(--state-danger)' };
+
     return (
         <div
             data-testid="huddle-overlay"
-            className={`fixed bottom-4 left-4 z-50 flex flex-col bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${minimised ? 'w-52' : isVideo ? 'w-96' : 'w-64'}`}
-            style={{ minWidth: 208 }}
+            style={{
+                position: 'fixed', bottom: '16px', left: '16px', zIndex: 50, display: 'flex', flexDirection: 'column',
+                width: minimised ? 208 : isVideo ? 384 : 256, minWidth: 208, overflow: 'hidden',
+                background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px',
+                boxShadow: 'var(--card-shadow)', fontFamily: 'Inter, system-ui, sans-serif', transition: 'width 200ms ease',
+            }}
         >
-            {}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-green-600/20 border-b border-white/10">
-                <Radio size={13} className="text-green-400 flex-shrink-0 animate-pulse" />
-                <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white truncate">
-                        {channelName ? `# ${channelName}` : 'Huddle'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', borderLeft: '3px solid var(--state-success)' }}>
+                <Radio size={13} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {channelName ? `# ${channelName.replace(/^#\s*/, '')}` : 'Huddle'}
                     </p>
-                    <p className="text-[10px] text-green-400">{formatDuration(elapsed)}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{formatDuration(elapsed)}</p>
                 </div>
                 <button
                     onClick={() => setMinimised(m => !m)}
-                    className="text-white/50 hover:text-white transition p-1"
+                    style={{ display: 'flex', padding: '4px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
                     title={minimised ? 'Expand' : 'Minimise'}
                 >
                     {minimised ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
             </div>
 
-            {}
             {!minimised && (
-                <>
-                    {}
-                    <div className="px-3 py-2.5">
-                        <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wider">
-                            {participants.length} {participants.length === 1 ? 'participant' : 'participants'}
-                        </p>
-                        {isVideo ? (
-                            <div className="grid grid-cols-2 gap-1.5">
-                                {participants.map(p => (
-                                    <VideoTile
-                                        key={p.userId}
-                                        isLocal={!!p.isLocal}
-                                        name={p.username}
-                                        stream={p.isLocal ? localStream : remoteStreams[p.userId]}
-                                        cameraOn={p.isLocal ? cameraOn : p.videoEnabled !== false}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <HuddleParticipants participants={participants} />
-                        )}
-                    </div>
-
-                    {}
-                    <div className="h-px bg-white/10 mx-3" />
-                </>
+                <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                        {participants.length} {participants.length === 1 ? 'participant' : 'participants'}
+                    </p>
+                    {isVideo ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
+                            {participants.map(p => (
+                                <VideoTile
+                                    key={p.userId}
+                                    isLocal={!!p.isLocal}
+                                    name={p.username}
+                                    stream={p.isLocal ? localStream : remoteStreams[p.userId]}
+                                    cameraOn={p.isLocal ? cameraOn : p.videoEnabled !== false}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <HuddleParticipants participants={participants} />
+                    )}
+                </div>
             )}
 
-            {}
-            <div className="flex items-center justify-between px-3 py-2.5 gap-2">
-                {}
-                <button
-                    onClick={onToggleMute}
-                    title={muted ? 'Unmute' : 'Mute'}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex-1 justify-center
-                        ${muted
-                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                            : 'bg-white/10 text-white hover:bg-white/20'
-                        }`}
-                >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px' }}>
+                <button onClick={onToggleMute} title={muted ? 'Unmute' : 'Mute'} style={{ ...btn, ...(muted ? off : neutral), flex: 1 }}>
                     {muted ? <MicOff size={13} /> : <Mic size={13} />}
                     <span>{muted ? 'Unmute' : 'Mute'}</span>
                 </button>
@@ -108,18 +101,16 @@ export default function HuddleOverlay({
                     <button
                         onClick={onToggleCamera}
                         title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all justify-center
-                            ${cameraOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                        style={{ ...btn, ...(cameraOn ? neutral : off) }}
                     >
                         {cameraOn ? <Video size={13} /> : <VideoOff size={13} />}
                     </button>
                 )}
 
-                {}
                 <button
                     onClick={onLeave}
                     title="Leave huddle"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-700 text-white transition-all"
+                    style={{ ...btn, background: 'var(--state-danger)', color: '#fff', border: '1px solid var(--state-danger)' }}
                 >
                     <PhoneOff size={13} />
                     <span>Leave</span>

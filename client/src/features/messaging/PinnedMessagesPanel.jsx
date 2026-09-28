@@ -39,13 +39,14 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
   };
 
   return (
-    <div data-testid="pinned-panel" style={{
-      position: 'fixed', right: 0, top: 0, bottom: 0, width: 320,
+    // Side column inside the conversation window (next to the messages), like the thread panel.
+    <div data-testid="pinned-panel" role="complementary" aria-label="Pinned messages" style={{
+      width: 'clamp(280px, 32vw, 360px)', flexShrink: 0, height: '100%', overflow: 'hidden',
       backgroundColor: 'var(--bg-surface)',
       borderLeft: '1px solid var(--border-accent)',
       display: 'flex', flexDirection: 'column',
-      zIndex: 900, boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
       fontFamily: FONT,
+      animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
     }}>
       {}
       <div style={{

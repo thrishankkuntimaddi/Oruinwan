@@ -7,9 +7,10 @@ import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useAIContext } from "../../../contexts/AIContext";
 import { useToast } from "../../../contexts/ToastContext";
 import { Rnd } from "react-rnd";
+import AIMarkdown from "../AIMarkdown";
 import {
   Send, X, Plus, History, Info, Copy, Edit2, CornerUpLeft, Sparkles, List,
-  MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check,
+  MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square,
 } from "lucide-react";
 
 const WELCOME = () => ({ id: 1, sender: "ai", text: "Hi, I'm Oruinwan AI. Ask me anything about your workspace, or use a quick action below.", time: now() });
@@ -22,6 +23,16 @@ const ACTION_LABELS = {
   send_message_to_channel: 'sent channel message', send_direct_message: 'sent direct message', create_task: 'created task',
   list_my_tasks: 'listed tasks', update_task_status: 'updated task', create_note: 'created note', list_recent_notes: 'listed notes',
   search_workspace: 'searched workspace', schedule_meeting: 'scheduled meeting',
+  remember_about_user: 'saved to memory', forget_about_user: 'removed from memory',
+};
+
+// Shown while a tool is running during a streamed answer.
+const TOOL_PROGRESS = {
+  get_current_workspace: 'Checking your workspace', get_user_channels: 'Looking up channels', get_workspace_members: 'Looking up members',
+  send_message_to_channel: 'Sending the message', send_direct_message: 'Sending the message', create_task: 'Creating the task',
+  list_my_tasks: 'Reading your tasks', update_task_status: 'Updating the task', create_note: 'Creating the note', list_recent_notes: 'Reading your notes',
+  search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling the meeting',
+  remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 
 const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPromptConsumed }) => {
@@ -54,6 +65,12 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const [replyingTo, setReplyingTo] = useState(null);
   const [visible, setVisible] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [streamingId, setStreamingId] = useState(null);
+  const abortRef = useRef(null);
+  const busy = isTyping || streamingId !== null;
+
+  // Stop any in-flight answer when the panel closes.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const endRef = useRef(null);
   const textRef = useRef(null);
@@ -77,8 +94,11 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const conversation = aiCtx?.conversation || null;
   const note = aiCtx?.note || null;
   const task = aiCtx?.task || null;
-  const contextLabel = conversation
+  const baseLabel = conversation
     ? (conversation.type === 'dm' ? `DM ${conversation.name || ''}`.trim() : `#${String(conversation.name || 'conversation').replace(/^#+/, '')}`)
+    : null;
+  const contextLabel = conversation
+    ? (aiCtx?.thread ? `Thread in ${baseLabel}` : baseLabel)
     : note ? `Note: ${note.title || 'Untitled'}` : task ? `Task: ${task.title}` : null;
 
   const pushAI = (payload) => setMessages(p => [...p, { id: Date.now() + Math.random(), sender: "ai", time: now(), ...payload }]);
@@ -99,23 +119,62 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);
 
+  const patchMsg = (id, patch) => setMessages(p => p.map(m => (m.id === id ? { ...m, ...(typeof patch === 'function' ? patch(m) : patch) } : m)));
+
   const handleSend = async (text = input) => {
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
     const userMsg = pushUser(text);
     const next = [...messages, userMsg];
     setInput(""); setIsTyping(true);
+    const history = next.filter(m => !(m.id === 1 && m.sender === "ai") && !m.isError && !m.kind && !m.stopped)
+      .map(m => ({ sender: m.sender, text: m.text }));
+    const wantsInsert = /\b(draft|write|reply|respond|compose|rephrase|reword|message)\b/i.test(text);
+
+    const aiId = Date.now() + Math.random();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      setIsTyping(false);
+      setStreamingId(aiId);
+      setMessages(p => [...p, { id: aiId, sender: "ai", time: now(), text: "", streaming: true }]);
+    };
+
     try {
-      const history = next.filter(m => !(m.id === 1 && m.sender === "ai") && !m.isError && !m.kind)
-        .map(m => ({ sender: m.sender, text: m.text }));
-      const data = await aiService.chat(text, history.slice(0, -1), workspaceId, aiCtx?.snapshot?.());
-      setIsTyping(false);
-      const wantsInsert = /\b(draft|write|reply|respond|compose|rephrase|reword|message)\b/i.test(text);
-      pushAI({ text: data.text || '(no reply)', actions: data.actionsExecuted || null, kind: wantsInsert && !data.actionsExecuted ? 'draft' : undefined });
+      const data = await aiService.chatStream({
+        message: text, history: history.slice(0, -1), workspaceId, context: aiCtx?.snapshot?.(), signal: controller.signal,
+        onToken: (_t, full) => { start(); patchMsg(aiId, { text: full, status: null }); },
+        onTool: ({ name, status }) => {
+          start();
+          patchMsg(aiId, { status: status === 'running' ? `${TOOL_PROGRESS[name] || name.replace(/_/g, ' ')}…` : null });
+        },
+      });
+      start();
+      patchMsg(aiId, {
+        text: data.text || '(no reply)', streaming: false, status: null, actions: data.actionsExecuted || null, sources: data.sources || [],
+        kind: wantsInsert && !data.actionsExecuted ? 'draft' : undefined,
+      });
     } catch (err) {
-      setIsTyping(false);
-      pushAI({ text: aiErrorMessage(err, "Sorry, I'm having trouble connecting. Please try again."), isError: true });
+      if (controller.signal.aborted) {
+        if (started) patchMsg(aiId, m => ({ streaming: false, status: null, stopped: true, text: m.text || 'Stopped.' }));
+        else setIsTyping(false);
+      } else {
+        setIsTyping(false);
+        const msg = aiErrorMessage(err, "Sorry, I'm having trouble connecting. Please try again.");
+        if (started) patchMsg(aiId, { streaming: false, status: null, isError: true, text: msg });
+        else pushAI({ text: msg, isError: true });
+      }
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      setStreamingId(null);
     }
-  };  handleSendRef.current = handleSend;
+  };
+
+  const stopAnswer = () => abortRef.current?.abort();
+
+  handleSendRef.current = handleSend;
 
 
   /* ── Quick actions: real endpoints, not canned prompts ────────────── */
@@ -366,10 +425,18 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
                   </div>
                 </div>
               ) : (
-                <div style={{ padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, borderRadius: '2px', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                <div style={{ padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, borderRadius: '2px', whiteSpace: msg.sender === 'ai' && !msg.isError ? 'normal' : 'pre-wrap', wordBreak: 'break-word',
                   background: msg.sender === 'ai' ? 'var(--bg-surface)' : 'var(--bg-active)', color: 'var(--text-primary)',
                   border: `1px solid ${msg.isError ? 'var(--state-danger)' : msg.sender === 'ai' ? 'var(--border-default)' : 'var(--border-accent)'}` }}>
-                  {msg.text}
+                  {msg.sender === 'ai' && !msg.isError
+                    ? <AIMarkdown text={msg.text} streaming={msg.streaming} />
+                    : msg.text}
+                  {msg.status && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: msg.text ? '6px' : 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      <span className="ai-status-dot" /> {msg.status}
+                    </span>
+                  )}
+                  {msg.stopped && <span style={{ display: 'block', marginTop: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>Stopped</span>}
                   {msg.translated && (
                     <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
                       <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Translation</span>{msg.translated}
@@ -406,6 +473,25 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
                   {msg.created?.length > 0 && workspaceId && (
                     <button onClick={() => navigate(`/workspace/${workspaceId}/tasks`)} style={{ ...smallBtn, background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>Open tasks</button>
                   )}
+                </div>
+              )}
+              {msg.sources?.length > 0 && !msg.isError && (
+                <div className="flex flex-wrap items-center gap-1 mt-1.5" aria-label="Sources">
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Sources:</span>
+                  {msg.sources.map((src) => {
+                    const to = !workspaceId ? null
+                      : src.type === 'note' ? `/workspace/${workspaceId}/notes/${src.id}`
+                        : src.type === 'task' ? `/workspace/${workspaceId}/tasks` : null;
+                    const label = `${src.type === 'task' ? 'Task' : src.type === 'note' ? 'Note' : 'Page'}: ${src.title}`;
+                    return to ? (
+                      <button key={`${src.type}-${src.id}`} onClick={() => navigate(to)} title={`Open ${label}`}
+                        style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', border: '1px solid var(--border-default)', background: 'var(--bg-active)', color: 'var(--text-secondary)', cursor: 'pointer', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {label}
+                      </button>
+                    ) : (
+                      <span key={`${src.type}-${src.id}`} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>{label}</span>
+                    );
+                  })}
                 </div>
               )}
               {msg.actions?.length > 0 && (
@@ -469,11 +555,18 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
           <textarea ref={textRef} rows={1} value={input} onChange={e => setInput(e.target.value)}
             placeholder={contextLabel ? `Ask about ${contextLabel}…` : 'Message Oruinwan AI…'}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', resize: 'none', padding: '1px 0', maxHeight: '112px', fontFamily: 'var(--font)' }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
-          <button onClick={() => handleSend()} disabled={!input.trim() || isTyping}
-            style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: '2px', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}>
-            <Send size={14} />
-          </button>
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!busy) handleSend(); } }} />
+          {streamingId !== null || (isTyping && abortRef.current) ? (
+            <button onClick={stopAnswer} aria-label="Stop generating" title="Stop generating"
+              style={{ padding: '5px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', cursor: 'pointer', display: 'flex' }}>
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button onClick={() => handleSend()} disabled={!input.trim()} aria-label="Send"
+              style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: '2px', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}>
+              <Send size={14} />
+            </button>
+          )}
         </div>
         <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>AI can make mistakes. Check important info.</p>
       </div>

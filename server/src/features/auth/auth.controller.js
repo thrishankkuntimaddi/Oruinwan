@@ -21,6 +21,8 @@ const { setRefreshTokenCookie, clearRefreshTokenCookie, isNativeClient, getRefre
 const { sha256 } = require('../../../utils/hashUtils');
 const { handleError } = require('../../../utils/responseHelpers');
 const logger = require('../../shared/utils/logger');
+const { parseDeviceInfo, getClientIP } = require('../../../utils/deviceParser');
+const AuditLog = require('../../../models/AuditLog');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -512,11 +514,28 @@ exports.login = async (req, res) => {
       return res.status(403).json({ message: "Account Suspended." });
     }
 
-    
-    
-    
+    // Two-factor: the password was right, now the authenticator code is required too.
+    // Wrong codes count as failed attempts, so the usual lockout also stops code guessing.
+    if (user.twoFactorEnabled) {
+      const otp = String(req.body.otp || '').replace(/\s+/g, '');
+      if (!otp) {
+        return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
+      }
+      const withSecret = await User.findById(user._id).select('+twoFactorSecret').lean();
+      const { verifyUserTotp } = require('../security/totp');
+      if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
+        user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+        if (user.failedLoginAttempts >= 5) {
+          user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+          user.failedLoginAttempts = 0;
+          logger.warn({ email: user.email }, '[LOGIN] Account locked after 5 failed 2FA codes');
+        }
+        await user.save();
+        return res.status(401).json({ requires2FA: true, invalidCode: true, message: "That code didn't work. Check your authenticator app and try again." });
+      }
+    }
 
-    let redirectTo = "/workspaces"; 
+    let redirectTo = "/workspaces";
     let isAdmin = false;
 
     if (isCompanyAccount) {
@@ -589,6 +608,8 @@ exports.login = async (req, res) => {
       tokenHash: refreshHash,
       expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
       deviceInfo: req.get("User-Agent") || "Unknown",
+      ip: getClientIP(req),
+      startedAt: new Date(),
     });
 
     
@@ -743,10 +764,14 @@ exports.refresh = async (req, res) => {
         logger.debug('[REFRESH] Old token marked for 30s grace period');
       }
 
+      // The rotated token continues the same session: keep when it started.
+      const previous = oldTokenIndex !== -1 ? user.refreshTokens[oldTokenIndex] : null;
       user.refreshTokens.push({
         tokenHash: sha256(newRefresh),
         expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
-        deviceInfo: req.get('User-Agent') || 'Unknown'
+        deviceInfo: req.get('User-Agent') || 'Unknown',
+        ip: getClientIP(req),
+        startedAt: previous ? (previous.startedAt || previous.createdAt) : new Date(),
       });
 
       
@@ -918,14 +943,67 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+const THEMES = ['light', 'dark', 'auto'];
+const TEXT_SIZES = ['small', 'default', 'large', 'larger'];
+
+/**
+ * True when the account has a password the user chose (or was given). OAuth sign-ups get a
+ * random or placeholder hash they never learn, so those only count once passwordSetAt is set.
+ */
+function computeHasPassword(user) {
+  const hash = user?.passwordHash;
+  if (!hash || typeof hash !== 'string' || !hash.startsWith('$2')) return false;
+  if (user.authProvider && user.authProvider !== 'local' && !user.passwordSetAt) return false;
+  return true;
+}
+
+/** preferences as the client sees them, with every default filled in. */
+function serializePreferences(prefs) {
+  const { privacyWithDefaults } = require('./privacy.service');
+  const { regionWithDefaults } = require('./accountPreferences');
+  const { NOTIFICATION_PREF_DEFAULTS } = require('./notificationPreferences');
+  const p = prefs && typeof prefs.toObject === 'function' ? prefs.toObject() : (prefs || {});
+  const notifications = { ...NOTIFICATION_PREF_DEFAULTS };
+  for (const k of Object.keys(NOTIFICATION_PREF_DEFAULTS)) {
+    if (typeof p.notifications?.[k] === 'boolean') notifications[k] = p.notifications[k];
+  }
+  return {
+    theme: THEMES.includes(p.theme) ? p.theme : 'light',
+    appearance: { textSize: TEXT_SIZES.includes(p.appearance?.textSize) ? p.appearance.textSize : 'default' },
+    privacy: privacyWithDefaults(p.privacy),
+    region: regionWithDefaults(p.region),
+    notifications,
+  };
+}
+
+exports.computeHasPassword = computeHasPassword;
+exports.serializePreferences = serializePreferences;
+
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub)
-      .select("-passwordHash -refreshTokens -twoFactorSecret -otpCodes -inviteToken -resetPasswordTokenHash -verificationTokenHash -deviceTokens")
+    const userObject = await loadMe(req.user.sub);
+    if (!userObject) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.json(userObject);
+  } catch (_err) {
+    logger.error("GET ME ERROR:", _err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * The signed-in user's own record, sanitised: no secrets, plus `hasPassword` and
+ * `preferences` with defaults. Used by GET /me and returned by PUT /me.
+ */
+async function loadMe(userId) {
+    // passwordHash is loaded only to compute hasPassword; it is deleted below.
+    const user = await User.findById(userId)
+      .select("-refreshTokens -twoFactorSecret -otpCodes -inviteToken -resetPasswordTokenHash -verificationTokenHash -deviceTokens")
       .populate('companyId', 'name displayName logo domain verificationStatus isSetupComplete setupStep defaultWorkspace plan isActive');
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return null;
     }
 
     
@@ -1068,150 +1146,238 @@ exports.getMe = async (req, res) => {
       logger.info(`📞 Migrated phone (no prefix) for user ${user.email}: ${extractedCode} ${extractedPhone}`);
     }
 
-    return res.json(userObject);
-  } catch (_err) {
-    logger.error("GET ME ERROR:", _err);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
+    userObject.hasPassword = computeHasPassword(user);
+    userObject.preferences = serializePreferences(user.preferences);
+    delete userObject.passwordHash;
+
+    return userObject;
+}
+
+const PHONE_RE = /^[0-9][0-9 -]{2,18}[0-9]$/;
+const PHONE_CODE_RE = /^\+[1-9][0-9]{0,2}$/;
 
 exports.updateMe = async (req, res) => {
   try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
     const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    
-    if (req.body.username !== undefined) user.username = req.body.username;
-    if (req.body.phone !== undefined) user.phone = req.body.phone;
-    if (req.body.phoneCode !== undefined) user.phoneCode = req.body.phoneCode;
-
-    
-    if (!user.profile) user.profile = {};
-
-    
-    if (req.body.dob !== undefined && req.body.dob !== "") {
-      const dob = new Date(req.body.dob);
-      const today = new Date();
-
-      
-      if (isNaN(dob.getTime())) {
-        return res.status(400).json({ message: "Invalid date of birth" });
+    if (body.username !== undefined) {
+      const username = typeof body.username === 'string' ? body.username.trim() : '';
+      if (username.length < 2 || username.length > 50) {
+        return res.status(400).json({ message: "Name must be between 2 and 50 characters" });
       }
-
-      const age = today.getFullYear() - dob.getFullYear();
-
-      if (dob > today) {
-        return res.status(400).json({ message: "Date of birth cannot be in the future" });
-      }
-      if (age < 13) {
-        return res.status(400).json({ message: "You must be at least 13 years old" });
-      }
-
-      user.profile.dob = dob;
+      user.username = username;
     }
 
-    
-    if (req.body.about !== undefined && req.body.about !== "") {
-      const about = req.body.about.trim();
+    // Phone: '' or null clears it. The field has a unique sparse index, so it is unset
+    // rather than stored as '' (two '' values would collide).
+    let phoneChanged = false;
+    if (body.phone !== undefined) {
+      const raw = body.phone === null ? '' : String(body.phone).trim();
+      if (raw === '') {
+        user.phone = undefined;
+      } else {
+        const digits = raw.replace(/[\s-]/g, '');
+        if (!PHONE_RE.test(raw) || raw.length < 4 || raw.length > 20 || digits.length < 4) {
+          return res.status(400).json({ message: "Phone number must be 4-20 characters: digits, spaces or dashes" });
+        }
+        if (digits !== user.phone) {
+          user.phone = digits;
+          phoneChanged = true;
+        }
+      }
+    }
+    if (body.phoneCode !== undefined && body.phoneCode !== null && body.phoneCode !== '') {
+      const code = String(body.phoneCode).trim();
+      if (!PHONE_CODE_RE.test(code)) {
+        return res.status(400).json({ message: "Country code must look like +1 to +999" });
+      }
+      user.phoneCode = code;
+    }
+
+    if (!user.profile) user.profile = {};
+
+    if (body.dob !== undefined) {
+      if (body.dob === '' || body.dob === null) {
+        user.profile.dob = undefined;
+      } else {
+        const dob = new Date(body.dob);
+        const today = new Date();
+        if (isNaN(dob.getTime())) {
+          return res.status(400).json({ message: "Invalid date of birth" });
+        }
+        const age = today.getFullYear() - dob.getFullYear();
+        if (dob > today) {
+          return res.status(400).json({ message: "Date of birth cannot be in the future" });
+        }
+        if (age < 13) {
+          return res.status(400).json({ message: "You must be at least 13 years old" });
+        }
+        user.profile.dob = dob;
+      }
+    }
+
+    // About: '' clears it.
+    if (body.about !== undefined) {
+      const about = body.about === null ? '' : String(body.about).trim();
       if (about.length > 500) {
         return res.status(400).json({ message: "About section must be 500 characters or less" });
       }
       user.profile.about = about;
     }
 
-    
-    if (req.body.address !== undefined) {
-      user.profile.address = req.body.address;
+    if (body.address !== undefined) {
+      const address = body.address === null ? '' : String(body.address).trim();
+      if (address.length > 300) return res.status(400).json({ message: "Address must be 300 characters or less" });
+      user.profile.address = address;
+    }
+    if (body.company !== undefined) {
+      const company = body.company === null ? '' : String(body.company).trim();
+      if (company.length > 100) return res.status(400).json({ message: "Company must be 100 characters or less" });
+      user.profile.company = company;
+    }
+    if (body.showCompany !== undefined) {
+      if (typeof body.showCompany !== 'boolean') return res.status(400).json({ message: "showCompany must be a boolean" });
+      user.profile.showCompany = body.showCompany;
     }
 
-    if (req.body.company !== undefined) user.profile.company = req.body.company;
-    if (req.body.showCompany !== undefined) user.profile.showCompany = req.body.showCompany;
-
-    
     if (!user.preferences) user.preferences = {};
-    if (req.body.preferences) {
-      if (req.body.preferences.theme) user.preferences.theme = req.body.preferences.theme;
+    if (body.preferences && typeof body.preferences === 'object') {
+      if (body.preferences.theme !== undefined) {
+        if (!THEMES.includes(body.preferences.theme)) {
+          return res.status(400).json({ message: `theme must be one of: ${THEMES.join(', ')}` });
+        }
+        user.preferences.theme = body.preferences.theme;
+      }
+      const textSize = body.preferences.appearance?.textSize;
+      if (textSize !== undefined) {
+        if (!TEXT_SIZES.includes(textSize)) {
+          return res.status(400).json({ message: `appearance.textSize must be one of: ${TEXT_SIZES.join(', ')}` });
+        }
+        user.set('preferences.appearance.textSize', textSize);
+      }
     }
 
-    
-    if (req.body.phone !== undefined && req.body.phone) {
-      const existingUser = await User.findOne({
-        phone: req.body.phone,
-        _id: { $ne: user._id } 
-      });
-
+    if (phoneChanged) {
+      const existingUser = await User.findOne({ phone: user.phone, _id: { $ne: user._id } }).select('_id').lean();
       if (existingUser) {
-        return res.status(409).json({ message: "Phone number already in use by another account" });
+        return res.status(409).json({ message: "That phone number is already used by another account" });
       }
     }
 
     await saveWithRetry(user);
 
+    const me = await loadMe(user._id);
     return res.json({
       message: "Profile updated",
+      // Same shape as GET /me, plus the flat profile fields older clients read.
       user: {
+        ...me,
         id: user._id,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        phoneCode: user.phoneCode,
-        dob: user.profile?.dob || "",
-        about: user.profile?.about || "",
-        address: user.profile?.address || "",
-        company: user.profile?.company || "",
-        showCompany: user.profile?.showCompany ?? true,
-        verified: user.verified,
-        roles: user.roles,
-        userStatus: user.userStatus,
-        preferences: user.preferences
+        dob: me?.profile?.dob || "",
+        about: me?.profile?.about || "",
+        address: me?.profile?.address || "",
+        company: me?.profile?.company || "",
+        showCompany: me?.profile?.showCompany ?? true,
       }
     });
 
   } catch (_err) {
-    logger.error("UPDATE PROFILE ERROR:", _err);
-    logger.error("Error details:", {
-      name: _err.name,
-      code: _err.code,
-      message: _err.message
-    });
+    logger.error({ err: _err.message, code: _err.code }, "UPDATE PROFILE ERROR");
 
-    
     if (_err.code === 11000) {
       const field = Object.keys(_err.keyPattern || {})[0];
+      if (field === 'phone') {
+        return res.status(409).json({ message: "That phone number is already used by another account" });
+      }
       return res.status(409).json({
         message: `That ${field} is already in use by another account`
       });
     }
+    if (_err.name === 'ValidationError') {
+      return res.status(400).json({ message: _err.message });
+    }
 
-    return res.status(500).json({ message: _err.message || "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
+/**
+ * Keep only the session the request came from (its refresh token), revoking every other.
+ * Returns the number of sessions revoked.
+ */
+function keepOnlyCurrentSession(req, user) {
+  const token = getRefreshTokenFromRequest(req);
+  const currentHash = token ? sha256(token) : null;
+  const before = user.refreshTokens.length;
+  user.refreshTokens = user.refreshTokens.filter(t => currentHash && t.tokenHash === currentHash);
+  user.markModified('refreshTokens');
+  return before - user.refreshTokens.length;
+}
+
+function isStrongPassword(pw) {
+  return typeof pw === 'string' &&
+    pw.length >= 8 &&
+    pw.length <= 16 &&
+    /[A-Z]/.test(pw) &&
+    /\d/.test(pw) &&
+    /[^A-Za-z0-9]/.test(pw);
+}
+const PASSWORD_RULE = "Password must be 8-16 characters with an uppercase letter, a number and a special character";
+
+async function auditAuthEvent(req, userId, action, description, severity = 'info') {
+  try {
+    await AuditLog.create({
+      userId,
+      action,
+      resource: 'User',
+      resourceId: userId,
+      description,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      category: 'security',
+      severity,
+    });
+  } catch (err) {
+    logger.warn({ err: err.message, action }, '[AUDIT] Could not write auth event');
+  }
+}
+
 exports.updatePassword = async (req, res) => {
   try {
-    
-    const { currentPassword, oldPassword, newPassword } = req.body;
+    const { currentPassword, oldPassword, newPassword } = req.body || {};
     const passwordToCheck = currentPassword || oldPassword;
 
+    if (typeof passwordToCheck !== 'string' || !passwordToCheck || typeof newPassword !== 'string' || !newPassword) {
+      return res.status(400).json({ message: "Current password and new password are required" });
+    }
+
     const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!computeHasPassword(user)) {
+      return res.status(400).json({ message: "Your account has no password yet. Set one instead.", code: 'NO_PASSWORD' });
+    }
 
     const match = await bcrypt.compare(passwordToCheck, user.passwordHash);
     if (!match)
-      return res.status(400).json({ message: "Old password incorrect" });
+      return res.status(400).json({ message: "Current password is incorrect" });
 
-    const strong =
-      newPassword.length >= 8 &&
-      newPassword.length <= 16 &&
-      /[A-Z]/.test(newPassword) &&
-      /\d/.test(newPassword) &&
-      /[^A-Za-z0-9]/.test(newPassword);
+    if (!isStrongPassword(newPassword))
+      return res.status(400).json({ message: PASSWORD_RULE });
 
-    if (!strong)
-      return res.status(400).json({ message: "Weak password" });
+    if (await bcrypt.compare(newPassword, user.passwordHash))
+      return res.status(400).json({ message: "New password must be different from your current password" });
 
     user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordSetAt = new Date();
+    user.isTemporaryPassword = false;
+    const revoked = keepOnlyCurrentSession(req, user);
     await saveWithRetry(user);
 
-    return res.json({ message: "Password updated" });
+    await auditAuthEvent(req, user._id, 'auth.password_changed', `Password changed; ${revoked} other session(s) signed out`, 'warning');
+
+    return res.json({ message: "Password updated", otherSessionsRevoked: revoked });
 
   } catch (_err) {
     logger.error("PASSWORD ERROR:", _err);
@@ -1220,12 +1386,11 @@ exports.updatePassword = async (req, res) => {
 };
 
 exports.setPassword = async (req, res) => {
-  logger.info('🔄 [MODULAR AUTH] Function invoked: setPassword (OAuth)');
   try {
-    const { password } = req.body;
+    const { password } = req.body || {};
     const userId = req.user.sub;
 
-    if (!password) {
+    if (typeof password !== 'string' || !password) {
       return res.status(400).json({ message: "Password is required" });
     }
 
@@ -1234,36 +1399,27 @@ exports.setPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    
-    if (!user.authProvider || user.authProvider === 'local') {
+    // Only for accounts without a password (Google / GitHub / LinkedIn / SSO sign-ups).
+    if (computeHasPassword(user)) {
       return res.status(400).json({
-        message: "This endpoint is only for OAuth users. Use password change endpoint instead."
+        message: "Your account already has a password. Use change password instead.",
+        code: 'HAS_PASSWORD'
       });
     }
 
-    
-    const strong =
-      password.length >= 8 &&
-      password.length <= 16 &&
-      /[A-Z]/.test(password) &&
-      /\d/.test(password) &&
-      /[^A-Za-z0-9]/.test(password);
-
-    if (!strong) {
-      return res.status(400).json({
-        message: "Password must be 8-16 characters with uppercase, number, and special character"
-      });
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: PASSWORD_RULE });
     }
 
-    
     user.passwordHash = await bcrypt.hash(password, 12);
-    user.passwordSetAt = new Date(); 
-    user.passwordLoginEnabled = true; 
+    user.passwordSetAt = new Date();
+    user.passwordLoginEnabled = true;
+    const revoked = keepOnlyCurrentSession(req, user);
     await saveWithRetry(user);
 
-    logger.info(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
+    logger.info({ userId: String(user._id), provider: user.authProvider }, 'Password set for account without one');
+    await auditAuthEvent(req, user._id, 'auth.password_set', `Password set; ${revoked} other session(s) signed out`, 'warning');
 
-    
     try {
       const { passwordSetTemplate } = require('../../../utils/emailTemplates');
       const template = passwordSetTemplate(user.username, user.authProvider);
@@ -1274,16 +1430,13 @@ exports.setPassword = async (req, res) => {
         html: template.html,
         text: template.text
       });
-
-      logger.info(`📧 Password set confirmation email sent to ${user.email}`);
     } catch (emailErr) {
-      
-      logger.warn('⚠️ Failed to send password set confirmation email:', emailErr.message);
-      logger.info(`💡 Password was set successfully for ${user.email}, but email notification failed (SMTP may not be configured)`);
+      logger.warn({ err: emailErr.message }, 'Failed to send password set confirmation email');
     }
 
     return res.json({
-      message: "Password set successfully! You can now login with email + password"
+      message: "Password set successfully! You can now login with email + password",
+      otherSessionsRevoked: revoked
     });
 
   } catch (_err) {
@@ -1351,15 +1504,57 @@ exports.googleLogin = async (req, res) => {
       if (user.googleAccount && !user.passwordHash) {
         needsPasswordSetup = true;
       }
+
+      // Same gates as password login: Google must not bypass suspension, deactivation or 2FA.
+      if (user.lockedUntil && user.lockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+        return res.status(429).json({ message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).` });
+      }
+      if (user.accountStatus === 'suspended' || user.accountStatus === 'removed') {
+        return res.status(403).json({ message: "Account Suspended." });
+      }
+      if (user.deactivatedAt) {
+        const otpCode = crypto.randomInt(100000, 1000000).toString();
+        user.otpCodes = user.otpCodes || [];
+        user.otpCodes.push({ code: otpCode, type: 'reactivation', expiresAt: new Date(Date.now() + 10 * 60 * 1000), used: false });
+        await user.save();
+        try {
+          const reactivateTpl = reactivateAccountTemplate(user.username, otpCode);
+          await sendEmail({ to: user.email, subject: reactivateTpl.subject, html: reactivateTpl.html, text: reactivateTpl.text });
+        } catch (emailErr) {
+          logger.error({ err: emailErr }, 'Failed to send reactivation OTP email');
+        }
+        return res.status(403).json({ message: "Account is deactivated", requiresReactivation: true, email: user.email });
+      }
+      if (user.twoFactorEnabled) {
+        const otp = String(req.body.otp || '').replace(/\s+/g, '');
+        if (!otp) {
+          return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
+        }
+        const withSecret = await User.findById(user._id).select('+twoFactorSecret').lean();
+        const { verifyUserTotp } = require('../security/totp');
+        if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
+          user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+          if (user.failedLoginAttempts >= 5) {
+            user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+            user.failedLoginAttempts = 0;
+          }
+          await user.save();
+          return res.status(401).json({ requires2FA: true, invalidCode: true, message: "That code didn't work. Check your authenticator app and try again." });
+        }
+      }
     }
 
-    
+
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
     user.refreshTokens.push({
       tokenHash: sha256(refreshToken),
       expiresAt: new Date(Date.now() + 7 * 86400000),
+      deviceInfo: req.get('User-Agent') || 'Unknown',
+      ip: getClientIP(req),
+      startedAt: new Date(),
     });
 
     
@@ -1394,84 +1589,79 @@ exports.googleLogin = async (req, res) => {
 
 exports.googleAuth = exports.googleLogin;
 
+// A rotated refresh token lives on for a 30s grace period; hide those so one device
+// does not show up twice.
+const GRACE_HIDE_MS = 60 * 1000;
+
+function describeSession(t, currentHash) {
+  const info = parseDeviceInfo(t.deviceInfo && t.deviceInfo !== 'Unknown' ? t.deviceInfo : null);
+  const ua = (t.deviceInfo || '').toLowerCase();
+  let type = 'desktop';
+  if (info.deviceType === 'tablet' || ua.includes('ipad')) type = 'tablet';
+  else if (info.deviceType === 'mobile' || ua.includes('iphone') || (ua.includes('android') && ua.includes('mobile'))) type = 'mobile';
+
+  let device = info.device || null;
+  if (!device) {
+    if (ua.includes('iphone')) device = 'iPhone';
+    else if (ua.includes('ipad')) device = 'iPad';
+    else if (ua.includes('android')) device = 'Android device';
+    else if (ua.includes('cros')) device = 'Chromebook';
+    else if (ua.includes('mac os')) device = 'Mac';
+    else if (ua.includes('windows')) device = 'Windows PC';
+    else if (ua.includes('linux')) device = 'Linux computer';
+    else device = 'Unknown device';
+  }
+
+  return {
+    id: String(t._id),
+    device,
+    browser: info.browser && info.browser !== 'Unknown' && info.browser !== 'Unknown Browser' ? info.browser : '',
+    os: type,
+    osName: info.os && info.os !== 'Unknown' && info.os !== 'Unknown OS' ? info.os : '',
+    ip: t.ip || null,
+    location: null,
+    lastActive: t.createdAt || null,
+    createdAt: t.startedAt || t.createdAt || null,
+    expiresAt: t.expiresAt || null,
+    current: !!currentHash && t.tokenHash === currentHash,
+  };
+}
+
+function currentTokenHash(req) {
+  const token = getRefreshTokenFromRequest(req);
+  return token ? sha256(token) : null;
+}
+
+/**
+ * GET /api/auth/sessions -> [{ id, device, browser, os: 'mobile'|'desktop'|'tablet', osName,
+ *   ip, location, lastActive, createdAt, expiresAt, current }] (current first, then most recent).
+ */
 exports.getSessions = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    
-    const currentToken = req.cookies?.jwt;
-    const currentHash = currentToken ? sha256(currentToken) : null;
+    const currentHash = currentTokenHash(req);
 
-    
-    
-    
-    
-
+    // Drop duplicate hashes (legacy data) while we are here.
     const seenHashes = new Set();
     const uniqueTokens = [];
-    let isDirty = false;
-
-    
-    
-    
     for (const t of user.refreshTokens) {
-      if (seenHashes.has(t.tokenHash)) {
-
-        isDirty = true; 
-        continue;
-      }
+      if (seenHashes.has(t.tokenHash)) continue;
       seenHashes.add(t.tokenHash);
       uniqueTokens.push(t);
     }
-
-    if (isDirty) {
-
+    if (uniqueTokens.length !== user.refreshTokens.length) {
       user.refreshTokens = uniqueTokens;
-      user.markModified('refreshTokens'); 
+      user.markModified('refreshTokens');
       await saveWithRetry(user);
     }
-    
 
-    const sessions = user.refreshTokens.map(t => {
-      
-      let deviceType = "desktop";
-      const ua = (t.deviceInfo || "").toLowerCase();
+    const visibleAfter = Date.now() + GRACE_HIDE_MS;
+    const sessions = user.refreshTokens
+      .filter(t => t.tokenHash === currentHash || !t.expiresAt || new Date(t.expiresAt).getTime() > visibleAfter)
+      .map(t => describeSession(t, currentHash));
 
-      
-      if (ua.includes("mobile") || ua.includes("iphone") || ua.includes("android")) {
-        deviceType = "mobile";
-      }
-
-      
-      let deviceName = "Unknown Device";
-      if (ua.includes("mac os")) deviceName = "MacBook / Mac";
-      else if (ua.includes("windows")) deviceName = "Windows PC";
-      else if (ua.includes("iphone")) deviceName = "iPhone";
-      else if (ua.includes("android")) deviceName = "Android Device";
-      else if (ua.includes("linux")) deviceName = "Linux Machine";
-      else if (ua.includes("cros")) deviceName = "Chromebook";
-
-      
-      let browser = "";
-      if (ua.includes("chrome") && !ua.includes("edg") && !ua.includes("opr")) browser = "Chrome";
-      else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
-      else if (ua.includes("firefox")) browser = "Firefox";
-      else if (ua.includes("edg")) browser = "Edge";
-      else if (ua.includes("opr")) browser = "Opera";
-
-      return {
-        id: t._id,
-        device: deviceName,
-        browser: browser, 
-        os: deviceType,
-        location: "Unknown",
-        lastActive: t.createdAt,
-        current: t.tokenHash === currentHash
-      };
-    });
-
-    
     sessions.sort((a, b) => {
       if (a.current) return -1;
       if (b.current) return 1;
@@ -1485,50 +1675,45 @@ exports.getSessions = async (req, res) => {
   }
 };
 
+/** DELETE /api/auth/sessions/:id -> { message } | 404 unknown id. Revoking the current one signs this device out. */
 exports.revokeSession = async (req, res) => {
   try {
-    const sessionId = req.params.id;
+    const sessionId = String(req.params.id || '');
     const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    
-    
-    
+    const session = user.refreshTokens.find(t => String(t._id) === sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
 
-    user.refreshTokens.pull({ _id: sessionId });
+    const isCurrent = session.tokenHash === currentTokenHash(req);
+    user.refreshTokens = user.refreshTokens.filter(t => String(t._id) !== sessionId);
+    user.markModified('refreshTokens');
     await saveWithRetry(user);
 
-    res.json({ message: "Session revoked" });
+    if (isCurrent) clearRefreshTokenCookie(res);
+
+    res.json({ message: "Session revoked", current: isCurrent });
   } catch (_err) {
     logger.error("REVOKE SESSION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+/** DELETE /api/auth/sessions/others -> { message, revoked } (never the current session). */
 exports.revokeOtherSessions = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
-    const currentToken = req.cookies?.jwt;
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!currentToken) {
-      return res.status(400).json({ message: "No active session to keep" });
+    const currentHash = currentTokenHash(req);
+    if (!currentHash || !user.refreshTokens.some(t => t.tokenHash === currentHash)) {
+      return res.status(400).json({ message: "Could not identify your current session. Sign in again and retry." });
     }
 
-    const currentHash = sha256(currentToken);
-
-    
-    const activeToken = user.refreshTokens.find(t => t.tokenHash === currentHash);
-
-    if (activeToken) {
-      user.refreshTokens = [activeToken]; 
-    } else {
-      
-      user.refreshTokens = [];
-    }
-
-    user.markModified('refreshTokens');
+    const revoked = keepOnlyCurrentSession(req, user);
     await saveWithRetry(user);
 
-    res.json({ message: "All other sessions revoked" });
+    res.json({ message: "All other sessions revoked", revoked });
   } catch (_err) {
     logger.error("REVOKE OTHERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
@@ -2089,13 +2274,34 @@ exports.deactivateAccount = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    
-    user.deactivatedAt = new Date();
+    // Company-managed accounts are suspended/removed by company admins, not by the user.
+    if (user.userType === "company" || user.companyId) {
+      return res.status(403).json({
+        message: "Your account is managed by your company. Ask an administrator to deactivate it."
+      });
+    }
 
-    
+    if (user.deactivatedAt) {
+      clearRefreshTokenCookie(res);
+      return res.json({ message: "Account already deactivated", deactivated: true });
+    }
+
+    user.deactivatedAt = new Date();
+    user.isOnline = false;
+    // Sign out everywhere: refresh tokens die now, access tokens within their 15 min lifetime.
     user.refreshTokens = [];
 
-    await user.save();
+    await saveWithRetry(user);
+
+    try {
+      const UserDeviceSession = require('../../models/UserDeviceSession');
+      await UserDeviceSession.updateMany({ userId: String(userId), revokedAt: null }, { $set: { revokedAt: new Date() } });
+    } catch (err) {
+      logger.warn({ err: err.message }, 'Could not revoke device sessions on deactivate');
+    }
+
+    await auditAuthEvent(req, user._id, 'auth.deactivated', 'Account deactivated by user', 'warning');
+    clearRefreshTokenCookie(res);
 
     logger.info(`🔒 Account deactivated for user: ${user.username} (${userId})`);
 
@@ -2164,6 +2370,8 @@ exports.verifyReactivationOTP = async (req, res) => {
       tokenHash: sha256(refreshToken),
       expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
       deviceInfo: req.get('user-agent') || 'Unknown',
+      ip: getClientIP(req),
+      startedAt: new Date(),
       createdAt: new Date()
     });
 

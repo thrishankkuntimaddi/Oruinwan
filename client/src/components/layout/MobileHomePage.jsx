@@ -37,7 +37,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
     
     const MORE_ROWS = [
         { Icon: Newspaper, label: 'Updates',          path: '/updates',                show: user?.userType === 'company' },
-        { Icon: Video,     label: 'Meetings',         path: '/huddles',                show: true },
+        { Icon: Video,     label: 'Huddles',          path: '/huddles',                show: true },
         { Icon: Puzzle,    label: 'Apps',             path: '/apps',                   show: true },
         { Icon: FileText,  label: 'Notes',            path: '/notes',                  show: true },
         { Icon: Shield,    label: 'Admin Dashboard',  abs: '/admin/analytics',         show: ['owner','admin'].includes(user?.companyRole) || user?.isCoOwner },

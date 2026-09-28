@@ -5,6 +5,7 @@ const NOTIFICATION_TYPES = [
     'dm',                
     'task_assigned',     
     'task_comment',      
+    'task_status',
     'task_due_soon',     
     'task_updated',
     'task_removed',

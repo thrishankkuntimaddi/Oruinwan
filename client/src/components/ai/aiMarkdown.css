@@ -1,0 +1,55 @@
+/* Markdown rendering for Oruinwan AI answers (panel, in-chat AI replies). */
+.aimd { font-size: 13px; line-height: 1.6; color: var(--text-primary); word-break: break-word; }
+.aimd > :first-child { margin-top: 0; }
+.aimd > :last-child { margin-bottom: 0; }
+.aimd p { margin: 0 0 8px; }
+.aimd h1, .aimd h2, .aimd h3, .aimd h4 { margin: 12px 0 6px; font-weight: 700; line-height: 1.3; }
+.aimd h1 { font-size: 16px; }
+.aimd h2 { font-size: 15px; }
+.aimd h3, .aimd h4 { font-size: 13.5px; }
+.aimd ul, .aimd ol { margin: 0 0 8px; padding-left: 18px; }
+.aimd ul { list-style: disc; }
+.aimd ol { list-style: decimal; }
+.aimd li { margin: 2px 0; }
+.aimd li > p { margin: 0; }
+.aimd strong { font-weight: 650; }
+.aimd a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.aimd blockquote { margin: 0 0 8px; padding: 2px 10px; border-left: 2px solid var(--accent); color: var(--text-secondary); }
+.aimd hr { border: 0; border-top: 1px solid var(--border-default); margin: 10px 0; }
+.aimd :not(pre) > code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; padding: 1px 5px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: 2px; }
+
+.aimd-code { margin: 6px 0 10px; border: 1px solid var(--border-default); background: var(--bg-base); border-radius: 2px; overflow: hidden; }
+.aimd-code__bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; font-size: 10.5px; color: var(--text-secondary); background: var(--bg-active); border-bottom: 1px solid var(--border-default); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.aimd-code__bar button { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font: inherit; }
+.aimd-code__bar button:hover { color: var(--text-primary); }
+.aimd-code pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 12px; line-height: 1.55; }
+.aimd-code code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+
+.aimd-table { overflow-x: auto; margin: 6px 0 10px; }
+.aimd table { border-collapse: collapse; font-size: 12px; }
+.aimd th, .aimd td { border: 1px solid var(--border-default); padding: 4px 8px; text-align: left; }
+.aimd th { background: var(--bg-active); font-weight: 650; }
+
+/* Live typing caret while an answer streams in. */
+.aimd-caret { display: inline-block; width: 7px; height: 14px; margin-left: 2px; vertical-align: -2px; background: var(--accent); animation: aimdBlink 0.9s steps(1) infinite; }
+.aimd--streaming > p:last-of-type { display: inline; }
+@keyframes aimdBlink { 50% { opacity: 0; } }
+
+.ai-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: aimdPulse 1s ease-in-out infinite; flex-shrink: 0; }
+@keyframes aimdPulse { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .aimd-caret, .ai-status-dot { animation: none; }
+}
+
+/* Live in-conversation AI reply (shown while the assistant is typing). */
+.ai-live-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 16px 8px; }
+.ai-live { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border: 1px solid var(--border-default); border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-dim), transparent 70%); border-radius: 2px; animation: aiLiveIn 260ms ease both; }
+.ai-live__avatar { width: 32px; height: 32px; border-radius: 2px; object-fit: cover; background: #0b0b0d; }
+.ai-live__body { min-width: 0; }
+.ai-live__meta { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 13px; color: var(--text-primary); }
+.ai-live__badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border: 1px solid var(--accent); color: var(--accent); border-radius: 2px; }
+.ai-live__state { font-size: 11px; color: var(--text-secondary); }
+.ai-live__status { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
+.ai-live__error { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font-size: 12.5px; color: var(--state-danger); }
+@keyframes aiLiveIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }

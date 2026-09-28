@@ -46,7 +46,10 @@ async function resolveForWorkspace(workspaceId) {
                 const apiKey = record ? openSecret(record.apiKey) : null;
                 const baseUrl = record?.config?.baseUrl || undefined;
                 const models = { ...modelsFor(ai.provider), ...(ai.model && { chat: ai.model, fast: ai.model }) };
-                if (apiKey || ai.provider === 'local_llm') {
+                // A self-hosted engine is only used when an active record points at an endpoint;
+                // otherwise fall back to the server's default engine rather than guessing a URL.
+                const usable = ai.provider === 'local_llm' ? !!(record && baseUrl) : !!apiKey;
+                if (usable) {
                     value = {
                         ...value,
                         provider: createProvider(ai.provider, { apiKey: apiKey || undefined, baseUrl, defaultModels: models }),
@@ -55,7 +58,7 @@ async function resolveForWorkspace(workspaceId) {
                         source: 'workspace',
                     };
                 } else {
-                    logger.warn(`[AI] workspace ${workspaceId} selected ${ai.provider} but no active key is connected; using default provider`);
+                    logger.warn(`[AI] workspace ${workspaceId} selected ${ai.provider} but it is not connected (no active key/endpoint); using default provider`);
                 }
             } else if (ai.model) {
                 value.model = ai.model;

@@ -13,9 +13,12 @@ const mongoose = require('mongoose');
 
 router.use(requireAuth);
 
-router.post('/ai/suggestions',    messagesController.getSmartReplies);
-router.post('/ai/translate',      messagesController.translateMessage);
-router.post('/ai/thread-summary', messagesController.getThreadSummary);
+// Message AI helpers share the /api/ai limits and the workspace AI switch.
+const { aiLimiter, requireAIAccess } = require('../../features/ai/ai.access');
+const aiAccess = requireAIAccess({ optional: true });
+router.post('/ai/suggestions',    aiLimiter, aiAccess, messagesController.getSmartReplies);
+router.post('/ai/translate',      aiLimiter, aiAccess, messagesController.translateMessage);
+router.post('/ai/thread-summary', aiLimiter, aiAccess, messagesController.getThreadSummary);
 
 router.get('/bookmarks',                messagesController.getBookmarks);
 router.get('/pinned',                   messagesController.getPinnedMessages);

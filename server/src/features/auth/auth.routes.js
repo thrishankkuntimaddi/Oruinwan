@@ -33,6 +33,7 @@ const {
 } = require("./auth.controller");
 
 const requireAuth = require("../../shared/middleware/auth");
+const { discoverableFilter } = require("./privacy.service");
 
 router.post("/signup", signup);
 router.get("/verify-email", verifyEmail);
@@ -140,92 +141,42 @@ router.delete("/me/emails/:id", requireAuth, deleteEmail);
 router.post("/me/deactivate", requireAuth, deactivateAccount);
 router.post("/reactivate/verify-otp", verifyReactivationOTP);
 
-router.get("/me/preferences/privacy", requireAuth, async (req, res) => {
-  try {
-    const User = require("../../../models/User");
-    const user = await User.findById(req.user.sub).select("preferences");
+const {
+  getPrivacyPreferences,
+  updatePrivacyPreferences,
+  getRegionPreferences,
+  updateRegionPreferences,
+} = require("./accountPreferences");
+router.get("/me/preferences/privacy", requireAuth, getPrivacyPreferences);
+router.put("/me/preferences/privacy", requireAuth, updatePrivacyPreferences);
 
-    const privacy = user?.preferences?.privacy || {
-      readReceipts: true,
-      typingIndicators: true,
-      allowDiscovery: true,
-      dataSharing: false
-    };
+const { getNotificationPreferences, updateNotificationPreferences } = require("./notificationPreferences");
+router.get("/me/preferences/notifications", requireAuth, getNotificationPreferences);
+router.put("/me/preferences/notifications", requireAuth, updateNotificationPreferences);
 
-    res.json(privacy);
-  } catch (error) {
-    logger.error("GET PRIVACY PREFERENCES ERROR:", error);
-    res.status(500).json({ message: "Failed to load privacy preferences" });
-  }
-});
+router.get("/me/preferences/region", requireAuth, getRegionPreferences);
+router.put("/me/preferences/region", requireAuth, updateRegionPreferences);
 
-router.put("/me/preferences/privacy", requireAuth, async (req, res) => {
-  try {
-    const User = require("../../../models/User");
-    const { readReceipts, typingIndicators, allowDiscovery, dataSharing } = req.body;
-
-    await User.findByIdAndUpdate(req.user.sub, {
-      "preferences.privacy": {
-        readReceipts: readReceipts !== undefined ? readReceipts : true,
-        typingIndicators: typingIndicators !== undefined ? typingIndicators : true,
-        allowDiscovery: allowDiscovery !== undefined ? allowDiscovery : true,
-        dataSharing: dataSharing !== undefined ? dataSharing : false
-      }
-    });
-
-    res.json({ message: "Privacy preferences updated successfully" });
-  } catch (error) {
-    logger.error("UPDATE PRIVACY PREFERENCES ERROR:", error);
-    res.status(500).json({ message: "Failed to update privacy preferences" });
-  }
-});
-
-router.get("/me/preferences/region", requireAuth, async (req, res) => {
-  try {
-    const User = require("../../../models/User");
-    const user = await User.findById(req.user.sub).select("preferences");
-
-    const region = user?.preferences?.region || {
-      language: 'en',
-      timezone: 'UTC',
-      dateFormat: 'MM/DD/YYYY'
-    };
-
-    res.json(region);
-  } catch (error) {
-    logger.error("GET REGION PREFERENCES ERROR:", error);
-    res.status(500).json({ message: "Failed to load region preferences" });
-  }
-});
-
-router.put("/me/preferences/region", requireAuth, async (req, res) => {
-  try {
-    const User = require("../../../models/User");
-    const { language, timezone, dateFormat } = req.body;
-
-    await User.findByIdAndUpdate(req.user.sub, {
-      "preferences.region": {
-        language: language || 'en',
-        timezone: timezone || 'UTC',
-        dateFormat: dateFormat || 'MM/DD/YYYY'
-      }
-    });
-
-    res.json({ message: "Region preferences updated successfully" });
-  } catch (error) {
-    logger.error("UPDATE REGION PREFERENCES ERROR:", error);
-    res.status(500).json({ message: "Failed to update region preferences" });
-  }
-});
-
+// blockedUsers entries are { userId, blockedAt }.
 router.get("/me/blocked-users", requireAuth, async (req, res) => {
   try {
     const User = require("../../../models/User");
     const user = await User.findById(req.user.sub)
-      .populate("blockedUsers", "_id username email profilePicture")
-      .select("blockedUsers");
+      .select("blockedUsers")
+      .populate("blockedUsers.userId", "_id username email profilePicture")
+      .lean();
 
-    res.json(user?.blockedUsers || []);
+    const list = (user?.blockedUsers || [])
+      .filter(b => b && b.userId)
+      .map(b => ({
+        _id: b.userId._id || b.userId,
+        userId: b.userId._id || b.userId,
+        username: b.userId.username || null,
+        email: b.userId.email || null,
+        profilePicture: b.userId.profilePicture || null,
+        blockedAt: b.blockedAt || null,
+      }));
+    res.json(list);
   } catch (error) {
     logger.error("GET BLOCKED USERS ERROR:", error);
     res.status(500).json({ message: "Failed to load blocked users" });
@@ -236,9 +187,12 @@ router.delete("/me/blocked-users/:userId", requireAuth, async (req, res) => {
   try {
     const User = require("../../../models/User");
     const { userId } = req.params;
+    if (!/^[a-f0-9]{24}$/i.test(String(userId))) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
 
     await User.findByIdAndUpdate(req.user.sub, {
-      $pull: { blockedUsers: userId }
+      $pull: { blockedUsers: { userId } }
     });
 
     res.json({ message: "User unblocked successfully" });
@@ -263,11 +217,17 @@ router.get("/users", requireAuth, async (req, res) => {
     
     const currentUser = await User.findById(currentUserId).select('companyId').lean();
 
+    // Company accounts only see their own company. Personal accounts see other personal
+    // accounts, minus those who turned discovery off and share no workspace with them.
     const query = currentUser?.companyId
       ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
-      
-      
-      : { _id: { $ne: currentUserId }, $or: [{ companyId: null }, { companyId: { $exists: false } }] };
+      : {
+        _id: { $ne: currentUserId },
+        $and: [
+          { $or: [{ companyId: null }, { companyId: { $exists: false } }] },
+          await discoverableFilter(currentUserId),
+        ],
+      };
 
     const users = await User.find(query)
       .select("_id username email profilePicture")

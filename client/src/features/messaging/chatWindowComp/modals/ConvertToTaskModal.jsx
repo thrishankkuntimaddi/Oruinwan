@@ -3,12 +3,14 @@ import { CheckSquare, Loader2 } from 'lucide-react';
 import api from '@services/api';
 import ToolbarModalShell, { fieldStyle, labelStyle, PrimaryButton, SecondaryButton } from './ToolbarModalShell';
 import { getMessageText, taskTitleFromText } from '../../../../utils/messageActionUtils';
+import { PRIORITIES, PRIORITY_META, taskErrorMessage } from '../../../../utils/taskMeta';
 
-const PRIORITIES = [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-];
+// fieldStyle pins colorScheme to dark; follow the app theme so the native
+// select/date popups are readable in light mode too.
+const themedField = () => ({
+    ...fieldStyle,
+    colorScheme: typeof document !== 'undefined' && document.documentElement.classList.contains('light') ? 'light' : 'dark',
+});
 
 /** Create a task from a (decrypted) message. POSTs /api/v2/messages/:id/convert-task. */
 export default function ConvertToTaskModal({ msg, onClose, onCreated }) {
@@ -19,6 +21,7 @@ export default function ConvertToTaskModal({ msg, onClose, onCreated }) {
     const [dueDate, setDueDate] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const field = themedField();
 
     const submit = async (e) => {
         e?.preventDefault?.();
@@ -36,8 +39,8 @@ export default function ConvertToTaskModal({ msg, onClose, onCreated }) {
             onCreated?.(res.data?.task, t);
             onClose();
         } catch (err) {
-            if (err?.response?.status === 409) setError('Already converted to a task');
-            else setError(err?.response?.data?.message || 'Failed to create task');
+            if (err?.response?.status === 409 && !err?.response?.data?.message) setError('This message was already converted to a task.');
+            else setError(taskErrorMessage(err, 'Failed to create task'));
         } finally {
             setSaving(false);
         }
@@ -61,22 +64,22 @@ export default function ConvertToTaskModal({ msg, onClose, onCreated }) {
             <form onSubmit={submit} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                     <label style={labelStyle} htmlFor="task-title">Title</label>
-                    <input id="task-title" autoFocus value={title} maxLength={200} onChange={e => setTitle(e.target.value)} style={fieldStyle} />
+                    <input id="task-title" autoFocus value={title} maxLength={200} onChange={e => setTitle(e.target.value)} style={field} />
                 </div>
                 <div>
                     <label style={labelStyle} htmlFor="task-desc">Description</label>
-                    <textarea id="task-desc" rows={4} value={description} onChange={e => setDescription(e.target.value)} style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.5 }} />
+                    <textarea id="task-desc" rows={4} value={description} onChange={e => setDescription(e.target.value)} style={{ ...field, resize: 'vertical', lineHeight: 1.5 }} />
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <div style={{ flex: 1 }}>
                         <label style={labelStyle} htmlFor="task-priority">Priority</label>
-                        <select id="task-priority" value={priority} onChange={e => setPriority(e.target.value)} style={fieldStyle}>
-                            {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        <select id="task-priority" value={priority} onChange={e => setPriority(e.target.value)} style={field}>
+                            {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_META[p].label}</option>)}
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
                         <label style={labelStyle} htmlFor="task-due">Due date (optional)</label>
-                        <input id="task-due" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={fieldStyle} />
+                        <input id="task-due" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={field} />
                     </div>
                 </div>
                 {error && <div role="alert" style={{ fontSize: '12px', color: 'var(--state-danger)' }}>{error}</div>}

@@ -10,6 +10,12 @@ import { encryptMessageForSending, batchDecryptMessages } from "../../../service
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";
 import logger from '../../../utils/logger';
+import { useOptionalWorkspace } from '../../../contexts/WorkspaceContext';
+import useConversationAI, { mentionsAI } from '../../../hooks/useConversationAI';
+import { AILiveReplies } from '../../../components/ai/AILiveReply';
+import { useAIContext } from '../../../contexts/AIContext';
+import AIMarkdown from '../../../components/ai/AIMarkdown';
+import BRAND from '../../../shared/brand';
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
     const { showToast } = useToast();
@@ -31,6 +37,46 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     const repliesEndRef = useRef(null);
 
     const formatTime = (iso) => fmtTime(iso);
+
+    // Oruinwan AI in this thread: @ai replies land here, streamed live.
+    const { activeWorkspace } = useOptionalWorkspace() || {};
+    const threadWorkspaceId = parentMessage.workspace?._id || parentMessage.workspace || activeWorkspace?.id || activeWorkspace?._id || null;
+    const threadAI = useConversationAI({
+        socket,
+        conversationId: channelId,
+        conversationType,
+        workspaceId: threadWorkspaceId ? String(threadWorkspaceId) : null,
+        currentUserId,
+        onError: (msg) => showToast(msg, 'error'),
+    });
+    const threadRootId = String(parentMessage._id || parentMessage.id);
+    const threadTranscript = () => [parentMessageState, ...replies]
+        .filter(Boolean)
+        .map(m => ({
+            sender: m.sender?.username || 'User',
+            text: m.decryptedContent || m.payload?.text || m.text || '',
+            isMe: String(m.sender?._id || m.senderId) === String(currentUserId),
+        }))
+        .filter(m => m.text);
+
+    // While open, the AI panel works on this thread (replies decrypted on this device).
+    const setAIThread = useAIContext()?.setThread;
+    const threadTranscriptRef = useRef(threadTranscript);
+    threadTranscriptRef.current = threadTranscript;
+    useEffect(() => {
+        if (!setAIThread) return undefined;
+        setAIThread({ parentId: threadRootId, getMessages: () => threadTranscriptRef.current() });
+        return () => setAIThread(null);
+    }, [setAIThread, threadRootId]);
+
+    // Slash commands in the thread composer.
+    const handleThreadSlash = (name, args) => {
+        if (name === 'ai') {
+            window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt: args || null } }));
+            return true;
+        }
+        return false;
+    };
 
     
     const messageId = parentMessage._id || parentMessage.id;
@@ -358,6 +404,16 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     attachments: [],
                     clientTempId: tempId
                 });
+
+            // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
+            if (mentionsAI(replyText) || threadAI.isFollowUp(messageId)) {
+                threadAI.ask({
+                    prompt: replyText,
+                    parentId: messageId,
+                    triggerMessageId: res.data?.reply?._id || null,
+                    messages: [...threadTranscript(), { sender: 'Me', text: replyText, isMe: true }],
+                });
+            }
 
             logger.debug(`[THREAD][SEND][E2EE] Reply created successfully: ${res.data.reply._id}`);
 
@@ -688,14 +744,19 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span>
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
                                                         </div>
-                                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: FONT }}>
-                                                            {reply.decryptedContent || reply.payload?.text || reply.text}
-                                                        </p>
+                                                        {senderName === BRAND.ai ? (
+                                                            <AIMarkdown text={reply.decryptedContent || reply.payload?.text || reply.text} />
+                                                        ) : (
+                                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: FONT }}>
+                                                                {reply.decryptedContent || reply.payload?.text || reply.text}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
                                         })
                                     )}
+                                    <AILiveReplies replies={threadAI.repliesFor(threadRootId)} />
                                     <div ref={repliesEndRef} />
                                 </div>
                             </div>
@@ -705,6 +766,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 newMessage={newReply}
                                 setNewMessage={setNewReply}
                                 onSend={handleSendReply}
+                                onSlashCommand={handleThreadSlash}
+                                aiFollowUp={threadAI.isFollowUp(threadRootId) ? { onStop: () => threadAI.endFollowUp(threadRootId) } : null}
                                 onChange={(e) => setNewReply(e.target.value)}
                                 showAI={true}
                                 showVoice={false}

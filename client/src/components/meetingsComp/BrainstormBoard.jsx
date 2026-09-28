@@ -2,11 +2,18 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import api from '@services/api';
 import { useSocket } from '../../contexts/SocketContext';
+import { useToast } from '../../contexts/ToastContext';
 
 const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];
+const FONT = 'Inter, system-ui, sans-serif';
 
-const BrainstormBoard = ({ meetingId, workspaceId }) => {
+/**
+ * Sticky notes for a meeting. Notes are stored on the server and the server
+ * pushes changes to everyone in the meeting room (liveReady = room joined).
+ */
+const BrainstormBoard = ({ meetingId, liveReady = false }) => {
     const { socket } = useSocket();
+    const { showToast } = useToast();
     const boardRef = useRef(null);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,9 +28,9 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
         if (!meetingId) return;
         api.get(`/api/v2/collaboration/brainstorm/${meetingId}`)
             .then(({ data }) => setItems(data.items || []))
-            .catch(() => { })
+            .catch((err) => showToast(err?.response?.data?.message || 'Could not load the board', 'error'))
             .finally(() => setLoading(false));
-    }, [meetingId]);
+    }, [meetingId, showToast]);
 
     
     useEffect(() => {
@@ -51,23 +58,29 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
         try {
             const { data } = await api.post(
                 `/api/v2/collaboration/brainstorm/${meetingId}`,
-                { workspaceId, text: newText.trim(), color: newColor, position: { x: 50 + Math.random() * 200, y: 50 + Math.random() * 200 } }
+                { text: newText.trim(), color: newColor, position: { x: 50 + Math.random() * 200, y: 50 + Math.random() * 200 } }
             );
             setItems(prev => {
                 const exists = prev.find(i => i._id === data.item._id);
                 return exists ? prev : [...prev, data.item];
             });
             setNewText('');
-        } catch {  }
-    }, [meetingId, workspaceId, newText, newColor]);
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not add the note', 'error');
+        }
+    }, [meetingId, newText, newColor, showToast]);
 
     
     const handleDelete = useCallback(async (itemId) => {
-        setItems(prev => prev.filter(i => i._id !== itemId));
+        let removed;
+        setItems(prev => { removed = prev.find(i => i._id === itemId); return prev.filter(i => i._id !== itemId); });
         try {
             await api.delete(`/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`);
-        } catch {  }
-    }, [meetingId]);
+        } catch (err) {
+            if (removed) setItems(prev => [...prev, removed]);
+            showToast(err?.response?.data?.message || 'Could not delete the note', 'error');
+        }
+    }, [meetingId, showToast]);
 
     
     const onMouseDown = (e, itemId, origX, origY) => {
@@ -93,14 +106,17 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
         const newX = Math.max(0, origX + dx);
         const newY = Math.max(0, origY + dy);
         dragging.current = null;
+        if (dx === 0 && dy === 0) return;
 
         try {
             await api.patch(
                 `/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`,
                 { position: { x: newX, y: newY } }
             );
-        } catch {  }
-    }, [meetingId]);
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not move the note', 'error');
+        }
+    }, [meetingId, showToast]);
 
     useEffect(() => {
         window.addEventListener('mousemove', onMouseMove);
@@ -112,54 +128,58 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
     }, [onMouseMove, onMouseUp]);
 
     return (
-        <div className="flex flex-col h-full gap-3">
-            {}
-            <div className="flex items-center gap-2 flex-wrap">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', fontFamily: FONT }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {liveReady
+                    ? 'Notes are saved and appear live for everyone who has this meeting open.'
+                    : 'Notes are saved; live updates start once you are connected to the meeting.'}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <input
                     value={newText}
                     onChange={e => setNewText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAdd()}
                     placeholder="New sticky note…"
-                    className="flex-1 min-w-[160px] px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-white placeholder-gray-400"
+                    style={{ flex: 1, minWidth: '160px', padding: '8px 10px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', outline: 'none', fontFamily: FONT }}
                 />
-                <div className="flex gap-1">
+                <div style={{ display: 'flex', gap: '4px' }}>
                     {NOTE_COLORS.map(c => (
                         <button
                             key={c}
+                            title="Note colour"
+                            aria-label={`Note colour ${c}`}
                             onClick={() => setNewColor(c)}
-                            className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${newColor === c ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent'}`}
-                            style={{ backgroundColor: c }}
+                            style={{ width: 22, height: 22, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: newColor === c ? '2px solid var(--text-primary)' : '1px solid var(--border-accent)' }}
                         />
                     ))}
                 </div>
                 <button
                     onClick={handleAdd}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-medium"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontSize: '13px', fontWeight: 600, background: 'var(--accent)', color: '#0c0c0c', border: '1px solid var(--accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}
                 >
-                    <Plus size={14} /> Add Note
+                    <Plus size={14} /> Add note
                 </button>
             </div>
 
-            {}
             <div
                 ref={boardRef}
-                className="flex-1 relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 overflow-hidden"
-                style={{ minHeight: '400px' }}
+                style={{ flex: 1, position: 'relative', minHeight: '400px', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}
             >
                 {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
                         Loading board…
                     </div>
                 )}
                 {!loading && items.length === 0 && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
-                        <p className="text-sm">Brainstorm board is empty</p>
-                        <p className="text-xs">Add sticky notes above to get started</p>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                        <p style={{ fontSize: '13px' }}>The board is empty</p>
+                        <p style={{ fontSize: '12px' }}>Add sticky notes above to get started</p>
                     </div>
                 )}
                 {items.map(item => (
                     <div
                         key={item._id}
+                        className="group"
                         style={{
                             position: 'absolute',
                             left: item.position?.x || 50,
@@ -168,18 +188,24 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
                             cursor: 'grab',
                             minWidth: 120,
                             maxWidth: 200,
+                            padding: '10px 22px 10px 10px',
+                            borderRadius: '2px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
                             userSelect: 'none' }}
-                        className="rounded-xl shadow-lg p-3 group"
                         onMouseDown={(e) => onMouseDown(e, item._id, item.position?.x || 50, item.position?.y || 50)}
                     >
-                        <p className="text-sm font-medium text-gray-900 break-words leading-snug pr-4">
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#1a1916', wordBreak: 'break-word', lineHeight: 1.4 }}>
                             {item.text}
                         </p>
                         <button
+                            onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }}
-                            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded bg-black/10 hover:bg-black/20"
+                            title="Delete note"
+                            aria-label="Delete note"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ position: 'absolute', top: 4, right: 4, display: 'flex', padding: '2px', borderRadius: '2px', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer' }}
                         >
-                            <X size={10} className="text-gray-700" />
+                            <X size={10} style={{ color: '#1a1916' }} />
                         </button>
                     </div>
                 ))}

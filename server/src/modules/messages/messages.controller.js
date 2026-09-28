@@ -8,6 +8,7 @@ const { handleError } = require('../../../utils/responseHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 const mongoose = require('mongoose');
 const { canAccessMessage, loadAccessibleMessage } = require('./messageAccess');
+const { redactReadBy, readersHidingReceipts } = require('../../features/auth/privacy.service');
 
 function sendError(res, err, label) {
     if (err && err.status && err.status < 500) {
@@ -238,6 +239,8 @@ exports.getDMs = async (req, res) => {
                 userJoinedAt: cleared?.clearedAt || null,
             }
         );
+        // Readers who turned read receipts off are hidden from everyone but themselves.
+        result.messages = await redactReadBy(result.messages, userId);
 
         
         
@@ -483,6 +486,7 @@ exports.getChannelMessages = async (req, res) => {
                 userId   
             }
         );
+        result.messages = await redactReadBy(result.messages, userId);
 
         
         const channelMembers = channel.members.map((m) => ({
@@ -1123,9 +1127,16 @@ exports.getMessageInfo = async (req, res) => {
             channelMembers = (dmSession?.participants || []).map(toMember);
         }
 
-        const readByUsers = (message.readBy || [])
+        let readByUsers = (message.readBy || [])
             .filter(Boolean)
             .map(toMember);
+        // Readers who turned read receipts off stay hidden from others.
+        try {
+            const hidden = await readersHidingReceipts(readByUsers.map(u => u._id).filter(id => id !== String(userId)));
+            if (hidden.size) readByUsers = readByUsers.filter(u => u._id === String(userId) || !hidden.has(u._id));
+        } catch (err) {
+            logger.warn({ err: err.message }, '[PRIVACY] read-receipt lookup failed');
+        }
         const readByIds = [...new Set(readByUsers.map(u => u._id))];
 
         const editCount = (message.editHistory || []).length;
@@ -1276,7 +1287,8 @@ exports.getSmartReplies = async (req, res) => {
         const suggestions = await aiMessagingService.getSmartReplies(
             messageText,
             messageId || null,
-            contextMessages
+            contextMessages,
+            aiGatewayContext(req)
         );
         return res.json({ suggestions });
     } catch (err) {
@@ -1285,6 +1297,11 @@ exports.getSmartReplies = async (req, res) => {
 };
 
 const MAX_TRANSLATE_CHARS = 5000;
+
+/** Gateway context: the caller, and the workspace's own AI provider/model when one was resolved. */
+function aiGatewayContext(req) {
+    return { userId: req.user.sub, workspaceId: req.aiWorkspace?.id || null, ...(req.aiContext || {}) };
+}
 
 exports.translateMessage = async (req, res) => {
     try {
@@ -1297,7 +1314,7 @@ exports.translateMessage = async (req, res) => {
         }
         if (targetLang.length > 40) return res.status(400).json({ message: 'Invalid targetLang' });
 
-        const result = await aiMessagingService.translateMessage(text, targetLang.trim(), { userId: req.user.sub });
+        const result = await aiMessagingService.translateMessage(text, targetLang.trim(), aiGatewayContext(req));
         return res.json(result);
     } catch (err) {
         logger.warn('[AI translate] failed:', err.message);
@@ -1317,7 +1334,8 @@ exports.getThreadSummary = async (req, res) => {
         const summary = await aiMessagingService.summarizeThread(
             parentMessageId,
             replies.slice(-200),
-            typeof parentText === 'string' ? parentText : ''
+            typeof parentText === 'string' ? parentText : '',
+            aiGatewayContext(req)
         );
         return res.json({ summary });
     } catch (err) {

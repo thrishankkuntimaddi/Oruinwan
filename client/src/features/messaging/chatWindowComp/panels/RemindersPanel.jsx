@@ -48,10 +48,12 @@ export default function RemindersPanel({ onClose }) {
     };
 
     return (
-        <div data-testid="reminders-panel" style={{
-            position: 'fixed', right: 0, top: 0, bottom: 0, width: 320, zIndex: 900,
+        // Side column inside the conversation window (next to the messages), like the thread panel.
+        <aside data-testid="reminders-panel" aria-label="Reminders" style={{
+            width: 'clamp(280px, 32vw, 360px)', flexShrink: 0, height: '100%', overflow: 'hidden',
             background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-accent)',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', fontFamily: FONT,
+            display: 'flex', flexDirection: 'column', fontFamily: FONT,
+            animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-default)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>
@@ -80,6 +82,6 @@ export default function RemindersPanel({ onClose }) {
                     </div>
                 ))}
             </div>
-        </div>
+        </aside>
     );
 }

@@ -2,81 +2,51 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Activity, Calendar, Clock } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { taskErrorMessage, STATUS_META } from '../../utils/taskMeta';
+import { PriorityIcon, StatusBadge, AvatarStack, fmtDate, isOverdue, FONT } from './taskUi';
 
 const T = {
-  bg: 'var(--bg-base)', bar: 'var(--bg-hover)', cardBg: 'var(--bg-surface)',
-  border: 'var(--border-default)', accent: '#b8956a',
-  text: 'var(--text-primary)', muted: 'var(--text-muted)',
-  font: 'Inter, system-ui, sans-serif',
+  bg: 'var(--bg-base)', bar: 'var(--bg-hover)', cardBg: 'var(--bg-base)',
+  border: 'var(--border-subtle)', accent: 'var(--accent)',
+  text: 'var(--text-primary)', muted: 'var(--text-secondary)',
+  font: FONT,
 };
 
-const STATUS_META = {
-  'To Do':       { bg: 'var(--bg-active)',          color: 'var(--text-muted)' },
-  'In Progress': { bg: 'rgba(59,130,246,0.12)',    color: '#60a5fa' },
-  'In Review':   { bg: 'rgba(139,92,246,0.12)',   color: '#a78bfa' },
-  'Completed':   { bg: 'rgba(34,197,94,0.1)',     color: '#4ade80' },
-  'Blocked':     { bg: 'rgba(239,68,68,0.1)',     color: '#f87171' },
-  'Cancelled':   { bg: 'rgba(248,113,113,0.1)',   color: '#f87171' },
-};
-
-const PRIORITY_COLORS = {
-  Highest: '#ef4444', High: '#f97316', Medium: '#b8956a',
-  Low: '#3b82f6', Lowest: 'var(--text-muted)', Emergency: '#ef4444'
-};
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+const inSprint = (t, sprintId) => sameId(t.sprintId, sprintId) || sameId(t.sprint?._id || t.sprint, sprintId);
 
 function SprintTaskRow({ task, onClick }) {
-  const sm = STATUS_META[task.status] || STATUS_META['To Do'];
-  const pColor = PRIORITY_COLORS[task.priority] || '#E2B203';
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Completed';
-
+  const overdue = isOverdue(task);
+  const done = task.status === 'done';
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px', background: T.cardBg, borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 150ms ease', fontFamily: T.font }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = T.cardBg}
+      role="button"
+      tabIndex={0}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px', minHeight: '44px', background: T.cardBg, borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 150ms ease', fontFamily: T.font }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = T.cardBg; }}
       onClick={() => onClick(task)}
+      onKeyDown={e => { if (e.key === 'Enter') onClick(task); }}
     >
-      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pColor, flexShrink: 0 }} />
-
+      <span style={{ width: '16px', display: 'inline-flex', justifyContent: 'center' }}><PriorityIcon priority={task.priority} size={13} /></span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: task.status === 'Completed' ? T.muted : T.text, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
+        <p style={{ margin: 0, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done ? T.muted : T.text, textDecoration: done ? 'line-through' : 'none' }}>
           {task.title}
         </p>
-        {task.issueKey && (
-          <span style={{ fontSize: '10px', fontFamily: 'monospace', color: T.muted }}>{task.issueKey}</span>
-        )}
+        {task.issueKey && <span style={{ fontSize: '10px', fontFamily: 'monospace', color: T.muted }}>{task.issueKey}</span>}
       </div>
-
-      {task.dueDate && (
-        <span style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, color: isOverdue ? '#f87171' : T.muted, fontWeight: isOverdue ? 700 : 400, fontFamily: T.font }}>
-          <Calendar size={9} />
-          {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          {isOverdue && ' · Overdue'}
-        </span>
-      )}
-
-      {task.assignees?.[0]?.username && (
-        <div
-          style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(184,149,106,0.2)', border: '1px solid rgba(184,149,106,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 700, color: T.accent, flexShrink: 0 }}
-          title={task.assignees[0].username}
-        >
-          {task.assignees[0].username.charAt(0).toUpperCase()}
-        </div>
-      )}
-
-      <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '2px 7px', background: sm.bg, color: sm.color, flexShrink: 0 }}>
-        {task.status}
+      <span style={{ width: '96px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexShrink: 0, color: overdue ? 'var(--state-danger)' : T.muted, fontWeight: overdue ? 700 : 400 }}>
+        {task.dueDate ? <><Calendar size={10} /> {fmtDate(task.dueDate, { month: 'short', day: 'numeric' })}</> : '—'}
       </span>
+      <span style={{ width: '56px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}><AvatarStack users={task.assignees} size={18} /></span>
+      <span style={{ width: '110px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}><StatusBadge status={task.status} compact /></span>
     </div>
   );
 }
 
 function SprintProgress({ sprint, tasks }) {
-  const sprintTasks = tasks.filter(t =>
-    (t.sprintId && t.sprintId === sprint._id) ||
-    (t.sprint && (t.sprint._id === sprint._id || t.sprint === sprint._id))
-  );
-  const done = sprintTasks.filter(t => t.status === 'Completed').length;
+  const sprintTasks = tasks.filter(t => inSprint(t, sprint._id));
+  const done = sprintTasks.filter(t => t.status === 'done').length;
   const pct = sprintTasks.length > 0 ? Math.round((done / sprintTasks.length) * 100) : 0;
   return { pct, done, total: sprintTasks.length };
 }
@@ -106,41 +76,38 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
       .catch(err => {
         
         if (err.response?.status !== 404) {
-          showToast('Could not load sprints', 'error');
+          showToast(taskErrorMessage(err, 'Could not load sprints'), 'error');
         }
       })
       .finally(() => setLoading(false));
-  }, [workspaceId]); 
+  }, [workspaceId, showToast]);
 
   const filteredTasks = selectedSprint === 'all'
     ? tasks
-    : tasks.filter(t =>
-        (t.sprintId && t.sprintId === selectedSprint) ||
-        (t.sprint && (t.sprint._id === selectedSprint || t.sprint === selectedSprint))
-      );
+    : tasks.filter(t => inSprint(t, selectedSprint));
 
-  const activeSprint = sprints.find(s => s._id === selectedSprint);
+  const activeSprint = sprints.find(s => sameId(s._id, selectedSprint));
   const selectedLabel = selectedSprint === 'all'
     ? `All Tasks (${tasks.length})`
     : activeSprint?.name || 'Sprint';
 
   
-  const doneCount = filteredTasks.filter(t => t.status === 'Completed').length;
-  const inProgressCount = filteredTasks.filter(t => t.status === 'In Progress').length;
-  const blockedCount = filteredTasks.filter(t => t.status === 'Blocked').length;
+  const doneCount = filteredTasks.filter(t => t.status === 'done').length;
+  const inProgressCount = filteredTasks.filter(t => t.status === 'in_progress').length;
+  const blockedCount = filteredTasks.filter(t => t.status === 'blocked').length;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg }}>
       {}
-      <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.font }}>
+      <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontFamily: T.font }}>
         <Activity size={14} style={{ color: T.accent }} />
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Sprint</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: T.muted }}>Sprint</span>
 
         {}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
             onClick={() => setOpen(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: `1px solid ${T.border}`, padding: '5px 10px', background: 'var(--bg-hover)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '5px 10px', background: 'var(--bg-input)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
           >
@@ -149,7 +116,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           </button>
 
           {open && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 50, background: 'var(--bg-input)', border: `1px solid ${T.border}`, minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontFamily: T.font }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 50, background: 'var(--bg-surface)', border: '1px solid var(--border-default)', minWidth: '220px', boxShadow: 'var(--card-shadow)', fontFamily: T.font }}>
               <button
                 onClick={() => { setSelectedSprint('all'); setOpen(false); }}
                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: '12px', color: selectedSprint === 'all' ? T.accent : T.text, background: 'transparent', border: 'none', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font }}
@@ -163,7 +130,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
               </button>
               {sprints.map(s => {
                 const { pct, done, total } = SprintProgress({ sprint: s, tasks });
-                const statusColor = s.status === 'active' ? '#22c55e' : s.status === 'planning' ? '#3b82f6' : T.muted;
+                const statusColor = s.status === 'active' ? 'var(--state-success)' : s.status === 'planning' ? 'var(--accent)' : T.muted;
                 return (
                   <button
                     key={s._id}
@@ -180,7 +147,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
                       <span style={{ color: T.muted, flexShrink: 0 }}>{done}/{total}</span>
                     </div>
                     <div style={{ height: '3px', background: 'var(--bg-active)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: '#22c55e', transition: 'width 300ms ease' }} />
+                      <div style={{ height: '100%', width: `${pct}%`, background: 'var(--state-success)', transition: 'width 300ms ease' }} />
                     </div>
                     {s.startDate && s.endDate && (
                       <p style={{ fontSize: '9px', color: T.muted, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -206,14 +173,14 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '8px' }}>
             {[
               { label: 'Total', count: filteredTasks.length, color: T.muted },
-              { label: 'Done', count: doneCount, color: '#4ade80' },
-              { label: 'In Progress', count: inProgressCount, color: '#60a5fa' },
-              { label: 'Blocked', count: blockedCount, color: '#f87171' },
+              { label: 'Done', count: doneCount, color: STATUS_META.done.color },
+              { label: 'In progress', count: inProgressCount, color: STATUS_META.in_progress.color },
+              { label: 'Blocked', count: blockedCount, color: STATUS_META.blocked.color },
             ].filter(s => s.count > 0).map(s => (
               <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }} />
-                <span style={{ fontSize: '10px', color: T.muted, fontFamily: T.font }}>{s.label}</span>
-                <span style={{ fontSize: '10px', fontWeight: 700, color: s.color, fontFamily: T.font }}>{s.count}</span>
+                <span style={{ fontSize: '11px', color: T.muted, fontFamily: T.font }}>{s.label}</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: T.text, fontFamily: T.font }}>{s.count}</span>
               </div>
             ))}
           </div>
@@ -223,12 +190,12 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
       {}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', background: T.bg }}>
         {}
-        <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, color: T.muted, fontFamily: T.font, zIndex: 10 }}>
-          <span style={{ width: '8px' }} />
+        <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)', color: T.muted, fontFamily: T.font, zIndex: 10 }}>
+          <span style={{ width: '16px' }} />
           <span style={{ flex: 1 }}>Summary</span>
-          <span style={{ width: '96px', textAlign: 'center' }}>Due Date</span>
-          <span style={{ width: '24px' }} />
-          <span style={{ width: '96px', textAlign: 'center' }}>Status</span>
+          <span style={{ width: '96px', textAlign: 'center' }}>Due date</span>
+          <span style={{ width: '56px', textAlign: 'center' }}>Assignee</span>
+          <span style={{ width: '110px', textAlign: 'center' }}>Status</span>
         </div>
 
         {filteredTasks.length === 0 ? (

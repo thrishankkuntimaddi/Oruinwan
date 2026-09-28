@@ -22,6 +22,25 @@ function scopeRoom({ channelId, dmId, workspaceId }) {
     return null;
 }
 
+/** 'channel' | 'dm' | 'workspace' for a verified scope. */
+function scopeKind(scope) {
+    if (scope.channelId) return 'channel';
+    if (scope.dmId) return 'dm';
+    return 'workspace';
+}
+
+/**
+ * Where huddle:started goes: the channel room for channel huddles, the
+ * workspace room for workspace huddles, and for DMs only the two participants
+ * (their DM room plus their personal rooms; Socket.IO de-duplicates sockets
+ * that sit in several of these rooms).
+ */
+function startedAudience(scope, recipientIds) {
+    if (scope.channelId) return [`channel:${scope.channelId}`];
+    if (scope.dmId) return [`dm:${scope.dmId}`, ...(recipientIds || []).map(id => `user_${id}`)];
+    return [`workspace:${scope.workspaceId}`];
+}
+
 /**
  * Check the socket's user may use a huddle in this scope.
  * Returns { ok: true, scope, recipientIds, channelName } or { ok: false, message }.
@@ -64,7 +83,10 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
     }
     if (workspaceId) {
         const WorkspaceModel = require('../../../models/Workspace');
-        const ws = await WorkspaceModel.findOne({ _id: workspaceId, 'members.user': uid }).select('_id').lean();
+        const ws = await WorkspaceModel.findOne({
+            _id: workspaceId,
+            members: { $elemMatch: { user: uid, status: 'active' } },
+        }).select('_id').lean();
         if (!ws) return { ok: false, message: 'Not a member of this workspace' };
         return { ok: true, scope: { workspaceId: String(workspaceId) } };
     }
@@ -130,17 +152,19 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             if (error) return huddleError(socket, huddleId, error, 'Huddle already exists elsewhere');
             huddle.workspaceId = huddle.workspaceId || check.scope.workspaceId || null;
 
+            const scope = registryScope(check.scope);
             const payload = {
                 huddleId,
-                channelId: check.scope.channelId,
-                dmId: check.scope.dmId,
+                scope: scopeKind(scope),
+                channelId: check.scope.channelId || null,
+                dmId: check.scope.dmId || null,
                 workspaceId: huddle.workspaceId,
                 channelName: check.channelName,
                 startedBy,
                 video: !!huddle.video,
                 timestamp: new Date(),
             };
-            io.to(scopeRoom(registryScope(check.scope))).emit('huddle:started', payload);
+            io.to(startedAudience({ ...scope, workspaceId: huddle.workspaceId }, check.recipientIds)).emit('huddle:started', payload);
 
             if (check.recipientIds) {
                 notifyHuddle(io, socket, {
@@ -168,7 +192,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
             const username = await displayName(socket);
             // A join for a huddle this process never saw (e.g. after a restart) re-creates it.
-            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username } });
+            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled) });
             if (ensured.error) return huddleError(socket, huddleId, ensured.error, 'This huddle belongs to a different conversation');
             ensured.huddle.workspaceId = ensured.huddle.workspaceId || check.scope.workspaceId || null;
 
@@ -278,3 +302,5 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
 module.exports = registerHuddleHandlers;
 module.exports.verifyScope = verifyScope;
+module.exports.startedAudience = startedAudience;
+module.exports.scopeKind = scopeKind;

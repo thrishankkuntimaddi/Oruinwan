@@ -6,11 +6,11 @@ const T = {
   bgHover: 'var(--bg-hover)',
   border: 'var(--border-default)',
   borderHover: 'var(--border-accent)',
-  accent: '#b8956a',
-  accentBg: 'rgba(184,149,106,0.1)',
+  accent: 'var(--accent)',
+  accentBg: 'var(--accent-dim)',
   text: 'var(--text-primary)',
   muted: 'var(--text-muted)',
-  font: 'Inter, system-ui, sans-serif',
+  font: 'var(--font)',
 };
 
 export default function IntegrationCard({ integration, connected, onCardClick }) {
@@ -19,7 +19,7 @@ export default function IntegrationCard({ integration, connected, onCardClick })
       onClick={onCardClick}
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
-        background: T.bg, border: `1px solid ${T.border}`,
+        background: T.bg, border: `1px solid ${T.border}`, borderRadius: '2px',
         padding: '18px', textAlign: 'left', cursor: 'pointer', outline: 'none',
         width: '100%', transition: 'all 150ms ease', fontFamily: T.font,
       }}
@@ -34,18 +34,18 @@ export default function IntegrationCard({ integration, connected, onCardClick })
     >
       {}
       {connected && (
-        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', padding: '2px 7px' }}>
+        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: 'var(--state-success)', background: 'color-mix(in srgb, var(--state-success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 25%, transparent)', borderRadius: '2px', padding: '2px 7px' }}>
           <CheckCircle2 size={10} /> Connected
         </span>
       )}
       {!connected && (
-        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '2px 7px' }}>
+        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '2px 7px' }}>
           <ZapOff size={10} /> Not Connected
         </span>
       )}
 
       {}
-      <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '14px', flexShrink: 0 }}>
+      <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid var(--border-accent)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '14px', flexShrink: 0 }}>
         {integration.emoji}
       </div>
 
@@ -66,7 +66,7 @@ export default function IntegrationCard({ integration, connected, onCardClick })
 
       {}
       <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#34d399' : T.accent }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? 'var(--state-success)' : T.accent }}>
           {connected ? 'Manage →' : 'Connect →'}
         </span>
       </div>

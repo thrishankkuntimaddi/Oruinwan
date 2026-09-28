@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Check, Copy, ArrowDownToLine } from 'lucide-react';
 import { aiService, aiErrorMessage } from '../../services/aiService';
+import { statusLabel, priorityLabel } from '../../utils/taskMeta';
 
 const ACTIONS = [
   { id: 'describe', label: 'Write description' },
@@ -24,7 +25,7 @@ export default function AITaskAssist({ task, workspaceId, onApplyDescription }) 
     try {
       const r = await aiService.taskAssist({
         workspaceId, action,
-        task: { title: task.title, description: task.description, status: task.status, priority: task.priority, dueDate: task.dueDate, subtasks: (task.subtasks || []).map(s => s.title || s) },
+        task: { title: task.title, description: task.description, status: statusLabel(task.status), priority: priorityLabel(task.priority), dueDate: task.dueDate, subtasks: (task.subtasks || []).map(s => s.title || s) },
       });
       setResult({ action, text: r.text });
     } catch (err) {
@@ -39,8 +40,8 @@ export default function AITaskAssist({ task, workspaceId, onApplyDescription }) 
   };
 
   const chip = (active) => ({
-    padding: '3px 9px', fontSize: '11px', fontWeight: 600, borderRadius: '99px', cursor: loading ? 'wait' : 'pointer',
-    background: active ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
+    padding: '3px 9px', fontSize: '11px', fontWeight: 600, borderRadius: '2px', cursor: loading ? 'wait' : 'pointer',
+    background: active ? 'var(--accent-dim)' : 'var(--bg-active)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
     color: active ? 'var(--accent)' : 'var(--text-secondary)', fontFamily: 'var(--font)', display: 'inline-flex', alignItems: 'center', gap: '4px',
   });
 

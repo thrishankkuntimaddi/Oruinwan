@@ -22,7 +22,16 @@ const admin = requireAIAccess({ adminOnly: true });
 // Assistant
 router.post('/chat', optional, c.chat);
 router.post('/chat/stream', optional, c.chatStream);
+// Mentioned in a channel / DM / thread: reply there, streamed live to everyone
+router.post('/reply', member, c.reply);
 router.post('/memory/clear', optional, c.clearMemory);
+
+// Personal memory: what Oruinwan AI remembers about the signed-in user
+router.get('/memories', optional, c.listMemories);
+router.post('/memories', optional, c.addMemory);
+router.patch('/memories/:id', c.updateMemory);
+router.delete('/memories/:id', c.deleteMemory);
+router.delete('/memories', c.clearMemories);
 
 // In-app actions (plaintext is decrypted by the client and sent here)
 router.post('/smart-replies', member, c.smartReplies);

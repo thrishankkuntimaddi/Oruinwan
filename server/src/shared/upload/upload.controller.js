@@ -4,7 +4,7 @@ const { uploadNoteAttachment, getFileCategory, validateFileSize, FILE_SIZE_LIMIT
 const { uploadToGCS, streamGCSFile, BUCKET_NAME } = require('../../modules/uploads/upload.service');
 const { Storage } = require('@google-cloud/storage');
 const Note = require('../../../models/Note');
-const Workspace = require('../../../models/Workspace');
+const { assertWorkspaceMember, sendAccessError, isValidId } = require('../utils/workspaceAccess');
 
 exports.uploadNoteAttachment = async (req, res) => {
     try {
@@ -27,9 +27,11 @@ exports.uploadNoteAttachment = async (req, res) => {
                 return res.status(400).json({ message: 'Workspace ID required' });
             }
 
-            const workspace = await Workspace.findById(workspaceId);
-            if (!workspace || !workspace.isMember(userId)) {
-                return res.status(403).json({ message: 'Access denied to workspace' });
+            let workspace;
+            try {
+                ({ workspace } = await assertWorkspaceMember(workspaceId, userId));
+            } catch (accessErr) {
+                return sendAccessError(res, accessErr);
             }
 
             
@@ -65,37 +67,21 @@ exports.uploadNoteAttachment = async (req, res) => {
 
             
             if (noteId) {
+                if (!isValidId(noteId)) return res.status(400).json({ message: 'Invalid note id' });
                 const note = await Note.findById(noteId);
-                if (!note) {
+                // The note must live in the workspace the file was uploaded to.
+                if (!note || String(note.workspace) !== String(workspaceId)) {
                     return res.status(404).json({ message: 'Note not found' });
                 }
-                if (!note.canEdit(userId)) {
+                if (!note.canEdit(userId, { isWorkspaceMember: true })) {
                     return res.status(403).json({ message: 'Not authorized to edit this note' });
                 }
 
                 note.attachments.push(attachmentData);
                 await note.save();
 
-                
-                if (req.io) {
-                    if (note.isPublic && note.workspace) {
-                        req.io.to(`workspace_${note.workspace}`).emit('note-attachment-added', {
-                            noteId: note._id,
-                            attachment: attachmentData
-                        });
-                    } else {
-                        const recipients = new Set([
-                            note.owner.toString(),
-                            ...note.sharedWith.map(id => id.toString())
-                        ]);
-                        recipients.forEach(readerId => {
-                            req.io.to(`user_${readerId}`).emit('note-attachment-added', {
-                                noteId: note._id,
-                                attachment: attachmentData
-                            });
-                        });
-                    }
-                }
+                require('../../features/notes/notes.notifications')
+                    .notifyAttachmentAdded(note._id, note.attachments[note.attachments.length - 1], note, req.io);
             }
 
             return res.status(200).json({

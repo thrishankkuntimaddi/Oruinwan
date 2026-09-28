@@ -136,7 +136,37 @@ async function createMessage(messageData, io = null) {
     fanOutMessage(message, { channel, dm, workspace, sender, type, parentId, mentionText }, io)
         .catch(err => logger.error({ err }, '[createMessage] fan-out error (non-fatal)'));
 
+    fireMessageSentWebhook(message, { channel, workspace, sender, type, parentId })
+        .catch(err => logger.warn({ err: err?.message }, '[createMessage] message.sent webhook error (non-fatal)'));
+
     return message;
+}
+
+/**
+ * Outgoing `message.sent` webhook for channel messages. Messages are end-to-end
+ * encrypted, so the payload carries ids and metadata only — never text,
+ * ciphertext, attachments or poll/contact contents. Private channels are skipped
+ * so their activity does not leave the workspace. Never throws into the caller.
+ */
+async function fireMessageSentWebhook(message, { channel, workspace, sender, type, parentId }) {
+    if (!channel || type === 'system') return;
+    const channelId = String(channel?._id || channel);
+    if (!/^[a-f0-9]{24}$/i.test(channelId)) return;
+    const Channel = require('../../features/channels/channel.model.js');
+    const ch = await Channel.findById(channelId).select('workspace isPrivate').lean();
+    if (!ch || ch.isPrivate) return;
+    const workspaceId = workspace || ch.workspace;
+    if (!workspaceId) return;
+    const webhookTrigger = require('../../features/integrations/webhook.trigger');
+    webhookTrigger.fire(workspaceId, 'message.sent', {
+        messageId: String(message._id),
+        channelId,
+        senderId: String(sender?._id || sender),
+        type: message.type,
+        parentId: parentId ? String(parentId) : null,
+        hasAttachments: Array.isArray(message.attachments) && message.attachments.length > 0,
+        createdAt: message.createdAt,
+    });
 }
 
 const ATTACHMENT_LABELS = {
@@ -1047,26 +1077,23 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     if (message.linkedTaskId) throw httpError(409, 'Message is already linked to a task');
 
     let workspaceId = message.workspace || null;
-    let companyId = message.company || null;
     if (!workspaceId && message.channel) {
-        const ch = await _Channel.findById(message.channel).select('workspace company').lean();
+        const ch = await _Channel.findById(message.channel).select('workspace').lean();
         workspaceId = ch?.workspace || null;
-        companyId = companyId || ch?.company || null;
     }
+
+    const tasksShared = require('../../features/tasks/tasks.shared');
+    const ws = workspaceId ? await Workspace.findById(workspaceId).select('name members company').lean() : null;
+    if (workspaceId && !ws) throw httpError(404, 'Workspace not found');
 
     let assignedTo = [userId];
     if (Array.isArray(taskData.assigneeIds) && taskData.assigneeIds.length) {
         const ids = [...new Set(taskData.assigneeIds.map(String))];
         if (ids.some(id => !mongoose.Types.ObjectId.isValid(id))) throw httpError(400, 'Invalid assigneeIds');
         if (!workspaceId) throw httpError(400, 'Assignees require a workspace message');
-        const ws = await Workspace.findById(workspaceId).select('members company').lean();
-        const active = new Set((ws?.members || [])
-            .filter(m => m.user && m.status !== 'removed')
-            .map(m => String(m.user)));
-        const invalid = ids.filter(id => !active.has(id));
+        const invalid = ids.filter(id => !tasksShared.isActiveMember(ws, id));
         if (invalid.length) throw httpError(400, `Assignees are not workspace members: ${invalid.join(', ')}`);
         assignedTo = ids;
-        companyId = companyId || ws?.company || null;
     }
 
     let dueDate = null;
@@ -1074,6 +1101,12 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
         dueDate = new Date(taskData.dueDate);
         if (isNaN(dueDate.getTime())) throw httpError(400, 'Invalid dueDate');
     }
+
+    // Same company value as tasks created from the Tasks page.
+    const User = require('../../../models/User');
+    const creator = await User.findById(userId).select('companyId username').lean();
+    const companyId = tasksShared.resolveTaskCompany(ws, creator) || message.company || null;
+    const issueKey = workspaceId ? await tasksShared.nextIssueKey(workspaceId, ws?.name) : null;
 
     const Task = require('../../../models/Task');
     const task = await Task.create({
@@ -1084,6 +1117,7 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
         status:        'todo',
         company:       companyId,
         workspace:     workspaceId,
+        channel:       message.channel ? (message.channel._id || message.channel) : null,
         taskType:      workspaceId ? 'workspace' : 'personal',
         visibility:    'private',
         createdBy:     userId,
@@ -1091,9 +1125,22 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
         linkedMessage: message._id,
         linkedDM:      message.dm || null,
         source:        'manual',
+        issueKey,
     });
 
     await Message.findByIdAndUpdate(messageId, { $set: { linkedTaskId: task._id } });
+
+    try {
+        const TaskActivity = require('../../../models/TaskActivity');
+        await TaskActivity.create({
+            task: task._id,
+            user: userId,
+            action: 'created',
+            metadata: { source: 'message', messageId: String(message._id), visibility: 'private' },
+        });
+    } catch (err) {
+        logger.warn({ err }, '[convertToTask] activity not recorded');
+    }
 
     const room = roomFor(message);
     if (io && room) {
@@ -1102,6 +1149,11 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
             taskId:    task._id,
             taskTitle: task.title,
         });
+    }
+
+    if (io) {
+        const payload = await tasksShared.loadTaskForClient(task._id).catch(() => null);
+        await tasksShared.emitToTaskAudience(io, task, 'task-created', payload || task);
     }
 
     return task;
@@ -1192,6 +1244,7 @@ async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
 
 module.exports = {
     createMessage,
+    _fireMessageSentWebhook: fireMessageSentWebhook,
     fetchMessages,
     findOrCreateDMSession,
     getUserDMSessions,

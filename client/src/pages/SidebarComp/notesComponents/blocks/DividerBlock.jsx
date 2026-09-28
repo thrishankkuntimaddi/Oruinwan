@@ -29,7 +29,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         type="text"
                         value={label}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
-                        style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', minWidth: '60px', maxWidth: '180px', padding: '0 8px', fontFamily: 'monospace' }}
+                        style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', minWidth: '60px', maxWidth: '180px', padding: '0 8px', fontFamily: 'var(--font)' }}
                         placeholder="SECTION"
                     />
                 ) : (
@@ -51,7 +51,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     onClick={() => onRemoveBlock(block.id)}
                     style={{ position: 'absolute', right: 0, top: '-4px', padding: '6px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                     className="group-hover:!opacity-100"
-                    onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Trash2 size={12} />
@@ -66,7 +66,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         value={label}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         placeholder="Add section label..."
-                        style={{ fontSize: '10px', textAlign: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', width: '160px', fontFamily: 'monospace' }}
+                        style={{ fontSize: '10px', textAlign: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', width: '160px', fontFamily: 'var(--font)' }}
                     />
                 </div>
             )}

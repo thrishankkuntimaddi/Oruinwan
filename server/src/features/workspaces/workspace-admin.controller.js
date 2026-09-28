@@ -3,6 +3,32 @@ const Workspace = require("../../../models/Workspace");
 const _User = require("../../../models/User");
 const Channel = require("../channels/channel.model.js");
 const { recordAdminAction } = require("../../shared/adminAudit");
+const { isValidId, userRoom } = require("../../shared/utils/workspaceAccess");
+
+/**
+ * Who may act on whom: nobody acts on the owner; only the owner acts on
+ * admins; admins and the owner act on members. Returns an error message or null.
+ */
+function hierarchyError(actor, target, verb) {
+    if (target.role === "owner") return `Cannot ${verb} the workspace owner`;
+    if (target.role === "admin" && actor.role !== "owner") return `Only the workspace owner can ${verb} an admin`;
+    return null;
+}
+
+function emitToUser(req, userId, event, payload) {
+    const io = req.app?.get?.("io");
+    if (io) io.to(userRoom(userId)).emit(event, payload);
+}
+
+function badIds(res, ...ids) {
+    if (ids.some(id => !isValidId(id))) {
+        res.status(400).json({ message: "Invalid id" });
+        return true;
+    }
+    return false;
+}
+
+exports._internal = { hierarchyError };
 
 exports.revokeInvite = async (req, res) => {
     try {
@@ -264,6 +290,7 @@ exports.suspendMember = async (req, res) => {
     try {
         const { workspaceId, userId: targetUserId } = req.params;
         const adminId = req.user?.sub;
+        if (badIds(res, workspaceId, targetUserId)) return;
 
         
         const workspace = await Workspace.findById(workspaceId);
@@ -272,7 +299,7 @@ exports.suspendMember = async (req, res) => {
         }
 
         
-        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        const admin = workspace.members.find(m => String(m.user) === String(adminId) && (m.status || "active") === "active");
         if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
             return res.status(403).json({ message: "Only workspace admins can suspend members" });
         }
@@ -289,8 +316,9 @@ exports.suspendMember = async (req, res) => {
         }
 
         
-        if (targetMember.role === "owner") {
-            return res.status(403).json({ message: "Cannot suspend workspace owner" });
+        const suspendDenied = hierarchyError(admin, targetMember, "suspend");
+        if (suspendDenied) {
+            return res.status(403).json({ message: suspendDenied });
         }
 
         
@@ -310,6 +338,8 @@ exports.suspendMember = async (req, res) => {
             details: { targetUserId }, req,
         });
 
+        emitToUser(req, targetUserId, "workspace:access-revoked", { workspaceId: String(workspaceId), reason: "suspended" });
+
         return res.json({
             message: "Member suspended successfully",
             userId: targetUserId
@@ -324,6 +354,7 @@ exports.restoreMember = async (req, res) => {
     try {
         const { workspaceId, userId: targetUserId } = req.params;
         const adminId = req.user?.sub;
+        if (badIds(res, workspaceId, targetUserId)) return;
 
         
         const workspace = await Workspace.findById(workspaceId);
@@ -332,7 +363,7 @@ exports.restoreMember = async (req, res) => {
         }
 
         
-        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        const admin = workspace.members.find(m => String(m.user) === String(adminId) && (m.status || "active") === "active");
         if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
             return res.status(403).json({ message: "Only workspace admins can restore members" });
         }
@@ -344,6 +375,11 @@ exports.restoreMember = async (req, res) => {
         }
 
         
+        const restoreDenied = hierarchyError(admin, targetMember, "restore");
+        if (restoreDenied) {
+            return res.status(403).json({ message: restoreDenied });
+        }
+
         if (targetMember.status !== "suspended") {
             return res.status(400).json({ message: "Member is not suspended" });
         }
@@ -360,6 +396,8 @@ exports.restoreMember = async (req, res) => {
             details: { targetUserId }, req,
         });
 
+        emitToUser(req, targetUserId, "workspace:access-restored", { workspaceId: String(workspaceId) });
+
         return res.json({
             message: "Member restored successfully",
             userId: targetUserId
@@ -373,8 +411,9 @@ exports.restoreMember = async (req, res) => {
 exports.changeRole = async (req, res) => {
     try {
         const { workspaceId, userId: targetUserId } = req.params;
-        const { newRole } = req.body;
+        const newRole = req.body?.newRole ?? req.body?.role;
         const adminId = req.user?.sub;
+        if (badIds(res, workspaceId, targetUserId)) return;
 
         
         if (!['member', 'admin'].includes(newRole)) {
@@ -388,7 +427,7 @@ exports.changeRole = async (req, res) => {
         }
 
         
-        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        const admin = workspace.members.find(m => String(m.user) === String(adminId) && (m.status || "active") === "active");
         if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
             return res.status(403).json({ message: "Only workspace admins can change member roles" });
         }
@@ -405,8 +444,9 @@ exports.changeRole = async (req, res) => {
         }
 
         
-        if (targetMember.role === "owner") {
-            return res.status(403).json({ message: "Cannot change workspace owner's role" });
+        const roleDenied = hierarchyError(admin, targetMember, "change the role of");
+        if (roleDenied) {
+            return res.status(403).json({ message: roleDenied });
         }
 
         
@@ -418,6 +458,15 @@ exports.changeRole = async (req, res) => {
         const previousRole = targetMember.role;
         targetMember.role = newRole;
         await workspace.save();
+
+        // Keep the user's own copy of the role in sync (used by /workspaces/my, auth payloads).
+        await _User.updateOne(
+            { _id: targetUserId, "workspaces.workspace": workspace._id },
+            { $set: { "workspaces.$.role": newRole } }
+        );
+        emitToUser(req, targetUserId, "workspace:role-updated", {
+            workspaceId: String(workspace._id), userId: String(targetUserId), role: newRole,
+        });
 
         await recordAdminAction({
             userId: adminId, companyId: workspace.company, action: 'workspace.member_role_changed', category: 'permissions', severity: 'warning',
@@ -439,12 +488,13 @@ exports.changeRole = async (req, res) => {
 exports.removeMember = async (req, res) => {
     try {
         const { workspaceId } = req.params;
-        const { userId: targetUserId } = req.body;
+        const targetUserId = req.body?.userId;
         const adminId = req.user?.sub;
 
         if (!targetUserId) {
             return res.status(400).json({ message: "User ID is required" });
         }
+        if (badIds(res, workspaceId, targetUserId)) return;
 
         
         const workspace = await Workspace.findById(workspaceId);
@@ -453,7 +503,7 @@ exports.removeMember = async (req, res) => {
         }
 
         
-        const admin = workspace.members.find(m => String(m.user) === String(adminId));
+        const admin = workspace.members.find(m => String(m.user) === String(adminId) && (m.status || "active") === "active");
         if (!admin || (admin.role !== "admin" && admin.role !== "owner")) {
             return res.status(403).json({ message: "Only workspace admins can remove members" });
         }
@@ -469,8 +519,9 @@ exports.removeMember = async (req, res) => {
             return res.status(404).json({ message: "User is not a member of this workspace" });
         }
 
-        if (targetMember.role === "owner") {
-            return res.status(403).json({ message: "Cannot remove workspace owner" });
+        const removeDenied = hierarchyError(admin, targetMember, "remove");
+        if (removeDenied) {
+            return res.status(403).json({ message: removeDenied });
         }
 
         
@@ -480,7 +531,7 @@ exports.removeMember = async (req, res) => {
         
         await Channel.updateMany(
             { workspace: workspaceId },
-            { $pull: { members: targetUserId } }
+            { $pull: { members: { user: targetUserId }, admins: targetUserId } }
         );
 
         
@@ -501,6 +552,8 @@ exports.removeMember = async (req, res) => {
             resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
             details: { targetUserId }, req,
         });
+
+        emitToUser(req, targetUserId, "workspace:access-revoked", { workspaceId: String(workspaceId), reason: "removed" });
 
         return res.json({
             message: "Member removed successfully",

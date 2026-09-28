@@ -5,7 +5,7 @@ const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const { upload, uploadFile } = require('./upload.controller');
 const { streamGCSFile, objectHandle } = require('./upload.service');
-const { canAccessFile } = require('./upload.access');
+const { canAccessFile, isPublicObject } = require('./upload.access');
 const { signMediaPath, verifyMediaSignature } = require('./mediaSignature');
 
 // The conversation is in the multipart body, so the feature check runs after multer.
@@ -33,6 +33,10 @@ router.get('/sign', requireAuth, async (req, res) => {
 
 // A valid signature stands in for the Authorization header (media elements cannot send one).
 function authOrSignature(req, res, next) {
+    if (!req.headers.authorization && !req.query.sig && isPublicObject(req.query.path)) {
+        req.publicObject = true;
+        return next();
+    }
     if (req.query.sig) {
         const userId = verifyMediaSignature(req.query);
         if (!userId || req.query.path == null) return res.status(403).json({ error: 'Invalid or expired link' });
@@ -55,7 +59,7 @@ router.get('/file', authOrSignature, async (req, res) => {
         await streamGCSFile(gcsPath, req, res, {
             // Signed links were access-checked when issued; re-check anyway so a
             // user removed from the conversation loses access immediately.
-            authorize: (objectMeta) => canAccessFile(gcsPath, req.user.sub, objectMeta),
+            authorize: (objectMeta) => (req.publicObject ? isPublicObject(gcsPath) : canAccessFile(gcsPath, req.user.sub, objectMeta)),
         });
     } catch (err) {
         logger.error({ err }, '[UploadRoutes] /file error');

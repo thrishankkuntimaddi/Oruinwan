@@ -18,9 +18,11 @@ const adminGate = [...memberGate, enforceRoleCeiling({ minRole: 'admin' })];
 const requireWorkspaceAdmin = (req, res, next) => {
     const role = req.workspaceRole; 
     if (role !== 'admin' && role !== 'owner') {
+        const message = `This action requires at least 'admin' workspace access. Your workspace role is '${role}'.`;
         return res.status(403).json({
             success: false,
-            error: `This action requires at least 'admin' workspace access. Your workspace role is '${role}'.`,
+            message,
+            error: message,
             code: 'INSUFFICIENT_WORKSPACE_ROLE',
             workspaceRole: role,
             requiredRole: 'admin',
@@ -32,9 +34,11 @@ const requireWorkspaceAdmin = (req, res, next) => {
         req.effectiveRole = effectiveRole;
         const ROLE_HIERARCHY = enforceRoleCeiling.ROLE_HIERARCHY;
         if (ROLE_HIERARCHY.indexOf(effectiveRole) < ROLE_HIERARCHY.indexOf('admin')) {
+            const message = `This action requires at least 'admin' access. Your effective role is '${effectiveRole}'.`;
             return res.status(403).json({
                 success: false,
-                error: `This action requires at least 'admin' access. Your effective role is '${effectiveRole}'.`,
+                message,
+                error: message,
                 code: 'INSUFFICIENT_ROLE',
                 effectiveRole,
                 requiredRole: 'admin',
@@ -85,6 +89,9 @@ router.post('/:workspaceId/members/:userId/restore', ...adminGatePersonal, works
 router.post('/:workspaceId/members/:userId/change-role', ...adminGatePersonal, workspaceAdminController.changeRole);
 router.post('/:workspaceId/remove-member', ...adminGatePersonal, workspaceAdminController.removeMember);
 
+// Any active non-owner member may leave; the owner must transfer ownership first.
+router.post('/:id/leave', ...memberGatePersonal, workspaceController.leaveWorkspace);
+
 router.put('/:id/rename', ...adminGatePersonal, workspaceController.renameWorkspace);
 
 router.put('/:id', ...adminGatePersonal, workspaceController.updateWorkspace);
@@ -92,9 +99,11 @@ router.put('/:id', ...adminGatePersonal, workspaceController.updateWorkspace);
 const requireWorkspaceOwner = (req, res, next) => {
     const role = req.workspaceRole;
     if (role !== 'owner') {
+        const message = `Only the workspace owner can perform this action. Your workspace role is '${role}'.`;
         return res.status(403).json({
             success: false,
-            error: `Only the workspace owner can perform this action. Your workspace role is '${role}'.`,
+            message,
+            error: message,
             code: 'INSUFFICIENT_WORKSPACE_ROLE',
         });
     }

@@ -32,4 +32,11 @@ describe('module registry', () => {
     registerModuleSockets({}, socket);
     expect(events).toEqual(expect.arrayContaining(['huddle:start', 'huddle:join', 'huddle:leave', 'huddle:offer', 'disconnect']));
   });
+
+  test('socket registration attaches the live-meeting handlers', () => {
+    const events = [];
+    const socket = { id: 's1', user: { id: 'u1' }, data: {}, on: (event) => events.push(event) };
+    registerModuleSockets({}, socket);
+    expect(events).toEqual(expect.arrayContaining(['meeting:join', 'meeting:leave', 'meeting:notes_update']));
+  });
 });

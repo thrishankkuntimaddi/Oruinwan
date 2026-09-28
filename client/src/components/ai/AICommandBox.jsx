@@ -7,17 +7,6 @@ const EXAMPLES = [
     { icon: '🔍', text: 'What are our coding standards?' },
 ];
 
-async function apiCommand(command, workspaceId, token) {
-    const res = await fetch('/api/ai/command', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        credentials: 'include',
-        body:    JSON.stringify({ command, workspaceId }),
-    });
-    if (!res.ok) throw new Error('Command failed');
-    return res.json();
-}
-
 const INTENT_COLORS = {
     create_task:       { bg:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.3)', color:'#34d399', icon:'✅' },
     generate_tasks:    { bg:'rgba(52,211,153,0.10)', border:'rgba(52,211,153,0.25)', color:'#6ee7b7', icon:'📋' },
@@ -27,10 +16,14 @@ const INTENT_COLORS = {
     unknown:           { bg:'rgba(100,116,139,0.12)', border:'rgba(100,116,139,0.25)', color:'#94a3b8', icon:'❓' },
 };
 
-export default function AICommandBox({ workspaceId, token, isOpen, onClose }) {
+/**
+ * ⌘/ quick launcher: hands the command to the Oruinwan AI panel, which runs it
+ * with the full assistant (streaming answer, workspace tools, memory).
+ */
+export default function AICommandBox({ workspaceId, isOpen, onClose }) {
     const [command, setCommand] = useState('');
     const [result, setResult]   = useState(null);
-    const [loading, setLoading] = useState(false);
+    const loading = false; // the command runs in the AI panel, not here
     const [error, setError]     = useState(null);
     const inputRef = useRef(null);
 
@@ -44,12 +37,9 @@ export default function AICommandBox({ workspaceId, token, isOpen, onClose }) {
 
     const handleSubmit = async () => {
         if (!command.trim() || loading) return;
-        setLoading(true); setError(null); setResult(null);
-        try {
-            const data = await apiCommand(command.trim(), workspaceId, token);
-            setResult(data);
-        } catch (e) { setError('Command execution failed. Please try again.'); }
-        finally { setLoading(false); }
+        if (!workspaceId) { setError('Open a workspace first, then try again.'); return; }
+        window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt: command.trim() } }));
+        onClose?.();
     };
 
     if (!isOpen) return null;

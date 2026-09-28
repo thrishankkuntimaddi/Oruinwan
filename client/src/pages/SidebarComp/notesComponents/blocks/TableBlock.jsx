@@ -25,7 +25,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     };
 
     const cell = { borderRight: '1px solid var(--border-subtle)', padding: 0, position: 'relative' };
-    const inp = { width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px' };
+    const inp = { width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontFamily: 'var(--font)', padding: '8px 12px' };
 
     return (
         <div className="group relative mb-4">
@@ -50,8 +50,8 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                                 style={{ position: 'absolute', top: '6px', right: '4px', padding: '2px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 100ms ease' }}
                                                 className="group-hover/hcol:!opacity-100"
                                                 title="Remove column"
-                                                onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.15)'}
+                                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                             >
                                                 <Trash2 size={9} />
                                             </button>
@@ -64,8 +64,8 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                         onClick={addCol}
                                         style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 6px', transition: 'color 150ms ease' }}
                                         title="Add column"
-                                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                     >
                                         <Plus size={12} />
                                     </button>
@@ -99,8 +99,8 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px 4px', opacity: 0, transition: 'all 150ms ease' }}
                                                 className="group-hover/row:!opacity-100"
                                                 title="Remove row"
-                                                onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.15)'}
+                                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                             >
                                                 <Trash2 size={10} />
                                             </button>
@@ -116,9 +116,9 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'var(--bg-hover)', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
                         onClick={addRow}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'var(--font)' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <Plus size={11} /> Add row
                     </button>
@@ -126,8 +126,8 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         onClick={() => onRemoveBlock(block.id)}
                         style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
-                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <Trash2 size={11} />
                     </button>

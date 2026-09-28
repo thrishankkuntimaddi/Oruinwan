@@ -11,8 +11,10 @@ function canEditTask(task, userId, isManager) {
     return taskPermissionsLegacy.canEditTask(task, userId, isManager);
 }
 
+// The creator can also move their task through the workflow (e.g. close a
+// task they handed to someone else); assignees and workspace managers as before.
 function canChangeStatus(task, userId, isManager) {
-    return taskPermissionsLegacy.canChangeStatus(task, userId, isManager);
+    return task.isCreator(userId) || taskPermissionsLegacy.canChangeStatus(task, userId, isManager);
 }
 
 function canManageAssignees(task, userId, isManager) {

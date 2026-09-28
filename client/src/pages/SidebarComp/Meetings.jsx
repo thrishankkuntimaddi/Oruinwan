@@ -1,434 +1,445 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-    Mic, MicOff, Video, VideoOff, Monitor, Phone,
-    Users, MessageSquare, Grid, Signal, Settings, Hand,
-    Radio, Plus, Play, Calendar,
+    Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff,
+    Users, MessageSquare, Hand, Radio, Calendar, X, AlertTriangle, RotateCcw,
 } from 'lucide-react';
-import { useHuddleContext } from '../../features/huddles/HuddleContext';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useHuddleContext, meetingHuddleId, meetingConversationPath } from '../../features/huddles/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
-import { useParams } from 'react-router-dom';
+import api from '../../services/api';
+
+const FONT = 'Inter, system-ui, sans-serif';
 
 function formatTime(seconds) {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    const mm = h ? String(m).padStart(2, '0') : String(m);
+    return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
 }
-
-const AVATAR_COLORS = [
-    'from-violet-500 to-purple-600',
-    'from-blue-500 to-indigo-600',
-    'from-emerald-400 to-cyan-500',
-    'from-rose-400 to-pink-500',
-    'from-amber-400 to-orange-500',
-    'from-sky-400 to-blue-500',
-];
 
 function getInitials(name = '') {
-    return name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
+    return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
-    const color = AVATAR_COLORS[colorIdx % AVATAR_COLORS.length];
-    const label = isLocal ? 'You' : (participant.username || participant.userId?.slice(-4) || 'Guest');
-    const isAudioOn = participant.audioEnabled !== false;
-
-    return (
-        <div className="relative bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[28px] overflow-hidden border border-white/10 shadow-2xl transition-all duration-300 hover:border-white/20 group aspect-video flex items-center justify-center">
-            {}
-            <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10`} />
-
-            {}
-            <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${color} p-[2px] shadow-2xl`}>
-                <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#111' }}>
-                    <span className="text-3xl font-bold text-white">{getInitials(label)}</span>
-                </div>
-            </div>
-
-            {}
-            {isAudioOn && (
-                <div className="absolute inset-0 border-2 border-emerald-500/40 rounded-[28px] animate-pulse pointer-events-none" />
-            )}
-
-            {}
-            <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                <div className="px-3 py-1.5 bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 flex items-center gap-2 shadow-lg">
-                    <span className="text-sm font-semibold text-white tracking-wide">{label}</span>
-                    <div className={`w-1.5 h-1.5 rounded-full ${isAudioOn ? 'bg-emerald-400' : 'bg-red-500'}`} />
-                </div>
-                {!isAudioOn && (
-                    <div className="px-2 py-1.5 bg-red-500/20 backdrop-blur-xl rounded-xl border border-red-500/20 flex items-center justify-center text-red-400">
-                        <MicOff size={12} />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+const CONNECTION_LABELS = {
+    new: 'Connecting…',
+    connecting: 'Connecting…',
+    disconnected: 'Reconnecting…',
+    failed: 'Connection failed',
 };
 
-const LandingView = ({ onStart, onSchedule, starting }) => (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
-        {}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '30%', left: '20%', width: '40vw', height: '40vw', background: 'rgba(184,149,106,0.04)', borderRadius: '50%', filter: 'blur(100px)' }} />
-            <div style={{ position: 'absolute', bottom: '25%', right: '20%', width: '30vw', height: '30vw', background: 'rgba(184,149,106,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
-        </div>
+const primaryButton = (disabled) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '11px 20px',
+    background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '2px', color: '#0c0c0c', fontWeight: 700, fontSize: '14px',
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, fontFamily: FONT, whiteSpace: 'nowrap',
+});
+const secondaryButton = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 20px',
+    background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)',
+    fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+};
 
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '88px', height: '88px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <Video size={34} style={{ color: '#b8956a' }} />
-            </div>
+const Spinner = ({ size = 14, color = 'currentColor' }) => (
+    <span style={{ width: size, height: size, border: `2px solid ${color}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0 }} />
+);
 
-            <h2 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                Video Huddles Center
-            </h2>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '360px', marginBottom: '32px', fontSize: '14px', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif' }}>
-                Start a real-time video call with your team, or select an active huddle from the sidebar to join.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '260px' }}>
-                <button
-                    onClick={onStart}
-                    disabled={starting}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px 24px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontWeight: 700, fontSize: '14px', cursor: starting ? 'not-allowed' : 'pointer', opacity: starting ? 0.6 : 1, transition: 'opacity 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                >
-                    {starting ? (
-                        <>
-                            <span style={{ width: '14px', height: '14px', border: '2px solid #0c0c0c', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                            Starting...
-                        </>
-                    ) : (
-                        <>
-                            <Radio size={16} />
-                            Start Instant Huddle
-                        </>
-                    )}
-                </button>
-                <button
-                    onClick={onSchedule}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
-                >
-                    <Calendar size={13} />
-                    Schedule for Later
-                </button>
-            </div>
-
-            {}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '36px' }}>
-                {["HD Video", "Screen Share", "Real-time Audio", "Participants List", "In-call Chat"].map(f => (
-                    <span key={f} style={{ padding: '4px 12px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        {f}
-                    </span>
-                ))}
-            </div>
+const CenteredPanel = ({ children }) => (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: 'var(--bg-base)', fontFamily: FONT }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '380px', width: '100%' }}>
+            {children}
         </div>
     </div>
 );
 
-const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
-    onToggleMute, onToggleVideo, onToggleScreen, onLeave }) => {
+const IconBadge = ({ icon: Icon, tone = 'accent' }) => (
+    <div style={{
+        width: '72px', height: '72px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
+        background: tone === 'danger' ? 'var(--bg-active)' : 'var(--accent-dim)',
+        border: `1px solid ${tone === 'danger' ? 'var(--state-danger)' : 'var(--border-accent)'}`,
+    }}>
+        <Icon size={28} style={{ color: tone === 'danger' ? 'var(--state-danger)' : 'var(--accent)' }} />
+    </div>
+);
 
+const LandingView = ({ onStart, onStartVideo, onSchedule, starting }) => (
+    <CenteredPanel>
+        <IconBadge icon={Radio} />
+        <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+            Huddles
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '28px', fontSize: '14px', lineHeight: 1.6 }}>
+            Start a quick call with your workspace, or join one that is live now from the list on the left.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '260px' }}>
+            <button onClick={onStart} disabled={starting} style={primaryButton(starting)}>
+                {starting ? <><Spinner color="#0c0c0c" /> Starting…</> : <><Mic size={16} /> Start huddle</>}
+            </button>
+            <button onClick={onStartVideo} disabled={starting} style={{ ...secondaryButton, opacity: starting ? 0.6 : 1 }}>
+                <Video size={15} /> Start video huddle
+            </button>
+            <button onClick={onSchedule} style={{ ...secondaryButton, border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+                <Calendar size={14} /> Schedule a meeting
+            </button>
+        </div>
+    </CenteredPanel>
+);
+
+const ConnectingView = ({ label }) => (
+    <CenteredPanel>
+        <div style={{ marginBottom: '20px', color: 'var(--accent)' }}><Spinner size={40} color="var(--accent)" /></div>
+        <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>{label || 'Connecting'}…</h3>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            If your browser asks, allow access to your microphone.
+        </p>
+    </CenteredPanel>
+);
+
+const ErrorView = ({ message, onRetry, onBack }) => (
+    <CenteredPanel>
+        <IconBadge icon={AlertTriangle} tone="danger" />
+        <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Couldn't connect</h3>
+        <p data-testid="huddle-connect-error" style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>{message}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '220px' }}>
+            <button onClick={onRetry} style={primaryButton(false)}><RotateCcw size={14} /> Try again</button>
+            <button onClick={onBack} style={secondaryButton}>Back</button>
+        </div>
+    </CenteredPanel>
+);
+
+/** One participant: their video when it is on, otherwise their initials. */
+const ParticipantTile = ({ participant, stream, showVideo, mirror, connection }) => {
+    const ref = useRef(null);
+    const hasVideo = showVideo && !!stream && stream.getVideoTracks().length > 0;
+    const label = participant.isLocal ? 'You' : (participant.username || 'Guest');
+    const isAudioOn = participant.audioEnabled !== false;
+    const status = !participant.isLocal ? CONNECTION_LABELS[connection] : null;
+
+    useEffect(() => {
+        if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream || null;
+    }, [stream, hasVideo]);
+
+    return (
+        <div data-testid={participant.isLocal ? 'room-tile-local' : 'room-tile-remote'}
+            style={{ position: 'relative', aspectRatio: '16 / 9', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {hasVideo ? (
+                // Audio plays through hidden <audio> elements, so the video is muted.
+                <video ref={ref} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000', transform: mirror ? 'scaleX(-1)' : undefined }} />
+            ) : (
+                <div style={{ width: '88px', height: '88px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)' }}>{getInitials(participant.username || label)}</span>
+                </div>
+            )}
+            <div style={{ position: 'absolute', left: '10px', bottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '2px', background: hasVideo ? 'rgba(0,0,0,0.6)' : 'var(--bg-base)', border: hasVideo ? 'none' : '1px solid var(--border-default)' }}>
+                {isAudioOn
+                    ? <Mic size={12} style={{ color: hasVideo ? '#fff' : 'var(--text-secondary)' }} />
+                    : <MicOff size={12} style={{ color: 'var(--state-danger)' }} />}
+                <span style={{ fontSize: '12px', fontWeight: 600, color: hasVideo ? '#fff' : 'var(--text-primary)' }}>{label}</span>
+            </div>
+            {status && (
+                <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', fontSize: '11px', color: connection === 'failed' ? 'var(--state-danger)' : 'var(--text-secondary)' }}>
+                    {connection !== 'failed' && <Spinner size={9} />}
+                    {status}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * A dock button. "Unavailable" buttons stay focusable and keep their tooltip
+ * (a disabled <button> would swallow the hover), but do nothing.
+ */
+const DockButton = ({ icon: Icon, label, onClick, active = false, danger = false, unavailable = false, badge, wide = false, testId }) => {
+    const bg = danger ? 'var(--state-danger)' : active ? 'var(--accent)' : 'var(--bg-active)';
+    const color = danger ? '#fff' : active ? '#0c0c0c' : 'var(--text-primary)';
+    return (
+        <button
+            type="button"
+            data-testid={testId}
+            title={label}
+            aria-label={label}
+            aria-disabled={unavailable || undefined}
+            aria-pressed={active || undefined}
+            onClick={unavailable ? undefined : onClick}
+            style={{
+                position: 'relative', width: wide ? 64 : 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: bg, color, border: `1px solid ${danger ? 'var(--state-danger)' : active ? 'var(--accent)' : 'var(--border-default)'}`,
+                borderRadius: '2px', cursor: unavailable ? 'not-allowed' : 'pointer', opacity: unavailable ? 0.45 : 1, transition: 'background 120ms ease',
+            }}
+        >
+            <Icon size={19} />
+            {badge !== undefined && (
+                <span style={{ position: 'absolute', top: '-6px', right: '-6px', minWidth: '16px', height: '16px', padding: '0 4px', borderRadius: '8px', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--text-primary)', color: 'var(--bg-base)' }}>
+                    {badge}
+                </span>
+            )}
+        </button>
+    );
+};
+
+const ParticipantsPanel = ({ participants, peerStates, onClose }) => (
+    <aside data-testid="huddle-participants-panel" style={{ width: '260px', flexShrink: 0, borderLeft: '1px solid var(--border-default)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Participants ({participants.length})</span>
+            <button onClick={onClose} title="Close participants" aria-label="Close participants" style={{ display: 'flex', padding: '4px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={15} />
+            </button>
+        </div>
+        <ul style={{ listStyle: 'none', margin: 0, padding: '6px 0', overflowY: 'auto' }}>
+            {participants.map(p => {
+                const status = p.isLocal ? null : CONNECTION_LABELS[peerStates[p.userId]];
+                return (
+                    <li key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>
+                            {getInitials(p.username || '?')}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {p.username || 'Guest'}{p.isLocal ? ' (you)' : ''}
+                            </p>
+                            {status && <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{status}</p>}
+                        </div>
+                        {p.videoEnabled ? <Video size={14} style={{ color: 'var(--text-secondary)' }} /> : null}
+                        {p.audioEnabled === false
+                            ? <MicOff size={14} style={{ color: 'var(--state-danger)' }} aria-label="Muted" />
+                            : <Mic size={14} style={{ color: 'var(--text-secondary)' }} aria-label="Mic on" />}
+                    </li>
+                );
+            })}
+        </ul>
+    </aside>
+);
+
+const ActiveRoom = ({ huddle, onLeave }) => {
+    const { showToast } = useToast();
+    const {
+        participants, muted, toggleMute, isVideo, cameraOn, toggleCamera,
+        localStream, remoteStreams, screenStream, startScreenShare, stopScreenShare, peerStates,
+    } = huddle;
     const [duration, setDuration] = useState(0);
-    const [handRaised, setHandRaised] = useState(false);
-    const [showChat, setShowChat] = useState(false);
+    const [showParticipants, setShowParticipants] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => setDuration(d => d + 1), 1000);
         return () => clearInterval(interval);
     }, []);
 
+    const hasCameraTrack = !!localStream && localStream.getVideoTracks().length > 0;
+    const sharing = !!screenStream;
+    const cameraLabel = !isVideo
+        ? 'Camera is available in video huddles'
+        : !hasCameraTrack ? 'No camera available'
+            : sharing ? 'Stop sharing to change the camera'
+                : cameraOn ? 'Turn camera off' : 'Turn camera on';
+    const screenLabel = !isVideo
+        ? 'Screen sharing is available in video huddles'
+        : !hasCameraTrack ? 'Screen sharing needs a camera connection'
+            : sharing ? 'Stop sharing screen' : 'Share screen';
+
+    const handleScreen = async () => {
+        if (sharing) { stopScreenShare(); return; }
+        try {
+            const ok = await startScreenShare();
+            if (!ok) showToast('Screen sharing is not available in this huddle.', 'info');
+        } catch (err) {
+            if (err?.name === 'NotAllowedError') return; // the user closed the picker
+            showToast(err?.message || 'Could not share your screen.', 'error');
+        }
+    };
+
+    const count = participants.length;
+    const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+
     return (
-        <div className="h-full w-full flex flex-col text-white overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
-            {}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full" style={{ background: 'rgba(184,149,106,0.04)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite' }} />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.025)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite', animationDelay: '1s' }} />
-            </div>
-
-            {}
-            <header className="relative z-10 flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 shadow-lg">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        <div data-testid="huddle-room" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-base)', fontFamily: FONT }}>
+            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--state-success)', flexShrink: 0 }} />
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {huddle.selectedHuddle?.title || 'Huddle'}
+                    </h3>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{formatTime(duration)}</span>
+                    {sharing && (
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent)', padding: '2px 8px', border: '1px solid var(--border-accent)', borderRadius: '2px', flexShrink: 0 }}>
+                            Sharing your screen
                         </span>
-                        <div className="h-3.5 w-px bg-white/20" />
-                        <h3 className="font-semibold text-sm text-white/90 tracking-wide">
-                            {huddle?.title || 'Instant Huddle'}
-                        </h3>
-                        <span className="font-mono text-sm text-white/50 tabular-nums">{formatTime(duration)}</span>
-                    </div>
+                    )}
                 </div>
-
-                <div className="flex items-center gap-2">
-                    {}
-                    <div className="relative group flex items-center justify-center w-9 h-9 bg-white/5 rounded-full border border-white/10 text-emerald-400 cursor-help">
-                        <Signal size={15} />
-                        <div className="absolute top-11 right-0 w-32 bg-black/90 text-[10px] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-white/10 text-center">
-                            Connection: Good
-                        </div>
-                    </div>
-                    <button className="flex items-center justify-center w-9 h-9 bg-white/5 rounded-full border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all">
-                        <Grid size={15} />
-                    </button>
-                    <button className="flex items-center justify-center w-9 h-9 bg-white/5 rounded-full border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all">
-                        <Settings size={15} />
-                    </button>
-                </div>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                    {isVideo ? 'Video huddle' : 'Voice huddle'} · {count} {count === 1 ? 'participant' : 'participants'}
+                </span>
             </header>
 
-            {}
-            <main className="relative z-10 flex-1 px-6 pb-28 overflow-hidden">
-                {participants.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center gap-4">
-                        <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                            <Users size={28} className="text-white/40" />
-                        </div>
-                        <p className="text-white/50 text-sm">Waiting for others to join...</p>
-                    </div>
-                ) : (
-                    <div className={`h-full grid gap-4 items-center ${participants.length === 1 ? "grid-cols-1 max-w-xl mx-auto" :
-                            participants.length <= 4 ? "grid-cols-2" :
-                                "grid-cols-3"
-                        }`}>
-                        {participants.map((p, i) => (
-                            <ParticipantCard
+            <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+                <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px', maxWidth: cols === 1 ? '720px' : '1200px', margin: '0 auto' }}>
+                        {participants.map(p => (
+                            <ParticipantTile
                                 key={p.userId}
                                 participant={p}
-                                isLocal={p.isLocal}
-                                colorIdx={i}
+                                stream={p.isLocal ? (screenStream || localStream) : remoteStreams[p.userId]}
+                                showVideo={p.isLocal ? (sharing || cameraOn) : p.videoEnabled !== false && isVideo}
+                                mirror={p.isLocal && !sharing}
+                                connection={peerStates[p.userId]}
                             />
                         ))}
                     </div>
+                    {count <= 1 && (
+                        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            Waiting for others to join. Teammates see this huddle under Live now.
+                        </p>
+                    )}
+                </main>
+                {showParticipants && (
+                    <ParticipantsPanel participants={participants} peerStates={peerStates} onClose={() => setShowParticipants(false)} />
                 )}
-            </main>
+            </div>
 
-            {}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
-                <div className="flex items-center gap-2 p-2 px-4 bg-black/40 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl ring-1 ring-white/5 h-18">
-                    {}
-                    <button
-                        onClick={onToggleMute}
-                        className={`w-13 h-13 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg ${muted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                            }`}
-                        style={{ width: 52, height: 52 }}
-                        title={muted ? "Unmute" : "Mute"}
-                    >
-                        {muted ? <MicOff size={20} /> : <Mic size={20} />}
-                    </button>
-
-                    {}
-                    <button
-                        onClick={onToggleVideo}
-                        className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isVideoOff ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                            }`}
-                        style={{ width: 52, height: 52 }}
-                        title={isVideoOff ? "Turn Video On" : "Turn Video Off"}
-                    >
-                        {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-                    </button>
-
-                    {}
-                    <button
-                        onClick={onToggleScreen}
-                        className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isScreenSharing ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
-                        style={{ width: 52, height: 52, ...(isScreenSharing ? { background: '#b8956a' } : {}) }}
-                        title="Share Screen"
-                    >
-                        <Monitor size={20} />
-                    </button>
-
-                    {}
-                    <button
-                        onClick={() => setHandRaised(h => !h)}
-                        className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${handRaised ? 'bg-yellow-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                            }`}
-                        style={{ width: 52, height: 52 }}
-                        title={handRaised ? "Lower Hand" : "Raise Hand"}
-                    >
-                        <Hand size={20} />
-                    </button>
-
-                    <div className="w-px h-8 bg-white/10 mx-1" />
-
-                    {}
-                    <button
-                        onClick={() => setShowChat(c => !c)}
-                        className={`relative flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${showChat ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
-                        style={{ width: 52, height: 52, ...(showChat ? { background: '#b8956a' } : {}) }}
-                    >
-                        <MessageSquare size={20} />
-                    </button>
-
-                    {}
-                    <button
-                        className="flex items-center justify-center bg-white/10 text-white hover:bg-white/20 border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl relative"
-                        style={{ width: 52, height: 52 }}
-                        title="Participants"
-                    >
-                        <Users size={20} />
-                        {participants.length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center" style={{ background: '#b8956a', color: '#0c0c0c' }}>
-                                {participants.length}
-                            </span>
-                        )}
-                    </button>
-
-                    <div className="w-px h-8 bg-white/10 mx-1" />
-
-                    {}
-                    <button
-                        onClick={onLeave}
-                        className="flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-500/30 rounded-2xl"
-                        style={{ width: 68, height: 52 }}
-                        title="Leave Huddle"
-                    >
-                        <Phone size={22} style={{ transform: 'rotate(135deg)' }} />
-                    </button>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <DockButton testId="room-mute" icon={muted ? MicOff : Mic} label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute} danger={muted} />
+                    <DockButton testId="room-camera" icon={isVideo && cameraOn ? Video : VideoOff} label={cameraLabel} onClick={toggleCamera}
+                        unavailable={!isVideo || !hasCameraTrack || sharing} />
+                    <DockButton testId="room-screen" icon={sharing ? MonitorOff : Monitor} label={screenLabel} onClick={handleScreen}
+                        active={sharing} unavailable={!isVideo || !hasCameraTrack} />
+                    <DockButton icon={Hand} label="Raise hand: coming soon" unavailable />
+                    <DockButton icon={MessageSquare} label="In-call chat: coming soon" unavailable />
+                    <span style={{ width: '1px', height: '28px', background: 'var(--border-default)', margin: '0 4px' }} />
+                    <DockButton testId="room-participants" icon={Users} label={showParticipants ? 'Hide participants' : 'Show participants'}
+                        onClick={() => setShowParticipants(s => !s)} active={showParticipants} badge={count} />
+                    <DockButton testId="room-leave" icon={PhoneOff} label="Leave huddle" onClick={onLeave} danger wide />
                 </div>
             </div>
         </div>
     );
 };
 
-const ConnectingView = () => (
-    <div className="h-full flex flex-col items-center justify-center text-white" style={{ background: 'var(--bg-base)' }}>
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.06)', filter: 'blur(150px)' }} />
-        </div>
-        <div className="relative z-10 flex flex-col items-center gap-6">
-            <div className="relative">
-                <div className="w-28 h-28 rounded-full border border-white/10 animate-ping absolute inset-0" />
-                <div className="w-28 h-28 rounded-full p-[2px] shadow-2xl relative z-10" style={{ background: 'linear-gradient(135deg, #b8956a, #8a6a47)' }}>
-                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#111' }}>
-                        <Radio size={32} style={{ color: '#b8956a', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                    </div>
-                </div>
-            </div>
-            <div className="text-center">
-                <h3 className="text-xl font-bold text-white mb-1">Connecting...</h3>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Establishing secure connection</p>
-            </div>
-        </div>
-    </div>
-);
-
 const Meetings = () => {
     const { showToast } = useToast();
     const { workspaceId } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
 
+    const huddle = useHuddleContext();
     const {
-        active,
-        participants,
-        muted,
-        selectedHuddle,
-        setSelectedHuddle,
-        startHuddle,
-        leaveHuddle,
-        toggleMute,
-    } = useHuddleContext();
+        active, startHuddle, joinHuddle, leaveHuddle, connecting, connectError, dismissConnectError, activeWorkspaceHuddles,
+    } = huddle;
 
     const { createMeeting } = useScheduledMeetings(workspaceId);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-    const [starting, setStarting] = useState(false);
-    const [connecting, setConnecting] = useState(false);
-    const [isVideoOff, setIsVideoOff] = useState(false);
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const params = new URLSearchParams(location.search);
+    const meetingParam = params.get('meeting');
+    const joinParam = params.get('join');
+    const startParam = params.get('start');
+    const handledRef = useRef(null);
 
-    
+    const clearParams = useCallback(() => {
+        const next = new URLSearchParams(location.search);
+        ['meeting', 'join', 'start'].forEach(k => next.delete(k));
+        const qs = next.toString();
+        navigate(`/workspace/${workspaceId}/huddles${qs ? `?${qs}` : ''}`, { replace: true });
+    }, [location.search, navigate, workspaceId]);
+
+    // ?meeting=<id>: the call for a scheduled meeting (one fixed huddle per meeting).
     useEffect(() => {
-        if (active && connecting) {
-            const t = setTimeout(() => setConnecting(false), 2000);
-            return () => clearTimeout(t);
-        }
-    }, [active, connecting]);
+        if (!meetingParam || handledRef.current === `meeting:${meetingParam}`) return;
+        handledRef.current = `meeting:${meetingParam}`;
+        const stateTitle = location.state?.meetingTitle;
+        (async () => {
+            let meeting = null;
+            try {
+                const { data } = await api.post(`/api/v2/meetings/${meetingParam}/join`, {});
+                meeting = data.meeting;
+            } catch (err) {
+                showToast(err?.response?.data?.message || 'Could not open that meeting.', 'error');
+                clearParams();
+                return;
+            }
+            const path = meetingConversationPath(workspaceId, meeting);
+            if (path) {
+                // Meetings scheduled in a conversation meet in that conversation's huddle.
+                showToast('This meeting happens in its conversation. Start or join the huddle there.', 'info');
+                navigate(path, { replace: true });
+                return;
+            }
+            clearParams();
+            try {
+                await startHuddle(meeting?.title || stateTitle || 'Meeting', { huddleId: meetingHuddleId(meetingParam) });
+            } catch { /* the error view offers Retry */ }
+        })();
+    }, [meetingParam, location.state, workspaceId, startHuddle, showToast, clearParams, navigate]);
 
-    const handleStart = async () => {
-        if (starting) return;
-        setStarting(true);
-        setConnecting(true);
-        try {
-            await startHuddle("Instant Huddle");
-        } catch (err) {
-            setConnecting(false);
-            showToast("Microphone permission denied. Please allow mic access.", "error");
-        } finally {
-            setStarting(false);
-        }
-    };
+    // ?start=1: "Start huddle" pressed elsewhere (e.g. from a meeting page's sidebar).
+    useEffect(() => {
+        if (!startParam || handledRef.current === 'start') return;
+        handledRef.current = 'start';
+        clearParams();
+        if (!active) startHuddle('Workspace huddle').catch(() => {});
+    }, [startParam, active, startHuddle, clearParams]);
 
-    const handleLeave = () => {
-        leaveHuddle();
-        setSelectedHuddle(null);
-        setIsVideoOff(false);
-        setIsScreenSharing(false);
+    // ?join=<huddleId>: join a live workspace huddle once it shows up in the list.
+    useEffect(() => {
+        if (!joinParam || handledRef.current === `join:${joinParam}`) return undefined;
+        const target = activeWorkspaceHuddles.find(h => h.id === joinParam);
+        if (target) {
+            handledRef.current = `join:${joinParam}`;
+            clearParams();
+            joinHuddle(target).catch(() => {});
+            return undefined;
+        }
+        const t = setTimeout(() => {
+            handledRef.current = `join:${joinParam}`;
+            clearParams();
+            showToast('That huddle has already ended.', 'info');
+        }, 4000);
+        return () => clearTimeout(t);
+    }, [joinParam, activeWorkspaceHuddles, joinHuddle, clearParams, showToast]);
+
+    const handleStart = (video) => {
+        startHuddle(video ? 'Workspace video huddle' : 'Workspace huddle', { video }).catch(() => { /* error view */ });
     };
 
     const handleSchedule = useCallback(async (payload) => {
-        try {
-            await createMeeting(payload);
-            showToast("Meeting scheduled!", "success");
-            setShowScheduleModal(false);
-        } catch (err) {
-            showToast(err?.response?.data?.message || "Failed to schedule meeting", "error");
-            throw err;
-        }
+        await createMeeting(payload);
+        showToast('Meeting scheduled', 'success');
     }, [createMeeting, showToast]);
 
-    
-    if (connecting) return <ConnectingView />;
+    const modal = showScheduleModal && (
+        <ScheduleMeetingModal
+            onSchedule={handleSchedule}
+            onClose={() => setShowScheduleModal(false)}
+        />
+    );
 
-    
-    if (active && selectedHuddle) {
+    if (active) {
+        return <ActiveRoom huddle={huddle} onLeave={leaveHuddle} />;
+    }
+
+    if (connecting) return <ConnectingView label={connecting.label} />;
+
+    if (connectError) {
         return (
-            <>
-                <ActiveRoom
-                    huddle={selectedHuddle}
-                    participants={participants}
-                    muted={muted}
-                    isVideoOff={isVideoOff}
-                    isScreenSharing={isScreenSharing}
-                    onToggleMute={toggleMute}
-                    onToggleVideo={() => setIsVideoOff(v => !v)}
-                    onToggleScreen={() => {
-                        setIsScreenSharing(s => !s);
-                        showToast(isScreenSharing ? "Screen sharing stopped" : "Screen sharing started", "info");
-                    }}
-                    onLeave={handleLeave}
-                />
-                {showScheduleModal && (
-                    <ScheduleMeetingModal
-                        onSchedule={handleSchedule}
-                        onClose={() => setShowScheduleModal(false)}
-                        conversationId={null}
-                        conversationType={null}
-                    />
-                )}
-            </>
+            <ErrorView
+                message={connectError.message}
+                onRetry={connectError.retry}
+                onBack={dismissConnectError}
+            />
         );
     }
 
-    
     return (
         <>
             <LandingView
-                onStart={handleStart}
+                onStart={() => handleStart(false)}
+                onStartVideo={() => handleStart(true)}
                 onSchedule={() => setShowScheduleModal(true)}
-                starting={starting}
+                starting={!!connecting}
             />
-            {showScheduleModal && (
-                <ScheduleMeetingModal
-                    onSchedule={handleSchedule}
-                    onClose={() => setShowScheduleModal(false)}
-                    conversationId={null}
-                    conversationType={null}
-                />
-            )}
+            {modal}
         </>
     );
 };

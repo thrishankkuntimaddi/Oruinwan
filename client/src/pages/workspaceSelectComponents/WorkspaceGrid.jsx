@@ -1,7 +1,10 @@
 import React from 'react';
-import { User, ArrowRight, Plus, Shield, Lock } from 'lucide-react';
+import { User, ArrowRight, Plus, Shield, Lock, Crown } from 'lucide-react';
+import { WorkspaceIcon } from '../../utils/workspaceIcons';
 
-const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconComponent, user }) => {
+const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member' };
+
+const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, user }) => {
     const ownedWorkspacesCount = workspaces.filter(ws => ws.isOwner).length;
     const isLimitReached = user?.userType === 'personal' && ownedWorkspacesCount >= 3;
     const isCompanyMember = user?.companyRole === 'member' && user?.userType !== 'personal';
@@ -17,9 +20,12 @@ const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconCom
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+        // Fixed-width tracks centred under the centred heading (no left-aligned leftovers).
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 300px))', justifyContent: 'center', gap: '16px' }}>
             {workspaces.map((ws) => {
-                const IconComponent = getIconComponent(ws.icon);
+                const role = ws.isOwner ? 'owner' : (ws.role || 'member');
+                const RoleIcon = role === 'owner' ? Crown : role === 'admin' ? Shield : User;
+                const suspended = ws.membershipStatus && ws.membershipStatus !== 'active';
                 return (
                     <button key={ws.id} onClick={() => onWorkspaceClick(ws.id)}
                         className="ws-card"
@@ -42,8 +48,8 @@ const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconCom
                         style={{ ...cardBase, border: 'none', outline: '1px solid var(--border-default)' }}
                     >
                         <div style={{ flex: 1 }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', marginBottom: '14px', backgroundColor: ws.color, flexShrink: 0 }}>
-                                <IconComponent size={18} />
+                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ws.color ? '#fff' : 'var(--text-primary)', marginBottom: '14px', background: ws.color || 'var(--bg-active)', border: ws.color ? 'none' : '1px solid var(--border-default)', flexShrink: 0 }}>
+                                <WorkspaceIcon icon={ws.icon} size={18} />
                             </div>
 
                             <h3 className="ws-name" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms ease', margin: '0 0 6px' }}>
@@ -51,12 +57,17 @@ const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconCom
                             </h3>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <User size={11} />
-                                    {ws.role === 'owner' ? 'Owner' : 'Member'}
+                                <div data-testid="ws-role" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: role === 'member' ? 'var(--text-muted)' : 'var(--accent)' }}>
+                                    <RoleIcon size={11} />
+                                    {ROLE_LABEL[role] || 'Member'}
                                 </div>
                                 <div style={{ width: '3px', height: '3px', background: 'var(--border-accent)', borderRadius: '50%' }} />
                                 <div>{ws.members} member{ws.members !== 1 && 's'}</div>
+                                {suspended && (
+                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--state-danger)', border: '1px solid var(--state-danger)', borderRadius: '2px', padding: '1px 5px' }}>
+                                        Suspended
+                                    </span>
+                                )}
                             </div>
                         </div>
 

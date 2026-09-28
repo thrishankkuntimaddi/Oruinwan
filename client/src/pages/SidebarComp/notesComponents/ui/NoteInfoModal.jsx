@@ -1,5 +1,7 @@
 import React from 'react';
 import { X, FileText, Clock } from 'lucide-react';
+import { formatDateTime } from '../../../../utils/userDateFormat';
+import { getUserPreferences } from '../../../../hooks/useUserPreferences';
 
 const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
     if (!showInfoModal || !note) return null;
@@ -31,12 +33,8 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
 
     const sizeKb = (JSON.stringify(blocks).length / 1024).toFixed(2);
 
-    const createdFull = new Date(note.createdAt).toLocaleString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-    const editedFull = new Date(note.updatedAt).toLocaleString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
+    const createdFull = formatDateTime(note.createdAt, getUserPreferences().region);
+    const editedFull = formatDateTime(note.updatedAt, getUserPreferences().region);
 
     return (
         <div
@@ -47,11 +45,11 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <FileText size={15} style={{ color: '#b8956a' }} />
+                        <div style={{ width: '32px', height: '32px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={15} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div>
-                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Note Info</h3>
+                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font)', marginBottom: '1px' }}>Note Info</h3>
                             <p style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
                                 {note.title || 'Untitled Note'}
                             </p>
@@ -72,8 +70,8 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '18px' }}>
                         {[{ val: wordCount, label: 'Words' }, { val: blocks.length, label: 'Blocks' }, { val: sizeKb, label: 'KB' }].map(({ val, label }) => (
                             <div key={label} style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', padding: '12px 10px', textAlign: 'center' }}>
-                                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace', marginBottom: '3px' }}>{val}</p>
-                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+                                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font)', marginBottom: '3px' }}>{val}</p>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
                             </div>
                         ))}
                     </div>
@@ -81,16 +79,16 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     {}
                     {blockSummary.length > 0 && (
                         <div style={{ marginBottom: '18px' }}>
-                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'monospace' }}>Block breakdown</p>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'var(--font)' }}>Block breakdown</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {blockSummary.map(({ type, count }) => (
                                     <div key={type} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize', fontFamily: 'Inter, system-ui, sans-serif' }}>{type}</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize', fontFamily: 'var(--font)' }}>{type}</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <div style={{ height: '4px', width: '80px', background: 'var(--bg-active)', overflow: 'hidden' }}>
-                                                <div style={{ height: '100%', background: '#b8956a', width: `${Math.round((count / blocks.length) * 100)}%`, transition: 'width 400ms ease' }} />
+                                                <div style={{ height: '100%', background: 'var(--accent)', width: `${Math.round((count / blocks.length) * 100)}%`, transition: 'width 400ms ease' }} />
                                             </div>
-                                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', width: '16px', textAlign: 'right', fontFamily: 'monospace' }}>{count}</span>
+                                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', width: '16px', textAlign: 'right', fontFamily: 'var(--font)' }}>{count}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -101,10 +99,10 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     {}
                     {note.tags && note.tags.length > 0 && (
                         <div style={{ marginBottom: '18px' }}>
-                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Tags</p>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'var(--font)' }}>Tags</p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {note.tags.map(tag => (
-                                    <span key={tag} style={{ padding: '3px 10px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', color: '#b8956a', fontSize: '11px', fontWeight: 600, fontFamily: 'monospace' }}>
+                                    <span key={tag} style={{ padding: '3px 10px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.2)', color: 'var(--accent)', fontSize: '11px', fontWeight: 600, fontFamily: 'var(--font)' }}>
                                         #{tag}
                                     </span>
                                 ))}
@@ -119,14 +117,14 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <Clock size={11} /> {label}
                                 </span>
-                                <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{val}</span>
+                                <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{val}</span>
                             </div>
                         ))}
                     </div>
 
                     {}
                     <button onClick={() => setShowInfoModal(false)}
-                        style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
                         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                     >
