@@ -1,1070 +1,495 @@
 <div align="center">
 
-<img src="client/public/icons/oruinwan-192.png" alt="Oruinwan Logo" width="80" height="80" style="border-radius: 12px;" />
+<img src="client/public/icons/oruinwan-192.png" alt="Oruinwan logo" width="80" height="80" />
 
 # Oruinwan
 
-**The enterprise workspace OS. Real-time messaging, AI intelligence, E2EE, and an entire operating system for teams — in a single platform.**
+**An open-source, self-hosted workspace for teams: end-to-end encrypted messaging, tasks, notes, huddles and a built-in AI assistant, on web, desktop and mobile.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
-[![CI](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/actions/workflows/ci.yml)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7-brightgreen.svg)](https://mongodb.com/)
-[![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
-[![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 
-[Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
+[Report a bug](https://github.com/thrishankkuntimaddi/Oruniwan/issues) · [Request a feature](https://github.com/thrishankkuntimaddi/Oruniwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## Contents
 
-- [What is Oruinwan?](#-what-is-oruinwan)
-- [Feature Overview](#-feature-overview)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [Real-time System](#-real-time-system)
-- [AI System](#-ai-system)
-- [Security & E2EE](#-security--e2ee)
-- [Role & Permission Model](#-role--permission-model)
-- [Mobile Experience](#-mobile-experience)
-- [Desktop App](#-desktop-app)
-- [SDK & Developer Platform](#-sdk--developer-platform)
-- [Deployment](#-deployment)
-- [Design System](#-design-system)
-- [Contributing](#-contributing)
-- [License](#-license)
-
----
-
-## 🚀 What is Oruinwan?
-
-Oruinwan is a **production-grade, full-stack collaboration platform** built for modern teams. It goes beyond simple messaging — it is a complete **Workspace Operating System** that consolidates:
-
-- Team messaging (channels, threads, DMs) with full E2EE
-- AI-powered assistance (Oruinwan AI, powered by Gemini AI)
-- Task & project management with sprints, milestones, and boards
-- Document collaboration with a rich note-taking system
-- Knowledge base management
-- Meeting & huddle support
-- File management on S3-compatible object storage
-- Workflow automations
-- Developer platform with OAuth apps & webhooks
-- Enterprise-grade admin, compliance, and audit infrastructure
-- Cross-platform: Web, Electron Desktop, React Native Mobile, and SDK
-
-Oruinwan is architected as a true **multi-tenant SaaS** platform with workspace isolation, company-level administration, and deep role-based access control.
+- [What is Oruinwan?](#what-is-oruinwan)
+- [Features](#features)
+- [Architecture](#architecture)
+- [External services](#external-services)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Repository layout](#repository-layout)
+- [API and real-time events](#api-and-real-time-events)
+- [AI](#ai)
+- [Security and encryption](#security-and-encryption)
+- [Roles](#roles)
+- [Clients: web, desktop, mobile, SDK](#clients-web-desktop-mobile-sdk)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Project status](#project-status)
+- [A note from the builder](#a-note-from-the-builder)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## ✨ Feature Overview
+## What is Oruinwan?
 
-### 💬 Messaging & Channels
-- **Public & private channels** with invite links, member roles (owner, admin, member), and descriptions
-- **Direct Messages (DMs)** — 1:1 and multi-person conversations
-- **Thread replies** — in-channel discussion without noise
-- **Message formatting** — Markdown supported, code blocks, rich embeds
-- **Emoji reactions** — per-message reactions with real-time sync
-- **Pinned messages** — pin important content inside any channel
-- **Message editing & deletion** — with audit history
-- **Link previews** — auto-fetched OG metadata for URLs
-- **File & image attachment** — upload via drag-and-drop or button
-- **Broadcasts** — one-way announcement channels
-- **Slash commands** — `/remind`, `/status`, `/task`, and more
+Oruinwan is a multi-tenant collaboration platform. A **company** owns one or more **workspaces**, and each workspace has channels, direct messages, tasks, notes, a knowledge base, files and huddles. Messages are end-to-end encrypted: the server stores ciphertext and the clients decrypt.
 
-### 🔒 End-to-End Encryption (E2EE)
-- Per-workspace **AES-GCM encryption keys**
-- Server Key Encryption Key (KEK) architecture — keys never stored in plaintext
-- **Client-side decryption** only — server sees ciphertext
-- E2EE lock/unlock via password prompt
-- Encrypted DMs using X25519 identity keys
-- Compliance with zero-knowledge architecture
-
-### 🤖 AI — Oruinwan AI
-- **Gemini AI** integration (Google `@google/generative-ai`)
-- Context-aware chat assistant embedded in workspace
-- **Screen Context** — AI reads current page to answer contextually
-- **Summarize** — summarize channel/DM conversations
-- **Draft Message** — AI drafts messages from natural language
-- **Add Task** — convert AI chat into a task directly
-- Smart reply suggestions in chat
-- AI Insights Dashboard — workspace-level analytics generated by AI
-- Keyboard shortcut: `Cmd+Shift+A`
-
-### ✅ Tasks & Project Management
-- **My Tasks** — personal task inbox with priority, due dates, and status
-- **Board view** (Kanban), **List view**, **Sprint view**, **Timeline**, **Workload**
-- Task creation from chat messages, AI chat, or manually
-- **Sprints & Milestones** — project structure with burndown tracking
-- **Task Templates** — reusable task blueprints
-- **Assignments** — multi-member assignment with notifications
-- Manager dashboard: team allocation, unassigned members, reports
-
-### 📝 Notes & Knowledge
-- Personal and workspace notes with **rich text editing**
-- Note sharing, pinning, and organization
-- **Knowledge Base** — structured docs with nested pages
-- **Knowledge Graph** — visual relationship map of knowledge nodes
-- Full-text search across all notes and knowledge pages
-
-### 📂 Files & Media
-- **S3-compatible object storage** (RustFS locally, any S3 later) for file uploads
-- Per-workspace file library with metadata
-- File preview, download, and sharing
-- Drag-and-drop upload in channels and DMs
-
-### 🔔 Notifications
-- **Per-conversation unread badges** (Slack/WhatsApp style) on the DM list, channel list and icon rail, kept live over Socket.IO (`conversation:activity` / `conversation:read`) and cleared when you open the conversation
-- **Compact one-line toasts** for DMs and @mentions (sender + decrypted preview, click to jump); browser and Electron native notifications when the tab is hidden
-- **Bell / notification center** with stored notifications for: DMs, @user / @here / @channel mentions, thread replies, reactions, task assignments and status changes, shared notes, scheduled meetings, huddles, new members, "Remind me" reminders, due-soon tasks and a daily digest
-- **Per-workspace preferences** (messages, thread replies, tasks, meetings, email, push) enforced server-side before anything is stored or sent
-- **Mobile push** through Expo for every stored notification the user allows; E2EE previews are decrypted on the client only
-
-### 📅 Meetings & Huddles
-- In-workspace **huddle/meeting** creation and management
-- Meeting detail pages with notes and attendees
-- Integration with the calendar and workspace timeline
-
-### ⚙️ Workflow Automations
-- Visual automation builder — trigger + action model
-- Triggers: message sent, task created, member joined, status changed, etc.
-- Actions: send message, create task, notify channel, call webhook
-- Save and re-run automation rules from the automations library
-
-### 🏢 Workspace OS (Enterprise Infrastructure)
-- **Multi-workspace** — users can belong to multiple workspaces under one company
-- **Workspace templates** — bootstrap new workspaces from templates
-- **Workspace permissions** — granular per-workspace access control
-- **Org chart** — visual company hierarchy
-- **Employee directory** — people management with roles and departments
-- **Teams management** — group teammates into functional squads
-- **Department management** — HR-level department tree
-- **Permission matrix** — fine-grained capability control per role
-- **Audit logs** — full action history for compliance
-- **Compliance logs** — GDPR and data-retention events
-- **SCIM provisioning** support (token-based)
-- **Domain verification** — company domain ownership proof
-- **Onboarding wizard** — guided workspace + company setup
-- **Billing & invoices** — subscription management
-- **Security events** — login anomaly and threat tracking
-- **Active sessions** — view and revoke all user sessions
-
-### 🔌 Integrations & Developer Platform
-- GitHub, Slack, and more via **Integrations** panel
-- **Developer Portal** — build OAuth apps on top of Oruinwan
-- Webhook registration and delivery
-- Platform SDK (`/sdk`) — React Native and web SDK for embedding Oruinwan
-- REST API + Socket.IO real-time API
+Everything is self-hostable. The default AI runs on your own model server (Ollama or vLLM), so no third-party AI service is needed unless you choose one. The same code runs on one laptop, on a single VPS, or split across many servers, with only `.env` changes.
 
 ---
 
-## 🏗 Architecture
+## Features
+
+### Messaging
+- Public and private channels, invite links, channel roles
+- 1:1 and group direct messages, threads, reactions, pins, edits and deletes
+- Markdown, code blocks, link previews, polls, file and image attachments
+- Broadcast channels and slash commands such as `/remind`, `/status` and `/task`
+- Unread badges per conversation, typing indicators and read receipts over Socket.IO
+
+### Encryption
+- End-to-end encrypted channels and DMs with AES-256-GCM
+- Per-user identity keys, X25519 or RSA-OAEP key wrapping, password-based unlock
+- Server-side secrets sealed under a key-encryption key (`SERVER_KEK`, `CRYPTO_KEK_*`)
+
+### Tasks and projects
+- Personal task inbox, board, list, sprint, timeline and workload views
+- Sprints, milestones, task templates and multi-assignee tasks
+- Create tasks from a message, from the AI assistant or by hand
+
+### Notes and knowledge
+- Personal and shared notes with a rich editor
+- Knowledge base with nested pages, a knowledge graph and live cursors
+- Search across messages, notes, tasks and knowledge pages
+
+### Huddles and meetings
+- Voice and video huddles over WebRTC with shared notes
+- Scheduled meetings linked to the workspace calendar
+- STUN by default, plus Cloudflare TURN, self-hosted coturn or any static TURN provider
+
+### Notifications
+- In-app notification center for DMs, mentions, thread replies, tasks, meetings and reminders
+- Browser and Electron native notifications, daily digests and email notifications
+- Mobile push through Expo, with previews decrypted on the device only
+- Per-workspace preferences enforced on the server
+
+### Company administration
+- Multiple workspaces per company, workspace templates and an onboarding wizard
+- Departments, teams, org chart, employee directory and a role permission matrix
+- Audit, compliance and security event logs with configurable retention
+- Active session management, two-factor authentication and domain verification
+
+### Automations and developer platform
+- Trigger and action automations, such as "when a task is created, post to a channel"
+- Developer portal with API keys, OAuth apps and outgoing webhooks
+- GitHub, Jira and Zoom integrations behind a feature flag (see [docs/integrations.md](docs/integrations.md))
+- A zero-dependency JavaScript SDK in [`sdk/js`](sdk/js)
+
+Some areas are still being built and are hidden behind `FEATURES_ENABLED`: `billing`, `sso`, `integrations` and `community`.
+
+---
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CLIENT LAYER                                 │
-│  React 19 SPA (Vite) · Tailwind + Monolith Flow tokens · Socket.IO   │
-│  Web / Electron Desktop / React Native Mobile                        │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │ HTTPS + WSS
-┌──────────────────────────▼──────────────────────────────────────────┐
-│                         SERVER LAYER                                 │
-│  Express.js API Server · Socket.IO Server · JWT Auth · Rate-limiting │
-│  Feature-module architecture (~60 feature modules)                   │
-└──────────┬───────────────────────────────────────────┬──────────────┘
-           │                                           │
-┌──────────▼──────────┐                   ┌───────────▼──────────────┐
-│     MongoDB Atlas   │                   │    Redis (ioredis)        │
-│  Primary datastore  │                   │  Pub/Sub · Session cache  │
-│  Mongoose ODM       │                   │  Socket.IO adapter        │
-└─────────────────────┘                   └──────────────────────────┘
-           │
-┌──────────▼──────────┐
-│  Object storage     │
-│  (S3 API)           │
-│  File uploads       │
-└─────────────────────┘
+            Web (React 19 + Vite)   Desktop (Electron)   Mobile (Expo)   SDK
+                           \               |                 |           /
+                            \______ HTTPS + WebSocket (one origin) _____/
+                                               |
+                 ┌─────────────────────────────▼─────────────────────────────┐
+                 │  server/  Express 5 + Socket.IO 4                          │
+                 │  PROCESS_ROLE = all | api | realtime | worker | storage     │
+                 └───┬──────────────┬──────────────┬──────────────┬───────────┘
+                     │              │              │              │  HTTP + token
+          ┌──────────▼───┐ ┌────────▼─────┐ ┌──────▼──────┐ ┌─────▼──────────────┐
+          │ PostgreSQL   │ │ MongoDB      │ │ Redis       │ │ ai/ (optional own  │
+          │ + pgvector   │ │              │ │             │ │ process)           │
+          │ identity,    │ │ messages,    │ │ presence,   │ │ agents, tools,     │
+          │ tasks, logs, │ │ channels,    │ │ socket      │ │ memory  ──► Ollama │
+          │ embeddings,  │ │ notes,       │ │ fan-out,    │ │ / vLLM / Gemini /  │
+          │ event outbox │ │ notifications│ │ job locks,  │ │ OpenAI / Anthropic │
+          └──────────────┘ └──────────────┘ │ event stream│ └────────────────────┘
+                                            └─────────────┘
+                     S3-compatible object storage for uploads (RustFS locally, AWS S3 or any S3 API in production)
 ```
 
-### Backend Architecture: Feature Modules
-The server uses a **feature-module pattern** — each domain (channels, tasks, notes, auth, etc.) is a self-contained module under `server/src/features/` with its own:
-- `routes.js` — Express router
-- `controller.js` — request handlers
-- `service.js` — business logic
-- `model.js` (or imported from `/models`)
-- `socket.js` — Socket.IO event handlers (where applicable)
+Key design points:
+
+- **One codebase, several shapes.** `PROCESS_ROLE=all` runs everything in one process. The same code can run as separate API, realtime, worker and storage units once `REDIS_URL` is set.
+- **Two databases with a clear split.** PostgreSQL holds identity, tasks, logs, AI embeddings and the event outbox. MongoDB holds messages and other documents. No transaction spans both.
+- **Events go through an outbox.** Producers write to PostgreSQL, a worker relays to a Redis Stream, and consumers acknowledge. Without Redis, events stay in-process.
+- **Migrations run on boot.** SQL files in `server/db/migrations` run in order under an advisory lock.
+
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs/SCALING.md).
 
 ---
 
-## 🛠 Tech Stack
+## External services
 
-### Frontend
-| Technology | Purpose |
-|---|---|
-| **React 19** | UI framework |
-| **Vite** | Build tool & dev server |
-| **React Router DOM v7** | Client-side routing |
-| **Socket.IO Client** | Real-time events |
-| **Lucide React** | Icon system |
-| **Recharts** | Analytics charts |
-| **React Markdown** | Message rendering |
-| **emoji-picker-react** | Emoji picker |
-| **react-rnd** | Resizable panels |
-| **Tailwind CSS 3** | Utility classes on top of the Monolith Flow design tokens in `index.css` |
-| **Vitest + Testing Library** | Unit and component tests |
-| **XLSX** | Spreadsheet export |
+| Service | Used for | Required? |
+|---|---|---|
+| **PostgreSQL 16 + pgvector** | Users, companies, workspaces, keys, sessions, tasks, logs, AI embeddings, event outbox | Yes |
+| **MongoDB 7** | Messages, channels, notes, knowledge, notifications, huddle history | Yes |
+| **Redis 7** | Socket.IO adapter, shared presence, job locks, event stream | Only for more than one server process |
+| **S3-compatible storage** | File, image and voice uploads | Yes in production. Local disk works for development |
+| **AI model server** | Ollama or vLLM serving `qwen2.5:3b` and `nomic-embed-text` | Optional. AI features are off without it |
+| **Gemini, OpenAI or Anthropic** | Alternative AI providers, chosen globally or per workspace | Optional |
+| **Brevo or any SMTP server** | Sign-up verification, invites, password resets, digests | Needed for email flows |
+| **Google OAuth** | Google sign-in. `GOOGLE_CLIENT_ID` must be set at boot | Yes, can be a placeholder if unused |
+| **GitHub and LinkedIn OAuth** | Extra sign-in options | Optional |
+| **Twilio** | SMS one-time passwords | Optional |
+| **TURN server** | Huddles behind strict NATs and firewalls | Optional |
+| **Expo push service** | Mobile push notifications | Optional |
 
-### Backend
-| Technology | Purpose |
-|---|---|
-| **Node.js 20+** | Runtime |
-| **Express.js** | HTTP server & routing |
-| **Socket.IO 4** | Real-time bidirectional events |
-| **MongoDB + Mongoose** | Primary database & ODM |
-| **Redis (ioredis)** | Pub/Sub, session cache, Socket.IO adapter |
-| **JWT (jsonwebtoken)** | Access & refresh token auth |
-| **bcryptjs** | Password hashing |
-| **Multer** | File upload handling |
-| **Nodemailer** | Transactional email |
-| **Helmet** | HTTP security headers |
-| **express-rate-limit** | API rate limiting |
-| **express-validator** | Request validation |
-| **@google/generative-ai** | Gemini AI integration |
-| **@aws-sdk/client-s3** | S3-compatible file storage |
-| **pg** | PostgreSQL client (identity, tasks, logs, pgvector) |
-| **google-auth-library** | Google OAuth verification |
-| **open-graph-scraper** | Link preview metadata |
-| **pino** | Structured logging (pretty in dev, JSON in prod) |
-| **Jest** | Unit tests for server, `ai/` and `sdk/` |
-
-### Infrastructure
-| Technology | Purpose |
-|---|---|
-| **MongoDB Atlas** | Managed cloud database |
-| **Redis Cloud / Upstash** | Managed Redis |
-| **PostgreSQL 16 + pgvector** | Relational data and AI embeddings |
-| **S3-compatible storage** | File & media storage |
-| **Docker Compose** | Self-hosted infrastructure |
-| **Electron** | Desktop wrapper |
-| **React Native (Expo)** | Mobile app |
-| **GitHub Actions** | CI: lint, test and build on every push and PR |
+`docker compose up -d` starts PostgreSQL, Redis and RustFS locally. `docker compose --profile mongo up -d` adds MongoDB.
 
 ---
 
-## 📁 Project Structure
-
-```
-ChttrixCollab/
-├── client/                         # React frontend (Vite)
-│   ├── public/                     # Static assets
-│   ├── src/
-│   │   ├── App.js                  # Root router — all routes defined here
-│   │   ├── features/               # Domain folders (new code goes here)
-│   │   │   ├── messaging/          # Channel & DM chat window, message list, threads UI, modals
-│   │   │   ├── huddles/            # useHuddle (WebRTC), HuddleContext, huddle overlay
-│   │   │   └── notifications/      # NotificationsContext, preferences, desktop notifications
-│   │   ├── index.css               # Global design system tokens (Monolith Flow)
-│   │   ├── main.jsx                # React entry point
-│   │   ├── components/
-│   │   │   ├── layout/             # Core layout shell
-│   │   │   │   ├── MainLayout.jsx  # Primary workspace layout (desktop + mobile)
-│   │   │   │   ├── IconSidebar.jsx # Left icon rail
-│   │   │   │   ├── MobileBottomNav.jsx  # Mobile tab bar (5 tabs)
-│   │   │   │   ├── MobileHomePage.jsx   # Mobile home grid
-│   │   │   │   ├── SidePanel.jsx   # Left slide-over panel
-│   │   │   │   └── panels/         # Route-specific side panels
-│   │   │   │       ├── ChannelsPanel.jsx
-│   │   │   │       ├── MessagesPanel.jsx
-│   │   │   │       ├── NotesPanel.jsx
-│   │   │   │       ├── TasksPanel.jsx
-│   │   │   │       ├── FilesPanel.jsx
-│   │   │   │       ├── KnowledgePanel.jsx
-│   │   │   │       ├── MeetingsPanel.jsx
-│   │   │   │       └── UpdatesPanel.jsx
-│   │   │   ├── ai/                 # Oruinwan AI components
-│   │   │   │   └── ChttrixAIChat/  # Full AI chat panel
-│   │   │   ├── chat/               # Message composer, rich editor, slash commands
-│   │   │   ├── home/               # Home panel, workspace header
-│   │   │   ├── profile/            # Profile views (main menu, profile, settings)
-│   │   │   ├── SidebarComp/        # Profile sidebar, settings drawer
-│   │   │   ├── tasksComp/          # Task cards, modals, board components
-│   │   │   ├── admin/              # Admin dashboard components
-│   │   │   ├── manager/            # Manager dashboard components
-│   │   │   ├── security/           # E2EE password unlock, security modals
-│   │   │   └── workspace-os/       # Org chart, employee directory, permissions
-│   │   ├── contexts/               # React contexts (Auth, Workspace, Socket, ...)
-│   │   ├── hooks/                  # Custom hooks (useIsMobile, useSocket, ...)
-│   │   ├── pages/                  # Route-level page components
-│   │   │   ├── Settings.jsx        # User settings (profile, security, notifications…)
-│   │   │   ├── SidebarComp/
-│   │   │   │   └── MyTasks.jsx     # Full task management page
-│   │   │   ├── dashboards/         # Owner, admin, manager dashboards
-│   │   │   ├── settingsTabs/       # Individual settings tab components
-│   │   │   └── workspace-os/       # Workspace OS admin pages
-│   │   ├── services/               # API service layer (axios wrappers)
-│   │   └── utils/                  # Utility functions
-│
-├── server/                         # Node.js + Express backend
-│   ├── server.js                   # Production entry point (env validation + boot)
-│   ├── models/                     # Mongoose models
-│   │   ├── User.js                 # User accounts, profile, identity keys
-│   │   ├── Workspace.js            # Workspace with encryption key
-│   │   ├── Company.js              # Company (multi-workspace owner)
-│   │   ├── Task.js                 # Tasks with priority, status, sprints
-│   │   ├── Note.js                 # Notes with rich content
-│   │   ├── Department.js           # Company departments
-│   │   ├── AuditLog.js             # Immutable audit trail
-│   │   ├── ComplianceLog.js        # GDPR compliance events
-│   │   ├── Analytics.js            # Workspace analytics snapshots
-│   │   ├── Billing.js / Invoice.js # Subscription & invoice records
-│   │   ├── Sprint.js / Milestone.js # Agile sprint & milestone models
-│   │   └── ... (30+ models)
-│   ├── src/
-│   │   ├── features/               # Feature modules (~60 domains)
-│   │   │   ├── auth/               # Login, register, OAuth, sessions, E2EE unlock
-│   │   │   ├── channels/           # Channel CRUD, membership, invites
-│   │   │   ├── tasks/              # Task CRUD, assignments, comments
-│   │   │   ├── notes/              # Note CRUD, sharing
-│   │   │   ├── knowledge/          # Knowledge base pages
-│   │   │   ├── files/              # File library (object storage)
-│   │   │   ├── ai/                 # Gemini AI chat, context, summarise
-│   │   │   ├── automations/        # Workflow automations engine
-│   │   │   ├── search/             # Full-text cross-entity search
-│   │   │   ├── analytics/          # Workspace analytics
-│   │   │   ├── audit/              # Audit log read routes
-│   │   │   ├── compliance/         # GDPR / compliance log routes
-│   │   │   ├── meetings/           # Huddle/meeting management
-│   │   │   ├── sprints/            # Sprint planning & tracking
-│   │   │   ├── milestones/         # Project milestones
-│   │   │   ├── integrations/       # Third-party integrations
-│   │   │   ├── developer/          # OAuth apps, webhooks, API keys
-│   │   │   ├── admin/              # Admin controls, user management
-│   │   │   ├── company/            # Company profile, billing
-│   │   │   ├── departments/        # Department tree management
-│   │   │   ├── workspaces/         # Workspace CRUD, member management
-│   │   │   ├── workspace-os/       # Workspace OS (templates, permissions, org)
-│   │   │   ├── crypto/             # E2EE key management (KEK, workspace key)
-│   │   │   ├── security/           # Security events, threat detection
-│   │   │   ├── presence/           # Online/offline user presence
-│   │   │   ├── status/             # Custom user status
-│   │   │   └── ... (40+ more)
-│   │   ├── modules/                # Self-contained domains; index.js is the registry
-│   │   │   ├── index.js            # register() / registerSocket() / start() for each module
-│   │   │   ├── messages/           # Messages, DM actions, bookmarks, reminders, Message model
-│   │   │   ├── threads/            # Thread replies (v1 + v2 routes)
-│   │   │   ├── notifications/      # Notifications, preferences, email digests, cron, models
-│   │   │   ├── huddles/            # Voice-call signaling, participant registry, ICE/TURN config
-│   │   │   ├── ai/                 # Gemini AI client & prompt engine
-│   │   │   ├── conversations/      # Conversation session management
-│   │   │   ├── encryption/         # AES-GCM server-side E2EE helpers
-│   │   │   ├── identity/           # User identity key management (X25519)
-│   │   │   ├── uploads/            # S3 / local upload driver
-│   │   │   └── linkPreview/        # OG metadata scraper
-│   │   ├── socket/                 # Socket.IO server setup & handlers
-│   │   ├── services/               # Cross-feature services (email, push, queue)
-│   │   ├── identity/               # PostgreSQL repositories: users, companies, workspaces, keys
-│   │   ├── shared/                 # Shared middleware, validators
-│   │   └── utils/                  # Server-side utilities
-│
-├── ai/                             # Oruinwan AI (framework-free, see ai/README.md)
-│   ├── api/ai.gateway.js           # Boundary the server calls: chat / summarize / generateTask
-│   ├── orchestrator/               # Intent → agent routing, memory, activity events
-│   ├── agents/                     # ChatAgent (tool calling), SummarizeAgent, TaskAgent
-│   ├── tools/registry.js           # Tool declarations + executors (actions injected by server)
-│   ├── memory/                     # Bounded LRU/TTL conversation memory
-│   ├── providers/                  # Gemini provider + mock provider for tests
-│   ├── events/                     # Activity event descriptors
-│   └── __tests__/                  # Jest suite (runs with the mock provider)
-│
-├── mobile/                         # React Native (Expo) mobile app
-│   ├── src/screens/                # Auth, workspace select, tabs, chat, notes, files, knowledge, settings
-│   ├── src/services/               # API client (with token refresh), socket, storage, crypto (E2EE)
-│   ├── src/hooks/                  # Offline queue, connectivity, presence
-│   └── src/theme.js                # Monolith Flow design tokens for RN
-│
-├── desktop/                        # Electron desktop app
-│   ├── electron/                   # Main process, preload bridge, tray, notifications, store
-│   ├── renderer/                   # Offline fallback page
-│   └── assets/                     # App and tray icons
-│
-├── sdk/                            # @oruinwan/sdk — JavaScript client (see sdk/js/README.md)
-│   ├── js/oruinwan-sdk.js          # UMD client: API keys, user tokens, webhooks, AI, realtime
-│   ├── js/index.d.ts               # TypeScript definitions
-│   └── __tests__/                  # Jest suite (mocked fetch)
-│
-├── platform/                       # Code shared by client, server and mobile
-│   ├── sdk/                        # Browser API client, token manager, socket client, E2EE helpers
-│   └── constants/                  # API versions, socket event names, encryption constants
-│
-├── e2e/                            # Playwright browser tests (sign in, DM + thread, tasks, huddle)
-│   ├── tests/                      # Specs, run in order against one seeded database
-│   └── scripts/                    # Stack launcher, seed, shared config
-│
-├── .github/workflows/ci.yml        # CI: server lint+test, client lint+test+build, e2e
-├── package.json                    # Root workspace orchestrator (npm workspaces: client, server, e2e)
-├── docker-compose.yml              # PostgreSQL, Redis, object storage
-└── docs/                           # ARCHITECTURE, SCALING, LOCAL_DEVELOPMENT
-```
-
----
-
-## 🚀 Getting Started
+## Quick start
 
 ### Prerequisites
 
-- **Node.js** ≥ 20.x
-- **npm** ≥ 10.x
-- **Docker** (Docker Desktop, or `brew install colima docker docker-compose` on macOS) for PostgreSQL, Redis and object storage via `docker compose up -d`
-- **MongoDB** — Atlas cluster or `docker compose --profile mongo up -d`
-- **Ollama** for Oruinwan AI (`ollama pull qwen2.5:3b nomic-embed-text`), or `AI_PROVIDER=mock`
-- A Google OAuth 2.0 Client ID only if you enable Google sign-in
+- Node.js 20 or newer, npm 10 or newer
+- Docker with Compose (Docker Desktop, Colima or Docker Engine)
+- Optional: [Ollama](https://ollama.com) for the AI assistant
 
-### 1. Clone the Repository
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform.git
-cd Chttrix-AI-Augmented-Collaboration-Platform
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install all workspaces at once
+git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
+cd Oruniwan
 npm run install-all
-
-# Or install individually:
-npm install                    # Root
-cd client && npm install       # Frontend
-cd ../server && npm install    # Backend
 ```
 
-### 3. Configure Environment Variables
+### 2. Start the infrastructure
 
 ```bash
-# Copy the examples
+docker compose --profile mongo up -d   # PostgreSQL, Redis, S3 storage and MongoDB
+```
+
+Skip `--profile mongo` if you use MongoDB Atlas.
+
+### 3. Configure
+
+```bash
 cp server/.env.example server/.env
 cp client/.env.example client/.env
 ```
 
-Fill in the values — see [Environment Variables](#-environment-variables) below.
-
-### 4. Start Development Servers
-
-> Full guide (AI engine, database, stopping, troubleshooting): [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+At minimum, set these in `server/.env`:
 
 ```bash
-# Everything: MongoDB (if local) + Ollama AI engine + API + web
-npm run dev:all
-npm run dev:status   # what is running
-
-# From the root — starts both client and server concurrently
-npm run dev
-
-# Or individually:
-npm run server   # Backend on :8080 (PORT in server/.env)
-npm run client   # Frontend on :3000 (Vite proxies /api and /uploads to :8080)
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 5. Run the Checks
-
-```bash
-npm run lint     # ESLint for server, client, ai/ and sdk/
-npm test         # Jest (server, ai/, sdk/) and Vitest (client)
-npm run build    # Production client build into /dist
-```
-
-The same three commands run in CI on every push and pull request.
-
-### 6. Browser (E2E) Tests
-
-```bash
-npm run test:e2e   # Playwright: sign in, encrypted DM + thread, tasks, DM huddle, webhook access, status page
-```
-
-The tests need a local MongoDB on `127.0.0.1:27017` (for example `brew services start mongodb-community@7.0`). They start their own API server (port 8095) and client (port 3095) against a throwaway `chttrix_e2e` database. That database is dropped and re-seeded on every run, and the runner refuses any database whose name does not end in `_e2e`. Locally they use your installed Chrome. Point them elsewhere with `E2E_MONGO_URI`, `E2E_API_PORT` and `E2E_WEB_PORT`. CI runs the same suite with a MongoDB service container and uploads the Playwright report when a test fails.
-
----
-
-## 🔧 Environment Variables
-
-### Server (`server/.env`)
-
-```env
-# ─── Database ───────────────────────────────────────────────
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/chttrix
-
-# ─── JWT Auth ────────────────────────────────────────────────
-ACCESS_TOKEN_SECRET=<32-char-random-string>
-REFRESH_TOKEN_SECRET=<32-char-random-string>
-
-# ─── E2EE Server Key Encryption Key (256-bit hex, 64 chars) ─
-SERVER_KEK=<64-char-hex-string>
-
-# ─── Frontend URL (CORS) ────────────────────────────────────
-FRONTEND_URL=http://localhost:3000
-
-# ─── Google OAuth ────────────────────────────────────────────
-GOOGLE_CLIENT_ID=<your-google-client-id>
-GOOGLE_CLIENT_SECRET=<your-google-client-secret>
-
-# ─── Redis ───────────────────────────────────────────────────
-REDIS_URL=redis://localhost:6379
-# For Upstash: REDIS_URL=rediss://<token>@<host>:6380
-
-# ─── PostgreSQL / object storage ────────────────────────────
+MONGO_URI=mongodb://127.0.0.1:27017/oruinwan
 DATABASE_URL=postgres://oruinwan:oruinwan-dev@localhost:5432/oruinwan
-S3_ENDPOINT=http://localhost:9000
-S3_BUCKET=oruinwan-uploads
-S3_ACCESS_KEY=oruinwan
-S3_SECRET_KEY=oruinwan-dev-secret
-
-# ─── Gemini AI ───────────────────────────────────────────────
-GEMINI_API_KEY=<your-gemini-api-key>
-
-# ─── Email ───────────────────────────────────────────────────
-# Providers are tried in order: Brevo API → SMTP_* → SMTP_FALLBACK_*
-BREVO_API_KEY=<optional-brevo-api-key>
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=<your-email>
-SMTP_PASS=<your-smtp-key>
-SMTP_FALLBACK_HOST=smtp.gmail.com        # optional backup (Gmail app password)
-SMTP_FALLBACK_PORT=587
-SMTP_FALLBACK_USER=<your-gmail>
-SMTP_FALLBACK_PASS=<gmail-app-password>
-EMAIL_FROM=noreply@oruinwan.com
-# Brevo: if the log says "unrecognised / unauthorized IP address", disable
-# Security → Authorised IPs at https://app.brevo.com/security/authorised_ips
-
-# ─── Web Push (VAPID) ────────────────────────────────────────
-VAPID_PUBLIC_KEY=<generated-vapid-public-key>
-VAPID_PRIVATE_KEY=<generated-vapid-private-key>
-
-# ─── App Config ──────────────────────────────────────────────
-PORT=5000
-NODE_ENV=development
+ACCESS_TOKEN_SECRET=$(openssl rand -hex 32)
+REFRESH_TOKEN_SECRET=$(openssl rand -hex 32)
+SERVER_KEK=$(openssl rand -hex 32)
+CRYPTO_KEK_V1=$(openssl rand -hex 32)    # exactly 64 hex characters
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:8080
+GOOGLE_CLIENT_ID=placeholder             # or a real client id for Google sign-in
 ```
 
-### Client (`client/.env`)
+The S3, Redis and AI defaults in `.env.example` already match `docker-compose.yml` and a local Ollama.
 
-```env
-VITE_API_URL=http://localhost:8080/api
-VITE_BACKEND_URL=http://localhost:8080
-VITE_GOOGLE_CLIENT_ID=<same-google-client-id>
-VITE_VAPID_PUBLIC_KEY=<same-vapid-public-key>
-```
-
-> **Generate VAPID keys:**
-> ```bash
-> npx web-push generate-vapid-keys
-> ```
-
-> **Generate SERVER_KEK:**
-> ```bash
-> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-> ```
-
----
-
-## 🔌 API Reference
-
-The backend exposes a versioned REST API at `/api/`. All protected routes require a valid `Authorization: Bearer <accessToken>` header.
-
-### Authentication
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/register` | Create account |
-| `POST` | `/api/auth/login` | Email + password login |
-| `POST` | `/api/auth/google` | Google OAuth login |
-| `POST` | `/api/auth/refresh` | Refresh access token |
-| `POST` | `/api/auth/logout` | Revoke tokens |
-| `GET` | `/api/auth/me` | Get current user profile |
-| `PUT` | `/api/auth/me` | Update profile |
-| `PUT` | `/api/auth/me/password` | Change password |
-| `GET` | `/api/auth/sessions` | List active sessions |
-| `DELETE` | `/api/auth/sessions/:id` | Revoke session |
-| `POST` | `/api/auth/e2ee/unlock` | Unlock workspace E2EE key |
-
-### Workspaces
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/workspaces/my` | Get user's workspaces |
-| `POST` | `/api/workspaces` | Create workspace |
-| `GET` | `/api/workspaces/:id` | Get workspace details |
-| `PUT` | `/api/workspaces/:id` | Update workspace |
-| `DELETE` | `/api/workspaces/:id` | Delete workspace |
-| `POST` | `/api/workspaces/:id/invite` | Send invite link |
-| `GET` | `/api/workspaces/:id/members` | List members |
-| `DELETE` | `/api/workspaces/:id/members/:userId` | Remove member |
-
-### Channels
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/channels?workspaceId=` | List channels |
-| `POST` | `/api/channels` | Create channel |
-| `PUT` | `/api/channels/:id` | Update channel |
-| `DELETE` | `/api/channels/:id` | Delete channel |
-| `POST` | `/api/channels/:id/join` | Join channel |
-| `POST` | `/api/channels/:id/leave` | Leave channel |
-| `GET` | `/api/channels/:id/members` | Get members |
-
-### Messages
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/messages/:channelId` | Fetch messages (paginated) |
-| `POST` | `/api/messages` | Send message |
-| `PUT` | `/api/messages/:id` | Edit message |
-| `DELETE` | `/api/messages/:id` | Delete message |
-| `POST` | `/api/messages/:id/react` | Add/toggle reaction |
-| `POST` | `/api/messages/:id/pin` | Pin message |
-
-### Tasks
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/tasks?workspaceId=` | List tasks |
-| `POST` | `/api/tasks` | Create task |
-| `PUT` | `/api/tasks/:id` | Update task |
-| `DELETE` | `/api/tasks/:id` | Delete task |
-| `POST` | `/api/tasks/:id/comment` | Add comment |
-
-### Notes
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/notes?workspaceId=` | List notes |
-| `POST` | `/api/notes` | Create note |
-| `PUT` | `/api/notes/:id` | Update note |
-| `DELETE` | `/api/notes/:id` | Delete note |
-
-### AI
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/ai/chat` | Send AI message |
-| `POST` | `/api/ai/summarize` | Summarise content |
-| `POST` | `/api/ai/draft` | Draft a message |
-| `POST` | `/api/ai/context` | Process screen context |
-| `GET` | `/api/ai/insights/:workspaceId` | AI workspace insights |
-
-> Full API documentation available at `/api/docs` when running in development mode.
-
----
-
-## ⚡ Real-time System
-
-Oruinwan uses **Socket.IO 4** with the `@socket.io/redis-adapter` for horizontal scaling across multiple server instances.
-
-### Key Socket Events
-
-#### Client → Server (Emit)
-```js
-socket.emit('join_workspace', { workspaceId })
-socket.emit('join_channel', { channelId })
-socket.emit('send_message', { channelId, content, type })
-socket.emit('typing_start', { channelId })
-socket.emit('typing_stop', { channelId })
-socket.emit('reaction_add', { messageId, emoji })
-socket.emit('presence_update', { status }) // online, away, dnd
-```
-
-#### Server → Client (On)
-```js
-socket.on('new_message', (message) => { ... })
-socket.on('message_edited', ({ messageId, content }) => { ... })
-socket.on('message_deleted', ({ messageId }) => { ... })
-socket.on('reaction_updated', ({ messageId, reactions }) => { ... })
-socket.on('typing_users', ({ channelId, users }) => { ... })
-socket.on('presence_changed', ({ userId, status }) => { ... })
-socket.on('notification', (notification) => { ... })
-socket.on('task_updated', (task) => { ... })
-socket.on('member_joined', ({ workspaceId, user }) => { ... })
-```
-
-### Redis Pub/Sub
-The Redis adapter ensures that Socket.IO events broadcast correctly across all server instances in a clustered/scaled deployment.
-
----
-
-## 🤖 AI System
-
-Oruinwan AI is one AI layer (`/ai`) that every feature calls through a single gateway. The server default is **Google Gemini** (`gemini-2.5-flash`); each workspace can switch to **OpenAI**, **Anthropic Claude** or a **local / self-hosted OpenAI-compatible model** (Ollama, LM Studio, vLLM) from **Settings → Oruinwan AI**, with its own API key sealed under the server key. Tests run against a mock provider.
-
-### Where it shows up
-| Surface | What it does |
-|---|---|
-| **Assistant** (⌘⇧A) | Chat with tools: sees the open conversation / note / task, summarizes, pulls action items, drafts replies (insert into the message box), creates and updates tasks, notes and meetings, sends messages when asked, lists channels & members |
-| **Smart replies** | Reply chips under the composer in channels and DMs, generated from the decrypted last messages |
-| **Message toolbar** | Translate any message; summarize a thread |
-| **Notes** | Summarize, extract action items (→ tasks), expand, rewrite, structure, proofread, shorten, continue, or free-form instructions |
-| **Tasks** | Write description, suggest subtasks, acceptance criteria, effort estimate |
-| **Command palette** (⌘/) | Natural-language commands: create task, schedule meeting, ask the knowledge base |
-| **Settings → Oruinwan AI** | Turn AI / smart replies on or off, pick provider & model, connect keys, test the connection, see usage |
-
-Messages are end-to-end encrypted: the client decrypts and sends only the text it can read; the server never feeds stored message content to a model.
-
-### AI Architecture (`/ai` directory)
-The server's AI controller is transport only (`/api/ai/*`, guarded by membership, per-workspace AI toggle and a per-user rate limit). It hands plain payloads to `ai/api/ai.gateway.js`, which delegates to the orchestrator:
-
-- **Orchestrator** — maps an intent to an agent, injects the provider (server default or the workspace's own), tools and memory, records usage, returns the result plus an activity event
-- **Agents** — `ChatAgent` (multi-round tool calling), `SummarizeAgent`, `TaskAgent`, and the one-shot assist agents: smart replies, translate, draft, conversation summary / Q&A, extract tasks, note assist, answer-from-sources, re-rank, intent classification
-- **Tools** — declarations plus executors; the server injects the side-effect implementations from `server/utils/aiActions.js` (membership-checked, E2EE-safe message sending)
-- **Memory** — bounded per user and workspace (turn cap, TTL, LRU size cap, no timers), cleared on "New chat"
-- **Providers** — `gemini`, `openai`, `anthropic`, `local_llm`, `mock`; register more with `registerProvider()`
-- **Usage** — every call is logged to `AIUsage` (intent, provider, model, latency, errors) for the Settings dashboard
-
-Configuration and extension points are documented in [`ai/README.md`](ai/README.md).
-
----
-
-## 🛡 Security & E2EE
-
-### Authentication Flow
-1. Login with email/password or Google OAuth
-2. Server returns `accessToken` (15m) + `refreshToken` (7d) in httpOnly cookie
-3. Client stores `accessToken` in memory; auto-refreshes via interceptor
-4. All API calls include `Authorization: Bearer <accessToken>`
-
-### End-to-End Encryption Architecture
-```
-┌─────────┐     generates      ┌──────────────────────────────┐
-│  Client │ ─────────────────► │  Workspace Encryption Key    │
-└─────────┘                    │  (AES-256 symmetric key)     │
-                               └──────────────┬───────────────┘
-                                              │ encrypted with
-                                              ▼
-                               ┌──────────────────────────────┐
-                               │  SERVER_KEK (server-managed) │
-                               │  Only server can wrap/unwrap │
-                               └──────────────────────────────┘
-Messages encrypted client-side before sending.
-Server stores ciphertext only. Decryption requires client unlock.
-```
-
-### DM Encryption (X25519)
-- Each user has an **identity key pair** (X25519) stored server-side
-- DM sessions derive a **shared secret** via ECDH
-- Messages encrypted with AES-GCM using the derived key
-
-### Security Features
-- **Helmet.js** — HTTP security headers
-- **Rate limiting** — per-IP and per-user API limits
-- **CORS** — strict origin whitelist
-- **Session revocation** — all existing sessions can be invalidated
-- **Audit trail** — every sensitive action logged with timestamp + actor
-- **Compliance logs** — GDPR data access and deletion events
-- **Security events** — suspicious login detection
-
----
-
-## 👥 Role & Permission Model
-
-### Platform Roles
-| Role | Scope | Capabilities |
-|---|---|---|
-| `chttrix_admin` | Platform-wide | Full platform access, tenant management |
-| `owner` | Company | Company settings, billing, all workspaces |
-| `admin` | Company | User management, workspace control |
-| `manager` | Department | Team oversight, analytics, allocation |
-| `member` | Workspace | Standard workspace access |
-
-### Workspace-Level Roles
-| Role | Capabilities |
-|---|---|
-| `workspace_admin` | Manage channels, members, settings |
-| `channel_admin` | Manage channel members and settings |
-| `member` | Read, write, react, thread reply |
-| `guest` | Read-only access to specific channels |
-
-### Permission Matrix
-The permission matrix provides **capability-level control** beyond roles:
-- `can_create_channels` — allow/deny per role
-- `can_invite_members` — workspace-level toggle
-- `can_manage_tasks` — role-scoped task admin
-- `can_view_analytics` — restrict analytics access
-- `can_export_data` — compliance export gate
-
----
-
-## 📱 Mobile Experience
-
-Oruinwan has a **fully responsive mobile web UI** built into the main React app, plus a dedicated **React Native (Expo)** app.
-
-### Mobile Web (Responsive)
-The mobile web view uses a dedicated 5-tab bottom navigation bar:
-
-| Tab | Icon | Route |
-|---|---|---|
-| **Home** | 🏠 | `/workspace/:id/home` — workspace grid |
-| **Notes** | 📄 | `/workspace/:id/notes` — notes list |
-| **Tasks** | ✅ | `/workspace/:id/tasks` — task manager |
-| **AI** | 🤖 | Opens Oruinwan AI full-screen panel |
-| **Settings** | ⚙️ | `/settings` — user settings |
-
-**Mobile navigation patterns:**
-- All panel routes (Channels, Notes, etc.) → full-screen side panel
-- Detail routes (channel, note, DM) → main content with `← Back` button
-- AI opens full-screen overlay with `← AI` back button in header
-- `isMobile` breakpoint: `window.innerWidth < 768`
-
-### React Native App (`/mobile`)
-Expo 54 / React Native 0.81 app that talks to the same API and Socket.IO server as the web client.
-
-- **Auth** — email/password sign-in and registration; access and refresh tokens in SecureStore. Native clients send `x-client-platform: ios|android`, and the server returns the refresh token in the login and refresh bodies for them (web keeps the httpOnly cookie). One shared refresh request retries a 401 once, then signs out.
-- **End-to-end encryption** — the same scheme as the web client, in pure JavaScript (`@noble/ciphers`, `@noble/curves`, `@noble/hashes`): PBKDF2 unlock of the identity key, RSA-OAEP or X25519 conversation-key unwrap, AES-256-GCM messages, HKDF thread keys. An Unlock screen handles accounts that need the password again.
-- **Chat** — DM and channel screens with pagination, jump-to-date, reactions, typing, read receipts, reconnect catch-up and an offline queue that stores ciphertext only.
-- **Everything else** — workspace switcher, tasks (v2 API), notes with editor, files, knowledge pages, notifications with push registration, settings and profile.
-- **Limits** — an account that has never signed in on the web has no identity keys yet, so mobile cannot decrypt until it does; attachments, polls and threads show placeholders.
+### 4. Optional: start the AI engine
 
 ```bash
-cd mobile
-npm install --workspaces=false
+ollama serve &
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text
+```
+
+### 5. Run
+
+```bash
+npm run dev          # API on :8080 and web app on :3000
+npm run dev:all      # also starts Ollama and a local MongoDB first
+npm run dev:status   # shows what is running
+```
+
+Open http://localhost:3000. The web app proxies `/api` and `/uploads` to the API.
+
+The full guide, including stopping services and troubleshooting, is in [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
+
+---
+
+## Configuration
+
+`server/.env.example` documents every variable. The important groups:
+
+| Group | Variables | Notes |
+|---|---|---|
+| Required at boot | `MONGO_URI`, `DATABASE_URL`, `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `FRONTEND_URL`, `GOOGLE_CLIENT_ID`, `SERVER_KEK` | The server exits if any is missing |
+| Encryption | `CRYPTO_KEK_ACTIVE_VERSION`, `CRYPTO_KEK_V1`, `CRYPTO_KEK_V2` | Each key is exactly 64 hex characters |
+| Object storage | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE` | The bucket is created on boot. `STORAGE_DRIVER=local` forces local disk |
+| Scaling | `REDIS_URL`, `PROCESS_ROLE` | Any role other than `all` needs Redis |
+| AI | `AI_PROVIDER`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_EMBED_MODEL`, `AI_SERVICE_URL`, `AI_SERVICE_TOKEN` | Default provider is `local_llm` |
+| Email | `BREVO_API_KEY`, `EMAIL_FROM`, `SMTP_*`, `SMTP_FALLBACK_*` | Tried in that order |
+| OAuth | `GOOGLE_*`, `GITHUB_*`, `LINKEDIN_*` | Only Google's client id is required |
+| Huddles | `CLOUDFLARE_TURN_*` or `TURN_URLS` with `TURN_SECRET` or static credentials | Configure one TURN source |
+| Retention | `AUDIT_LOG_RETENTION_DAYS`, `HISTORY_LOG_RETENTION_DAYS`, `ACTIVITY_RETENTION_DAYS`, `SECURITY_AUDIT_RETENTION_DAYS` | `0` keeps logs forever |
+| Feature flags | `FEATURES_ENABLED` | Comma list of `billing`, `sso`, `integrations`, `community`, or `all` |
+
+The client only needs `VITE_API_URL`, `VITE_BACKEND_URL` and `VITE_GOOGLE_CLIENT_ID`. Never put secrets in `client/.env`, because Vite bundles every `VITE_` variable into the browser build.
+
+Generate secrets with:
+
+```bash
+openssl rand -hex 32
+```
+
+---
+
+## Repository layout
+
+```
+Oruniwan/
+├── client/            React 19 + Vite web app (also served by the API in production)
+├── server/            Express + Socket.IO API
+│   ├── server.js      Entry point: env validation, migrations, boot
+│   ├── db/migrations/ PostgreSQL migrations, applied on boot
+│   ├── models/        Mongoose models
+│   └── src/
+│       ├── identity/  PostgreSQL repositories for users, companies, workspaces, keys, sessions
+│       ├── features/  Feature modules (auth, channels, tasks, notes, knowledge, automations, ...)
+│       ├── modules/   Self-contained domains (messages, threads, notifications, huddles, uploads, ...)
+│       ├── shared/    Database clients, Redis, event bus, jobs, feature flags, middleware
+│       └── socket/    Socket.IO setup and handlers
+├── ai/                AI orchestrator, agents, tools, memory and providers (see ai/README.md)
+├── desktop/           Electron app (see desktop/README.md)
+├── mobile/            React Native (Expo) app
+├── sdk/js/            @oruinwan/sdk JavaScript client (see sdk/js/README.md)
+├── platform/          Code shared by web, server and mobile: API client, socket client, E2EE helpers
+├── e2e/               Playwright browser tests
+├── scripts/           Local development helpers
+├── docs/              Architecture, scaling, local development, integrations
+└── docker-compose.yml PostgreSQL, Redis, S3 storage and optional MongoDB
+```
+
+---
+
+## API and real-time events
+
+The REST API lives under `/api`. Newer endpoints are versioned under `/api/v2`. Protected routes take `Authorization: Bearer <accessToken>`, and the refresh token travels in an httpOnly cookie on the web.
+
+| Area | Base paths |
+|---|---|
+| Auth and accounts | `/api/auth`, `/api/auth/2fa`, `/api/auth/sso`, `/api/otp`, `/api/users` |
+| Companies and workspaces | `/api/companies`, `/api/company`, `/api/departments`, `/api/teams`, `/api/permissions`, `/api/workspace-os` |
+| Messaging | `/api/channels`, `/api/messages`, `/api/v2/messages`, `/api/threads`, `/api/v2/dm`, `/api/v2/conversations`, `/api/polls` |
+| Encryption | `/api/v2/crypto`, `/api/v2/encryption`, `/api/v2/identity`, `/api/v2/devices` |
+| Work | `/api/v2/tasks`, `/api/sprints`, `/api/milestones`, `/api/task-templates`, `/api/v2/notes`, `/api/v2/knowledge` |
+| Files | `/api/v2/uploads`, `/api/v2/files`, `/api/upload` |
+| Meetings | `/api/v2/huddles`, `/api/v2/meetings`, `/api/scheduled-meetings` |
+| AI | `/api/ai` |
+| Notifications | `/api/notifications`, `/api/push` |
+| Admin and compliance | `/api/admin`, `/api/v2/audit`, `/api/compliance`, `/api/security`, `/api/analytics` |
+| Developer platform | `/api/developer`, `/api/v2/integrations`, `/api/v2/automations` |
+| Health | `GET /api/health` reports database, Redis, process role and scheduled jobs |
+
+The route definitions in `server/src` are the source of truth.
+
+**Socket.IO events** use the same JWT. The client joins rooms with `join-workspace`, `join-channel` and `join-dm`, and sends `send-message`, `typing`, `add-reaction`, `message-read` and `mark-chat-read`. Huddles use `huddle:start`, `huddle:join`, `huddle:offer`, `huddle:answer` and `huddle:ice-candidate`. Knowledge pages use `knowledge:join` and `knowledge:cursor`. With `REDIS_URL` set, events reach clients connected to any server instance.
+
+---
+
+## AI
+
+Oruinwan AI lives in `ai/` and every feature calls it through one gateway. It runs inside the API process by default, or as its own service when `AI_SERVICE_URL` is set.
+
+| Provider | How to select |
+|---|---|
+| `local_llm` (default) | Any OpenAI-compatible server: Ollama locally, vLLM on a GPU host |
+| `gemini`, `openai`, `anthropic` | `AI_PROVIDER` globally, or per workspace in Settings → Oruinwan AI |
+| `mock` | Used automatically under `NODE_ENV=test` |
+
+What it does:
+
+- **Assistant** (Cmd/Ctrl + Shift + A) with tools that read the open conversation, note or task, then summarize, draft replies, and create tasks, notes and meetings
+- **Smart replies** under the message composer
+- **Translate** messages and **summarize** threads
+- **Note assist**: summarize, rewrite, expand, proofread, extract action items
+- **Task assist**: descriptions, subtasks, acceptance criteria, estimates
+- **Knowledge search** over pgvector embeddings. The embedding model must produce 768-dimension vectors, such as `nomic-embed-text`
+
+Messages are end-to-end encrypted, so the client sends only text the user can already read. The server never feeds stored ciphertext to a model. See [ai/README.md](ai/README.md) for agents, tools, memory and adding providers.
+
+---
+
+## Security and encryption
+
+- **Authentication.** Short-lived access tokens (15 minutes) and refresh tokens (7 days) in an httpOnly cookie. Native apps receive the refresh token in the response body and keep it in secure storage. Two-factor authentication uses TOTP.
+- **Message encryption.** Each user has an identity key pair, unlocked with their password through PBKDF2. Conversation keys are wrapped per member with X25519 or RSA-OAEP. Messages use AES-256-GCM, and thread keys are derived with HKDF. The server stores only ciphertext and wrapped keys.
+- **Server secrets.** Integration credentials, 2FA secrets and similar values are sealed under `SERVER_KEK` and versioned `CRYPTO_KEK_*` keys.
+- **Hardening.** Helmet headers, a strict CORS allow-list, per-IP and per-user rate limits, `express-validator` on inputs, and membership checks on every workspace route.
+- **Audit.** Sensitive actions go to audit, compliance and security logs in MongoDB, mirrored to PostgreSQL.
+
+Found a vulnerability? Please report it privately through [GitHub security advisories](https://github.com/thrishankkuntimaddi/Oruniwan/security/advisories/new) rather than a public issue.
+
+---
+
+## Roles
+
+| Level | Roles |
+|---|---|
+| Platform | `user`, platform admin |
+| Company | `owner`, `admin`, `manager`, `member`, `guest` |
+| Workspace | `owner`, `admin`, `member` |
+| Department | `manager`, `member` |
+| Team | `lead`, `member` |
+
+The company permission matrix maps each company role to capabilities such as creating channels, inviting members, viewing analytics and exporting data.
+
+---
+
+## Clients: web, desktop, mobile, SDK
+
+**Web.** The React app in `client/` is responsive. Below 768 px wide it switches to a mobile layout with a bottom tab bar.
+
+**Desktop.** `desktop/` wraps the web app in a sandboxed Electron shell with native notifications, a tray icon, unread badges, `oruinwan://` deep links and auto-update.
+
+```bash
+cd desktop && npm install --workspaces=false
+npm start              # loads http://localhost:3000; override with CHTTRIX_WEB_URL
+npm run build:mac      # or build:win / build:linux
+```
+
+**Mobile.** `mobile/` is an Expo 54 app with the same encryption scheme in pure JavaScript, offline queueing of ciphertext, and push notifications. An account must sign in on the web once to create its identity keys before mobile can decrypt.
+
+```bash
+cd mobile && npm install --workspaces=false
 EXPO_PUBLIC_API_URL=http://<your-ip>:8080/api EXPO_PUBLIC_SOCKET_URL=http://<your-ip>:8080 npx expo start
-npx expo export --platform android   # verifies the bundle compiles
 ```
 
----
-
-## 🖥 Desktop App
-
-The Electron desktop app (`/desktop`) wraps the hosted Oruinwan web client in a hardened Chromium shell. Details in [`desktop/README.md`](desktop/README.md).
-
-- **Native notifications** with click-to-navigate, dock and tray unread badge, Do Not Disturb, and a bridge the web client calls through `window.chttrixDesktop`
-- **System tray** with open, notifications, DnD, check-for-updates and quit; closing the window hides it on every platform
-- **Deep links** via `oruinwan://workspace/<id>/channel/<id>` (legacy `chttrix://` links still work), single-instance lock, auto-update through `electron-updater`
-- **Security** — context isolation and sandbox, origin-checked permissions, CSP on the offline page, only http/https/mailto links open externally, OAuth popups confined to a preload-free window
-- **Offline fallback** page with automatic retry when the web client is unreachable
-
-```bash
-cd desktop
-npm install --workspaces=false
-npm start            # loads http://localhost:3000 (set CHTTRIX_WEB_URL to override)
-npm run icons        # regenerate assets/icon.png and tray-icon.png
-npm run build:mac    # or build:win / build:linux
-```
-
----
-
-## 🔧 SDK & Developer Platform
-
-### Oruinwan SDK (`/sdk/js`)
-Zero-dependency JavaScript client for Node 18+ and browsers. Full docs in [`sdk/js/README.md`](sdk/js/README.md).
-
-```bash
-npm install ./sdk/js            # or, once published: npm install @oruinwan/sdk
-```
+**SDK.** `sdk/js` is a zero-dependency client for Node 18+ and browsers.
 
 ```js
 const { OruinwanSDK } = require('@oruinwan/sdk');
 
-// Server-to-server with a workspace API key from the Developer Portal
-const oruinwan = new OruinwanSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
-const { tasks } = await oruinwan.tasks.list({ status: 'todo' });
+const oruinwan = new OruinwanSDK({ baseUrl: 'https://your-host', apiKey: 'chx_...' });
 await oruinwan.tasks.create({ title: 'Rotate credentials', priority: 'high' });
-
-// On behalf of a user
-await oruinwan.auth.login(email, password);
-await oruinwan.webhooks.subscribe({ workspaceId, url, events: ['task.created', 'message.sent'] });
-const { text } = await oruinwan.ai.chat({ message: 'Summarise #general', workspaceId });
-
-// Realtime (optional socket.io-client)
-const { io } = require('socket.io-client');
-oruinwan.realtime.connect({ io });
-oruinwan.realtime.on('new-message', console.log);
 ```
-
-### Developer Portal (In-App)
-Navigate to `Settings → Developer` or `/workspace/:id/developer`:
-- Create OAuth 2.0 applications
-- Register webhooks with event filtering
-- Manage API keys
-- View request logs and delivery history
 
 ---
 
-## 🚀 Deployment
-
-Oruinwan is self-hosted: no hosted platform is required. The same code runs on one laptop, on a home server reached over Tailscale, or on several servers. The full service and data layout is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); growth stages are in [`docs/SCALING.md`](docs/SCALING.md).
-
-### Infrastructure
+## Testing
 
 ```bash
-docker compose up -d     # PostgreSQL + pgvector, Redis, S3-compatible object storage (RustFS)
+npm run lint       # ESLint for server, client, ai/ and sdk/
+npm test           # Jest for server, ai/ and sdk/; Vitest for the client
+npm run build      # Production web build into dist/
+npm run test:e2e   # Playwright: sign in, encrypted DM and thread, tasks, huddle, webhooks
 ```
 
-MongoDB is Atlas today (`MONGO_URI`); `docker compose --profile mongo up -d` runs it locally instead.
+The end-to-end suite starts its own API on port 8095 and web app on port 3095 against a throwaway `chttrix_e2e` MongoDB database, which it drops and re-seeds on every run. It refuses any database whose name does not end in `_e2e`. GitHub Actions runs lint, tests, the build and the end-to-end suite on every push and pull request.
 
-### Application processes
+---
 
-```bash
-cd server && node server.js                          # PROCESS_ROLE=all: API + realtime + jobs + uploads
-PROCESS_ROLE=api|realtime|worker|storage node server.js   # the same code split into units
-cd ai && npm start                                   # optional standalone AI service (AI_SERVICE_URL)
-```
+## Deployment
 
-The server applies PostgreSQL migrations (`server/db/migrations`) and creates the upload bucket on boot. A container image builds from the repository root:
+The smallest production setup is one server running everything:
+
+1. Run PostgreSQL, Redis and MongoDB, either from `docker-compose.yml` with changed passwords or as managed services.
+2. Create an S3 bucket, or any S3-compatible bucket, and set the `S3_*` variables.
+3. Build and run the server image. It applies migrations, creates the bucket if needed and serves the built web app from the same origin.
 
 ```bash
 docker build -f server/Dockerfile -t oruinwan-server .
 docker run -p 8080:8080 --env-file server/.env oruinwan-server
 ```
 
-The web client is static: `npm run build` produces `dist/`, which the server already serves, so one process and one origin is enough.
+4. Put a TLS-terminating reverse proxy in front, such as Caddy, Nginx or a cloud load balancer, with WebSocket upgrades enabled.
 
-### Environment Checklist Before Deploy
-- [ ] `DATABASE_URL`, `REDIS_URL`, `MONGO_URI` reachable from every process
-- [ ] `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` set (uploads shared by all processes)
-- [ ] `SERVER_KEK` is a unique, securely generated 64-char hex string
-- [ ] `FRONTEND_URL` matches the web origin exactly (CORS)
-- [ ] Passwords in `docker-compose.yml` changed from the development defaults
-- [ ] VAPID keys generated and set on both server and client
+To scale out, set `REDIS_URL` and run more instances, or split them with `PROCESS_ROLE`. Sticky sessions are not required. See [docs/SCALING.md](docs/SCALING.md).
+
+**Pre-deploy checklist**
+
 - [ ] `NODE_ENV=production`
-- [ ] AI engine reachable (`LOCAL_LLM_BASE_URL`) or `AI_PROVIDER=mock`
+- [ ] All secrets freshly generated, and the development passwords in `docker-compose.yml` changed
+- [ ] `FRONTEND_URL` matches the public web origin exactly
+- [ ] `DATABASE_URL`, `MONGO_URI` and `REDIS_URL` reachable from every process
+- [ ] `S3_*` set, so uploads are shared by every process
+- [ ] Email configured and sender domain authenticated with SPF and DKIM
+- [ ] AI endpoint reachable, or AI left disabled
+- [ ] A TURN server configured if users sit behind corporate firewalls
+- [ ] Log retention chosen to match your compliance needs
 
 ---
 
-## 🎨 Design System
+## Project status
 
-Oruinwan uses a custom design system called **Monolith Flow** — a dark-first, border-based, flat aesthetic inspired by tools like Linear and Raycast.
+Oruinwan is under active development and is not yet production-hardened. Known gaps:
 
-### Core Design Principles
-- **Dark-first** — deep charcoal backgrounds, no harsh blacks
-- **Border-based** — structure via subtle borders, not shadows
-- **Flat hierarchy** — minimal depth, maximum information density
-- **Amber accent** — `#b8956a` as the single accent color
-- **Inter typeface** — system-style, no decorative fonts
+- Billing, SSO, integrations and the community page are incomplete and hidden behind feature flags.
+- Huddles are peer-to-peer mesh calls, capped at six participants until a media server is added.
+- Data is moving from MongoDB to PostgreSQL. Identity, tasks and logs have moved, and messages have not.
+- Mobile shows placeholders for attachments, polls and threads.
 
-### CSS Token Reference
-
-```css
---bg-base:       #111111   /* Page background */
---bg-surface:    #161616   /* Card / sidebar surface */
---bg-active:     #1e1e1e   /* Active item background */
---bg-hover:      #1a1a1a   /* Hover state */
---bg-input:      #141414   /* Input fields */
-
---text-primary:  #e8e8e8   /* Main body text */
---text-secondary:#a0a0a0   /* Secondary labels */
---text-muted:    #6b6b6b   /* Placeholder / metadata */
-
---accent:        #b8956a   /* Primary accent (amber) */
---accent-hover:  #c9a97d   /* Accent hover */
---border-accent: #b8956a66 /* Accent border (40% opacity) */
-
---border-default:#2a2a2a   /* Component borders */
---border-subtle: #1f1f1f   /* Subtle dividers */
-
---state-success: #34d399   /* Success green */
---state-danger:  #f87171   /* Danger / error red */
---state-warning: #fbbf24   /* Warning amber */
-
---font: 'Inter', system-ui, -apple-system, sans-serif
-```
+Issues and pull requests on any of these are welcome.
 
 ---
 
-## 💬 A Note from the Builder
+## A note from the builder
 
-> *Before you fork, star, or scroll past — I want to be honest with you.*
+> *Before you fork, star, or scroll past, I want to be honest with you.*
 
 I built Oruinwan **alone, for 5 months straight.**
 
 No co-founder. No team. No one to rubber-duck debug with at 2am. Just me, a blank editor, and an idea that felt enormous every single morning and impossible every single night.
 
-Somewhere along the way, I lost patience with it. Then I lost hope. I genuinely don't know if this project is something great that I couldn't see clearly anymore, or if I built in the wrong direction, or if I just burned out too hard to tell the difference. Maybe all three. Maybe none. I honestly don't know what went wrong — or if anything went wrong at all.
+Somewhere along the way, I lost patience with it. Then I lost hope. I genuinely don't know if this project is something great that I couldn't see clearly anymore, or if I built in the wrong direction, or if I just burned out too hard to tell the difference. Maybe all three. Maybe none. I honestly don't know what went wrong, or if anything went wrong at all.
 
 What I do know is this: **I can't keep carrying it alone.**
 
-So I'm making it public. Not because it's finished. Not because it's perfect. But because maybe the right eyes will see something I've stopped being able to see — a gap worth filling, a feature worth building, an architecture worth extending, or a bug worth fixing.
+So I'm making it public. Not because it's finished. Not because it's perfect. But because maybe the right eyes will see something I've stopped being able to see: a gap worth filling, a feature worth building, an architecture worth extending, or a bug worth fixing.
 
-If that's you — **let's build it together.**
+If that's you, **let's build it together.**
 
 And if you think it's a waste of time, tell me that too. Honest feedback from strangers beats quiet doubt from a solo dev every single time.
 
-Rate it. Break it. Improve it. Fork it. Whatever you do — **do it with me, not without me.**
+Rate it. Break it. Improve it. Fork it. Whatever you do, **do it with me, not without me.**
 
 — *Thrishank*
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Here's how to get started:
+1. Fork the repository and create a branch: `git checkout -b feat/your-feature`.
+2. Make your change and run `npm run lint && npm test`.
+3. Commit with [Conventional Commits](https://www.conventionalcommits.org), for example `feat(tasks): add recurring tasks` or `fix(mobile): show navbar on settings`.
+4. Open a pull request describing what changed and how you tested it.
 
-### Development Workflow
+**Code conventions**
 
-```bash
-# 1. Fork and clone
-git clone https://github.com/<your-fork>/Chttrix-AI-Augmented-Collaboration-Platform.git
-
-# 2. Create a feature branch
-git checkout -b feat/your-feature-name
-
-# 3. Make changes following the code style
-# - Use named exports for components
-# - Follow the feature-module pattern for backend
-# - Use the design tokens from index.css (no hardcoded colors); Tailwind utilities are fine
-# - Log through the logger (server: utils/logger, client: utils/logger), never console.*
-
-# 3b. Run the checks
-npm run lint && npm test
-
-# 4. Commit with conventional commits
-git commit -m "feat(tasks): add recurring task support"
-git commit -m "fix(mobile): navbar not showing on settings page"
-
-# 5. Push and open a PR
-git push origin feat/your-feature-name
-```
-
-### Commit Convention
-| Prefix | Use for |
-|---|---|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `refactor` | Code restructure (no behavior change) |
-| `chore` | Build, deps, tooling |
-| `docs` | Documentation only |
-| `style` | CSS / formatting |
-| `perf` | Performance improvement |
-
-### Code Style Guidelines
-- **Components** — Functional components with hooks only (no class components)
-- **State** — Local `useState`, context for shared state, no Redux
-- **Styling** — Tailwind utilities plus CSS variables from `index.css`; no hardcoded colors
-- **Icons** — Lucide React exclusively, size 14-20px, `strokeWidth={2}`
-- **API calls** — Always through the service layer in `/services/`
-- **Real-time** — Use `useSocket` hook from contexts
-- **Mobile** — Test all UI at `< 768px` with `useIsMobile()` hook
-
-### Pull Request Checklist
-- [ ] Feature works on desktop and mobile (`< 768px`)
-- [ ] No `console.error` or unhandled promise rejections
-- [ ] CSS uses design system tokens (no hardcoded `#hex` or `rgb()`)
-- [ ] Lucide icons used (not emoji or other icon libraries)
-- [ ] Protected routes use `RequireAuth` + `RequireWorkspace` guards
-- [ ] Backend routes validated with `express-validator`
-- [ ] Every route checks workspace/company membership, not just authentication
-- [ ] `npm run lint` and `npm test` pass locally; CI is green
+- Backend code follows the feature-module pattern in `server/src/features` and `server/src/modules`.
+- Every route checks workspace or company membership, not just authentication, and validates input with `express-validator`.
+- Logging goes through the logger in `utils/logger`, never `console.*`.
+- The UI uses the design tokens in `client/src/index.css` and Tailwind utilities, with no hard-coded colors.
+- Icons come from Lucide React.
+- API calls go through the service layer in `client/src/services`.
+- Check every UI change at widths below 768 px.
+- New PostgreSQL changes get a new numbered migration. Never edit an applied one.
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
+Released under the [MIT License](LICENSE).
 
 <div align="center">
 
-Built with ❤️ by [Thrishank Kuntimaddi](https://github.com/thrishankkuntimaddi)
-
-**Oruinwan** — *Collaborate Smarter. Build Faster. Together.*
+Built by [Thrishank Kuntimaddi](https://github.com/thrishankkuntimaddi)
 
 </div>
