@@ -8,10 +8,14 @@ import { AuthProvider } from './contexts/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import logger from './utils/logger';
 
+// Google sign-in is optional. The Google library throws while rendering the login
+// form when the client id is empty, so pass a placeholder; LoginForm hides the button.
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'google-sign-in-not-configured';
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId={googleClientId}>
       <AuthProvider>
         <App />
       </AuthProvider>

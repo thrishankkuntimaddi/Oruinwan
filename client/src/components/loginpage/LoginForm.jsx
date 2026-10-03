@@ -139,7 +139,8 @@ const LoginForm = ({ initialEmail = '' }) => {
     const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
 
     const socials = [
-        { icon: <GoogleIcon />, label: 'Google', onClick: googleLogin },
+        // Shown only when the build has a Google client id (VITE_GOOGLE_CLIENT_ID).
+        ...(import.meta.env.VITE_GOOGLE_CLIENT_ID ? [{ icon: <GoogleIcon />, label: 'Google', onClick: googleLogin }] : []),
         { icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } },
         { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } },
     ];
