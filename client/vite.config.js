@@ -28,12 +28,12 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://100.70.234.41:8080',
         changeOrigin: true,
         ws: true,
       },
       '/uploads': {
-        target: 'http://localhost:8080',
+        target: 'http://100.70.234.41:8080',
         changeOrigin: true,
       },
     },

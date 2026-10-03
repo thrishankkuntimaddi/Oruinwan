@@ -26,10 +26,10 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "vite",
+    "start": "vite --host 0.0.0.0",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0 --outDir ../dist --port 3000",
     "lint": "eslint src/",
     "test": "vitest run",
     "test:watch": "vitest"

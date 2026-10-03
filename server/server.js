@@ -98,6 +98,7 @@ const allowedOrigins = [
   'http://localhost:8081',   // Expo web
   'http://localhost:19006',  // Expo web (classic)
   'http://localhost:19000',  // Expo DevTools
+  'http://100.70.234.41:3000',
   process.env.FRONTEND_URL,
 ].filter(Boolean); 
 
@@ -443,6 +444,7 @@ connectDatabase()
       }
       throw err;
     });
+
 
     httpServer.listen(PORT, () => {
       logger.success(`Server (Express + Socket.IO) running on port ${PORT} as "${processRole.role}"`);

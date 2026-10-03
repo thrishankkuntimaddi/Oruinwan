@@ -10,7 +10,7 @@
   "scripts": {
     "start": "npm run dev",
     "dev": "concurrently -k -n server,client -c blue,magenta \"npm run server\" \"npm run client\"",
-    "client": "cd client && npm start",
+    "client": "cd client && npm run preview",
     "server": "cd server && npm run dev",
     "install-all": "npm install && cd client && npm install && cd ../server && npm install",
     "lint": "npm run lint --workspace=server && npm run lint --workspace=client && npm run lint:ai && npm run lint:sdk",
