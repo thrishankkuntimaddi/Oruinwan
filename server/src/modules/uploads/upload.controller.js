@@ -91,12 +91,16 @@ async function uploadFile(req, res) {
         }
 
         // Record the uploader + company on the object so /uploads/file can authorize reads.
-        const User = require('../../../models/User');
-        const uploader = await User.findById(req.user.sub).select('companyId').lean();
+        const uploader = await require('../../identity').users.findById(req.user.sub);
         const attachment = await uploadToGCS(req.file, folder, {
             userId: req.user.sub,
             companyId: uploader?.companyId || undefined,
         });
+
+        require('../../shared/events/bus').publish('file.uploaded', {
+            objectPath: attachment.gcsPath, name: attachment.name, size: attachment.size,
+            mimeType: attachment.mimeType, type: attachment.type, folder,
+        }, { companyId: uploader?.companyId || null, actorId: req.user.sub }).catch(() => {});
 
         return res.status(200).json(attachment);
     } catch (err) {

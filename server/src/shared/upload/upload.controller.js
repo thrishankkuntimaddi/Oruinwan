@@ -1,8 +1,7 @@
 const logger = require('../../../utils/logger');
 const { sendError } = require('../utils/httpError');
 const { uploadNoteAttachment, getFileCategory, validateFileSize, FILE_SIZE_LIMITS } = require('../../../config/multer.config');
-const { uploadToGCS, streamGCSFile, BUCKET_NAME } = require('../../modules/uploads/upload.service');
-const { Storage } = require('@google-cloud/storage');
+const { uploadObject, deleteObject } = require('../../modules/uploads/upload.service');
 const Note = require('../../../models/Note');
 const { assertWorkspaceMember, sendAccessError, isValidId } = require('../utils/workspaceAccess');
 
@@ -48,7 +47,7 @@ exports.uploadNoteAttachment = async (req, res) => {
 
             
             const gcsFolder = `notes/${workspaceId}`;
-            const gcsAttachment = await uploadToGCS(req.file, gcsFolder, { userId, companyId: workspace.company || undefined });
+            const gcsAttachment = await uploadObject(req.file, gcsFolder, { userId, companyId: workspace.company || undefined });
 
             const category = getFileCategory(req.file.mimetype);
             const categoryKey = category === 'images' ? 'image' :
@@ -131,8 +130,7 @@ exports.deleteAttachment = async (req, res) => {
         }
 
         
-        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
-        await storageClient.bucket(BUCKET_NAME).file(gcsPath).delete();
+        await deleteObject(gcsPath);
 
         
         for (const note of notes) {

@@ -3,7 +3,7 @@ const logger = require('../../../utils/logger');
 
 const express = require('express');
 const router = express.Router();
-const User = require('../../../models/User');
+const { users } = require('../../identity');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { otplib, encryptSecret, decryptSecret, verifyTotp } = require('./totp');
@@ -29,7 +29,7 @@ async function qrDataUrlFor(otpauthUrl) {
  */
 router.post('/setup', requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select('username email twoFactorEnabled');
+    const user = await users.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.twoFactorEnabled) {
       return res.status(400).json({ message: '2FA is already enabled. Disable it first.' });
@@ -40,9 +40,7 @@ router.post('/setup', requireAuth, async (req, res) => {
     const qrDataUrl = await qrDataUrlFor(otpauthUrl);
 
     
-    await User.findByIdAndUpdate(req.user.sub, {
-      twoFactorSecret: encryptSecret(secret),
-    });
+    await users.update(req.user.sub, { twoFactorSecret: encryptSecret(secret) });
 
     return res.json({
       secret,
@@ -61,7 +59,7 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ message: 'OTP is required' });
 
-    const user = await User.findById(req.user.sub).select('twoFactorSecret twoFactorEnabled email');
+    const user = await users.findById(req.user.sub, { withSecrets: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.twoFactorEnabled) return res.status(400).json({ message: '2FA is already enabled' });
     if (!user.twoFactorSecret) return res.status(400).json({ message: 'Run /2fa/setup first' });
@@ -70,7 +68,7 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
     const isValid = await verifyTotp(otp, secret);
     if (!isValid) return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
 
-    await User.findByIdAndUpdate(req.user.sub, { twoFactorEnabled: true });
+    await users.update(req.user.sub, { twoFactorEnabled: true });
 
     
     await AuditLog.create({
@@ -97,7 +95,7 @@ router.post('/disable', requireAuth, async (req, res) => {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ message: 'OTP is required to disable 2FA' });
 
-    const user = await User.findById(req.user.sub).select('twoFactorSecret twoFactorEnabled');
+    const user = await users.findById(req.user.sub, { withSecrets: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.twoFactorEnabled) return res.status(400).json({ message: '2FA is not enabled' });
 
@@ -105,10 +103,7 @@ router.post('/disable', requireAuth, async (req, res) => {
     const isValid = await verifyTotp(otp, secret);
     if (!isValid) return res.status(400).json({ message: 'Invalid OTP' });
 
-    await User.findByIdAndUpdate(req.user.sub, {
-      twoFactorEnabled: false,
-      twoFactorSecret: null,
-    });
+    await users.update(req.user.sub, { twoFactorEnabled: false, twoFactorSecret: null });
 
     await AuditLog.create({
       userId: user._id,
@@ -134,7 +129,7 @@ router.post('/verify', requireAuth, async (req, res) => {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ message: 'OTP is required' });
 
-    const user = await User.findById(req.user.sub).select('twoFactorSecret twoFactorEnabled');
+    const user = await users.findById(req.user.sub, { withSecrets: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.twoFactorEnabled) return res.status(400).json({ message: '2FA is not enabled' });
 
@@ -151,7 +146,7 @@ router.post('/verify', requireAuth, async (req, res) => {
 
 router.get('/status', requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select('twoFactorEnabled');
+    const user = await users.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: 'User not found' });
     return res.json({ twoFactorEnabled: user.twoFactorEnabled || false });
   } catch (err) {

@@ -26,8 +26,32 @@ jest.mock('../../../../models/TaskActivity', () => ({
     find: jest.fn(),
     countDocuments: jest.fn().mockResolvedValue(0),
 }));
-jest.mock('../../../../models/User');
-jest.mock('../../../../models/Workspace');
+// Users and workspaces live in the PostgreSQL identity store; membership and
+// member lists are derived from whatever `workspaces.findById` returns.
+jest.mock('../../../identity', () => {
+    const api = {
+        users: {
+            findById: jest.fn(),
+            findManyByIds: jest.fn(async () => new Map()),
+        },
+        workspaces: {
+            findById: jest.fn(),
+            findManyByIds: jest.fn(async () => []),
+        },
+    };
+    const activeMember = (ws, uid) => (ws?.members || []).find((m) => String(m.user) === String(uid) && (m.status || 'active') === 'active') || null;
+    api.workspaces.membership = jest.fn(async (wsId, uid) => {
+        const ws = await api.workspaces.findById(wsId);
+        if (!ws) return null;
+        const member = activeMember(ws, uid);
+        return { workspace: ws, member, role: member ? member.role : null, isAdmin: !!member && ['owner', 'admin'].includes(member.role) };
+    });
+    api.workspaces.listMembers = jest.fn(async (wsId) => {
+        const ws = await api.workspaces.findById(wsId);
+        return (ws?.members || []).filter((m) => (m.status || 'active') === 'active');
+    });
+    return api;
+});
 jest.mock('../../channels/channel.model.js');
 jest.mock('../../../modules/messages/message.model.js');
 jest.mock('../issue-key-counter.model', () => ({ nextKey: jest.fn().mockResolvedValue('ACME-1') }));
@@ -41,8 +65,10 @@ jest.mock('../../../modules/conversations/cryptoUtils', () => ({ encryptForConve
 
 const Task = require('../../../../models/Task');
 const TaskActivity = require('../../../../models/TaskActivity');
-const User = require('../../../../models/User');
-const Workspace = require('../../../../models/Workspace');
+const identity = require('../../../identity');
+// Same names the tests always used; they now stand for the identity repositories.
+const User = identity.users;
+const Workspace = identity.workspaces;
 const Channel = require('../../channels/channel.model.js');
 const Message = require('../../../modules/messages/message.model.js');
 const messagesService = require('../../../modules/messages/messages.service');

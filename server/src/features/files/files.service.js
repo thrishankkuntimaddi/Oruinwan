@@ -47,14 +47,16 @@ async function uploadStorage(multerFile, folder, owner = {}) {
     };
 }
 
+const { hydrate } = require('../../identity/hydrate');
+const PERSON = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
+
 /** Only members of a workspace see, add or comment on its library files. */
 async function assertWorkspaceMember(workspaceId, userId) {
     if (!workspaceId || !mongoose.isValidObjectId(String(workspaceId))) {
         throw Object.assign(new Error('Invalid workspaceId'), { statusCode: 400 });
     }
-    const Workspace = require('../../../models/Workspace');
-    const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).select('_id').lean();
-    if (!ws) throw Object.assign(new Error('Not a member of this workspace'), { statusCode: 403 });
+    const ws = await require('../../identity').workspaces.findById(workspaceId);
+    if (!ws || !ws.members.some(m => String(m.user) === String(userId) && m.status !== 'removed')) throw Object.assign(new Error('Not a member of this workspace'), { statusCode: 403 });
 }
 
 async function loadVisibleFile(fileId, userId) {
@@ -114,19 +116,18 @@ async function getFiles(userId, workspaceId, filters = {}) {
     }
 
     const files = await WorkspaceFile.find(query)
-        .populate('createdBy', 'username firstName lastName avatarUrl profilePicture')
         .sort({ createdAt: -1 })
         .lean();
+    await hydrate(files, { createdBy: PERSON });
 
     return { files };
 }
 
 async function getFile(userId, fileId) {
     await loadVisibleFile(fileId, userId);
-    const file = await WorkspaceFile.findById(fileId)
-        .populate('createdBy', 'username firstName lastName avatarUrl profilePicture')
-        .lean();
+    const file = await WorkspaceFile.findById(fileId).lean();
     if (!file || file.isDeleted) throw Object.assign(new Error('File not found'), { statusCode: 404 });
+    await hydrate(file, { createdBy: PERSON });
     return { file };
 }
 
@@ -175,9 +176,9 @@ async function getVersions(userId, fileId) {
     const file = await loadVisibleFile(fileId, userId);
 
     const versions = await FileVersion.find({ fileId })
-        .populate('createdBy', 'username firstName lastName avatarUrl')
         .sort({ versionNumber: -1 })
         .lean();
+    await hydrate(versions, { createdBy: PERSON });
 
     return { versions, currentVersion: file.currentVersion };
 }
@@ -225,16 +226,17 @@ async function addComment(userId, fileId, content, parentId = null) {
         parentId: parentId || null,
     });
 
-    await comment.populate('author', 'username firstName lastName avatarUrl profilePicture');
-    return { comment };
+    const commentOut = comment.toObject();
+    await hydrate(commentOut, { author: PERSON });
+    return { comment: commentOut };
 }
 
 async function getComments(userId, fileId) {
     await loadVisibleFile(fileId, userId);
     const comments = await FileComment.find({ fileId, isDeleted: false })
-        .populate('author', 'username firstName lastName avatarUrl profilePicture')
         .sort({ createdAt: 1 })
         .lean();
+    await hydrate(comments, { author: PERSON });
     return { comments };
 }
 

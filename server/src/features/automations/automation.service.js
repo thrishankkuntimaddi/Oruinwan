@@ -1,3 +1,4 @@
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const logger = require('../../../utils/logger');
 const Automation = require('./automation.model');
 const AutomationRun = require('./automationRun.model');
@@ -101,8 +102,8 @@ const ACTION_HANDLERS = {
         const { title, priority = 'medium', assignedToIds = [] } = config;
         if (!title) return { skipped: true, reason: 'Missing task title' };
 
-        const Task = require('../../../models/Task');
-        const task = await Task.create({
+        const Tasks = require('../tasks/tasks.query');
+        const task = await Tasks.create({
             workspace:  eventData.workspaceId,
             title,
             priority,
@@ -120,12 +121,11 @@ const ACTION_HANDLERS = {
         const { taskId, assigneeId } = config;
         if (!taskId || !assigneeId) return { skipped: true, reason: 'Missing taskId or assigneeId' };
 
-        const Task = require('../../../models/Task');
-        const task = await Task.findById(taskId);
+        const Tasks = require('../tasks/tasks.query');
+        let task = await Tasks.findById(taskId);
         if (!task) return { skipped: true, reason: 'Task not found' };
-        if (!task.assignedTo.includes(assigneeId)) {
-            task.assignedTo.push(assigneeId);
-            await task.save();
+        if (!(task.assignedTo || []).some((a) => String(a) === String(assigneeId))) {
+            task = await Tasks.updateById(task._id, { assignedTo: [...(task.assignedTo || []), assigneeId] });
         }
         if (io) io.to(`user_${assigneeId}`).emit('task-assigned', task);
         return { taskId: task._id };
@@ -296,11 +296,11 @@ async function getAutomations(workspaceId, { page = 1, limit = 20 } = {}) {
     const skip = (page - 1) * limit;
     const [automations, total] = await Promise.all([
         Automation.find({ workspaceId, deleted: { $ne: true } })
-            .populate('createdBy', 'username firstName lastName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .lean(),
+            .lean()
+            .then((rows) => hydrate(rows, { createdBy: userSelect('username firstName lastName') })),
         Automation.countDocuments({ workspaceId, deleted: { $ne: true } })
     ]);
     return { automations, total, page, limit };
@@ -311,7 +311,7 @@ async function getAutomation(automationId, workspaceId) {
         _id:         automationId,
         workspaceId,
         deleted:     { $ne: true }
-    }).populate('createdBy', 'username firstName lastName').lean();
+    }).lean().then((doc) => (doc ? hydrate(doc, { createdBy: userSelect('username firstName lastName') }) : doc));
 
     if (!automation) {
         const err = new Error('Automation not found');

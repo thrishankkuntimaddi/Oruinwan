@@ -93,12 +93,17 @@ router.post(
 
             
             const emails = employees.map(e => e.email);
-            const existing = await require('../../../models/User').find({
+            const existing = await require('../../identity/queries/org').users.find({
                 email: { $in: emails },
                 companyId: req.companyId,
-            }).select('email accountStatus scimExternalId').lean();
+            }, { select: 'email accountStatus profile' });
 
             const existingSet = new Set(existing.map(u => u.email));
+            // Preview without sensitive provider fields (was referenced but never defined).
+            const safeEmployeePreview = employees.slice(0, 50).map(e => ({
+                email: e.email, firstName: e.firstName, lastName: e.lastName, department: e.department || null,
+                jobTitle: e.jobTitle || null, status: e.status, exists: existingSet.has(e.email),
+            }));
 
             return res.json({
                 success: true,

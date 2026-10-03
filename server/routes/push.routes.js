@@ -3,7 +3,7 @@ const logger = require('../utils/logger');
 
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const identity = require('../src/identity');
 
 const requireAuth = require('../src/shared/middleware/auth');
 
@@ -14,19 +14,12 @@ router.post('/register', requireAuth, async (req, res) => {
 
     const userId = req.user.sub || req.user._id || req.user.id;
 
-    // Drop any existing entry for this token first: the subdocument carries a
-    // fresh registeredAt and _id, so $addToSet alone would never deduplicate.
-    await User.updateOne({ _id: userId }, { $pull: { deviceTokens: { token } } });
-
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $addToSet: {
-          deviceTokens: { token, platform: platform || 'unknown', registeredAt: new Date() },
-        },
-      },
-      { new: true }
-    );
+    // One entry per token: drop any existing one, then add it with a fresh registeredAt.
+    const user = await identity.users.findById(userId, { withSecrets: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const tokens = (Array.isArray(user.deviceTokens) ? user.deviceTokens : []).filter((t) => t.token !== token);
+    tokens.push({ token, platform: platform || 'unknown', registeredAt: new Date() });
+    await identity.users.update(userId, { deviceTokens: tokens });
 
     res.json({ success: true, message: 'Device token registered' });
   } catch (err) {
@@ -42,9 +35,11 @@ router.post('/unregister', requireAuth, async (req, res) => {
 
     const userId = req.user.sub || req.user._id || req.user.id;
 
-    await User.findByIdAndUpdate(userId, {
-      $pull: { deviceTokens: { token } },
-    });
+    const user = await identity.users.findById(userId, { withSecrets: true });
+    if (user) {
+      const tokens = (Array.isArray(user.deviceTokens) ? user.deviceTokens : []).filter((t) => t.token !== token);
+      await identity.users.update(userId, { deviceTokens: tokens });
+    }
 
     res.json({ success: true, message: 'Device token removed' });
   } catch (err) {

@@ -13,7 +13,7 @@
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 const mongoose = require('mongoose');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 const resolver = require('./ai.provider.resolver');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -53,7 +53,7 @@ function requireAIAccess({ optional = false, adminOnly = false } = {}) {
             if (!mongoose.Types.ObjectId.isValid(String(workspaceId))) {
                 return res.status(400).json({ message: 'Invalid workspaceId' });
             }
-            const ws = await Workspace.findOne({ _id: workspaceId, isActive: { $ne: false } }).select('name members settings').lean();
+            const ws = await identity.workspaces.findById(workspaceId, { activeOnly: true });
             if (!ws) return res.status(404).json({ message: 'Workspace not found' });
             const me = (ws.members || []).find(m => String(m.user?._id || m.user) === String(req.user.sub) && m.status !== 'removed');
             if (!me) return res.status(403).json({ message: 'You are not a member of this workspace', code: 'WORKSPACE_ACCESS_DENIED' });

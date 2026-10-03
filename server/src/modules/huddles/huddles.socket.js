@@ -86,12 +86,8 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
         };
     }
     if (workspaceId) {
-        const WorkspaceModel = require('../../../models/Workspace');
-        const ws = await WorkspaceModel.findOne({
-            _id: workspaceId,
-            members: { $elemMatch: { user: uid, status: 'active' } },
-        }).select('_id').lean();
-        if (!ws) return { ok: false, message: 'Not a member of this workspace' };
+        const access = await require('../../identity').workspaces.membership(workspaceId, uid);
+        if (!access?.member) return { ok: false, message: 'Not a member of this workspace' };
         return { ok: true, scope: { workspaceId: String(workspaceId) } };
     }
     return { ok: false, message: 'channelId, dmId, or workspaceId required' };
@@ -107,13 +103,19 @@ function registryScope(scope) {
 async function displayName(socket) {
     if (socket.data.username) return socket.data.username;
     try {
-        const User = require('../../../models/User');
-        const user = await User.findById(socket.user.id).select('username profile.name').lean();
+        const user = await require('../../identity').users.findById(socket.user.id);
         socket.data.username = user?.username || user?.profile?.name || 'Unknown';
     } catch (err) {
         socket.data.username = 'Unknown';
     }
     return socket.data.username;
+}
+
+/** Bus event for a huddle lifecycle change; a bus failure never affects the call. */
+function publishHuddle(name, huddle, payload) {
+    if (!huddle?.workspaceId) return;
+    require('../../shared/events/bus').publish(name, payload, { workspaceId: huddle.workspaceId, actorId: payload.startedBy || null })
+        .catch(() => {});
 }
 
 function huddleError(socket, huddleId, code, message) {
@@ -130,6 +132,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:ended', payload);
         history.ended(huddle.huddleId);
+        publishHuddle('huddle.ended', huddle, { huddleId: huddle.huddleId, reason });
     };
 
     /** Remove this user from a huddle; ends the huddle when nobody is left. */
@@ -155,10 +158,12 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const username = await displayName(socket);
             const startedBy = { _id: uid(), username };
             const existed = !!registry.get(huddleId);
-            const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video });
+            const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video, workspaceId: check.scope.workspaceId || null });
             if (error) return huddleError(socket, huddleId, error, 'Huddle already exists elsewhere');
-            huddle.workspaceId = huddle.workspaceId || check.scope.workspaceId || null;
-            if (!existed) history.started(registry.summary(huddle));
+            if (!existed) {
+                history.started(registry.summary(huddle));
+                publishHuddle('huddle.started', huddle, { huddleId, channelId: huddle.channelId, dmId: huddle.dmId, startedBy: uid(), video: !!huddle.video });
+            }
 
             const scope = registryScope(check.scope);
             const payload = {
@@ -201,10 +206,12 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const username = await displayName(socket);
             // A join for a huddle this process never saw (e.g. after a restart) re-creates it.
             const existed = !!registry.get(huddleId);
-            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled) });
+            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled), workspaceId: check.scope.workspaceId || null });
             if (ensured.error) return huddleError(socket, huddleId, ensured.error, 'This huddle belongs to a different conversation');
-            ensured.huddle.workspaceId = ensured.huddle.workspaceId || check.scope.workspaceId || null;
-            if (!existed) history.started(registry.summary(ensured.huddle));
+            if (!existed) {
+                history.started(registry.summary(ensured.huddle));
+                publishHuddle('huddle.started', ensured.huddle, { huddleId, channelId: ensured.huddle.channelId, dmId: ensured.huddle.dmId, startedBy: uid(), video: !!ensured.huddle.video });
+            }
 
             const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id });
             if (joined.error === 'HUDDLE_FULL') {

@@ -14,7 +14,7 @@
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 
-[Live Demo](https://chttrix.vercel.app) · [Documentation](https://chttrix.vercel.app/docs) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
+[Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
 
 </div>
 
@@ -54,7 +54,7 @@ Oruinwan is a **production-grade, full-stack collaboration platform** built for 
 - Document collaboration with a rich note-taking system
 - Knowledge base management
 - Meeting & huddle support
-- File management with GCS integration
+- File management on S3-compatible object storage
 - Workflow automations
 - Developer platform with OAuth apps & webhooks
 - Enterprise-grade admin, compliance, and audit infrastructure
@@ -115,7 +115,7 @@ Oruinwan is architected as a true **multi-tenant SaaS** platform with workspace 
 - Full-text search across all notes and knowledge pages
 
 ### 📂 Files & Media
-- **Google Cloud Storage (GCS)** backend for file uploads
+- **S3-compatible object storage** (RustFS locally, any S3 later) for file uploads
 - Per-workspace file library with metadata
 - File preview, download, and sharing
 - Drag-and-drop upload in channels and DMs
@@ -187,8 +187,8 @@ Oruinwan is architected as a true **multi-tenant SaaS** platform with workspace 
 └─────────────────────┘                   └──────────────────────────┘
            │
 ┌──────────▼──────────┐
-│  Google Cloud       │
-│  Storage (GCS)      │
+│  Object storage     │
+│  (S3 API)           │
 │  File uploads       │
 └─────────────────────┘
 ```
@@ -237,7 +237,8 @@ The server uses a **feature-module pattern** — each domain (channels, tasks, n
 | **express-rate-limit** | API rate limiting |
 | **express-validator** | Request validation |
 | **@google/generative-ai** | Gemini AI integration |
-| **@google-cloud/storage** | GCS file storage |
+| **@aws-sdk/client-s3** | S3-compatible file storage |
+| **pg** | PostgreSQL client (identity, tasks, logs, pgvector) |
 | **google-auth-library** | Google OAuth verification |
 | **open-graph-scraper** | Link preview metadata |
 | **pino** | Structured logging (pretty in dev, JSON in prod) |
@@ -248,9 +249,9 @@ The server uses a **feature-module pattern** — each domain (channels, tasks, n
 |---|---|
 | **MongoDB Atlas** | Managed cloud database |
 | **Redis Cloud / Upstash** | Managed Redis |
-| **Google Cloud Storage** | File & media storage |
-| **Railway / Cloud Run** | Server deployment |
-| **Vercel** | Frontend deployment (optional) |
+| **PostgreSQL 16 + pgvector** | Relational data and AI embeddings |
+| **S3-compatible storage** | File & media storage |
+| **Docker Compose** | Self-hosted infrastructure |
 | **Electron** | Desktop wrapper |
 | **React Native (Expo)** | Mobile app |
 | **GitHub Actions** | CI: lint, test and build on every push and PR |
@@ -332,7 +333,7 @@ ChttrixCollab/
 │   │   │   ├── tasks/              # Task CRUD, assignments, comments
 │   │   │   ├── notes/              # Note CRUD, sharing
 │   │   │   ├── knowledge/          # Knowledge base pages
-│   │   │   ├── files/              # GCS file upload, library
+│   │   │   ├── files/              # File library (object storage)
 │   │   │   ├── ai/                 # Gemini AI chat, context, summarise
 │   │   │   ├── automations/        # Workflow automations engine
 │   │   │   ├── search/             # Full-text cross-entity search
@@ -364,11 +365,11 @@ ChttrixCollab/
 │   │   │   ├── conversations/      # Conversation session management
 │   │   │   ├── encryption/         # AES-GCM server-side E2EE helpers
 │   │   │   ├── identity/           # User identity key management (X25519)
-│   │   │   ├── uploads/            # GCS upload client
+│   │   │   ├── uploads/            # S3 / local upload driver
 │   │   │   └── linkPreview/        # OG metadata scraper
 │   │   ├── socket/                 # Socket.IO server setup & handlers
 │   │   ├── services/               # Cross-feature services (email, push, queue)
-│   │   ├── config/                 # DB, Redis, GCS config
+│   │   ├── identity/               # PostgreSQL repositories: users, companies, workspaces, keys
 │   │   ├── shared/                 # Shared middleware, validators
 │   │   └── utils/                  # Server-side utilities
 │
@@ -408,9 +409,8 @@ ChttrixCollab/
 │
 ├── .github/workflows/ci.yml        # CI: server lint+test, client lint+test+build, e2e
 ├── package.json                    # Root workspace orchestrator (npm workspaces: client, server, e2e)
-├── nixpacks.toml                   # Railway deployment config
-├── railway.json                    # Railway service config
-└── vercel.json                     # Vercel deployment config
+├── docker-compose.yml              # PostgreSQL, Redis, object storage
+└── docs/                           # ARCHITECTURE, SCALING, LOCAL_DEVELOPMENT
 ```
 
 ---
@@ -421,12 +421,10 @@ ChttrixCollab/
 
 - **Node.js** ≥ 20.x
 - **npm** ≥ 10.x
-- **MongoDB** — local instance or [MongoDB Atlas](https://cloud.mongodb.com/) cluster
-- **Redis** — local instance or [Upstash](https://upstash.com/) / [Redis Cloud](https://redis.com/cloud/)
-- **Google Cloud** project with:
-  - Cloud Storage bucket
-  - Gemini API key (`@google/generative-ai`)
-  - OAuth 2.0 Client ID (for Google sign-in)
+- **Docker** (Docker Desktop, or `brew install colima docker docker-compose` on macOS) for PostgreSQL, Redis and object storage via `docker compose up -d`
+- **MongoDB** — Atlas cluster or `docker compose --profile mongo up -d`
+- **Ollama** for Oruinwan AI (`ollama pull qwen2.5:3b nomic-embed-text`), or `AI_PROVIDER=mock`
+- A Google OAuth 2.0 Client ID only if you enable Google sign-in
 
 ### 1. Clone the Repository
 
@@ -522,10 +520,12 @@ GOOGLE_CLIENT_SECRET=<your-google-client-secret>
 REDIS_URL=redis://localhost:6379
 # For Upstash: REDIS_URL=rediss://<token>@<host>:6380
 
-# ─── Google Cloud Storage ────────────────────────────────────
-GCS_BUCKET_NAME=<your-gcs-bucket>
-GCS_PROJECT_ID=<your-gcp-project-id>
-GOOGLE_APPLICATION_CREDENTIALS=./gcs-key.json
+# ─── PostgreSQL / object storage ────────────────────────────
+DATABASE_URL=postgres://oruinwan:oruinwan-dev@localhost:5432/oruinwan
+S3_ENDPOINT=http://localhost:9000
+S3_BUCKET=oruinwan-uploads
+S3_ACCESS_KEY=oruinwan
+S3_SECRET_KEY=oruinwan-dev-secret
 
 # ─── Gemini AI ───────────────────────────────────────────────
 GEMINI_API_KEY=<your-gemini-api-key>
@@ -890,51 +890,42 @@ Navigate to `Settings → Developer` or `/workspace/:id/developer`:
 
 ## 🚀 Deployment
 
-### Railway (Recommended)
+Oruinwan is self-hosted: no hosted platform is required. The same code runs on one laptop, on a home server reached over Tailscale, or on several servers. The full service and data layout is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); growth stages are in [`docs/SCALING.md`](docs/SCALING.md).
 
-```toml
-# nixpacks.toml — already configured (Node 20)
-[phases.install]
-cmds = ["cd server && npm ci --production=false"]
-
-[start]
-cmd = "node server/server.js"
-```
-
-The server requires the sibling `ai/` and `platform/` folders at runtime, so the whole repository is the deploy unit. Set all environment variables in Railway's dashboard and deploy.
-
-### Docker
-
-Build from the **repository root** so `ai/` and `platform/` are included in the image:
+### Infrastructure
 
 ```bash
-docker build -f server/Dockerfile -t chttrix-server .
-docker run -p 8080:8080 --env-file server/.env chttrix-server
+docker compose up -d     # PostgreSQL + pgvector, Redis, S3-compatible object storage (RustFS)
 ```
 
-The image is a two-stage Node 20 build, runs as the `node` user and exposes `/api/health` for the health check.
+MongoDB is Atlas today (`MONGO_URI`); `docker compose --profile mongo up -d` runs it locally instead.
 
-### Vercel (Frontend Only)
+### Application processes
 
-```json
-// vercel.json — already configured
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
+```bash
+cd server && node server.js                          # PROCESS_ROLE=all: API + realtime + jobs + uploads
+PROCESS_ROLE=api|realtime|worker|storage node server.js   # the same code split into units
+cd ai && npm start                                   # optional standalone AI service (AI_SERVICE_URL)
 ```
 
-Set `VITE_API_URL` to your deployed server URL.
+The server applies PostgreSQL migrations (`server/db/migrations`) and creates the upload bucket on boot. A container image builds from the repository root:
+
+```bash
+docker build -f server/Dockerfile -t oruinwan-server .
+docker run -p 8080:8080 --env-file server/.env oruinwan-server
+```
+
+The web client is static: `npm run build` produces `dist/`, which the server already serves, so one process and one origin is enough.
 
 ### Environment Checklist Before Deploy
-- [ ] `MONGO_URI` points to Atlas cluster (not localhost)
-- [ ] `REDIS_URL` points to managed Redis (TLS enabled)
+- [ ] `DATABASE_URL`, `REDIS_URL`, `MONGO_URI` reachable from every process
+- [ ] `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` set (uploads shared by all processes)
 - [ ] `SERVER_KEK` is a unique, securely generated 64-char hex string
-- [ ] `FRONTEND_URL` matches your deployed frontend domain exactly (CORS)
-- [ ] GCS key JSON uploaded and `GOOGLE_APPLICATION_CREDENTIALS` set
+- [ ] `FRONTEND_URL` matches the web origin exactly (CORS)
+- [ ] Passwords in `docker-compose.yml` changed from the development defaults
 - [ ] VAPID keys generated and set on both server and client
 - [ ] `NODE_ENV=production`
-- [ ] `GEMINI_API_KEY` set (or `AI_PROVIDER=mock` for environments without AI)
-- [ ] CI is green on the commit you deploy
+- [ ] AI engine reachable (`LOCAL_LLM_BASE_URL`) or `AI_PROVIDER=mock`
 
 ---
 

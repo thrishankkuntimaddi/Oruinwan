@@ -63,9 +63,9 @@ async function getPrivacyMany(userIds) {
         else missing.push(id);
     }
     if (missing.length) {
-        const User = require('../../../models/User');
-        const rows = await User.find({ _id: { $in: missing } }).select('preferences.privacy').lean();
-        const byId = new Map((rows || []).map(r => [String(r._id), r]));
+        const { query } = require('../../shared/postgres');
+        const { rows } = await query("SELECT id, preferences->'privacy' AS privacy FROM users WHERE id = ANY($1)", [missing]);
+        const byId = new Map((rows || []).map(r => [String(r.id), { preferences: { privacy: r.privacy } }]));
         for (const id of missing) {
             const privacy = privacyWithDefaults(byId.get(id)?.preferences?.privacy);
             rememberPrivacy(id, privacy);
@@ -123,28 +123,61 @@ async function redactReadBy(messages, viewerId) {
     });
 }
 
+/** Ids of users who share an active workspace with `viewerId`. */
+async function sharedWorkspaceUserIds(viewerId) {
+    const { query } = require('../../shared/postgres');
+    const { rows } = await query(
+        `SELECT DISTINCT other.user_id FROM workspace_members me
+         JOIN workspace_members other ON other.workspace_id = me.workspace_id AND other.status = 'active'
+         JOIN workspaces w ON w.id = me.workspace_id AND w.is_active = true
+         WHERE me.user_id = $1 AND me.status = 'active'`,
+        [String(viewerId)]
+    );
+    return rows.map((r) => r.user_id);
+}
+
 /**
- * Extra mongo filter for platform-wide people lists shown to `viewerId`: users with
+ * Filter for platform-wide people lists shown to `viewerId`: users with
  * discovery off are only included when they share a workspace with the viewer.
- * Callers that already scope to the viewer's own company do not need it.
+ * Returned in the old Mongo filter shape for callers not yet on PostgreSQL;
+ * new code should use `discoverablePeople`.
  */
 async function discoverableFilter(viewerId) {
-    const Workspace = require('../../../models/Workspace');
-    const rows = await Workspace.find({ 'members.user': viewerId, isActive: { $ne: false } })
-        .select('members.user members.status')
-        .lean();
-    const shared = new Set();
-    for (const ws of rows || []) {
-        for (const m of ws.members || []) {
-            if (m?.user && (m.status || 'active') === 'active') shared.add(String(m.user));
-        }
-    }
+    const shared = await sharedWorkspaceUserIds(viewerId);
     return {
         $or: [
             { 'preferences.privacy.allowDiscovery': { $ne: false } },
-            { _id: { $in: [...shared] } },
+            { _id: { $in: shared } },
         ],
     };
+}
+
+/**
+ * People a viewer may see in platform-wide lists: their own company's members
+ * for company accounts; for personal accounts other personal accounts that
+ * allow discovery or share a workspace. [{ _id, username, email, profilePicture }]
+ */
+async function discoverablePeople(viewerId, { limit = 100, search = null } = {}) {
+    const { query } = require('../../shared/postgres');
+    const me = String(viewerId);
+    const { rows: [viewer] } = await query('SELECT company_id FROM users WHERE id = $1', [me]);
+    const params = [me];
+    let where;
+    if (viewer?.company_id) {
+        params.push(viewer.company_id);
+        where = 'id <> $1 AND company_id = $2';
+    } else {
+        params.push(await sharedWorkspaceUserIds(me));
+        where = `id <> $1 AND company_id IS NULL AND (COALESCE((preferences->'privacy'->>'allowDiscovery')::boolean, true) OR id = ANY($2))`;
+    }
+    if (search) { params.push(`%${search}%`); where += ` AND (username ILIKE $${params.length} OR email ILIKE $${params.length})`; }
+    params.push(limit);
+    const { rows } = await query(
+        `SELECT id, username, email, profile_picture FROM users WHERE ${where} AND account_status NOT IN ('removed', 'blocked')
+         ORDER BY username LIMIT $${params.length}`,
+        params
+    );
+    return rows.map((r) => ({ _id: r.id, username: r.username, email: r.email, profilePicture: r.profile_picture }));
 }
 
 module.exports = {
@@ -158,4 +191,6 @@ module.exports = {
     readersHidingReceipts,
     redactReadBy,
     discoverableFilter,
+    discoverablePeople,
+    sharedWorkspaceUserIds,
 };

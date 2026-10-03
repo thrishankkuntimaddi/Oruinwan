@@ -1,4 +1,4 @@
-const User = require("../../../models/User");
+const { loadAuthUser } = require("../../identity/queries/auth");
 
 const requireCompanyMember = async (req, res, next) => {
     try {
@@ -13,9 +13,7 @@ const requireCompanyMember = async (req, res, next) => {
         }
 
         
-        const dbUser = await User.findById(jwtPayload.sub)
-            .select("companyId companyRole coOwnerOf managedDepartments accountStatus username email profilePicture")
-            .lean();
+        const dbUser = await loadAuthUser(jwtPayload.sub);
 
         if (!dbUser) {
             return res.status(401).json({

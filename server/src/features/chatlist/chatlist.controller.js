@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger');
 const Message = require("../../modules/messages/message.model.js");
-const User = require("../../../models/User");
+const identity = require("../../identity");
 const Channel = require("../channels/channel.model.js");
 
 exports.getChatList = async (req, res) => {
@@ -56,12 +56,10 @@ exports.getChatList = async (req, res) => {
       }
     ]);
 
-    const dmUsers = await User.find({
-      _id: { $in: dmPartners.map(x => x._id) }
-    }).select("_id username profilePicture");
+    const dmUsers = await identity.users.findManyByIds(dmPartners.map(x => x._id));
 
-    const dmList = dmPartners.map(dm => {
-      const u = dmUsers.find(x => String(x._id) === String(dm._id));
+    const dmList = dmPartners.filter(dm => dmUsers.has(String(dm._id))).map(dm => {
+      const u = dmUsers.get(String(dm._id));
       return {
         type: "dm",
         id: u._id,

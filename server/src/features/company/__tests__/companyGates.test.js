@@ -11,22 +11,17 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Company', () => ({
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    updateOne: jest.fn(async () => ({})),
-}));
-jest.mock('../../../../models/Workspace', () => ({ countDocuments: jest.fn(async () => 2), find: jest.fn() }));
-jest.mock('../../../../models/Department', () => ({ countDocuments: jest.fn(async () => 3), find: jest.fn() }));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../../../modules/uploads/upload.service', () => ({ uploadToGCS: jest.fn() }));
 jest.mock('../../../../utils/historyLogger', () => ({ logAction: jest.fn(async () => {}) }));
 jest.mock('../../employees/employee.service', () => ({ inviteEmployee: jest.fn(async () => ({ inviteId: 'inv1', emailSent: false })) }));
 jest.mock('../metrics.service', () => ({ getCompanyAnalytics: jest.fn(async () => ({ ok: true })) }));
 
 const h = require('../../../shared/__tests__/gateHarness');
-const Company = require('../../../../models/Company');
-const User = require('../../../../models/User');
+const store = require('../../admin/__tests__/identityStore');
 const employeeService = require('../../employees/employee.service');
 
 const C1 = h.oid(0xc1);
@@ -53,47 +48,45 @@ function app() {
 }
 
 beforeEach(() => {
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [OWNER]: { _id: OWNER, companyId: C1, companyRole: 'owner', ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [OTHER_ADMIN]: { _id: OTHER_ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [ADMIN_B]: { _id: ADMIN_B, companyId: C2, companyRole: 'admin', ...base },
-    });
-    Company.findById.mockImplementation((id) => h.query({ _id: id, name: 'Acme', admins: [], save: jest.fn() }));
-    Company.findByIdAndUpdate.mockImplementation((id, update) => h.query({ _id: id, ...update.$set }));
+    store.reset();
+    store.addCompany({ _id: C1, name: 'Acme', plan: 'free' }, { admins: [{ user: OWNER, role: 'owner' }] });
+    store.addCompany({ _id: C2, name: 'Beta' });
+    store.addUser({ _id: OWNER, companyId: C1, companyRole: 'owner', username: 'owner' });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin', username: 'admin' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member', username: 'member' });
+    store.addUser({ _id: OTHER_ADMIN, companyId: C1, companyRole: 'admin', username: 'admin2' });
+    store.addUser({ _id: ADMIN_B, companyId: C2, companyRole: 'admin', username: 'adminb' });
+    store.addWorkspace({ company: C1, name: 'W1' });
+    store.addWorkspace({ company: C1, name: 'W2' });
+    for (const name of ['A', 'B', 'C']) store.addDepartment({ company: C1, name });
 });
 
 describe('PUT /api/companies/:id', () => {
     it('lets an admin edit profile fields and drops protected ones', async () => {
         const res = await h.call(app(), 'PUT', `/api/companies/${C1}`, ADMIN, { name: 'New', verificationStatus: 'verified', admins: [] });
         expect(res.status).toBe(200);
-        expect(Company.findByIdAndUpdate.mock.calls[0][1]).toEqual({ $set: { name: 'New' } });
+        expect(store.org.updateCompany.mock.calls.at(-1)[1]).toEqual({ name: 'New' });
+        expect(store.state.companies.get(C1).verificationStatus).toBe('verified');
+        expect(store.state.companies.get(C1).name).toBe('New');
     });
     it('rejects plan changes by an admin but allows the owner', async () => {
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}`, ADMIN, { plan: 'enterprise' })).status).toBe(403);
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}`, OWNER, { plan: 'enterprise' })).status).toBe(200);
+        expect(store.state.companies.get(C1).plan).toBe('enterprise');
     });
     it('blocks members and other companies', async () => {
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}`, MEMBER, { name: 'x' })).status).toBe(403);
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}`, ADMIN_B, { name: 'x' })).status).toBe(403);
-        expect(Company.findByIdAndUpdate).not.toHaveBeenCalled();
+        expect(store.org.updateCompany).not.toHaveBeenCalled();
     });
 });
 
 describe('PUT /api/companies/:id/members/:userId/role', () => {
-    beforeEach(() => {
-        User.findById.mockImplementation((id) => {
-            const u = h.users[String(id)];
-            if (!u) return h.query(null);
-            return h.query({ ...u, username: 'u', save: jest.fn(async () => {}) });
-        });
-    });
     it('accepts the role from `role` (was always 400) for an owner', async () => {
         const res = await h.call(app(), 'PUT', `/api/companies/${C1}/members/${MEMBER}/role`, OWNER, { role: 'manager' });
         expect(res.status).toBe(200);
         expect(res.body.companyRole).toBe('manager');
+        expect(store.state.users.get(MEMBER).companyRole).toBe('manager');
     });
     it('stops an admin from granting admin or touching another admin', async () => {
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}/members/${MEMBER}/role`, ADMIN, { role: 'admin' })).status).toBe(403);

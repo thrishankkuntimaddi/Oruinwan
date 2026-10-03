@@ -121,8 +121,8 @@ internalMessageSchema.statics.getConversation = async function (
   })
     .sort({ createdAt: 1 })
     .limit(limit)
-    .populate('sender', 'username email profilePicture companyRole')
-    .populate('recipient', 'username email profilePicture companyRole');
+    .lean()
+    .then((rows) => hydrate(rows, { sender: PARTY, recipient: PARTY }));
 };
 
 internalMessageSchema.statics.getUnreadCount = async function (userId) {
@@ -176,12 +176,16 @@ internalMessageSchema.statics.getAdminInbox = async function (
     { $sort: { 'lastMessage.createdAt': -1 } }
   ]);
 
-  await this.populate(conversations, {
-    path: 'lastMessage.sender lastMessage.recipient',
-    select: 'username email profilePicture companyRole'
-  });
+  await hydrate(conversations, { 'lastMessage.sender': PARTY, 'lastMessage.recipient': PARTY });
 
   return conversations;
 };
+
+// Users live in PostgreSQL: the statics attach them with hydrate (populate cannot reach them).
+// Required lazily to keep model loading free of the PostgreSQL pool.
+function hydrate(docs, paths) {
+  return require('../src/identity/hydrate').hydrate(docs, paths);
+}
+const PARTY = { type: 'user', fields: ['username', 'email', 'profilePicture', 'companyRole'] };
 
 module.exports = mongoose.model('InternalMessage', internalMessageSchema);

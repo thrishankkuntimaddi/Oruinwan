@@ -19,8 +19,9 @@
  */
 
 const crypto = require('crypto');
-const gateway = require('../../../../ai/api/ai.gateway');
-const User = require('../../../models/User');
+const gateway = require('./ai.gatewayResolver');
+const { upsertSystemUser } = require('../../identity/queries/security');
+const { hydrate, USER_MIN } = require('../../identity/hydrate');
 const Message = require('../../modules/messages/message.model.js');
 const messagesService = require('../../modules/messages/messages.service');
 const { encryptForConversation } = require('../../modules/conversations/cryptoUtils');
@@ -51,20 +52,9 @@ let assistantPromise = null;
 /** The system account that authors AI messages (created on first use; it has no password and cannot sign in). */
 function getAssistantUser() {
   if (!assistantPromise) {
-    assistantPromise = User.findOneAndUpdate(
-      { email: ASSISTANT_EMAIL },
-      {
-        $setOnInsert: {
-          username: ASSISTANT_NAME,
-          email: ASSISTANT_EMAIL,
-          roles: [ASSISTANT_ROLE],
-          profilePicture: '/icons/oruinwan-128.png',
-          accountStatus: 'active',
-          passwordHash: null,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    ).lean().catch((err) => { assistantPromise = null; throw err; });
+    assistantPromise = upsertSystemUser({
+      email: ASSISTANT_EMAIL, username: ASSISTANT_NAME, roles: [ASSISTANT_ROLE], profilePicture: '/icons/oruinwan-128.png',
+    }).catch((err) => { assistantPromise = null; throw err; });
   }
   return assistantPromise;
 }
@@ -208,9 +198,10 @@ async function postThreadReply({ parent, parentId, senderId, enc, io }) {
     company: parent.company,
     ...(parent.dm ? { dm: parent.dm } : { channel: parent.channel }),
   });
-  await reply.populate('sender', '_id username profilePicture');
+  // Senders live in PostgreSQL: attach them to the plain objects instead of populate().
+  const replyObj = await hydrate(reply.toObject(), { sender: USER_MIN });
   const updatedParent = await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 }, $set: { lastReplyAt: new Date() } }, { new: true })
-    .populate('sender', '_id username profilePicture').lean();
+    .lean().then((doc) => hydrate(doc, { sender: USER_MIN }));
 
   if (io) {
     const room = parent.channel ? `channel:${parent.channel}` : `dm:${parent.dm}`;
@@ -220,7 +211,7 @@ async function postThreadReply({ parent, parentId, senderId, enc, io }) {
         replyCount: 1, lastReplyAt: new Date().toISOString(), parentMessage: updatedParent,
       });
     }
-    io.to(room).emit('thread-reply', { parentId: String(parentId), reply: reply.toObject() });
+    io.to(room).emit('thread-reply', { parentId: String(parentId), reply: replyObj });
     io.to(room).emit('message-updated', { messageId: String(parentId), updates: { replyCount: updatedParent?.replyCount }, fullMessage: updatedParent });
   }
   return reply;

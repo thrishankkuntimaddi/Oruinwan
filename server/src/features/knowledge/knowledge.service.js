@@ -1,6 +1,9 @@
 const KnowledgePage = require('./KnowledgePage');
 const PageLink = require('./PageLink');
 const KnowledgeCategory = require('./KnowledgeCategory');
+const { hydrate } = require('../../identity/hydrate');
+
+const CREATOR = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
 
 const aiSummarizer = require('../ai/ai.summarizer.service');
 
@@ -16,8 +19,9 @@ async function createPage(userId, workspaceId, data) {
         isHandbook: data.isHandbook || false,
         icon: data.icon || '📄',
     });
-    await page.populate('createdBy', 'username firstName lastName avatarUrl profilePicture');
-    return { page };
+    // Users live in PostgreSQL: attach the creator with hydrate instead of populate.
+    const out = await hydrate(page.toObject(), { createdBy: CREATOR });
+    return { page: out };
 }
 
 async function getPages(userId, workspaceId, filters = {}) {
@@ -29,18 +33,17 @@ async function getPages(userId, workspaceId, filters = {}) {
     if (filters.categoryId) query.categoryId = filters.categoryId;
 
     const pages = await KnowledgePage.find(query)
-        .populate('createdBy', 'username firstName lastName avatarUrl')
         .sort({ createdAt: -1 })
         .lean();
+    await hydrate(pages, { createdBy: CREATOR });
 
     return { pages };
 }
 
 async function getPage(userId, pageId) {
-    const page = await KnowledgePage.findById(pageId)
-        .populate('createdBy', 'username firstName lastName avatarUrl profilePicture')
-        .lean();
+    const page = await KnowledgePage.findById(pageId).lean();
     if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
+    await hydrate(page, { createdBy: CREATOR });
     return { page };
 }
 

@@ -1,5 +1,9 @@
 const logger = require('../../../utils/logger');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
+
+const DEPT_NAME = { type: 'department', fields: ['name'] };
 const bcrypt = require('bcryptjs');
 const sendEmail = require('../../../utils/sendEmail');
 const { assignRoleError, manageUserError, assertCompanyDepartments, syncCompanyAdmins } = require('../../shared/roleCeiling');
@@ -57,7 +61,7 @@ async function inviteEmployee({ companyId, email, firstName, lastName, companyRo
     if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
     departments = await assertCompanyDepartments(companyId, departments || []);
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await identity.users.findByEmail(email.toLowerCase());
     if (existing) {
         const err = new Error(`A user with email "${email}" already exists.`);
         err.status = 409;
@@ -73,24 +77,22 @@ async function inviteEmployee({ companyId, email, firstName, lastName, companyRo
 
     const role = companyRole || 'member';
 
-    const newUser = await User.create({
+    const newUser = await identity.users.create({
         username,
         email: email.toLowerCase(),
         passwordHash,
         userType: 'company',
-        companyId,
+        companyId: String(companyId),
         companyRole: role,
         jobTitle: jobTitle || null,
-        departments: departments || [],
-        managedDepartments: role === 'manager' ? (departments || []) : [],
         accountStatus: 'invited',
-        verified: true, 
+        verified: true,
         lastLoginAt: null,
     });
+    // Department membership (and management, for managers) lives in department_members.
+    for (const d of departments || []) await org.addDepartmentMembers(d, [newUser._id], role === 'manager' ? 'manager' : 'member');
 
-    
-    const Company = require('../../../models/Company');
-    const company = await Company.findById(companyId).select('name').lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     const companyName = company?.name || 'Your Company';
 
     await sendInviteEmail({ to: email, name, companyName, tempPassword });
@@ -111,7 +113,7 @@ async function listMembers(companyId, { callerRole, status, role, search } = {})
     if (status) filter.accountStatus = status;
     if (role) filter.companyRole = role;
     if (search) {
-        const regex = new RegExp(search, 'i');
+        const regex = new RegExp(String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
         filter.$or = [{ username: regex }, { email: regex }, { jobTitle: regex }];
     }
 
@@ -120,25 +122,24 @@ async function listMembers(companyId, { callerRole, status, role, search } = {})
         filter.companyRole = { $ne: 'guest' };
     }
 
-    const members = await User.find(filter)
-        .select('username email profilePicture companyRole jobTitle accountStatus departments managedDepartments joiningDate lastLoginAt isOnline createdAt')
-        .populate('departments', 'name')
-        .populate('managedDepartments', 'name')
-        .sort({ createdAt: -1 })
-        .lean();
+    const members = await org.users.find(filter, {
+        org: true,
+        select: 'username email profilePicture companyRole jobTitle accountStatus departments managedDepartments joiningDate lastLoginAt isOnline createdAt',
+        sort: { createdAt: -1 },
+    });
+    await hydrate(members, { departments: DEPT_NAME, managedDepartments: DEPT_NAME });
 
     return members;
 }
 
 async function getMember(memberId, companyId) {
-    const member = await User.findOne({ _id: memberId, companyId })
-        .select('-passwordHash -refreshTokens -otpCodes -verificationTokenHash -resetPasswordTokenHash ' +
-            '-twoFactorSecret -inviteToken -deviceTokens -encryption.encryptedPrivateKey ' +
-            '-emails.verificationTokenHash -emails.verificationTokenExpires')
-        .populate('departments', 'name')
-        .populate('managedDepartments', 'name')
-        .populate('workspaces.workspace', 'name type')
-        .lean();
+    // Secrets are not returned by the repository unless asked for.
+    const member = await org.users.findOne({ _id: memberId, companyId }, { org: true });
+    if (member) {
+        delete member.tokens; delete member.loginGuard;
+        if (member.encryption) member.encryption = { ...member.encryption, encryptedPrivateKey: undefined };
+        await hydrate(member, { departments: DEPT_NAME, managedDepartments: DEPT_NAME, 'workspaces.workspace': { type: 'workspace', fields: ['name', 'type'] } });
+    }
 
     if (!member) {
         const err = new Error('Member not found in this company.');
@@ -152,7 +153,7 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
     const roleError = assignRoleError({ companyRole: requesterRole }, newRole);
     if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
 
-    const target = await User.findOne({ _id: targetId, companyId });
+    const target = await org.users.findOne({ _id: targetId, companyId }, { org: true });
     if (!target) throw fail('Member not found in this company.', 404);
 
     const manageError = manageUserError({ _id: requesterId, companyId, companyRole: requesterRole }, target);
@@ -161,15 +162,17 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
     if (managedDepartments) managedDepartments = await assertCompanyDepartments(companyId, managedDepartments);
 
     target.companyRole = newRole;
+    await org.updateUser(target._id, { companyRole: newRole });
 
-    
+    // Managed departments are the 'manager' rows in department_members.
     if (newRole === 'manager' && managedDepartments) {
-        target.managedDepartments = managedDepartments;
+        await org.setUserManagedDepartments(target._id, managedDepartments, { companyId });
+        target.managedDepartments = managedDepartments.map(String);
     } else if (newRole !== 'manager') {
+        await org.setUserManagedDepartments(target._id, [], { companyId });
         target.managedDepartments = [];
     }
 
-    await target.save();
     await syncCompanyAdmins(companyId, target._id, newRole);
 
     return {
@@ -188,28 +191,24 @@ async function updateStatus({ companyId, targetId, newStatus, reason, requesterI
         throw err;
     }
 
-    const target = await User.findOne({ _id: targetId, companyId });
+    const target = await org.users.findOne({ _id: targetId, companyId });
     if (!target) throw fail('Member not found in this company.', 404);
 
     const manageError = manageUserError({ _id: requesterId, companyId, companyRole: requesterRole }, target);
     if (manageError) throw fail(manageError, 403);
 
     target.accountStatus = newStatus;
+    const patch = { accountStatus: newStatus };
 
     if (newStatus === 'suspended') {
-        target.suspendedAt = new Date();
-        target.suspendedBy = requesterId;
-        target.suspensionReason = reason || 'No reason provided';
+        Object.assign(patch, { suspendedAt: new Date(), suspendedBy: requesterId, suspensionReason: reason || 'No reason provided' });
     } else if (newStatus === 'active') {
-        
-        target.suspendedAt = null;
-        target.suspendedBy = null;
-        target.suspensionReason = null;
+        Object.assign(patch, { suspendedAt: null, suspendedBy: null, suspensionReason: null });
     } else if (newStatus === 'removed') {
-        target.deactivatedAt = new Date();
+        patch.deactivatedAt = new Date();
     }
 
-    await target.save();
+    await org.updateUser(target._id, patch);
 
     return {
         _id: target._id,

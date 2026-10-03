@@ -15,7 +15,10 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../department.service', () => ({
     assignMembers: jest.fn(async (id) => ({ _id: id })),
     createDepartment: jest.fn(async () => ({ _id: 'new' })),
@@ -25,6 +28,7 @@ jest.mock('../../../../models/InternalMessage', () => ({
 }));
 
 const h = require('../../../shared/__tests__/gateHarness');
+const store = require('../../admin/__tests__/identityStore');
 const deptService = require('../department.service');
 const InternalMessage = require('../../../../models/InternalMessage');
 
@@ -52,14 +56,16 @@ function app() {
 }
 
 beforeEach(() => {
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [MANAGER]: { _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG], ...base },
-        [CO_OWNER]: { _id: CO_OWNER, companyId: C1, companyRole: 'member', coOwnerOf: C1, ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', email: 'a@acme.test', ...base },
-        [ADMIN_B]: { _id: ADMIN_B, companyId: C2, companyRole: 'admin', ...base },
-    });
+    store.reset();
+    store.addCompany({ _id: C1, name: 'Acme' });
+    store.addCompany({ _id: C2, name: 'Beta' });
+    store.addDepartment({ _id: ENG, company: C1, name: 'Eng' });
+    store.addDepartment({ _id: SALES, company: C1, name: 'Sales' });
+    store.addUser({ _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG] });
+    store.addUser({ _id: CO_OWNER, companyId: C1, companyRole: 'member', coOwnerOf: C1 });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member' });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin', email: 'a@acme.test' });
+    store.addUser({ _id: ADMIN_B, companyId: C2, companyRole: 'admin' });
 });
 
 describe('PATCH /api/departments/:id/members', () => {

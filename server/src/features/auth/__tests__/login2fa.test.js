@@ -12,11 +12,12 @@ jest.mock('../../security/totp', () => ({
   verifyUserTotp: jest.fn(async (secret, otp) => secret === 'enc-secret' && otp === '123456'),
 }));
 
-jest.mock('../../../../models/User', () => ({
-  findOne: jest.fn(() => ({ select: () => ({ populate: async () => mockState.user }) })),
-  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ twoFactorSecret: mockState.secret }) }) })),
+// Users are loaded through the identity document adapter (PostgreSQL); the doc carries the secret.
+jest.mock('../../../identity/queries/auth', () => ({
+  userDocs: { findByEmail: jest.fn(async () => mockState.user) },
+  emailTaken: jest.fn(), companyByAllowedEmail: jest.fn(), companyForAutoJoin: jest.fn(), invites: {},
 }));
-jest.mock('../../../../models/Company', () => ({ findOne: jest.fn(async () => null) }));
+jest.mock('../../../identity', () => ({ companies: { findByDomain: jest.fn(async () => null), findById: jest.fn(async () => null) } }));
 jest.mock('../../../../utils/mongooseRetry', () => ({ saveWithRetry: jest.fn(async () => {}) }));
 jest.mock('../../../../utils/sendEmail', () => jest.fn());
 jest.mock('../../../../models/AuditLog', () => ({ create: jest.fn().mockResolvedValue({}) }));
@@ -45,7 +46,7 @@ beforeEach(() => {
   mockState.user = {
     _id: 'u1', email: 'a@example.com', username: 'A', passwordHash: hash, verified: true,
     authProvider: 'local', twoFactorEnabled: true, refreshTokens: [], roles: [],
-    failedLoginAttempts: 0, save: jest.fn(async () => {}),
+    failedLoginAttempts: 0, twoFactorSecret: mockState.secret, save: jest.fn(async () => {}),
   };
 });
 

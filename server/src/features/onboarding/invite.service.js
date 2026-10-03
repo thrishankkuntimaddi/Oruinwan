@@ -1,6 +1,7 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
-const User = require('../../../models/User');
+const { userDocs } = require('../../identity/queries/auth');
+const org = require('../../identity/queries/org');
 const sendEmail = require('../../../utils/sendEmail');
 const { inviteTemplate } = require('../../../utils/emailTemplates');
 
@@ -46,10 +47,8 @@ async function acceptInvite(rawToken, password) {
 
     const tokenHash = _sha256(rawToken);
 
-    const user = await User.findOne({
-        inviteToken: tokenHash,
-        inviteTokenExpiry: { $gt: new Date() },  
-    });
+    const found = await userDocs.findByInviteToken(tokenHash);
+    const user = found && found.inviteTokenExpiry && new Date(found.inviteTokenExpiry) > new Date() ? found : null;
 
     if (!user) {
         throw Object.assign(new Error('Invalid or expired invite link. Please ask your admin to resend the invite.'), { status: 400 });
@@ -125,11 +124,8 @@ async function acceptInvite(rawToken, password) {
 }
 
 async function resendInvite(userId, companyId) {
-    const user = await User.findOne({
-        _id: userId,
-        companyId,
-        accountStatus: 'invited',
-    });
+    const row = await org.users.findOne({ _id: userId, companyId, accountStatus: 'invited' });
+    const user = row ? await userDocs.findById(row._id) : null;
 
     if (!user) {
         throw Object.assign(
@@ -139,8 +135,7 @@ async function resendInvite(userId, companyId) {
     }
 
     
-    const Company = require('../../../models/Company');
-    const company = await Company.findById(companyId).lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) throw Object.assign(new Error('Company not found.'), { status: 404 });
 
     

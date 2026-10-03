@@ -21,8 +21,8 @@ async function getWorkspaceFeatures(workspaceId) {
     const key = String(workspaceId);
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < TTL_MS) return hit.toggles;
-    const WorkspacePermission = require('../../models/WorkspacePermission');
-    const doc = await WorkspacePermission.findOne({ workspace: key }).select('featureToggles').lean();
+    const { workspacePermissions } = require('../../identity');
+    const doc = await workspacePermissions.get(key);
     const toggles = { ...DEFAULTS };
     for (const f of FEATURES) {
         if (doc?.featureToggles && typeof doc.featureToggles[f] === 'boolean') toggles[f] = doc.featureToggles[f];

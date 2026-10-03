@@ -1,7 +1,22 @@
 const logger = require('../../../utils/logger');
 const Update = require("../../../models/Update");
-const User = require("../../../models/User");
-const Workspace = require("../../../models/Workspace");
+const identity = require("../../identity");
+const { hydrate } = require("../../identity/hydrate");
+
+// postedBy / mentions are PostgreSQL users and workspace a PostgreSQL workspace.
+const UPDATE_REFS = {
+    postedBy: { type: "user", fields: ["username", "profilePicture"] },
+    mentions: { type: "user", fields: ["username"] },
+    workspace: { type: "workspace", fields: ["name"] },
+};
+const UPDATE_REFS_NO_WS = { postedBy: UPDATE_REFS.postedBy, mentions: UPDATE_REFS.mentions };
+
+/** Lean update(s) with their people (and workspace name) attached. */
+async function withRefs(query, refs = UPDATE_REFS) {
+    const result = await query;
+    if (result) await hydrate(result, refs);
+    return result;
+}
 const { logAction } = require("../../../utils/historyLogger");
 
 exports.getUpdates = async (req, res) => {
@@ -9,7 +24,7 @@ exports.getUpdates = async (req, res) => {
         const userId = req.user.sub;
         const { workspaceId, type, priority, limit = 50 } = req.query;
 
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -27,12 +42,10 @@ exports.getUpdates = async (req, res) => {
         if (type) query.type = type;
         if (priority) query.priority = priority;
 
-        const updates = await Update.find(query)
-            .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username")
+        const updates = await withRefs(Update.find(query)
             .sort({ isPinned: -1, createdAt: -1 })
             .limit(parseInt(limit))
-            .lean();
+            .lean(), UPDATE_REFS_NO_WS);
 
         return res.json({ updates });
 
@@ -59,7 +72,7 @@ exports.postUpdate = async (req, res) => {
             return res.status(400).json({ message: "Message and workspace ID required" });
         }
 
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -102,10 +115,7 @@ exports.postUpdate = async (req, res) => {
             req
         });
 
-        const populatedUpdate = await Update.findById(update._id)
-            .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username")
-            .populate("workspace", "name");
+        const populatedUpdate = await withRefs(Update.findById(update._id).lean());
 
         
         if (req.io) {
@@ -137,10 +147,10 @@ exports.updateUpdate = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(update.workspace);
+        const workspace = await identity.workspaces.findById(update.workspace);
         const canEdit =
             update.postedBy.toString() === userId ||
-            workspace.isAdminOrOwner(userId);
+            !!workspace?.isAdminOrOwner(userId);
 
         if (!canEdit) {
             return res.status(403).json({
@@ -158,10 +168,7 @@ exports.updateUpdate = async (req, res) => {
 
         await update.save();
 
-        const populatedUpdate = await Update.findById(update._id)
-            .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username")
-            .populate("workspace", "name");
+        const populatedUpdate = await withRefs(Update.findById(update._id).lean());
 
         
         if (req.io) {
@@ -190,10 +197,10 @@ exports.deleteUpdate = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(update.workspace);
+        const workspace = await identity.workspaces.findById(update.workspace);
         const canDelete =
             update.postedBy.toString() === userId ||
-            workspace.isAdminOrOwner(userId);
+            !!workspace?.isAdminOrOwner(userId);
 
         if (!canDelete) {
             return res.status(403).json({
@@ -252,10 +259,7 @@ exports.addReaction = async (req, res) => {
 
         
         if (req.io) {
-            const populatedUpdate = await Update.findById(update._id)
-                .populate("postedBy", "username profilePicture")
-                .populate("mentions", "username")
-                .populate("workspace", "name");
+            const populatedUpdate = await withRefs(Update.findById(update._id).lean());
             req.io.to(`company_${update.company}`).emit("update-updated", populatedUpdate);
         }
 
@@ -300,8 +304,8 @@ exports.getCompanyUpdates = async (req, res) => {
         const { type, priority, limit = 50 } = req.query;
 
         
-        const user = await User.findById(userId);
-        if (!user || user.companyId.toString() !== companyId) {
+        const user = await identity.users.findById(userId);
+        if (!user || String(user.companyId) !== String(companyId)) {
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -313,13 +317,10 @@ exports.getCompanyUpdates = async (req, res) => {
         if (type) query.type = type;
         if (priority) query.priority = priority;
 
-        const updates = await Update.find(query)
-            .populate("postedBy", "username profilePicture")
-            .populate("mentions", "username")
-            .populate("workspace", "name") 
+        const updates = await withRefs(Update.find(query)
             .sort({ isPinned: -1, createdAt: -1 })
             .limit(parseInt(limit))
-            .lean();
+            .lean());
 
         return res.json({ updates });
 

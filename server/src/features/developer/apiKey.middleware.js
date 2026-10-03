@@ -20,8 +20,8 @@ module.exports = async function apiKeyMiddleware(req, res, next) {
       return res.status(401).json({ message: 'Invalid or revoked API key' });
     }
 
-    const Workspace = require('../../../models/Workspace');
-    const ws = await Workspace.findOne({ _id: apiKeyDoc.workspaceId, isActive: { $ne: false } }).select('_id').lean();
+    const { workspaces } = require('../../identity');
+    const ws = await workspaces.findById(apiKeyDoc.workspaceId, { activeOnly: true });
     if (!ws) {
       return res.status(401).json({ message: 'Invalid or revoked API key' });
     }

@@ -1,14 +1,14 @@
 const logger = require('../../../utils/logger');
+const { replicaRead } = require('../../shared/db');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Workspace = require('../../../models/Workspace');
-const Department = require('../../../models/Department');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 const Message = require("../../modules/messages/message.model.js");
-const UserSession = require('../../../models/UserSession');
-const Invoice = require('../../../models/Invoice');
+// Invoices live in PostgreSQL (migration 0007_billing_analytics).
+const { invoices: invoiceRepo } = require('../billing/billing.repository');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireOwner } = require('../../shared/middleware/permissionMiddleware');
@@ -38,7 +38,7 @@ function buildDateLabels(days) {
 router.get('/overview', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -52,17 +52,17 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
             workspaceCount,
             departmentCount
         ] = await Promise.all([
-            User.countDocuments({ companyId }),
-            User.countDocuments({ companyId, accountStatus: 'active' }),
-            Workspace.countDocuments({ company: companyId }),
-            Department.countDocuments({ company: companyId })
+            org.users.count({ companyId }),
+            org.users.count({ companyId, accountStatus: 'active' }),
+            org.workspaces.count({ company: companyId }),
+            org.departments.count({ company: companyId })
         ]);
 
         
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const [newUsersLast30Days, newWorkspacesLast30Days] = await Promise.all([
-            User.countDocuments({ companyId, createdAt: { $gte: thirtyDaysAgo } }),
-            Workspace.countDocuments({ company: companyId, createdAt: { $gte: thirtyDaysAgo } })
+            org.users.count({ companyId, createdAt: { $gte: thirtyDaysAgo } }),
+            org.workspaces.count({ company: companyId, createdAt: { $gte: thirtyDaysAgo } })
         ]);
 
         res.json({
@@ -84,7 +84,7 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
 router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -104,7 +104,7 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
                 company: companyId,
                 createdAt: { $gte: thirtyDaysAgo }
             }),
-            Workspace.countDocuments({ company: companyId }),
+            org.workspaces.count({ company: companyId }),
             Message.distinct('workspace', {
                 company: companyId,
                 createdAt: { $gte: sevenDaysAgo }
@@ -135,14 +135,14 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
 router.get('/billing-summary', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
-        const company = await Company.findById(user.companyId);
+        const user = await identity.users.findById(userId);
+        const company = await org.companies.findOne({ _id: user.companyId });
 
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
 
-        const totalUsers = await User.countDocuments({ companyId: company._id, accountStatus: { $ne: 'removed' } });
+        const totalUsers = await org.users.count({ companyId: company._id, accountStatus: { $ne: 'removed' } });
         const seatLimit = company.settings?.maxUsers || null;
         const address = company.settings?.address;
 
@@ -173,7 +173,7 @@ router.get('/billing-summary', requireFlag('billing'), requireAuth, requireOwner
 router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         
@@ -186,7 +186,7 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
         // recorded: SecurityEvent (role_changed / account_suspended) and the
         // history log (user_role_changed / member_removed / user_left_company).
         const [activeSessions, totalAuditLogs, criticalEvents, criticalHistory, warnings, failed] = await Promise.all([
-            User.countDocuments({ companyId, lastLoginAt: { $gte: oneDayAgo } }),
+            org.users.count({ companyId, lastLoginAt: { $gte: oneDayAgo } }),
             AuditLog.countDocuments({ companyId, createdAt: { $gte: sevenDaysAgo } }),
             SecurityEvent.countDocuments({ companyId, eventType: { $in: ['role_changed', 'account_suspended'] }, createdAt: { $gte: sevenDaysAgo } }),
             HistoryLog.countDocuments({ company: companyId, action: { $in: ['user_role_changed', 'member_removed', 'user_left_company'] }, timestamp: { $gte: sevenDaysAgo } }),
@@ -195,7 +195,7 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
                 .sort({ createdAt: -1 }).limit(20).select('metadata ipAddress userAgent createdAt').lean(),
         ]);
 
-        const company = await Company.findById(companyId).select('domain ownerEmail').lean();
+        const company = await org.companies.findOne({ _id: companyId });
         const emailDomain = company?.domain || company?.ownerEmail?.split('@')[1] || null;
 
         res.json({
@@ -225,21 +225,13 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
 router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-        const sessions = await UserSession.find({
-            companyId,
-            isActive: true,
-            lastActivityAt: { $gte: oneDayAgo }
-        })
-            .populate('userId', 'username email')
-            .sort({ lastActivityAt: -1 })
-            .limit(50)
-            .lean();
+        const sessions = await org.companySessions(companyId, { since: oneDayAgo, limit: 50 });
 
         
         const formattedSessions = sessions.map(session => ({
@@ -267,7 +259,7 @@ router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
 router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         const { limit = 50, type = 'all' } = req.query;
@@ -311,11 +303,11 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
             query.action = { $in: securityActions };
         }
 
-        const events = await AuditLog.find(query)
-            .populate('userId', 'username email')
+        const events = await replicaRead(AuditLog.find(query))
             .sort({ createdAt: -1 })
             .limit(parseInt(limit))
             .lean();
+        await hydrate(events, { userId: { type: 'user', fields: ['username', 'email'] } });
 
         
         const formattedEvents = events.map(event => {
@@ -350,20 +342,14 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
 router.get('/invoices', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         const { limit = 10, status = 'all' } = req.query;
 
-        let query = { companyId };
-        if (status !== 'all') {
-            query.status = status;
-        }
-
-        const invoices = await Invoice.find(query)
-            .sort({ createdAt: -1 })
-            .limit(parseInt(limit))
-            .lean();
+        const invoices = companyId
+            ? await invoiceRepo.list(companyId, { status: status !== 'all' ? status : undefined, limit: parseInt(limit) || 10 })
+            : [];
 
         res.json({ invoices });
     } catch (error) {
@@ -375,14 +361,11 @@ router.get('/invoices', requireFlag('billing'), requireAuth, requireOwner, async
 router.get('/payment-methods', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         
-        const latestInvoice = await Invoice.findOne({ companyId })
-            .sort({ createdAt: -1 })
-            .select('paymentMethod')
-            .lean();
+        const latestInvoice = companyId ? await invoiceRepo.latest(companyId) : null;
 
         // No payment provider is wired up yet: report what the invoices say, never a placeholder card.
         res.json({ paymentMethod: latestInvoice?.paymentMethod?.last4 ? latestInvoice.paymentMethod : null });
@@ -395,7 +378,7 @@ router.get('/payment-methods', requireFlag('billing'), requireAuth, requireOwner
 router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
         if (!companyId) return res.status(400).json({ message: 'No company found' });
 
@@ -415,11 +398,11 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             activeWorkspaces,
             recentMessages,
         ] = await Promise.all([
-            User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
-            User.countDocuments({ companyId, accountStatus: 'active' }),
-            User.countDocuments({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
-            Workspace.countDocuments({ company: companyId }),
-            Workspace.countDocuments({ company: companyId, isActive: true, isArchived: false }),
+            org.users.count({ companyId, accountStatus: { $ne: 'removed' } }),
+            org.users.count({ companyId, accountStatus: 'active' }),
+            org.users.count({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
+            org.workspaces.count({ company: companyId }),
+            org.workspaces.count({ company: companyId, isActive: true, isArchived: false }),
             Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
         ]);
 
@@ -439,8 +422,8 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
         }
         const userGrowth = await Promise.all(weekBuckets.map(async ({ end, label }) => {
             const [users, active] = await Promise.all([
-                User.countDocuments({ companyId, createdAt: { $lte: end }, accountStatus: { $ne: 'removed' } }),
-                User.countDocuments({ companyId, accountStatus: 'active', createdAt: { $lte: end } }),
+                org.users.count({ companyId, createdAt: { $lte: end }, accountStatus: { $ne: 'removed' } }),
+                org.users.count({ companyId, accountStatus: 'active', createdAt: { $lte: end } }),
             ]);
             return { date: label, users, active };
         }));
@@ -464,26 +447,19 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             { $group: { _id: '$workspace', count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 5 },
-            { $lookup: { from: 'workspaces', localField: '_id', foreignField: '_id', as: 'ws' } },
-            { $unwind: { path: '$ws', preserveNullAndEmptyArrays: true } },
-            { $project: { _id: 0, name: { $ifNull: ['$ws.name', 'Unknown'] }, activity: '$count' } },
-        ]);
+        ]).then(async (rows) => {
+            // Workspace names come from PostgreSQL.
+            const names = new Map((await org.workspaces.find({ _id: { $in: rows.map((r) => String(r._id)) } }, { members: false }))
+                .map((w) => [String(w._id), w.name]));
+            return rows.map((r) => ({ name: names.get(String(r._id)) || 'Unknown', activity: r.count }));
+        });
 
         
-        const departments = await Department.find({ company: companyId, isActive: true }).select('name members').lean();
-        let departmentDistribution = departments.map(d => ({
-            name: d.name,
-            value: Array.isArray(d.members) ? d.members.length : 0,
-        })).sort((a, b) => b.value - a.value).slice(0, 6);
-
-        if (!departmentDistribution.some(d => d.value > 0) && departments.length > 0) {
-            departmentDistribution = await Promise.all(
-                departments.slice(0, 6).map(async d => ({
-                    name: d.name,
-                    value: await User.countDocuments({ companyId, departments: d._id, accountStatus: { $ne: 'removed' } }),
-                }))
-            );
-        }
+        // Members per department in one grouped query.
+        const departmentDistribution = (await org.departmentSizes(companyId))
+            .map((d) => ({ name: d.name, value: d.members }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 6);
 
         res.json({
             timeRange,

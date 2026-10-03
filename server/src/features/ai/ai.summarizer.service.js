@@ -3,7 +3,7 @@ const logger = require('../../../utils/logger');
 
 const crypto = require('crypto');
 
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('./ai.gatewayResolver');
 const sys = (context = {}) => ({ userId: context.userId || 'system', ...context });
 const isConfigured = () => { try { return !!gateway.getOrchestrator().provider.isConfigured; } catch { return false; } };
 

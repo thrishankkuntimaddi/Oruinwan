@@ -58,8 +58,7 @@ router.delete('/:huddleId/tasks/:taskId', requireAuth, handle((req) => history.u
 
 // Record the posted (E2EE) summary message and notify everyone who was in the call.
 router.post('/:huddleId/wrap-up', requireAuth, handle(async (req) => {
-  const User = require('../../../models/User');
-  const me = await User.findById(userId(req)).select('username').lean();
+  const me = await require('../../identity').users.findById(userId(req));
   return history.recordWrapUp({
     userId: userId(req),
     username: me?.username,

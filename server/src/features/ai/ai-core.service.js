@@ -5,7 +5,7 @@
  * one-shot helpers (knowledge Q&A, automation, meetings). No vendor SDKs here.
  */
 const logger = require('../../../utils/logger');
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('./ai.gatewayResolver');
 const { summarizeDocument, semanticSearch, cacheStats, clearCache } = require('./ai.summarizer.service');
 
 exports.summarize = summarizeDocument;

@@ -11,7 +11,7 @@
  */
 
 const Message = require('../../../modules/messages/message.model.js');
-const Workspace = require('../../../../models/Workspace');
+const { workspaces } = require('../../../identity');
 const logger = require('../../../../utils/logger');
 const bot = require('../integration.bot');
 const links = require('../integration.tasks');
@@ -153,8 +153,8 @@ async function runReview({ workspaceId, repo, number, messageId = null, userId =
     if (!reviewed.length) {
       review = '**Summary**: No reviewable code changes (only binary, generated or lock files).';
     } else {
-      const gateway = require('../../../../../ai/api/ai.gateway');
-      const ws = await Workspace.findById(workspaceId).select('name').lean();
+      const gateway = require('../../ai/ai.gatewayResolver');
+      const ws = await workspaces.findById(workspaceId);
       const message = [
         `Please review this pull request and check it for bugs, security issues and improvements.`,
         `Repository: ${repo}`,

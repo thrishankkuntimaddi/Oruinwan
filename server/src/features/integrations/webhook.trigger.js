@@ -7,8 +7,20 @@ const notifEmitter = require('../../modules/notifications/notificationEventEmitt
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [1000, 3000, 9000]; 
 
+/**
+ * Fire an outgoing webhook event. With Redis the event goes on the bus and the
+ * webhook dispatcher consumer (a jobs process) delivers it; without Redis it is
+ * delivered directly from here, as before. Never throws into the caller.
+ */
 function fire(workspaceId, event, data = {}) {
-  
+  const bus = require('../../shared/events/bus');
+  const { isKnownEvent } = require('../../shared/events/catalog');
+  if (bus.hasRedis() && isKnownEvent(event)) {
+    const actorId = data.createdBy || data.updatedBy || data.deletedBy || data.senderId || null;
+    bus.publish(event, data, { workspaceId, actorId })
+      .catch(err => logger.error(`[Webhook] Could not publish ${event}:`, err.message));
+    return;
+  }
   _dispatch(workspaceId, event, data).catch(err =>
     logger.error(`[Webhook] Dispatch error for ${event}:`, err.message)
   );
@@ -149,4 +161,4 @@ async function sendTest(hook, { triggeredBy } = {}) {
   return { status, ok };
 }
 
-module.exports = { fire, sendTest, _sign };
+module.exports = { fire, sendTest, _sign, _dispatch };

@@ -29,9 +29,9 @@ router.get('/messages/me', requireAuth, async (req, res) => {
             ticket: ticket._id,
             deletedAt: null
         })
-            .populate('sender', 'username email profilePicture')
             .sort({ createdAt: 1 })
             .lean();
+        await require('../../identity/hydrate').hydrate(messages, { sender: { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
 
         return res.json({ messages });
     } catch (error) {

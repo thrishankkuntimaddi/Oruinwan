@@ -6,8 +6,12 @@
 const mongoose = require('mongoose');
 const logger = require('../../../utils/logger');
 const Task = require('../../../models/Task');
-const Workspace = require('../../../models/Workspace');
 const IssueKeyCounter = require('./issue-key-counter.model');
+const { hydrateTaskUsers } = require('./tasks.hydrate');
+const { tasksStore } = require('./tasks.store');
+
+// Workspaces and users live in PostgreSQL (src/identity).
+const identity = () => require('../../identity');
 
 const USER_FIELDS = 'username profilePicture';
 
@@ -40,7 +44,7 @@ async function nextIssueKey(workspaceId, workspaceName) {
     try {
         let name = workspaceName;
         if (!name) {
-            const ws = await Workspace.findById(workspaceId).select('name').lean();
+            const ws = await identity().workspaces.findById(workspaceId);
             name = ws?.name;
         }
         return await IssueKeyCounter.nextKey(workspaceId, name || 'TSK');
@@ -87,10 +91,8 @@ async function emitToTaskAudience(io, task, event, payload, extraUserIds = []) {
         const rooms = new Set();
         if (task.visibility === 'workspace' && task.workspace) {
             rooms.add(`workspace_${idOf(task.workspace)}`);
-            const ws = await Workspace.findById(idOf(task.workspace)).select('members').lean();
-            (ws?.members || []).forEach(m => {
-                if (m?.user && (!m.status || m.status === 'active')) users.add(idOf(m.user));
-            });
+            const members = await identity().workspaces.listMembers(idOf(task.workspace), { status: 'active' });
+            (members || []).forEach(m => { if (m?.user) users.add(idOf(m.user)); });
         } else if (task.visibility === 'channel' && task.channel) {
             rooms.add(`channel:${idOf(task.channel)}`);
         }
@@ -101,15 +103,15 @@ async function emitToTaskAudience(io, task, event, payload, extraUserIds = []) {
     }
 }
 
-/** Standard population for any task returned to the client. */
+/**
+ * Standard population for a MongoDB task query: channel and subtasks (both
+ * still MongoDB). User references are attached afterwards with
+ * `hydrateTaskUsers` because users live in PostgreSQL.
+ */
 function populateTask(query) {
     return query
-        .populate('createdBy', USER_FIELDS)
-        .populate('assignedTo', USER_FIELDS)
         .populate('channel', 'name')
-        .populate('subtasks', 'title status assignedTo deleted')
-        .populate('transferRequest.requestedTo', USER_FIELDS)
-        .populate('transferRequest.requestedBy', USER_FIELDS);
+        .populate('subtasks', 'title status assignedTo deleted');
 }
 
 /** Plain object for the client; live parents hide their deleted subtasks. */
@@ -124,8 +126,12 @@ function serializeTask(doc) {
     return obj;
 }
 
+/** A task ready for clients and socket payloads, from whichever store holds tasks. */
 async function loadTaskForClient(taskId) {
-    const doc = await populateTask(Task.findById(taskId));
+    if (tasksStore() === 'pg') return require('./tasks.service.pg').loadForClient(taskId);
+    const doc = await populateTask(Task.findById(taskId)).lean();
+    if (!doc) return null;
+    await hydrateTaskUsers([doc]);
     return serializeTask(doc);
 }
 
@@ -141,6 +147,7 @@ module.exports = {
     stakeholderIds,
     emitToTaskAudience,
     populateTask,
+    hydrateTaskUsers,
     serializeTask,
     loadTaskForClient,
 };

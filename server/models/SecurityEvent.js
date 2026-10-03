@@ -71,4 +71,7 @@ SecurityEventSchema.index({ companyId: 1, severity: 1, createdAt: -1 });
 
 SecurityEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
+// Mirrored into PostgreSQL (security_event) while reads still come from MongoDB.
+SecurityEventSchema.plugin(require('../src/shared/logStore').mirrorToPostgres, { kind: 'security' });
+
 module.exports = mongoose.model('SecurityEvent', SecurityEventSchema);

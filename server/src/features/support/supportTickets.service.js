@@ -12,6 +12,9 @@
  */
 
 const SupportTicket = require('../../../models/SupportTicket');
+const { hydrate } = require('../../identity/hydrate');
+
+const USER_ROLES = { type: 'user', fields: ['username', 'email', 'roles'] };
 const SupportMessage = require('../../../models/SupportMessage');
 
 const LIVE_CHAT_SUBJECT = 'Live Chat Support';
@@ -49,9 +52,9 @@ function buildThread(ticket, supportMessages) {
 async function withThreads(tickets) {
   if (!tickets.length) return [];
   const messages = await SupportMessage.find({ ticket: { $in: tickets.map((t) => t._id) }, deletedAt: null })
-    .populate('sender', 'username email roles')
     .sort({ createdAt: 1 })
     .lean();
+  await hydrate(messages, { sender: USER_ROLES });
   const byTicket = new Map();
   for (const m of messages) {
     const key = String(m.ticket);
@@ -61,12 +64,17 @@ async function withThreads(tickets) {
   return tickets.map((t) => ({ ...t, messages: buildThread(t, byTicket.get(String(t._id)) || []) }));
 }
 
-function baseQuery(query) {
-  return query
-    .populate('companyId', 'name domain')
-    .populate('creatorId', 'username email')
-    .populate('messages.sender', 'username email roles')
-    .lean();
+/** Lean ticket(s) with company, creator and embedded message senders expanded from PostgreSQL. */
+async function baseQuery(query) {
+  const docs = await query.lean();
+  if (docs) {
+    await hydrate(docs, {
+      companyId: { type: 'company', fields: ['name', 'domain'] },
+      creatorId: { type: 'user', fields: ['username', 'email'] },
+      'messages.sender': USER_ROLES,
+    });
+  }
+  return docs;
 }
 
 async function listTickets({ status, priority, companyId } = {}) {
@@ -122,7 +130,8 @@ async function adminUpdate(id, { status, message, adminId, io }) {
       senderRole: 'platform',
       content: text,
     });
-    await reply.populate('sender', 'username email profilePicture');
+    reply = reply.toObject();
+    await hydrate(reply, { sender: { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
     if (!status && ticket.status === 'open') ticket.status = 'in-progress';
   }
 

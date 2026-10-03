@@ -2,27 +2,46 @@ const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../../../models/User');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 const Message = require("../../modules/messages/message.model.js");
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireManager } = require('../../shared/middleware/permissionMiddleware');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id) && /^[a-f\d]{24}$/i.test(String(id));
+// Ids from PostgreSQL are strings; Mongo aggregation $match does not cast, so convert there.
+const oid = (id) => new mongoose.Types.ObjectId(String(id));
+const USER_CARD = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
+const USER_EMAIL = { type: 'user', fields: ['username', 'email'] };
+const DEPT_NAME = { type: 'department', fields: ['name'] };
+const plainTask = (t) => (t && typeof t.toJSON === 'function' ? t.toJSON() : t);
+
+/** Names of the company workspaces each user is an active member of: Map(userId → [name]). */
+async function workspaceNamesByUser(userIds, companyId) {
+    const ws = await org.workspaces.find({ company: companyId });
+    const out = new Map(userIds.map((id) => [String(id), []]));
+    for (const w of ws) {
+        for (const m of w.members) {
+            if (m.status === 'active' && out.has(String(m.user))) out.get(String(m.user)).push(w.name);
+        }
+    }
+    return out;
+}
 
 router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId).select('workspaces companyId').lean();
+        const user = await org.userWithOrg(userId);
 
-        
         const workspaceIds = (user.workspaces || []).map(w => w.workspace);
 
-        const workspaces = await Workspace.find({ _id: { $in: workspaceIds }, company: user.companyId })
-            .populate('members.user', 'username email profilePicture')
-            .lean();
+        const workspaces = workspaceIds.length
+            ? (await org.workspaces.find({ _id: { $in: workspaceIds }, company: user.companyId }))
+                .map((w) => ({ ...w, members: w.members.filter((m) => m.status === 'active') }))
+            : [];
+        await hydrate(workspaces, { 'members.user': USER_CARD });
 
         
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -33,9 +52,9 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
                     workspace: workspace._id,
                     createdAt: { $gte: sevenDaysAgo }
                 }),
-                Task.countDocuments(live),
-                Task.countDocuments({ ...live, status: { $in: ['todo', 'in_progress', 'review', 'blocked'] } }),
-                Task.countDocuments({ ...live, status: 'done' })
+                Tasks.countDocuments(live),
+                Tasks.countDocuments({ ...live, status: { $in: ['todo', 'in_progress', 'review', 'blocked'] } }),
+                Tasks.countDocuments({ ...live, status: 'done' })
             ]);
 
             workspace.memberCount = workspace.members.length;
@@ -58,33 +77,28 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
 router.get('/team-load', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId).select('companyId workspaces').lean();
+        const user = await org.userWithOrg(userId);
         const companyId = user.companyId;
 
-        
         const workspaceIds = (user.workspaces || []).map(w => w.workspace);
 
-        
-        const workspaceDocs = await Workspace.find({ _id: { $in: workspaceIds }, company: companyId }).select('members');
+        const workspaceDocs = workspaceIds.length ? await org.workspaces.find({ _id: { $in: workspaceIds }, company: companyId }) : [];
         const teamMemberIds = new Set();
         workspaceDocs.forEach(ws => {
-            ws.members.forEach(m => teamMemberIds.add(m.user.toString()));
+            ws.members.forEach(m => { if (m.status === 'active') teamMemberIds.add(String(m.user)); });
         });
 
-        
-        const teamMembers = await User.find({
+        const teamMembers = teamMemberIds.size ? await org.users.find({
             _id: { $in: Array.from(teamMemberIds) },
             companyId,
             accountStatus: { $ne: 'removed' },
-        })
-            .select('username email profilePicture companyRole jobTitle isOnline')
-            .lean();
+        }, { select: 'username email profilePicture companyRole jobTitle isOnline' }) : [];
 
-        
+        const wsNames = await workspaceNamesByUser(teamMembers.map((m) => m._id), companyId);
         for (const member of teamMembers) {
             const [workspaces, activeTasks] = await Promise.all([
-                Workspace.find({ 'members.user': member._id, company: companyId }).select('name'),
-                Task.countDocuments({
+                (wsNames.get(String(member._id)) || []).map((name) => ({ name })),
+                Tasks.countDocuments({
                     assignedTo: member._id,
                     status: { $in: ['todo', 'in_progress', 'review', 'blocked'] },
                     deleted: { $ne: true }
@@ -109,35 +123,30 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
 router.get('/unassigned-employees', requireAuth, requireManager, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await org.userWithOrg(userId);
 
-        
         const managedDepts = user.managedDepartments || [];
 
-        
-        const managerWorkspaces = await Workspace.find({
+        const managerWorkspaces = await org.workspaces.find({
             company: user.companyId,
             $or: [
-                { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
-                { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
+                { members: { $elemMatch: { user: String(userId), role: 'owner', status: 'active' } } },
+                { members: { $elemMatch: { user: String(userId), role: 'admin', status: 'active' } } }
             ]
         });
 
         const workspaceMemberIds = new Set();
         managerWorkspaces.forEach(ws => {
-            ws.members.forEach(m => workspaceMemberIds.add(m.user.toString()));
+            ws.members.forEach(m => { if (m.status === 'active') workspaceMemberIds.add(String(m.user)); });
         });
 
-        
-        const unassigned = await User.find({
+        const unassigned = managedDepts.length ? await org.users.find({
             companyId: user.companyId,
             departments: { $in: managedDepts },
             _id: { $nin: Array.from(workspaceMemberIds) },
             accountStatus: 'active'
-        })
-            .populate('departments', 'name')
-            .select('username email profilePicture departments createdAt')
-            .lean();
+        }, { org: true, select: 'username email profilePicture departments createdAt' }) : [];
+        await hydrate(unassigned, { departments: DEPT_NAME });
 
         res.json({ unassigned });
     } catch (error) {
@@ -184,24 +193,25 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         const { departmentId } = req.params;
         const companyId = guard.ctx.manager.companyId;
 
-        const dept = await Department.findById(departmentId).populate('head', 'username email').lean();
+        const dept = await identity.departments.findById(departmentId);
+        await hydrate(dept, { head: USER_EMAIL });
         const inDept = { departments: departmentId, companyId };
 
         const [totalMembers, activeMembers, pendingMembers, managers] = await Promise.all([
-            User.countDocuments(inDept),
-            User.countDocuments({ ...inDept, accountStatus: 'active' }),
-            User.countDocuments({ ...inDept, accountStatus: { $in: ['pending', 'invited'] } }),
-            User.countDocuments({ ...inDept, companyRole: 'manager' })
+            org.users.count(inDept),
+            org.users.count({ ...inDept, accountStatus: 'active' }),
+            org.users.count({ ...inDept, accountStatus: { $in: ['pending', 'invited'] } }),
+            org.users.count({ ...inDept, companyRole: 'manager' })
         ]);
 
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const memberIds = (await User.find(inDept).select('_id').lean()).map(m => m._id);
+        const memberIds = await org.users.ids(inDept);
 
         const [messagesThisWeek, tasksCompletedThisWeek, openTasks, overdueTasks] = await Promise.all([
             Message.countDocuments({ sender: { $in: memberIds }, createdAt: { $gte: sevenDaysAgo } }),
-            Task.countDocuments({ assignedTo: { $in: memberIds }, status: 'done', deleted: { $ne: true }, updatedAt: { $gte: sevenDaysAgo } }),
-            Task.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } }),
-            Task.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true }, dueDate: { $lt: new Date() } }),
+            Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: 'done', deleted: { $ne: true }, updatedAt: { $gte: sevenDaysAgo } }),
+            Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } }),
+            Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true }, dueDate: { $lt: new Date() } }),
         ]);
 
         res.json({
@@ -222,14 +232,14 @@ router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, as
         const { departmentId } = req.params;
         const companyId = guard.ctx.manager.companyId;
 
-        const teamMembers = await User.find({ departments: departmentId, companyId, accountStatus: 'active' })
-            .select('username email profilePicture jobTitle')
-            .lean();
+        const teamMembers = await org.users.find({ departments: departmentId, companyId, accountStatus: 'active' },
+            { select: 'username email profilePicture jobTitle' });
 
+        const wsNames = await workspaceNamesByUser(teamMembers.map((m) => m._id), companyId);
         for (const member of teamMembers) {
             const [workspaces, activeTasks] = await Promise.all([
-                Workspace.find({ 'members.user': member._id, company: companyId }).select('name'),
-                Task.countDocuments({ assignedTo: member._id, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } })
+                (wsNames.get(String(member._id)) || []).map((name) => ({ name })),
+                Tasks.countDocuments({ assignedTo: member._id, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } })
             ]);
             member.workspaces = workspaces.map(ws => ws.name);
             member.activeTasks = activeTasks;
@@ -255,19 +265,17 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
         const companyId = guard.ctx.manager.companyId;
 
         // "Unassigned" = in the department but in none of the company's workspaces.
-        const workspaces = await Workspace.find({ company: companyId }).select('members').lean();
+        const workspaces = await org.workspaces.find({ company: companyId });
         const workspaceMemberIds = new Set();
-        workspaces.forEach(ws => (ws.members || []).forEach(m => workspaceMemberIds.add(String(m.user))));
+        workspaces.forEach(ws => (ws.members || []).forEach(m => { if (m.status === 'active') workspaceMemberIds.add(String(m.user)); }));
 
-        const unassigned = await User.find({
+        const unassigned = await org.users.find({
             departments: departmentId,
             companyId,
             _id: { $nin: Array.from(workspaceMemberIds) },
             accountStatus: 'active'
-        })
-            .populate('departments', 'name')
-            .select('username email profilePicture departments createdAt')
-            .lean();
+        }, { org: true, select: 'username email profilePicture departments createdAt' });
+        await hydrate(unassigned, { departments: DEPT_NAME });
 
         res.json({ unassigned });
     } catch (error) {
@@ -283,21 +291,17 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
         const { departmentId } = req.params;
         const companyId = guard.ctx.manager.companyId;
 
-        const members = await User.find({ departments: departmentId, companyId }).select('_id username').lean();
-        const memberIds = members.map(m => m._id);
+        const members = await org.users.find({ departments: departmentId, companyId }, { select: '_id username' });
+        const memberIds = members.map(m => oid(m._id));
         const base = { assignedTo: { $in: memberIds }, deleted: { $ne: true } };
 
         const [totalTasks, completedTasks, inProgressTasks, doneWithTimes, perMember] = await Promise.all([
-            Task.countDocuments(base),
-            Task.countDocuments({ ...base, status: 'done' }),
-            Task.countDocuments({ ...base, status: 'in_progress' }),
-            Task.find({ ...base, status: 'done', completedAt: { $ne: null } }).select('createdAt completedAt').limit(500).lean(),
-            Task.aggregate([
-                { $match: { assignedTo: { $in: memberIds }, deleted: { $ne: true } } },
-                { $unwind: '$assignedTo' },
-                { $match: { assignedTo: { $in: memberIds } } },
-                { $group: { _id: '$assignedTo', total: { $sum: 1 }, done: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } } } },
-            ]),
+            Tasks.countDocuments(base),
+            Tasks.countDocuments({ ...base, status: 'done' }),
+            Tasks.countDocuments({ ...base, status: 'in_progress' }),
+            Tasks.find({ ...base, status: 'done', completedAt: { $ne: null } }, { select: 'createdAt completedAt', limit: 500 }),
+            Tasks.groupCount({ assignedTo: { $in: memberIds }, deleted: { $ne: true } }, 'assignee', { onlyAssignees: memberIds })
+                .then((rows) => rows.map((r) => ({ _id: r._id, total: r.count, done: r.done }))),
         ]);
 
         const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -332,7 +336,7 @@ const COMPANY_WIDE_ROLES = ['owner', 'admin'];
 
 async function _managerContext(req) {
     const userId = String(req.user.sub || req.user._id);
-    const manager = await User.findById(userId).select('companyId companyRole managedDepartments coOwnerOf').lean();
+    const manager = await org.userWithOrg(userId);
     if (!manager) return null;
     const companyWide = COMPANY_WIDE_ROLES.includes(manager.companyRole) ||
         (manager.coOwnerOf && manager.companyId && String(manager.coOwnerOf) === String(manager.companyId));
@@ -340,7 +344,7 @@ async function _managerContext(req) {
 }
 
 async function _managesDepartment(ctx, departmentId) {
-    const dept = await Department.findById(departmentId).select('company head managers').lean();
+    const dept = await identity.departments.findById(departmentId);
     if (!dept) return { dept: null, allowed: false };
     if (!ctx.manager.companyId || String(dept.company) !== String(ctx.manager.companyId)) return { dept, allowed: false };
     if (ctx.companyWide) return { dept, allowed: true };
@@ -362,7 +366,7 @@ async function _managedDepartmentIds(ctx) {
                 { head: ctx.userId },
             ],
         };
-    return (await Department.find(query).select('_id').lean()).map(d => d._id);
+    return org.departments.ids(query);
 }
 
 function _taskScopeFilter(memberIds, managerId) {
@@ -390,18 +394,14 @@ router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res)
         if (!dept) return res.status(404).json({ message: 'Department not found' });
         if (!allowed) return res.status(403).json({ message: 'Access denied: You do not manage this department' });
 
-        const members = await User.find({
+        const memberIds = (await org.users.ids({
             departments: departmentId,
             accountStatus: { $ne: 'removed' }
-        }).select('_id');
-        const memberIds = members.map(m => m._id);
+        })).map(oid);
         memberIds.push(new mongoose.Types.ObjectId(ctx.userId));
 
-        const allTasks = await Task.find(_taskScopeFilter(memberIds, ctx.userId))
-            .populate('assignedTo', 'username email profilePicture')
-            .populate('createdBy', 'username email')
-            .sort({ createdAt: -1 })
-            .lean();
+        const allTasks = await Tasks.find(_taskScopeFilter(memberIds, ctx.userId), { sort: { createdAt: -1 } });
+        await hydrate(allTasks, { assignedTo: USER_CARD, createdBy: USER_EMAIL });
 
         const now = new Date();
         const tasks = {
@@ -446,7 +446,7 @@ router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res
         }
         const others = assignees.filter(id => id !== String(userId));
         if (others.length) {
-            const inDept = await User.countDocuments({ _id: { $in: others }, departments: departmentId, accountStatus: { $ne: 'removed' } });
+            const inDept = await org.users.count({ _id: { $in: others }, departments: departmentId, accountStatus: { $ne: 'removed' } });
             if (inDept !== others.length) {
                 return res.status(400).json({ message: 'Assignees must be members of this department' });
             }
@@ -454,7 +454,7 @@ router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res
 
         const user = ctx.manager;
 
-        const task = new Task({
+        const task = await Tasks.create({
             title: title.trim(),
             description: description || '',
             priority: ['lowest', 'low', 'medium', 'high', 'highest'].includes(priority) ? priority : 'medium',
@@ -468,11 +468,10 @@ router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res
             deleted: false
         });
 
-        await task.save();
-        await task.populate('assignedTo', 'username email profilePicture');
-        await task.populate('createdBy', 'username email');
+        const out = plainTask(task);
+        await hydrate(out, { assignedTo: USER_CARD, createdBy: USER_EMAIL });
 
-        res.status(201).json({ task, message: 'Task created successfully' });
+        res.status(201).json({ task: out, message: 'Task created successfully' });
     } catch (error) {
         logger.error('Manager Tasks POST Error:', error);
         if (error.name === 'ValidationError' || error.name === 'CastError') {
@@ -500,7 +499,7 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
         const ctx = await _managerContext(req);
         if (!ctx) return res.status(401).json({ message: 'User not found' });
 
-        const task = await Task.findById(taskId);
+        let task = await Tasks.findById(taskId);
         if (!task || task.deleted) return res.status(404).json({ message: 'Task not found' });
 
         // Scope: the manager is party to the task, or it is a non-private task
@@ -511,7 +510,7 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
             const deptIds = await _managedDepartmentIds(ctx);
             if (deptIds.length) {
                 const people = [task.createdBy, ...(task.assignedTo || [])];
-                inScope = (await User.countDocuments({ _id: { $in: people }, departments: { $in: deptIds } })) > 0;
+                inScope = (await org.users.count({ _id: { $in: people }, departments: { $in: deptIds } })) > 0;
             }
         }
         if (!inScope) return res.status(403).json({ message: 'Access denied: this task is outside your team' });
@@ -529,31 +528,25 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
             const blocked = validateBlocked(normalizedStatus, reason);
             if (!blocked.valid) return res.status(400).json({ message: blocked.error });
 
-            task.previousStatus = previousStatus;
-            task.status = normalizedStatus;
+            const patch = { previousStatus, status: normalizedStatus };
             if (normalizedStatus === 'blocked') {
-                task.blockedReason = reason;
-                task.blockedBy = ctx.userId;
-                task.blockedAt = new Date();
+                Object.assign(patch, { blockedReason: reason, blockedBy: ctx.userId, blockedAt: new Date() });
             } else {
-                task.blockedReason = null;
-                task.blockedBy = null;
-                task.blockedAt = null;
+                Object.assign(patch, { blockedReason: null, blockedBy: null, blockedAt: null });
             }
             if (normalizedStatus === 'done') {
-                task.completedAt = new Date();
-                task.completedBy = ctx.userId;
-                task.completionNote = typeof completionNote === 'string' ? completionNote.slice(0, 2000) : '';
+                Object.assign(patch, {
+                    completedAt: new Date(),
+                    completedBy: ctx.userId,
+                    completionNote: typeof completionNote === 'string' ? completionNote.slice(0, 2000) : '',
+                });
             } else if (previousStatus === 'done') {
-                task.completedAt = null;
-                task.completedBy = null;
-                task.completionNote = '';
+                Object.assign(patch, { completedAt: null, completedBy: null, completionNote: '' });
             }
-            await task.save();
+            task = await Tasks.updateById(task._id, patch);
 
             try {
-                const TaskActivity = require('../../../models/TaskActivity');
-                await TaskActivity.create({
+                await Tasks.logActivity({
                     task: task._id, user: ctx.userId, action: 'status_changed', field: 'status',
                     from: previousStatus, to: normalizedStatus, metadata: { via: 'manager_dashboard' },
                 });
@@ -566,8 +559,9 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
             await shared.emitToTaskAudience(req.io || req.app?.get('io'), task, 'task-updated', payload);
         }
 
-        await task.populate('assignedTo', 'username email profilePicture');
-        res.json({ task, message: 'Task status updated' });
+        const out = plainTask(task);
+        await hydrate(out, { assignedTo: USER_CARD });
+        res.json({ task: out, message: 'Task status updated' });
     } catch (error) {
         logger.error('Manager Tasks PATCH Error:', error);
         res.status(500).json({ message: 'Server error' });

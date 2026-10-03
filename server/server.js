@@ -5,6 +5,7 @@ const logger = require("./utils/logger");
 
 const requiredEnvVars = [
   'MONGO_URI',
+  'DATABASE_URL',   // identity, tasks, logs, embeddings and the event outbox live in PostgreSQL
   'ACCESS_TOKEN_SECRET',
   'REFRESH_TOKEN_SECRET',
   'FRONTEND_URL',
@@ -25,6 +26,7 @@ if (missing.length > 0) {
 
 logger.info('✅ All required environment variables present');
 
+
 const serverKekHex = process.env.SERVER_KEK || '';
 if (serverKekHex.length !== 64) {
   logger.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);
@@ -44,6 +46,19 @@ const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
 const passport = require("./config/passport");
+
+// One codebase, several process shapes (all | api | realtime | worker); see src/shared/processRole.js
+const processRole = require('./src/shared/processRole');
+const { getRedis, createSubscriber, closeRedis, isRedisConfigured } = require('./src/shared/redis');
+const { scheduleJob, stopAllJobs } = require('./src/shared/jobs/scheduler');
+const { connectDatabase } = require('./src/shared/db');
+const { connectPostgres, closePostgres } = require('./src/shared/postgres');
+const { applyRetentionPolicies } = require('./src/shared/retentionIndexes');
+const presenceService = require('./src/features/presence/presence.service');
+let stopEventConsumers = async () => {};
+
+logger.info(`🧩 Process role: ${processRole.role} (http=${processRole.serves.http} sockets=${processRole.serves.sockets} jobs=${processRole.serves.jobs})`);
+for (const warning of processRole.roleWarnings()) logger.warn(`⚠️  ${warning}`);
 
 const { generateAuditDigest } = require('./src/services/auditDigestService');
 
@@ -134,6 +149,15 @@ app.use("/api/auth", refreshLimiter);
 
 app.use('/api/health', require('./src/shared/routes/health.routes'));
 
+if (!processRole.serves.http) {
+  // worker: health checks only. storage: health + the upload/download routes only.
+  const STORAGE_PATHS = /^\/(v2\/uploads|upload)(\/|$)/;
+  app.use('/api', (req, res, next) => {
+    if (processRole.serves.storage && STORAGE_PATHS.test(req.path)) return next();
+    return res.status(503).json({ message: `Not served by this ${processRole.role} process`, role: processRole.role });
+  });
+}
+
 app.use(express.static(path.join(__dirname, "../dist")));
 
 const requireAuth = require("./src/shared/middleware/auth");
@@ -166,36 +190,28 @@ const io = new Server(httpServer, {
   },
 });
 
-if (process.env.REDIS_URL) {
+if (isRedisConfigured()) {
   (async () => {
     try {
       const { createAdapter } = require('@socket.io/redis-adapter');
-      const { default: Redis } = require('ioredis');
-
-      const pubClient = new Redis(process.env.REDIS_URL, {
-        maxRetriesPerRequest: null,     
-        enableReadyCheck: false,
-        lazyConnect: true
-      });
-      const subClient = pubClient.duplicate();
-
-      
-      await pubClient.connect();
-      await subClient.connect();
+      const pubClient = getRedis();
+      const subClient = createSubscriber();
+      if (!pubClient || !subClient) throw new Error('shared Redis client unavailable');
 
       io.adapter(createAdapter(pubClient, subClient));
       logger.success('✅ [REDIS] Socket.IO Redis adapter connected — horizontal scaling enabled');
-
-      
-      pubClient.on('error', (err) => logger.error('❌ [REDIS] pub client error:', err.message));
       subClient.on('error', (err) => logger.error('❌ [REDIS] sub client error:', err.message));
     } catch (err) {
       logger.error('⚠️  [REDIS] Adapter init failed — falling back to in-memory adapter (single-instance only):', err.message);
-      
     }
   })();
 } else {
   logger.info('ℹ️  [REDIS] REDIS_URL not set — running with in-memory adapter (single-instance mode)');
+}
+
+if (!processRole.serves.sockets) {
+  // api/worker nodes keep `io` for emitting through the adapter but never hold client sockets.
+  io.use((socket, next) => next(new Error(`Realtime connections are not served by this ${processRole.role} process`)));
 }
 
 app.set("io", io);
@@ -263,6 +279,8 @@ app.use("/api/permissions", require("./src/features/permissions/permissions.rout
 app.use("/api/compliance-logs", require("./src/features/compliance/compliance.routes"));
 
 app.use("/api/platform/support", require("./src/features/support/platform-support.routes"));
+// Tool actions called back by the standalone AI service (bearer AI_SERVICE_TOKEN).
+app.use('/api/internal/ai-actions', require('./src/features/ai/ai.internal.routes'));
 app.use("/api/internal", require("./src/features/internal-messaging/messaging.routes"));
 
 app.use("/api", require("./routes/v1-to-v2-proxy"));
@@ -364,8 +382,11 @@ require('./src/features/developer/seedApps').seedApps();
 
 app.use('/api/marketplace', require('./src/features/community/marketplace.routes'));
 
-registerSocketAuth(io);       
-registerSocketConnection(io); 
+if (processRole.serves.sockets) {
+  registerSocketAuth(io);
+  registerSocketConnection(io);
+  presenceService.startPresenceHeartbeat();
+}
 
 app.use('/api/scheduled-meetings', requireAuth, require('./src/features/meetings/scheduled-meetings.routes'));
 
@@ -374,29 +395,44 @@ app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 8080;
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
+connectDatabase()
+  .then(async () => {
     logger.success("MongoDB Connected ✔");
 
-    
-    const { startRemindersCron } = require('./src/features/reminders/reminders.cron');
-    startRemindersCron(io);
+    // PostgreSQL (relational side). Off until DATABASE_URL is set; applies db/migrations on boot.
+    await connectPostgres();
 
-    
-    const { startRecurringTasksCron } = require('./src/features/tasks/tasks.cron');
-    startRecurringTasksCron();
+    // Object storage: make sure the bucket exists (S3 driver only).
+    await require('./src/modules/uploads/upload.service').ensureBucket();
 
-    
-    serverModules.startModules({ io });
+    // TTL indexes for the ever-growing log collections (no-op unless *_RETENTION_DAYS is set).
+    await applyRetentionPolicies();
 
-    
-    const { startRetentionCron } = require('./src/features/security/retention.cron');
-    startRetentionCron();
+    // Modules may start cross-instance state sharing (huddles) on every role.
+    serverModules.startModules({ io, jobs: processRole.serves.jobs });
 
-    
-    const { startAutomationCron } = require('./src/features/automations/automation.cron');
-    startAutomationCron(io);
+    if (processRole.serves.jobs) {
+      // Each job runs on one instance per interval fleet-wide (Redis lock in src/shared/jobs/scheduler.js).
+      require('./src/features/reminders/reminders.cron').startRemindersCron(io);
+      require('./src/features/tasks/tasks.cron').startRecurringTasksCron();
+      require('./src/features/security/retention.cron').startRetentionCron();
+      require('./src/features/automations/automation.cron').startAutomationCron(io);
+      scheduleJob({
+        name: 'audit-digest',
+        intervalMs: 60 * 60 * 1000,
+        initialDelayMs: 5000,
+        run: generateAuditDigest,
+      });
+      logger.info('✅ [AUDIT][PHASE1] Digest scheduler active (runs every 60 minutes)');
+
+      // Event bus: outbox -> Redis Stream relay, plus consumers (webhooks, ...). Jobs processes only.
+      const events = require('./src/shared/events');
+      events.startOutboxRelay();
+      events.startEventConsumers().then((stop) => { stopEventConsumers = stop; })
+        .catch((err) => logger.error('[EVENTS] consumers failed to start:', err.message));
+    } else {
+      logger.info(`ℹ️  [JOBS] Background jobs are not run by this ${processRole.role} process`);
+    }
 
     // A busy port is a config problem, not a crash: say so plainly and exit
     // without the uncaught-exception dump.
@@ -409,33 +445,10 @@ mongoose
     });
 
     httpServer.listen(PORT, () => {
-      logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);
+      logger.success(`Server (Express + Socket.IO) running on port ${PORT} as "${processRole.role}"`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
       require('./utils/sendEmail').logEmailConfigWarnings();
-
-      
-      
-      
-      logger.info('📊 [AUDIT][PHASE1] Scheduling hourly key distribution health checks');
-
-      
-      setTimeout(() => {
-        logger.info('📊 [AUDIT][PHASE1] Running initial audit digest...');
-        generateAuditDigest().catch(err => {
-          logger.error('[AUDIT][PHASE1] Initial digest failed:', err);
-        });
-      }, 5000); 
-
-      
-      setInterval(() => {
-        generateAuditDigest().catch(err => {
-          logger.error('[AUDIT][PHASE1] Hourly digest failed:', err);
-        });
-      }, 60 * 60 * 1000); 
-
-      logger.info('✅ [AUDIT][PHASE1] Digest scheduler active (runs every 60 minutes)');
-      
     });
 
   })
@@ -455,20 +468,28 @@ async function shutdown(signal) {
   forceExit.unref(); 
 
   try {
-    
+    stopAllJobs();
+    await stopEventConsumers();
+
+    // Tell the other instances this process's users are gone before the sockets close.
+    await presenceService.releaseAllPresence();
+
     logger.info('🔌 [SHUTDOWN] Closing Socket.IO...');
     await new Promise((resolve) => io.close(resolve));
     logger.info('✅ [SHUTDOWN] Socket.IO closed');
 
     
     logger.info('🌐 [SHUTDOWN] Draining HTTP connections...');
-    await new Promise((resolve, reject) => httpServer.close((err) => err ? reject(err) : resolve()));
+    // io.close() already closed the HTTP server it was attached to; a second close is not an error.
+    await new Promise((resolve, reject) => httpServer.close((err) => (err && err.code !== 'ERR_SERVER_NOT_RUNNING') ? reject(err) : resolve()));
     logger.info('✅ [SHUTDOWN] HTTP server drained');
 
     
     logger.info('🗄️  [SHUTDOWN] Disconnecting MongoDB...');
     await mongoose.disconnect();
     logger.info('✅ [SHUTDOWN] MongoDB disconnected');
+    await closeRedis();
+    await closePostgres();
 
     clearTimeout(forceExit);
     logger.info('✅ [SHUTDOWN] Graceful shutdown complete');

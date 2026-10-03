@@ -1,4 +1,5 @@
 const express = require('express');
+const { hydrate, USER_MIN } = require('../../identity/hydrate');
 const router = express.Router();
 const mongoose = require('mongoose');
 const App = require('../developer/app.model');
@@ -154,11 +155,11 @@ router.get('/reviews/:appId', async (req, res) => {
     const [reviews, total, stats] = await Promise.all([
       AppReview.find({ appId })
         .select('userId rating comment createdAt')
-        .populate('userId', 'username profilePicture')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean()
+        .then((rows) => hydrate(rows, { userId: USER_MIN })), // reviewers live in PostgreSQL
       AppReview.countDocuments({ appId }),
       AppReview.aggregate([
         { $match: { appId: new mongoose.Types.ObjectId(appId) } },

@@ -2,7 +2,8 @@ const logger = require('../../../utils/logger');
 const messagesService = require('./messages.service');
 const Channel = require("../../features/channels/channel.model.js");
 const Message = require("./message.model.js");
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
@@ -102,14 +103,13 @@ exports.sendDirectMessage = async (req, res) => {
             }
 
             
-            const receiver = await User.findById(receiverId);
+            const receiver = await identity.users.findById(receiverId);
             if (!receiver) {
                 return res.status(404).json({ message: 'Receiver not found' });
             }
 
-            const Workspace = require('../../../models/Workspace');
-            const ws = await Workspace.findById(workspaceId).select('members').lean();
-            const memberIds = new Set((ws?.members || []).map(m => String(m.user || m)));
+            const ws = await identity.workspaces.findById(workspaceId);
+            const memberIds = new Set((ws?.members || []).filter(m => m.status !== 'removed').map(m => String(m.user)));
             if (!ws || !memberIds.has(String(senderId)) || !memberIds.has(String(receiverId))) {
                 return res.status(403).json({ message: 'Both users must be members of this workspace' });
             }
@@ -314,15 +314,14 @@ exports.resolveDMSession = async (req, res) => {
 
         
         
-        const Workspace = require('../../../models/Workspace');
-        const workspace = await Workspace.findById(workspaceId).select('company members').lean();
+        const workspace = await identity.workspaces.findById(workspaceId);
 
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
 
         
-        const memberIds = workspace.members.map(m => String(m.user || m));
+        const memberIds = workspace.members.filter(m => m.status !== 'removed').map(m => String(m.user));
         if (!memberIds.includes(String(currentUserId))) {
             return res.status(403).json({ message: 'You are not a member of this workspace' });
         }
@@ -534,8 +533,8 @@ exports.getChannelMessages = async (req, res) => {
 
         
         const userIds = channelMembers.map(m => m.userId);
-        const users = await User.find({ _id: { $in: userIds } }).select('username').lean();
-        const userMap = new Map(users.map(u => [u._id.toString(), u.username]));
+        const users = await identity.users.findManyByIds(userIds);
+        const userMap = new Map([...users.values()].map(u => [String(u._id), u.username]));
 
         const populatedMembers = channelMembers.map(member => ({
             ...member,
@@ -850,7 +849,7 @@ exports.pinMessage = async (req, res) => {
             ).catch(e => logger.warn('[PIN] channel pinnedMessages sync failed:', e.message));
         }
 
-        const pinner = await User.findById(userId).select('username').lean().catch(() => null);
+        const pinner = await identity.users.findById(userId).catch(() => null);
         const pinnedByName = pinner?.username || null;
 
         const io = req.app?.get('io');
@@ -996,12 +995,9 @@ exports.createPollMessage = async (req, res) => {
 /** Poll with voter ids replaced by { _id, username } so clients can show who voted. */
 async function enrichPollVoters(message) {
     try {
-        const User = require('../../../models/User');
         const ids = new Set();
         message.poll.options.forEach(opt => opt.votes.forEach(v => ids.add(v.toString())));
-        const users = ids.size
-            ? await User.find({ _id: { $in: [...ids] } }).select('_id username').lean()
-            : [];
+        const users = ids.size ? [...(await identity.users.findManyByIds([...ids])).values()] : [];
         const names = Object.fromEntries(users.map(u => [u._id.toString(), u.username]));
         const plain = message.poll.toObject ? message.poll.toObject() : message.poll;
         return {
@@ -1129,16 +1125,9 @@ exports.getMessageInfo = async (req, res) => {
         const userId = req.user.sub;
         const { messageId } = req.params;
 
-        const Workspace = require('../../../models/Workspace');
-
-        const message = await loadAccessibleMessage(Message, messageId, userId, {
-            populate: [
-                { path: 'sender', select: 'username profilePicture' },
-                { path: 'readBy', select: 'username profilePicture' },
-                { path: 'pinnedBy', select: 'username profilePicture' },
-            ],
-            lean: true,
-        });
+        const message = await loadAccessibleMessage(Message, messageId, userId, { lean: true });
+        const CARD = { type: 'user', fields: ['username', 'profilePicture'] };
+        await hydrate(message, { sender: CARD, readBy: CARD, pinnedBy: CARD });
 
         let channelMembers = [];
         const toMember = (u) => ({
@@ -1148,15 +1137,13 @@ exports.getMessageInfo = async (req, res) => {
         });
 
         if (message.channel) {
-            const channel = await Channel.findById(message.channel)
-                .populate('members.user', 'username profilePicture')
-                .lean();
+            const channel = await Channel.findById(message.channel).lean();
             if (!channel) return res.status(404).json({ message: 'Channel not found' });
+            await hydrate(channel, { 'members.user': CARD });
 
             if (channel.isDefault && (!channel.members || channel.members.length === 0)) {
-                const workspace = await Workspace.findById(channel.workspace)
-                    .populate('members.user', 'username profilePicture')
-                    .lean();
+                const workspace = await identity.workspaces.findById(channel.workspace);
+                if (workspace) await hydrate(workspace, { 'members.user': CARD });
                 channelMembers = (workspace?.members || [])
                     .filter(m => m.user && m.status !== 'removed')
                     .map(m => toMember(m.user));
@@ -1164,9 +1151,8 @@ exports.getMessageInfo = async (req, res) => {
                 channelMembers = (channel.members || []).map(m => toMember(m.user || m));
             }
         } else if (message.dm) {
-            const dmSession = await DMSession.findById(message.dm)
-                .populate('participants', 'username profilePicture')
-                .lean();
+            const dmSession = await DMSession.findById(message.dm).lean();
+            if (dmSession) await hydrate(dmSession, { participants: CARD });
             channelMembers = (dmSession?.participants || []).map(toMember);
         }
 
@@ -1517,9 +1503,8 @@ exports.getPinnedMessages = async (req, res) => {
         })
             .sort({ pinnedAt: -1 })
             .limit(100)
-            .populate('sender', 'username profilePicture')
-            .populate('pinnedBy', 'username')
             .lean();
+        await hydrate(messages, { sender: { type: 'user', fields: ['username', 'profilePicture'] }, pinnedBy: { type: 'user', fields: ['username'] } });
         return res.json({ messages });
     } catch (err) {
         return handleError(res, err, 'GET PINNED MESSAGES ERROR');

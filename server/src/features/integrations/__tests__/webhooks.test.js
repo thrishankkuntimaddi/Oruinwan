@@ -19,22 +19,18 @@ const BOB = '64b0000000000000000000b1';
 const CAROL = '64b0000000000000000000c1';
 const HOOK = '64b0000000000000000000d1';
 
-jest.mock('../../../../models/Workspace', () => ({
-  findOne: jest.fn((q) => ({
-    select: () => ({
-      lean: async () => {
-        if (String(q._id) !== '64b000000000000000000001') return null;
-        return {
-          _id: q._id,
-          members: [
-            { user: '64b0000000000000000000a1', role: 'owner', status: 'active' },
-            { user: '64b0000000000000000000b1', role: 'member', status: 'active' },
-          ],
-        };
-      },
-    }),
+// Workspaces live in PostgreSQL; the repository is mocked.
+jest.mock('../../../identity/workspaces.repo', () => ({
+  ...jest.requireActual('../../../identity/workspaces.repo'),
+  findById: jest.fn(async (id) => (String(id) !== '64b000000000000000000001' ? null : {
+    _id: String(id),
+    members: [
+      { user: '64b0000000000000000000a1', role: 'owner', status: 'active' },
+      { user: '64b0000000000000000000b1', role: 'member', status: 'active' },
+    ],
   })),
 }));
+
 
 const Webhook = require('../webhook.model');
 const trigger = require('../webhook.trigger');

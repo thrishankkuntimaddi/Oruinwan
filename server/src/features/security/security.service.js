@@ -1,3 +1,4 @@
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const logger = require('../../../utils/logger');
 const SecurityEvent = require('../../../models/SecurityEvent');
 
@@ -68,11 +69,11 @@ async function getSecurityEvents(companyId, filters = {}) {
 
     const [events, total] = await Promise.all([
         SecurityEvent.find(query)
-            .populate('actorId', 'username email profilePicture')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
-            .lean(),
+            .lean()
+            .then((rows) => hydrate(rows, { actorId: userSelect('username email profilePicture') })),
         SecurityEvent.countDocuments(query),
     ]);
 

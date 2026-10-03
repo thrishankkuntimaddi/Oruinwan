@@ -10,7 +10,10 @@ const { loadMeetingForUser, canManageMeeting } = require('./meetingAccess');
 // Reading/creating: any active workspace member. Cancelling or deleting: the
 // organiser (createdBy) or a workspace owner/admin.
 
-const POPULATE_CREATED_BY = ['createdBy', 'username firstName lastName avatarUrl'];
+// Users live in PostgreSQL: the organizer is attached with hydrate (populate cannot reach it).
+const { hydrate } = require('../../identity/hydrate');
+const CREATOR = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
+const withCreator = (m) => hydrate(typeof m.toObject === 'function' ? m.toObject() : m, { createdBy: CREATOR });
 const VALID_STATUSES = ['scheduled', 'live', 'completed', 'cancelled'];
 
 function fail(res, err, fallback) {
@@ -37,8 +40,9 @@ async function getScheduledMeetings(req, res) {
     const meetings = await ScheduledMeeting.find(query)
       .sort({ startTime: 1 })
       .limit(Math.min(Math.max(Number(limit) || 10, 1), 100))
-      .populate(...POPULATE_CREATED_BY)
       .lean();
+
+    await hydrate(meetings, { createdBy: CREATOR });
 
     res.json({ meetings });
   } catch (err) {
@@ -85,7 +89,7 @@ async function createScheduledMeeting(req, res) {
       status: 'scheduled',
     });
 
-    const populated = await meeting.populate(...POPULATE_CREATED_BY);
+    const populated = await withCreator(meeting);
 
     req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
 
@@ -128,11 +132,11 @@ async function updateScheduledMeeting(req, res) {
     if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
     meeting.status = status;
     await meeting.save();
-    await meeting.populate(...POPULATE_CREATED_BY);
+    const updated = await withCreator(meeting);
 
-    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting });
+    req.io.to(`workspace:${meeting.workspaceId}`).emit('schedule:updated', { meeting: updated });
 
-    res.json({ meeting });
+    res.json({ meeting: updated });
   } catch (err) {
     fail(res, err, 'Failed to update meeting');
   }

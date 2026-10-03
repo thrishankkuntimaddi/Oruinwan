@@ -1,4 +1,4 @@
-const Workspace = require("../../../models/Workspace");
+const identity = require("../../identity");
 const { isValidId } = require("../utils/workspaceAccess");
 
 // Error bodies carry `message` (the API-wide convention); `error`/`success`
@@ -19,11 +19,8 @@ const requireWorkspaceMember = async (req, res, next) => {
             return deny(res, 400, "Invalid workspaceId.", "WORKSPACE_ID_INVALID");
         }
 
-        const workspace = await Workspace.findOne({
-            _id: workspaceId,
-            isActive: true,
-            isArchived: false,
-        }).lean();
+        const found = await identity.workspaces.findById(workspaceId, { activeOnly: true });
+        const workspace = found && !found.isArchived ? found : null;
 
         if (!workspace) {
             return deny(res, 404, "Workspace not found or is no longer active.", "WORKSPACE_NOT_FOUND");

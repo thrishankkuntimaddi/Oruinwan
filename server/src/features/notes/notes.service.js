@@ -1,7 +1,8 @@
 'use strict';
 
 const Note = require('../../../models/Note');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 
 const { logAction } = require('../../../utils/historyLogger');
 const logger = require('../../../utils/logger');
@@ -30,10 +31,16 @@ function normaliseTitle(title) {
     return t || UNTITLED;
 }
 
-function populate(query) {
-    return query
-        .populate('owner', 'username profilePicture')
-        .populate('sharedWith', 'username profilePicture');
+const NOTE_USERS = {
+    owner: { type: 'user', fields: ['username', 'profilePicture'] },
+    sharedWith: { type: 'user', fields: ['username', 'profilePicture'] },
+};
+
+/** Run a lean note query and attach owner / sharedWith from PostgreSQL. */
+async function withUsers(query) {
+    const result = await query;
+    if (result) await hydrate(result, NOTE_USERS);
+    return result;
 }
 
 async function loadNote(noteId, select) {
@@ -85,10 +92,10 @@ async function getNotes(userId, filters = {}) {
         query.type = type;
     }
 
-    const notes = await populate(Note.find(query))
+    const notes = await withUsers(Note.find(query)
         .select('-versions')
         .sort({ isPinned: -1, updatedAt: -1 })
-        .lean();
+        .lean());
 
     return { notes };
 }
@@ -96,7 +103,7 @@ async function getNotes(userId, filters = {}) {
 async function getNote(userId, noteId) {
     const note = await loadNote(noteId);
     await policy.assertNoteAccess(note, userId, 'view');
-    const populated = await populate(Note.findById(note._id)).select('-versions').lean();
+    const populated = await withUsers(Note.findById(note._id).select('-versions').lean());
     return { note: populated };
 }
 
@@ -143,7 +150,7 @@ async function createNote(userId, noteData, io, req) {
         req
     });
 
-    const populatedNote = await populate(Note.findById(note._id));
+    const populatedNote = await withUsers(Note.findById(note._id).lean());
     notify.notifyNoteCreated(populatedNote, io);
 
     return {
@@ -190,7 +197,7 @@ async function updateNote(userId, noteId, updates, io, _req) {
 
     await note.save();
 
-    const populatedNote = await populate(Note.findById(note._id));
+    const populatedNote = await withUsers(Note.findById(note._id).lean());
     const nowShared = new Set((note.sharedWith || []).map(idOf));
     const removed = previousShared.filter(id => !nowShared.has(id));
     notify.notifyVisibilityChange(io, populatedNote, { wasPublic, removedUserIds: removed });
@@ -264,14 +271,14 @@ async function shareNote(userId, noteId, userIds, io, req, options = {}) {
         req
     });
 
-    const populatedNote = await populate(Note.findById(note._id));
+    const populatedNote = await withUsers(Note.findById(note._id).lean());
     notify.notifyNoteShared(populatedNote, io);
 
     const recipientIds = added.filter(id => id !== String(userId) && id !== idOf(note.owner));
     if (recipientIds.length && populatedNote.workspace) {
         let sharerUsername = populatedNote.owner?.username;
         if (!sharerUsername) {
-            const u = await User.findById(userId).select('username').lean().catch(() => null);
+            const u = await identity.users.findById(userId).catch(() => null);
             sharerUsername = u?.username;
         }
         const notificationService = require('../../modules/notifications/notificationService');

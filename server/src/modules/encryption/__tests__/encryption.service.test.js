@@ -2,6 +2,8 @@ const encryptionService = require('../encryption.service');
 const { UserWorkspaceKey, WorkspaceKey } = require('../../../../models/encryption');
 
 jest.mock('../../../../models/encryption');
+// Workspaces live in PostgreSQL; the service hydrates workspace names through this repository.
+jest.mock('../../../identity/workspaces.repo', () => ({ findManyByIds: jest.fn(async (ids) => ids.map((id) => ({ _id: id, name: `WS ${id}`, icon: '📁' }))) }));
 
 describe('Encryption Service', () => {
     beforeEach(() => {
@@ -111,6 +113,7 @@ describe('Encryption Service', () => {
 
             expect(UserWorkspaceKey.find).toHaveBeenCalledWith({ userId: 'user123' });
             expect(result).toHaveLength(2);
+            expect(result[0].workspaceId).toEqual({ _id: 'ws1', name: 'WS ws1', icon: '📁' });
         });
     });
 

@@ -1,9 +1,9 @@
 const Notification = require('./notification.model');
 const logger = require('../../../utils/logger');
 const notifEmitter = require('./notificationEventEmitter');
+const { scheduleJob } = require('../../shared/jobs/scheduler');
 
 const getTask = () => require('../../../models/Task');
-const getUser = () => require('../../../models/User');
 
 async function generateDigest(io) {
     try {
@@ -71,7 +71,10 @@ async function checkDueSoonTasks(io) {
             ],
         };
 
-        const tasks = await Task.find({
+        // TASKS_STORE=pg: same query and claim on PostgreSQL (tasks.repository.js).
+        const onPg = require('../../features/tasks/tasks.store').tasksStore() === 'pg';
+        const repo = onPg ? require('../../features/tasks/tasks.repository') : null;
+        const tasks = onPg ? await repo.findDueSoon(now, in24h) : await Task.find({
             deleted: { $ne: true },
             status: { $nin: ['done', 'cancelled'] },
             dueDate: { $gte: now, $lte: in24h },
@@ -84,11 +87,13 @@ async function checkDueSoonTasks(io) {
 
         for (const task of tasks) {
             // Atomically claim the reminder so concurrent instances/runs cannot double-send.
-            const claim = await Task.updateOne(
-                { _id: task._id, dueDate: task.dueDate, ...notNotifiedForCurrentDueDate },
-                { $set: { dueSoonNotifiedAt: now } }
-            );
-            if (!claim.modifiedCount) continue;
+            const claimed = onPg
+                ? await repo.claimDueSoon(task._id, task.dueDate, now)
+                : (await Task.updateOne(
+                    { _id: task._id, dueDate: task.dueDate, ...notNotifiedForCurrentDueDate },
+                    { $set: { dueSoonNotifiedAt: now } }
+                )).modifiedCount > 0;
+            if (!claimed) continue;
 
             const assignees = task.assignedTo || [];
             const hoursUntilDue = Math.ceil((new Date(task.dueDate) - now) / (60 * 60 * 1000));
@@ -111,19 +116,15 @@ async function checkDueSoonTasks(io) {
 const DIGEST_INTERVAL_MS   = 24 * 60 * 60 * 1000; 
 const DUE_SOON_INTERVAL_MS =  1 * 60 * 60 * 1000; 
 
+/** Daily digest and due-soon reminders; each runs on one instance per interval. */
 function startNotificationsCron(io) {
     logger.info('[NotifCron] Starting notification cron jobs...');
-
-    
-    setTimeout(() => generateDigest(io), 30_000);
-
-    
-    setInterval(() => generateDigest(io), DIGEST_INTERVAL_MS);
-
-    
-    setInterval(() => checkDueSoonTasks(io), DUE_SOON_INTERVAL_MS);
-
+    const stops = [
+        scheduleJob({ name: 'notifications-digest', intervalMs: DIGEST_INTERVAL_MS, initialDelayMs: 30_000, run: () => generateDigest(io) }),
+        scheduleJob({ name: 'notifications-due-soon', intervalMs: DUE_SOON_INTERVAL_MS, initialDelayMs: DUE_SOON_INTERVAL_MS, run: () => checkDueSoonTasks(io) }),
+    ];
     logger.info('[NotifCron] Notification cron jobs registered ✔');
+    return () => stops.forEach((stop) => stop());
 }
 
 module.exports = { startNotificationsCron, generateDigest, checkDueSoonTasks };

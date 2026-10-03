@@ -71,8 +71,9 @@ async function assertCompanyDepartments(companyId, ids = []) {
     if (list.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
         throw Object.assign(new Error('Invalid department id'), { status: 400 });
     }
-    const Department = require('../../models/Department');
-    const found = await Department.find({ _id: { $in: list }, company: companyId }).select('_id').lean();
+    const { query } = require('./postgres');
+    const { rows } = await query('SELECT id FROM departments WHERE id = ANY($1) AND company_id = $2', [list, String(companyId)]);
+    const found = rows.map((r) => ({ _id: r.id }));
     if (found.length !== new Set(list).size) {
         throw Object.assign(new Error('One or more departments do not belong to your company'), { status: 400 });
     }
@@ -86,11 +87,11 @@ async function assertCompanyDepartments(companyId, ids = []) {
  */
 async function syncCompanyAdmins(companyId, userId, role) {
     try {
-        const Company = require('../../models/Company');
-        await Company.updateOne({ _id: companyId }, { $pull: { admins: { user: userId, role: 'admin' } } });
-        if (role === 'admin') {
-            await Company.updateOne({ _id: companyId }, { $push: { admins: { user: userId, role: 'admin' } } });
-        }
+        const { companies } = require('../identity');
+        const { query } = require('./postgres');
+        // Owners are never touched: only rows with role 'admin' are removed.
+        await query("DELETE FROM company_admins WHERE company_id = $1 AND user_id = $2 AND role = 'admin'", [String(companyId), String(userId)]);
+        if (role === 'admin') await companies.addAdmin(companyId, userId, 'admin');
     } catch { /* legacy list only */ }
 }
 

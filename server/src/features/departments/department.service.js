@@ -1,76 +1,78 @@
 const logger = require('../../../utils/logger');
-const Department = require('../../../models/Department');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 const Channel = require('../channels/channel.model.js');
 
-async function getDepartments(companyId) {
-    const depts = await Department.find({ company: companyId, isActive: true })
-        .populate('head', 'username email profilePicture')
-        .populate('managers', 'username email profilePicture')
-        .populate({
-            path: 'members',
-            select: 'username email profilePicture companyRole accountStatus',
-            match: { accountStatus: { $ne: 'removed' } },
-        })
-        .populate('workspaces', 'name description type')
-        .sort({ name: 1 })
-        .lean();
+const USER_BASIC = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
+const USER_ROLE = { type: 'user', fields: ['username', 'email', 'profilePicture', 'companyRole'] };
+const WS_LIST = { type: 'workspace', fields: ['name', 'description', 'type'] };
+const WS_REF = { type: 'workspace', fields: ['name', 'type'] };
 
-    
-    return depts.map(d => ({
-        ...d,
-        members: (d.members || []).filter(Boolean),
-    }));
+function notFound() {
+    const err = new Error('Department not found.');
+    err.status = 404;
+    return err;
+}
+
+/** Department members that are not removed, with the requested fields (and the user's departments if asked). */
+async function liveMembers(memberIds, fields, { withDepartments = false } = {}) {
+    if (!memberIds.length) return [];
+    const list = await org.users.find({ _id: { $in: memberIds }, accountStatus: { $ne: 'removed' } }, { org: withDepartments });
+    const byId = new Map(list.map((u) => [String(u._id), u]));
+    return memberIds.map((id) => byId.get(String(id))).filter(Boolean).map((u) => org.project(u, fields.join(' ')));
+}
+
+async function present(dept, { memberFields, managerSelector = USER_BASIC, withDepartments = false } = {}) {
+    const memberIds = dept.members || [];
+    await hydrate(dept, { head: USER_BASIC, managers: managerSelector, workspaces: WS_LIST });
+    dept.members = await liveMembers(memberIds, memberFields, { withDepartments });
+    return dept;
+}
+
+async function getDepartments(companyId) {
+    const depts = await org.departments.find({ company: companyId, isActive: true }, { sort: { name: 1 } });
+    return Promise.all(depts.map((d) => present(d, { memberFields: ['username', 'email', 'profilePicture', 'companyRole', 'accountStatus'] })));
 }
 
 async function getDepartmentById(departmentId, companyId) {
-    const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true })
-        .populate('head', 'username email profilePicture')
-        .populate('managers', 'username email profilePicture companyRole')
-        .populate({
-            path: 'members',
-            select: 'username email profilePicture companyRole departments accountStatus',
-            match: { accountStatus: { $ne: 'removed' } },
-        })
-        .populate('workspaces', 'name description type')
-        .lean();
+    const dept = await org.departments.findOne({ _id: departmentId, company: companyId, isActive: true });
+    if (!dept) throw notFound();
+    return present(dept, {
+        memberFields: ['username', 'email', 'profilePicture', 'companyRole', 'departments', 'accountStatus'],
+        managerSelector: USER_ROLE,
+        withDepartments: true,
+    });
+}
 
-    if (!dept) {
-        const err = new Error('Department not found.');
-        err.status = 404;
-        throw err;
-    }
-
-    
-    dept.members = (dept.members || []).filter(Boolean);
+async function loadForResponse(departmentId, { memberSelector = USER_BASIC } = {}) {
+    const dept = await identity.departments.findById(departmentId);
+    if (!dept) return null;
+    await hydrate(dept, { head: USER_BASIC, members: memberSelector, defaultWorkspaceId: WS_REF });
     return dept;
 }
 
 async function createDepartment({ companyId, name, description, head, parentDepartment, creatorId }) {
-    
-    const existing = await Department.findOne({ company: companyId, name: new RegExp(`^${name.trim()}$`, 'i'), isActive: true });
+    const escaped = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const existing = await org.departments.findOne({ company: companyId, name: new RegExp(`^${escaped}$`, 'i'), isActive: true }, { members: false });
     if (existing) {
         const err = new Error(`A department named "${name}" already exists.`);
         err.status = 409;
         throw err;
     }
 
-    
-    const department = await Department.create({
-        company: companyId,
+    const department = await identity.departments.create({
+        company: String(companyId),
         name: name.trim(),
         description: description || '',
-        head: head || null,
-        parentDepartment: parentDepartment || null,
+        head: head ? String(head) : null,
+        parentDepartment: parentDepartment ? String(parentDepartment) : null,
         members: head ? [head] : [],
     });
 
-    
     const workspaceMembers = [];
     if (head) {
         workspaceMembers.push({ user: head, role: 'owner' });
-        
         if (String(head) !== String(creatorId)) {
             workspaceMembers.push({ user: creatorId, role: 'admin' });
         }
@@ -78,18 +80,17 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         workspaceMembers.push({ user: creatorId, role: 'owner' });
     }
 
-    const workspace = await Workspace.create({
-        company: companyId,
+    const workspace = await identity.workspaces.create({
+        company: String(companyId),
         name,
         description: `${name} Team Workspace`,
         type: 'department',
         department: department._id,
-        createdBy: head || creatorId,
+        createdBy: String(head || creatorId),
         members: workspaceMembers,
         settings: { isPrivate: false, allowMemberInvite: true },
     });
 
-    
     const channelNames = ['general', 'announcements'];
     const createdChannelIds = [];
     const now = new Date();
@@ -107,11 +108,8 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         createdChannelIds.push(channel._id);
     }
 
-    
-    workspace.defaultChannels = createdChannelIds;
-    await workspace.save();
+    await identity.workspaces.update(workspace._id, { defaultChannels: createdChannelIds.map(String) });
 
-    
     const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
     const memberIds = workspaceMembers.map(m => m.user.toString());
 
@@ -129,16 +127,9 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         }
     }
 
-    
-    department.workspaces.push(workspace._id);
-    department.defaultWorkspaceId = workspace._id; 
-    await department.save();
+    await org.addDepartmentWorkspace(department._id, workspace._id, { setDefault: true });
 
-    return Department.findById(department._id)
-        .populate('head', 'username email profilePicture')
-        .populate('members', 'username email profilePicture')
-        .populate('defaultWorkspaceId', 'name type')
-        .lean();
+    return loadForResponse(department._id);
 }
 
 async function updateDepartment(departmentId, companyId, updates) {
@@ -154,19 +145,14 @@ async function updateDepartment(departmentId, companyId, updates) {
         throw err;
     }
 
-    // Head changes keep dept.managers and the head's managedDepartments in step.
-    let previousHead = null;
+    const current = await org.departments.findOne({ _id: departmentId, company: companyId });
+    if (!current) throw notFound();
+
+    // Head changes keep the department's managers in step with the head.
     let newHead = null;
     if (sanitized.head !== undefined) {
-        const current = await Department.findOne({ _id: departmentId, company: companyId }).select('head managers').lean();
-        if (!current) {
-            const err = new Error('Department not found.');
-            err.status = 404;
-            throw err;
-        }
-        previousHead = current.head ? String(current.head) : null;
         if (sanitized.head) {
-            newHead = await User.findOne({ _id: sanitized.head, companyId }).select('_id companyRole').lean();
+            newHead = await org.users.findOne({ _id: sanitized.head, companyId });
             if (!newHead) {
                 const err = new Error('The department head must be a member of this company.');
                 err.status = 400;
@@ -183,167 +169,79 @@ async function updateDepartment(departmentId, companyId, updates) {
     }
     const addHead = headIsManager && !Array.isArray(sanitized.managers);
 
-    const dept = await Department.findOneAndUpdate(
-        { _id: departmentId, company: companyId },
-        { $set: sanitized, ...(addHead ? { $addToSet: { managers: newHead._id } } : {}) },
-        { new: true, runValidators: true }
-    )
-        .populate('head', 'username email profilePicture')
-        .populate('managers', 'username email profilePicture')
-        .lean();
+    const { managers, ...columns } = sanitized;
+    if (columns.head !== undefined) columns.head = columns.head ? String(columns.head) : null;
+    if (columns.parentDepartment !== undefined) columns.parentDepartment = columns.parentDepartment ? String(columns.parentDepartment) : null;
+    if (Object.keys(columns).length) await identity.departments.update(departmentId, columns);
+    if (Array.isArray(managers)) await org.setDepartmentManagers(departmentId, managers);
+    if (addHead) await org.addDepartmentMembers(departmentId, [newHead._id], 'manager');
 
-    if (!dept) {
-        const err = new Error('Department not found.');
-        err.status = 404;
-        throw err;
-    }
+    // A previous head keeps the manager role only while listed in managers: an explicit
+    // managers list above already replaced the set; otherwise nothing changes for them.
 
-    if (sanitized.head !== undefined) {
-        const managerIds = (dept.managers || []).map((m) => String(m._id || m));
-        if (newHead && newHead.companyRole === 'manager') {
-            await User.updateOne({ _id: newHead._id }, { $addToSet: { managedDepartments: dept._id } });
-        }
-        if (previousHead && previousHead !== String(newHead?._id || '') && !managerIds.includes(previousHead)) {
-            await User.updateOne({ _id: previousHead }, { $pull: { managedDepartments: dept._id } });
-        }
-    }
-
+    const dept = await identity.departments.findById(departmentId);
+    await hydrate(dept, { head: USER_BASIC, managers: USER_BASIC });
     return dept;
 }
 
 async function deleteDepartment(departmentId, companyId) {
-    const dept = await Department.findOne({ _id: departmentId, company: companyId });
-    if (!dept) {
-        const err = new Error('Department not found.');
-        err.status = 404;
-        throw err;
-    }
+    const dept = await org.departments.findOne({ _id: departmentId, company: companyId }, { members: false });
+    if (!dept) throw notFound();
 
-    
-    dept.isActive = false;
-    await dept.save();
-
-    
-    await Promise.all([
-        User.updateMany({ departments: departmentId }, { $pull: { departments: departmentId } }),
-        User.updateMany({ managedDepartments: departmentId }, { $pull: { managedDepartments: departmentId } }),
-    ]);
+    await identity.departments.update(departmentId, { isActive: false });
+    // Members and managers leave the department with it.
+    await org.removeDepartmentMembers(departmentId, await org.departmentMemberIds(departmentId));
 
     return { deleted: true, departmentId };
 }
 
 async function assignMembers(departmentId, companyId, userIds, action) {
-    const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true });
-    if (!dept) {
-        const err = new Error('Department not found.');
-        err.status = 404;
-        throw err;
-    }
+    const dept = await org.departments.findOne({ _id: departmentId, company: companyId, isActive: true }, { members: false });
+    if (!dept) throw notFound();
 
-    
-    const users = await User.find({ _id: { $in: userIds }, companyId }).select('_id').lean();
-    if (users.length !== userIds.length) {
+    const count = await org.users.count({ _id: { $in: userIds }, companyId });
+    if (count !== new Set(userIds.map(String)).size) {
         const err = new Error('One or more users not found or do not belong to this company.');
         err.status = 400;
         throw err;
     }
 
     if (action === 'add') {
-        
-        await Department.findByIdAndUpdate(departmentId, {
-            $addToSet: { members: { $each: userIds } },
-        });
-        
-        await User.updateMany(
-            { _id: { $in: userIds } },
-            { $addToSet: { departments: departmentId } }
-        );
-
-        
-        
-        
+        await org.addDepartmentMembers(departmentId, userIds, 'member');
+        // New members join the department's default workspace (existing memberships are left as they are).
         if (dept.defaultWorkspaceId) {
-            const now = new Date();
-
-            
+            const ws = await identity.workspaces.findById(dept.defaultWorkspaceId);
+            const already = new Set((ws?.members || []).filter((m) => m.status === 'active').map((m) => m.user));
             for (const uid of userIds) {
-                await Workspace.findByIdAndUpdate(
-                    dept.defaultWorkspaceId,
-                    {
-                        $addToSet: {
-                            members: { user: uid, role: 'member', status: 'active', joinedAt: now },
-                        },
-                    }
-                );
-            }
-
-            
-            for (const uid of userIds) {
-                const alreadyMember = await User.exists({
-                    _id: uid,
-                    'workspaces.workspace': dept.defaultWorkspaceId,
-                });
-                if (!alreadyMember) {
-                    await User.findByIdAndUpdate(uid, {
-                        $push: {
-                            workspaces: {
-                                workspace: dept.defaultWorkspaceId,
-                                role: 'member',
-                                joinedAt: now,
-                            },
-                        },
-                    });
-                }
+                if (!already.has(String(uid))) await identity.workspaces.addMember(dept.defaultWorkspaceId, uid, { role: 'member' });
             }
         }
     } else {
-        
-        await Department.findByIdAndUpdate(departmentId, {
-            $pull: { members: { $in: userIds } },
-        });
-        
-        await User.updateMany(
-            { _id: { $in: userIds } },
-            { $pull: { departments: departmentId } }
-        );
-        
-        
-        
+        await org.removeDepartmentMembers(departmentId, userIds);
     }
 
-    return Department.findById(departmentId)
-        .populate('members', 'username email profilePicture companyRole')
-        .populate('defaultWorkspaceId', 'name type')
-        .lean();
+    return loadForResponse(departmentId, { memberSelector: USER_ROLE });
 }
 
 async function setDefaultWorkspace(departmentId, companyId, workspaceId) {
-    const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true });
-    if (!dept) {
-        const err = new Error('Department not found.');
-        err.status = 404;
-        throw err;
-    }
+    const dept = await org.departments.findOne({ _id: departmentId, company: companyId, isActive: true }, { members: false });
+    if (!dept) throw notFound();
 
     if (workspaceId) {
-        const ws = await Workspace.findOne({ _id: workspaceId, company: companyId, isActive: true });
+        const ws = await org.workspaces.findOne({ _id: workspaceId, company: companyId, isActive: true }, { members: false });
         if (!ws) {
             const err = new Error('Workspace not found or does not belong to this company.');
             err.status = 404;
             throw err;
         }
-        
-        if (!dept.workspaces.map(w => w.toString()).includes(workspaceId.toString())) {
-            dept.workspaces.push(workspaceId);
-        }
+        await org.addDepartmentWorkspace(departmentId, workspaceId, { setDefault: true });
+    } else {
+        await identity.departments.update(departmentId, { defaultWorkspaceId: null });
     }
 
-    dept.defaultWorkspaceId = workspaceId || null;
-    await dept.save();
-
-    return Department.findById(departmentId)
-        .populate('defaultWorkspaceId', 'name type')
-        .lean();
+    const out = await identity.departments.findById(departmentId);
+    await hydrate(out, { defaultWorkspaceId: WS_REF });
+    return out;
 }
 
 module.exports = {

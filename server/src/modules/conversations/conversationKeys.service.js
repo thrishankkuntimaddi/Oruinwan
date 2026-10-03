@@ -1,7 +1,9 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
-const ConversationKey = require('../../../models/ConversationKey');
-const UserIdentityKey = require('../../../models/UserIdentityKey');
+// Keys live in PostgreSQL next to the users they belong to (identity/keys.repo); the
+// document adapter keeps the push-then-save style this service is written in.
+const { conversationKeyDocs: ConversationKey } = require('../../identity/queries/auth');
+const { identityKeys: UserIdentityKey } = require('../../identity');
 const cryptoUtils = require('./cryptoUtils');
 
 async function storeConversationKeys(params) {
@@ -29,9 +31,9 @@ async function storeConversationKeys(params) {
             isActive: true
         };
 
-        const conversationKey = session
-            ? (await ConversationKey.create([createOptions], { session }))[0]
-            : await ConversationKey.create(createOptions);
+        // Keys are in PostgreSQL: a Mongo `session` from the caller cannot cover this write.
+        void session;
+        const conversationKey = await ConversationKey.create(createOptions);
 
         logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         logger.info(`🔐 [PHASE 3] Conversation key stored for ${conversationType}:${conversationId}`);
@@ -566,10 +568,7 @@ async function repairConversationKeyForUser(channelId, userId) {
         
         logger.info(`🔍 [PHASE2][REPAIR][GATE-1] Checking conversation key existence...`);
 
-        const conversationKey = await ConversationKey.findOne({
-            conversationId: channelId,
-            conversationType: 'channel'
-        });
+        const conversationKey = await ConversationKey.findByConversation(channelId, 'channel');
 
         if (!conversationKey) {
             logger.error(`❌ [PHASE2][REPAIR][GATE-1] FAILED: No conversation key found`);

@@ -127,11 +127,11 @@ exports.revokeOtherDevices = async (req, res) => {
 
         
         try {
-            const User = require('../../../models/User');
+            const { users } = require('../../identity');
             const securityNotification = require('../../services/securityNotification.service');
 
             
-            const user = await User.findById(userId).lean();
+            const user = await users.findById(userId);
 
             if (user) {
                 securityNotification.sendSecurityNotification({

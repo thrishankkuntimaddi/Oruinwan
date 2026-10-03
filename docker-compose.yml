@@ -1,0 +1,79 @@
+# Oruinwan infrastructure. Runs unchanged on a Mac (Colima/Docker Desktop), a Linux PC
+# reached over Tailscale, or a VPS. The application processes (server/, ai/) run outside
+# this file during development and point at these ports through server/.env.
+#
+#   docker compose up -d                 postgres + redis + s3 object storage (MongoDB stays on Atlas)
+#   docker compose --profile mongo up -d also a local MongoDB
+#   docker compose down                  stop; data stays in the named volumes
+#
+# The bucket (S3_BUCKET) is created by the server on first boot.
+# Change the passwords before exposing anything beyond localhost.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: oruinwan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-oruinwan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oruinwan-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-oruinwan}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oruinwan} -d ${POSTGRES_DB:-oruinwan}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: oruinwan-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # S3-compatible object storage (RustFS: MinIO-compatible API and console; MinIO's own
+  # images are no longer freely pullable). Any S3 service works later: only S3_* change.
+  s3:
+    image: rustfs/rustfs:latest
+    container_name: oruinwan-s3
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-oruinwan}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-oruinwan-dev-secret}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+    ports:
+      - "${S3_PORT:-9000}:9000"          # S3 API
+      - "${S3_CONSOLE_PORT:-9001}:9001"  # web console
+    volumes:
+      - s3data:/data
+
+  mongo:
+    image: mongo:7
+    container_name: oruinwan-mongo
+    restart: unless-stopped
+    profiles: ["mongo"]
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodata:/data/db
+
+volumes:
+  pgdata:
+  redisdata:
+  s3data:
+  mongodata:

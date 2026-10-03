@@ -9,19 +9,21 @@
 const Message = require('../message.model.js');
 const Channel = require('../../../features/channels/channel.model.js');
 const DMSession = require('../../../../models/DMSession');
-const Workspace = require('../../../../models/Workspace');
+// Users and workspaces live in PostgreSQL: the identity repositories are mocked.
+const identity = require('../../../identity');
 const Task = require('../../../../models/Task');
-const User = require('../../../../models/User');
 const TaskActivity = require('../../../../models/TaskActivity');
 const IssueKeyCounter = require('../../../features/tasks/issue-key-counter.model');
 
 jest.mock('../message.model.js');
-jest.mock('../../../../models/User');
+jest.mock('../../../identity', () => ({
+    workspaces: { findById: jest.fn() },
+    users: { findById: jest.fn(), findManyByIds: jest.fn(async (ids) => new Map(ids.map(id => [String(id), { _id: String(id), username: 'u' }]))) },
+}));
 jest.mock('../../../../models/TaskActivity');
 jest.mock('../../../features/tasks/issue-key-counter.model');
 jest.mock('../../../features/channels/channel.model.js');
 jest.mock('../../../../models/DMSession');
-jest.mock('../../../../models/Workspace');
 jest.mock('../../../../models/Task');
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
@@ -86,7 +88,7 @@ describe('message toolbar', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         Channel.findById = jest.fn(() => query(privateChannel([SENDER, OTHER])));
-        Workspace.findOne = jest.fn(() => query(null));
+        identity.workspaces.findById.mockResolvedValue(null);
         DMSession.findById = jest.fn(() => query(null));
     });
 
@@ -98,9 +100,9 @@ describe('message toolbar', () => {
 
         it('requires workspace membership for public channels', async () => {
             Channel.findById = jest.fn(() => query({ _id: CH, isPrivate: false, workspace: WS, members: [] }));
-            Workspace.findOne = jest.fn(() => query(null));
+            identity.workspaces.findById.mockResolvedValue({ _id: WS, members: [{ user: SENDER, status: 'active' }] });
             expect(await canAccessMessage({ channel: CH }, OUTSIDER)).toBe(false);
-            Workspace.findOne = jest.fn(() => query({ _id: WS }));
+            identity.workspaces.findById.mockResolvedValue({ _id: WS, members: [{ user: OUTSIDER, status: 'active' }] });
             expect(await canAccessMessage({ channel: CH }, OUTSIDER)).toBe(true);
         });
 
@@ -182,11 +184,11 @@ describe('message toolbar', () => {
 
     describe('convertToTask', () => {
         function mockTaskDeps({ companyId = oid(51), wsCompany = null } = {}) {
-            Workspace.findById = jest.fn(() => query({
+            identity.workspaces.findById.mockResolvedValue({
                 _id: WS, name: 'Acme', company: wsCompany,
                 members: [{ user: SENDER, status: 'active' }, { user: OTHER, status: 'active' }],
-            }));
-            User.findById = jest.fn(() => query({ _id: OTHER, companyId, username: 'bob' }));
+            });
+            identity.users.findById.mockResolvedValue({ _id: OTHER, companyId, username: 'bob' });
             IssueKeyCounter.nextKey = jest.fn().mockResolvedValue('ACME-7');
             TaskActivity.create = jest.fn().mockResolvedValue({});
             Task.findById = jest.fn(() => query(null));
@@ -251,7 +253,7 @@ describe('message toolbar', () => {
             await expect(messagesService.convertToTask(MSG, OTHER, {}, null)).rejects.toMatchObject({ status: 400 });
 
             Message.findById = jest.fn(() => query(makeDoc({ linkedTaskId: null })));
-            Workspace.findById = jest.fn(() => query({ _id: WS, members: [{ user: OTHER, status: 'active' }] }));
+            identity.workspaces.findById.mockResolvedValue({ _id: WS, members: [{ user: OTHER, status: 'active' }] });
             await expect(messagesService.convertToTask(MSG, OTHER, { title: 't', assigneeIds: [OUTSIDER] }, null))
                 .rejects.toMatchObject({ status: 400 });
         });

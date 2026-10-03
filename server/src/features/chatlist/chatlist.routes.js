@@ -4,7 +4,7 @@ const router = express.Router();
 const requireAuth = require("../../shared/middleware/auth");
 const { getChatList, resetUnread } = require("./chatlist.controller");
 const channelCtrl = require("../channels/channel.controller");
-const { discoverableFilter } = require("../auth/privacy.service");
+const { discoverablePeople } = require("../auth/privacy.service");
 
 router.get("/list", requireAuth, getChatList);
 router.post("/reset-unread", requireAuth, resetUnread);
@@ -21,26 +21,9 @@ router.post("/channel/join", requireAuth, async (req, res) => {
 router.get("/contacts", requireAuth, async (req, res) => {
     try {
         const currentUserId = req.user.sub;
-        const User = require("../../../models/User");
-
-        const currentUser = await User.findById(currentUserId).select("companyId").lean();
-
-        
-        // Personal accounts: people who turned discovery off appear only to those sharing a workspace.
-        const query = currentUser?.companyId
-            ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
-            : {
-                _id: { $ne: currentUserId },
-                $and: [
-                    { $or: [{ companyId: null }, { companyId: { $exists: false } }] },
-                    await discoverableFilter(currentUserId),
-                ],
-            };
-
-        const users = await User.find(query)
-            .select("_id username email profilePicture")
-            .limit(100)
-            .lean();
+        // Company accounts see their company; personal accounts see discoverable personal
+        // accounts plus anyone they share a workspace with (PostgreSQL, see privacy.service).
+        const users = await discoverablePeople(currentUserId, { limit: 100 });
 
         res.json({ contacts: users });
     } catch (err) {

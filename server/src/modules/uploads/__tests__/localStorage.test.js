@@ -35,8 +35,8 @@ describe('local upload storage', () => {
 
   test('driver selection', () => {
     expect(svc.storageDriver({})).toBe('local');
-    expect(svc.storageDriver({ GOOGLE_APPLICATION_CREDENTIALS: '/k.json' })).toBe('gcs');
-    expect(svc.storageDriver({ STORAGE_DRIVER: 'local', GOOGLE_APPLICATION_CREDENTIALS: '/k.json' })).toBe('local');
+    expect(svc.storageDriver({ S3_ENDPOINT: 'http://localhost:9000' })).toBe('s3');
+    expect(svc.storageDriver({ STORAGE_DRIVER: 'local', S3_ENDPOINT: 'http://localhost:9000' })).toBe('local');
   });
 
   test('upload then stream back with safe headers, owner metadata and ranges', async () => {

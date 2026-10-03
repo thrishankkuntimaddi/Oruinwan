@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger');
-const Workspace = require("../../../models/Workspace");
-const _User = require("../../../models/User");
+const identity = require("../../identity");
+const { hydrate } = require("../../identity/hydrate");
 const Channel = require("../channels/channel.model.js");
 const { recordAdminAction } = require("../../shared/adminAudit");
 const { isValidId, userRoom } = require("../../shared/utils/workspaceAccess");
@@ -37,7 +37,7 @@ exports.revokeInvite = async (req, res) => {
         const userId = req.user?.sub;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -49,8 +49,8 @@ exports.revokeInvite = async (req, res) => {
         }
 
         
-        const Invite = require("../../../models/Invite");
-        const invite = await Invite.findById(inviteId);
+        const { invites: inviteStore } = require("../../identity/queries/auth");
+        const invite = await inviteStore.findById(inviteId);
 
         if (!invite) {
             return res.status(404).json({ message: "Invite not found" });
@@ -72,11 +72,9 @@ exports.revokeInvite = async (req, res) => {
         }
 
         
-        invite.status = "revoked";
-        invite.revokedBy = userId;
-        invite.revokedAt = new Date();
-        invite.revokeReason = reason || "Revoked by admin";
-        await invite.save();
+        Object.assign(invite, await inviteStore.update(invite._id, {
+            status: "revoked", revokedBy: userId, revokedAt: new Date(), revokeReason: reason || "Revoked by admin",
+        }));
 
         return res.json({
             message: "Invite revoked successfully",
@@ -99,7 +97,7 @@ exports.getWorkspaceInvites = async (req, res) => {
         const userId = req.user?.sub;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -110,11 +108,9 @@ exports.getWorkspaceInvites = async (req, res) => {
             return res.status(403).json({ message: "Only workspace admins can view invites" });
         }
 
-        const Invite = require("../../../models/Invite");
-        const invites = await Invite.find({ workspace: workspaceId })
-            .populate('invitedBy', 'username email')
-            .sort({ createdAt: -1 })
-            .lean();
+        const { invites: inviteStore } = require("../../identity/queries/auth");
+        const invites = await inviteStore.listByWorkspace(workspaceId);
+        await hydrate(invites, { invitedBy: { type: 'user', fields: ['username', 'email'] } });
 
         
         const pending = [];
@@ -192,7 +188,7 @@ exports.resendInvite = async (req, res) => {
         const userId = req.user?.sub;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -204,8 +200,8 @@ exports.resendInvite = async (req, res) => {
         }
 
         
-        const Invite = require("../../../models/Invite");
-        const invite = await Invite.findById(inviteId);
+        const { invites: inviteStore } = require("../../identity/queries/auth");
+        const invite = await inviteStore.findById(inviteId);
 
         if (!invite) {
             return res.status(404).json({ message: "Invite not found" });
@@ -236,10 +232,7 @@ exports.resendInvite = async (req, res) => {
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
 
         
-        invite.tokenHash = tokenHash;
-        invite.expiresAt = expiresAt;
-        invite.status = "pending"; 
-        await invite.save();
+        Object.assign(invite, await inviteStore.update(invite._id, { tokenHash, expiresAt, status: "pending" }));
 
         const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
 
@@ -293,7 +286,7 @@ exports.suspendMember = async (req, res) => {
         if (badIds(res, workspaceId, targetUserId)) return;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -327,10 +320,9 @@ exports.suspendMember = async (req, res) => {
         }
 
         
-        targetMember.status = "suspended";
-        targetMember.suspendedAt = new Date();
-        targetMember.suspendedBy = adminId;
-        await workspace.save();
+        await identity.workspaces.updateMember(workspaceId, targetUserId, {
+            status: "suspended", suspendedAt: new Date(), suspendedBy: adminId,
+        });
 
         await recordAdminAction({
             userId: adminId, companyId: workspace.company, action: 'workspace.member_suspended', category: 'permissions', severity: 'warning',
@@ -357,7 +349,7 @@ exports.restoreMember = async (req, res) => {
         if (badIds(res, workspaceId, targetUserId)) return;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -385,10 +377,9 @@ exports.restoreMember = async (req, res) => {
         }
 
         
-        targetMember.status = "active";
-        targetMember.suspendedAt = null;
-        targetMember.suspendedBy = null;
-        await workspace.save();
+        await identity.workspaces.updateMember(workspaceId, targetUserId, {
+            status: "active", suspendedAt: null, suspendedBy: null,
+        });
 
         await recordAdminAction({
             userId: adminId, companyId: workspace.company, action: 'workspace.member_restored', category: 'permissions', severity: 'info',
@@ -421,7 +412,7 @@ exports.changeRole = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -456,14 +447,8 @@ exports.changeRole = async (req, res) => {
 
         
         const previousRole = targetMember.role;
-        targetMember.role = newRole;
-        await workspace.save();
-
-        // Keep the user's own copy of the role in sync (used by /workspaces/my, auth payloads).
-        await _User.updateOne(
-            { _id: targetUserId, "workspaces.workspace": workspace._id },
-            { $set: { "workspaces.$.role": newRole } }
-        );
+        // The membership row is the only copy of the role (users carry no workspaces list now).
+        await identity.workspaces.updateMember(workspaceId, targetUserId, { role: newRole });
         emitToUser(req, targetUserId, "workspace:role-updated", {
             workspaceId: String(workspace._id), userId: String(targetUserId), role: newRole,
         });
@@ -497,7 +482,7 @@ exports.removeMember = async (req, res) => {
         if (badIds(res, workspaceId, targetUserId)) return;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -525,8 +510,7 @@ exports.removeMember = async (req, res) => {
         }
 
         
-        workspace.members = workspace.members.filter(m => String(m.user) !== String(targetUserId));
-        await workspace.save();
+        await identity.workspaces.removeMember(workspaceId, targetUserId, { hard: true });
 
         
         await Channel.updateMany(
@@ -541,11 +525,6 @@ exports.removeMember = async (req, res) => {
             { $set: { status: "closed" } }
         );
 
-        
-        const User = require("../../../models/User");
-        await User.findByIdAndUpdate(targetUserId, {
-            $pull: { workspaces: { workspace: workspaceId } }
-        });
 
         await recordAdminAction({
             userId: adminId, companyId: workspace.company, action: 'workspace.member_removed', category: 'permissions', severity: 'warning',
@@ -577,7 +556,7 @@ exports.bulkRevokeInvites = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -588,13 +567,10 @@ exports.bulkRevokeInvites = async (req, res) => {
             return res.status(403).json({ message: "Only workspace admins can revoke invites" });
         }
 
-        const Invite = require("../../../models/Invite");
+        const { invites: inviteStore } = require("../../identity/queries/auth");
 
         
-        const invites = await Invite.find({
-            _id: { $in: inviteIds },
-            workspace: workspaceId
-        });
+        const invites = await inviteStore.findManyInWorkspace(workspaceId, inviteIds);
 
         if (invites.length === 0) {
             return res.status(404).json({ message: "No matching invites found" });
@@ -615,11 +591,9 @@ exports.bulkRevokeInvites = async (req, res) => {
                 continue;
             }
 
-            invite.status = "revoked";
-            invite.revokedBy = userId;
-            invite.revokedAt = new Date();
-            invite.revokeReason = reason || "Bulk revoked by admin";
-            await invite.save();
+            await inviteStore.update(invite._id, {
+                status: "revoked", revokedBy: userId, revokedAt: new Date(), revokeReason: reason || "Bulk revoked by admin",
+            });
             revokedCount++;
         }
 
@@ -647,7 +621,7 @@ exports.bulkDeleteInvites = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -658,26 +632,10 @@ exports.bulkDeleteInvites = async (req, res) => {
             return res.status(403).json({ message: "Only workspace admins can delete invites" });
         }
 
-        const Invite = require("../../../models/Invite");
+        const { invites: inviteStore } = require("../../identity/queries/auth");
 
-        const _invitesToDelete = await Invite.find({
-            _id: { $in: inviteIds },
-            workspace: workspaceId
-        }).lean();
-
-        
-        const now = new Date();
-        const result = await Invite.deleteMany({
-            _id: { $in: inviteIds },
-            workspace: workspaceId,
-            $or: [
-                { status: "revoked" },
-                { status: "expired" },
-                { status: "accepted" },
-                { used: true },  
-                { status: "pending", expiresAt: { $lt: now } }
-            ]
-        });
+        // Only finished invites go: revoked, accepted, used, or pending past expiry.
+        const result = await inviteStore.deleteFinished(workspaceId, inviteIds, new Date());
 
         
         if (result.deletedCount === 0) {
@@ -703,7 +661,7 @@ exports.cleanupExpiredInvites = async (req, res) => {
         const userId = req.user?.sub;
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }
@@ -714,15 +672,8 @@ exports.cleanupExpiredInvites = async (req, res) => {
             return res.status(403).json({ message: "Only workspace admins can cleanup invites" });
         }
 
-        const Invite = require("../../../models/Invite");
-        const now = new Date();
-
-        
-        const result = await Invite.deleteMany({
-            workspace: workspaceId,
-            status: "pending",
-            expiresAt: { $lt: now }
-        });
+        const { invites: inviteStore } = require("../../identity/queries/auth");
+        const result = await inviteStore.deleteExpiredPending(workspaceId, new Date());
 
         return res.json({
             message: `Successfully cleaned up ${result.deletedCount} expired invitation(s)`,

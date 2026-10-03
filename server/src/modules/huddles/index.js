@@ -9,4 +9,10 @@ module.exports = {
     registerSocket(io, socket) {
         require('./huddles.socket')(io, socket);
     },
+    /** With REDIS_URL, share live-huddle state with the other server instances. */
+    start() {
+        const { registry } = require('./huddleRegistry');
+        require('./huddleReplication').attachHuddleReplication(registry)
+            .catch((err) => require('../../../utils/logger').warn(`[HUDDLES] replication not attached: ${err.message}`));
+    },
 };

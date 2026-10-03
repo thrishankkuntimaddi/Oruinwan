@@ -3,7 +3,7 @@ const logger = require('../../../utils/logger');
 
 const crypto = require('crypto');
 // The shared AI subsystem (repo-root ai/): gateway -> orchestrator -> provider.
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('../../features/ai/ai.gatewayResolver');
 
 function _hash(str) {
   return crypto.createHash('sha256').update(str).digest('hex').slice(0, 32);

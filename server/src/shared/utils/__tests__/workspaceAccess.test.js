@@ -1,7 +1,7 @@
 'use strict';
 
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn(), find: jest.fn() }));
-const Workspace = require('../../../../models/Workspace');
+jest.mock('../../../identity', () => ({ workspaces: { findById: jest.fn(), memberWorkspaceIds: jest.fn() } }));
+const { workspaces } = require('../../../identity');
 const { escapeRegex, safeRegex } = require('../escapeRegex');
 const { assertWorkspaceMember, requireWorkspaceAccess, isValidId } = require('../workspaceAccess');
 
@@ -11,7 +11,7 @@ const MEMBER = '64b0000000000000000000b1';
 const SUSP = '64b0000000000000000000c1';
 
 function mockWs(ws) {
-    Workspace.findOne.mockReturnValue({ select: () => ({ lean: () => Promise.resolve(ws) }) });
+    workspaces.findById.mockResolvedValue(ws);
 }
 const ws = {
     _id: WS,

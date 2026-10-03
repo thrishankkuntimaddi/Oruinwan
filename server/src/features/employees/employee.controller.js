@@ -85,58 +85,48 @@ exports.acceptInvite = async (req, res) => {
         }
 
         
-        const Invite = require("../../../models/Invite");
-        const User = require("../../../models/User");
-        const Company = require("../../../models/Company");
+        const { invites } = require("../../identity/queries/auth");
+        const { sha256 } = require("../../../utils/hashUtils");
+        const identity = require("../../identity");
+        const org = require("../../identity/queries/org");
         const bcrypt = require("bcryptjs");
 
         
-        const invite = await Invite.findOne({ token, status: "pending" });
-        if (!invite) {
+        const invite = await invites.findByTokenHash(sha256(token));
+        if (!invite || invite.status !== "pending") {
             return res.status(404).json({ message: "Invalid or expired invitation" });
         }
 
-        
         if (invite.expiresAt && new Date() > invite.expiresAt) {
-            invite.status = "expired";
-            await invite.save();
+            await invites.update(invite._id, { status: "expired" });
             return res.status(400).json({ message: "Invitation has expired" });
         }
 
         
-        const existingUser = await User.findOne({ email: invite.email.toLowerCase() });
+        const existingUser = await identity.users.findByEmail(invite.email.toLowerCase());
         if (existingUser) {
             return res.status(409).json({ message: "User already exists with this email" });
         }
 
         
         const passwordHash = await bcrypt.hash(password, 10);
-        const newUser = new User({
+        const newUser = await identity.users.create({
             username,
             email: invite.email.toLowerCase(),
             passwordHash,
             userType: "company",
-            companyId: invite.company,
+            companyId: invite.company ? String(invite.company) : null,
             // Ownership is never granted through an invite.
             companyRole: invite.role && invite.role !== "owner" ? invite.role : "member",
-            departments: invite.department ? [invite.department] : [],
             accountStatus: "active",
             verified: true
         });
-
-        await newUser.save();
-
-        
-        invite.status = "accepted";
-        invite.acceptedAt = new Date();
-        await invite.save();
+        if (invite.department) await org.addDepartmentMembers(invite.department, [newUser._id], 'member');
 
         
-        const company = await Company.findById(invite.company);
-        if (company && !company.members.includes(newUser._id)) {
-            company.members.push(newUser._id);
-            await company.save();
-        }
+        await invites.update(invite._id, { status: "accepted", used: true, usedBy: newUser._id, usedAt: new Date() });
+
+        // Company membership is the user's companyId; there is no separate member list.
 
         return res.json({
             message: "Account created successfully",
@@ -158,20 +148,19 @@ exports.checkEligibility = async (req, res) => {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        const Company = require("../../../models/Company");
+        const org = require("../../identity/queries/org");
 
-        
         const emailDomain = email.split("@")[1];
         if (!emailDomain) {
             return res.status(400).json({ message: "Invalid email format" });
         }
 
         
-        const company = await Company.findOne({
+        const company = await org.companies.findOne({
             domain: emailDomain.toLowerCase(),
             domainVerified: true,
             autoJoinByDomain: true
-        });
+        }, { admins: false });
 
         if (company) {
             return res.json({

@@ -1,5 +1,5 @@
 const Notification = require('./notification.model');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 const logger = require('../../../utils/logger');
 const { isValidId } = require('../../shared/utils/workspaceAccess');
 
@@ -46,9 +46,7 @@ function taskLink(workspaceId, taskId) {
 async function activeMemberIds(workspaceIdOrDoc) {
     const workspaceId = workspaceIdOrDoc && workspaceIdOrDoc._id ? workspaceIdOrDoc._id : workspaceIdOrDoc;
     if (!isValidId(workspaceId)) return null;
-    const ws = await Workspace.findOne({ _id: workspaceId, isActive: { $ne: false } })
-        .select('members.user members.status')
-        .lean();
+    const ws = await identity.workspaces.findById(workspaceId, { activeOnly: true });
     if (!ws) return null;
     return new Set((ws.members || [])
         .filter(m => (m.status || 'active') === 'active')

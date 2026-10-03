@@ -5,7 +5,7 @@
  * classify the intent through the AI gateway, then execute it with the same
  * services the UI uses (so permissions, notifications and sockets all apply).
  */
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('../ai.gatewayResolver');
 const aiCore = require('../ai-core.service');
 const meetingsSvc = require('../../meetings/meetings.service');
 const logger = require('../../../../utils/logger');

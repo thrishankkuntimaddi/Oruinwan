@@ -1,7 +1,7 @@
 const logger = require('../../../utils/logger');
 const dns = require('dns').promises;
 const crypto = require('crypto');
-const Company = require('../../../models/Company');
+const org = require('../../identity/queries/org');
 const { logAction } = require('../../../utils/historyLogger');
 
 // Errors carry an HTTP status so the controller never turns them into a 500.
@@ -35,7 +35,7 @@ async function verifyDomainTXT(domain, expectedToken) {
 }
 
 async function generateVerification({ companyId }) {
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) {
         throw fail('Company not found', 404);
     }
@@ -48,10 +48,8 @@ async function generateVerification({ companyId }) {
     
     const { token, txtRecord } = generateDomainVerificationToken();
 
-    company.domainVerificationToken = token;
-    company.domainVerificationExpires = new Date(Date.now() + 86400000); 
-    company.domainVerified = false;
-    await company.save();
+    company.domainVerificationExpires = new Date(Date.now() + 86400000);
+    await org.updateCompany(companyId, { domainVerificationToken: token, domainVerificationExpires: company.domainVerificationExpires, domainVerified: false });
 
     return {
         domain: company.domain,
@@ -69,7 +67,7 @@ async function generateVerification({ companyId }) {
 }
 
 async function verifyDomain({ companyId, userId, req }) {
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) {
         throw fail('Company not found', 404);
     }
@@ -79,7 +77,7 @@ async function verifyDomain({ companyId, userId, req }) {
         throw fail('No verification token generated. Please generate one first.', 400);
     }
 
-    if (company.domainVerificationExpires < new Date()) {
+    if (new Date(company.domainVerificationExpires) < new Date()) {
         throw fail('Verification token expired. Please generate a new one.', 400);
     }
 
@@ -91,10 +89,7 @@ async function verifyDomain({ companyId, userId, req }) {
     }
 
     
-    company.domainVerified = true;
-    company.domainVerificationToken = null;
-    company.domainVerificationExpires = null;
-    await company.save();
+    await org.updateCompany(companyId, { domainVerified: true, domainVerificationToken: null, domainVerificationExpires: null });
 
     
     await logAction({
@@ -114,7 +109,7 @@ async function verifyDomain({ companyId, userId, req }) {
 }
 
 async function setAutoJoinPolicy({ companyId, userId, enabled, req }) {
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) {
         throw fail('Company not found', 404);
     }
@@ -123,8 +118,7 @@ async function setAutoJoinPolicy({ companyId, userId, enabled, req }) {
         throw fail('Domain must be verified before enabling auto-join', 400);
     }
 
-    company.autoJoinByDomain = enabled;
-    await company.save();
+    await org.updateCompany(companyId, { autoJoinByDomain: !!enabled });
 
     
     await logAction({

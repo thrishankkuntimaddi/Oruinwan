@@ -14,17 +14,17 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
 jest.mock('../../../shared/middleware/permissionMiddleware', () => ({
     requireManager: (req, res, next) => next(),
 }));
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Department', () => ({ findById: jest.fn(), find: jest.fn() }));
-jest.mock('../../../../models/Workspace', () => ({ find: jest.fn(), findById: jest.fn() }));
+jest.mock('../../../identity', () => require('./identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('./identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('./identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('./identityStore').postgres);
 jest.mock('../../../modules/messages/message.model.js', () => ({ countDocuments: jest.fn(async () => 4) }));
 jest.mock('../../../../models/TaskActivity', () => ({ create: jest.fn() }));
 jest.mock('../../../../models/Task', () => ({ countDocuments: jest.fn(async () => 0), find: jest.fn(), aggregate: jest.fn(async () => []) }));
 
 const h = require('../../../shared/__tests__/gateHarness');
-const Department = require('../../../../models/Department');
+const store = require('./identityStore');
 const Task = require('../../../../models/Task');
-const Workspace = require('../../../../models/Workspace');
 const router = require('../manager-dashboard.routes');
 
 const C1 = h.oid(0xc1);
@@ -35,11 +35,6 @@ const ENG = h.oid(0x50);
 const SALES = h.oid(0x51);
 const FOREIGN = h.oid(0x52);
 
-const depts = {
-    [ENG]: { _id: ENG, company: C1, name: 'Engineering', managers: [], head: null },
-    [SALES]: { _id: SALES, company: C1, name: 'Sales', managers: [], head: null },
-    [FOREIGN]: { _id: FOREIGN, company: C2, name: 'Theirs', managers: [], head: null },
-};
 
 function app() {
     const a = express();
@@ -49,13 +44,13 @@ function app() {
 }
 
 beforeEach(() => {
-    Object.assign(h.users, {
-        [MANAGER]: { _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG] },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', managedDepartments: [] },
-    });
-    Department.findById.mockImplementation((id) => h.query(depts[String(id)] ? { ...depts[String(id)] } : null));
+    store.reset();
+    store.addDepartment({ _id: ENG, company: C1, name: 'Engineering' });
+    store.addDepartment({ _id: SALES, company: C1, name: 'Sales' });
+    store.addDepartment({ _id: FOREIGN, company: C2, name: 'Theirs' });
+    store.addUser({ _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG] });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin' });
     Task.find.mockImplementation(() => h.query([]));
-    Workspace.find.mockImplementation(() => h.query([]));
 });
 
 const kinds = ['metrics', 'team-load', 'unassigned', 'reports'];

@@ -3,6 +3,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const apiKeyMiddleware = require('./apiKey.middleware');
 const logger = require('../../../utils/logger');
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const { isValidId } = require('../../shared/utils/workspaceAccess');
 
 /**
@@ -85,8 +86,8 @@ router.get('/messages', requireScope('messages:read'), async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select('channel sender type parentId replyCount createdAt editedAt payload.isEncrypted attachments.type')
-      .populate('sender', 'username')
-      .lean();
+      .lean()
+      .then((rows) => hydrate(rows, { sender: userSelect('username') }));
 
     // Messages are end-to-end encrypted: only ids and metadata leave the server.
     const out = messages.map(m => ({
@@ -114,7 +115,7 @@ const TASK_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];
 
 router.get('/tasks', requireScope('tasks:read'), async (req, res) => {
   try {
-    const Task = require('../../../models/Task');
+    const Tasks = require('../tasks/tasks.query');
     const { status } = req.query;
     const limit = parseLimit(req.query.limit);
 
@@ -126,12 +127,11 @@ router.get('/tasks', requireScope('tasks:read'), async (req, res) => {
       query.status = status;
     }
 
-    const tasks = await Task.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .select('title description status priority assignedTo dueDate createdAt issueKey')
-      .populate('assignedTo', 'username')
-      .lean();
+    const tasks = await Tasks.find(query, {
+      sort: { createdAt: -1 },
+      limit,
+      select: 'title description status priority assignedTo dueDate createdAt issueKey',
+    }).then((rows) => hydrate(rows, { assignedTo: userSelect('username') }));
 
     res.json({ tasks, count: tasks.length });
   } catch (err) {
@@ -217,11 +217,9 @@ router.get('/files', requireScope('files:read'), async (req, res) => {
 
 router.get('/users', requireScope('users:read'), async (req, res) => {
   try {
-    const Workspace = require('../../../models/Workspace');
-
-    const ws = await Workspace.findById(req.workspaceId)
-      .populate('members.user', 'username firstName lastName profilePicture')
-      .lean();
+    const { workspaces } = require('../../identity');
+    const ws = await workspaces.findById(req.workspaceId)
+      .then((w) => (w ? hydrate(w, { 'members.user': userSelect('username profilePicture profile') }) : w));
 
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
@@ -230,8 +228,9 @@ router.get('/users', requireScope('users:read'), async (req, res) => {
       .map(m => ({
         id: m.user._id,
         username: m.user.username,
-        firstName: m.user.firstName,
-        lastName: m.user.lastName,
+        // Accounts keep one display name; first/last are derived for API compatibility.
+        firstName: (m.user.profile?.name || '').split(' ')[0] || null,
+        lastName: (m.user.profile?.name || '').split(' ').slice(1).join(' ') || null,
         avatarUrl: m.user.profilePicture || null,
         role: m.role
       }));

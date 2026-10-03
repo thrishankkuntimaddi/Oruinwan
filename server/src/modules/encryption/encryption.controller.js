@@ -2,7 +2,7 @@
 
 const encryptionService = require('./encryption.service');
 const { handleError } = require('../../../utils/responseHelpers');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 const logger = require('../../shared/utils/logger');
 
 exports.getUserKeys = async (req, res) => {
@@ -61,7 +61,7 @@ exports.revokeAccess = async (req, res) => {
         }
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
@@ -114,22 +114,13 @@ exports.storePersonalKeys = async (req, res) => {
             });
         }
 
-        const User = require('../../../models/User');
-        const user = await User.findById(userId);
+        const user = await identity.users.update(userId, {
+            encryption: { publicKey, encryptedPrivateKey, keyVersion: 1, createdAt: new Date() },
+        });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
-        
-        user.encryption = {
-            publicKey,
-            encryptedPrivateKey,
-            keyVersion: 1,
-            createdAt: new Date()
-        };
-
-        await user.save();
 
         return res.status(201).json({
             message: 'Personal encryption keys stored successfully',
@@ -143,9 +134,7 @@ exports.storePersonalKeys = async (req, res) => {
 exports.getMyPersonalKeys = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const User = require('../../../models/User');
-
-        const user = await User.findById(userId).select('encryption');
+        const user = await identity.users.findById(userId);
 
         if (!user || !user.encryption) {
             return res.status(404).json({
@@ -168,9 +157,7 @@ exports.getMyPersonalKeys = async (req, res) => {
 exports.getUserPublicKey = async (req, res) => {
     try {
         const { userId } = req.params;
-        const User = require('../../../models/User');
-
-        const user = await User.findById(userId).select('encryption.publicKey username');
+        const user = await identity.users.findById(userId);
 
         if (!user || !user.encryption?.publicKey) {
             return res.status(404).json({

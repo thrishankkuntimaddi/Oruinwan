@@ -1,5 +1,6 @@
 const HistoryLog = require("../models/HistoryLog");
 const logger = require("./logger");
+const { hydrate, userSelect } = require("../src/identity/hydrate"); // users live in PostgreSQL
 
 exports.logAction = async ({
     userId,
@@ -41,8 +42,8 @@ exports.getUserHistory = async (userId, limit = 50) => {
         return await HistoryLog.find({ user: userId })
             .sort({ timestamp: -1 })
             .limit(limit)
-            .populate("user", "username email")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { user: userSelect("username email") }));
     } catch (err) {
         logger.error("Error fetching user history:", err);
         return [];
@@ -54,8 +55,8 @@ exports.getCompanyHistory = async (companyId, limit = 100) => {
         return await HistoryLog.find({ company: companyId })
             .sort({ timestamp: -1 })
             .limit(limit)
-            .populate("user", "username email")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { user: userSelect("username email") }));
     } catch (err) {
         logger.error("Error fetching company history:", err);
         return [];
@@ -67,8 +68,8 @@ exports.getResourceHistory = async (resourceType, resourceId, limit = 50) => {
         return await HistoryLog.find({ resourceType, resourceId })
             .sort({ timestamp: -1 })
             .limit(limit)
-            .populate("user", "username email")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { user: userSelect("username email") }));
     } catch (err) {
         logger.error("Error fetching resource history:", err);
         return [];

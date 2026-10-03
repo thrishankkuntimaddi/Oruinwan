@@ -12,7 +12,6 @@ const { requireFlag } = require('../../shared/featureFlags');
 const integrationsFlag = requireFlag('integrations');
 
 const mongoose = require('mongoose');
-const Workspace = require('../../../models/Workspace');
 const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
 
 const ADMIN_ROLES = ['owner', 'admin'];
@@ -170,7 +169,7 @@ router.post('/disconnect', integrationsFlag, ...admin, async (req, res) => {
 
 // ── Developer integrations: GitHub, Jira, Zoom ───────────────────────────────
 
-const User = require('../../../models/User');
+const { users: identityUsers } = require('../../identity');
 const ghService = require('./github/github.service');
 const { requireAIAccess: aiAccess } = require('../ai/ai.access');
 
@@ -183,7 +182,7 @@ function sendError(res, err) {
 }
 
 async function actorOf(req) {
-  const u = await User.findById(req.user.sub).select('username').lean().catch(() => null);
+  const u = await identityUsers.findById(req.user.sub).catch(() => null);
   return { id: req.user.sub, name: u?.username || null };
 }
 

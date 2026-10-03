@@ -1,8 +1,7 @@
 const logger = require('../../../utils/logger');
-const Company = require('../../../models/Company');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
-const Department = require('../../../models/Department');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 const { logAction } = require('../../../utils/historyLogger');
 const bcrypt = require('bcryptjs');
 const sendEmail = require('../../../utils/sendEmail');
@@ -12,25 +11,25 @@ const { uploadToGCS } = require('../../modules/uploads/upload.service');
 // Never sent to clients: OTPs, verification tokens, SSO secrets, uploaded documents.
 const COMPANY_SECRET_FIELDS = '-phoneOTP -phoneOTPExpiresAt -domainVerificationToken -domainVerificationExpires -ssoConfig -documents -metadata';
 
-async function getCompanyById(companyId) {
-    const company = await Company.findById(companyId)
-        .select(COMPANY_SECRET_FIELDS)
-        .populate('admins.user', 'username email profilePicture')
-        .populate('defaultWorkspace', 'name')
-        .populate({
-            path: 'departments',
-            select: 'name head memberCount',
-            populate: {
-                path: 'head',
-                select: 'username email'
-            }
-        });
+const ADMIN_USER = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
 
-    return company;
+/** Company for API responses: no secrets, admins / default workspace / departments expanded. */
+async function presentCompany(company) {
+    if (!company) return null;
+    const out = org.publicCompany(company, { documents: false, metadata: false });
+    await hydrate(out, { 'admins.user': ADMIN_USER, defaultWorkspace: { type: 'workspace', fields: ['name'] } });
+    const depts = await org.departments.find({ company: company._id, isActive: true }, { sort: { name: 1 } });
+    await hydrate(depts, { head: { type: 'user', fields: ['username', 'email'] } });
+    out.departments = depts.map((d) => ({ _id: d._id, name: d.name, head: d.head, memberCount: (d.members || []).length }));
+    return out;
+}
+
+async function getCompanyById(companyId) {
+    return presentCompany(await org.companies.findOne({ _id: companyId }));
 }
 
 async function checkUserAccess(userId, companyId) {
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
 
     if (!user) {
         return { hasAccess: false, user: null };
@@ -43,7 +42,7 @@ async function checkUserAccess(userId, companyId) {
 }
 
 async function checkIsAdmin(userId, companyId) {
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
 
     if (!user) {
         return { isAdmin: false, user: null };
@@ -86,33 +85,26 @@ function sanitizeCompanyUpdates(body = {}, requesterRole) {
 }
 
 async function updateCompany(companyId, updates) {
-    const company = await Company.findByIdAndUpdate(
-        companyId,
-        { $set: updates },
-        { new: true, runValidators: true }
-    )
-        .select(COMPANY_SECRET_FIELDS)
-        .populate('admins.user', 'username email profilePicture')
-        .populate('defaultWorkspace', 'name');
-
-    return company;
+    return presentCompany(await org.updateCompany(companyId, updates));
 }
 
+const MEMBER_FIELDS = [
+    'username', 'email', 'companyEmail',
+    'profilePicture', 'companyRole',
+    'jobTitle', 'phone', 'corporateId',
+    'accountStatus', 'createdAt', 'lastLoginAt', 'isOnline',
+    'departments', 'workspaces'
+].join(' ');
+
 async function getCompanyMembers(companyId, { callerRole } = {}) {
-    const members = await User.find({
-        companyId,
-        accountStatus: { $ne: 'removed' }, 
-    })
-        .select([
-            'username', 'email', 'companyEmail',  
-            'profilePicture', 'companyRole',
-            'jobTitle', 'phone', 'corporateId',
-            'accountStatus', 'createdAt', 'lastLoginAt', 'isOnline',
-            'departments', 'workspaces'
-        ].join(' '))
-        .populate('departments', 'name')
-        .populate('workspaces.workspace', 'name')
-        .lean();
+    const members = await org.users.find(
+        { companyId, accountStatus: { $ne: 'removed' } },
+        { org: true, select: MEMBER_FIELDS }
+    );
+    await hydrate(members, {
+        departments: { type: 'department', fields: ['name'] },
+        'workspaces.workspace': { type: 'workspace', fields: ['name'] },
+    });
 
     if (callerRole === 'guest') {
         return members.map(({ phone, corporateId, ...rest }) => rest); // eslint-disable-line no-unused-vars
@@ -121,19 +113,12 @@ async function getCompanyMembers(companyId, { callerRole } = {}) {
 }
 
 async function getCompanyMetrics(companyId) {
-    
-    const [totalUsers, activeUsers, totalWorkspaces, totalDepartments] = await Promise.all([
-        User.countDocuments({ companyId }),
-        User.countDocuments({ companyId, isOnline: true }),
-        Workspace.countDocuments({ company: companyId }),
-        Department.countDocuments({ company: companyId })
-    ]);
-
+    const stats = await org.companyUserStats(companyId);
     return {
-        totalUsers,
-        activeUsers,
-        totalWorkspaces,
-        totalDepartments
+        totalUsers: stats.users.total,
+        activeUsers: stats.users.online,
+        totalWorkspaces: stats.workspaces.total,
+        totalDepartments: stats.departments
     };
 }
 
@@ -141,45 +126,35 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
     const { assignRoleError, manageUserError } = require('../../shared/roleCeiling');
     const fail = (message, status) => Object.assign(new Error(message), { status });
 
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId });
     if (!company) throw fail('Company not found', 404);
 
     // Roles come from the database, not the stored admins list (it can be stale).
-    const requester = await User.findById(requesterId).select('companyId companyRole coOwnerOf').lean();
+    const requester = await identity.users.findById(requesterId);
     const roleError = assignRoleError(requester, newRole);
     if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
 
-    const targetUser = await User.findById(targetUserId);
+    const targetUser = await identity.users.findById(targetUserId);
     if (!targetUser || String(targetUser.companyId) !== String(companyId)) throw fail('User not found', 404);
 
     const manageError = manageUserError(requester, targetUser);
     if (manageError) throw fail(manageError, 403);
 
-    
     const oldRole = targetUser.companyRole;
 
-    
-    targetUser.companyRole = newRole;
-    await targetUser.save();
-
-    
-    if (newRole === 'owner' || newRole === 'admin') {
-        const existingAdmin = company.admins.find(
-            a => a.user.toString() === targetUserId
-        );
-        if (!existingAdmin) {
-            company.admins.push({ user: targetUserId, role: newRole });
-            await company.save();
+    // Role and the company's admin list change together.
+    const { withTransaction } = require('../../shared/postgres');
+    await withTransaction(async (tx) => {
+        await org.users.updateMany({ _id: targetUserId }, { companyRole: newRole }, { tx });
+        if (newRole === 'owner' || newRole === 'admin') {
+            const existingAdmin = company.admins.find(a => String(a.user) === String(targetUserId));
+            if (!existingAdmin) await org.addCompanyAdmin(companyId, targetUserId, newRole, { tx });
+        } else {
+            await tx.query('DELETE FROM company_admins WHERE company_id = $1 AND user_id = $2', [String(companyId), String(targetUserId)]);
         }
-    } else {
-        
-        company.admins = company.admins.filter(
-            a => a.user.toString() !== targetUserId
-        );
-        await company.save();
-    }
+    });
+    targetUser.companyRole = newRole;
 
-    
     await logAction({
         userId: requesterId,
         action: 'user_role_changed',
@@ -214,7 +189,7 @@ module.exports = {
 };
 
 async function processSetupStep({ companyId, userId, step, data, files }) {
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId });
     if (!company) throw new Error('Company not found');
 
     switch (step) {
@@ -233,7 +208,7 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
             }
 
             updates.setupStep = 2;
-            await Company.findByIdAndUpdate(companyId, { $set: updates });
+            await org.updateCompany(companyId, updates);
             return { message: 'Step 1 saved', nextStep: 2 };
         }
 
@@ -242,20 +217,14 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
             const deptNames = data.departments || [];
 
             
-            await Department.deleteMany({ company: companyId });
-
-            
-            const createdDepts = await Promise.all(
-                deptNames.map(name =>
-                    Department.create({ name, company: companyId })
-                )
-            );
-
-            await Company.findByIdAndUpdate(companyId, {
-                $set: {
-                    departments: createdDepts.map(d => d._id),
-                    setupStep: 3
-                }
+            // Setup replaces the department list (and their memberships) in one go.
+            const { withTransaction } = require('../../shared/postgres');
+            const createdDepts = await withTransaction(async (tx) => {
+                await tx.query('DELETE FROM departments WHERE company_id = $1', [String(companyId)]);
+                const out = [];
+                for (const name of deptNames) out.push(await org.insert('departments', { name, company: companyId }, { tx }));
+                await org.updateCompany(companyId, { setupStep: 3 }, { tx });
+                return out;
             });
 
             return { message: 'Departments saved', departments: createdDepts, nextStep: 3 };
@@ -303,7 +272,6 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
                 }).filter(e => e.companyEmail);
 
                 
-                const company = await Company.findById(companyId);
                 if (company?.domain) {
                     employees = employees.map(e => ({
                         ...e,
@@ -320,19 +288,15 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
                 results = await bulkInviteEmployees(companyId, company.domain, employees);
             }
 
-            await Company.findByIdAndUpdate(companyId, { $set: { setupStep: 4 } });
+            await org.updateCompany(companyId, { setupStep: 4 });
             return { message: 'Invites processed', results, nextStep: 4 };
         }
 
         case 4: {
             
-            await Company.findByIdAndUpdate(companyId, {
-                $set: { isSetupComplete: true, setupStep: 4 }
-            });
-            
-            await User.findByIdAndUpdate(userId, {
-                $set: { 'companyStatus': 'active' }
-            });
+            await org.updateCompany(companyId, { isSetupComplete: true, setupStep: 4 });
+            // (The Mongo-era 'companyStatus' flag never existed on the user schema; nothing to set.)
+            void userId;
             return {
                 message: 'Setup complete! Workspace launched.',
                 redirectTo: '/admin/analytics',
@@ -348,11 +312,11 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
 async function bulkInviteEmployees(companyId, companyDomain, employees) {
     const results = { created: 0, skipped: 0, errors: [] };
 
-    const company = await Company.findById(companyId).populate('departments', 'name _id');
+    const company = await org.companies.findOne({ _id: companyId });
+    const departments = await org.departments.find({ company: companyId, isActive: true }, { members: false });
 
-    
     const deptMap = {};
-    (company.departments || []).forEach(d => {
+    departments.forEach(d => {
         deptMap[d.name.toLowerCase()] = d._id;
     });
 
@@ -370,7 +334,7 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
             }
 
             
-            const existingUser = await User.findOne({
+            const existingUser = await org.users.findOne({
                 $or: [
                     { companyEmail: companyEmailVal },
                     { email: loginEmail },
@@ -401,21 +365,20 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
             
             
             
-            const newUser = await User.create({
+            const newUser = await identity.users.create({
                 username,
-                email: loginEmail,                       
-                companyEmail: companyEmailVal,           
+                email: loginEmail,
+                companyEmail: companyEmailVal,
                 phone: emp.phone || undefined,
                 jobTitle: emp.jobTitle || undefined,
-                corporateId: emp.corporateId || undefined,
                 passwordHash: hashedPw,
                 userType: 'company',
-                companyId,
+                companyId: String(companyId),
                 companyRole,
-                departments: deptId ? [deptId] : [],
                 verified: true,
                 accountStatus: 'active',
             });
+            if (deptId) await org.addDepartmentMembers(deptId, [newUser._id], 'member');
 
             
             await sendWelcomeEmail({

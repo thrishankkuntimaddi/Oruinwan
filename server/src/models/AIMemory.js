@@ -18,5 +18,6 @@ const AIMemorySchema = new mongoose.Schema(
 );
 
 AIMemorySchema.index({ user: 1, workspace: 1, updatedAt: -1 });
+AIMemorySchema.index({ workspace: 1, updatedAt: -1 }); // tenant-first, for per-workspace export/deletion and sharding
 
 module.exports = mongoose.models.AIMemory || mongoose.model('AIMemory', AIMemorySchema);

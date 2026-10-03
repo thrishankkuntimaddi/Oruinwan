@@ -1,6 +1,5 @@
-const User = require('../../../models/User');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 
 async function getAnalyticsStats(companyId) {
     if (!companyId) {
@@ -15,9 +14,9 @@ async function getAnalyticsStats(companyId) {
         workspacesCount,
         _totalChannels 
     ] = await Promise.all([
-        User.countDocuments({ companyId: companyId }),
-        Department.countDocuments({ company: companyId }),
-        Workspace.countDocuments({ company: companyId }),
+        org.users.count({ companyId: companyId }),
+        org.departments.count({ company: companyId }),
+        org.workspaces.count({ company: companyId }),
         Promise.resolve(0) 
     ]);
 
@@ -60,14 +59,12 @@ async function getAnalyticsStats(companyId) {
 }
 
 async function getDepartments(companyId) {
-    const departments = await Department.find({ company: companyId })
-        .populate('head', 'username email profilePicture')
-        .populate('workspaces', 'name id')
-        .sort({ createdAt: -1 });
+    const departments = await org.departments.find({ company: companyId }, { sort: { createdAt: -1 } });
+    await hydrate(departments, { head: { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
+    const sizes = new Map((await org.departmentSizes(companyId)).map((d) => [String(d._id), d.members]));
 
-    
-    const deptData = await Promise.all(departments.map(async (dept) => {
-        const memberCount = await User.countDocuments({ departments: dept._id });
+    const deptData = departments.map((dept) => {
+        const memberCount = sizes.get(String(dept._id)) || 0;
         return {
             id: dept._id,
             name: dept.name,
@@ -77,7 +74,7 @@ async function getDepartments(companyId) {
             workspaces: dept.workspaces.length,
             created: new Date(dept.createdAt).toLocaleDateString()
         };
-    }));
+    });
 
     return { departments: deptData };
 }

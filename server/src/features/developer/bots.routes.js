@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Bot = require('./bot.model');
 const requireAuth = require('../../shared/middleware/auth');
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const logger = require('../../../utils/logger');
 const {
   requireWorkspaceAccess, assertWorkspaceMember, sendAccessError, isValidId, HttpError,
@@ -30,8 +31,8 @@ router.get('/bots', adminOfQuery, async (req, res) => {
   try {
     const bots = await Bot.find({ workspaceId: req.workspaceAccess.workspaceId, isActive: true })
       .select('name description tokenPrefix permissions createdAt lastActiveAt messageCount createdBy')
-      .populate('createdBy', 'username firstName lastName')
-      .lean();
+      .lean()
+      .then((rows) => hydrate(rows, { createdBy: userSelect('username firstName lastName') }));
 
     res.json({ bots });
   } catch (err) {

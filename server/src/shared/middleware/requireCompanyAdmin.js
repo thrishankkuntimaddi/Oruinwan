@@ -1,6 +1,6 @@
 'use strict';
 
-const User = require('../../../models/User');
+const identity = require('../../identity');
 
 const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
 const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
@@ -16,9 +16,7 @@ const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
 async function requireCompanyAdmin(req, res, next) {
     try {
         const userId = req.user?.sub || req.user?._id;
-        const user = userId && await User.findById(userId)
-            .select('companyId companyRole coOwnerOf roles accountStatus')
-            .lean();
+        const user = userId && await identity.users.findById(userId);
         if (!user) return res.status(401).json({ message: 'User not found' });
 
         req.isPlatformAdmin = Array.isArray(user.roles) && user.roles.some((r) => PLATFORM_ADMIN_ROLES.includes(r));

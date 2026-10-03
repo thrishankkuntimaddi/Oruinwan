@@ -1,6 +1,7 @@
 'use strict';
 
 const aiCore        = require('../ai-core.service');
+const { hydrate, userSelect } = require('../../../identity/hydrate');
 const Message       = require('../../../modules/messages/message.model');
 const KnowledgePage = require('../../knowledge/KnowledgePage');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
@@ -132,7 +133,6 @@ async function queryMeetings(question, workspaceId, context = {}) {
     })
         .sort({ startTime: -1 })
         .limit(10)
-        .populate('createdBy', 'username firstName lastName')
         .lean();
 
     const allMeetings = meetings.length
@@ -140,8 +140,9 @@ async function queryMeetings(question, workspaceId, context = {}) {
         : await ScheduledMeeting.find({ workspaceId, status: 'completed' })
             .sort({ startTime: -1 })
             .limit(5)
-            .populate('createdBy', 'username firstName lastName')
             .lean();
+    // Meeting creators live in PostgreSQL.
+    await hydrate(allMeetings, { createdBy: userSelect('username profile') });
 
     const contextDocs = allMeetings.map(m => ({
         title:   m.title,

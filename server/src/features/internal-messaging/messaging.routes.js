@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const internalMessagingController = require('./messaging.controller');
-const User = require('../../../models/User');
+const identity = require('../../identity');
 
 // The access token carries no companyId (and its role can be stale), so load
 // company, role and email from the database. req.user.sub is kept.
 async function hydrateUser(req, res, next) {
     try {
-        const u = await User.findById(req.user.sub).select('companyId companyRole coOwnerOf email accountStatus').lean();
+        const u = await identity.users.findById(req.user.sub);
         if (!u) return res.status(401).json({ message: 'User not found' });
         const coOwner = u.coOwnerOf && u.companyId && String(u.coOwnerOf) === String(u.companyId);
         req.user.companyId = u.companyId ? String(u.companyId) : null;

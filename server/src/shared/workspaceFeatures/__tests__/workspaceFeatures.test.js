@@ -1,8 +1,8 @@
 'use strict';
 
 const store = {};
-jest.mock('../../../models/WorkspacePermission', () => ({
-  findOne: jest.fn(({ workspace }) => ({ select: () => ({ lean: async () => store[workspace] || null }) })),
+jest.mock('../../../identity', () => ({
+  workspacePermissions: { get: jest.fn(async (workspace) => store[workspace] || null) },
 }));
 
 const WS = '64b000000000000000000001';

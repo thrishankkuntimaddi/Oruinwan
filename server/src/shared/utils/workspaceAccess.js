@@ -40,10 +40,9 @@ function memberUserId(m) {
 }
 
 async function getWorkspaceMembership(workspaceId, userId) {
-    const Workspace = require('../../../models/Workspace');
-    const ws = await Workspace.findOne({ _id: workspaceId, isActive: { $ne: false } })
-        .select('name members settings createdBy company')
-        .lean();
+    if (!isValidId(workspaceId)) return null;
+    const { workspaces } = require('../../identity');
+    const ws = await workspaces.findById(workspaceId, { activeOnly: true });
     if (!ws) return null;
     const uid = String(userId);
     const member = (ws.members || []).find(m => memberUserId(m) === uid && (m.status || 'active') === 'active') || null;
@@ -63,12 +62,8 @@ async function assertWorkspaceMember(workspaceId, userId, { adminOnly = false } 
 
 /** Ids of active workspaces the user is an active member of. */
 async function memberWorkspaceIds(userId) {
-    const Workspace = require('../../../models/Workspace');
-    const rows = await Workspace.find({
-        isActive: { $ne: false },
-        members: { $elemMatch: { user: userId, status: 'active' } },
-    }).select('_id').lean();
-    return rows.map(r => String(r._id));
+    const { workspaces } = require('../../identity');
+    return workspaces.memberWorkspaceIds(userId);
 }
 
 function defaultFrom(req) {

@@ -1,11 +1,11 @@
 'use strict';
 
 /**
- * PATCH /api/departments/:id { head }: a manager head is added to dept.managers
- * and gets the department in managedDepartments; the previous head loses it
- * unless still listed in dept.managers. companyRole never changes.
+ * PATCH /api/departments/:id { head }: a manager head becomes one of the
+ * department's managers (department_members role 'manager'); listed managers
+ * keep their role when the head changes; companyRole never changes.
  * Plus: admin users-access counts invited users as pending, and department
- * workspaces are found by Workspace.department within the company.
+ * workspaces are found by workspace.department within the company.
  */
 
 const express = require('express');
@@ -14,14 +14,13 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Department', () => ({ findOne: jest.fn(), findOneAndUpdate: jest.fn(), updateOne: jest.fn() }));
-jest.mock('../../../../models/Workspace', () => ({ find: jest.fn() }));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 
 const h = require('../../../shared/__tests__/gateHarness');
-const User = require('../../../../models/User');
-const Department = require('../../../../models/Department');
-const Workspace = require('../../../../models/Workspace');
+const store = require('../../admin/__tests__/identityStore');
 
 const departmentsRoutes = require('../departments.routes');
 const adminDashboardRoutes = require('../../admin/admin-dashboard.routes');
@@ -44,52 +43,42 @@ function app() {
     return a;
 }
 
-let stored;
+const managersOf = () => store.state.deptMembers.filter((r) => r.department === DEPT && r.role === 'manager').map((r) => r.user);
+
 beforeEach(() => {
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [MGR_NEW]: { _id: MGR_NEW, companyId: C1, companyRole: 'manager', ...base },
-        [MGR_OLD]: { _id: MGR_OLD, companyId: C1, companyRole: 'manager', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-    });
-    stored = { _id: DEPT, company: C1, head: MGR_OLD, managers: [], workspaces: [] };
-    Department.findOne.mockImplementation(() => h.query({ ...stored }));
-    Department.findOneAndUpdate.mockImplementation((q, update) => {
-        stored = { ...stored, ...update.$set };
-        if (update.$addToSet) stored.managers = [...new Set([...stored.managers.map(String), String(update.$addToSet.managers)])];
-        return h.query({ ...stored });
-    });
-    User.findOne.mockImplementation((q) => {
-        const u = h.users[String(q._id)];
-        return h.query(u && String(u.companyId) === String(q.companyId) ? u : null);
-    });
-    User.updateOne.mockClear();
+    store.reset();
+    store.addCompany({ _id: C1, name: 'Acme' });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin' });
+    store.addUser({ _id: MGR_NEW, companyId: C1, companyRole: 'manager' });
+    store.addUser({ _id: MGR_OLD, companyId: C1, companyRole: 'manager' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member' });
+    store.addDepartment({ _id: DEPT, company: C1, name: 'Eng', head: MGR_OLD });
 });
 
 describe('PATCH /api/departments/:id head', () => {
     const patch = (body) => h.call(app(), 'PATCH', `/api/departments/${DEPT}`, ADMIN, body);
 
-    it('adds a manager head to managers and managedDepartments; the old head loses it', async () => {
+    it('makes a manager head one of the department managers and records the head', async () => {
         expect((await patch({ head: MGR_NEW })).status).toBe(200);
-        expect(stored.managers).toContain(MGR_NEW);
-        expect(User.updateOne).toHaveBeenCalledWith({ _id: MGR_NEW }, { $addToSet: { managedDepartments: DEPT } });
-        expect(User.updateOne).toHaveBeenCalledWith({ _id: MGR_OLD }, { $pull: { managedDepartments: DEPT } });
-        expect(User.updateOne.mock.calls.some(([, u]) => u.$set && 'companyRole' in u.$set)).toBe(false);
+        expect(managersOf()).toContain(MGR_NEW);
+        expect(store.state.departments.get(DEPT).head).toBe(MGR_NEW);
+        expect(store.state.users.get(MGR_NEW).companyRole).toBe('manager');
     });
-    it('keeps the old head\'s access when they are still a listed manager', async () => {
-        stored.managers = [MGR_OLD];
+    it('keeps a listed manager\'s role when the head changes', async () => {
+        store.addDeptMember(DEPT, MGR_OLD, 'manager');
         await patch({ head: MGR_NEW });
-        expect(User.updateOne).not.toHaveBeenCalledWith({ _id: MGR_OLD }, expect.anything());
+        expect(managersOf()).toEqual(expect.arrayContaining([MGR_OLD, MGR_NEW]));
     });
-    it('a member head is not made a manager; clearing the head removes the old head\'s access', async () => {
+    it('a member head is not made a manager; clearing the head clears it', async () => {
         await patch({ head: MEMBER });
-        expect(stored.managers).not.toContain(MEMBER);
-        expect(User.updateOne).not.toHaveBeenCalledWith({ _id: MEMBER }, expect.anything());
-        User.updateOne.mockClear();
-        stored.head = MGR_OLD;
-        await patch({ head: null });
-        expect(User.updateOne).toHaveBeenCalledWith({ _id: MGR_OLD }, { $pull: { managedDepartments: DEPT } });
+        expect(managersOf()).not.toContain(MEMBER);
+        expect((await patch({ head: null })).status).toBe(200);
+        expect(store.state.departments.get(DEPT).head).toBeNull();
+    });
+    it('an explicit managers list replaces the manager set', async () => {
+        store.addDeptMember(DEPT, MGR_OLD, 'manager');
+        expect((await patch({ managers: [MGR_NEW] })).status).toBe(200);
+        expect(managersOf()).toEqual([MGR_NEW]);
     });
     it('rejects a head from outside the company', async () => {
         expect((await patch({ head: h.oid(99) })).status).toBe(400);
@@ -98,13 +87,19 @@ describe('PATCH /api/departments/:id head', () => {
 
 describe('admin routes', () => {
     it('users-access counts invited users as pending', async () => {
-        await h.call(app(), 'GET', '/api/admin-dashboard/users-access', ADMIN);
-        expect(User.countDocuments).toHaveBeenCalledWith({ companyId: C1, accountStatus: { $in: ['pending', 'invited'] } });
+        store.addUser({ _id: h.oid(7), companyId: C1, accountStatus: 'invited' });
+        store.addUser({ _id: h.oid(8), companyId: C1, accountStatus: 'pending' });
+        const res = await h.call(app(), 'GET', '/api/admin-dashboard/users-access', ADMIN);
+        expect(res.status).toBe(200);
+        expect(res.body.stats.pending).toBe(2);
     });
-    it('department workspaces use Workspace.department within the company', async () => {
-        Workspace.find.mockImplementation(() => h.query([]));
+    it('department workspaces use workspace.department within the company', async () => {
+        store.addWorkspace({ _id: h.oid(0x60), company: C1, name: 'Eng WS', department: DEPT, members: [{ user: MEMBER }] });
+        store.addWorkspace({ _id: h.oid(0x61), company: h.oid(0xc2), name: 'Other', department: DEPT });
+        store.addWorkspace({ _id: h.oid(0x62), company: C1, name: 'Unrelated' });
         const res = await h.call(app(), 'GET', `/api/admin/departments/${DEPT}/workspaces`, ADMIN);
         expect(res.status).toBe(200);
-        expect(Workspace.find.mock.calls[0][0]).toEqual({ company: C1, $or: [{ department: DEPT }, { _id: { $in: [] } }] });
+        expect(res.body.map((w) => w.name)).toEqual(['Eng WS']);
+        expect(res.body[0].members[0].user._id).toBe(MEMBER);
     });
 });

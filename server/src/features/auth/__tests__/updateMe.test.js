@@ -28,16 +28,14 @@ function mockMakeUser(overrides = {}) {
   };
 }
 
-jest.mock('../../../../models/User', () => ({
-  findById: jest.fn(() => {
-    const q = {
-      select: () => q,
-      populate: () => q,
-      then: (resolve, reject) => Promise.resolve(mockState.user).then(resolve, reject),
-    };
-    return q;
-  }),
-  findOne: jest.fn(() => ({ select: () => ({ lean: async () => mockState.phoneOwner }) })),
+// Users load through the identity document adapter (PostgreSQL); phone uniqueness through the users repo.
+jest.mock('../../../identity/queries/auth', () => ({
+  userDocs: { findById: jest.fn(async () => mockState.user) },
+  emailTaken: jest.fn(), companyByAllowedEmail: jest.fn(), companyForAutoJoin: jest.fn(), invites: {},
+}));
+jest.mock('../../../identity', () => ({
+  users: { findByPhone: jest.fn(async () => mockState.phoneOwner) },
+  companies: { findById: jest.fn(async () => null) },
 }));
 jest.mock('../../../../utils/mongooseRetry', () => ({ saveWithRetry: jest.fn(async () => {}) }));
 jest.mock('../../../../utils/sendEmail', () => jest.fn());

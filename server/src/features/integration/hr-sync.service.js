@@ -1,7 +1,6 @@
 const axios = require('axios');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Department = require('../../../models/Department');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
 const { onboardIndividual } = require('../onboarding/onboarding.service');
 const { logSecurityEvent } = require('../security/security.service');
 
@@ -125,8 +124,7 @@ function buildConnector(provider, config) {
 }
 
 async function buildDeptMap(companyId) {
-    const depts = await Department.find({ company: companyId, isActive: true })
-        .select('_id name').lean();
+    const depts = await org.departments.find({ company: companyId, isActive: true }, { members: false });
     return new Map(depts.map(d => [d.name.toLowerCase().trim(), d._id.toString()]));
 }
 
@@ -155,10 +153,10 @@ async function runHrSync(companyId, provider, config) {
         const deptMap = await buildDeptMap(companyId);
 
         
-        const existingUsers = await User.find({
+        const existingUsers = (await org.users.find({
             companyId,
             accountStatus: { $ne: 'removed' },
-        }).select('_id email accountStatus username jobTitle departments scimExternalId').lean();
+        }, { org: true })).map((u) => ({ ...u, scimExternalId: u.profile?.scimExternalId || null }));
 
         const byExtId = new Map(
             existingUsers
@@ -174,7 +172,7 @@ async function runHrSync(companyId, provider, config) {
                 
                 if (emp.status === 'terminated') {
                     if (existing && existing.accountStatus !== 'suspended') {
-                        await User.findByIdAndUpdate(existing._id, { accountStatus: 'suspended' });
+                        await org.updateUser(existing._id, { accountStatus: 'suspended' });
                         report.disabled++;
                         logSecurityEvent({
                             companyId,
@@ -206,9 +204,9 @@ async function runHrSync(companyId, provider, config) {
                     });
 
                     
-                    const created = await User.findOne({ email: emp.email }).lean();
+                    const created = await identity.users.findByEmail(emp.email);
                     if (created && emp.externalId) {
-                        await User.findByIdAndUpdate(created._id, { scimExternalId: emp.externalId });
+                        await org.updateUser(created._id, { profile: { $merge: true, scimExternalId: emp.externalId } });
                     }
 
                     report.created++;
@@ -226,11 +224,11 @@ async function runHrSync(companyId, provider, config) {
                     updates.jobTitle = emp.jobTitle;
                 }
                 if (emp.externalId && emp.externalId !== existing.scimExternalId) {
-                    updates.scimExternalId = emp.externalId;
+                    updates.profile = { $merge: true, scimExternalId: emp.externalId };
                 }
 
                 if (Object.keys(updates).length > 0) {
-                    await User.findByIdAndUpdate(existing._id, updates);
+                    await org.updateUser(existing._id, updates);
                     report.updated++;
                 }
 

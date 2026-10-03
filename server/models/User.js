@@ -395,4 +395,7 @@ function stripSensitive(doc, ret) {
 UserSchema.set('toJSON', { transform: stripSensitive });
 UserSchema.statics.SENSITIVE_FIELDS = SENSITIVE_TOP_LEVEL_FIELDS;
 
+// Tenant-first index: company member lists, SCIM sync and per-company exports filter on it.
+UserSchema.index({ companyId: 1, accountStatus: 1 });
+
 module.exports = mongoose.model("User", UserSchema);

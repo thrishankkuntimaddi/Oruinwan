@@ -1,4 +1,5 @@
 const HistoryLog = require('../../../models/HistoryLog');
+const { hydrate, userSelect } = require('../../identity/hydrate');
 
 async function getCompanyAuditLogs(companyId, filters = {}) {
     const {
@@ -27,8 +28,8 @@ async function getCompanyAuditLogs(companyId, filters = {}) {
         .sort({ timestamp: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
-        .populate('user', 'username email profilePicture')
         .lean();
+    await hydrate(logs, { user: userSelect('username email profilePicture') });
 
     const total = await HistoryLog.countDocuments(query);
 
@@ -45,8 +46,8 @@ async function getCompanyAuditLogs(companyId, filters = {}) {
 async function exportAuditLogs(companyId, format) {
     const logs = await HistoryLog.find({ company: companyId })
         .sort({ timestamp: -1 })
-        .populate('user', 'username email')
         .lean();
+    await hydrate(logs, { user: userSelect('username email') });
 
     if (format === 'csv') {
         const fields = ['Timestamp', 'User', 'Action', 'Description', 'IP Address'];
@@ -108,8 +109,8 @@ async function getComplianceLogs(companyId, filters = {}) {
         .sort({ timestamp: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
-        .populate('user', 'username email profilePicture')
         .lean();
+    await hydrate(logs, { user: userSelect('username email profilePicture') });
 
     const total = await HistoryLog.countDocuments(query);
 

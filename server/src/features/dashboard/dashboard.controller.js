@@ -1,5 +1,5 @@
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
 const Message = require("../../modules/messages/message.model.js");
 const _Channel = require("../channels/channel.model.js");
 const analyticsService = require('../analytics/analytics.service');
@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 const isCoOwnerOf = (user) => !!(user && user.coOwnerOf && user.companyId && String(user.coOwnerOf) === String(user.companyId));
 
 async function _resolveCompanyId(userId) {
-    const user = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
+    const user = await identity.users.findById(userId);
     if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
     return { companyId: user.companyId?.toString(), companyRole: user.companyRole, isCoOwner: isCoOwnerOf(user) };
 }
@@ -19,7 +19,7 @@ exports.getDashboardMetrics = async (req, res) => {
         const { companyId } = req.params;
         const userId = req.user.sub;
 
-        const requestingUser = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
+        const requestingUser = await identity.users.findById(userId);
         if (!requestingUser) return res.status(401).json({ message: 'User not found' });
         if (!requestingUser.companyId || requestingUser.companyId.toString() !== String(companyId)) return res.status(403).json({ message: 'Access denied' });
 
@@ -31,12 +31,12 @@ exports.getDashboardMetrics = async (req, res) => {
         const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
         const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const workspaces = await Workspace.find({ company: companyId }).lean();
+        const workspaces = await org.workspaces.find({ company: companyId });
         const workspaceIds = workspaces.map(w => w._id);
 
         const [totalUsers, activeUsers, messagesToday, workspaceHealthData] = await Promise.all([
-            User.countDocuments({ companyId }),
-            User.countDocuments({ companyId, $or: [{ isOnline: true }, { lastActivityAt: { $gte: sevenDaysAgo } }] }),
+            org.users.count({ companyId }),
+            org.users.count({ companyId, $or: [{ isOnline: true }, { lastActivityAt: { $gte: sevenDaysAgo } }] }),
             Message.countDocuments({ workspace: { $in: workspaceIds }, createdAt: { $gte: todayStart } }),
             Promise.all(workspaces.map(async ws => {
                 const lastMessage = await Message.findOne({ workspace: ws._id }).sort({ createdAt: -1 }).lean();
@@ -52,12 +52,12 @@ exports.getDashboardMetrics = async (req, res) => {
                     else if (diffHours < 24) lastActivity = `${diffHours}h ago`;
                     else lastActivity = `${diffDays}d ago`;
                 }
-                return { _id: ws._id, name: ws.name, memberCount: ws.members?.length || 0, lastActivity, isInactive: messageCount === 0, messageCount, openTasks: 0 };
+                return { _id: ws._id, name: ws.name, memberCount: (ws.members || []).filter((m) => m.status === 'active').length, lastActivity, isInactive: messageCount === 0, messageCount, openTasks: 0 };
             }))
         ]);
 
-        const pendingInvites = await User.find({ companyId, accountStatus: { $in: ['pending', 'invited'] } }).select('email createdAt').lean();
-        const recentlyJoined = await User.find({ companyId, createdAt: { $gte: sevenDaysAgo } }).select('username email profilePicture createdAt').sort({ createdAt: -1 }).limit(5).lean();
+        const pendingInvites = await org.users.find({ companyId, accountStatus: { $in: ['pending', 'invited'] } }, { select: 'email createdAt' });
+        const recentlyJoined = await org.users.find({ companyId, createdAt: { $gte: sevenDaysAgo } }, { select: 'username email profilePicture createdAt', sort: { createdAt: -1 }, limit: 5 });
 
         return res.json({
             snapshot: { totalUsers, activeUsers, totalWorkspaces: workspaces.length, openTasks: 0 },
@@ -82,8 +82,8 @@ exports.getEmployeeDashboard = async (req, res) => {
 
         if (targetId !== callerId) {
             const [caller, target] = await Promise.all([
-                User.findById(callerId).select('companyId companyRole coOwnerOf').lean(),
-                User.findById(targetId).select('companyId').lean(),
+                identity.users.findById(callerId),
+                identity.users.findById(targetId),
             ]);
             const isAdmin = caller && (['owner', 'admin'].includes(caller.companyRole) || isCoOwnerOf(caller));
             if (!isAdmin || !caller.companyId || !target || String(target.companyId) !== String(caller.companyId)) {
@@ -91,15 +91,15 @@ exports.getEmployeeDashboard = async (req, res) => {
             }
         }
 
-        const Task = require('../../../models/Task');
+        const Tasks = require('../tasks/tasks.query');
         const Note = require('../../../models/Note');
         const Update = require('../../../models/Update');
         const uid = new mongoose.Types.ObjectId(targetId);
         const taskFilter = { deleted: { $ne: true }, $or: [{ assignedTo: uid }, { createdBy: uid }] };
         const [myTasks, totalTasks, completedTasks, myNotes, totalNotes, recentUpdates] = await Promise.all([
-            Task.find(taskFilter).select('title status priority dueDate workspace updatedAt').sort({ updatedAt: -1 }).limit(10).lean(),
-            Task.countDocuments(taskFilter),
-            Task.countDocuments({ ...taskFilter, status: 'done' }),
+            Tasks.find(taskFilter, { select: 'title status priority dueDate workspace updatedAt', sort: { updatedAt: -1 }, limit: 10 }),
+            Tasks.countDocuments(taskFilter),
+            Tasks.countDocuments({ ...taskFilter, status: 'done' }),
             Note.find({ owner: uid, isArchived: { $ne: true } }).select('title type updatedAt workspace').sort({ updatedAt: -1 }).limit(10).lean(),
             Note.countDocuments({ owner: uid }),
             Update.find({ postedBy: uid }).sort({ createdAt: -1 }).limit(5).lean(),

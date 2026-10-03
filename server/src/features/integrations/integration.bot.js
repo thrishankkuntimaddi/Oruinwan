@@ -15,7 +15,8 @@
 
 const Message = require('../../modules/messages/message.model.js');
 const Channel = require('../channels/channel.model.js');
-const User = require('../../../models/User');
+const { upsertSystemUser } = require('../../identity/queries/security');
+const { hydrate, USER_MIN, userSelect } = require('../../identity/hydrate');
 const messagesService = require('../../modules/messages/messages.service');
 const { encryptForConversation } = require('../../modules/conversations/cryptoUtils');
 const logger = require('../../../utils/logger');
@@ -35,20 +36,8 @@ function getBotUser(provider) {
   const def = BOTS[provider];
   if (!def) return Promise.reject(new Error(`No bot for provider ${provider}`));
   if (!botPromises.has(provider)) {
-    const p = User.findOneAndUpdate(
-      { email: def.email },
-      {
-        $setOnInsert: {
-          username: def.username,
-          email: def.email,
-          roles: [BOT_ROLE],
-          profilePicture: def.avatar,
-          accountStatus: 'active',
-          passwordHash: null,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    ).lean().catch((err) => { botPromises.delete(provider); throw err; });
+    const p = upsertSystemUser({ email: def.email, username: def.username, roles: [BOT_ROLE], profilePicture: def.avatar })
+      .catch((err) => { botPromises.delete(provider); throw err; });
     botPromises.set(provider, p);
   }
   return botPromises.get(provider);
@@ -115,8 +104,7 @@ async function upsertCard({ workspaceId, channelId, provider, card, summary, ded
     existing.markModified('integration');
     existing.version = (existing.version || 1) + 1;
     await existing.save();
-    await existing.populate('sender', 'username email profilePicture');
-    if (io) io.to(`channel:${channel._id}`).emit('message:edited', existing.toObject());
+    if (io) io.to(`channel:${channel._id}`).emit('message:edited', await hydrate(existing.toObject(), { sender: userSelect('username email profilePicture') }));
     return { message: existing, created: false, previous };
   }
 
@@ -156,9 +144,10 @@ async function postThreadReply({ parent, senderId, text, io }) {
     company: parent.company,
     channel: channelId,
   });
-  await reply.populate('sender', '_id username profilePicture');
+  // Senders live in PostgreSQL: attach them to the plain objects instead of populate().
+  const replyObj = await hydrate(reply.toObject(), { sender: USER_MIN });
   const updatedParent = await Message.findByIdAndUpdate(parent._id, { $inc: { replyCount: 1 }, $set: { lastReplyAt: new Date() } }, { new: true })
-    .populate('sender', '_id username profilePicture').lean();
+    .lean().then((doc) => hydrate(doc, { sender: USER_MIN }));
 
   if (io) {
     const room = `channel:${channelId}`;
@@ -168,7 +157,7 @@ async function postThreadReply({ parent, senderId, text, io }) {
         replyCount: 1, lastReplyAt: new Date().toISOString(), parentMessage: updatedParent,
       });
     }
-    io.to(room).emit('thread-reply', { parentId: String(parent._id), reply: reply.toObject() });
+    io.to(room).emit('thread-reply', { parentId: String(parent._id), reply: replyObj });
     io.to(room).emit('message-updated', { messageId: String(parent._id), updates: { replyCount: updatedParent?.replyCount }, fullMessage: updatedParent });
   }
   return reply;

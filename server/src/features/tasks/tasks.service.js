@@ -3,8 +3,10 @@ const mongoose = require('mongoose');
 
 const Task = require('../../../models/Task');
 const TaskActivity = require('../../../models/TaskActivity');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const { hydrateTaskUsers, hydrateTaskWorkspaces } = require('./tasks.hydrate');
+
+// Users and workspaces (with their memberships) live in PostgreSQL: src/identity.
+const identity = () => require('../../identity');
 const Channel = require("../channels/channel.model.js");
 const Message = require("../../modules/messages/message.model.js");
 
@@ -16,6 +18,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 const policy = require('./tasks.policy');
 const { normalizeAttachments } = require('./tasks.validator');
 const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
+const { tasksStore } = require('./tasks.store');
 const {
     httpError,
     isObjectId,
@@ -55,10 +58,10 @@ function _isWorkspaceAdmin(workspace, userId) {
 /** 400 invalid id, 404 unknown workspace, 403 not an active member. */
 async function _validateWorkspaceMember(userId, workspaceId) {
     if (!isObjectId(String(workspaceId))) throw httpError(400, 'Invalid workspace ID');
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace) throw httpError(404, 'Workspace not found');
-    if (!isActiveMember(workspace, userId)) throw httpError(403, 'You are not a member of this workspace');
-    return workspace;
+    const access = await identity().workspaces.membership(workspaceId, userId);
+    if (!access) throw httpError(404, 'Workspace not found');
+    if (!access.member) throw httpError(403, 'You are not a member of this workspace');
+    return access.workspace;
 }
 
 async function _getUserChannels(userId, workspaceId) {
@@ -84,7 +87,7 @@ async function _loadTaskForUser(userId, taskId, { allowDeleted = false, allowMan
     let userChannels = [];
     let isManager = false;
     if (task.workspace) {
-        workspace = await Workspace.findById(task.workspace);
+        workspace = await identity().workspaces.findById(task.workspace);
         if (!workspace) throw httpError(404, 'Workspace for this task not found');
         if (!isActiveMember(workspace, userId)) throw httpError(403, 'You are not a member of this workspace');
         isManager = _isWorkspaceAdmin(workspace, userId);
@@ -172,10 +175,32 @@ function _assertActiveMembers(workspace, ids) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Store switch: TASKS_STORE=pg routes the ported functions through
+// tasks.service.pg.js (same rules and shapes, PostgreSQL storage). Every
+// public function has a PostgreSQL implementation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _pgService = null;
+function pg() {
+    if (!_pgService) {
+        _pgService = require('./tasks.service.pg').createPgTaskService({
+            validateWorkspaceMember: _validateWorkspaceMember,
+            getUserChannels: _getUserChannels,
+            isWorkspaceAdmin: _isWorkspaceAdmin,
+            postChannelNotice: _postChannelNotice,
+            assertActiveMembers: _assertActiveMembers,
+        });
+    }
+    return _pgService;
+}
+const onPg = () => tasksStore() === 'pg';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Queries
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getTasks(userId, filters = {}) {
+    if (onPg()) return pg().getTasks(userId, filters);
     const { workspaceId, status, assignedTo, priority } = filters;
     const includeDeleted = filters.includeDeleted === true || filters.includeDeleted === 'true';
     const includeSubtasks = filters.includeSubtasks === true || filters.includeSubtasks === 'true';
@@ -205,19 +230,22 @@ async function getTasks(userId, filters = {}) {
     const tasks = await populateTask(Task.find(query))
         .sort({ dueDate: 1, priority: -1, createdAt: -1 })
         .lean();
+    await hydrateTaskUsers(tasks);
 
     return { tasks: tasks.map(serializeTask) };
 }
 
 async function getTask(userId, taskId) {
+    if (onPg()) return pg().getTask(userId, taskId);
     const { task } = await _loadTaskForUser(userId, taskId, { allowDeleted: true });
     return { task: await loadTaskForClient(task._id) };
 }
 
 async function getMyTasks(userId, filters = {}) {
+    if (onPg()) return pg().getMyTasks(userId, filters);
     const { status, priority } = filters;
 
-    const user = await User.findById(userId);
+    const user = await identity().users.findById(userId);
     if (!user) throw httpError(404, 'User not found');
 
     const query = {
@@ -229,13 +257,13 @@ async function getMyTasks(userId, filters = {}) {
     if (typeof priority === 'string' && priority) query.priority = priority;
 
     const tasks = await Task.find(query)
-        .populate("createdBy", "username profilePicture")
-        .populate("workspace", "name icon")
         .populate("channel", "name")
-        .populate("transferRequest.requestedTo", "username profilePicture")
-        .populate("transferRequest.requestedBy", "username profilePicture")
         .sort({ dueDate: 1, priority: -1 })
         .lean();
+    await Promise.all([
+        hydrateTaskUsers(tasks, ['createdBy', 'transferRequest.requestedTo', 'transferRequest.requestedBy']),
+        hydrateTaskWorkspaces(tasks),
+    ]);
 
     return { tasks };
 }
@@ -245,6 +273,7 @@ async function getMyTasks(userId, filters = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function createTask(userId, taskData, io, req) {
+    if (onPg()) return pg().createTask(userId, taskData, io, req);
     const {
         workspaceId,
         title,
@@ -272,7 +301,7 @@ async function createTask(userId, taskData, io, req) {
         if (!v.valid) throw httpError(400, v.error);
     }
 
-    const user = await User.findById(userId);
+    const user = await identity().users.findById(userId);
     if (!user) throw httpError(404, 'User not found');
 
     const workspace = await _validateWorkspaceMember(userId, workspaceId);
@@ -374,7 +403,7 @@ async function createTask(userId, taskData, io, req) {
             const assignerUsername = user.username || 'Someone';
             for (const assigneeId of task.assignedTo) {
                 if (assigneeId.toString() === userId.toString()) continue;
-                const assignee = await User.findById(assigneeId).select('email').lean();
+                const assignee = await identity().users.findById(assigneeId);
                 notifEmitter.emit('task.assigned', {
                     io,
                     assigneeId: assigneeId.toString(),
@@ -435,6 +464,7 @@ function _comparable(field, value) {
 }
 
 async function updateTask(userId, taskId, updates, io, req) {
+    if (onPg()) return pg().updateTask(userId, taskId, updates, io, req);
     updates = updates || {};
     const { task, isManager } = await _loadTaskForUser(userId, taskId, { allowManager: true });
 
@@ -506,7 +536,7 @@ async function updateTask(userId, taskId, updates, io, req) {
         if (!policy.canManageAssignees(task, userId, isManager)) {
             throw httpError(403, 'Only task creator or workspace managers can manage assignees');
         }
-        const workspace = await Workspace.findById(task.workspace);
+        const workspace = await identity().workspaces.findById(task.workspace);
         const oldAssignees = task.assignedTo.map(id => id.toString());
         const newAssignees = [...new Set((Array.isArray(updates.assignedTo) ? updates.assignedTo : [updates.assignedTo])
             .map(id => String(id)))];
@@ -580,7 +610,7 @@ async function updateTask(userId, taskId, updates, io, req) {
     if (changes.length > 0) {
         (async () => {
             const notificationService = require('../../modules/notifications/notificationService');
-            const changer = await User.findById(userId).select('username').lean();
+            const changer = await identity().users.findById(userId);
             const actorUsername = changer?.username || 'Someone';
             const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
             const me = String(userId);
@@ -627,7 +657,7 @@ async function _loadTaskWorkspaceForAdminAction(userId, taskId, { allowDeleted =
     if (!task || (task.deleted && !allowDeleted)) throw httpError(404, 'Task not found');
     let workspace = null;
     if (task.workspace) {
-        workspace = await Workspace.findById(task.workspace);
+        workspace = await identity().workspaces.findById(task.workspace);
         if (!workspace) throw httpError(404, 'Workspace for this task not found');
         if (!isActiveMember(workspace, userId)) throw httpError(403, 'You are not a member of this workspace');
     }
@@ -635,6 +665,7 @@ async function _loadTaskWorkspaceForAdminAction(userId, taskId, { allowDeleted =
 }
 
 async function deleteTask(userId, taskId, io, req) {
+    if (onPg()) return pg().deleteTask(userId, taskId, io, req);
     const { task, isWorkspaceAdmin } = await _loadTaskWorkspaceForAdminAction(userId, taskId, { allowDeleted: false });
     const uid = String(userId);
     const isAssignee = task.assignedTo.some(id => id.toString() === uid);
@@ -666,7 +697,7 @@ async function deleteTask(userId, taskId, io, req) {
 
         (async () => {
             const notificationService = require('../../modules/notifications/notificationService');
-            const actor = await User.findById(userId).select('username').lean();
+            const actor = await identity().users.findById(userId);
             await notificationService.taskRemoved(io, {
                 recipientIds: task.assignedTo.map(String).filter(id => id !== uid),
                 actorUsername: actor?.username || 'Someone',
@@ -691,7 +722,7 @@ async function deleteTask(userId, taskId, io, req) {
 
         await emitToTaskAudience(io, task, "task-deleted", { taskId: String(task._id), deleted: true });
 
-        return { message: "Task deleted successfully" };
+        return { message: "Task deleted successfully", workspaceId: task.workspace ? String(task.workspace._id || task.workspace) : null };
     }
 
     // Assignee hiding a completed task from their own view.
@@ -716,6 +747,7 @@ async function deleteTask(userId, taskId, io, req) {
 }
 
 async function restoreTask(userId, taskId, req) {
+    if (onPg()) return pg().restoreTask(userId, taskId, req);
     const io = req?.io || null;
     const { task, isWorkspaceAdmin } = await _loadTaskWorkspaceForAdminAction(userId, taskId);
 
@@ -764,6 +796,7 @@ async function restoreTask(userId, taskId, req) {
 }
 
 async function permanentDeleteTask(userId, taskId, req) {
+    if (onPg()) return pg().permanentDeleteTask(userId, taskId, req);
     const io = req?.io || null;
     const { task, isWorkspaceAdmin } = await _loadTaskWorkspaceForAdminAction(userId, taskId);
 
@@ -805,6 +838,7 @@ async function permanentDeleteTask(userId, taskId, req) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function revokeTask(userId, taskId, req) {
+    if (onPg()) return pg().revokeTask(userId, taskId, req);
     const io = req?.io || null;
     const { task } = await _loadTaskWorkspaceForAdminAction(userId, taskId, { allowDeleted: false });
 
@@ -869,6 +903,7 @@ function _transferForClient(tr) {
 }
 
 async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
+    if (onPg()) return pg().requestTransfer(userId, taskId, newAssigneeId, note, io, req);
     if (!newAssigneeId) throw httpError(400, 'New assignee ID is required');
     if (!isObjectId(String(newAssigneeId))) throw httpError(400, 'Invalid new assignee ID');
 
@@ -899,8 +934,8 @@ async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
     (async () => {
         const notificationService = require('../../modules/notifications/notificationService');
         const [requester, target] = await Promise.all([
-            User.findById(userId).select('username').lean(),
-            User.findById(newAssigneeId).select('username').lean(),
+            identity().users.findById(userId),
+            identity().users.findById(newAssigneeId),
         ]);
         await notificationService.taskTransfer(io, {
             recipientIds: [String(newAssigneeId), String(task.createdBy || '')].filter(id => id && id !== String(userId)),
@@ -935,6 +970,7 @@ async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
 }
 
 async function handleTransferRequest(userId, taskId, action, io, req) {
+    if (onPg()) return pg().handleTransferRequest(userId, taskId, action, io, req);
     if (!['approve', 'reject'].includes(action)) {
         throw httpError(400, "Invalid action. Use 'approve' or 'reject'");
     }
@@ -969,7 +1005,7 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
 
         (async () => {
             const notificationService = require('../../modules/notifications/notificationService');
-            const approver = await User.findById(userId).select('username').lean();
+            const approver = await identity().users.findById(userId);
             const actorUsername = approver?.username || 'Someone';
             const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
             if (newAssigneeId !== String(userId)) {
@@ -1012,7 +1048,7 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
 
     (async () => {
         const notificationService = require('../../modules/notifications/notificationService');
-        const rejecter = await User.findById(userId).select('username').lean();
+        const rejecter = await identity().users.findById(userId);
         if (requesterId && requesterId !== String(userId)) {
             await notificationService.taskUpdated(io, {
                 recipientIds: [requesterId], actorUsername: rejecter?.username || 'Someone',
@@ -1046,6 +1082,7 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function createSubtask(userId, parentId, subtaskData, io, req) {
+    if (onPg()) return pg().createSubtask(userId, parentId, subtaskData, io, req);
     const { title, description, assignedTo = [], priority, dueDate, tags } = subtaskData;
     if (!title) throw httpError(400, 'Subtask title is required');
 
@@ -1090,7 +1127,7 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
 
     (async () => {
         const notificationService = require('../../modules/notifications/notificationService');
-        const creator = await User.findById(userId).select('username').lean();
+        const creator = await identity().users.findById(userId);
         const actorUsername = creator?.username || 'Someone';
         const me = String(userId);
         const notifyAssignees = subtask.assignedTo.map(String).filter(id => id !== me);
@@ -1111,9 +1148,9 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
     await _logActivity(subtask._id, userId, 'created', { metadata: { parentTaskId: parentTask._id } }, req);
 
     const populatedSubtask = await Task.findById(subtask._id)
-        .populate('createdBy', 'username profilePicture')
-        .populate('assignedTo', 'username profilePicture')
-        .populate('parentTask', 'title');
+        .populate('parentTask', 'title')
+        .lean();
+    if (populatedSubtask) await hydrateTaskUsers([populatedSubtask], ['createdBy', 'assignedTo']);
 
     if (io) {
         const stakeholders = new Set([
@@ -1136,15 +1173,16 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
 }
 
 async function getTaskActivity(userId, taskId, pagination = {}) {
+    if (onPg()) return pg().getTaskActivity(userId, taskId, pagination);
     const { limit = 50, offset = 0 } = pagination;
     await _loadTaskForUser(userId, taskId, { allowDeleted: true });
 
     const activities = await TaskActivity.find({ task: taskId })
-        .populate('user', 'username profilePicture')
         .sort({ createdAt: -1 })
         .limit(parseInt(limit))
         .skip(parseInt(offset))
         .lean();
+    await hydrateTaskUsers(activities, ['user']);
 
     const total = await TaskActivity.countDocuments({ task: taskId });
 
@@ -1164,6 +1202,7 @@ async function getTaskActivity(userId, taskId, pagination = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function addLink(userId, taskId, { linkedTaskId, linkType }) {
+    if (onPg()) return pg().addLink(userId, taskId, { linkedTaskId, linkType });
     if (!LINK_TYPES.includes(linkType)) throw httpError(400, `Invalid linkType. Must be one of: ${LINK_TYPES.join(', ')}`);
     if (!isObjectId(String(linkedTaskId))) throw httpError(400, 'Invalid linkedTaskId');
     if (String(taskId) === String(linkedTaskId)) throw httpError(400, 'A task cannot be linked to itself');
@@ -1194,6 +1233,7 @@ async function addLink(userId, taskId, { linkedTaskId, linkType }) {
 }
 
 async function removeLink(userId, taskId, linkId) {
+    if (onPg()) return pg().removeLink(userId, taskId, linkId);
     const { task } = await _loadTaskForUser(userId, taskId);
     if (!isObjectId(String(linkId))) throw httpError(404, 'Link not found');
 
@@ -1219,6 +1259,7 @@ async function removeLink(userId, taskId, linkId) {
 }
 
 async function addWatcher(userId, taskId) {
+    if (onPg()) return pg().addWatcher(userId, taskId);
     // Watching requires being able to see the task already.
     const { task } = await _loadTaskForUser(userId, taskId);
     if (!task.watchers.map(id => id.toString()).includes(String(userId))) {
@@ -1229,6 +1270,7 @@ async function addWatcher(userId, taskId) {
 }
 
 async function removeWatcher(userId, taskId) {
+    if (onPg()) return pg().removeWatcher(userId, taskId);
     if (!isObjectId(String(taskId))) throw httpError(404, 'Task not found');
     const task = await Task.findById(taskId);
     if (!task) throw httpError(404, 'Task not found');
@@ -1239,6 +1281,7 @@ async function removeWatcher(userId, taskId) {
 }
 
 async function addDependency(userId, taskId, dependencyTaskId) {
+    if (onPg()) return pg().addDependency(userId, taskId, dependencyTaskId);
     if (!isObjectId(String(dependencyTaskId))) throw httpError(400, 'Invalid dependencyTaskId');
     if (String(taskId) === String(dependencyTaskId)) throw httpError(400, 'A task cannot depend on itself');
 
@@ -1267,6 +1310,7 @@ async function addDependency(userId, taskId, dependencyTaskId) {
 }
 
 async function startTimer(userId, taskId) {
+    if (onPg()) return pg().startTimer(userId, taskId);
     const { task } = await _loadTaskForUser(userId, taskId);
 
     const hasOpenSession = task.timeTracking.sessions.some(s => s.start && !s.end);
@@ -1278,6 +1322,7 @@ async function startTimer(userId, taskId) {
 }
 
 async function stopTimer(userId, taskId) {
+    if (onPg()) return pg().stopTimer(userId, taskId);
     const { task } = await _loadTaskForUser(userId, taskId);
 
     const openSession = task.timeTracking.sessions.slice().reverse().find(s => s.start && !s.end);
@@ -1294,6 +1339,7 @@ async function stopTimer(userId, taskId) {
 
 /** Open tasks per assignee, counting only tasks the caller can see. */
 async function getWorkload(userId, workspaceId) {
+    if (onPg()) return pg().getWorkload(userId, workspaceId);
     if (!workspaceId || typeof workspaceId !== 'string') throw httpError(400, 'workspaceId required');
     await _validateWorkspaceMember(userId, workspaceId);
     const userChannels = await _getUserChannels(userId, workspaceId);
@@ -1309,12 +1355,10 @@ async function getWorkload(userId, workspaceId) {
         { $sort: { count: -1 } }
     ]);
 
-    const userIds = result.map(r => r._id);
-    const users = await User.find({ _id: { $in: userIds } })
-        .select('username profilePicture firstName lastName')
-        .lean();
+    const userIds = result.map(r => String(r._id));
+    const users = await identity().users.findManyByIds(userIds);
     const userMap = {};
-    users.forEach(u => { userMap[u._id.toString()] = u; });
+    users.forEach(u => { userMap[String(u._id)] = { _id: String(u._id), username: u.username, profilePicture: u.profilePicture || null }; });
 
     const workload = result.map(r => ({
         userId: r._id,
@@ -1346,6 +1390,7 @@ async function getWorkload(userId, workspaceId) {
  * @returns {Promise<{ task: object|null, statusChanged: boolean, from?: string, to?: string }>}
  */
 async function applyExternalUpdate(taskId, { actorId, link = null, note = null, action = 'integration_event', status = null, onlyFrom = null } = {}, io = null) {
+    if (onPg()) return pg().applyExternalUpdate(taskId, { actorId, link, note, action, status, onlyFrom }, io);
     const task = await Task.findOne({ _id: taskId, deleted: { $ne: true } });
     if (!task) return { task: null, statusChanged: false };
 

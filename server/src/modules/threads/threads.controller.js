@@ -1,3 +1,5 @@
+const { hydrate } = require("../../identity/hydrate");
+const SENDER = { type: 'user', fields: ['username', 'profilePicture'] };
 const logger = require('../../../utils/logger');
 const Message = require("../messages/message.model.js");
 const Channel = require("../../features/channels/channel.model.js");
@@ -37,9 +39,9 @@ exports.getChannelThreads = async (req, res) => {
         }
 
         const threads = await Message.find(query)
-            .populate("sender", "_id username profilePicture")
             .sort({ lastReplyAt: -1, createdAt: -1 }) 
             .lean();
+        await hydrate(threads, { sender: SENDER });
 
         return res.json({
             threads,
@@ -59,13 +61,12 @@ exports.getThread = async (req, res) => {
         const userId = req.user.sub;
 
         
-        const parentMessage = await Message.findById(messageId)
-            .populate("sender", "_id username profilePicture")
-            .lean();
+        const parentMessage = await Message.findById(messageId).lean();
 
         if (!parentMessage) {
             return res.status(404).json({ message: "Message not found" });
         }
+        await hydrate(parentMessage, { sender: SENDER });
 
         
         if (parentMessage.dm) {
@@ -86,9 +87,9 @@ exports.getThread = async (req, res) => {
 
         
         const replies = await Message.find({ parentId: messageId })
-            .populate("sender", "_id username profilePicture")
             .sort({ createdAt: 1 })
             .lean();
+        await hydrate(replies, { sender: SENDER });
 
         
         const followerStrings = (parentMessage.followers || []).map(String);
@@ -111,8 +112,8 @@ exports.getThread = async (req, res) => {
 
         let resolvedBy = null;
         if (parentMessage.resolvedBy) {
-            const User = require("../../../models/User");
-            resolvedBy = await User.findById(parentMessage.resolvedBy).select("_id username").lean();
+            const u = await require("../../identity").users.findById(parentMessage.resolvedBy);
+            resolvedBy = u ? { _id: u._id, username: u.username } : null;
         }
 
         return res.json({
@@ -183,7 +184,8 @@ exports.postThreadReply = async (req, res) => {
         const reply = await Message.create(replyData);
 
         
-        await reply.populate("sender", "_id username profilePicture");
+        const replyOut = reply.toObject();
+        await hydrate(replyOut, { sender: SENDER });
 
         
         await Message.findByIdAndUpdate(messageId, {
@@ -192,9 +194,8 @@ exports.postThreadReply = async (req, res) => {
         });
 
         
-        const updatedParent = await Message.findById(messageId)
-            .populate("sender", "_id username profilePicture")
-            .lean();
+        const updatedParent = await Message.findById(messageId).lean();
+        if (updatedParent) await hydrate(updatedParent, { sender: SENDER });
 
         
         const io = req.app?.get("io");
@@ -219,7 +220,7 @@ exports.postThreadReply = async (req, res) => {
             if (parentMessage.channel) {
                 io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
                     parentId: messageId,
-                    reply: reply.toObject(),
+                    reply: replyOut,
                     clientTempId
                 });
 
@@ -231,7 +232,7 @@ exports.postThreadReply = async (req, res) => {
             } else if (parentMessage.dm) {
                 io.to(`dm:${parentMessage.dm}`).emit("thread-reply", {
                     parentId: messageId,
-                    reply: reply.toObject(),
+                    reply: replyOut,
                     clientTempId
                 });
 
@@ -275,7 +276,7 @@ exports.postThreadReply = async (req, res) => {
                     } catch (_) {  }
                 }
 
-                const senderUsername = reply.sender?.username || 'Someone';
+                const senderUsername = replyOut.sender?.username || 'Someone';
 
                 
                 await notificationService.threadReply(io, {
@@ -294,7 +295,7 @@ exports.postThreadReply = async (req, res) => {
             }
         })();
 
-        return res.status(201).json({ reply });
+        return res.status(201).json({ reply: replyOut });
     } catch (err) {
         logger.error("POST THREAD REPLY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
@@ -395,9 +396,9 @@ exports.summarizeThread = async (req, res) => {
         
         const replies = await Message.find({ parentId: messageId })
             .select('text sender')
-            .populate('sender', 'username')
             .sort({ createdAt: 1 })
             .lean();
+        await hydrate(replies, { sender: { type: 'user', fields: ['username'] } });
 
         const replyObjs = replies
             .filter(r => r.text) 

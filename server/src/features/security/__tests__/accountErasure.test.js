@@ -3,10 +3,14 @@
 const UID = 'd00000000000000000000001';
 const users = {};
 
-jest.mock('../../../../models/User', () => ({
-  findById: jest.fn((id) => ({ select: () => ({ lean: async () => users[String(id)] || null }) })),
-  updateOne: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
-  updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  toUser: (u) => u,
+  findById: jest.fn(async (id) => users[String(id)] || null),
+}));
+jest.mock('../../../identity/queries/security', () => ({
+  ...jest.requireActual('../../../identity/queries/security'),
+  eraseIdentity: jest.fn().mockResolvedValue({ workspacesLeft: 1, userDeleted: 1 }),
 }));
 jest.mock('../../../../models/AuditLog', () => ({ create: jest.fn().mockResolvedValue({}) }));
 jest.mock('../../../../models/Task', () => ({
@@ -15,23 +19,17 @@ jest.mock('../../../../models/Task', () => ({
 jest.mock('../../../../models/DMSession', () => ({ deleteMany: jest.fn(), updateMany: jest.fn() }));
 jest.mock('../../../modules/messages/message.model', () => ({ deleteMany: jest.fn(), updateMany: jest.fn() }));
 jest.mock('../../channels/channel.model', () => ({ updateMany: jest.fn().mockResolvedValue({ modifiedCount: 2 }) }));
-jest.mock('../../../../models/Workspace', () => ({
-  updateMany: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
-  updateOne: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
-}));
 const privateNotes = [{ _id: 'n1' }];
 jest.mock('../../../../models/Note', () => ({
   find: jest.fn(() => ({ select: () => ({ lean: async () => privateNotes }) })),
   deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 }),
 }));
 jest.mock('../../../models/AIMemory', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 3 }) }));
-jest.mock('../../../models/AIEmbedding', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 }) }));
+jest.mock('../../ai/ai.knowledge.service', () => ({ forgetSources: jest.fn().mockResolvedValue(1) }));
 jest.mock('../../../modules/notifications/notificationPreference.model', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }) }));
-jest.mock('../../../models/UserDeviceSession', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }) }));
-jest.mock('../../../../models/UserSession', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }) }));
 jest.mock('../../../socket/getIO', () => ({ getIO: () => null }));
 
-const User = require('../../../../models/User');
+const { eraseIdentity } = require('../../../identity/queries/security');
 const Task = require('../../../../models/Task');
 const DMSession = require('../../../../models/DMSession');
 const Message = require('../../../modules/messages/message.model');
@@ -52,11 +50,11 @@ function fakeRes() {
 
 beforeEach(() => {
   for (const k of Object.keys(users)) delete users[k];
-  users[UID] = { _id: UID, userType: 'personal', companyId: null, legalHold: false, personalWorkspace: 'w1', profilePictureGcsPath: null };
+  users[UID] = { _id: UID, userType: 'personal', companyId: null, legalHold: { enabled: false }, personalWorkspace: 'w1', profilePictureGcsPath: null };
 });
 
 describe('eraseAccount', () => {
-  test('anonymises the user and never deletes other people\'s tasks, DMs or messages', async () => {
+  test('deletes the identity rows and never deletes other people\'s tasks, DMs or messages', async () => {
     const result = await eraseAccount(UID, {});
     expect(result.erased).toBe(true);
 
@@ -65,15 +63,9 @@ describe('eraseAccount', () => {
     expect(DMSession.deleteMany).not.toHaveBeenCalled();
     expect(Message.deleteMany).not.toHaveBeenCalled();
 
-    const [filter, update] = User.updateOne.mock.calls[0];
-    expect(filter).toEqual({ _id: UID });
-    expect(update.$set.email).toBe(`deleted_${UID}@deleted.oruinwan.invalid`);
-    expect(update.$set.username).toBe('[Deleted User]');
-    expect(update.$set).toMatchObject({
-      passwordHash: null, emails: [], refreshTokens: [], twoFactorEnabled: false,
-      twoFactorSecret: null, ssoId: null, blockedUsers: [], accountStatus: 'removed', isActive: false,
-    });
-    expect(update.$unset).toMatchObject({ phone: 1, googleId: 1, profilePicture: 1 });
+    // Identity goes in one PostgreSQL transaction, after the document cleanup.
+    expect(eraseIdentity).toHaveBeenCalledWith(UID, { personalWorkspaceId: 'w1' });
+    expect(result.cleanup).toMatchObject({ userDeleted: 1, aiMemoriesDeleted: 3 });
 
     expect(AIMemory.deleteMany).toHaveBeenCalledWith({ user: UID });
     // Only the user's private notes are deleted, scoped to them as owner.
@@ -86,17 +78,16 @@ describe('eraseAccount', () => {
   test('refuses company-managed accounts', async () => {
     users[UID].companyId = 'c1';
     await expect(eraseAccount(UID, {})).rejects.toMatchObject({ status: 403, extra: { code: 'COMPANY_MANAGED' } });
-    expect(User.updateOne).not.toHaveBeenCalled();
+    expect(eraseIdentity).not.toHaveBeenCalled();
   });
 
   test('refuses accounts under legal hold', async () => {
-    users[UID].legalHold = true;
-    users[UID].legalHoldReason = 'Litigation';
+    users[UID].legalHold = { enabled: true, reason: 'Litigation' };
     const err = await eraseAccount(UID, {}).catch(e => e);
     expect(err).toBeInstanceOf(ErasureError);
     expect(err.status).toBe(403);
     expect(err.extra.reason).toBe('Litigation');
-    expect(User.updateOne).not.toHaveBeenCalled();
+    expect(eraseIdentity).not.toHaveBeenCalled();
   });
 });
 

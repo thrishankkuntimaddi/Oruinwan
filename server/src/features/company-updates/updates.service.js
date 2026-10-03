@@ -1,5 +1,9 @@
 const Update = require('../../../models/Update');
-const User = require('../../../models/User');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
+
+const POSTER = { type: 'user', fields: ['username', 'profilePicture', 'companyRole'] };
+const MENTION = { type: 'user', fields: ['username', 'profilePicture'] };
 const ROOMS = require('../../shared/utils/rooms');
 
 function emit(io, companyId, event, payload) {
@@ -10,7 +14,7 @@ function emit(io, companyId, event, payload) {
 async function postUpdate({ companyId, posterId, title, content, type, priority, visibility, targetDepartment, attachments, mentions, io }) {
 
     const ALLOWED_ROLES = ['manager', 'admin', 'owner'];
-    const poster = await User.findOne({ _id: posterId, companyId }).select('companyRole username profilePicture').lean();
+    const poster = await org.users.findOne({ _id: posterId, companyId });
 
     if (!poster) {
         const err = new Error('Poster not found in this company.');
@@ -37,10 +41,8 @@ async function postUpdate({ companyId, posterId, title, content, type, priority,
         mentions: mentions || [],
     });
 
-    const populated = await Update.findById(update._id)
-        .populate('postedBy', 'username profilePicture companyRole')
-        .populate('mentions', 'username profilePicture')
-        .lean();
+    const populated = await Update.findById(update._id).lean();
+    await hydrate(populated, { postedBy: POSTER, mentions: MENTION });
 
     emit(io, companyId, 'company:update:created', populated);
     return populated;
@@ -60,12 +62,11 @@ async function getUpdates(companyId, { type, priority, search, limit = 50, page 
 
     const [updates, total] = await Promise.all([
         Update.find(filter)
-            .populate('postedBy', 'username profilePicture companyRole')
-            .populate('mentions', 'username profilePicture')
             .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
-            .lean(),
+            .lean()
+            .then((rows) => hydrate(rows, { postedBy: POSTER, mentions: MENTION })),
         Update.countDocuments(filter),
     ]);
 

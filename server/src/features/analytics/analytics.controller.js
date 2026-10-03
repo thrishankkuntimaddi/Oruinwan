@@ -1,7 +1,5 @@
 const logger = require('../../../utils/logger');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
-const _Department = require('../../../models/Department');
+const org = require('../../identity/queries/org');
 const Message = require("../../modules/messages/message.model.js");
 const Channel = require("../channels/channel.model.js");
 const _DMSession = require('../../../models/DMSession');
@@ -22,12 +20,13 @@ exports.getCompanyAnalytics = async (req, res) => {
         
 
         
-        const allUsers = await User.find({ companyId }).lean();
+        const allUsers = await org.users.find({ companyId }, { select: 'isOnline lastActivityAt createdAt' });
         const totalUsers = allUsers.length;
         const activeUsers = allUsers.filter(u => u.isOnline || (u.lastActivityAt && new Date(u.lastActivityAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))).length;
 
         
-        const workspaces = await Workspace.find({ company: companyId }).lean();
+        const workspaces = (await org.workspaces.find({ company: companyId }))
+            .map((w) => ({ ...w, members: (w.members || []).filter((m) => m.status === 'active') }));
         const totalWorkspaces = workspaces.length;
 
         

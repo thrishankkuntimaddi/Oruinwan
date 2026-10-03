@@ -24,6 +24,9 @@ let _orchestrator = null;
 let _options = {};
 
 function loadServerActions() {
+  // As its own process the AI has no database: actions are injected through
+  // configure({ actions }) (ai/server.js proxies them to the API) instead.
+  if (process.env.AI_STANDALONE === '1') return {};
   try {
     return require('../../server/utils/aiActions');
   } catch (err) {
@@ -32,7 +35,7 @@ function loadServerActions() {
   }
 }
 
-/** Configure the shared orchestrator before first use (e.g. usage logging). */
+/** Configure the shared orchestrator before first use (usage logging, injected tool actions). */
 function configure(options = {}) {
   _options = { ..._options, ...options };
   _orchestrator = null;
@@ -40,7 +43,10 @@ function configure(options = {}) {
 
 /** Lazily build the shared orchestrator (or replace it, mainly for tests). */
 function getOrchestrator() {
-  if (!_orchestrator) _orchestrator = new Orchestrator({ actions: loadServerActions(), ..._options });
+  if (!_orchestrator) {
+    const { actions, ...rest } = _options;
+    _orchestrator = new Orchestrator({ actions: actions || loadServerActions(), ...rest });
+  }
   return _orchestrator;
 }
 

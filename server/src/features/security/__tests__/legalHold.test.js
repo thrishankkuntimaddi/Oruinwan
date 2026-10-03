@@ -16,37 +16,31 @@ const ID = {
   targetB: 'b00000000000000000000001',
   staff: 'c00000000000000000000001',
 };
+// Legal hold is stored as users.legal_hold jsonb: { enabled, reason, setBy, at }.
 const mockUsers = {
-  [ID.adminA]: { _id: ID.adminA, companyId: 'A', companyRole: 'admin', roles: ['user'] },
-  [ID.memberA]: { _id: ID.memberA, companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: false },
-  [ID.targetA]: { _id: ID.targetA, companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: true, legalHoldReason: 'Litigation' },
-  [ID.targetB]: { _id: ID.targetB, companyId: 'B', companyRole: 'member', roles: ['user'], legalHold: false },
-  [ID.staff]: { _id: ID.staff, companyId: null, companyRole: 'member', roles: ['chttrix_admin'] },
+  [ID.adminA]: { _id: ID.adminA, username: 'adminA', companyId: 'A', companyRole: 'admin', roles: ['user'] },
+  [ID.memberA]: { _id: ID.memberA, username: 'memberA', companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: { enabled: false } },
+  [ID.targetA]: { _id: ID.targetA, username: 'targetA', companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: { enabled: true, reason: 'Litigation' } },
+  [ID.targetB]: { _id: ID.targetB, username: 'targetB', companyId: 'B', companyRole: 'member', roles: ['user'], legalHold: { enabled: false } },
+  [ID.staff]: { _id: ID.staff, username: 'staff', companyId: null, companyRole: 'member', roles: ['chttrix_admin'] },
 };
 
-function mockQuery(value) {
-  const q = {
-    select: () => q,
-    populate: () => q,
-    lean: async () => value,
-    then: (resolve, reject) => Promise.resolve(value).then(resolve, reject),
-  };
-  return q;
-}
-
-jest.mock('../../../../models/User', () => ({
-  SENSITIVE_FIELDS: ['passwordHash'],
-  findById: jest.fn((id) => mockQuery(mockUsers[String(id)] || null)),
-  findByIdAndUpdate: jest.fn((id, update) => {
+// Every identity repository resolves users through users.repo, so mocking it covers them all.
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  toUser: (u) => u,
+  findById: jest.fn(async (id) => (mockUsers[String(id)] ? { ...mockUsers[String(id)] } : null)),
+  findManyByIds: jest.fn(async (ids) => new Map(ids.filter((i) => mockUsers[i]).map((i) => [i, mockUsers[i]]))),
+  update: jest.fn(async (id, patch) => {
     const u = mockUsers[String(id)];
-    if (!u) return mockQuery(null);
-    Object.assign(u, update);
-    return mockQuery(u);
+    if (!u) return null;
+    Object.assign(u, patch);
+    return { ...u };
   }),
 }));
 jest.mock('../../../../models/AuditLog', () => ({ create: jest.fn().mockResolvedValue({}) }));
 
-const User = require('../../../../models/User');
+const users = require('../../../identity/users.repo');
 const router = require('../gdpr.routes');
 
 function call(method, path, userId, body) {
@@ -89,8 +83,8 @@ describe('legal hold authorization', () => {
     expect(read.status).toBe(403);
     const write = await call('PATCH', `/api/compliance/legal-hold/${ID.targetA}`, ID.memberA, { legalHold: false });
     expect(write.status).toBe(403);
-    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
-    expect(mockUsers[ID.targetA].legalHold).toBe(true);
+    expect(users.update).not.toHaveBeenCalled();
+    expect(mockUsers[ID.targetA].legalHold.enabled).toBe(true);
   });
 
   test('a user cannot set a hold on themself', async () => {

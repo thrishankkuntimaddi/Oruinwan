@@ -2,12 +2,12 @@
 
 /** GET /api/users/:id/card and /api/users/card?username= (mention profile popover). */
 
-jest.mock('../../../../models/User', () => ({ findById: jest.fn(), findOne: jest.fn() }));
-jest.mock('../../../../models/Workspace', () => ({ findById: jest.fn(), findOne: jest.fn() }));
+jest.mock('../../../identity', () => ({ users: { findById: jest.fn() }, workspaces: { findById: jest.fn() } }));
+jest.mock('../../../shared/postgres', () => ({ query: jest.fn() }));
 jest.mock('../../presence/presence.service', () => ({ getPresence: jest.fn(() => null) }));
 
-const User = require('../../../../models/User');
-const Workspace = require('../../../../models/Workspace');
+const { users: usersRepo, workspaces } = require('../../../identity');
+const { query } = require('../../../shared/postgres');
 const presence = require('../../presence/presence.service');
 const ctrl = require('../userCard.controller');
 
@@ -18,14 +18,6 @@ const BOB = oid(12);
 const CAROL = oid(13);   // same company as Alice, no shared workspace
 const MALLORY = oid(99); // shares nothing
 const COMPANY = oid(500);
-
-// A mongoose-ish query: every builder method returns itself, lean() resolves.
-const q = (value) => {
-    const chain = {};
-    ['select', 'populate', 'limit', 'sort'].forEach((k) => { chain[k] = jest.fn(() => chain); });
-    chain.lean = jest.fn(() => Promise.resolve(value));
-    return chain;
-};
 
 const users = {
     [ALICE]: { _id: ALICE, username: 'alice', email: 'alice@x.io', companyId: COMPANY },
@@ -73,18 +65,23 @@ async function byName(viewer, username, workspaceId) {
 }
 
 beforeEach(() => {
-    User.findById.mockImplementation((id) => q(users[String(id)] || null));
-    Workspace.findById.mockImplementation((id) => q(String(id) === WS ? ws : null));
-    // Shared-workspace lookup: Alice and Bob share WS.
-    Workspace.findOne.mockImplementation((filter) => {
-        const ids = filter.$and.map((c) => String(c.members.$elemMatch.user));
-        const both = ids.every((id) => ws.members.some((m) => String(m.user) === id));
-        return q(both ? { _id: WS } : null);
-    });
-    User.findOne.mockImplementation((filter) => {
-        const allowed = filter._id.$in.map(String);
-        const hit = Object.values(users).find((u) => allowed.includes(String(u._id)) && filter.username.test(u.username));
-        return q(hit || null);
+    usersRepo.findById.mockImplementation(async (id) => (users[String(id)] ? { ...users[String(id)] } : null));
+    workspaces.findById.mockImplementation(async (id) => (String(id) === WS ? ws : null));
+    // SQL: department names, shared-workspace check, username lookup among members.
+    query.mockImplementation(async (sql, params) => {
+        if (/FROM department_members/.test(sql)) {
+            const u = users[String(params[0])];
+            return { rows: (u?.departments || []).map((d) => ({ id: d._id, name: d.name })) };
+        }
+        if (/FROM workspace_members v/.test(sql)) {
+            const both = params.every((id) => ws.members.some((m) => String(m.user) === String(id)));
+            return { rows: both ? [{}] : [] };
+        }
+        if (/lower\(username\)/.test(sql)) {
+            const hit = Object.values(users).find((u) => params[0].includes(String(u._id)) && u.username.toLowerCase() === String(params[1]).toLowerCase());
+            return { rows: hit ? [{ id: hit._id }] : [] };
+        }
+        return { rows: [] };
     });
     presence.getPresence.mockReturnValue(null);
 });

@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
-const UserIdentityKey = require('../../../models/UserIdentityKey');
+const { identityKeys } = require('../../identity');
 
 function unwrapConversationKeyWithWorkspaceKey(encryptedKey, iv, authTag, workspaceKey) {
     try {
@@ -115,7 +115,7 @@ async function wrapWithX25519(keyBytes, publicKeyBase64) {
 
 async function getUserPublicKey(userId) {
     try {
-        const identityKey = await UserIdentityKey.findOne({ userId, isActive: true });
+        const identityKey = await identityKeys.findByUserId(userId);
 
         if (!identityKey) {
             throw new Error(`No identity key found for user ${userId}`);

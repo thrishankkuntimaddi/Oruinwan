@@ -1,9 +1,10 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const { sendError, safeErrorMessage } = require('../../shared/utils/httpError');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { userDocs } = require('../../identity/queries/auth');
 const ScimToken = require('../../../models/ScimToken');
-const Department = require('../../../models/Department');
 const { ASSIGNABLE_ROLES } = require('../onboarding/onboarding.service');
 const { logSecurityEvent } = require('../security/security.service');
 
@@ -37,7 +38,8 @@ function scimUserResponse(user) {
     return {
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
         id: user._id.toString(),
-        externalId: user.scimExternalId || null,
+        // The directory's id is kept in the user's profile jsonb.
+        externalId: user.scimExternalId || user.profile?.scimExternalId || null,
         userName: user.email,
         name: {
             formatted: user.username,
@@ -66,11 +68,12 @@ function scimError(res, status, detail) {
 
 async function resolveDeptId(deptName, companyId) {
     if (!deptName) return null;
-    const dept = await Department.findOne({
-        name: { $regex: new RegExp(`^${deptName}$`, 'i') },
+    const escaped = String(deptName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const dept = await org.departments.findOne({
+        name: new RegExp(`^${escaped}$`, 'i'),
         company: companyId,
         isActive: true,
-    }).lean();
+    }, { members: false });
     return dept ? dept._id : null;
 }
 
@@ -126,7 +129,7 @@ exports.createUser = async (req, res) => {
         }
 
         
-        const existing = await User.findOne({ email }).lean();
+        const existing = await identity.users.findByEmail(email);
         if (existing) {
             if (existing.companyId?.toString() === companyId.toString()) {
                 
@@ -157,10 +160,10 @@ exports.createUser = async (req, res) => {
 
         
         if (extId) {
-            await User.findByIdAndUpdate(result.userId, { scimExternalId: extId });
+            await org.updateUser(result.userId, { profile: { $merge: true, scimExternalId: extId } });
         }
 
-        const user = await User.findById(result.userId).lean();
+        const user = await identity.users.findById(result.userId);
 
         logSecurityEvent({
             companyId,
@@ -183,7 +186,8 @@ exports.updateUser = async (req, res) => {
         const userId = req.params.id;
         const body = req.body;
 
-        const user = await User.findOne({ _id: userId, companyId });
+        const row = await org.users.findOne({ _id: userId, companyId });
+        const user = row ? await userDocs.findById(row._id) : null;
         if (!user) return scimError(res, 404, 'User not found');
 
         const ops = body.Operations || [];
@@ -252,11 +256,10 @@ exports.deactivateUser = async (req, res) => {
         const companyId = req.scimCompanyId;
         const userId = req.params.id;
 
-        const user = await User.findOne({ _id: userId, companyId });
+        const user = await org.users.findOne({ _id: userId, companyId });
         if (!user) return scimError(res, 404, 'User not found');
 
-        user.accountStatus = 'suspended';
-        await user.save();
+        await org.updateUser(user._id, { accountStatus: 'suspended' });
 
         logSecurityEvent({
             companyId,
@@ -276,10 +279,10 @@ exports.deactivateUser = async (req, res) => {
 
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findOne({
+        const user = await org.users.findOne({
             _id: req.params.id,
             companyId: req.scimCompanyId,
-        }).lean();
+        });
 
         if (!user) return scimError(res, 404, 'User not found');
         return res.json(scimUserResponse(user));
@@ -295,11 +298,8 @@ exports.listUsers = async (req, res) => {
         const skip = Math.max(parseInt(startIndex) - 1, 0);
 
         const [users, totalResults] = await Promise.all([
-            User.find({ companyId: req.scimCompanyId, accountStatus: { $ne: 'removed' } })
-                .skip(skip)
-                .limit(parseInt(count))
-                .lean(),
-            User.countDocuments({ companyId: req.scimCompanyId, accountStatus: { $ne: 'removed' } }),
+            org.users.find({ companyId: req.scimCompanyId, accountStatus: { $ne: 'removed' } }, { skip, limit: parseInt(count), sort: { createdAt: 1 } }),
+            org.users.count({ companyId: req.scimCompanyId, accountStatus: { $ne: 'removed' } }),
         ]);
 
         return res.json({

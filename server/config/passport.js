@@ -1,7 +1,8 @@
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const _LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
-const User = require("../models/User");
+// Users live in PostgreSQL; userDocs gives the mutable document the strategies update.
+const { userDocs } = require("../src/identity/queries/auth");
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -9,7 +10,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
-        const user = await User.findById(id);
+        const user = await userDocs.findById(id);
         done(null, user);
     } catch (err) {
         done(err, null);
@@ -28,7 +29,7 @@ passport.use(
                 const email = profile.emails?.[0]?.value;
 
                 
-                let user = await User.findOne({ githubId: profile.id });
+                let user = await userDocs.findByProvider('github', profile.id);
 
                 if (user) {
                     return done(null, user);
@@ -41,7 +42,7 @@ passport.use(
                 // take over the account.
                 const githubEmailVerified = profile.emails?.[0]?.verified !== false;
                 if (email) {
-                    user = await User.findOne({ email: String(email).toLowerCase() });
+                    user = await userDocs.findByEmail(email);
                     if (user) {
                         if (!user.verified || !githubEmailVerified || user.githubId) {
                             return done(null, false, { message: "An account with this email already exists. Sign in with your password and link GitHub from settings." });
@@ -53,7 +54,7 @@ passport.use(
                 }
 
                 
-                user = await User.create({
+                user = await userDocs.create({
                     githubId: profile.id,
                     username: profile.displayName || profile.username,
                     email: email, 

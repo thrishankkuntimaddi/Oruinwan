@@ -1,10 +1,11 @@
 'use strict';
 
 const Channel      = require('../channels/channel.model.js');
-const User         = require('../../../models/User');
 const Message      = require('../../modules/messages/message.model.js');
-const Workspace    = require('../../../models/Workspace');
-const Task         = require('../../../models/Task');
+const identity     = require('../../identity');
+const wsQueries    = require('../../identity/queries/workspaces');
+const { hydrate }  = require('../../identity/hydrate');
+const Tasks        = require('../tasks/tasks.query');
 const Note         = require('../../../models/Note');
 const WorkspaceFile = require('../files/WorkspaceFile');
 const KnowledgePage = require('../knowledge/KnowledgePage');
@@ -12,7 +13,10 @@ const DMSession    = require('../../../models/DMSession');
 const logger       = require('../../../utils/logger');
 const { safeRegex } = require('../../shared/utils/escapeRegex');
 
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('../ai/ai.gatewayResolver');
+
+// Users live in PostgreSQL; search results get their people attached with hydrate().
+const PERSON = { type: 'user', fields: ['username', 'profilePicture'] };
 
 function buildDateFilter(from, to) {
     if (!from && !to) return null;
@@ -150,31 +154,12 @@ async function searchChannels(workspaceId, userId, searchRegex, { dateFilter, li
 
 async function searchContacts(workspaceId, userId, searchRegex, { limit, offset } = {}) {
     try {
-        const workspace = await Workspace.findById(workspaceId).select('company members').lean();
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) return [];
 
-        let userQuery;
-        if (workspace.company) {
-            userQuery = {
-                companyId: workspace.company,
-                _id: { $ne: userId },
-                $or: [{ username: searchRegex }, { name: searchRegex }, { email: searchRegex }],
-            };
-        } else {
-            const memberIds = (workspace.members || [])
-                .filter(m => !m.status || m.status === 'active')
-                .map(m => m.user || m).filter(Boolean);
-            userQuery = {
-                _id: { $in: memberIds, $ne: userId },
-                $or: [{ username: searchRegex }, { name: searchRegex }, { email: searchRegex }],
-            };
-        }
-
-        const contacts = await User.find(userQuery)
-            .select('username name email profilePicture isOnline userStatus')
-            .skip(offset || 0)
-            .limit(limit || 10)
-            .lean();
+        // safeRegex() escaped the term for MongoDB; PostgreSQL gets the plain text back.
+        const text = searchRegex instanceof RegExp ? searchRegex.source.replace(/\\(.)/g, '$1') : String(searchRegex || '');
+        const contacts = await wsQueries.searchPeople(workspace, userId, text, { limit: limit || 10, offset: offset || 0 });
 
         return contacts.map(user => ({
             id: user._id,
@@ -233,10 +218,10 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
             .sort({ createdAt: -1 })
             .skip(offset || 0)
             .limit(limit || 10)
-            .populate('sender', 'username profilePicture')
             .populate('channel', 'name isPrivate')
-            .populate({ path: 'dm', populate: { path: 'participants', select: 'username' } })
+            .populate('dm')
             .lean();
+        await hydrate(messages, { sender: PERSON, 'dm.participants': { type: 'user', fields: ['username'] } });
 
         return messages.filter(msg => msg.channel || msg.dm).map(msg => {
             const isChannel = !!msg.channel;
@@ -283,14 +268,13 @@ async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags,
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
 
-        const tasks = await Task.find(query)
-            .select('title description status priority dueDate visibility createdBy assignedTo tags createdAt')
-            .populate('createdBy', 'username profilePicture')
-            .populate('assignedTo', 'username profilePicture')
-            .sort({ createdAt: -1 })
-            .skip(offset || 0)
-            .limit(limit || 10)
-            .lean();
+        const tasks = await Tasks.find(query, {
+            select: 'title description status priority dueDate visibility createdBy assignedTo tags createdAt',
+            sort: { createdAt: -1 },
+            skip: offset || 0,
+            limit: limit || 10,
+        });
+        await hydrate(tasks, { createdBy: PERSON, assignedTo: PERSON });
 
         return tasks
             .filter(t => t.createdBy != null)
@@ -327,11 +311,11 @@ async function searchNotes(workspaceId, userId, searchRegex, { dateFilter, tags,
 
         const notes = await Note.find(query)
             .select('title content type isPublic owner tags createdAt isPinned')
-            .populate('owner', 'username profilePicture')
             .sort({ isPinned: -1, createdAt: -1 })
             .skip(offset || 0)
             .limit(limit || 10)
             .lean();
+        await hydrate(notes, { owner: PERSON });
 
         return notes
             .filter(n => n.owner != null)
@@ -365,11 +349,11 @@ async function searchFiles(workspaceId, searchRegex, { dateFilter, tags, limit, 
 
         const files = await WorkspaceFile.find(query)
             .select('name description mimeType size url tags createdBy createdAt')
-            .populate('createdBy', 'username profilePicture')
             .sort({ createdAt: -1 })
             .skip(offset || 0)
             .limit(limit || 10)
             .lean();
+        await hydrate(files, { createdBy: PERSON });
 
         return files.map(f => ({
             id: f._id,
@@ -403,11 +387,11 @@ async function searchKnowledge(workspaceId, searchRegex, { dateFilter, tags, lim
 
         const pages = await KnowledgePage.find(query)
             .select('title icon content tags summary createdBy createdAt')
-            .populate('createdBy', 'username profilePicture')
             .sort({ createdAt: -1 })
             .skip(offset || 0)
             .limit(limit || 10)
             .lean();
+        await hydrate(pages, { createdBy: PERSON });
 
         return pages.map(p => ({
             id: p._id,

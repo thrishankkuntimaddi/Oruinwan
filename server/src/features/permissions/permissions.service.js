@@ -1,6 +1,6 @@
 'use strict';
 
-const Permission = require('../../../models/Permission');
+const { rolePermissions } = require('../../identity');
 
 const DEFAULT_MATRIX = {
     owner: {
@@ -58,7 +58,7 @@ const DEFAULT_MATRIX = {
 const ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
 
 exports.getMatrix = async function (companyId) {
-    const existing = await Permission.find({ company: companyId }).lean();
+    const existing = await rolePermissions.listForCompany(companyId);
     const matrix = {};
 
     for (const role of ROLES) {
@@ -75,35 +75,18 @@ exports.updateMatrix = async function (companyId, updates, updatedBy) {
     for (const [role, perms] of Object.entries(updates)) {
         if (!ROLES.includes(role)) continue;
 
-        ops.push(
-            Permission.findOneAndUpdate(
-                { company: companyId, role },
-                {
-                    $set: {
-                        permissions: perms,
-                        updatedBy,
-                        updatedAt: new Date()
-                    },
-                    $setOnInsert: { company: companyId, role }
-                },
-                { upsert: true, new: true, runValidators: true }
-            )
-        );
+        // Upsert per role; who changed it is in the audit log (recordAdminAction).
+        void updatedBy;
+        ops.push(rolePermissions.set(companyId, role, { permissions: perms }));
     }
 
     await Promise.all(ops);
     return exports.getMatrix(companyId);
 };
 
-exports.seedDefaults = async function (companyId, createdBy) {
+exports.seedDefaults = async function (companyId, _createdBy) {
+    const existing = new Set((await rolePermissions.listForCompany(companyId)).map((r) => r.role));
     for (const role of ROLES) {
-        const exists = await Permission.exists({ company: companyId, role });
-        if (!exists) {
-            await Permission.create({
-                company: companyId,
-                role,
-                permissions: DEFAULT_MATRIX[role]
-            });
-        }
+        if (!existing.has(role)) await rolePermissions.set(companyId, role, { permissions: DEFAULT_MATRIX[role] });
     }
 };

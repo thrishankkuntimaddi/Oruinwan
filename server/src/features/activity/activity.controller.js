@@ -1,5 +1,7 @@
 'use strict';
 const logger = require('../../../utils/logger');
+const { hydrate } = require('../../identity/hydrate');
+const ACTOR = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
 
 const mongoose = require('mongoose');
 const ActivityEvent = require('../../models/ActivityEvent');
@@ -40,8 +42,8 @@ exports.getFeed = async (req, res) => {
     const events = await ActivityEvent.find(query)
       .sort({ createdAt: -1 })
       .limit(Math.min(Number(limit), 50))
-      .populate('actor', 'firstName lastName username avatarUrl')
       .lean();
+    await hydrate(events, { actor: ACTOR });
 
     return res.json({ events });
   } catch (err) {
@@ -64,6 +66,7 @@ exports.getMyActivity = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(Math.min(Number(limit), 50))
       .lean();
+    await hydrate(events, { actor: ACTOR });
 
     return res.json({ events });
   } catch (err) {

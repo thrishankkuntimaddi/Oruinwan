@@ -8,7 +8,8 @@ const mongoose = require('mongoose');
 const Session = require('../huddleSession.model');
 const Message = require('../../messages/message.model');
 const Channel = require('../../../features/channels/channel.model');
-const Workspace = require('../../../../models/Workspace');
+// Workspaces live in PostgreSQL: spy on the repository.
+const identity = require('../../../identity');
 const notificationService = require('../../notifications/notificationService');
 const service = require('../huddleHistory.service');
 const { registry } = require('../huddleRegistry');
@@ -217,7 +218,7 @@ describe('huddle history listing', () => {
   beforeEach(() => jest.restoreAllMocks());
 
   test('lists finished runs the user can see and hides live and empty ones', async () => {
-    jest.spyOn(Workspace, 'findOne').mockImplementation(() => chain({ _id: WS, members: [{ user: ALICE, role: 'member', status: 'active' }] }));
+    jest.spyOn(identity.workspaces, 'findById').mockImplementation(async () => ({ _id: WS, members: [{ user: ALICE, role: 'member', status: 'active' }] }));
     jest.spyOn(Channel, 'find').mockImplementation(() => chain([{ _id: CH }]));
     const base = { scope: 'channel', channel: CH, workspace: WS, startedAt: new Date('2026-09-28T10:00:00Z') };
     const find = jest.spyOn(Session, 'find').mockImplementation(() => chain([
@@ -239,7 +240,7 @@ describe('huddle history listing', () => {
   });
 
   test('non-members of the workspace get 403', async () => {
-    jest.spyOn(Workspace, 'findOne').mockImplementation(() => chain({ _id: WS, members: [] }));
+    jest.spyOn(identity.workspaces, 'findById').mockImplementation(async () => ({ _id: WS, members: [] }));
     await expect(service.listHistory(EVE, WS)).rejects.toMatchObject({ status: 403 });
   });
 });

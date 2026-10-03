@@ -12,14 +12,15 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Company', () => ({ updateOne: jest.fn(async () => ({})), findById: jest.fn() }));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../../../../utils/sendEmail', () => jest.fn(async () => {}));
 jest.mock('../../security/security.service', () => ({ logSecurityEvent: jest.fn(async () => {}) }));
 
 const h = require('../../../shared/__tests__/gateHarness');
-const User = require('../../../../models/User');
-const Company = require('../../../../models/Company');
+const store = require('../../admin/__tests__/identityStore');
 
 const C1 = h.oid(0xc1);
 const C2 = h.oid(0xc2);
@@ -30,12 +31,16 @@ const MEMBER = h.oid(4);
 const MANAGER = h.oid(5);
 const FOREIGN = h.oid(6);
 
-const saved = [];
-function doc(u) {
-    const d = { ...u, managedDepartments: [], workspaces: [] };
-    d.save = jest.fn(async () => { saved.push({ id: d._id, role: d.companyRole, status: d.accountStatus }); return d; });
-    return d;
-}
+// Role and status as stored after each request (only what changed).
+const snapshot = () => Object.fromEntries([...store.state.users.values()].map((u) => [u._id, `${u.companyRole}/${u.accountStatus}`]));
+let before;
+const changed = () => {
+    const now = snapshot();
+    return Object.entries(now).filter(([id, v]) => before[id] !== v).map(([id, v]) => {
+        const [role, status] = v.split('/');
+        return { id, role, status };
+    });
+};
 
 // Load the routers up front: the first require is slow under a parallel run.
 const peopleRoutes = require('../people.routes');
@@ -51,20 +56,16 @@ function app() {
 }
 
 beforeEach(() => {
-    saved.length = 0;
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [OWNER]: { _id: OWNER, companyId: C1, companyRole: 'owner', ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [ADMIN2]: { _id: ADMIN2, companyId: C1, companyRole: 'admin', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [MANAGER]: { _id: MANAGER, companyId: C1, companyRole: 'manager', ...base },
-        [FOREIGN]: { _id: FOREIGN, companyId: C2, companyRole: 'member', ...base },
-    });
-    User.findOne.mockImplementation((q) => {
-        const u = h.users[String(q._id)];
-        return h.query(u && String(u.companyId) === String(q.companyId) ? doc(u) : null);
-    });
+    store.reset();
+    store.addCompany({ _id: C1, name: 'Acme' }, { admins: [{ user: OWNER, role: 'owner' }] });
+    store.addCompany({ _id: C2, name: 'Beta' });
+    store.addUser({ _id: OWNER, companyId: C1, companyRole: 'owner', email: 'o@acme.test' });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin', email: 'a@acme.test' });
+    store.addUser({ _id: ADMIN2, companyId: C1, companyRole: 'admin', email: 'a2@acme.test' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member', email: 'm@acme.test' });
+    store.addUser({ _id: MANAGER, companyId: C1, companyRole: 'manager', email: 'mg@acme.test' });
+    store.addUser({ _id: FOREIGN, companyId: C2, companyRole: 'member', email: 'f@beta.test' });
+    before = snapshot();
 });
 
 describe('PATCH /api/company/members/:id/role', () => {
@@ -72,16 +73,16 @@ describe('PATCH /api/company/members/:id/role', () => {
 
     it('lets an admin make a member a manager', async () => {
         expect((await patch(ADMIN, MEMBER, 'manager')).status).toBe(200);
-        expect(saved).toEqual([{ id: MEMBER, role: 'manager', status: 'active' }]);
+        expect(changed()).toEqual([{ id: MEMBER, role: 'manager', status: 'active' }]);
     });
     it('stops an admin from granting admin or changing another admin', async () => {
         expect((await patch(ADMIN, MEMBER, 'admin')).status).toBe(403);
         expect((await patch(ADMIN, ADMIN2, 'member')).status).toBe(403);
-        expect(saved).toEqual([]);
+        expect(changed()).toEqual([]);
     });
     it('lets the owner grant admin and keeps Company.admins in step', async () => {
         expect((await patch(OWNER, MEMBER, 'admin')).status).toBe(200);
-        expect(Company.updateOne).toHaveBeenCalledWith({ _id: C1 }, { $push: { admins: { user: MEMBER, role: 'admin' } } });
+        expect(store.state.admins).toContainEqual({ company: C1, user: MEMBER, role: 'admin' });
     });
     it('never grants owner, never touches the owner, never leaves the company', async () => {
         expect((await patch(OWNER, MEMBER, 'owner')).status).toBe(403);

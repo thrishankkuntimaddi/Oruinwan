@@ -33,7 +33,8 @@ const {
 } = require("./auth.controller");
 
 const requireAuth = require("../../shared/middleware/auth");
-const { discoverableFilter } = require("./privacy.service");
+const { discoverablePeople } = require("./privacy.service");
+const identity = require("../../identity");
 
 router.post("/signup", signup);
 router.get("/verify-email", verifyEmail);
@@ -53,9 +54,7 @@ router.post("/oauth/skip-password", requireAuth, skipPassword);
 router.post("/setup-temp-password", requireAuth, setupTempPassword); 
 
 const multer = require('multer');
-const { uploadToGCS } = require('../../modules/uploads/upload.service');
-const { Storage } = require('@google-cloud/storage');
-const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'chttrix-uploads';
+const { uploadObject, deleteObject } = require('../../modules/uploads/upload.service');
 
 const profilePicUpload = multer({
   storage: multer.memoryStorage(),
@@ -72,26 +71,24 @@ const profilePicUpload = multer({
 
 router.post("/me/profile-picture", requireAuth, profilePicUpload.single('profilePicture'), async (req, res) => {
   try {
-    const User = require("../../../models/User");
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const user = await User.findById(req.user.sub).select('profilePicture profilePictureGcsPath');
+    const user = await identity.users.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     
     if (user.profilePictureGcsPath) {
       try {
-        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
-        await storageClient.bucket(BUCKET_NAME).file(user.profilePictureGcsPath).delete();
+        await deleteObject(user.profilePictureGcsPath);
       } catch (delErr) {
-        logger.warn('[ProfilePic] Could not delete old GCS file:', delErr.message);
+        logger.warn('[ProfilePic] Could not delete old picture object:', delErr.message);
       }
     }
 
     
-    const gcsResult = await uploadToGCS(req.file, 'profiles', { userId: req.user.sub });
+    const gcsResult = await uploadObject(req.file, 'profiles', { userId: req.user.sub });
 
-    await User.findByIdAndUpdate(req.user.sub, {
+    await identity.users.update(req.user.sub, {
       profilePicture: gcsResult.url,
       profilePictureGcsPath: gcsResult.gcsPath,
     });
@@ -108,22 +105,18 @@ router.post("/me/profile-picture", requireAuth, profilePicUpload.single('profile
 
 router.delete("/me/profile-picture", requireAuth, async (req, res) => {
   try {
-    const User = require("../../../models/User");
-    const user = await User.findById(req.user.sub).select('profilePictureGcsPath');
+    const user = await identity.users.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (user.profilePictureGcsPath) {
       try {
-        const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
-        await storageClient.bucket(BUCKET_NAME).file(user.profilePictureGcsPath).delete();
+        await deleteObject(user.profilePictureGcsPath);
       } catch (delErr) {
-        logger.warn('[ProfilePic] Could not delete GCS file on removal:', delErr.message);
+        logger.warn('[ProfilePic] Could not delete picture object on removal:', delErr.message);
       }
     }
 
-    await User.findByIdAndUpdate(req.user.sub, {
-      $unset: { profilePicture: 1, profilePictureGcsPath: 1 }
-    });
+    await identity.users.update(req.user.sub, { profilePicture: null, profilePictureGcsPath: null });
 
     return res.json({ message: 'Profile picture removed' });
   } catch (err) {
@@ -160,11 +153,10 @@ router.put("/me/preferences/region", requireAuth, updateRegionPreferences);
 // blockedUsers entries are { userId, blockedAt }.
 router.get("/me/blocked-users", requireAuth, async (req, res) => {
   try {
-    const User = require("../../../models/User");
-    const user = await User.findById(req.user.sub)
-      .select("blockedUsers")
-      .populate("blockedUsers.userId", "_id username email profilePicture")
-      .lean();
+    const { hydrate, userSelect } = require("../../identity/hydrate");
+    const me = await identity.users.findById(req.user.sub);
+    const user = { blockedUsers: (me?.social?.blockedUsers || []).map((b) => ({ ...b })) };
+    await hydrate(user, { 'blockedUsers.userId': userSelect('username email profilePicture') });
 
     const list = (user?.blockedUsers || [])
       .filter(b => b && b.userId)
@@ -185,15 +177,15 @@ router.get("/me/blocked-users", requireAuth, async (req, res) => {
 
 router.delete("/me/blocked-users/:userId", requireAuth, async (req, res) => {
   try {
-    const User = require("../../../models/User");
     const { userId } = req.params;
     if (!/^[a-f0-9]{24}$/i.test(String(userId))) {
       return res.status(400).json({ message: "Invalid user id" });
     }
 
-    await User.findByIdAndUpdate(req.user.sub, {
-      $pull: { blockedUsers: { userId } }
-    });
+    const me = await identity.users.findById(req.user.sub);
+    const social = me?.social || {};
+    const blockedUsers = (social.blockedUsers || []).filter((b) => String(b.userId) !== String(userId));
+    await identity.users.update(req.user.sub, { social: { ...social, blockedUsers } });
 
     res.json({ message: "User unblocked successfully" });
   } catch (error) {
@@ -209,30 +201,9 @@ router.delete("/sessions/:id", requireAuth, revokeSession);
 router.get("/users", requireAuth, async (req, res) => {
   try {
     const currentUserId = req.user.sub;
-    const User = require("../../../models/User");
-
-    
-    
-    
-    
-    const currentUser = await User.findById(currentUserId).select('companyId').lean();
-
     // Company accounts only see their own company. Personal accounts see other personal
     // accounts, minus those who turned discovery off and share no workspace with them.
-    const query = currentUser?.companyId
-      ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
-      : {
-        _id: { $ne: currentUserId },
-        $and: [
-          { $or: [{ companyId: null }, { companyId: { $exists: false } }] },
-          await discoverableFilter(currentUserId),
-        ],
-      };
-
-    const users = await User.find(query)
-      .select("_id username email profilePicture")
-      .limit(100)
-      .lean();
+    const users = await discoverablePeople(currentUserId, { limit: 100 });
 
     res.json({ users });
   } catch (err) {
@@ -245,7 +216,7 @@ router.post("/google-login", googleLogin);
 router.post("/google", googleAuth);  
 
 const passport = require("../../../config/passport");
-const User = require("../../../models/User");
+const { userDocs } = require("../../identity/queries/auth");
 const jwt = require("jsonwebtoken");
 
 // Access token goes in the URL fragment (never the query string) so it does not reach
@@ -361,11 +332,11 @@ router.get("/linkedin/callback", async (req, res) => {
     logger.info('LinkedIn user profile:', linkedinUser);
 
     
-    let user = await User.findOne({ linkedinId: linkedinUser.sub });
+    let user = await userDocs.findByProvider('linkedin', linkedinUser.sub);
 
     if (!user && linkedinUser.email) {
       
-      user = await User.findOne({ email: linkedinUser.email });
+      user = await userDocs.findByEmail(linkedinUser.email);
       if (user) {
         // Only link to an existing account when that account's email is verified,
         // it is not already linked elsewhere, and LinkedIn vouches for the email.
@@ -381,7 +352,7 @@ router.get("/linkedin/callback", async (req, res) => {
 
     if (!user) {
       
-      user = await User.create({
+      user = await userDocs.create({
         linkedinId: linkedinUser.sub,
         username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
         email: linkedinUser.email,

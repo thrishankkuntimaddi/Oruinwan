@@ -14,7 +14,7 @@
 const mongoose = require('mongoose');
 const Channel = require('../../features/channels/channel.model.js');
 const DMSession = require('../../../models/DMSession');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 
 function sameId(a, b) {
     return a != null && b != null && String(a._id || a) === String(b._id || b);
@@ -35,11 +35,8 @@ async function canAccessMessage(message, userId) {
 
         // Public/default channel: any active member of the owning workspace may read it.
         if (!channel.workspace) return false;
-        const ws = await Workspace.findOne({
-            _id: channel.workspace,
-            members: { $elemMatch: { user: userId, status: { $ne: 'removed' } } },
-        }).select('_id').lean();
-        return !!ws;
+        const ws = await identity.workspaces.findById(channel.workspace);
+        return !!ws && ws.members.some(m => sameId(m.user, userId) && m.status !== 'removed');
     }
 
     if (message.dm) {

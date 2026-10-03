@@ -1,6 +1,23 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
-const UserCryptoState = require('../../models/UserCryptoState');
+const { cryptoState: cryptoStateRepo } = require('../../identity');
+
+// The crypto state lives in PostgreSQL (user_crypto_state, next to the user row).
+// Handlers below edit fields and save, as they did with the Mongo model.
+function cryptoStateDoc(row) {
+    if (!row) return null;
+    const doc = { ...row };
+    Object.defineProperty(doc, 'save', {
+        enumerable: false,
+        value: async () => Object.assign(doc, await cryptoStateRepo.upsert(doc.userId, doc)),
+    });
+    return doc;
+}
+
+const UserCryptoState = {
+    async findOne({ userId }) { return cryptoStateDoc(await cryptoStateRepo.findByUserId(userId)); },
+    async create(data) { return cryptoStateDoc(await cryptoStateRepo.upsert(data.userId, data)); },
+};
 
 exports.initIdentityCryptoState = async (req, res) => {
     try {
@@ -396,11 +413,11 @@ exports.rotateUMEK = async (req, res) => {
         
         if (!wasMigration) {
             try {
-                const User = require('../../../models/User');
+                const { users } = require('../../identity');
                 const securityNotification = require('../../services/securityNotification.service');
 
                 
-                const user = await User.findById(userId).lean();
+                const user = await users.findById(userId);
 
                 if (user) {
                     securityNotification.sendSecurityNotification({

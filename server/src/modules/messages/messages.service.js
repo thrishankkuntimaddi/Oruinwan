@@ -3,12 +3,30 @@
 const Message = require('./message.model.js');
 const DMSession = require('../../../models/DMSession');
 const _Channel = require('../../features/channels/channel.model.js');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 const {} = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
 const mongoose = require('mongoose');
 const { loadAccessibleMessage } = require('./messageAccess');
+
+// Users live in PostgreSQL: message user refs are attached with hydrate() instead of populate().
+const SENDER = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
+const SENDER_MIN = { type: 'user', fields: ['username', 'profilePicture'] };
+const MESSAGE_REFS = {
+    sender: SENDER,
+    'readBy.user': { type: 'user', fields: ['username'] },
+    'parentId.sender': SENDER_MIN,
+    'quotedMessageId.sender': SENDER_MIN,
+};
+
+/** Plain copy of a message document with its user references filled in. */
+async function messageForClient(message, refs = { sender: SENDER }) {
+    const obj = message && typeof message.toObject === 'function' ? message.toObject() : message;
+    if (obj) await hydrate(obj, refs);
+    return obj;
+}
 
 async function createMessage(messageData, io = null) {
     const {
@@ -93,15 +111,11 @@ async function createMessage(messageData, io = null) {
     const message = await Message.create(messageDoc);
 
     
-    await message.populate('sender', 'username email profilePicture');
-
-    
     if (message.quotedMessageId) {
-        await message.populate({
-            path: 'quotedMessageId',
-            populate: { path: 'sender', select: 'username profilePicture' }
-        });
+        await message.populate('quotedMessageId');
     }
+    // Sender (and the quoted message's sender) from PostgreSQL.
+    const hydratedMessage = await messageForClient(message, { sender: SENDER, 'quotedMessageId.sender': SENDER_MIN });
 
 
 
@@ -112,18 +126,7 @@ async function createMessage(messageData, io = null) {
     
     if (io) {
         const room = channel ? `channel:${channel}` : `dm:${dm}`;
-        const messageObject = message.toObject();
-
-        
-        
-        if (message.sender) {
-            messageObject.sender = {
-                _id: message.sender._id,
-                username: message.sender.username,
-                email: message.sender.email,
-                profilePicture: message.sender.profilePicture
-            };
-        }
+        const messageObject = { ...hydratedMessage };
 
         
         messageObject.replyCount = 0;
@@ -146,11 +149,13 @@ async function createMessage(messageData, io = null) {
     fireMessageSentWebhook(message, { channel, workspace, sender, type, parentId })
         .catch(err => logger.warn({ err: err?.message }, '[createMessage] message.sent webhook error (non-fatal)'));
 
-    return message;
+    // Plain object with `sender` filled in (what clients and callers read).
+    return hydratedMessage;
 }
 
 /**
- * Outgoing `message.sent` webhook for channel messages. Messages are end-to-end
+ * `message.sent` for channel messages: on the bus (Redis) or straight to the
+ * webhooks (single box), via webhook.trigger.fire. Messages are end-to-end
  * encrypted, so the payload carries ids and metadata only — never text,
  * ciphertext, attachments or poll/contact contents. Private channels are skipped
  * so their activity does not leave the workspace. Never throws into the caller.
@@ -243,16 +248,16 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
                 everyone = true;
             } else if (broadcastAllowed && isHere) {
                 // @here reaches only people who are online right now.
-                const { getPresence } = require('../../features/presence/presence.service');
-                hereIds = new Set(recipientIds.filter(id => getPresence(id)));
+                const { getBulkPresenceAsync } = require('../../features/presence/presence.service');
+                const live = await getBulkPresenceAsync(recipientIds);
+                hereIds = new Set(recipientIds.filter(id => live[String(id)] && live[String(id)].status !== 'offline'));
             }
             if (userHandles.length > 0) {
-                const User = require('../../../models/User');
-                const users = await User.find({
-                    _id: { $in: recipientIds },
-                    username: { $in: userHandles.map(h => new RegExp(`^${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')) },
-                }).select('_id').lean();
-                mentionedUserIds = users.map(u => String(u._id));
+                const handles = new Set(userHandles.map(h => String(h).toLowerCase()));
+                const users = await identity.users.findManyByIds(recipientIds);
+                mentionedUserIds = [...users.values()]
+                    .filter(u => handles.has(String(u.username || '').toLowerCase()))
+                    .map(u => String(u._id));
             }
             if (mentionedUserIds.length > 0) {
                 await Message.findByIdAndUpdate(message._id, { $set: { mentions: mentionedUserIds } });
@@ -346,16 +351,8 @@ async function fetchMessages(query, options = {}) {
 
     if (around) {
         const anchorMsg = await Message.findById(around)
-            .populate('sender', 'username email profilePicture')
-            .populate('readBy.user', 'username')
-            .populate({
-                path: 'parentId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            })
-            .populate({
-                path: 'quotedMessageId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            });
+            .populate('parentId')
+            .populate('quotedMessageId');
 
         if (!anchorMsg) {
             return { messages: [], hasMore: false, hasMoreNewer: false };
@@ -368,16 +365,8 @@ async function fetchMessages(query, options = {}) {
         const older = await Message.find(olderQuery)
             .sort({ _id: -1 })
             .limit(halfLimit + 1)
-            .populate('sender', 'username email profilePicture')
-            .populate('readBy.user', 'username')
-            .populate({
-                path: 'parentId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            })
-            .populate({
-                path: 'quotedMessageId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            });
+            .populate('parentId')
+            .populate('quotedMessageId');
 
         const hasMoreOlder = older.length > halfLimit;
         if (hasMoreOlder) {
@@ -390,16 +379,8 @@ async function fetchMessages(query, options = {}) {
         const newer = await Message.find(newerQuery)
             .sort({ _id: 1 })
             .limit(halfLimit + 1)
-            .populate('sender', 'username email profilePicture')
-            .populate('readBy.user', 'username')
-            .populate({
-                path: 'parentId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            })
-            .populate({
-                path: 'quotedMessageId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            });
+            .populate('parentId')
+            .populate('quotedMessageId');
 
         const hasMoreNewer = newer.length > halfLimit;
         if (hasMoreNewer) {
@@ -409,6 +390,7 @@ async function fetchMessages(query, options = {}) {
         const combined = [...older, anchorMsg, ...newer];
 
         let messagesWithCounts = combined.map(m => m.toObject ? m.toObject() : m);
+        await hydrate(messagesWithCounts, MESSAGE_REFS);
         if (populateReplies) {
             const messageIds = combined.map(m => m._id);
             const counts = await Message.aggregate([
@@ -439,16 +421,8 @@ async function fetchMessages(query, options = {}) {
         const messages = await Message.find(finalQuery)
             .sort({ _id: 1 }) // oldest first (chronological order)
             .limit(fetchLimit)
-            .populate('sender', 'username email profilePicture')
-            .populate('readBy.user', 'username')
-            .populate({
-                path: 'parentId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            })
-            .populate({
-                path: 'quotedMessageId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            });
+            .populate('parentId')
+            .populate('quotedMessageId');
 
         const hasMoreNewer = messages.length > parseInt(limit);
         if (hasMoreNewer) {
@@ -456,6 +430,7 @@ async function fetchMessages(query, options = {}) {
         }
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
+        await hydrate(messagesWithCounts, MESSAGE_REFS);
         if (populateReplies) {
             const messageIds = messages.map(m => m._id);
             const counts = await Message.aggregate([
@@ -495,16 +470,8 @@ async function fetchMessages(query, options = {}) {
         const messages = await Message.find(finalQuery)
             .sort({ _id: -1 })
             .limit(fetchLimit)
-            .populate('sender', 'username email profilePicture')
-            .populate('readBy.user', 'username')
-            .populate({
-                path: 'parentId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            })
-            .populate({
-                path: 'quotedMessageId',
-                populate: { path: 'sender', select: 'username profilePicture' }
-            });
+            .populate('parentId')
+            .populate('quotedMessageId');
 
         const hasMore = messages.length > parseInt(limit);
         if (hasMore) {
@@ -514,6 +481,7 @@ async function fetchMessages(query, options = {}) {
         messages.reverse();
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
+        await hydrate(messagesWithCounts, MESSAGE_REFS);
         if (populateReplies) {
             const messageIds = messages.map(m => m._id);
             const counts = await Message.aggregate([
@@ -557,7 +525,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
 
     if (!dmSession) {
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             throw new Error('Workspace not found');
         }
@@ -617,7 +585,8 @@ async function getUserDMSessions(userId, workspaceId) {
         workspace: workspaceId,
         participants: { $in: [userId] },
         'hiddenFor.user': { $ne: userId },
-    }).populate('participants', 'username email profilePicture isOnline userStatus');
+    }).lean();
+    await hydrate(sessions, { participants: { type: 'user', fields: ['username', 'email', 'profilePicture', 'isOnline', 'userStatus'] } });
 
     
     const sessionList = await Promise.all(
@@ -636,7 +605,8 @@ async function getUserDMSessions(userId, workspaceId) {
             })
                 .sort({ createdAt: -1 })
                 .select('_id payload type text createdAt sender')
-                .populate('sender', 'username');
+                .lean();
+            if (lastMsg) await hydrate(lastMsg, { sender: { type: 'user', fields: ['username'] } });
 
             
             const otherUser = session.participants.find(
@@ -757,11 +727,10 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
         throw httpError(400, 'messageIv is required with ciphertext');
     }
 
-    const message = await Message.findById(messageId)
-        .populate('sender', 'username email profilePicture');
+    const message = await Message.findById(messageId);
     if (!message) throw httpError(404, 'Message not found');
 
-    if (message.sender._id.toString() !== userId.toString()) {
+    if (String(message.sender?._id || message.sender) !== userId.toString()) {
         throw httpError(403, 'Unauthorized: only the sender can edit this message');
     }
 
@@ -795,7 +764,7 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
 
     const room = roomFor(message);
     if (io && room) {
-        io.to(room).emit('message:edited', message.toObject());
+        io.to(room).emit('message:edited', await messageForClient(message));
     }
 
     return message;
@@ -806,8 +775,7 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
  * editHistory first, so no version is ever lost.
  */
 async function restoreMessageVersion(messageId, userId, versionIndex, io) {
-    const message = await Message.findById(messageId)
-        .populate('sender', 'username email profilePicture');
+    const message = await Message.findById(messageId);
     if (!message) throw httpError(404, 'Message not found');
 
     const senderId = message.sender?._id || message.sender;
@@ -851,15 +819,14 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
 
     const room = roomFor(message);
     if (io && room) {
-        io.to(room).emit('message:edited', message.toObject());
+        io.to(room).emit('message:edited', await messageForClient(message));
     }
 
     return message;
 }
 
 async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId = null) {
-    const message = await Message.findById(messageId)
-        .populate('sender', 'username email profilePicture');
+    const message = await Message.findById(messageId);
     if (!message) throw new Error('Message not found');
 
     const room = message.channel
@@ -886,7 +853,7 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     }
 
     
-    const isSender = message.sender._id.toString() === userId.toString();
+    const isSender = String(message.sender?._id || message.sender) === userId.toString();
 
     
     let isChannelAdmin = false;
@@ -911,6 +878,14 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     message.deletedAt = new Date();
     message.deletedBy = userId;
     await message.save();
+
+    // Ids only on the bus (content is end-to-end encrypted); a bus failure never fails the delete.
+    require('../../shared/events/bus').publish('message.deleted', {
+        messageId: String(message._id),
+        channelId: message.channel ? String(message.channel) : null,
+        dmId: message.dm ? String(message.dm) : null,
+        deletedBy: String(userId),
+    }, { workspaceId: message.workspace, companyId: message.company, actorId: userId }).catch(() => {});
 
     if (io) {
         io.to(room).emit('message:deleted', {
@@ -967,9 +942,8 @@ async function addReaction(messageId, userId, emoji, io) {
 
     if (message.sender && String(message.sender) !== String(userId) && message.workspace) {
         (async () => {
-            const User = require('../../../models/User');
             const notificationService = require('../notifications/notificationService');
-            const reactor = await User.findById(userId).select('username').lean();
+            const reactor = await identity.users.findById(userId);
             await notificationService.reaction(io, {
                 recipientId: String(message.sender),
                 reactorUsername: reactor?.username || 'Someone',
@@ -1101,7 +1075,7 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     }
 
     const tasksShared = require('../../features/tasks/tasks.shared');
-    const ws = workspaceId ? await Workspace.findById(workspaceId).select('name members company').lean() : null;
+    const ws = workspaceId ? await identity.workspaces.findById(workspaceId) : null;
     if (workspaceId && !ws) throw httpError(404, 'Workspace not found');
 
     let assignedTo = [userId];
@@ -1121,13 +1095,11 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     }
 
     // Same company value as tasks created from the Tasks page.
-    const User = require('../../../models/User');
-    const creator = await User.findById(userId).select('companyId username').lean();
+    const creator = await identity.users.findById(userId);
     const companyId = tasksShared.resolveTaskCompany(ws, creator) || message.company || null;
-    const issueKey = workspaceId ? await tasksShared.nextIssueKey(workspaceId, ws?.name) : null;
-
-    const Task = require('../../../models/Task');
-    const task = await Task.create({
+    // Tasks.create assigns the next issue key on whichever store holds tasks (TASKS_STORE).
+    const Tasks = require('../../features/tasks/tasks.query');
+    const task = await Tasks.create({
         title,
         description:   typeof taskData.description === 'string' ? taskData.description.slice(0, 10000) : '',
         dueDate,
@@ -1143,14 +1115,13 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
         linkedMessage: message._id,
         linkedDM:      message.dm || null,
         source:        'manual',
-        issueKey,
     });
 
     await Message.findByIdAndUpdate(messageId, { $set: { linkedTaskId: task._id } });
 
     try {
-        const TaskActivity = require('../../../models/TaskActivity');
-        await TaskActivity.create({
+        const Tasks = require('../../features/tasks/tasks.query');
+        await Tasks.logActivity({
             task: task._id,
             user: userId,
             action: 'created',
@@ -1255,9 +1226,9 @@ async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
         .skip(sk)
         .limit(lim)
         .select('-hiddenFor -bookmarkedBy -editHistory')
-        .populate('sender', 'username profilePicture')
         .populate('channel', 'name')
-        .lean();
+        .lean()
+        .then((rows) => hydrate(rows, { sender: SENDER_MIN }));
 }
 
 module.exports = {

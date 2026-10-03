@@ -1,9 +1,10 @@
 'use strict';
 
+const mongoose = require('mongoose');
 const Channel = require('./channel.model.js');
 const { recordAdminAction } = require("../../shared/adminAudit");
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 const Message = require('../../modules/messages/message.model.js');
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
 const { handleError, badRequest, forbidden } = require('../../../utils/responseHelpers');
@@ -14,7 +15,7 @@ const logger = require('../../shared/utils/logger');
 
 async function isWorkspaceOwner(userId, workspaceId) {
   if (!workspaceId) return false;
-  const ws = await Workspace.findById(workspaceId).select('members').lean();
+  const ws = await identity.workspaces.findById(workspaceId);
   if (!ws) return false;
   return ws.members.some(
     m => m.user?.toString() === userId.toString() &&
@@ -36,7 +37,7 @@ exports.createChannel = async (req, res) => {
       return res.status(400).json({ message: "Channel name required" });
     }
 
-    const workspace = await Workspace.findById(workspaceId).select('members settings').lean();
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -128,7 +129,7 @@ exports.createChannel = async (req, res) => {
 
     
     try {
-      const creator = await User.findById(userId).select('username').lean();
+      const creator = await identity.users.findById(userId);
       const systemMsg = await Message.create({
         type: 'system',
         systemEvent: 'channel_created',
@@ -224,8 +225,8 @@ exports.getPublicChannelById = async (req, res) => {
   try {
     const channel = await Channel.findById(req.params.id)
       .select("_id name description topic workspace createdBy createdAt isPublic isArchived")
-      .populate("createdBy", "username")
       .lean();
+    if (channel) await hydrate(channel, { createdBy: { type: 'user', fields: ['username'] } });
 
     if (!channel) return res.status(404).json({ message: "Channel not found" });
     if (!channel.isPublic) return res.status(403).json({ message: "This channel is private" });
@@ -375,8 +376,8 @@ exports.inviteToChannel = async (req, res) => {
     
     try {
       const [inviter, invitee] = await Promise.all([
-        User.findById(userId).select('username').lean(),
-        User.findById(inviteeId).select('username').lean(),
+        identity.users.findById(userId),
+        identity.users.findById(inviteeId),
       ]);
 
       const systemMsg = await Message.create({
@@ -513,7 +514,7 @@ exports.joinChannel = async (req, res) => {
 
     
     try {
-      const joiner = await User.findById(userId).select('username').lean();
+      const joiner = await identity.users.findById(userId);
       const systemMsg = await Message.create({
         type: 'system',
         systemEvent: 'member_joined',
@@ -578,15 +579,15 @@ exports.getChannelMembers = async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
 
-    const channel = await Channel.findById(id)
-      .populate('members.user', 'username profilePicture email');
+    const channel = await Channel.findById(id).lean();
 
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
+    await hydrate(channel, { 'members.user': { type: 'user', fields: ['username', 'profilePicture', 'email'] } });
 
     
-    const allMembers = channel.members.map(m => {
+    const allMembers = channel.members.filter(m => m.user).map(m => {
       const isAdmin = channel.admins.some(adminId => adminId.toString() === m.user._id.toString());
       return {
         _id: m.user._id,
@@ -619,7 +620,7 @@ exports.exitChannel = async (req, res) => {
     const userId = req.user.sub;
     const channelId = req.params.id;
 
-    const channel = await Channel.findById(channelId).populate('members.user', 'username');
+    const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
@@ -652,7 +653,7 @@ exports.exitChannel = async (req, res) => {
     }
 
     
-    const exitingUser = await User.findById(userId).select('username');
+    const exitingUser = await identity.users.findById(userId);
     const username = exitingUser?.username || 'User';
 
     
@@ -763,8 +764,8 @@ exports.assignAdmin = async (req, res) => {
 
     
     const [requesterUser, targetUser] = await Promise.all([
-      User.findById(userId).select('username'),
-      User.findById(targetUserId).select('username')
+      identity.users.findById(userId),
+      identity.users.findById(targetUserId)
     ]);
 
     const requesterName = requesterUser?.username || 'Admin';
@@ -874,15 +875,14 @@ exports.getChannelDetails = async (req, res) => {
     const userId = req.user.sub;
     const channelId = req.params.id;
 
-    const channel = await Channel.findById(channelId)
-      .populate('createdBy', 'username profilePicture email')
-      .populate('members.user', 'username profilePicture email')
-      .populate('admins', 'username profilePicture email')
-      .lean();
+    const channel = await Channel.findById(channelId).lean();
 
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
+    const CARD = { type: 'user', fields: ['username', 'profilePicture', 'email'] };
+    await hydrate(channel, { createdBy: CARD, 'members.user': CARD, admins: CARD });
+    channel.members = channel.members.filter(m => m.user);
 
     
     const isUserMember = channel.members.some(m => {
@@ -955,7 +955,7 @@ exports.updateChannelInfo = async (req, res) => {
     await saveWithRetry(channel);
 
     const io = req.app?.get("io");
-    const user = await User.findById(userId).select('username').lean();
+    const user = await identity.users.findById(userId);
 
     
     if (name && name.trim().toLowerCase() !== oldName) {
@@ -1058,8 +1058,8 @@ exports.demoteAdmin = async (req, res) => {
 
     
     const [requesterUser, targetUser] = await Promise.all([
-      User.findById(userId).select('username'),
-      User.findById(targetUserId).select('username')
+      identity.users.findById(userId),
+      identity.users.findById(targetUserId)
     ]);
 
     const requesterName = requesterUser?.username || 'Admin';
@@ -1121,7 +1121,7 @@ exports.removeMember = async (req, res) => {
       return res.status(400).json({ message: "Target user ID is required" });
     }
 
-    const channel = await Channel.findById(channelId).populate('members.user', 'username');
+    const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
@@ -1147,7 +1147,7 @@ exports.removeMember = async (req, res) => {
     }
 
     
-    const targetUser = await User.findById(targetUserId).select('username');
+    const targetUser = await identity.users.findById(targetUserId);
     const targetName = targetUser?.username || 'User';
 
     
@@ -1162,7 +1162,7 @@ exports.removeMember = async (req, res) => {
     await saveWithRetry(channel);
 
     
-    const removerUser = await User.findById(userId).select('username');
+    const removerUser = await identity.users.findById(userId);
     const removerName = removerUser?.username || 'Admin';
 
     
@@ -1245,7 +1245,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
     await saveWithRetry(channel);
 
     
-    const _user = await User.findById(userId).select('username');
+    const _user = await identity.users.findById(userId);
     await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -1303,7 +1303,7 @@ exports.clearChannelMessages = async (req, res) => {
     const result = await Message.deleteMany({ channel: channelId });
 
     
-    const user = await User.findById(userId).select('username').lean();
+    const user = await identity.users.findById(userId);
     const systemMsg = await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -1347,7 +1347,7 @@ exports.joinChannelViaLink = async (req, res) => {
     const userId = req.user?.sub;
 
     
-    const channel = await Channel.findById(channelId).populate('workspace');
+    const channel = await Channel.findById(channelId);
     if (!channel) {
 
       return res.status(404).json({ message: "Channel not found" });
@@ -1359,8 +1359,9 @@ exports.joinChannelViaLink = async (req, res) => {
     }
 
     
-    const workspace = channel.workspace;
-    const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId));
+    const workspace = await identity.workspaces.findById(channel.workspace);
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+    const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId) && (m.status || 'active') === 'active');
 
     if (!isWorkspaceMember) {
 
@@ -1436,7 +1437,7 @@ exports.joinChannelViaLink = async (req, res) => {
 
     
     try {
-      const joiner = await User.findById(userId).select('username').lean();
+      const joiner = await identity.users.findById(userId);
       const systemMsg = await Message.create({
         type: 'system',
         systemEvent: 'member_joined',
@@ -1565,10 +1566,9 @@ exports.updateTab = async (req, res) => {
     await saveWithRetry(channel);
 
     
-    const populatedChannel = await Channel.findById(channelId)
-      .select('tabs')
-      .populate('tabs.lastEditedBy', 'username profilePicture');
-    const populatedTab = populatedChannel?.tabs?.id(tabId);
+    const populatedChannel = await Channel.findById(channelId).select('tabs').lean();
+    const populatedTab = (populatedChannel?.tabs || []).find(t => String(t._id) === String(tabId)) || null;
+    if (populatedTab) await hydrate(populatedTab, { lastEditedBy: { type: 'user', fields: ['username', 'profilePicture'] } });
 
     const io = req.app?.get("io");
     if (io) {
@@ -1662,8 +1662,6 @@ exports.joinDiscoverableChannel = async (req, res) => {
   try {
     const { id: channelId } = req.params;
     const userId = req.user.sub;
-    const mongoose = require('mongoose');
-    const Workspace = require('../../../models/Workspace');
 
     
     const channel = await Channel.findById(channelId);
@@ -1690,7 +1688,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     }
 
     
-    const workspace = await Workspace.findById(channel.workspace);
+    const workspace = await identity.workspaces.findById(channel.workspace);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -1752,7 +1750,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     
     
     try {
-      const joiner = await User.findById(userId).select('username').lean();
+      const joiner = await identity.users.findById(userId);
       const systemMsg = await Message.create({
         type: 'system',
         systemEvent: 'member_joined',

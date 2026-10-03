@@ -1,5 +1,8 @@
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
+
+const CREATOR = { createdBy: { type: 'user', fields: ['username', 'profilePicture'] } };
 const Channel = require('../channels/channel.model');
 const { handleError } = require('../../../utils/responseHelpers');
 
@@ -17,9 +20,9 @@ exports.listTemplates = async (req, res) => {
     };
 
     const templates = await WorkspaceTemplate.find(query)
-      .populate('createdBy', 'username profilePicture')
       .sort({ usageCount: -1, createdAt: -1 })
       .lean();
+    await hydrate(templates, CREATOR);
 
     return res.json({ templates });
   } catch (err) {
@@ -52,7 +55,7 @@ exports.createTemplate = async (req, res) => {
 
     
     if (fromWorkspaceId) {
-      const source = await Workspace.findById(fromWorkspaceId);
+      const source = await identity.workspaces.findById(fromWorkspaceId);
       if (!source) return res.status(404).json({ message: 'Source workspace not found' });
 
       
@@ -96,9 +99,8 @@ exports.createTemplate = async (req, res) => {
 
 exports.getTemplate = async (req, res) => {
   try {
-    const template = await WorkspaceTemplate.findById(req.params.id)
-      .populate('createdBy', 'username profilePicture')
-      .lean();
+    const template = await WorkspaceTemplate.findById(req.params.id).lean();
+    if (template) await hydrate(template, CREATOR);
 
     if (!template || !template.isActive) {
       return res.status(404).json({ message: 'Template not found' });
@@ -213,8 +215,8 @@ exports.importTemplate = async (req, res) => {
       return res.status(403).json({ message: 'Template is not publicly available' });
     }
 
-    const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).lean();
-    if (!ws) return res.status(403).json({ message: 'You are not a member of the target workspace' });
+    const ws = await identity.workspaces.findById(workspaceId);
+    if (!ws || !ws.members.some(m => String(m.user) === String(userId) && m.status !== 'removed')) return res.status(403).json({ message: 'You are not a member of the target workspace' });
 
     // Channels (with encryption keys), settings and feature toggles.
     const before = await Channel.countDocuments({ workspace: workspaceId });

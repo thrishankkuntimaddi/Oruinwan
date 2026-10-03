@@ -20,8 +20,12 @@ jest.mock('../notificationPreferenceService', () => ({
     updateUserPreferences: jest.fn(),
 }));
 jest.mock('../../../features/push/push.service', () => ({ sendToUser: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn() }));
-jest.mock('../../../../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+// Users and workspaces live in PostgreSQL: the identity repositories are mocked.
+jest.mock('../../../identity', () => ({
+    workspaces: { findById: jest.fn() },
+    users: { findById: jest.fn() },
+}));
+jest.mock('../../../identity/queries/auth', () => ({ setUserPaths: jest.fn() }));
 jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-test-user'] };
     next();
@@ -30,8 +34,8 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
 const express = require('express');
 const Notification = require('../notification.model');
 const prefService = require('../notificationPreferenceService');
-const Workspace = require('../../../../models/Workspace');
-const User = require('../../../../models/User');
+const identity = require('../../../identity');
+const authQueries = require('../../../identity/queries/auth');
 const notificationService = require('../notificationService');
 
 const WS = '64b000000000000000000001';
@@ -51,9 +55,6 @@ const workspaceDoc = {
     ],
 };
 
-function chain(value) {
-    return { select: () => ({ lean: () => Promise.resolve(value) }) };
-}
 function fakeIo() {
     const emit = jest.fn();
     const to = jest.fn(() => ({ emit }));
@@ -62,7 +63,7 @@ function fakeIo() {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    Workspace.findOne.mockReturnValue(chain(workspaceDoc));
+    identity.workspaces.findById.mockResolvedValue(workspaceDoc);
     prefService.getUserPreferences.mockResolvedValue({ task: true, message: true, push: false });
     Notification.create.mockImplementation(async (doc) => ({ ...doc, _id: NOTIF, toObject: () => ({ ...doc, _id: NOTIF }) }));
 });
@@ -82,7 +83,7 @@ describe('notificationService (N1-N3 + labels)', () => {
     test('createMany loads the workspace once and filters to active members', async () => {
         const out = await notificationService.createMany(fakeIo(), [ALICE, BOB, CAROL, SUSPENDED], { workspaceId: WS, type: 'digest', title: 't' });
         expect(out.map(n => n.recipient).sort()).toEqual([ALICE, BOB].sort());
-        expect(Workspace.findOne).toHaveBeenCalledTimes(1);
+        expect(identity.workspaces.findById).toHaveBeenCalledTimes(1);
     });
 
     test('task links point at /workspace/<ws>/tasks/<id>', async () => {
@@ -185,19 +186,19 @@ describe('notification routes (N3, N4, N6) and account prefs (N5)', () => {
     });
 
     test('account notification preferences: defaults, booleans only, partial update', async () => {
-        User.findById.mockReturnValue(chain({ preferences: {} }));
+        identity.users.findById.mockResolvedValue({ _id: BOB, preferences: {} });
         const g = await call('GET', '/api/auth/me/preferences/notifications', BOB);
         expect(g.status).toBe(200);
         expect(g.body).toEqual({ emailDigest: true, marketingEmails: false, desktopPush: true, sound: true, mentionsOnly: false, dmNotifications: true });
 
         const bad = await call('PUT', '/api/auth/me/preferences/notifications', BOB, { sound: 'no' });
         expect(bad.status).toBe(400);
-        expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+        expect(authQueries.setUserPaths).not.toHaveBeenCalled();
 
-        User.findByIdAndUpdate.mockReturnValue(chain({ preferences: { notifications: { sound: false } } }));
+        authQueries.setUserPaths.mockResolvedValue({ _id: BOB, preferences: { notifications: { sound: false } } });
         const ok = await call('PUT', '/api/auth/me/preferences/notifications', BOB, { sound: false, hacker: true });
         expect(ok.status).toBe(200);
         expect(ok.body.sound).toBe(false);
-        expect(User.findByIdAndUpdate.mock.calls[0][1]).toEqual({ $set: { 'preferences.notifications.sound': false } });
+        expect(authQueries.setUserPaths.mock.calls[0][1]).toEqual({ 'preferences.notifications.sound': false });
     });
 });

@@ -53,14 +53,13 @@ exports.unmute = async (req, res, next) => {
 
 // ── @channel / @here policy ──────────────────────────────────────────────────
 
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 
 async function canManage(channel, userId) {
     if ((channel.admins || []).some((a) => String(a) === String(userId))) return true;
-    return !!(await Workspace.exists({
-        _id: channel.workspace,
-        members: { $elemMatch: { user: userId, status: 'active', role: { $in: ['owner', 'admin'] } } },
-    }));
+    if (!channel.workspace) return false;
+    const access = await identity.workspaces.membership(channel.workspace, userId);
+    return !!access?.isAdmin;
 }
 
 exports.setMentionPolicy = async (req, res, next) => {

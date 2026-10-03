@@ -1,7 +1,6 @@
 'use strict';
 
-const Workspace = require('../../../models/Workspace');
-const User = require('../../../models/User');
+const identity = require('../../identity');
 const requireWorkspaceMember = require('./requireWorkspaceMember');
 const { isValidId } = require('../utils/workspaceAccess');
 
@@ -16,11 +15,12 @@ async function requireWorkspaceMemberOrCompanyAdmin(req, res, next) {
         const workspaceId = req.params.workspaceId || req.params.id;
         const userId = String(req.user._id || req.user.sub);
         if (workspaceId && isValidId(workspaceId)) {
-            const workspace = await Workspace.findOne({ _id: workspaceId, isActive: true, isArchived: false }).lean();
+            const found = await identity.workspaces.findById(workspaceId, { activeOnly: true });
+            const workspace = found && !found.isArchived ? found : null;
             if (workspace && workspace.company) {
                 const isMember = (workspace.members || []).some((m) => m.user && String(m.user) === userId && m.status === 'active');
                 if (!isMember) {
-                    const u = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
+                    const u = await identity.users.findById(userId);
                     const coOwner = u && u.coOwnerOf && String(u.coOwnerOf) === String(u.companyId);
                     const companyAdmin = u && u.companyId && String(u.companyId) === String(workspace.company) &&
                         (['owner', 'admin'].includes(u.companyRole) || coOwner);

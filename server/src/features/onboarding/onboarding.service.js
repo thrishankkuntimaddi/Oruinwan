@@ -1,9 +1,7 @@
 const logger = require('../../../utils/logger');
 const bcrypt = require('bcryptjs');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
+const org = require('../../identity/queries/org');
+const { userDocs } = require('../../identity/queries/auth');
 const { createInviteToken, sendInviteEmail } = require('./invite.service');
 
 const ROLE_HIERARCHY = ['guest', 'member', 'manager', 'admin', 'owner'];
@@ -24,13 +22,13 @@ function checkRoleCeiling(requesterRole, targetRole) {
 async function validateDepartments(departmentIds, companyId) {
     if (!departmentIds || departmentIds.length === 0) return;
 
-    const found = await Department.find({
+    const found = await org.departments.count({
         _id: { $in: departmentIds },
         company: companyId,
         isActive: true,
-    }).select('_id').lean();
+    });
 
-    if (found.length !== departmentIds.length) {
+    if (found !== new Set(departmentIds.map(String)).size) {
         throw Object.assign(
             new Error('One or more departments do not belong to your company or are inactive.'),
             { status: 400 }
@@ -41,12 +39,12 @@ async function validateDepartments(departmentIds, companyId) {
 async function validateWorkspaces(workspaceIds, companyId) {
     if (!workspaceIds || workspaceIds.length === 0) return;
 
-    const found = await Workspace.find({
+    const found = await org.workspaces.count({
         _id: { $in: workspaceIds },
         company: companyId,
-    }).select('_id').lean();
+    });
 
-    if (found.length !== workspaceIds.length) {
+    if (found !== new Set(workspaceIds.map(String)).size) {
         throw Object.assign(
             new Error('One or more workspaces do not belong to your company.'),
             { status: 400 }
@@ -80,7 +78,7 @@ async function onboardIndividual(params) {
     }
 
     
-    const company = await Company.findById(companyId).lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) throw Object.assign(new Error('Company not found.'), { status: 404 });
 
     
@@ -89,7 +87,7 @@ async function onboardIndividual(params) {
 
     
     const normalizedEmail = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: normalizedEmail }).lean();
+    const existing = await org.users.findOne({ email: normalizedEmail });
     if (existing) {
         if (existing.accountStatus === 'active') {
             throw Object.assign(new Error('This email is already registered and active.'), { status: 409 });
@@ -115,7 +113,8 @@ async function onboardIndividual(params) {
 
     
     const isBulkImport = !!bulkTempPasswordHash;
-    const user = new User({
+    // A user document (queries/auth userDocs): save() writes the row, workspace and department memberships.
+    const user = userDocs.build({
         username: `${firstName} ${lastName}`.trim(),
         email: normalizedEmail,
         personalEmail: personalEmail ? personalEmail.toLowerCase().trim() : undefined,

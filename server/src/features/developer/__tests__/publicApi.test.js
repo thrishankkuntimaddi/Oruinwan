@@ -18,12 +18,24 @@ jest.mock('../apiKey.model', () => ({
   findOne: jest.fn((q) => ({ lean: async () => mockKeys[q.keyHash] || null })),
   findByIdAndUpdate: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('../../../../models/Workspace', () => ({
-  findOne: jest.fn(() => ({ select: () => ({ lean: async () => ({ _id: '64b000000000000000000001' }) }) })),
-  findById: jest.fn(() => ({ populate: () => ({ lean: async () => ({ members: [
-    { user: { _id: 'u1', username: 'alice', email: 'a@x' }, role: 'owner', status: 'active' },
-    { user: { _id: 'u2', username: 'gone' }, role: 'member', status: 'removed' },
-  ] }) }) })),
+// Workspaces and users live in PostgreSQL; the repositories are mocked.
+jest.mock('../../../identity/workspaces.repo', () => ({
+  ...jest.requireActual('../../../identity/workspaces.repo'),
+  findById: jest.fn(async () => ({
+    _id: '64b000000000000000000001',
+    members: [
+      { user: 'u1', role: 'owner', status: 'active' },
+      { user: 'u2', role: 'member', status: 'removed' },
+    ],
+  })),
+  findManyByIds: jest.fn(async () => []),
+}));
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  findManyByIds: jest.fn(async () => new Map([
+    ['u1', { _id: 'u1', username: 'alice', email: 'a@x', profile: { name: 'Alice Smith' } }],
+    ['u2', { _id: 'u2', username: 'gone' }],
+  ])),
 }));
 
 const mockChannelFind = jest.fn();
@@ -91,12 +103,13 @@ describe('public API', () => {
   });
 
   test('GET /tasks queries by workspace and excludes deleted', async () => {
-    const c = chain([{ _id: 't1' }]);
+    const c = chain([{ _id: 't1', assignedTo: ['u1'] }]);
     mockTaskFind.mockReturnValue(c);
     const r = await call('GET', '/api/public/tasks?status=todo', 'readonly');
     expect(r.status).toBe(200);
     expect(mockTaskFind).toHaveBeenCalledWith({ workspace: mockWs, deleted: { $ne: true }, status: 'todo' });
-    expect(c.populate).toHaveBeenCalledWith('assignedTo', 'username');
+    // Assignees are resolved from PostgreSQL, username only.
+    expect(r.body.tasks[0].assignedTo).toEqual([{ _id: 'u1', username: 'alice' }]);
     expect((await call('GET', '/api/public/tasks?status=bogus', 'readonly')).status).toBe(400);
   });
 

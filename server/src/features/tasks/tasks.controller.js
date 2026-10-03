@@ -6,6 +6,8 @@ const activityService = require('../activity/activity.service');
 let webhookTrigger;
 try { webhookTrigger = require('../integrations/webhook.trigger'); }
 catch { webhookTrigger = null; }
+// task.created/updated/completed: webhook.trigger.fire publishes catalogue events on the bus
+// (Redis) or delivers webhooks directly (single box).
 const _fireWebhook = (workspaceId, event, data) => {
   if (webhookTrigger && workspaceId) webhookTrigger.fire(workspaceId, event, data);
 };
@@ -169,6 +171,10 @@ async function deleteTask(req, res) {
         const taskId = req.params.id;
 
         const result = await tasksService.deleteTask(userId, taskId, req.io, req);
+        if (result.workspaceId) {
+            require('../../shared/events/bus').publish('task.deleted', { taskId, deletedBy: userId }, { workspaceId: result.workspaceId, actorId: userId })
+                .catch(() => {});
+        }
         return res.json(result);
     } catch (error) {
         logger.error('DELETE_TASK ERROR:', error);

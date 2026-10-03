@@ -10,5 +10,6 @@ const fileCommentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 fileCommentSchema.index({ fileId: 1, createdAt: 1 });
+fileCommentSchema.index({ workspaceId: 1, createdAt: -1 }); // tenant-first, for per-workspace cleanup and sharding
 
 module.exports = mongoose.model('FileComment', fileCommentSchema);

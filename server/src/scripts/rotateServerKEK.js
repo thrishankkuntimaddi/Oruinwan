@@ -1,6 +1,8 @@
 const logger = require('../../utils/logger');
 const mongoose = require('mongoose');
-const UserCryptoState = require('../models/UserCryptoState');
+const { cryptoState: cryptoStates } = require('../identity');
+const { countKekRotation, listKekRotation } = require('../identity/queries/security');
+const { connectPostgres, closePostgres } = require('../shared/postgres');
 const kekManager = require('../services/kekManager.service');
 const securityAudit = require('../services/securityAudit.service');
 const crypto = require('crypto');
@@ -41,11 +43,7 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
         const newEnvelope = Buffer.concat([newIv, newAuthTag, newEncrypted]).toString('base64');
 
         
-        cryptoState.umekEnvelope = newEnvelope;
-        cryptoState.kekVersion = toVersion;
-        cryptoState.updatedAt = new Date();
-
-        await cryptoState.save();
+        await cryptoStates.upsert(userId, { umekEnvelope: newEnvelope, kekVersion: toVersion });
 
         logger.info(`✅ Rotated KEK for user ${userId} (v${fromVersion} → v${toVersion})`);
 
@@ -99,15 +97,7 @@ async function rotateServerKEK(options = {}) {
     }
 
     
-    const query = {
-        umekProtectionType: 'SERVER_KEK',
-        $or: [
-            { kekVersion: fromVersion },
-            { kekVersion: null }  
-        ]
-    };
-
-    const totalUsers = await UserCryptoState.countDocuments(query);
+    const totalUsers = await countKekRotation(fromVersion);
     logger.info(`📊 Found ${totalUsers} users to rotate\n`);
 
     if (totalUsers === 0) {
@@ -125,10 +115,9 @@ async function rotateServerKEK(options = {}) {
     let succeeded = 0;
     let failed = 0;
 
+    let afterUserId = '';
     while (processed < totalUsers) {
-        const users = await UserCryptoState.find(query)
-            .limit(batchSize)
-            .skip(processed);
+        const users = await listKekRotation(fromVersion, { afterUserId, limit: batchSize });
 
         if (users.length === 0) break;
 
@@ -149,6 +138,7 @@ async function rotateServerKEK(options = {}) {
         }
 
         processed += users.length;
+        afterUserId = users[users.length - 1].userId;
     }
 
     
@@ -194,14 +184,14 @@ if (require.main === module) {
     });
 
     
-    mongoose.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    }).then(async () => {
+    mongoose.connect(process.env.MONGO_URI).then(async () => {
         logger.info('✅ Connected to MongoDB');
+        // Crypto state lives in PostgreSQL; MongoDB is still used for the audit trail.
+        await connectPostgres({ migrate: false });
 
         try {
             const result = await rotateServerKEK(options);
+            await closePostgres();
             process.exit(result.success ? 0 : 1);
         } catch (error) {
             logger.error('❌ Rotation failed:', error);

@@ -1,9 +1,13 @@
 const logger = require('../../../utils/logger');
+const { replicaRead } = require('../../shared/db');
 const express = require('express');
 const router = express.Router();
-const User = require('../../../models/User');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
+
+const USER_EMAIL = { type: 'user', fields: ['username', 'email'] };
+const DEPT_NAME = { type: 'department', fields: ['name'] };
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
@@ -11,30 +15,26 @@ const { requireAdmin } = require('../../shared/middleware/permissionMiddleware')
 router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         const [total, active, pending, suspended, blocked, guests] = await Promise.all([
-            User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
-            User.countDocuments({ companyId, accountStatus: 'active' }),
+            org.users.count({ companyId, accountStatus: { $ne: 'removed' } }),
+            org.users.count({ companyId, accountStatus: 'active' }),
             // Onboarding creates 'invited' users; both count as pending.
-            User.countDocuments({ companyId, accountStatus: { $in: ['pending', 'invited'] } }),
-            User.countDocuments({ companyId, accountStatus: 'suspended' }),
-            User.countDocuments({ companyId, accountStatus: 'blocked' }),
-            User.countDocuments({ companyId, companyRole: 'guest', accountStatus: { $ne: 'removed' } })
+            org.users.count({ companyId, accountStatus: { $in: ['pending', 'invited'] } }),
+            org.users.count({ companyId, accountStatus: 'suspended' }),
+            org.users.count({ companyId, accountStatus: 'blocked' }),
+            org.users.count({ companyId, companyRole: 'guest', accountStatus: { $ne: 'removed' } })
         ]);
 
         
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const recentInvites = await User.find({
+        const recentInvites = await org.users.find({
             companyId,
             accountStatus: { $in: ['pending', 'invited'] },
             createdAt: { $gte: sevenDaysAgo }
-        })
-            .select('username email accountStatus createdAt')
-            .sort({ createdAt: -1 })
-            .limit(10)
-            .lean();
+        }, { select: 'username email accountStatus createdAt', sort: { createdAt: -1 }, limit: 10 });
 
         res.json({
             stats: {
@@ -62,20 +62,16 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
 router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
-        const departments = await Department.find({ company: companyId })
-            .populate('managers', 'username email')
-            .lean();
+        const departments = await org.departments.find({ company: companyId });
+        await hydrate(departments, { managers: USER_EMAIL });
 
-        
+        // Live member counts in one grouped query.
+        const sizes = new Map((await org.departmentSizes(companyId)).map((d) => [String(d._id), d.members]));
         for (const dept of departments) {
-            dept.userCount = await User.countDocuments({
-                companyId,
-                departments: dept._id,
-                accountStatus: { $ne: 'removed' },
-            });
+            dept.userCount = sizes.get(String(dept._id)) || 0;
         }
 
         res.json({ departments });
@@ -88,13 +84,12 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
 router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
-        const workspaces = await Workspace.find({ company: companyId })
-            .populate('members.user', 'username email')
-            .populate('department', 'name')
-            .lean();
+        const workspaces = (await org.workspaces.find({ company: companyId }))
+            .map((w) => ({ ...w, members: w.members.filter((m) => m.status !== 'removed') }));
+        await hydrate(workspaces, { 'members.user': USER_EMAIL, department: DEPT_NAME });
 
         
         const Message = require("../../modules/messages/message.model.js");
@@ -127,20 +122,20 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
 router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
         
-        const recentActions = await AuditLog.find({
+        const recentActions = await replicaRead(AuditLog.find({
             companyId,
             createdAt: { $gte: sevenDaysAgo }
-        })
-            .populate('userId', 'username email')
+        }))
             .sort({ createdAt: -1 })
             .limit(50)
             .lean();
+        await hydrate(recentActions, { userId: USER_EMAIL });
 
         
         const [roleChanges, permissionChanges] = await Promise.all([
@@ -175,14 +170,12 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
 router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         
-        const workspaces = await Workspace.find({ company: companyId })
-            .populate('createdBy', 'username email')
-            .populate('department', 'name')
-            .lean();
+        const workspaces = await org.workspaces.find({ company: companyId });
+        await hydrate(workspaces, { createdBy: USER_EMAIL, department: DEPT_NAME });
 
         
         const Channel = require("../channels/channel.model.js");
@@ -195,14 +188,13 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
             
             const memberCount = workspace.members.filter(m => m.status === 'active').length;
 
-            
             const adminMember = workspace.members.find(m =>
-                m.role === 'owner' || m.role === 'admin'
+                m.status === 'active' && (m.role === 'owner' || m.role === 'admin')
             );
 
             let admin = null;
             if (adminMember) {
-                const adminUser = await User.findById(adminMember.user).select('username email').lean();
+                const adminUser = await identity.users.findById(adminMember.user);
                 admin = adminUser;
             }
 
@@ -236,20 +228,17 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
 router.get('/company-members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
 
         if (!companyId) {
             return res.status(403).json({ message: 'No company associated with this account' });
         }
 
-        const members = await User.find({
+        const members = await org.users.find({
             companyId,
             accountStatus: { $in: ['active', 'pending'] }
-        })
-            .select('_id username email companyEmail profilePicture companyRole jobTitle accountStatus')
-            .sort({ username: 1 })
-            .lean();
+        }, { select: '_id username email companyEmail profilePicture companyRole jobTitle accountStatus', sort: { username: 1 } });
 
         res.json({ members });
     } catch (error) {
@@ -261,13 +250,16 @@ router.get('/company-members', requireAuth, requireAdmin, async (req, res) => {
 router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
-        const user = await User.findById(userId);
+        const user = await identity.users.findById(userId);
         const companyId = user.companyId;
         const { workspaceId } = req.params;
 
-        const workspace = await Workspace.findById(workspaceId)
-            .populate('members.user', '_id username email profilePicture companyRole jobTitle isOnline')
-            .lean();
+        const workspace = await identity.workspaces.findById(workspaceId);
+        if (workspace) {
+            workspace.members = workspace.members.filter((m) => m.status !== 'removed');
+            await hydrate(workspace, { 'members.user': { type: 'user', fields: ['username', 'email', 'profilePicture', 'companyRole', 'jobTitle', 'isOnline'] } });
+            workspace.members = workspace.members.filter((m) => m.user);
+        }
 
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
@@ -301,7 +293,7 @@ router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async 
 router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const callerId = req.user.sub || req.user._id;
-        const caller = await User.findById(callerId);
+        const caller = await identity.users.findById(callerId);
         const companyId = caller.companyId;
         const { workspaceId } = req.params;
         const { userId: targetUserId, role = 'member' } = req.body;
@@ -317,7 +309,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
         }
 
         
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
@@ -326,7 +318,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
         }
 
         
-        const targetUser = await User.findById(targetUserId);
+        const targetUser = await identity.users.findById(targetUserId);
         if (!targetUser) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -338,29 +330,15 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
 
         
         const alreadyMember = workspace.members.some(
-            m => String(m.user) === String(targetUserId)
+            m => m.status === 'active' && String(m.user) === String(targetUserId)
         );
         if (alreadyMember) {
             return res.status(400).json({ message: 'User is already a member of this workspace' });
         }
 
         
-        workspace.members.push({
-            user: targetUserId,
-            role,
-            status: 'active',
-            joinedAt: new Date()
-        });
-        await workspace.save();
-
-        
-        const alreadyInUserList = targetUser.workspaces.some(
-            w => String(w.workspace) === String(workspaceId)
-        );
-        if (!alreadyInUserList) {
-            targetUser.workspaces.push({ workspace: workspaceId, role, joinedAt: new Date() });
-            await targetUser.save();
-        }
+        // One membership row serves both the workspace's member list and the user's workspaces.
+        await identity.workspaces.addMember(workspaceId, targetUserId, { role });
 
         
         const Channel = require('../channels/channel.model.js');
@@ -399,11 +377,11 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
 router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAdmin, async (req, res) => {
     try {
         const callerId = req.user.sub || req.user._id;
-        const caller = await User.findById(callerId);
+        const caller = await identity.users.findById(callerId);
         const companyId = caller.companyId;
         const { workspaceId, userId: targetUserId } = req.params;
 
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
@@ -414,7 +392,7 @@ router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAd
         }
 
         
-        const targetMember = workspace.members.find(m => String(m.user) === String(targetUserId));
+        const targetMember = workspace.members.find(m => m.status !== 'removed' && String(m.user) === String(targetUserId));
         if (!targetMember) {
             return res.status(404).json({ message: 'User is not a member of this workspace' });
         }
@@ -423,13 +401,7 @@ router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAd
         }
 
         
-        workspace.members = workspace.members.filter(m => String(m.user) !== String(targetUserId));
-        await workspace.save();
-
-        
-        await User.findByIdAndUpdate(targetUserId, {
-            $pull: { workspaces: { workspace: workspace._id } }
-        });
+        await identity.workspaces.removeMember(workspace._id, targetUserId, { by: callerId });
 
         res.json({ message: 'Member removed from workspace' });
     } catch (error) {

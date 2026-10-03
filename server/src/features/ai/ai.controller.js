@@ -7,7 +7,7 @@
  */
 
 const logger = require('../../../utils/logger');
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('./ai.gatewayResolver'); // in-process, or the AI service when AI_SERVICE_URL is set
 const { listProviders, modelsFor } = require('../../../../ai/providers');
 const { DECLARATIONS } = require('../../../../ai/tools/registry');
 const { NOTE_ACTIONS } = require('../../../../ai/agents/assist.agents');
@@ -33,7 +33,7 @@ async function privateChatExtras(req, message) {
   return { memories, knowledge };
 }
 const AIUsage = require('../../models/AIUsage');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -443,7 +443,7 @@ function publicEndpoint(url) {
 }
 
 async function settingsView(workspaceId) {
-  const ws = await Workspace.findById(workspaceId).select('settings.ai').lean();
+  const ws = await identity.workspaces.findById(workspaceId);
   const ai = { enabled: true, provider: 'default', model: null, smartReplies: true, ...(ws?.settings?.ai || {}) };
   const resolved = await resolver.resolveForWorkspace(workspaceId);
   const aiProviderService = require('../integrations/ai-provider.service');
@@ -468,16 +468,21 @@ exports.getSettings = async (req, res) => {
 exports.updateSettings = async (req, res) => {
   try {
     const { enabled, provider, model, smartReplies } = req.body;
-    const $set = {};
-    if (typeof enabled === 'boolean') $set['settings.ai.enabled'] = enabled;
-    if (typeof smartReplies === 'boolean') $set['settings.ai.smartReplies'] = smartReplies;
+    const changes = {};
+    if (typeof enabled === 'boolean') changes.enabled = enabled;
+    if (typeof smartReplies === 'boolean') changes.smartReplies = smartReplies;
     if (provider !== undefined) {
       const allowed = ['default', ...listProviders().filter((n) => n !== 'mock'), 'claude'];
       if (!allowed.includes(provider)) return res.status(400).json({ message: `provider must be one of ${allowed.join(', ')}` });
-      $set['settings.ai.provider'] = provider;
+      changes.provider = provider;
     }
-    if (model !== undefined) $set['settings.ai.model'] = model ? str(model, 80) : null;
-    if (Object.keys($set).length) await Workspace.updateOne({ _id: req.aiWorkspace.id }, { $set });
+    if (model !== undefined) changes.model = model ? str(model, 80) : null;
+    if (Object.keys(changes).length) {
+      // settings is one jsonb document: merge the ai sub-object, keep the other settings.
+      const ws = await identity.workspaces.findById(req.aiWorkspace.id);
+      const ai = { ...(ws?.settings?.ai || {}), ...changes };
+      await identity.workspaces.update(req.aiWorkspace.id, { settings: { $merge: true, ai } });
+    }
     resolver.invalidate(req.aiWorkspace.id);
     return res.json({ settings: await settingsView(req.aiWorkspace.id), canManage: true });
   } catch (err) {

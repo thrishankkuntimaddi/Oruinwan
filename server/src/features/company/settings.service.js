@@ -1,24 +1,21 @@
-const Company = require('../../../models/Company');
+const org = require('../../identity/queries/org');
 
+/**
+ * Profile edits. name and website are columns; the descriptive extras live in
+ * metadata.profile and contact details in settings (where the client reads them).
+ */
 async function updateCompanyProfile(companyId, profileData) {
     const { name, description, industry, size, location, website, phone, address } = profileData;
+    const patch = {};
+    if (name !== undefined) patch.name = name;
+    if (website !== undefined) patch.website = website;
+    const profile = Object.fromEntries(Object.entries({ description, industry, size, location }).filter(([, v]) => v !== undefined));
+    if (Object.keys(profile).length) patch.metadata = { profile };
+    const settings = Object.fromEntries(Object.entries({ phone, address }).filter(([, v]) => v !== undefined));
+    if (Object.keys(settings).length) patch.settings = settings;
 
-    const company = await Company.findByIdAndUpdate(
-        companyId,
-        {
-            name,
-            description,
-            industry,
-            size,
-            location,
-            website,
-            phone,
-            address
-        },
-        { new: true, runValidators: true }
-    );
-
-    return company;
+    const company = await org.updateCompany(companyId, patch);
+    return company ? org.publicCompany(company) : null;
 }
 
 /**
@@ -41,8 +38,8 @@ async function updateSecuritySettings(companyId, securityData = {}) {
     if (d.enforceSSO !== undefined) set['securitySettings.enforceSSO'] = !!d.enforceSSO;
 
     const company = Object.keys(set).length
-        ? await Company.findByIdAndUpdate(companyId, { $set: set }, { new: true, runValidators: true })
-        : await Company.findById(companyId);
+        ? await org.updateCompany(companyId, set)
+        : await org.companies.findOne({ _id: companyId }, { admins: false });
 
     if (!company) {
         return null;
@@ -54,28 +51,22 @@ async function updateSecuritySettings(companyId, securityData = {}) {
 async function updateDomainSettings(companyId, domainData) {
     const { autoJoin, ssoEnabled, ssoProvider } = domainData;
 
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) {
         throw new Error('Company not found');
     }
 
-    
     if (autoJoin && !company.domainVerified) {
         throw new Error('Domain must be verified before enabling auto-join');
     }
 
-    
-    company.autoJoinByDomain = autoJoin;
-    if (company.settings) {
-        company.settings.sso = { enabled: ssoEnabled, provider: ssoProvider };
-    }
-
-    await company.save();
+    const sso = { enabled: ssoEnabled, provider: ssoProvider };
+    const updated = await org.updateCompany(companyId, { autoJoinByDomain: autoJoin, 'settings.sso': sso });
 
     return {
         autoJoin,
-        sso: company.settings?.sso,
-        company
+        sso: updated.settings?.sso,
+        company: org.publicCompany(updated),
     };
 }
 

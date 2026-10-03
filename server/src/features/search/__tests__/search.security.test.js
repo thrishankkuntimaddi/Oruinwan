@@ -21,6 +21,19 @@ const workspaceDoc = {
     { user: '64b0000000000000000000b1', role: 'member', status: 'active' },
   ],
 };
+// Identity is in PostgreSQL: workspace + membership come from the repositories.
+jest.mock('../../../identity', () => {
+  const ws = () => ({ ...workspaceDoc, company: null });
+  const membership = async (_id, userId) => {
+    const member = workspaceDoc.members.find(m => m.user === String(userId) && m.status === 'active') || null;
+    return { workspace: ws(), member, role: member?.role || null, isAdmin: member?.role === 'owner' };
+  };
+  return {
+    workspaces: { findById: jest.fn(async () => ws()), membership: jest.fn(membership), memberWorkspaceIds: jest.fn(async () => [workspaceDoc._id]) },
+    users: { findManyByIds: jest.fn(async () => new Map()), findById: jest.fn(async () => null) },
+  };
+});
+jest.mock('../../../identity/queries/workspaces', () => ({ searchPeople: jest.fn(async () => []) }));
 jest.mock('../../../../models/Workspace', () => ({
   findOne: jest.fn(() => ({ select: () => ({ lean: async () => workspaceDoc }) })),
   findById: jest.fn(() => ({ select: () => ({ lean: async () => workspaceDoc }) })),
@@ -46,6 +59,7 @@ const Channel = require('../../channels/channel.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Message = require('../../../modules/messages/message.model.js');
 const User = require('../../../../models/User');
+const wsQueries = require('../../../identity/queries/workspaces');
 const Task = require('../../../../models/Task');
 const Note = require('../../../../models/Note');
 const WorkspaceFile = require('../../files/WorkspaceFile');
@@ -108,9 +122,10 @@ describe('regex escaping (S2)', () => {
       const res = await call(p, ALICE);
       expect(res.status).toBe(200);
     }
-    const userFilter = User.find.mock.calls[0][0];
-    const regex = userFilter.$or[0].username;
-    expect(regex.source).toBe('\\(');
+    // People search runs in PostgreSQL with the unescaped term (bound as a parameter).
+    const [, , text] = wsQueries.searchPeople.mock.calls[0];
+    expect(text).toBe('(');
+    expect(User.find).not.toHaveBeenCalled();
   });
 });
 

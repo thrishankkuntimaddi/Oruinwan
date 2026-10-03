@@ -1,8 +1,8 @@
 const otpService = require("../services/otp.service");
 const otpStore = require("../services/otpStore");
 const { handleError } = require("../../../utils/responseHelpers");
-const Company = require("../../../models/Company");
-const User = require("../../../models/User");
+const identity = require("../../identity");
+const { query } = require("../postgres");
 
 const OTP_TYPES = ["email", "phone"];
 const PHONE_RE = /^\+?[0-9]{7,15}$/;
@@ -20,7 +20,7 @@ function otpError(res, err, context) {
 async function assertCompanyAdmin(req, companyId) {
     const userId = req.user && (req.user.sub || req.user._id);
     if (!userId) return false;
-    const user = await User.findById(userId).select("companyId companyRole").lean();
+    const user = await identity.users.findById(userId);
     return !!user && !!user.companyId && String(user.companyId) === String(companyId)
         && ["owner", "admin"].includes(user.companyRole);
 }
@@ -81,7 +81,7 @@ exports.sendPhoneOtp = async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const company = await Company.findById(companyId).select("_id");
+        const company = await identity.companies.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -121,16 +121,14 @@ exports.verifyPhoneOtp = async (req, res) => {
             return res.status(400).json({ message: result.error });
         }
 
-        const company = await Company.findById(companyId);
-        if (!company) {
+        // companies.phone (jsonb) holds { ownerPhone, verified, otp, otpExpiresAt }.
+        const { rowCount } = await query(
+            `UPDATE companies SET phone = (COALESCE(phone, '{}'::jsonb) - 'otp' - 'otpExpiresAt') || $2::jsonb, updated_at = now() WHERE id = $1`,
+            [String(companyId), JSON.stringify({ ownerPhone: phone, verified: true })]
+        );
+        if (!rowCount) {
             return res.status(404).json({ message: "Company not found" });
         }
-
-        company.ownerPhone = phone;
-        company.phoneVerified = true;
-        company.phoneOTP = undefined;
-        company.phoneOTPExpiresAt = undefined;
-        await company.save();
 
         return res.json({
             message: "Phone verified successfully",

@@ -1,14 +1,14 @@
 const logger = require('../../../utils/logger');
 const companyService = require("./company.service");
 const metricsService = require("./metrics.service");
-const Company = require("../../../models/Company");
+const org = require("../../identity/queries/org");
 
 exports.getCompanyMetrics = async (req, res) => {
     try {
         const companyId = req.params.id;
         const userId = req.user.sub;
 
-        const company = await Company.findById(companyId);
+        const company = await org.companies.findOne({ _id: companyId }, { admins: false });
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }

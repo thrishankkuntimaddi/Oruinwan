@@ -52,9 +52,9 @@ router.get('/bookmarks', requireAuth, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(Math.max(parseInt(skip, 10) || 0, 0))
       .limit(Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100))
-      .populate('sender', 'username profilePicture')
       .populate('channel', 'name')
       .lean();
+    await require('../../identity/hydrate').hydrate(messages, { sender: { type: 'user', fields: ['username', 'profilePicture'] } });
 
     res.json({ messages });
   } catch (err) {

@@ -4,7 +4,7 @@ const analyticsController = require('./analytics.controller');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 const analyticsService = require('./analytics.service');
-const User = require('../../../models/User');
+const identity = require('../../identity');
 
 const requireCompanyAdmin = require('../../shared/middleware/requireCompanyAdmin');
 const { scopedCompanyId } = requireCompanyAdmin;
@@ -24,7 +24,7 @@ async function resolveCompanyId(req) {
     if (c) return String(c._id || c);
     const id = req.user && (req.user.sub || req.user._id);
     if (!id) return null;
-    const user = await User.findById(id).select('companyId').lean();
+    const user = await identity.users.findById(id);
     return user?.companyId?.toString();
 }
 

@@ -23,15 +23,22 @@ async function scheduleReminder(userId, messageId, remindAt, note = '') {
   return reminder;
 }
 
+/** Message senders live in PostgreSQL: attach them after the Mongo populate. */
+function withSenders(reminders) {
+  return require('../../identity/hydrate').hydrate(reminders, {
+    'messageId.sender': { type: 'user', fields: ['username', 'profilePicture'] },
+  });
+}
+
 async function getUserReminders(userId) {
   return MessageReminder.find({ userId, delivered: false })
     .sort({ remindAt: 1 })
     .populate({
       path: 'messageId',
       select: 'text payload attachments type channel dm sender createdAt',
-      populate: { path: 'sender', select: 'username profilePicture' },
     })
-    .lean();
+    .lean()
+    .then(withSenders);
 }
 
 async function cancelReminder(reminderId, userId) {
@@ -55,9 +62,9 @@ async function deliverDueReminders(io) {
       .populate({
         path: 'messageId',
         select: 'text payload attachments type channel dm sender createdAt',
-        populate: { path: 'sender', select: 'username profilePicture' },
       })
-      .lean();
+      .lean()
+      .then(withSenders);
 
     if (due.length === 0) return;
 

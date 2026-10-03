@@ -1,7 +1,9 @@
 'use strict';
 const logger = require('../../../utils/logger');
 
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const securityQueries = require('../../identity/queries/security');
+const { hydrate, USER_MIN } = require('../../identity/hydrate');
 const AuditLog = require('../../../models/AuditLog');
 const { clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
 const { isValidId, assertWorkspaceMember, sendAccessError } = require('../../shared/utils/workspaceAccess');
@@ -9,10 +11,7 @@ const { eraseAccount, ErasureError } = require('./accountErasure');
 
 const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
 const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
-const SECRET_FIELDS = User.SENSITIVE_FIELDS || [
-  'passwordHash', 'refreshTokens', 'twoFactorSecret', 'otpCodes', 'inviteToken',
-  'resetPasswordTokenHash', 'verificationTokenHash', 'deviceTokens',
-];
+const SECRET_FIELDS = ['passwordHash', 'twoFactorSecret', 'tokens', 'deviceTokens', 'refreshToken'];
 
 function audit(req, fields) {
   return AuditLog.create({
@@ -31,13 +30,22 @@ function audit(req, fields) {
  * owners/admins/co-owners only for users of their own company. Loaded from the DB, never the JWT.
  */
 async function canManageUser(actorId, target) {
-  const actor = await User.findById(actorId).select('roles companyId companyRole coOwnerOf').lean();
+  const actor = await identity.users.findById(actorId);
   if (!actor) return false;
   if (Array.isArray(actor.roles) && actor.roles.some(r => PLATFORM_ADMIN_ROLES.includes(r))) return true;
   if (!actor.companyId || !target?.companyId) return false;
   if (String(actor.companyId) !== String(target.companyId)) return false;
   const isCoOwner = actor.coOwnerOf && String(actor.coOwnerOf) === String(actor.companyId);
   return COMPANY_ADMIN_ROLES.includes(actor.companyRole) || !!isCoOwner;
+}
+
+/** User with the flat legal-hold fields and legalHoldSetBy resolved to { _id, username }. */
+async function loadWithLegalHold(userId) {
+  const user = await identity.users.findById(userId);
+  if (!user) return null;
+  const flat = { ...user, ...securityQueries.legalHoldOf(user) };
+  await hydrate(flat, { legalHoldSetBy: USER_MIN });
+  return flat;
 }
 
 function legalHoldView(userId, user) {
@@ -64,22 +72,19 @@ function legalHoldView(userId, user) {
 exports.exportUser = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const user = await User.findById(userId)
-      .select('-passwordHash -twoFactorSecret -refreshTokens -verificationTokenHash -resetPasswordTokenHash -inviteToken -otpCodes -deviceTokens')
-      .lean();
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    const ident = await securityQueries.identityExport(userId);
+    if (!ident) return res.status(404).json({ message: 'User not found' });
+    const user = ident.user;
 
-    const Task = require('../../../models/Task');
+    const Tasks = require('../tasks/tasks.query');
     const Note = require('../../../models/Note');
-    const Workspace = require('../../../models/Workspace');
     const AIMemory = require('../../models/AIMemory');
     const NotificationPreference = require('../../modules/notifications/notificationPreference.model');
     const { serializePreferences } = require('../auth/auth.controller');
 
-    const [tasks, notes, workspaces, aiMemories, workspaceNotificationPrefs, auditLogs] = await Promise.all([
-      Task.find({ $or: [{ createdBy: userId }, { assignedTo: userId }] }).lean(),
+    const [tasks, notes, aiMemories, workspaceNotificationPrefs, auditLogs] = await Promise.all([
+      Tasks.find({ $or: [{ createdBy: userId }, { assignedTo: userId }] }),
       Note.find({ owner: userId }).lean(),
-      Workspace.find({ 'members.user': userId }).select('name members.user members.role').lean(),
       AIMemory.find({ user: userId }).select('text workspace source createdAt updatedAt').lean(),
       NotificationPreference.find({ userId }).lean(),
       AuditLog.find({ userId }).sort({ createdAt: -1 }).limit(500).lean(),
@@ -87,7 +92,6 @@ exports.exportUser = async (req, res) => {
 
     const profile = { ...user };
     for (const f of SECRET_FIELDS) delete profile[f];
-    delete profile.emails;
     delete profile.preferences;
     if (profile.encryption) profile.encryption = { publicKey: profile.encryption.publicKey || null };
 
@@ -96,14 +100,13 @@ exports.exportUser = async (req, res) => {
       format: 'oruinwan-personal-export-v1',
       profile,
       preferences: serializePreferences(user.preferences),
-      emails: (user.emails || []).map(e => ({
-        email: e.email, verified: !!e.verified, isPrimary: !!e.isPrimary, addedAt: e.addedAt || null,
-      })),
-      workspaces: workspaces.map(ws => ({
-        id: String(ws._id),
-        name: ws.name,
-        role: (ws.members || []).find(m => String(m.user) === String(userId))?.role || 'member',
-      })),
+      emails: ident.emails,
+      workspaces: ident.workspaces,
+      departments: ident.departments,
+      teams: ident.teams,
+      sessions: ident.sessions,
+      devices: ident.devices,
+      identityKey: ident.identityKey,
       tasks,
       notes,
       aiMemories,
@@ -176,15 +179,14 @@ exports.exportWorkspace = async (req, res) => {
       return sendAccessError(res, err);
     }
 
-    const Task = require('../../../models/Task');
+    const Tasks = require('../tasks/tasks.query');
     const Note = require('../../../models/Note');
-    const Workspace = require('../../../models/Workspace');
     const Channel = require('../channels/channel.model');
 
     const [workspace, channels, tasks, notes] = await Promise.all([
-      Workspace.findById(workspaceId).select('name members').populate('members.user', 'username').lean(),
+      identity.workspaces.findById(workspaceId).then((ws) => hydrate(ws, { 'members.user': USER_MIN })),
       Channel.find({ workspace: workspaceId }).select('name description isPrivate isDefault members.user createdAt').lean(),
-      Task.find({ workspace: workspaceId, deleted: { $ne: true } }).lean(),
+      Tasks.find({ workspace: workspaceId, deleted: { $ne: true } }),
       Note.find({ workspace: workspaceId, $or: [{ isPublic: true }, { owner: userId }] }).lean(),
     ]);
 
@@ -238,10 +240,7 @@ exports.exportWorkspace = async (req, res) => {
 exports.getMyLegalHold = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const user = await User.findById(userId)
-      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt')
-      .populate('legalHoldSetBy', 'username')
-      .lean();
+    const user = await loadWithLegalHold(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
     return res.json(legalHoldView(userId, user));
   } catch (err) {
@@ -257,10 +256,7 @@ exports.getLegalHold = async (req, res) => {
     if (userId === 'me' || String(userId) === String(req.user.sub)) return exports.getMyLegalHold(req, res);
     if (!isValidId(userId)) return res.status(400).json({ message: 'Invalid user id' });
 
-    const user = await User.findById(userId)
-      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt companyId')
-      .populate('legalHoldSetBy', 'username')
-      .lean();
+    const user = await loadWithLegalHold(userId);
     // Same 403 for "not found" and "not yours" so ids cannot be probed.
     if (!user || !(await canManageUser(req.user.sub, user))) {
       return res.status(403).json({ message: 'Access denied: only an administrator who manages this user can view their legal hold' });
@@ -285,22 +281,14 @@ exports.setLegalHold = async (req, res) => {
       return res.status(400).json({ message: 'reason must be a string of at most 500 characters' });
     }
 
-    const target = await User.findById(userId).select('companyId').lean();
+    const target = await identity.users.findById(userId);
     if (!target || !(await canManageUser(req.user.sub, target))) {
       return res.status(403).json({ message: 'Access denied: only an administrator who manages this user can set a legal hold' });
     }
 
-    const update = {
-      legalHold,
-      legalHoldReason: legalHold ? (reason || 'Legal hold active') : null,
-      legalHoldSetBy: legalHold ? req.user.sub : null,
-      legalHoldAt: legalHold ? new Date() : null,
-    };
-    const user = await User.findByIdAndUpdate(userId, update, { new: true })
-      .select('legalHold legalHoldReason legalHoldSetBy legalHoldAt')
-      .populate('legalHoldSetBy', 'username')
-      .lean();
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    const updated = await securityQueries.setLegalHold(userId, { enabled: legalHold, reason, setBy: req.user.sub });
+    if (!updated) return res.status(404).json({ message: 'User not found' });
+    const user = await loadWithLegalHold(userId);
 
     await audit(req, {
       action: legalHold ? 'compliance.legal_hold_set' : 'compliance.legal_hold_removed',
@@ -355,9 +343,9 @@ exports.getAuditLogs = async (req, res) => {
 /** GET /api/compliance/retention-policy -> { retentionDays: number | null, legalHold } */
 exports.getRetentionPolicy = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select('retentionDays legalHold').lean();
+    const user = await identity.users.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    return res.json({ retentionDays: user.retentionDays || null, legalHold: !!user.legalHold });
+    return res.json({ retentionDays: user.retentionDays || null, legalHold: securityQueries.legalHoldOf(user).legalHold });
   } catch (err) {
     logger.error('[GDPR] get-retention error:', err);
     return res.status(500).json({ message: 'Failed to fetch retention policy' });
@@ -371,7 +359,7 @@ exports.setRetentionPolicy = async (req, res) => {
     if (retentionDays !== null && !(Number.isInteger(retentionDays) && retentionDays >= 1 && retentionDays <= 3650)) {
       return res.status(400).json({ message: 'retentionDays must be a whole number from 1 to 3650, or null to keep messages forever' });
     }
-    await User.findByIdAndUpdate(req.user.sub, { retentionDays });
+    await identity.users.update(req.user.sub, { retentionDays });
 
     await audit(req, {
       action: 'compliance.retention_policy_updated',

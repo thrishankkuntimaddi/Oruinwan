@@ -15,8 +15,9 @@ const users = {
   spammer: { _id: 'u4', companyId: null },
   validator: { _id: 'u5', companyId: null },
 };
-jest.mock('../../../../models/User', () => ({
-  findById: jest.fn((id) => ({ select: () => ({ lean: async () => users[id] || null }) })),
+jest.mock('../../../identity', () => ({
+  users: { findById: jest.fn(async (id) => users[id] || null), findManyByIds: jest.fn(async () => new Map()) },
+  companies: { findManyByIds: jest.fn(async () => new Map()) },
 }));
 
 const saved = [];

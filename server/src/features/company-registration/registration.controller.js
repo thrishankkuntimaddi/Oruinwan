@@ -1,8 +1,6 @@
 const logger = require('../../../utils/logger');
 const registrationService = require("./registration.service");
-const Company = require("../../../models/Company");
-const Department = require("../../../models/Department");
-const User = require("../../../models/User");
+const org = require("../../identity/queries/org");
 
 exports.registerCompany = async (req, res) => {
     try {
@@ -56,7 +54,7 @@ exports.verifyCompany = async (req, res) => {
         
         
 
-        const company = await Company.findById(companyId);
+        const company = await org.companies.findOne({ _id: companyId });
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -71,8 +69,7 @@ exports.verifyCompany = async (req, res) => {
             logger.info(`✅ Approving company: ${company.name}...`);
 
             
-            company.verificationStatus = "approved";
-            await company.save();
+            await org.updateCompany(companyId, { verificationStatus: "approved" });
 
             
             
@@ -92,8 +89,7 @@ exports.verifyCompany = async (req, res) => {
             } catch (provisionErr) {
                 logger.error("Provisioning error:", provisionErr);
                 
-                company.verificationStatus = "pending";
-                await company.save();
+                await org.updateCompany(companyId, { verificationStatus: "pending" });
 
                 return res.status(500).json({
                     message: "Failed to provision resources",
@@ -102,9 +98,7 @@ exports.verifyCompany = async (req, res) => {
             }
 
         } else if (decision === "reject") {
-            company.verificationStatus = "rejected";
-            company.rejectionReason = rejectionReason || "Not specified";
-            await company.save();
+            await org.updateCompany(companyId, { verificationStatus: "rejected", rejectionReason: rejectionReason || "Not specified" });
 
             logger.info(`❌ Company "${company.name}" rejected.`);
 
@@ -129,15 +123,14 @@ exports.startSetup = async (req, res) => {
         const userId = req.user.sub;
         const { plan, acceptedTerms } = req.body;
 
-        const company = await Company.findById(companyId);
+        const company = await org.companies.findOne({ _id: companyId });
         if (!company) return res.status(404).json({ message: "Company not found" });
 
-        
-        if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
-            return res.status(403).json({ message: "Only admins can perform setup" });
-        } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
+        if (!company.isAdmin(userId)) {
             return res.status(403).json({ message: "Only admins can perform setup" });
         }
+        // Collected below and written once.
+        const patch = {};
 
         if (company.isSetupComplete) {
             return res.status(400).json({ message: "Setup already complete" });
@@ -145,16 +138,15 @@ exports.startSetup = async (req, res) => {
 
         
         // The plan is an owner decision.
-        if (plan && req.companyRole === 'owner') company.plan = plan.toLowerCase();
-        if (acceptedTerms) company.metadata = { ...company.metadata, acceptedTermsAt: new Date(), acceptedTermsBy: userId };
+        if (plan && req.companyRole === 'owner') patch.plan = plan.toLowerCase();
+        if (acceptedTerms) patch.metadata = { acceptedTermsAt: new Date(), acceptedTermsBy: userId };
 
-        
-        company.setupStep = 1;
-        await company.save();
+        patch.setupStep = 1;
+        const updated = await org.updateCompany(companyId, patch);
 
         return res.json({
             message: "Setup started",
-            step: company.setupStep
+            step: updated.setupStep
         });
 
     } catch (err) {
@@ -169,36 +161,29 @@ exports.updateCompanySetup = async (req, res) => {
         const userId = req.user.sub;
         const { step, data } = req.body;
 
-        const company = await Company.findById(companyId);
+        const company = await org.companies.findOne({ _id: companyId });
         if (!company) return res.status(404).json({ message: "Company not found" });
 
-        
-        if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
-            return res.status(403).json({ message: "Only admins can perform setup" });
-        } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
+        if (!company.isAdmin(userId)) {
             return res.status(403).json({ message: "Only admins can perform setup" });
         }
+        // Collected below and written once.
+        const patch = {};
 
         
         if (step === 1) { 
-            if (data.displayName) company.displayName = data.displayName;
-            company.setupStep = 1;
+            if (data.displayName) patch.displayName = data.displayName;
+            patch.setupStep = 1;
         } else if (step === 2) { 
             if (data.departments && Array.isArray(data.departments)) {
-                company.metadata = {
-                    ...company.metadata,
-                    finalDepartments: data.departments
-                };
+                patch.metadata = { finalDepartments: data.departments };
             }
-            company.setupStep = 2;
+            patch.setupStep = 2;
         } else if (step === 3) {
             if (data.invites && Array.isArray(data.invites)) {
-                company.metadata = {
-                    ...company.metadata,
-                    finalInvites: data.invites
-                };
+                patch.metadata = { finalInvites: data.invites };
             }
-            company.setupStep = 3;
+            patch.setupStep = 3;
         } else if (step === 4) { 
             logger.info("🚀 Finalizing Company Setup & Provisioning Resources...");
 
@@ -206,10 +191,9 @@ exports.updateCompanySetup = async (req, res) => {
             const departmentsToCreate = company.metadata?.finalDepartments || [];
 
             
-            const existingDepartments = await Department.find({
-                company: company._id,
-                name: { $in: departmentsToCreate }
-            });
+            const existingDepartments = departmentsToCreate.length
+                ? await org.departments.find({ company: company._id, name: { $in: departmentsToCreate } }, { members: false })
+                : [];
 
             const existingDeptNames = existingDepartments.map(d => d.name);
             const newDepartmentNames = departmentsToCreate.filter(
@@ -218,47 +202,29 @@ exports.updateCompanySetup = async (req, res) => {
 
             const createdDepartmentIds = [];
 
-            
-            for (const deptName of newDepartmentNames) {
-                const dept = new Department({
-                    name: deptName,
-                    company: company._id,
-                    head: userId,  
-                    members: [userId],
-                    createdAt: new Date()
-                });
-                await dept.save();
-                createdDepartmentIds.push(dept._id);
-                logger.info(`✅ Created new department: ${deptName}`);
-            }
+            const { withTransaction } = require('../../shared/postgres');
+            await withTransaction(async (tx) => {
+                for (const deptName of newDepartmentNames) {
+                    const dept = await org.insert('departments', { name: deptName, company: company._id, head: userId }, { tx });
+                    createdDepartmentIds.push(dept._id);
+                }
+                const allIds = [...createdDepartmentIds, ...existingDepartments.map(d => d._id)];
+                // The owner joins every department (existing memberships are kept).
+                for (const deptId of allIds) await org.addDepartmentMembers(deptId, [userId], 'member', { tx });
+            });
+            for (const deptName of newDepartmentNames) logger.info(`✅ Created new department: ${deptName}`);
 
-            
             const allDepartmentIds = [
                 ...createdDepartmentIds,
                 ...existingDepartments.map(d => d._id)
             ];
+            logger.info(`✅ Updated owner's departments: ${allDepartmentIds.length} departments`);
 
-            
-            const ownerUser = await User.findById(userId);
-            if (ownerUser) {
-                
-                const existingUserDeptIds = ownerUser.departments.map(id => id.toString());
-                const newDeptIds = allDepartmentIds.map(id => id.toString());
-                const uniqueDeptIds = [...new Set([...existingUserDeptIds, ...newDeptIds])];
-
-                ownerUser.departments = uniqueDeptIds;
-                await ownerUser.save();
-                logger.info(`✅ Updated owner's departments: ${uniqueDeptIds.length} total departments`);
-            }
-
-            
             if (existingDeptNames.length > 0) {
                 logger.info(`ℹ️ Skipped ${existingDeptNames.length} existing departments:`, existingDeptNames);
             }
 
-            company.isSetupComplete = true;
-            company.setupStep = 4;
-            await company.save();
+            await org.updateCompany(companyId, { ...patch, isSetupComplete: true, setupStep: 4 });
 
             logger.info(`✅ Setup complete for company: ${company.name}`);
 
@@ -272,12 +238,12 @@ exports.updateCompanySetup = async (req, res) => {
             });
         }
 
-        await company.save();
+        const updated = await org.updateCompany(companyId, patch);
 
         return res.json({
             message: "Setup updated",
-            step: company.setupStep,
-            isSetupComplete: company.isSetupComplete
+            step: updated.setupStep,
+            isSetupComplete: updated.isSetupComplete
         });
 
     } catch (err) {

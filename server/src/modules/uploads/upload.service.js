@@ -1,33 +1,47 @@
 const logger = require('../../../utils/logger');
-const { Storage } = require('@google-cloud/storage');
 const { randomUUID } = require('crypto');
 const path = require('path');
 const { pipeline } = require('stream');
-
 const fs = require('fs');
 
-const storageClient = new Storage({
-    projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod',
-});
-
-const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'chttrix-uploads';
-
 /**
- * Where uploaded objects live. GCS needs credentials (GOOGLE_APPLICATION_CREDENTIALS,
- * or the platform's own on Cloud Run/GCE); without them every upload used to fail.
- * STORAGE_DRIVER=gcs|local forces a choice; otherwise GCS is used only when credentials
- * are present and local disk (LOCAL_UPLOAD_DIR) otherwise.
+ * Where uploaded objects live. The S3 driver speaks to the compose s3 service (RustFS)
+ * locally and to any
+ * S3-compatible service later (same code, different S3_ENDPOINT). It is chosen
+ * when S3_ENDPOINT or S3_BUCKET is set (or STORAGE_DRIVER=s3); otherwise objects
+ * go to local disk (LOCAL_UPLOAD_DIR), which is for development and tests only:
+ * a second server instance cannot see files written by the first.
  */
 function storageDriver(env = process.env) {
-    if (env.STORAGE_DRIVER === 'gcs' || env.STORAGE_DRIVER === 'local') return env.STORAGE_DRIVER;
-    return env.GOOGLE_APPLICATION_CREDENTIALS || env.K_SERVICE || env.GCE_METADATA_HOST ? 'gcs' : 'local';
+    if (env.STORAGE_DRIVER === 's3' || env.STORAGE_DRIVER === 'local') return env.STORAGE_DRIVER;
+    return env.S3_ENDPOINT || env.S3_BUCKET ? 's3' : 'local';
+}
+
+const BUCKET_NAME = process.env.S3_BUCKET || 'oruinwan-uploads';
+
+let s3Client = null;
+function s3() {
+    if (!s3Client) {
+        const { S3Client } = require('@aws-sdk/client-s3');
+        const env = process.env;
+        s3Client = new S3Client({
+            region: env.S3_REGION || 'us-east-1',
+            endpoint: env.S3_ENDPOINT || undefined,
+            // Self-hosted S3 servers serve buckets as a path (host/bucket), not as a subdomain.
+            forcePathStyle: env.S3_FORCE_PATH_STYLE !== 'false',
+            credentials: env.S3_ACCESS_KEY && env.S3_SECRET_KEY
+                ? { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY }
+                : undefined,
+        });
+    }
+    return s3Client;
 }
 
 const LOCAL_UPLOAD_DIR = process.env.LOCAL_UPLOAD_DIR || path.join(__dirname, '..', '..', '..', 'uploads', 'objects');
 
 if (storageDriver() === 'local') {
-    const note = `[UploadService] Storing uploads on local disk at ${LOCAL_UPLOAD_DIR} (no GCS credentials).`;
-    if (process.env.NODE_ENV === 'production') logger.warn(`${note} Files will not survive a redeploy; set GOOGLE_APPLICATION_CREDENTIALS or STORAGE_DRIVER=gcs.`);
+    const note = `[UploadService] Storing uploads on local disk at ${LOCAL_UPLOAD_DIR} (no S3 configured).`;
+    if (process.env.NODE_ENV === 'production') logger.warn(`${note} Files will not survive a redeploy and are not shared between instances; set S3_ENDPOINT/S3_BUCKET.`);
     else logger.info(note);
 }
 
@@ -37,9 +51,48 @@ function localPath(objectPath) {
     return full;
 }
 
-/** A GCS-like handle (getMetadata / createReadStream) for either driver. */
+const isNotFound = (err) => err && (err.name === 'NotFound' || err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404);
+
+// S3 lowercases user-metadata keys (x-amz-meta-*), so `uploadedBy` comes back as
+// `uploadedby`. Map them back to the camelCase names the access checks read.
+const METADATA_KEYS = ['originalName', 'uploadedBy', 'companyId', 'workspaceId', 'kind'];
+function fromS3Metadata(meta = {}) {
+    const out = {};
+    for (const [k, v] of Object.entries(meta || {})) {
+        const known = METADATA_KEYS.find((name) => name.toLowerCase() === k.toLowerCase());
+        out[known || k] = v;
+    }
+    return out;
+}
+
+/** A handle (getMetadata / createReadStream) for either driver; the shape is shared by both. */
 function objectHandle(objectPath) {
-    if (storageDriver() === 'gcs') return storageClient.bucket(BUCKET_NAME).file(objectPath);
+    if (storageDriver() === 's3') {
+        return {
+            async getMetadata() {
+                const { HeadObjectCommand } = require('@aws-sdk/client-s3');
+                let head;
+                try {
+                    head = await s3().send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: objectPath }));
+                } catch (err) {
+                    if (isNotFound(err)) throw Object.assign(new Error('File not found'), { code: 404 });
+                    throw err;
+                }
+                return [{ contentType: head.ContentType, size: head.ContentLength, metadata: fromS3Metadata(head.Metadata) }];
+            },
+            // Lazy stream: the GetObject round trip happens once a consumer attaches.
+            createReadStream(opts = {}) {
+                const { GetObjectCommand } = require('@aws-sdk/client-s3');
+                const { PassThrough } = require('stream');
+                const out = new PassThrough();
+                const range = opts.start != null ? `bytes=${opts.start}-${opts.end != null ? opts.end : ''}` : undefined;
+                s3().send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: objectPath, Range: range }))
+                    .then((res) => { res.Body.on('error', (e) => out.destroy(e)); res.Body.pipe(out); })
+                    .catch((err) => out.destroy(isNotFound(err) ? Object.assign(new Error('File not found'), { code: 404 }) : err));
+                return out;
+            },
+        };
+    }
     const full = localPath(objectPath);
     return {
         async getMetadata() {
@@ -59,18 +112,18 @@ function objectHandle(objectPath) {
 }
 
 async function writeObject(objectPath, buffer, { contentType, metadata }) {
-    if (storageDriver() === 'gcs') {
-        const gcsFile = storageClient.bucket(BUCKET_NAME).file(objectPath);
-        await new Promise((resolve, reject) => {
-            const stream = gcsFile.createWriteStream({
-                resumable: false,
-                contentType,
-                metadata: { cacheControl: 'private, max-age=3600', ...metadata },
-            });
-            stream.on('error', reject);
-            stream.on('finish', resolve);
-            stream.end(buffer);
-        });
+    if (storageDriver() === 's3') {
+        const { PutObjectCommand } = require('@aws-sdk/client-s3');
+        // S3 user metadata is string-only; drop empty values so the header set stays clean.
+        const Metadata = Object.fromEntries(Object.entries(metadata || {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)]));
+        await s3().send(new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: objectPath,
+            Body: buffer,
+            ContentType: contentType,
+            CacheControl: 'private, max-age=3600',
+            Metadata,
+        }));
         return;
     }
     const full = localPath(objectPath);
@@ -98,11 +151,12 @@ function formatSize(bytes) {
 }
 
 /**
+ * Store a multer file under <folder>/<date>/<uuid><ext>.
  * @param {object} file   multer file
- * @param {string} folder GCS folder prefix
+ * @param {string} folder object key prefix
  * @param {object} [owner] { userId, companyId } — stored as object metadata and used for access checks
  */
-async function uploadToGCS(file, folder = 'channels', owner = {}) {
+async function uploadObject(file, folder = 'channels', owner = {}) {
     const ext = path.extname(file.originalname) || '';
     const date = new Date().toISOString().slice(0, 10); 
     const uniqueName = `${randomUUID()}${ext}`;
@@ -117,10 +171,6 @@ async function uploadToGCS(file, folder = 'channels', owner = {}) {
         },
     });
 
-    
-    
-    
-    
     const type = resolveAttachmentType(file.mimetype);
 
     return {
@@ -129,8 +179,8 @@ async function uploadToGCS(file, folder = 'channels', owner = {}) {
         size: file.size,
         sizeFormatted: formatSize(file.size),
         mimeType: file.mimetype,
-        type,           
-        gcsPath,        
+        type,
+        gcsPath, // object key; the name is kept because models and access checks query this field
     };
 }
 
@@ -173,12 +223,12 @@ function pipeToResponse(readStream, res, label) {
 }
 
 /**
- * Stream a GCS object to the client.
+ * Stream a stored object to the client (with HTTP range support).
  * @param {object} [options]
  * @param {(objectMeta: object) => Promise<boolean>} [options.authorize] access check run after
  *        metadata is loaded; a falsy result yields 403 without streaming anything.
  */
-async function streamGCSFile(gcsPath, req, res, options = {}) {
+async function streamObject(gcsPath, req, res, options = {}) {
     const gcsFile = objectHandle(gcsPath);
 
     const [metadata] = await gcsFile.getMetadata();
@@ -234,8 +284,13 @@ async function streamGCSFile(gcsPath, req, res, options = {}) {
 
 /** Delete a stored object (and its local .meta.json). Missing objects are ignored. */
 async function deleteObject(objectPath) {
-    if (storageDriver() === 'gcs') {
-        await storageClient.bucket(BUCKET_NAME).file(objectPath).delete({ ignoreNotFound: true });
+    if (storageDriver() === 's3') {
+        const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+        try {
+            await s3().send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: objectPath }));
+        } catch (err) {
+            if (!isNotFound(err)) throw err;
+        }
         return;
     }
     const full = localPath(objectPath);
@@ -243,4 +298,41 @@ async function deleteObject(objectPath) {
     await fs.promises.rm(`${full}.meta.json`, { force: true });
 }
 
-module.exports = { uploadToGCS, streamGCSFile, resolveAttachmentType, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle, deleteObject };
+/** Test hook: swap the S3 client. */
+function _setS3ClientForTests(client) { s3Client = client; }
+
+/**
+ * Create the bucket if it does not exist (S3 driver only). Called once at boot;
+ * a storage error here is logged, not fatal, so the API still starts.
+ */
+async function ensureBucket() {
+    if (storageDriver() !== 's3') return { driver: 'local' };
+    const { HeadBucketCommand, CreateBucketCommand } = require('@aws-sdk/client-s3');
+    try {
+        await s3().send(new HeadBucketCommand({ Bucket: BUCKET_NAME }));
+        return { driver: 's3', bucket: BUCKET_NAME, created: false };
+    } catch (err) {
+        if (!isNotFound(err)) {
+            logger.error(`[UploadService] Object storage unreachable (${err.name || err.message}); uploads will fail until S3_ENDPOINT answers`);
+            return { driver: 's3', bucket: BUCKET_NAME, error: err.message };
+        }
+    }
+    try {
+        await s3().send(new CreateBucketCommand({ Bucket: BUCKET_NAME }));
+        logger.info(`[UploadService] Created bucket "${BUCKET_NAME}"`);
+        return { driver: 's3', bucket: BUCKET_NAME, created: true };
+    } catch (err) {
+        if (err.name === 'BucketAlreadyOwnedByYou' || err.name === 'BucketAlreadyExists') return { driver: 's3', bucket: BUCKET_NAME, created: false };
+        logger.error(`[UploadService] Could not create bucket "${BUCKET_NAME}": ${err.message}`);
+        return { driver: 's3', bucket: BUCKET_NAME, error: err.message };
+    }
+}
+
+module.exports = {
+    ensureBucket,
+    fromS3Metadata,
+    uploadObject, streamObject, deleteObject, writeObject, objectHandle,
+    // Older names, kept for the existing call sites.
+    uploadToGCS: uploadObject, streamGCSFile: streamObject,
+    resolveAttachmentType, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, _setS3ClientForTests,
+};

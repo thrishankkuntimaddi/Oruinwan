@@ -1,5 +1,7 @@
 const logger = require('../../../utils/logger');
-const User = require("../../../models/User");
+const identity = require("../../identity");
+const { userDocs } = require("../../identity/queries/auth");
+const { query } = require("../../shared/postgres");
 const DMSession = require("../../../models/DMSession");
 
 exports.blockUser = async (req, res) => {
@@ -10,7 +12,7 @@ exports.blockUser = async (req, res) => {
         if (!userIdToBlock) return res.status(400).json({ message: "User ID required" });
         if (String(currentUserId) === String(userIdToBlock)) return res.status(400).json({ message: "Cannot block yourself" });
 
-        const user = await User.findById(currentUserId);
+        const user = await userDocs.findById(currentUserId);
         if (!user) return res.status(404).json({ message: "User not found" });
 
         const alreadyBlocked = user.blockedUsers.some(b => String(b.userId) === String(userIdToBlock));
@@ -19,7 +21,8 @@ exports.blockUser = async (req, res) => {
         user.blockedUsers.push({ userId: userIdToBlock, blockedAt: new Date() });
         await user.save();
 
-        const blockedUser = await User.findById(userIdToBlock).select("username email profilePicture");
+        const blockedUser = await identity.users.findById(userIdToBlock);
+        if (!blockedUser) return res.status(404).json({ message: "User not found" });
         return res.json({
             message: "User blocked successfully",
             blockedUser: { _id: blockedUser._id, username: blockedUser.username, email: blockedUser.email, profilePicture: blockedUser.profilePicture }
@@ -37,7 +40,7 @@ exports.unblockUser = async (req, res) => {
 
         if (!userIdToUnblock) return res.status(400).json({ message: "User ID required" });
 
-        const user = await User.findById(currentUserId);
+        const user = await userDocs.findById(currentUserId);
         if (!user) return res.status(404).json({ message: "User not found" });
 
         user.blockedUsers = user.blockedUsers.filter(b => String(b.userId) !== String(userIdToUnblock));
@@ -53,7 +56,10 @@ exports.unblockUser = async (req, res) => {
 exports.getBlockedUsers = async (req, res) => {
     try {
         const currentUserId = req.user.sub;
-        const user = await User.findById(currentUserId).select("blockedUsers").populate("blockedUsers.userId", "username email profilePicture");
+        const { hydrate, userSelect } = require("../../identity/hydrate");
+        const me = await identity.users.findById(currentUserId);
+        const user = me ? { blockedUsers: (me.social?.blockedUsers || []).map((b) => ({ ...b })) } : null;
+        if (user) await hydrate(user, { 'blockedUsers.userId': userSelect('username email profilePicture') });
 
         if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -75,7 +81,7 @@ exports.muteDM = async (req, res) => {
         const { dmId } = req.params;
         const { muted } = req.body;
 
-        const user = await User.findById(currentUserId);
+        const user = await userDocs.findById(currentUserId);
         if (!user) return res.status(404).json({ message: "User not found" });
 
         if (muted) {
@@ -130,11 +136,7 @@ exports.updateStatus = async (req, res) => {
         }
 
         
-        const user = await User.findByIdAndUpdate(
-            userId,
-            { userStatus: status },
-            { new: true }
-        ).select('username userStatus');
+        const user = await identity.users.update(userId, { userStatus: status });
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -168,9 +170,7 @@ exports.checkUsername = async (req, res) => {
             return res.status(400).json({ message: "Username is required" });
         }
 
-        const exists = await User.findOne({
-            username: { $regex: new RegExp(`^${username}$`, 'i') }
-        }).select('_id');
+        const exists = await identity.users.findByUsername(username.trim());
 
         return res.json({
             exists: !!exists,
@@ -190,9 +190,7 @@ exports.checkEmail = async (req, res) => {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        const exists = await User.findOne({
-            email: email.toLowerCase()
-        }).select('_id');
+        const exists = await identity.users.findByEmail(email.trim());
 
         return res.json({
             exists: !!exists,
@@ -216,10 +214,8 @@ exports.checkPhone = async (req, res) => {
             return res.status(400).json({ message: "Phone code is required" });
         }
 
-        const exists = await User.findOne({
-            phone,
-            phoneCode
-        }).select('_id');
+        const { rows } = await query('SELECT id FROM users WHERE phone = $1 AND phone_code = $2 LIMIT 1', [phone, phoneCode]);
+        const exists = rows[0] || null;
 
         return res.json({
             exists: !!exists,

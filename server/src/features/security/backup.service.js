@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const User = require('../../../models/User');
+const { companyBackup } = require('../../identity/queries/security');
 const AuditLog = require('../../../models/AuditLog');
 
 const BACKUP_KEY = Buffer.from(process.env.SERVER_KEK || '', 'hex');
@@ -30,12 +30,9 @@ function decryptPayload(encryptedBase64) {
 }
 
 async function createBackup({ requesterId, companyId }) {
-  const filter = companyId ? { companyId } : {};
-
-  const [users, auditLogs] = await Promise.all([
-    User.find(filter)
-      .select('-passwordHash -twoFactorSecret -refreshTokens -verificationTokenHash -resetPasswordTokenHash')
-      .lean(),
+  // Identity tables come from PostgreSQL (secrets never included), audit logs from MongoDB.
+  const [identityTables, auditLogs] = await Promise.all([
+    companyBackup(companyId || null),
     AuditLog.find(companyId ? { companyId } : {})
       .sort({ createdAt: -1 })
       .limit(10000)
@@ -45,9 +42,10 @@ async function createBackup({ requesterId, companyId }) {
   const backupPayload = {
     backedUpAt: new Date().toISOString(),
     companyId: companyId || null,
-    users,
+    ...identityTables,
     auditLogs,
   };
+  const users = identityTables.users;
 
   const encrypted = encryptPayload(backupPayload);
 
@@ -55,7 +53,13 @@ async function createBackup({ requesterId, companyId }) {
     createdAt: new Date().toISOString(),
     createdBy: requesterId,
     companyId: companyId || null,
-    recordCount: { users: users.length, auditLogs: auditLogs.length },
+    recordCount: {
+      users: users.length,
+      workspaces: identityTables.workspaces.length,
+      departments: identityTables.departments.length,
+      teams: identityTables.teams.length,
+      auditLogs: auditLogs.length,
+    },
     algorithm: 'AES-256-GCM',
     encryptedPayload: encrypted,
   };

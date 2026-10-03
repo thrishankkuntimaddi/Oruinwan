@@ -9,7 +9,7 @@
  * statusSync is on, a workflow-checked status move via the tasks service.
  */
 
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 const logger = require('../../../utils/logger');
 
 // Oruinwan keys are PREFIX-N (prefix: letters). Matched case-insensitively so
@@ -34,12 +34,12 @@ const TASK_FIELDS = '_id issueKey title status visibility channel workspace crea
 
 async function findTasksByKeys(workspaceId, keys) {
   if (!keys.length) return [];
-  return Task.find({ workspace: workspaceId, issueKey: { $in: keys }, deleted: { $ne: true } }).select(TASK_FIELDS).lean();
+  return Tasks.find({ workspace: workspaceId, issueKey: { $in: keys }, deleted: { $ne: true } }, { select: TASK_FIELDS });
 }
 
 async function findTasksByLinkUrl(workspaceId, url) {
   if (!url) return [];
-  return Task.find({ workspace: workspaceId, 'externalLinks.url': url, deleted: { $ne: true } }).select(TASK_FIELDS).lean();
+  return Tasks.find({ workspace: workspaceId, 'externalLinks.url': url, deleted: { $ne: true } }, { select: TASK_FIELDS });
 }
 
 /** Activity line + target status for a PR event. */

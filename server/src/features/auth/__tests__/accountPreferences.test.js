@@ -11,15 +11,14 @@ function mockApplySet($set) {
   }
 }
 
-jest.mock('../../../../models/User', () => ({
-  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ preferences: mockStore.prefs }) }) })),
-  findByIdAndUpdate: jest.fn((id, update) => {
-    mockApplySet(update.$set);
-    return { select: () => ({ lean: async () => ({ preferences: mockStore.prefs }) }) };
-  }),
+jest.mock('../../../identity', () => ({
+  users: { findById: jest.fn(async () => ({ preferences: mockStore.prefs })) },
+}));
+jest.mock('../../../identity/queries/auth', () => ({
+  setUserPaths: jest.fn(async (id, $set) => { mockApplySet($set); return { preferences: mockStore.prefs }; }),
 }));
 
-const User = require('../../../../models/User');
+const { setUserPaths } = require('../../../identity/queries/auth');
 const prefs = require('../accountPreferences');
 const privacyService = require('../privacy.service');
 
@@ -42,14 +41,14 @@ describe('privacy preferences', () => {
     mockStore.prefs = { privacy: { readReceipts: false, typingIndicators: false, allowDiscovery: true } };
     const res = await run(prefs.updatePrivacyPreferences, { allowDiscovery: false });
     expect(res.statusCode).toBe(200);
-    expect(User.findByIdAndUpdate.mock.calls[0][1]).toEqual({ $set: { 'preferences.privacy.allowDiscovery': false } });
+    expect(setUserPaths.mock.calls[0][1]).toEqual({ 'preferences.privacy.allowDiscovery': false });
     expect(res.body).toEqual({ readReceipts: false, typingIndicators: false, allowDiscovery: false });
   });
 
   test('PUT rejects non-booleans and empty bodies', async () => {
     expect((await run(prefs.updatePrivacyPreferences, { readReceipts: 'no' })).statusCode).toBe(400);
     expect((await run(prefs.updatePrivacyPreferences, {})).statusCode).toBe(400);
-    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(setUserPaths).not.toHaveBeenCalled();
   });
 
   test('PUT refreshes the enforcement cache at once', async () => {
@@ -77,16 +76,14 @@ describe('region preferences', () => {
     for (const body of bad) {
       expect((await run(prefs.updateRegionPreferences, body)).statusCode).toBe(400);
     }
-    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(setUserPaths).not.toHaveBeenCalled();
   });
 
   test('PUT is partial and returns the saved object', async () => {
     mockStore.prefs = { region: { language: 'en', timezone: 'auto', dateFormat: 'DD/MM/YYYY', timeFormat: '12h' } };
     const res = await run(prefs.updateRegionPreferences, { timezone: 'Asia/Kolkata', timeFormat: '24h' });
     expect(res.statusCode).toBe(200);
-    expect(User.findByIdAndUpdate.mock.calls[0][1]).toEqual({
-      $set: { 'preferences.region.timezone': 'Asia/Kolkata', 'preferences.region.timeFormat': '24h' },
-    });
+    expect(setUserPaths.mock.calls[0][1]).toEqual({ 'preferences.region.timezone': 'Asia/Kolkata', 'preferences.region.timeFormat': '24h' });
     expect(res.body).toEqual({ language: 'en', timezone: 'Asia/Kolkata', dateFormat: 'DD/MM/YYYY', timeFormat: '24h' });
   });
 

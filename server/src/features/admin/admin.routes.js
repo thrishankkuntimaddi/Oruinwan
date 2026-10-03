@@ -1,20 +1,22 @@
 const logger = require('../../../utils/logger');
+const { replicaRead } = require('../../shared/db');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { userDocs } = require('../../identity/queries/auth');
+const { hydrate } = require('../../identity/hydrate');
 const supportTickets = require('../support/supportTickets.service');
 const Broadcast = require('../../../models/Broadcast');
-const Billing = require('../../../models/Billing');
+// Billing accounts live in PostgreSQL (migration 0007_billing_analytics).
+const { billing: billingRepo } = require('../billing/billing.repository');
 const sendEmail = require('../../../utils/sendEmail');
 
 const AuditLog = require('../../../models/AuditLog');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
 const Message = require("../../modules/messages/message.model.js");
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
@@ -32,12 +34,14 @@ function callerCompanyId(req) {
 async function findCompanyEmployee(req) {
   const companyId = callerCompanyId(req);
   if (!companyId || !mongoose.Types.ObjectId.isValid(req.params.id)) return null;
-  return User.findOne({ _id: req.params.id, companyId });
+  // A user document (save() writes back to PostgreSQL) scoped to the caller's company.
+  const row = await org.users.findOne({ _id: req.params.id, companyId });
+  return row ? userDocs.findById(row._id) : null;
 }
 
 const requireSuperAdmin = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.sub);
+    const user = await identity.users.findById(req.user.sub);
 
     if (user && user.roles.includes('chttrix_admin')) {
       next();
@@ -51,11 +55,11 @@ const requireSuperAdmin = async (req, res, next) => {
 
 router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
   try {
-    const totalCompanies = await Company.countDocuments({ verificationStatus: 'verified' });
-    const pendingRequests = await Company.countDocuments({ verificationStatus: 'pending' });
+    const totalCompanies = await org.companies.count({ verificationStatus: 'verified' });
+    const pendingRequests = await org.companies.count({ verificationStatus: 'pending' });
 
     
-    const activeUsers = await User.countDocuments({
+    const activeUsers = await org.users.count({
       accountStatus: 'active',
       companyId: { $ne: null }
     });
@@ -64,7 +68,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
     const openTickets = await supportTickets.countOpenTickets();
 
     
-    const billings = await Billing.find({ status: 'active' });
+    const billings = await billingRepo.list({ status: 'active' });
     const monthlyRevenue = billings
       .filter(b => b.billingCycle === 'monthly')
       .reduce((sum, b) => sum + b.amount, 0);
@@ -73,7 +77,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
 
-    const companiesLastMonth = await Company.countDocuments({
+    const companiesLastMonth = await org.companies.count({
       verificationStatus: 'verified',
       createdAt: { $lte: lastMonth }
     });
@@ -107,12 +111,11 @@ router.get('/audit-logs', requireSuperAdmin, async (req, res) => {
     if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) filter.companyId = req.query.companyId;
     if (req.query.action) filter.action = String(req.query.action);
     if (req.query.severity) filter.severity = String(req.query.severity);
-    const logs = await AuditLog.find(filter)
+    const logs = await replicaRead(AuditLog.find(filter))
       .sort({ createdAt: -1 })
       .limit(limit)
-      .populate('userId', 'username email')
-      .populate('companyId', 'name')
       .lean();
+    await hydrate(logs, { userId: { type: 'user', fields: ['username', 'email'] }, companyId: { type: 'company', fields: ['name'] } });
     return res.json(logs);
   } catch (err) {
     logger.error('[Admin] audit-logs failed:', err);
@@ -122,10 +125,9 @@ router.get('/audit-logs', requireSuperAdmin, async (req, res) => {
 
 router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
   try {
-    const activities = await AuditLog.find()
+    const activities = await replicaRead(AuditLog.find())
       .sort({ createdAt: -1 })
       .limit(20)
-      .populate('userId', 'username')
       .lean();
 
     const formattedActivities = activities.map(log => ({
@@ -143,12 +145,9 @@ router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
 
 router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
   try {
-    const companies = await Company.find({ verificationStatus: 'pending' })
-      .populate({
-        path: 'admins.user',
-        select: 'username name email personalEmail phone phoneCode jobTitle role emails'
-      })
-      .sort({ createdAt: -1 });
+    const companies = (await org.companies.find({ verificationStatus: 'pending' }, { sort: { createdAt: -1 } }))
+      .map((c) => org.publicCompany(c));
+    await hydrate(companies, { 'admins.user': { type: 'user', fields: ['username', 'profile', 'email', 'personalEmail', 'phone', 'phoneCode', 'jobTitle'] } });
 
     res.json(companies);
   } catch (err) {
@@ -160,15 +159,15 @@ router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
 router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { message } = req.body;
-    const company = await Company.findById(req.params.id);
+    const company = await org.companies.findOne({ _id: req.params.id });
     if (!company) return res.status(404).json({ message: "Company not found" });
 
+    await org.updateCompany(company._id, { verificationStatus: 'verified' });
     company.verificationStatus = 'verified';
-    await company.save();
 
     let emailSent = false;
     let provisioned = false;
-    const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
+    const adminUser = await org.users.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
       // First approval: create the departments / default workspace the company
       // asked for (skipped when it already has a default workspace).
@@ -181,8 +180,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
           logger.error('Company provisioning after approval failed:', provisionError.message);
         }
       }
-      adminUser.accountStatus = 'active';
-      await adminUser.save();
+      await org.updateUser(adminUser._id, { accountStatus: 'active' });
 
       // Email is best effort: the decision is already saved.
       try {
@@ -198,7 +196,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
     }
 
     
-    const auditUser = await User.findById(req.user.sub);
+    const auditUser = await identity.users.findById(req.user.sub);
     await AuditLog.create({
       companyId: company._id,
       userId: req.user.sub,
@@ -208,7 +206,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
       description: `Company ${company.name} approved by ${auditUser ? auditUser.username : 'Admin'}`
     });
 
-    res.json({ message: "Company Approved", company, emailSent, provisioned });
+    res.json({ message: "Company Approved", company: org.publicCompany(company), emailSent, provisioned });
   } catch (err) {
     logger.error('Approve company error:', err);
     res.status(500).json({ message: "Server Error" });
@@ -220,16 +218,15 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
     const { message, reason } = req.body;
     const finalReason = message || reason; 
 
-    const company = await Company.findById(req.params.id);
+    const company = await org.companies.findOne({ _id: req.params.id });
     if (!company) return res.status(404).json({ message: "Company not found" });
 
+    await org.updateCompany(company._id, { verificationStatus: 'rejected', rejectionReason: finalReason });
     company.verificationStatus = 'rejected';
     company.rejectionReason = finalReason;
-    await company.save();
 
-    
     let emailSent = false;
-    const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
+    const adminUser = await org.users.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
       // Email is best effort: the decision is already saved.
       try {
@@ -252,7 +249,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
     }
 
     
-    const auditUser = await User.findById(req.user.sub);
+    const auditUser = await identity.users.findById(req.user.sub);
     await AuditLog.create({
       companyId: company._id,
       userId: req.user.sub,
@@ -263,7 +260,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
       description: `Company ${company.name} rejected by ${auditUser ? auditUser.username : 'Admin'}`
     });
 
-    res.json({ message: "Company Rejected", company, emailSent });
+    res.json({ message: "Company Rejected", company: org.publicCompany(company), emailSent });
   } catch (err) {
     logger.error('Reject company error:', err);
     res.status(500).json({ message: "Server Error" });
@@ -272,14 +269,12 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
 
 router.get('/active-companies', requireSuperAdmin, async (req, res) => {
   try {
-    const companies = await Company.find({ verificationStatus: 'verified' })
-      .select('-phoneOTP -phoneOTPExpiresAt -domainVerificationToken -domainVerificationExpires -ssoConfig')
-      .populate({
-        path: 'admins.user',
-        select: 'username name email personalEmail jobTitle'
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+    const companies = (await org.companies.find({ verificationStatus: 'verified' }, { sort: { createdAt: -1 } }))
+      .map((c) => org.publicCompany(c));
+    await hydrate(companies, { 'admins.user': { type: 'user', fields: ['username', 'profile', 'email', 'personalEmail', 'jobTitle'] } });
+    // Users and workspaces per company in two grouped queries.
+    const counts = await org.companyCounts(companies.map((c) => c._id));
+    for (const c of companies) Object.assign(c, { stats: counts.get(String(c._id)) || { users: 0, activeUsers: 0, workspaces: 0 } });
 
     res.json(companies);
   } catch (err) {
@@ -365,19 +360,19 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
     let companies = [];
     switch (targetType) {
       case 'all':
-        companies = await Company.find({ verificationStatus: 'verified' });
+        companies = await org.companies.find({ verificationStatus: 'verified' }, { admins: false });
         break;
       case 'active':
-        companies = await Company.find({ verificationStatus: 'verified' });
+        companies = await org.companies.find({ verificationStatus: 'verified' }, { admins: false });
         break;
       case 'pending':
-        companies = await Company.find({ verificationStatus: 'pending' });
+        companies = await org.companies.find({ verificationStatus: 'pending' }, { admins: false });
         break;
       case 'specific':
         if (!Array.isArray(targetCompanies) || !targetCompanies.length || !targetCompanies.every((id) => mongoose.Types.ObjectId.isValid(String(id)))) {
           return res.status(400).json({ message: 'Choose at least one company' });
         }
-        companies = await Company.find({ _id: { $in: targetCompanies } });
+        companies = await org.companies.find({ _id: { $in: targetCompanies.map(String) } }, { admins: false });
         break;
       default:
         return res.status(400).json({ message: 'Invalid target type' });
@@ -386,7 +381,7 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
     
     // Recorded for the platform history; there is no company-wide in-app
     // channel to deliver it through yet, so counts say who it targets.
-    const recipientUsers = await User.countDocuments({ companyId: { $in: companies.map(c => c._id) }, accountStatus: 'active' });
+    const recipientUsers = await org.users.count({ companyId: { $in: companies.map(c => c._id) }, accountStatus: 'active' });
     const broadcast = await Broadcast.create({
       subject: String(subject).trim(),
       body,
@@ -426,9 +421,10 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
 router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
   try {
     const broadcasts = await Broadcast.find()
-      .populate('sentBy', 'username')
       .sort({ sentAt: -1 })
-      .limit(50);
+      .limit(50)
+      .lean();
+    await hydrate(broadcasts, { sentBy: { type: 'user', fields: ['username'] } });
 
     res.json(broadcasts);
   } catch (err) {
@@ -439,18 +435,15 @@ router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
 
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
-const UserModel = require('../../../models/User');
 
 router.get('/dm-users', requireSuperAdmin, async (req, res) => {
   try {
     
-    const users = await UserModel.find({
-      companyId: { $exists: true, $ne: null },
+    const users = await org.users.find({
+      companyId: { $ne: null },
       companyRole: { $in: ['owner', 'admin'] }
-    })
-      .select('username email profilePicture companyRole companyId isOnline')
-      .populate('companyId', 'name')
-      .lean();
+    }, { select: 'username email profilePicture companyRole companyId isOnline' });
+    await hydrate(users, { companyId: { type: 'company', fields: ['name'] } });
 
     
     const enriched = await Promise.all(users.map(async (user) => {
@@ -523,9 +516,9 @@ router.get('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
       ticket: ticket._id,
       deletedAt: null
     })
-      .populate('sender', 'username email profilePicture roles companyRole')
       .sort({ createdAt: 1 })
       .lean();
+    await hydrate(messages, { sender: { type: 'user', fields: ['username', 'email', 'profilePicture', 'roles', 'companyRole'] } });
 
     res.json(messages);
   } catch (err) {
@@ -544,7 +537,7 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
     }
 
     
-    const targetUser = await UserModel.findById(userId).select('companyId').lean();
+    const targetUser = await identity.users.findById(userId);
     if (!targetUser) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -567,15 +560,15 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
       });
     }
 
-    const newMessage = await SupportMessage.create({
+    const created = await SupportMessage.create({
       ticket: ticket._id,
       company: targetUser.companyId,
       sender: req.user.sub,
       senderRole: 'platform',
       content: message.trim()
     });
-
-    await newMessage.populate('sender', 'username email profilePicture roles');
+    const newMessage = created.toObject();
+    await hydrate(newMessage, { sender: { type: 'user', fields: ['username', 'email', 'profilePicture', 'roles'] } });
 
     
     await AuditLog.create({
@@ -600,7 +593,7 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
 
 router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
   try {
-    const billings = await Billing.find({ status: 'active' });
+    const billings = await billingRepo.list({ status: 'active' });
 
     const totalRevenue = billings.reduce((sum, b) => sum + b.amount, 0);
     const avgPerCompany = billings.length > 0 ? totalRevenue / billings.length : 0;
@@ -628,12 +621,12 @@ router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
 
 router.get('/billing/companies', requireSuperAdmin, async (req, res) => {
   try {
-    const billings = await Billing.find()
-      .populate('companyId', 'name domain')
-      .sort({ createdAt: -1 });
+    const billings = await billingRepo.list(); // newest first
+    const accountIds = billings.map(b => b.companyId); // one account per company: its id is the company id
+    await hydrate(billings, { companyId: { type: 'company', fields: ['name', 'domain'] } });
 
-    const formattedBillings = billings.map(billing => ({
-      _id: billing._id,
+    const formattedBillings = billings.map((billing, i) => ({
+      _id: accountIds[i],
       companyName: billing.companyId?.name || 'Unknown',
       companyDomain: billing.companyId?.domain || 'N/A',
       plan: billing.plan,
@@ -671,29 +664,18 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
     const dbStats = await mongoose.connection.db.stats();
 
     
+    // Identity counts in one PostgreSQL query; content counts from MongoDB.
     const [
-      totalUsers,
-      activeUsers,
-      totalCompanies,
-      verifiedCompanies,
-      pendingCompanies,
-      totalDepartments,
-      totalWorkspaces,
+      platform,
       totalChannels,
       totalMessages,
       totalTasks,
       totalNotes
     ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ accountStatus: 'active' }),
-      Company.countDocuments(),
-      Company.countDocuments({ verificationStatus: 'verified' }),
-      Company.countDocuments({ verificationStatus: 'pending' }),
-      Department.countDocuments(),
-      Workspace.countDocuments(),
+      org.platformStats(),
       Channel.countDocuments(),
       Message.countDocuments(),
-      Task.countDocuments(),
+      Tasks.countDocuments(),
       Note.countDocuments()
     ]);
 
@@ -721,16 +703,16 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       },
       entities: {
         users: {
-          total: totalUsers,
-          active: activeUsers
+          total: platform.users,
+          active: platform.activeUsers
         },
         companies: {
-          total: totalCompanies,
-          verified: verifiedCompanies,
-          pending: pendingCompanies
+          total: platform.companies,
+          verified: platform.verifiedCompanies,
+          pending: platform.pendingCompanies
         },
-        departments: totalDepartments,
-        workspaces: totalWorkspaces,
+        departments: platform.departments,
+        workspaces: platform.workspaces,
         channels: totalChannels,
         messages: totalMessages,
         tasks: totalTasks,
@@ -747,20 +729,17 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
 router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
   try {
     const userId = req.user.sub || req.user._id;
-    const user = await User.findById(userId).populate('companyId');
+    const user = await identity.users.findById(userId);
 
     if (!user || !user.companyId) {
       return res.status(403).json({ message: 'User not part of a company' });
     }
 
-    const employees = await User.find({
-        companyId: user.companyId._id,
-        accountStatus: { $ne: 'removed' }, 
-    })
-        .populate('departments')
-        .populate('managedDepartments')
-        .select('-passwordHash -refreshTokens -encryption.encryptedPrivateKey')
-        .sort({ createdAt: -1 });
+    const employees = await org.users.find({
+        companyId: user.companyId,
+        accountStatus: { $ne: 'removed' },
+    }, { org: true, sort: { createdAt: -1 } });
+    await hydrate(employees, { departments: { type: 'department', fields: null }, managedDepartments: { type: 'department', fields: null } });
 
     res.json(employees.map(toSafeUser));
   } catch (error) {
@@ -839,23 +818,9 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
       return res.status(403).json({ message: ceiling });
     }
 
-    const employeeId = employee._id;
-    const Department = require('../../../models/Department');
-    const Workspace = require('../../../models/Workspace');
-
-    
-    
-    await Promise.all([
-      Department.updateMany({ members: employeeId }, { $pull: { members: employeeId } }),
-      Department.updateMany({ managers: employeeId }, { $pull: { managers: employeeId } }),
-      Workspace.updateMany(
-        { 'members.user': employeeId },
-        { $pull: { members: { user: employeeId } } }
-      ),
-    ]);
-
-    
-    await User.findByIdAndDelete(employeeId);
+    // Department, team and workspace memberships, sessions and keys go with the
+    // row (ON DELETE CASCADE in 0006_identity).
+    await identity.users.remove(employee._id);
 
     res.json({ message: 'Employee permanently removed from company' });
   } catch (error) {
@@ -877,13 +842,13 @@ router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async 
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    const validDeptCount = await Department.countDocuments({ _id: { $in: departmentIds }, company: callerCompanyId(req) });
+    const validDeptCount = await org.departments.count({ _id: { $in: departmentIds }, company: callerCompanyId(req) });
     if (validDeptCount !== new Set(departmentIds.map(String)).size) {
       return res.status(400).json({ message: 'One or more departments do not belong to your company' });
     }
 
-    employee.departments = departmentIds;
-    await employee.save();
+    await org.setUserDepartments(employee._id, callerCompanyId(req), departmentIds);
+    employee.departments = departmentIds.map(String);
 
     res.json({ message: 'Department assignment updated', employee: toSafeUser(employee) });
   } catch (error) {
@@ -915,19 +880,21 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
 
     
     if (role === 'manager' && Array.isArray(managedDepartments) && managedDepartments.length) {
-      const validManaged = await Department.countDocuments({ _id: { $in: managedDepartments }, company: callerCompanyId(req) });
+      const validManaged = await org.departments.count({ _id: { $in: managedDepartments }, company: callerCompanyId(req) });
       if (validManaged !== new Set(managedDepartments.map(String)).size) {
         return res.status(400).json({ message: 'One or more departments do not belong to your company' });
       }
     }
 
+    await employee.save();
+    // Managed departments are the 'manager' rows in department_members.
     if (role === 'manager' && managedDepartments) {
-      employee.managedDepartments = managedDepartments;
+      await org.setUserManagedDepartments(employee._id, managedDepartments, { companyId: callerCompanyId(req) });
+      employee.managedDepartments = managedDepartments.map(String);
     } else if (role !== 'manager') {
+      await org.setUserManagedDepartments(employee._id, [], { companyId: callerCompanyId(req) });
       employee.managedDepartments = [];
     }
-
-    await employee.save();
     await syncCompanyAdmins(employee.companyId, employee._id, role);
     require('../security/security.service').logSecurityEvent({
       companyId: employee.companyId, actorId: req.user._id || req.user.sub, eventType: 'role_changed',
@@ -943,21 +910,18 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
 
 router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const Department = require('../../../models/Department');
-    const Workspace = require('../../../models/Workspace');
-
-    const department = await Department.findOne({ _id: req.params.id, company: callerCompanyId(req) });
+    const department = await org.departments.findOne({ _id: req.params.id, company: callerCompanyId(req) }, { members: false });
     if (!department) {
       return res.status(404).json({ message: 'Department not found' });
     }
 
     // Workspace.department is the field; also include ones listed on the department.
-    const workspaces = await Workspace.find({
+    const workspaces = (await org.workspaces.find({
       company: callerCompanyId(req),
       $or: [{ department: department._id }, { _id: { $in: department.workspaces || [] } }],
-    })
-      .populate('members.user', 'username email')
-      .select('name description members createdAt');
+    }, { select: 'name description members createdAt' }))
+      .map((w) => ({ ...w, members: (w.members || []).filter((m) => m.status === 'active') }));
+    await hydrate(workspaces, { 'members.user': { type: 'user', fields: ['username', 'email'] } });
 
     res.json(workspaces);
   } catch (error) {
@@ -982,20 +946,20 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
     
     
     
-    const validWsCount = await Workspace.countDocuments({ _id: { $in: workspaceIds }, company: callerCompanyId(req) });
+    const validWsCount = await org.workspaces.count({ _id: { $in: workspaceIds }, company: callerCompanyId(req) });
     if (validWsCount !== new Set(workspaceIds.map(String)).size) {
       return res.status(400).json({ message: 'One or more workspaces do not belong to your company' });
     }
 
-    const existingIds = employee.workspaces.map(w => w.workspace.toString());
-    const newEntries = workspaceIds
-      .filter(id => !existingIds.includes(id.toString()))
-      .map(id => ({ workspace: id, role: 'member', joinedAt: new Date() }));
+    // The list replaces the employee's workspaces: join the new ones, leave the rest.
+    const wanted = new Set(workspaceIds.map(String));
+    const existingIds = employee.workspaces.map(w => String(w.workspace));
+    for (const id of wanted) if (!existingIds.includes(id)) await identity.workspaces.addMember(id, employee._id, { role: 'member' });
+    for (const id of existingIds) if (!wanted.has(id)) await identity.workspaces.removeMember(id, employee._id, { by: req.user.sub || req.user._id });
     employee.workspaces = [
-      ...employee.workspaces.filter(w => workspaceIds.map(String).includes(w.workspace.toString())),
-      ...newEntries
+      ...employee.workspaces.filter(w => wanted.has(String(w.workspace))),
+      ...[...wanted].filter((id) => !existingIds.includes(id)).map((id) => ({ workspace: id, role: 'member', joinedAt: new Date() })),
     ];
-    await employee.save();
 
     res.json({ message: 'Workspace assignment updated', employee: toSafeUser(employee) });
   } catch (error) {

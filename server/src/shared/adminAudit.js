@@ -7,7 +7,7 @@
  */
 
 const logger = require('../../utils/logger');
-const User = require('../../models/User');
+const identity = require('../identity');
 const AuditLog = require('../../models/AuditLog');
 const ComplianceLog = require('../../models/ComplianceLog');
 
@@ -35,7 +35,7 @@ async function recordAdminAction({
             status: 'success',
         })];
         if (companyId) {
-            const actor = await User.findById(userId).select('email companyRole').lean();
+            const actor = await identity.users.findById(userId);
             writes.push(ComplianceLog.create({
                 companyId,
                 actorId: userId,

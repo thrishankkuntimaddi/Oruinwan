@@ -6,7 +6,7 @@ module.exports = {
     register({ app }) {
         app.use('/api/notifications', require('./notifications.routes'));
     },
-    start({ io }) {
-        require('./notifications.cron').startNotificationsCron(io);
+    start({ io, jobs = true }) {
+        if (jobs) require('./notifications.cron').startNotificationsCron(io);
     },
 };

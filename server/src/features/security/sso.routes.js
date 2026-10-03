@@ -6,7 +6,8 @@ const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const User = require('../../../models/User');
+const { users } = require('../../identity');
+const { findBySso } = require('../../identity/queries/security');
 const AuditLog = require('../../../models/AuditLog');
 
 const PROVIDERS = {
@@ -141,34 +142,31 @@ router.get('/:provider/callback', async (req, res) => {
     }
 
     
-    let user = await User.findOne({ ssoProvider: provider, ssoId: externalId });
+    let user = await findBySso(provider, externalId);
     if (!user) {
-      user = await User.findOne({ email: email.toLowerCase() });
+      user = await users.findByEmail(email);
       if (user) {
-        
-        user.ssoProvider = provider;
-        user.ssoId = externalId;
-        if (picture && !user.profilePicture) user.profilePicture = picture;
-        await user.save();
+        // Link the existing account to this SSO identity.
+        user = await users.update(user._id, {
+          sso: { provider, id: String(externalId) },
+          ...(picture && !user.profilePicture ? { profilePicture: picture } : {}),
+        });
       }
     }
 
     if (!user) {
-      
-      user = await User.create({
+      user = await users.create({
         username: name || email.split('@')[0],
         email: email.toLowerCase(),
         profilePicture: picture,
         authProvider: provider === 'google' ? 'google' : 'local',
-        ssoProvider: provider,
-        ssoId: externalId,
+        sso: { provider, id: String(externalId) },
         passwordHash: null,
         verified: true,
         accountStatus: 'active',
       });
     }
 
-    
     try {
       await AuditLog.create({
         userId: user._id,

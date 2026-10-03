@@ -11,8 +11,10 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Workspace', () => ({ find: jest.fn() }));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../../../modules/messages/message.model.js', () => ({ countDocuments: jest.fn(async () => 0), findOne: jest.fn() }));
 jest.mock('../../channels/channel.model.js', () => ({}));
 jest.mock('../../../../models/Task', () => ({ find: jest.fn(), countDocuments: jest.fn(async () => 3) }));
@@ -29,6 +31,7 @@ jest.mock('../../security/backup.service', () => ({
 }));
 
 const h = require('../../../shared/__tests__/gateHarness');
+const store = require('../../admin/__tests__/identityStore');
 const Task = require('../../../../models/Task');
 const Note = require('../../../../models/Note');
 const Update = require('../../../../models/Update');
@@ -60,16 +63,16 @@ function app() {
 }
 
 beforeEach(() => {
-    const base = { accountStatus: 'active', roles: ['user'] };
-    Object.assign(h.users, {
-        [OWNER]: { _id: OWNER, companyId: C1, companyRole: 'owner', ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [GUEST]: { _id: GUEST, companyId: C1, companyRole: 'guest', ...base },
-        [ADMIN_B]: { _id: ADMIN_B, companyId: C2, companyRole: 'admin', ...base },
-        [CO_OWNER]: { _id: CO_OWNER, companyId: C1, companyRole: 'member', coOwnerOf: C1, ...base },
-        [STAFF]: { _id: STAFF, companyId: null, companyRole: 'member', accountStatus: 'active', roles: ['user', 'chttrix_admin'] },
-    });
+    store.reset();
+    store.addCompany({ _id: C1, name: 'Acme' });
+    store.addCompany({ _id: C2, name: 'Beta' });
+    store.addUser({ _id: OWNER, companyId: C1, companyRole: 'owner' });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member' });
+    store.addUser({ _id: GUEST, companyId: C1, companyRole: 'guest' });
+    store.addUser({ _id: ADMIN_B, companyId: C2, companyRole: 'admin' });
+    store.addUser({ _id: CO_OWNER, companyId: C1, companyRole: 'member', coOwnerOf: C1 });
+    store.addUser({ _id: STAFF, companyId: null, companyRole: 'member', roles: ['user', 'chttrix_admin'] });
     Task.find.mockImplementation(() => h.query([{ title: 't' }]));
     Note.find.mockImplementation(() => h.query([]));
     Update.find.mockImplementation(() => h.query([]));

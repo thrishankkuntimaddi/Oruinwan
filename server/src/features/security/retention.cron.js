@@ -1,7 +1,8 @@
 'use strict';
 const logger = require('../../../utils/logger');
+const { scheduleJob } = require('../../shared/jobs/scheduler');
 
-const User = require('../../../models/User');
+const { usersWithRetention } = require('../../identity/queries/security');
 
 /**
  * Personal message retention. For every user with retentionDays set and no legal hold:
@@ -45,11 +46,7 @@ async function runRetentionCleanup() {
   logger.info('[Retention] Starting message retention cleanup...');
 
   try {
-    const usersWithPolicy = await User.find({
-      retentionDays: { $ne: null, $gt: 0 },
-      legalHold: { $ne: true },
-      accountStatus: { $ne: 'removed' },
-    }).select('_id retentionDays').lean();
+    const usersWithPolicy = await usersWithRetention();
 
     if (usersWithPolicy.length === 0) {
       logger.info('[Retention] No retention policies active. Skipping.');
@@ -93,21 +90,15 @@ async function runRetentionCleanup() {
   }
 }
 
-let started = false;
-
+/** Personal retention cleanup: one run per day fleet-wide, 30s after boot. */
 function startRetentionCron() {
-  if (started) return;
-  started = true;
-  const INTERVAL_MS = 24 * 60 * 60 * 1000;
-
   logger.info('[Retention] Retention cron scheduled (runs every 24h).');
-
-  const first = setTimeout(async () => {
-    await runRetentionCleanup();
-    const every = setInterval(runRetentionCleanup, INTERVAL_MS);
-    if (every.unref) every.unref();
-  }, 30 * 1000);
-  if (first.unref) first.unref();
+  return scheduleJob({
+    name: 'retention',
+    intervalMs: 24 * 60 * 60 * 1000,
+    initialDelayMs: 30 * 1000,
+    run: runRetentionCleanup,
+  });
 }
 
 module.exports = { startRetentionCron, runRetentionCleanup, purgeChatMessages };

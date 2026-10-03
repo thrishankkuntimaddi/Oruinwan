@@ -1,7 +1,6 @@
-const Department = require('../../../models/Department');
-const Team = require('../../models/Team');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { hydrate } = require('../../identity/hydrate');
 const { handleError } = require('../../../utils/responseHelpers');
 const { recordAdminAction } = require('../../shared/adminAudit');
 
@@ -29,34 +28,24 @@ exports.getOrgChart = async (req, res) => {
     const userId = req.user?.sub;
 
     
-    const dbUser = await User.findById(userId).select('companyId companyRole').lean();
+    const dbUser = await identity.users.findById(userId);
     if (!dbUser || String(dbUser.companyId) !== String(companyId)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    
-    const company = await Company.findById(companyId)
-      .select('name logo industry')
-      .lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) return res.status(404).json({ message: 'Company not found' });
 
-    
-    const departments = await Department.find({ company: companyId, isActive: true })
-      .populate('head', 'username email profilePicture')
-      .populate('managers', 'username email profilePicture')
-      .lean();
+    const USER = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
+    const departments = await org.departments.find({ company: companyId, isActive: true });
+    const teams = await identity.teams.listForCompany(companyId);
+    await hydrate(departments, { head: USER, managers: USER });
+    await hydrate(teams, { lead: USER, 'members.user': USER });
 
-    
-    const teams = await Team.find({ company: companyId, isActive: true })
-      .populate('lead', 'username email profilePicture')
-      .populate('members.user', 'username email profilePicture')
-      .lean();
-
-    
-    const allUsers = await User.find({
-      companyId,
-      accountStatus: { $in: ['active', 'invited'] }
-    }).select('username email profilePicture companyRole departments reportsTo').lean();
+    const allUsers = await org.users.find(
+      { companyId, accountStatus: { $in: ['active', 'invited'] } },
+      { org: true, select: 'username email profilePicture companyRole departments reportsTo' }
+    );
 
     
     const teamsByDept = {};
@@ -100,7 +89,7 @@ exports.getOrgChart = async (req, res) => {
         id: company._id,
         name: company.name,
         logo: company.logo,
-        industry: company.industry
+        industry: company.metadata?.profile?.industry
       },
       totalEmployees: allUsers.length,
       unassignedCount: unassignedUsers.length,
@@ -118,7 +107,7 @@ exports.getEmployeeDirectory = async (req, res) => {
     const userId = req.user?.sub;
 
     
-    const dbUser = await User.findById(userId).select('companyId').lean();
+    const dbUser = await identity.users.findById(userId);
     if (!dbUser || String(dbUser.companyId) !== String(companyId)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -137,19 +126,14 @@ exports.getEmployeeDirectory = async (req, res) => {
     if (role) filter.companyRole = role;
 
     
-    if (dept) {
-      const deptDoc = await Department.findById(dept).select('members').lean();
-      if (deptDoc) filter._id = { $in: deptDoc.members };
-    }
+    if (dept) filter.departments = String(dept);
 
-    
     if (search.trim()) {
       const regex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [
         { username: regex },
         { email: regex },
-        { firstName: regex },
-        { lastName: regex }
+        { 'profile.name': regex }
       ];
     }
 
@@ -157,19 +141,19 @@ exports.getEmployeeDirectory = async (req, res) => {
     const skip = (parseInt(page) - 1) * cap;
 
     const [employees, total] = await Promise.all([
-      User.find(filter)
-        .select('username email firstName lastName profilePicture companyRole accountStatus isOnline lastLoginAt departments phone reportsTo')
-        .sort({ firstName: 1, lastName: 1 })
-        .skip(skip)
-        .limit(cap)
-        .lean(),
-      User.countDocuments(filter)
+      org.users.find(filter, {
+        org: true,
+        select: 'username email profile profilePicture companyRole accountStatus isOnline lastLoginAt departments phone reportsTo',
+        sort: { username: 1 },
+        skip,
+        limit: cap,
+      }),
+      org.users.count(filter)
     ]);
 
-    
     const deptIds = [...new Set(employees.flatMap(e => e.departments || []).map(String))];
     const depts = deptIds.length
-      ? await Department.find({ _id: { $in: deptIds } }).select('name').lean()
+      ? await org.departments.find({ _id: { $in: deptIds } }, { members: false })
       : [];
     const deptMap = Object.fromEntries(depts.map(d => [String(d._id), d.name]));
 
@@ -201,28 +185,23 @@ exports.setManager = async (req, res) => {
     const employeeId = req.params.userId;
     const managerId = req.body?.managerId || null;
 
-    const employee = await User.findOne({ _id: employeeId, companyId }).select('username reportsTo').lean();
+    const employee = await org.users.findOne({ _id: employeeId, companyId });
     if (!employee) return res.status(404).json({ message: 'Employee not found in this company' });
 
     if (managerId) {
       if (String(managerId) === String(employeeId)) {
         return res.status(400).json({ message: 'An employee cannot report to themselves' });
       }
-      const manager = await User.findOne({ _id: managerId, companyId }).select('_id').lean();
+      const manager = await org.users.findOne({ _id: managerId, companyId });
       if (!manager) return res.status(400).json({ message: 'Manager must be in the same company' });
 
-      // Walk up from the new manager; reaching the employee means a loop.
-      let cursor = String(managerId);
-      for (let hops = 0; cursor && hops < 500; hops++) {
-        if (cursor === String(employeeId)) {
-          return res.status(400).json({ message: 'That would create a reporting loop' });
-        }
-        const next = await User.findById(cursor).select('reportsTo').lean();
-        cursor = next?.reportsTo ? String(next.reportsTo) : null;
+      // Walk up from the new manager (recursive query); reaching the employee means a loop.
+      if (await org.wouldCreateReportingLoop(employeeId, managerId)) {
+        return res.status(400).json({ message: 'That would create a reporting loop' });
       }
     }
 
-    await User.updateOne({ _id: employeeId }, { $set: { reportsTo: managerId } });
+    await identity.users.update(employeeId, { reportsTo: managerId ? String(managerId) : null });
     await recordAdminAction({
       userId: req.user.sub, companyId, action: 'org.reporting_line_changed', category: 'org',
       resourceType: 'User', resourceId: employeeId, resourceName: employee.username,

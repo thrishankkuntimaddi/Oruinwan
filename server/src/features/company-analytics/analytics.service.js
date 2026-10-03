@@ -1,8 +1,6 @@
-const User = require('../../../models/User');
-const Department = require('../../../models/Department');
-const Workspace = require('../../../models/Workspace');
+const org = require('../../identity/queries/org');
 const Message = require('../../modules/messages/message.model');
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 
 function since(range) {
     const now = new Date();
@@ -50,17 +48,15 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         recentUpdates,
     ] = await Promise.all([
         
-        User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
-        User.countDocuments({ companyId, accountStatus: 'active' }),
-        User.countDocuments({ companyId, accountStatus: 'invited' }),
-        User.countDocuments({ companyId, accountStatus: 'suspended' }),
+        org.users.count({ companyId, accountStatus: { $ne: 'removed' } }),
+        org.users.count({ companyId, accountStatus: 'active' }),
+        org.users.count({ companyId, accountStatus: 'invited' }),
+        org.users.count({ companyId, accountStatus: 'suspended' }),
 
-        
-        Department.countDocuments({ company: companyId, isActive: true }),
+        org.departments.count({ company: companyId, isActive: true }),
 
-        
-        Workspace.countDocuments({ company: companyId }),
-        Workspace.countDocuments({ company: companyId, isActive: true, isArchived: false }),
+        org.workspaces.count({ company: companyId }),
+        org.workspaces.count({ company: companyId, isActive: true, isArchived: false }),
 
         
         Message.countDocuments({ company: companyId, isDeleted: false }),
@@ -69,17 +65,17 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         Message.countDocuments({ company: companyId, isDeleted: false, dm: { $ne: null } }),
 
         
-        Task.countDocuments({ company: companyId }),
-        Task.countDocuments({ company: companyId, status: { $in: ['done', 'completed'] } }),
-        Task.countDocuments({ company: companyId, status: { $nin: ['done', 'completed', 'cancelled'] } }),
-        Task.countDocuments({ company: companyId, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'completed', 'cancelled'] } }),
+        Tasks.countDocuments({ company: companyId }),
+        Tasks.countDocuments({ company: companyId, status: { $in: ['done', 'completed'] } }),
+        Tasks.countDocuments({ company: companyId, status: { $nin: ['done', 'completed', 'cancelled'] } }),
+        Tasks.countDocuments({ company: companyId, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'completed', 'cancelled'] } }),
 
         
         Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
             .then(ids => ids.length),
 
         
-        User.countDocuments({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
+        org.users.count({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
 
         
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false }),
@@ -101,12 +97,10 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         : 0;
 
     
-    const departmentBreakdown = await Department.aggregate([
-        { $match: { company: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), isActive: true } },
-        { $project: { name: 1, memberCount: { $size: '$members' } } },
-        { $sort: { memberCount: -1 } },
-        { $limit: 5 },
-    ]);
+    const departmentBreakdown = (await org.departmentSizes(companyId))
+        .map((d) => ({ _id: d._id, name: d.name, memberCount: d.members }))
+        .sort((a, b) => b.memberCount - a.memberCount)
+        .slice(0, 5);
 
     
     const workspaceActivity = await Message.aggregate([
@@ -114,18 +108,17 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         { $group: { _id: '$workspace', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
-        { $lookup: { from: 'workspaces', localField: '_id', foreignField: '_id', as: 'ws' } },
-        { $unwind: { path: '$ws', preserveNullAndEmptyArrays: true } },
-        { $project: { _id: 0, workspaceId: '$_id', name: { $ifNull: ['$ws.name', 'Unknown'] }, messageCount: '$count' } },
-    ]);
+    ]).then(async (rows) => {
+        // Workspace names come from PostgreSQL.
+        const names = new Map((await org.workspaces.find({ _id: { $in: rows.map((r) => String(r._id)) } }, { members: false }))
+            .map((w) => [String(w._id), w.name]));
+        return rows.map((r) => ({ workspaceId: r._id, name: names.get(String(r._id)) || 'Unknown', messageCount: r.count }));
+    });
 
     
-    const roleDistribution = await User.aggregate([
-        { $match: { companyId: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), accountStatus: { $ne: 'removed' } } },
-        { $group: { _id: '$companyRole', count: { $sum: 1 } } },
-        { $project: { _id: 0, role: '$_id', count: 1 } },
-        { $sort: { count: -1 } },
-    ]);
+    const roleDistribution = Object.entries(await org.roleDistribution(companyId))
+        .map(([role, count]) => ({ role, count }))
+        .sort((a, b) => b.count - a.count);
 
     
     return {
@@ -193,11 +186,11 @@ async function getActivityAnalytics(companyId) {
         updatesPosted,
     ] = await Promise.all([
         Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
-        Task.countDocuments({ company: companyId, createdAt: { $gte: from } }),
+        Tasks.countDocuments({ company: companyId, createdAt: { $gte: from } }),
         
         Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
             .then(ids => ids.length),
-        User.countDocuments({ companyId, accountStatus: 'invited', createdAt: { $gte: from } }),
+        org.users.count({ companyId, accountStatus: 'invited', createdAt: { $gte: from } }),
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
     ]);
 

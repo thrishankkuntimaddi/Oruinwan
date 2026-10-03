@@ -18,16 +18,16 @@ async function savedRolePermissions(companyId, role) {
     const key = `${companyId}:${role}`;
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < TTL_MS) return hit.permissions;
-    const Permission = require('../../models/Permission');
-    const doc = await Permission.findOne({ company: companyId, role }).select('permissions').lean();
+    const { rolePermissions } = require('../identity');
+    const doc = await rolePermissions.get(companyId, role);
     const permissions = doc?.permissions || null;
     cache.set(key, { permissions, at: Date.now() });
     return permissions;
 }
 
 async function companyPermission(userId, permission) {
-    const User = require('../../models/User');
-    const user = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
+    const { users } = require('../identity');
+    const user = userId ? await users.findById(userId) : null;
     if (!user?.companyId) return null;
     if (user.companyRole === 'owner' || (user.coOwnerOf && String(user.coOwnerOf) === String(user.companyId))) return true;
     const perms = await savedRolePermissions(String(user.companyId), user.companyRole || 'member');

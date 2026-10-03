@@ -1,30 +1,31 @@
 'use strict';
 
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
-const Department = require('../../../models/Department');
+const org = require('../../identity/queries/org');
 const Message = require('../../modules/messages/message.model.js');
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 const Channel = require('../channels/channel.model.js');
 const logger = require('../../shared/utils/logger');
 
 async function getCompanyAnalytics(companyId) {
     
-    const [totalUsers, workspaces, departments, _messages, tasks] = await Promise.all([
-        User.countDocuments({ companyId }),
-        Workspace.countDocuments({ company: companyId }),
-        Department.countDocuments({ company: companyId }),
-        Message.countDocuments({ companyId }),
-        Task.find({ companyId })
-    ]);
-
-    
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const activeUsers = await User.countDocuments({
-        companyId,
-        lastLogin: { $gte: sevenDaysAgo }
-    });
+
+    // Identity counts in one PostgreSQL round trip; tasks still come from the task store.
+    const [stats, activeUsers, tasks] = await Promise.all([
+        org.companyUserStats(companyId),
+        org.users.count({ companyId, lastLoginAt: { $gte: sevenDaysAgo } }),
+        // Tasks carry `company` (a `companyId` filter matched nothing) and the
+        // statuses todo / in_progress / review / blocked / done / cancelled.
+        Promise.all([
+            Tasks.countDocuments({ company: companyId, deleted: { $ne: true }, status: { $in: ['backlog', 'todo', 'in_progress', 'review', 'blocked'] } }),
+            Tasks.countDocuments({ company: companyId, deleted: { $ne: true }, status: 'done' }),
+            Tasks.countDocuments({ company: companyId, deleted: { $ne: true }, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'cancelled'] } }),
+        ]),
+    ]);
+    const totalUsers = stats.users.total;
+    const workspaces = stats.workspaces.total;
+    const departments = stats.departments;
 
     
     const today = new Date();
@@ -51,20 +52,18 @@ async function getCompanyAnalytics(companyId) {
 
     
     const taskStats = {
-        open: tasks.filter(t => t.status === 'open' || t.status === 'in-progress').length,
-        completed: tasks.filter(t => t.status === 'completed').length,
-        overdue: tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length
+        open: tasks[0],
+        completed: tasks[1],
+        overdue: tasks[2]
     };
 
     
-    const departmentList = await Department.find({ company: companyId }).lean();
+    const departmentList = await org.departments.find({ company: companyId }, { members: false });
+    const sizes = new Map((await org.departmentSizes(companyId)).map((d) => [String(d._id), d.members]));
     const departmentStats = await Promise.all(
         departmentList.map(async (dept) => {
-            const [memberCount, deptChannels] = await Promise.all([
-                User.countDocuments({ companyId, departments: dept._id }),
-                
-                Channel.find({ company: companyId, department: dept._id }).select('_id').lean(),
-            ]);
+            const memberCount = sizes.get(String(dept._id)) || 0;
+            const deptChannels = await Channel.find({ company: companyId, department: dept._id }).select('_id').lean();
 
             const channelIds = deptChannels.map(c => c._id);
             const activityScore = channelIds.length
@@ -83,9 +82,7 @@ async function getCompanyAnalytics(companyId) {
     );
 
     
-    const users = await User.find({ companyId })
-        .select('username email profilePicture')
-        .lean();
+    const users = await org.users.find({ companyId }, { select: 'username email profilePicture' });
 
     const userActivityCounts = await Promise.all(
         users.map(async (u) => {

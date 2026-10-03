@@ -19,9 +19,8 @@ function idEq(a, b) {
 
 async function isWorkspaceMember(workspaceId, userId) {
     if (!workspaceId || !mongoose.isValidObjectId(String(workspaceId))) return false;
-    const Workspace = require('../../../models/Workspace');
-    const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).select('_id').lean();
-    return !!ws;
+    const ws = await require('../../identity').workspaces.findById(workspaceId);
+    return !!ws && ws.members.some(m => idEq(m.user, userId) && m.status !== 'removed');
 }
 
 async function canAccessMessage(msg, userId) {
@@ -59,6 +58,13 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
 
     if (SHARED_PREFIXES.some(p => gcsPath.startsWith(p))) return true;
 
+    // Company verification documents: platform admins only.
+    if (gcsPath.startsWith('verification_docs/')) {
+        const requester = await require('../../identity').users.findById(userId);
+        const roles = requester?.roles || [];
+        return roles.includes('platform-admin') || roles.includes('chttrix_admin');
+    }
+
     // The uploader can always read their own file.
     if (idEq(objectMeta.uploadedBy, userId)) return true;
 
@@ -91,8 +97,7 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     // Not for files shared in a chat: those follow the conversation's membership, so a
     // coworker outside a DM or private channel can't open its files.
     if (objectMeta.companyId && messages.length === 0) {
-        const User = require('../../../models/User');
-        const requester = await User.findById(userId).select('companyId').lean();
+        const requester = await require('../../identity').users.findById(userId);
         if (requester && idEq(requester.companyId, objectMeta.companyId)) return true;
     }
 

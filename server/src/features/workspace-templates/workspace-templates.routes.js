@@ -13,11 +13,11 @@ const requireWorkspaceAdmin = require('../../shared/middleware/requireWorkspaceA
 router.get('/public', ctrl.listPublicTemplates);
 // Personal accounts see public templates; company members also see their
 // company's own, so load the caller's company without requiring one.
-const User = require('../../../models/User');
+const identity = require('../../identity');
 async function withCompany(req, res, next) {
   try {
     if (!req.user._dbUser) {
-      req.user._dbUser = await User.findById(req.user.sub).select('companyId companyRole').lean();
+      req.user._dbUser = await identity.users.findById(req.user.sub);
     }
     next();
   } catch (err) {

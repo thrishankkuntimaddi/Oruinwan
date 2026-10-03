@@ -273,11 +273,11 @@ async function createIssue({ workspaceId, repo, title, body, taskId, user, io })
 
 /** A task of this workspace the user can see (404 otherwise). */
 async function loadVisibleTask(workspaceId, taskId, userId) {
-  const Task = require('../../../../models/Task');
+  const Tasks = require('../../tasks/tasks.query');
   const mongoose = require('mongoose');
   if (!mongoose.Types.ObjectId.isValid(String(taskId))) throw httpError(400, 'Invalid taskId');
-  const task = await Task.findOne({ _id: taskId, workspace: workspaceId, deleted: { $ne: true } })
-    .select('_id issueKey title status visibility channel createdBy assignedTo').lean();
+  const task = await Tasks.findOne({ _id: taskId, workspace: workspaceId, deleted: { $ne: true } },
+    { select: '_id issueKey title status visibility channel createdBy assignedTo' });
   if (!task) throw httpError(404, 'Task not found');
   const { canViewTask } = require('../../tasks/tasks.shared');
   const Channel = require('../../channels/channel.model');

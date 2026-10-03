@@ -5,7 +5,7 @@ const requireAuth = require('../../shared/middleware/auth');
 const repairController = require('./conversationKeys.repair.controller');
 
 function requirePlatformAdmin(req, res, next) {
-    const User = require('../../../models/User');
+    const { users } = require('../../identity');
 
     
     if (!req.user || !req.user.sub) {
@@ -17,7 +17,7 @@ function requirePlatformAdmin(req, res, next) {
     }
 
     
-    User.findById(req.user.sub).then(user => {
+    users.findById(req.user.sub).then(user => {
         if (!user || !user.roles || !user.roles.includes('chttrix_admin')) {
             logger.error(`🚫 [AUDIT][PHASE2][AUTH] Non-admin access attempt`);
             logger.error(`   ├─ User: ${req.user.sub}`);

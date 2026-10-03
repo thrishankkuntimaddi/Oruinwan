@@ -3,8 +3,20 @@ const AuditLog = require('../../../models/AuditLog');
 const SupportTicket = require('../../../models/SupportTicket');
 const PlatformSession = require('../../../models/PlatformSession');
 const Message = require("../../modules/messages/message.model.js");
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
+const org = require('../../identity/queries/org');
+const { hydrate, COMPANY_MIN } = require('../../identity/hydrate');
+
+const USER_EMAIL = { type: 'user', fields: ['username', 'email'] };
+const USER_FULL = { type: 'user', fields: ['username', 'email', 'profilePicture', 'roles'] };
+const COMPANY_NAME = { ...COMPANY_MIN, fields: ['name'] };
+
+/** Mongo document(s) → plain objects with user / company references expanded from PostgreSQL. */
+async function expand(docs, paths) {
+    const toPlain = (d) => (d && typeof d.toObject === 'function' ? d.toObject() : d);
+    const out = Array.isArray(docs) ? docs.map(toPlain) : toPlain(docs);
+    await hydrate(out, paths);
+    return out;
+}
 
 exports.getAuditLogs = async (req, res) => {
     try {
@@ -44,9 +56,8 @@ exports.getAuditLogs = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
-            .populate('userId', 'username email')
-            .populate('companyId', 'name')
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { userId: USER_EMAIL, companyId: COMPANY_NAME }));
 
         const total = await AuditLog.countDocuments(filter);
 
@@ -54,9 +65,8 @@ exports.getAuditLogs = async (req, res) => {
         if (!req.query.page) {
             const allLogs = await AuditLog.find(filter)
                 .sort({ createdAt: -1 })
-                .populate('userId', 'username email')
-                .populate('companyId', 'name')
-                .lean();
+                .lean()
+                .then((rows) => hydrate(rows, { userId: USER_EMAIL, companyId: COMPANY_NAME }));
             return res.json(allLogs);
         }
 
@@ -74,10 +84,11 @@ exports.getAuditLogs = async (req, res) => {
 
 exports.getActiveCompanies = async (req, res) => {
     try {
-        const companies = await Company.find({ verificationStatus: 'verified' })
-            .select('name domain plan billingEmail createdAt admins logo')
-            .populate('admins.user', 'username email')
-            .sort({ createdAt: -1 });
+        const companies = await org.companies.find({ verificationStatus: 'verified' }, {
+            select: 'name domain plan billingEmail createdAt admins logo',
+            sort: { createdAt: -1 },
+        });
+        await hydrate(companies, { 'admins.user': USER_EMAIL });
 
         res.json(companies);
     } catch (err) {
@@ -88,10 +99,7 @@ exports.getActiveCompanies = async (req, res) => {
 
 exports.getAllTickets = async (req, res) => {
     try {
-        const tickets = await SupportTicket.find()
-            .populate('companyId', 'name')
-            .populate('creatorId', 'username email')
-            .sort({ updatedAt: -1 });
+        const tickets = await expand(await SupportTicket.find().sort({ updatedAt: -1 }), { companyId: COMPANY_NAME, creatorId: USER_EMAIL });
 
         res.json(tickets);
     } catch (err) {
@@ -159,8 +167,7 @@ exports.updateTicket = async (req, res) => {
         await ticket.save();
 
         
-        const updatedTicket = await SupportTicket.findById(req.params.id)
-            .populate('messages.sender', 'username email profilePicture');
+        const updatedTicket = await expand(await SupportTicket.findById(req.params.id), { 'messages.sender': { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
 
         res.json(updatedTicket);
     } catch (err) {
@@ -179,17 +186,18 @@ exports.getPlatformSession = async (req, res) => {
         
 
         
-        const company = await Company.findById(companyId).populate('admins.user');
+        const company = await org.companies.findOne({ _id: companyId });
         if (!company) return res.status(404).json({ message: "Company not found" });
 
-        const owner = company.admins.find(a => a.role === 'owner')?.user;
-        if (!owner) return res.status(400).json({ message: "Company has no owner" });
+        const ownerId = company.admins.find(a => a.role === 'owner')?.user;
+        if (!ownerId) return res.status(400).json({ message: "Company has no owner" });
+        const owner = { _id: ownerId };
 
         
         
         
         
-        const superAdmins = await User.find({ roles: 'chttrix_admin' });
+        const superAdmins = await org.users.find({ roles: 'chttrix_admin' }, { select: '_id' });
         const superAdminIds = superAdmins.map(u => u._id);
 
         
@@ -221,9 +229,7 @@ exports.getPlatformSession = async (req, res) => {
 exports.getSessionMessages = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const messages = await Message.find({ platformSession: sessionId })
-            .populate('sender', 'username email profilePicture roles')
-            .sort({ createdAt: 1 });
+        const messages = await expand(await Message.find({ platformSession: sessionId }).sort({ createdAt: 1 }), { sender: USER_FULL });
 
         res.json(messages);
     } catch (err) {
@@ -251,7 +257,7 @@ exports.sendSessionMessage = async (req, res) => {
             lastMessagePreview: text.substring(0, 50)
         });
 
-        const fullMessage = await Message.findById(message._id).populate('sender', 'username email profilePicture roles');
+        const fullMessage = await expand(await Message.findById(message._id), { sender: USER_FULL });
 
         
         

@@ -11,15 +11,15 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Department', () => ({ findOne: jest.fn(), findByIdAndUpdate: jest.fn(async () => ({})) }));
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn() }));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('../../admin/__tests__/identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../../../../models/Task', () => ({ find: jest.fn(), countDocuments: jest.fn(async () => 0) }));
 jest.mock('../../channels/channel.model.js', () => ({ find: jest.fn() }));
 
 const h = require('../../../shared/__tests__/gateHarness');
-const User = require('../../../../models/User');
-const Department = require('../../../../models/Department');
+const store = require('../../admin/__tests__/identityStore');
 const Task = require('../../../../models/Task');
 
 const C1 = h.oid(0xc1);
@@ -43,24 +43,18 @@ function app() {
     return a;
 }
 
-const depts = {
-    [ENG]: { _id: ENG, company: C1, members: [MEMBER] },
-    [SALES]: { _id: SALES, company: C1, members: [] },
-    [FOREIGN]: { _id: FOREIGN, company: C2, members: ['x'] },
-};
+const OTHER = h.oid(5); // in another company
 
 beforeEach(() => {
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [MANAGER]: { _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG], ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [OUTSIDER]: { _id: OUTSIDER, companyId: null, companyRole: 'member', ...base },
-    });
-    Department.findOne.mockImplementation(async (q) => {
-        const d = depts[String(q._id)];
-        return d && String(d.company) === String(q.company) ? { ...d } : null;
-    });
+    store.reset();
+    store.addDepartment({ _id: ENG, company: C1, name: 'Eng' }, { members: [MEMBER] });
+    store.addDepartment({ _id: SALES, company: C1, name: 'Sales' });
+    store.addDepartment({ _id: FOREIGN, company: C2, name: 'Theirs' }, { members: [OTHER] });
+    store.addUser({ _id: MANAGER, companyId: C1, companyRole: 'manager', managedDepartments: [ENG] });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member', email: 'm@acme.test' });
+    store.addUser({ _id: OUTSIDER, companyId: null, companyRole: 'member' });
+    store.addUser({ _id: OTHER, companyId: C2, companyRole: 'member', email: 'x@y.z' });
     Task.find.mockImplementation(() => h.query([]));
 });
 
@@ -75,7 +69,8 @@ describe('department scope', () => {
     it('lets a manager read the department they manage', async () => {
         const res = await h.call(app(), 'GET', `/api/managers/metrics?scopeType=department&scopeId=${ENG}`, MANAGER);
         expect(res.status).toBe(200);
-        expect(res.body.teamSize).toBe(1);
+        // Department managers are department members too (department_members).
+        expect(res.body.teamSize).toBe(2);
     });
     it('refuses a department in the same company the manager does not manage', async () => {
         expect((await h.call(app(), 'GET', `/api/managers/metrics?scopeType=department&scopeId=${SALES}`, MANAGER)).status).toBe(403);
@@ -98,15 +93,18 @@ describe('GET /api/managers/tasks', () => {
     it('queries only the scoped members and skips private tasks', async () => {
         await h.call(app(), 'GET', `/api/managers/tasks?scopeType=department&scopeId=${ENG}`, MANAGER);
         const q = Task.find.mock.calls[0][0];
-        expect(q.assignedTo.$in).toEqual([MEMBER]);
+        expect(q.assignedTo.$in.map(String).sort()).toEqual([MANAGER, MEMBER].sort());
         expect(q.visibility).toEqual({ $ne: 'private' });
     });
 });
 
 describe('POST /api/managers/allocations/department/add', () => {
     it('only finds people in the caller\'s company', async () => {
-        await h.call(app(), 'POST', '/api/managers/allocations/department/add', MANAGER, { email: 'x@y.z', departmentId: ENG });
-        expect(User.findOne).toHaveBeenCalledWith({ email: 'x@y.z', companyId: C1 });
+        const res = await h.call(app(), 'POST', '/api/managers/allocations/department/add', MANAGER, { email: 'x@y.z', departmentId: ENG });
+        expect(res.status).toBe(404);
+        const ok = await h.call(app(), 'POST', '/api/managers/allocations/department/add', MANAGER, { email: 'm@acme.test', departmentId: ENG });
+        expect(ok.status).toBe(200);
+        expect(store.state.deptMembers).toContainEqual({ department: ENG, user: MEMBER, role: 'member' });
     });
     it('refuses departments the manager does not manage', async () => {
         const res = await h.call(app(), 'POST', '/api/managers/allocations/department/add', MANAGER, { email: 'x@y.z', departmentId: SALES });

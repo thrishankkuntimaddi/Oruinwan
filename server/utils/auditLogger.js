@@ -1,5 +1,6 @@
 const logger = require('./logger');
 const AuditLog = require("../models/AuditLog");
+const { hydrate, userSelect } = require("../src/identity/hydrate"); // users live in PostgreSQL
 
 exports.logAudit = async ({
     userId,
@@ -77,8 +78,8 @@ exports.getCompanyAuditLogs = async (companyId, options = {}) => {
             .sort({ createdAt: -1 })
             .limit(limit)
             .skip(skip)
-            .populate("userId", "username email profilePicture")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { userId: userSelect("username email profilePicture") }));
     } catch (err) {
         logger.error("Error fetching company audit logs:", err);
         return [];
@@ -90,8 +91,8 @@ exports.getUserAuditLogs = async (userId, limit = 50) => {
         return await AuditLog.find({ userId })
             .sort({ createdAt: -1 })
             .limit(limit)
-            .populate("userId", "username email")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { userId: userSelect("username email") }));
     } catch (err) {
         logger.error("Error fetching user audit logs:", err);
         return [];
@@ -103,8 +104,8 @@ exports.getResourceAuditLogs = async (resource, resourceId, limit = 50) => {
         return await AuditLog.find({ resource, resourceId })
             .sort({ createdAt: -1 })
             .limit(limit)
-            .populate("userId", "username email")
-            .lean();
+            .lean()
+            .then((rows) => hydrate(rows, { userId: userSelect("username email") }));
     } catch (err) {
         logger.error("Error fetching resource audit logs:", err);
         return [];

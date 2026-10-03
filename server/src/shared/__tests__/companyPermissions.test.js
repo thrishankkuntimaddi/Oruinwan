@@ -8,11 +8,11 @@ const users = {
 };
 const saved = { 'c1:member': { createChannel: false, createTasks: true } };
 
-jest.mock('../../../models/User', () => ({
-  findById: jest.fn((id) => ({ select: () => ({ lean: async () => users[id] || null }) })),
-}));
-jest.mock('../../../models/Permission', () => ({
-  findOne: jest.fn(({ company, role }) => ({ select: () => ({ lean: async () => (saved[`${company}:${role}`] ? { permissions: saved[`${company}:${role}`] } : null) }) })),
+jest.mock('../../identity', () => ({
+  users: { findById: jest.fn(async (id) => users[id] || null) },
+  rolePermissions: {
+    get: jest.fn(async (company, role) => (saved[`${company}:${role}`] ? { permissions: saved[`${company}:${role}`] } : null)),
+  },
 }));
 
 const { companyPermission, requireCompanyPermission } = require('../companyPermissions');

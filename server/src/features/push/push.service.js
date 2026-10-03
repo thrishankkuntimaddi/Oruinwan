@@ -2,7 +2,7 @@
 const logger = require('../../../utils/logger');
 
 const axios = require('axios');
-const User = require('../../../models/User');
+const identity = require('../../identity');
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -31,8 +31,8 @@ async function sendRaw(token, title, body, data = {}) {
 
 async function sendToUser(userId, title, body, data = {}) {
   try {
-    const user = await User.findById(userId).select('deviceTokens').lean();
-    if (!user || !user.deviceTokens || user.deviceTokens.length === 0) return;
+    const user = await identity.users.findById(userId, { withSecrets: true });
+    if (!user || !Array.isArray(user.deviceTokens) || user.deviceTokens.length === 0) return;
 
     const sends = user.deviceTokens.map(({ token }) => sendRaw(token, title, body, data));
     await Promise.allSettled(sends);

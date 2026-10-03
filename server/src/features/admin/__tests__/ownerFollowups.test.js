@@ -17,27 +17,20 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     next();
 });
 jest.mock('../../../shared/featureFlags', () => ({ requireFlag: () => (req, res, next) => next() }));
-jest.mock('../../../../models/User', () => require('../../../shared/__tests__/gateHarness').userModel());
-jest.mock('../../../../models/Company', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../../../identity', () => require('./identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('./identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('./identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('./identityStore').postgres);
 jest.mock('../../../../models/AuditLog', () => ({ countDocuments: jest.fn(async () => 4) }));
 jest.mock('../../../../models/SecurityEvent', () => ({ countDocuments: jest.fn(async () => 1), find: jest.fn() }));
 jest.mock('../../../../models/HistoryLog', () => ({ countDocuments: jest.fn(async () => 2) }));
-jest.mock('../../../../models/Department', () => ({ findOne: jest.fn() }));
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn(), findById: jest.fn() }));
-jest.mock('../../../models/Team', () => ({ findOneAndUpdate: jest.fn() }));
-jest.mock('../../../models/WorkspacePermission', () => ({ findOne: jest.fn(), create: jest.fn(), findOneAndUpdate: jest.fn() }));
 jest.mock('../../../shared/adminAudit', () => ({ recordAdminAction: jest.fn(async () => {}) }));
 jest.mock('dns', () => ({ promises: { resolveTxt: jest.fn() } }));
 jest.mock('../../../../utils/historyLogger', () => ({ logAction: jest.fn(async () => {}) }));
 
 const h = require('../../../shared/__tests__/gateHarness');
-const User = require('../../../../models/User');
-const Company = require('../../../../models/Company');
+const store = require('./identityStore');
 const SecurityEvent = require('../../../../models/SecurityEvent');
-const Department = require('../../../../models/Department');
-const Workspace = require('../../../../models/Workspace');
-const Team = require('../../../models/Team');
-const WorkspacePermission = require('../../../models/WorkspacePermission');
 const dns = require('dns').promises;
 
 const ownerRoutes = require('../owner-dashboard.routes');
@@ -69,24 +62,23 @@ function app() {
     return a;
 }
 
-let company;
 beforeEach(() => {
-    const base = { accountStatus: 'active' };
-    Object.assign(h.users, {
-        [OWNER]: { _id: OWNER, companyId: C1, companyRole: 'owner', ...base },
-        [ADMIN]: { _id: ADMIN, companyId: C1, companyRole: 'admin', ...base },
-        [MEMBER]: { _id: MEMBER, companyId: C1, companyRole: 'member', ...base },
-        [ADMIN_B]: { _id: ADMIN_B, companyId: C2, companyRole: 'admin', ...base },
-    });
-    company = {
-        _id: C1, plan: 'professional', domain: 'acme.test', ownerEmail: 'o@acme.test',
+    store.reset();
+    store.addCompany({
+        _id: C1, name: 'Acme', plan: 'professional', domain: 'acme.test', ownerEmail: 'o@acme.test',
         settings: { maxUsers: 50 }, securitySettings: { mfaRequired: true },
         domainVerificationToken: 'tok', domainVerificationExpires: new Date(Date.now() + 3600e3),
-        save: jest.fn(async () => {}),
-    };
-    Company.findById.mockImplementation(() => h.query(company));
-    Company.findByIdAndUpdate.mockImplementation(async (id, update) => ({ securitySettings: update.$set }));
-    User.countDocuments.mockImplementation(async () => 7);
+    }, { admins: [{ user: OWNER, role: 'owner' }] });
+    store.addCompany({ _id: C2, name: 'Beta' });
+    store.addUser({ _id: OWNER, companyId: C1, companyRole: 'owner', lastLoginAt: new Date() });
+    store.addUser({ _id: ADMIN, companyId: C1, companyRole: 'admin' });
+    store.addUser({ _id: MEMBER, companyId: C1, companyRole: 'member' });
+    store.addUser({ _id: ADMIN_B, companyId: C2, companyRole: 'admin' });
+    for (let i = 0; i < 4; i += 1) store.addUser({ companyId: C1, companyRole: 'member' }); // 7 people in C1
+    store.addDepartment({ _id: DEPT_OK, company: C1, name: 'Eng' });
+    store.addDepartment({ _id: DEPT_FOREIGN, company: C2, name: 'Theirs' });
+    store.addTeam({ _id: TEAM, company: C1, name: 'Core' });
+    store.addWorkspace({ _id: WS, company: C1, name: 'HQ', members: [{ user: MEMBER, role: 'member', status: 'active' }] });
     SecurityEvent.find.mockImplementation(() => h.query([{ metadata: { email: 'x@acme.test', attempts: 3 }, ipAddress: '1.2.3.4', createdAt: new Date() }]));
 });
 
@@ -94,7 +86,8 @@ describe('GET /api/owner-dashboard/security-risk', () => {
     it('uses lastLoginAt, real event names, and no invented compliance score', async () => {
         const res = await h.call(app(), 'GET', '/api/owner-dashboard/security-risk', OWNER);
         expect(res.status).toBe(200);
-        expect(User.countDocuments).toHaveBeenCalledWith(expect.objectContaining({ companyId: C1, lastLoginAt: expect.any(Object) }));
+        expect(store.org.users.count).toHaveBeenCalledWith(expect.objectContaining({ companyId: C1, lastLoginAt: expect.any(Object) }));
+        expect(res.body.activeSessions).toBe(1);
         expect(SecurityEvent.countDocuments).toHaveBeenCalledWith(expect.objectContaining({ eventType: { $in: ['role_changed', 'account_suspended'] } }));
         expect(res.body.complianceScore).toBeNull();
         expect(res.body.auditSummary).toEqual({ lastWeek: 4, critical: 3, warnings: 1 });
@@ -118,7 +111,8 @@ describe('PUT /api/companies/:id/settings/security', () => {
     it('writes the securitySettings schema field', async () => {
         const res = await h.call(app(), 'PUT', `/api/companies/${C1}/settings/security`, ADMIN, { mfaRequired: true, sessionTimeout: 60 });
         expect(res.status).toBe(200);
-        expect(Company.findByIdAndUpdate.mock.calls[0][1]).toEqual({ $set: { 'securitySettings.mfaRequired': true, 'securitySettings.sessionTimeoutMinutes': 60 } });
+        expect(store.org.updateCompany.mock.calls[0][1]).toEqual({ 'securitySettings.mfaRequired': true, 'securitySettings.sessionTimeoutMinutes': 60 });
+        expect(store.state.companies.get(C1).securitySettings).toEqual({ mfaRequired: true, sessionTimeoutMinutes: 60 });
     });
     it('is closed to members and other companies', async () => {
         expect((await h.call(app(), 'PUT', `/api/companies/${C1}/settings/security`, MEMBER, { mfaRequired: true })).status).toBe(403);
@@ -138,37 +132,27 @@ describe('POST /api/companies/:id/domain/verify', () => {
         expect((await h.call(app(), 'POST', `/api/companies/${C1}/domain/verify`, ADMIN)).status).toBe(400);
         dns.resolveTxt.mockResolvedValue([['chttrix-verification=tok']]);
         expect((await h.call(app(), 'POST', `/api/companies/${C1}/domain/verify`, ADMIN)).status).toBe(200);
+        expect(store.state.companies.get(C1).domainVerified).toBe(true);
     });
     it('answers 400 when no domain is set (was 500)', async () => {
-        company.domain = null;
+        store.state.companies.get(C1).domain = null;
         expect((await h.call(app(), 'POST', `/api/companies/${C1}/domain/generate`, ADMIN)).status).toBe(400);
     });
 });
 
 describe('PATCH /api/teams/:id', () => {
-    beforeEach(() => {
-        Department.findOne.mockImplementation((q) => h.query(String(q._id) === DEPT_OK && String(q.company) === C1 ? { _id: DEPT_OK } : null));
-        User.findOne.mockImplementation((q) => h.query(h.users[String(q._id)] && String(h.users[String(q._id)].companyId) === String(q.companyId) ? { _id: q._id } : null));
-        Team.findOneAndUpdate.mockImplementation(() => h.query({ _id: TEAM }));
-    });
     it('accepts a department and lead from the same company', async () => {
         expect((await h.call(app(), 'PATCH', `/api/teams/${TEAM}`, ADMIN, { department: DEPT_OK, lead: MEMBER })).status).toBe(200);
+        expect(store.state.teams.get(TEAM)).toMatchObject({ department: DEPT_OK, lead: MEMBER });
     });
     it('rejects another company\'s department or lead', async () => {
         expect((await h.call(app(), 'PATCH', `/api/teams/${TEAM}`, ADMIN, { department: DEPT_FOREIGN })).status).toBe(400);
         expect((await h.call(app(), 'PATCH', `/api/teams/${TEAM}`, ADMIN, { lead: ADMIN_B })).status).toBe(400);
-        expect(Team.findOneAndUpdate).not.toHaveBeenCalled();
+        expect(store.identity.teams.update).not.toHaveBeenCalled();
     });
 });
 
 describe('workspace permissions / features', () => {
-    beforeEach(() => {
-        const ws = { _id: WS, company: C1, name: 'HQ', isActive: true, isArchived: false, members: [{ user: MEMBER, role: 'member', status: 'active' }] };
-        Workspace.findOne.mockImplementation(() => h.query(ws));
-        Workspace.findById.mockImplementation(async () => ws);
-        WorkspacePermission.findOneAndUpdate.mockImplementation(async () => ({ featureToggles: { tasks: false } }));
-        WorkspacePermission.findOne.mockImplementation(() => h.query({ featureToggles: { tasks: true } }));
-    });
     it('lets a company admin who is not a member manage features', async () => {
         expect((await h.call(app(), 'GET', `/api/workspaces/${WS}/features`, ADMIN)).status).toBe(200);
         expect((await h.call(app(), 'PUT', `/api/workspaces/${WS}/features`, OWNER, { featureToggles: { tasks: false } })).status).toBe(200);

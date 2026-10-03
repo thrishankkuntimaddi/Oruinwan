@@ -1,7 +1,7 @@
 'use strict';
 
-jest.mock('../../../models/User', () => ({
-  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ email: 'a@x.test', companyRole: 'admin' }) }) })),
+jest.mock('../../identity', () => ({
+  users: { findById: jest.fn(async () => ({ email: 'a@x.test', companyRole: 'admin' })) },
 }));
 jest.mock('../../../models/AuditLog', () => ({ create: jest.fn(async (d) => d) }));
 jest.mock('../../../models/ComplianceLog', () => ({ create: jest.fn(async (d) => d) }));

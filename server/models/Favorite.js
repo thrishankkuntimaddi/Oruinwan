@@ -13,6 +13,7 @@ const FavoriteSchema = new mongoose.Schema({
 });
 
 FavoriteSchema.index({ user: 1, workspace: 1 });
+FavoriteSchema.index({ workspace: 1, user: 1 }); // tenant-first, for per-workspace cleanup and sharding
 FavoriteSchema.index({ user: 1, itemType: 1, itemId: 1 }, { unique: true }); 
 
 module.exports = mongoose.model("Favorite", FavoriteSchema);

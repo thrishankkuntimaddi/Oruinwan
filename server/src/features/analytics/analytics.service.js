@@ -1,9 +1,12 @@
 const Message = require('../../modules/messages/message.model');
 const Channel = require('../channels/channel.model');
-const Task = require('../../../models/Task');
+const Tasks = require('../tasks/tasks.query');
 const ScheduledMeeting = require('../../models/ScheduledMeeting');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const org = require('../../identity/queries/org');
+const mongoose = require('mongoose');
+
+// Company ids arrive as strings (PostgreSQL); aggregation $match does not cast them.
+const oid = (id) => (mongoose.Types.ObjectId.isValid(String(id)) ? new mongoose.Types.ObjectId(String(id)) : id);
 
 const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; 
@@ -61,7 +64,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
 
   const { start } = _dateRange(period);
 
-  const workspaces = await Workspace.find({ company: companyId }).select('_id').lean();
+  const workspaces = await org.workspaces.find({ company: companyId }, { members: false, select: '_id' });
   const wsIds = workspaces.map(w => w._id);
 
   const [
@@ -71,15 +74,15 @@ async function getAnalyticsSummary(companyId, period = 30) {
     totalMessages,
     taskMetrics
   ] = await Promise.all([
-    User.countDocuments({ companyId }),
+    org.users.count({ companyId }),
 
-    User.countDocuments({
+    org.users.count({
       companyId,
       $or: [{ isOnline: true }, { lastActivityAt: { $gte: start } }]
     }),
 
     
-    User.countDocuments({
+    org.users.count({
       companyId,
       $or: [
         { isOnline: true },
@@ -93,16 +96,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
       createdAt: { $gte: start }
     }),
 
-    Task.aggregate([
-      { $match: { company: companyId, deleted: false, createdAt: { $gte: start } } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } }
-        }
-      }
-    ])
+    Tasks.totals({ company: companyId, deleted: false, createdAt: { $gte: start } }).then((t) => [t])
   ]);
 
   const taskTotal = taskMetrics[0]?.total || 0;
@@ -141,7 +135,7 @@ async function getUserActivityAnalytics(companyId, period = 30) {
     Message.aggregate([
       {
         $match: {
-          company: companyId,
+          company: oid(companyId),
           type: { $ne: 'system' },
           createdAt: { $gte: start }
         }
@@ -149,30 +143,20 @@ async function getUserActivityAnalytics(companyId, period = 30) {
       { $group: { _id: '$sender', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          userId: '$_id',
-          messages: '$count',
-          name: { $ifNull: ['$user.username', 'Unknown'] },
-          avatar: '$user.profilePicture'
-        }
-      }
-    ]),
+    ]).then(async (rows) => {
+      // Sender names come from PostgreSQL.
+      const people = await require('../../identity').users.findManyByIds(rows.map((r) => r._id));
+      return rows.map((r) => {
+        const u = people.get(String(r._id));
+        return { _id: r._id, userId: r._id, messages: r.count, name: u?.username || 'Unknown', avatar: u?.profilePicture };
+      });
+    }),
 
     
     Promise.all(
       buckets.map(async b => ({
         name: b.label,
-        value: await User.countDocuments({
+        value: await org.users.count({
           companyId,
           lastActivityAt: { $gte: b.start, $lte: b.end }
         })
@@ -195,13 +179,13 @@ async function getWorkspaceAnalytics(companyId, period = 30) {
   if (cached) return cached;
 
   const { start } = _dateRange(period);
-  const workspaces = await Workspace.find({ company: companyId }).lean();
+  const workspaces = await org.workspaces.find({ company: companyId });
 
   const workspaceStats = await Promise.all(
     workspaces.slice(0, 15).map(async ws => {
       const [msgCount, taskCount] = await Promise.all([
         Message.countDocuments({ workspace: ws._id, type: { $ne: 'system' }, createdAt: { $gte: start } }),
-        Task.countDocuments({ workspace: ws._id, deleted: false, createdAt: { $gte: start } })
+        Tasks.countDocuments({ workspace: ws._id, deleted: false, createdAt: { $gte: start } })
       ]);
 
       const activeSenders = await Message.distinct('sender', {
@@ -243,7 +227,7 @@ async function getChannelEngagementAnalytics(companyId, period = 30) {
   const channelStats = await Message.aggregate([
     {
       $match: {
-        company: companyId,
+        company: oid(companyId),
         channel: { $ne: null },
         type: { $ne: 'system' },
         createdAt: { $gte: start }
@@ -292,48 +276,19 @@ async function getTaskAnalytics(companyId, period = 30) {
 
   const [statusBreakdown, completionDuration, trendData] = await Promise.all([
     
-    Task.aggregate([
-      { $match: { company: companyId, deleted: false, createdAt: { $gte: start } } },
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]),
+    Tasks.statusCounts({ company: companyId, deleted: false, createdAt: { $gte: start } }),
 
-    
-    Task.aggregate([
-      {
-        $match: {
-          company: companyId,
-          deleted: false,
-          status: 'done',
-          completedAt: { $ne: null },
-          createdAt: { $gte: start }
-        }
-      },
-      {
-        $project: {
-          durationHours: {
-            $divide: [
-              { $subtract: ['$completedAt', '$createdAt'] },
-              3600000 
-            ]
-          }
-        }
-      },
-      { $group: { _id: null, avgHours: { $avg: '$durationHours' } } }
-    ]),
+    Tasks.avgCompletionHours({ company: companyId, deleted: false, status: 'done', createdAt: { $gte: start } })
+      .then((avgHours) => (avgHours == null ? [] : [{ _id: null, avgHours }])),
 
-    
     (async () => {
       const buckets = _buildBuckets(period);
-      const rows = await Promise.all(
-        buckets.map(async b => {
-          const [created, completed] = await Promise.all([
-            Task.countDocuments({ company: companyId, deleted: false, createdAt: { $gte: b.start, $lte: b.end } }),
-            Task.countDocuments({ company: companyId, deleted: false, completedAt: { $gte: b.start, $lte: b.end } })
-          ]);
-          return { name: b.label, created, completed };
-        })
-      );
-      return rows;
+      const live = { company: companyId, deleted: false };
+      const [created, completed] = await Promise.all([
+        Tasks.countBuckets(live, 'createdAt', buckets),
+        Tasks.countBuckets(live, 'completedAt', buckets),
+      ]);
+      return buckets.map((b, i) => ({ name: b.label, created: created[i], completed: completed[i] }));
     })()
   ]);
 
@@ -370,7 +325,7 @@ async function getMessageVolumeAnalytics(companyId, period = 30) {
 
   const [totals, trendRaw] = await Promise.all([
     Message.aggregate([
-      { $match: { company: companyId, type: { $ne: 'system' }, createdAt: { $gte: start } } },
+      { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
       {
         $group: {
           _id: null,
@@ -417,9 +372,9 @@ async function getEngagementTrends(companyId, period = 30) {
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [dau, wau, mau] = await Promise.all([
-    User.countDocuments({ companyId, lastActivityAt: { $gte: dayAgo } }),
-    User.countDocuments({ companyId, lastActivityAt: { $gte: weekAgo } }),
-    User.countDocuments({ companyId, lastActivityAt: { $gte: monthAgo } })
+    org.users.count({ companyId, lastActivityAt: { $gte: dayAgo } }),
+    org.users.count({ companyId, lastActivityAt: { $gte: weekAgo } }),
+    org.users.count({ companyId, lastActivityAt: { $gte: monthAgo } })
   ]);
 
   const dauWauRatio = wau > 0 ? Math.round((dau / wau) * 100) : 0;
@@ -438,23 +393,14 @@ async function getTeamActivity(companyId, period = 30) {
 
   const [msgByUser, taskByUser, users] = await Promise.all([
     Message.aggregate([
-      { $match: { company: companyId, type: { $ne: 'system' }, createdAt: { $gte: start } } },
+      { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
       { $group: { _id: '$sender', messages: { $sum: 1 } } }
     ]),
 
-    Task.aggregate([
-      { $match: { company: companyId, deleted: false, createdAt: { $gte: start } } },
-      { $unwind: '$assignedTo' },
-      {
-        $group: {
-          _id: '$assignedTo',
-          tasksAssigned: { $sum: 1 },
-          tasksCompleted: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } }
-        }
-      }
-    ]),
+    Tasks.groupCount({ company: companyId, deleted: false, createdAt: { $gte: start } }, 'assignee')
+      .then((rows) => rows.map((r) => ({ _id: r._id, tasksAssigned: r.count, tasksCompleted: r.done }))),
 
-    User.find({ companyId }).select('_id username profilePicture companyRole').lean()
+    org.users.find({ companyId }, { select: '_id username profilePicture companyRole' })
   ]);
 
   
@@ -490,20 +436,10 @@ async function getWorkloadAnalysis(companyId, period = 30) {
   const { start } = _dateRange(period);
 
   const [tasksByUser, users] = await Promise.all([
-    Task.aggregate([
-      {
-        $match: {
-          company: companyId,
-          deleted: false,
-          status: { $nin: ['done', 'cancelled'] },
-          createdAt: { $gte: start }
-        }
-      },
-      { $unwind: '$assignedTo' },
-      { $group: { _id: '$assignedTo', openTasks: { $sum: 1 } } }
-    ]),
+    Tasks.groupCount({ company: companyId, deleted: false, status: { $nin: ['done', 'cancelled'] }, createdAt: { $gte: start } }, 'assignee')
+      .then((rows) => rows.map((r) => ({ _id: r._id, openTasks: r.count }))),
 
-    User.find({ companyId }).select('_id username profilePicture companyRole').lean()
+    org.users.find({ companyId }, { select: '_id username profilePicture companyRole' })
   ]);
 
   const taskMap = Object.fromEntries(tasksByUser.map(t => [t._id.toString(), t.openTasks]));
@@ -557,7 +493,7 @@ async function getCommunicationPatterns(companyId, period = 30) {
 
   
   const hourDist = await Message.aggregate([
-    { $match: { company: companyId, type: { $ne: 'system' }, createdAt: { $gte: start } } },
+    { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
     { $group: { _id: { $hour: '$createdAt' }, count: { $sum: 1 } } },
     { $sort: { '_id': 1 } }
   ]);
@@ -569,7 +505,7 @@ async function getCommunicationPatterns(companyId, period = 30) {
 
   
   const topChannels = await Message.aggregate([
-    { $match: { company: companyId, channel: { $ne: null }, type: { $ne: 'system' }, createdAt: { $gte: start } } },
+    { $match: { company: oid(companyId), channel: { $ne: null }, type: { $ne: 'system' }, createdAt: { $gte: start } } },
     { $group: { _id: '$channel', count: { $sum: 1 } } },
     { $sort: { count: -1 } },
     { $limit: 5 },

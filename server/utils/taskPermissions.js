@@ -1,16 +1,10 @@
 const logger = require('./logger');
-const Workspace = require('../models/Workspace');
 
+/** Workspace owner or admin (active membership in PostgreSQL, src/identity). */
 async function isWorkspaceManager(userId, workspaceId) {
     try {
-        const workspace = await Workspace.findById(workspaceId);
-        if (!workspace) return false;
-
-        const member = workspace.members.find(m =>
-            m.user.toString() === userId.toString()
-        );
-
-        return member && (member.role === 'owner' || member.role === 'admin');
+        const access = await require('../src/identity').workspaces.membership(workspaceId, userId);
+        return !!(access && access.isAdmin);
     } catch (err) {
         logger.error('Error checking workspace manager status:', err);
         return false;

@@ -1,14 +1,15 @@
 const logger = require('../../../utils/logger');
-const Workspace = require("../../../models/Workspace");
+const identity = require("../../identity");
+const wsQueries = require("../../identity/queries/workspaces");
+const { hydrate, USER_MIN } = require("../../identity/hydrate");
 const Channel = require("../channels/channel.model.js");
-const User = require("../../../models/User");
 const Message = require("../../modules/messages/message.model.js");
 const DMSession = require("../../../models/DMSession");
-const Task = require("../../../models/Task");
+const Tasks = require("../tasks/tasks.query");
 const Note = require("../../../models/Note");
 const Update = require("../../../models/Update");
 const Favorite = require("../../../models/Favorite");
-const Invite = require("../../../models/Invite");
+const { invites: inviteStore } = require("../../identity/queries/auth");
 const {} = require("../../../utils/invite");
 const sendEmail = require("../../../utils/sendEmail");
 const { handleError} = require("../../../utils/responseHelpers");
@@ -42,6 +43,14 @@ function workspaceRooms(id) {
   return [`workspace:${id}`, `workspace_${id}`];
 }
 
+/** A repository record without its helper methods, for JSON responses. */
+function stripMethods(ws) {
+  const out = { ...ws };
+  delete out.isMember;
+  delete out.isAdminOrOwner;
+  return out;
+}
+
 exports._internal = { pickSafeSettings, countActiveMembers };
 
 exports.createWorkspace = async (req, res) => {
@@ -59,15 +68,9 @@ exports.createWorkspace = async (req, res) => {
 
     if (!name) return res.status(400).json({ message: "Workspace name is required" });
 
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    
-    
-    
-    
-    
-    
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
     
@@ -87,7 +90,7 @@ exports.createWorkspace = async (req, res) => {
 
     
     if (isPersonalWorkspace) {
-      const ownedWorkspacesCount = await Workspace.countDocuments({ createdBy: userId });
+      const ownedWorkspacesCount = await wsQueries.countCreatedBy(userId);
       if (ownedWorkspacesCount >= 3) {
         return res.status(403).json({
           message: "Free plan limit reached. You can only create up to 3 workspaces.",
@@ -97,10 +100,7 @@ exports.createWorkspace = async (req, res) => {
     }
 
     
-    const existingWorkspace = await Workspace.findOne({
-      name: name.trim(),
-      createdBy: userId  
-    });
+    const existingWorkspace = await wsQueries.findByNameForCreator(name.trim(), userId);
 
     if (existingWorkspace) {
       return res.status(400).json({
@@ -109,7 +109,8 @@ exports.createWorkspace = async (req, res) => {
     }
 
     
-    const workspace = await Workspace.create({
+    // Workspace row and owner membership in one PostgreSQL transaction.
+    let workspace = await identity.workspaces.create({
       company: resolvedCompanyId || null,
       type: isPersonalWorkspace ? "personal" : "company",
       name: name.trim(),
@@ -192,8 +193,9 @@ exports.createWorkspace = async (req, res) => {
     }
 
     
-    workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
-    await workspace.save();
+    workspace = await identity.workspaces.update(workspace._id, {
+      defaultChannels: [generalChannel._id, announcementsChannel._id],
+    });
 
     let templateError = null;
     if (templateId) {
@@ -208,18 +210,10 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
-    
-    user.workspaces.push({
-      workspace: workspace._id,
-      role: "owner"
-    });
-
-    
+    // Membership already lives in workspace_members; only the personal pointer is on the user.
     if (isPersonalWorkspace && !user.personalWorkspace) {
-      user.personalWorkspace = workspace._id;
+      await identity.users.update(userId, { personalWorkspace: workspace._id });
     }
-
-    await user.save();
 
     logger.info("👤 [PHASE 2] User added as member:", userId);
 
@@ -244,44 +238,34 @@ exports.listMyWorkspaces = async (req, res) => {
   try {
     const userId = req.user?.sub;
 
-    const user = await User.findById(userId).populate({
-      path: 'workspaces.workspace',
-      select: '-__v'
-    });
-
+    const user = await identity.users.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const workspacesWithOwner = await Promise.all(
-      user.workspaces
-        .filter(ws => ws.workspace)
-        .map(async (ws) => {
-          const workspace = await Workspace.findById(ws.workspace._id)
-            .populate('createdBy', 'username')
-            .lean();
-          const members = workspace?.members || ws.workspace.members || [];
-          const mine = members.find(m => String(m.user) === String(userId));
+    // Same shape the old user.workspaces array produced, from workspace_members.
+    const memberships = await wsQueries.membershipsForUser(userId);
+    const creators = await identity.users.findManyByIds(memberships.map(m => m.workspace.createdBy));
 
-          return {
-            id: ws.workspace._id,
-            name: ws.workspace.name,
-            description: ws.workspace.description,
-            icon: ws.workspace.icon,
-            color: ws.workspace.color || "#2563eb",
-            rules: ws.workspace.rules || "",
-            settings: pickSafeSettings(workspace?.settings || ws.workspace.settings),
-            type: ws.workspace.type,
-            // The workspace's own members list is authoritative for the role.
-            role: mine?.role || ws.role,
-            membershipStatus: mine ? (mine.status || 'active') : 'removed',
-            memberCount: countActiveMembers(members),
-            isPersonal: ws.workspace.type === 'personal',
-            ownerName: workspace?.createdBy?.username || 'Unknown',
-            isOwner: String(workspace?.createdBy?._id) === String(userId)
-          };
-        })
-    );
+    const workspacesWithOwner = memberships.map(({ workspace, role, status }) => {
+      const creator = creators.get(String(workspace.createdBy));
+      return {
+        id: workspace._id,
+        name: workspace.name,
+        description: workspace.description,
+        icon: workspace.icon,
+        color: workspace.color || "#2563eb",
+        rules: workspace.rules || "",
+        settings: pickSafeSettings(workspace.settings),
+        type: workspace.type,
+        role,
+        membershipStatus: status || 'active',
+        memberCount: countActiveMembers(workspace.members),
+        isPersonal: workspace.type === 'personal',
+        ownerName: creator?.username || 'Unknown',
+        isOwner: String(workspace.createdBy) === String(userId)
+      };
+    });
 
     return res.json({ workspaces: workspacesWithOwner });
   } catch (err) {
@@ -294,10 +278,10 @@ exports.listWorkspaces = async (req, res) => {
     const companyId = req.params.companyId;
     const userId = req.user?.sub;
 
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
     if (!user || String(user.companyId) !== String(companyId)) return res.status(403).json({ message: "Not a company member" });
 
-    const workspaces = await Workspace.find({ company: companyId }).select("-__v").lean();
+    const workspaces = (await wsQueries.listByCompany(companyId)).map(stripMethods);
     return res.json({ workspaces });
   } catch (err) {
     return handleError(res, err, "LIST WORKSPACES ERROR");
@@ -322,7 +306,7 @@ exports.deleteWorkspace = async (req, res) => {
     const workspaceId = req.params.id;
     const userId = req.user?.sub;
 
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -343,7 +327,7 @@ exports.deleteWorkspace = async (req, res) => {
     const _deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
 
     
-    const _deletedTasks = await Task.deleteMany({ workspace: workspaceId });
+    const _deletedTasks = await Tasks.deleteMany({ workspace: workspaceId });
 
     
     const _deletedNotes = await Note.deleteMany({ workspace: workspaceId });
@@ -355,19 +339,10 @@ exports.deleteWorkspace = async (req, res) => {
     const _deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
 
     
-    const _deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
+    const _deletedInvites = await inviteStore.deleteByWorkspace(workspaceId);
 
-    
-    await User.updateMany(
-      { "workspaces.workspace": workspaceId },
-      { $pull: { workspaces: { workspace: workspaceId } } }
-    );
-
-    
-    await User.updateMany(
-      { personalWorkspace: workspaceId },
-      { $unset: { personalWorkspace: "" } }
-    );
+    // Memberships go with the workspace (ON DELETE CASCADE); clear personal pointers first.
+    await wsQueries.clearPersonalWorkspace(workspaceId);
 
     
     // API keys, bots and webhooks must stop working with the workspace.
@@ -379,7 +354,7 @@ exports.deleteWorkspace = async (req, res) => {
     }
 
     
-    await Workspace.findByIdAndDelete(workspaceId);
+    await identity.workspaces.remove(workspaceId);
 
     return res.json({ message: "Workspace deleted successfully" });
   } catch (err) {
@@ -393,7 +368,7 @@ exports.inviteToWorkspace = async (req, res) => {
     const { emails, inviteType = "link", role = "member", daysValid = 7 } = req.body;
     const inviterId = req.user?.sub;
 
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
     
@@ -403,7 +378,6 @@ exports.inviteToWorkspace = async (req, res) => {
     }
 
     const invites = [];
-    const Invite = require("../../../models/Invite");
     const crypto = require("crypto");
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 
@@ -421,7 +395,7 @@ exports.inviteToWorkspace = async (req, res) => {
 
       for (const email of emailList) {
         
-        const userExists = await User.findOne({ email });
+        const userExists = await identity.users.findByEmail(email);
         // Privacy: people who turned discovery off are not confirmed to exist.
         const revealExists = !!userExists && userExists.preferences?.privacy?.allowDiscovery !== false;
 
@@ -429,7 +403,7 @@ exports.inviteToWorkspace = async (req, res) => {
         const tokenHash = sha256(raw);
         const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
 
-        const _invite = await Invite.create({
+        const _invite = await inviteStore.create({
           email,
           tokenHash,
           workspace: workspace._id,
@@ -443,7 +417,7 @@ exports.inviteToWorkspace = async (req, res) => {
         const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
 
         
-        const inviter = await User.findById(req.user.sub).select('username');
+        const inviter = await identity.users.findById(req.user.sub);
         const inviterName = inviter ? inviter.username : 'A team member';
 
         
@@ -479,7 +453,7 @@ exports.inviteToWorkspace = async (req, res) => {
       const tokenHash = sha256(raw);
       const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
 
-      const _invite = await Invite.create({
+      const _invite = await inviteStore.create({
         tokenHash,
         workspace: workspace._id,
         company: workspace.company,
@@ -508,12 +482,10 @@ exports.getInviteDetails = async (req, res) => {
     const { token } = req.params;
     const crypto = require("crypto");
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
-    const Invite = require("../../../models/Invite");
 
     const tokenHash = sha256(token);
-    const invite = await Invite.findOne({ tokenHash })
-      .populate('workspace', 'name description icon metadata')
-      .populate('invitedBy', 'username profilePicture');
+    const invite = await inviteStore.findByTokenHash(tokenHash);
+    if (invite) await hydrate(invite, { invitedBy: USER_MIN });
 
     if (!invite) {
       return res.status(404).json({ message: "Invalid invitation link" });
@@ -527,7 +499,8 @@ exports.getInviteDetails = async (req, res) => {
       return res.status(400).json({ message: "This invitation link has expired" });
     }
 
-    const workspace = await Workspace.findById(invite.workspace);
+    const workspace = await identity.workspaces.findById(invite.workspace);
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
     const memberCount = countActiveMembers(workspace.members);
 
     return res.json({
@@ -550,20 +523,19 @@ exports.joinWorkspace = async (req, res) => {
     const userId = req.user?.sub;
     const crypto = require("crypto");
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
-    const Invite = require("../../../models/Invite");
 
     if (!token) {
 
       return res.status(400).json({ message: "Invite token is required" });
     }
 
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const tokenHash = sha256(token);
-    const invite = await Invite.findOne({ tokenHash });
+    const invite = await inviteStore.findByTokenHash(tokenHash);
 
     if (!invite) {
       return res.status(404).json({ message: "Invalid invitation link" });
@@ -578,24 +550,22 @@ exports.joinWorkspace = async (req, res) => {
     }
 
     
-    const workspace = await Workspace.findById(invite.workspace);
+    const workspace = await identity.workspaces.findById(invite.workspace);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
     
-    const alreadyMember = workspace.members.some(m => String(m.user) === String(userId));
+    const alreadyMember = workspace.members.some(m => String(m.user) === String(userId) && m.status !== 'removed');
     if (alreadyMember) {
       return res.status(400).json({ message: "You are already a member of this workspace" });
     }
 
     
-    workspace.members.push({
-      user: userId,
-      role: invite.role,
-      joinedAt: new Date()
-    });
-    await workspace.save();
+    await identity.workspaces.addMember(workspace._id, userId, { role: invite.role || 'member' });
+
+    require('../../shared/events/bus').publish('member.joined', { userId: String(userId), role: invite.role, source: 'invite' },
+      { workspaceId: workspace._id, companyId: workspace.company, actorId: userId }).catch(() => {});
 
     {
       const notificationService = require('../../modules/notifications/notificationService');
@@ -606,13 +576,6 @@ exports.joinWorkspace = async (req, res) => {
         recipientIds: workspace.members.map(m => String(m.user)).filter(id => id !== String(userId)),
       }).catch(() => {});
     }
-
-    user.workspaces.push({
-      workspace: workspace._id,
-      role: invite.role,
-      joinedAt: new Date()
-    });
-    await user.save();
 
     
     const defaultChannels = await Channel.find({
@@ -674,10 +637,7 @@ exports.joinWorkspace = async (req, res) => {
     }
 
     
-    invite.used = true;
-    invite.usedBy = userId;
-    invite.usedAt = new Date();
-    await invite.save();
+    await inviteStore.update(invite._id, { used: true, usedBy: userId, usedAt: new Date(), status: 'accepted' });
 
     
     const io = req.app.get("io");
@@ -711,10 +671,10 @@ exports.getWorkspaceMembers = async (req, res) => {
     const userId = req.user?.sub;
     if (!isValidId(workspaceId)) return res.status(400).json({ message: "Invalid workspaceId" });
 
-    const workspace = await Workspace.findById(workspaceId).populate({
-      path: 'members.user',
-      select: 'username email phone profilePicture isOnline userStatus profile lastLoginAt'
-    });
+    const workspace = await identity.workspaces.findById(workspaceId);
+    if (workspace) {
+      await hydrate(workspace, { 'members.user': { type: 'user', fields: ['username', 'email', 'phone', 'profilePicture', 'isOnline', 'userStatus', 'profile', 'lastLoginAt'] } });
+    }
 
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -759,7 +719,7 @@ exports.leaveWorkspace = async (req, res) => {
     const userId = req.user?.sub;
     if (!isValidId(workspaceId)) return res.status(400).json({ message: "Invalid workspaceId" });
 
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
     const me = workspace.members.find(m => String(m.user) === String(userId) && (m.status || 'active') === 'active');
@@ -768,7 +728,7 @@ exports.leaveWorkspace = async (req, res) => {
       return res.status(400).json({ message: "Transfer ownership before leaving" });
     }
 
-    await Workspace.updateOne({ _id: workspaceId }, { $pull: { members: { user: userId } } });
+    await identity.workspaces.removeMember(workspaceId, userId, { hard: true });
     await Channel.updateMany(
       { workspace: workspaceId },
       { $pull: { members: { user: userId }, admins: userId } }
@@ -777,7 +737,6 @@ exports.leaveWorkspace = async (req, res) => {
       { workspace: workspaceId, participants: userId },
       { $set: { status: "closed" } }
     );
-    await User.updateOne({ _id: userId }, { $pull: { workspaces: { workspace: workspaceId } } });
 
     const io = req.app?.get("io");
     if (io) {
@@ -797,7 +756,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     const userId = req.user?.sub;
 
     
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -811,12 +770,9 @@ exports.getWorkspaceChannels = async (req, res) => {
     
     const allChannels = await Channel.find({ workspace: workspaceId })
       .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents')
-      .populate('createdBy', 'firstName lastName')
       .sort({ isDefault: -1, createdAt: 1 }) 
       .lean();
-
-    
-    const User = require('../../../models/User');
+    await hydrate(allChannels, { createdBy: { type: 'user', fields: ['username', 'profile'] } });
 
     
     const eventUserIds = new Set();
@@ -833,10 +789,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     
     let userMap = new Map();
     if (eventUserIds.size > 0) {
-      const eventUsers = await User.find(
-        { _id: { $in: Array.from(eventUserIds) } },
-        { firstName: 1, lastName: 1, username: 1 }
-      ).lean();
+      const eventUsers = [...(await identity.users.findManyByIds(Array.from(eventUserIds))).values()];
       eventUsers.forEach(u => {
         userMap.set(u._id.toString(),
           u.username || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown'
@@ -847,7 +800,7 @@ exports.getWorkspaceChannels = async (req, res) => {
     
     for (const channel of allChannels) {
       if (channel.createdBy) {
-        channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
+        channel.creatorName = channel.createdBy.profile?.name || channel.createdBy.username || 'Unknown';
       }
       if (channel.systemEvents && channel.systemEvents.length > 0) {
         for (const event of channel.systemEvents) {
@@ -919,7 +872,7 @@ exports.createWorkspaceChannel = async (req, res) => {
     }
 
     
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -1066,10 +1019,11 @@ exports.getAllWorkspaceMembers = async (req, res) => {
     const { workspaceId } = req.params;
     const userId = req.user?.sub;
 
-    const workspace = await Workspace.findById(workspaceId).populate({
-      path: 'members.user',
-      select: 'username email profilePicture isOnline lastLoginAt'
-    });
+    const workspace = await identity.workspaces.findById(workspaceId);
+    if (workspace) {
+      await hydrate(workspace, { 'members.user': { type: 'user', fields: ['username', 'email', 'profilePicture', 'isOnline', 'lastLoginAt'] } });
+      workspace.members = workspace.members.filter(m => m.user);
+    }
 
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -1120,7 +1074,7 @@ exports.renameWorkspace = async (req, res) => {
       return res.status(400).json({ message: "Workspace name is required" });
     }
 
-    const workspace = await Workspace.findById(id);
+    let workspace = await identity.workspaces.findById(id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -1132,11 +1086,7 @@ exports.renameWorkspace = async (req, res) => {
     }
 
     
-    const existingWorkspace = await Workspace.findOne({
-      _id: { $ne: id }, 
-      name: name.trim(),
-      'members.user': userId
-    });
+    const existingWorkspace = await wsQueries.findByNameForMember(name.trim(), userId, id);
 
     if (existingWorkspace) {
       return res.status(400).json({
@@ -1145,8 +1095,7 @@ exports.renameWorkspace = async (req, res) => {
     }
 
     
-    workspace.name = name.trim();
-    await workspace.save();
+    workspace = await identity.workspaces.update(id, { name: name.trim() });
 
     const io = req.app?.get("io");
     if (io) {
@@ -1206,7 +1155,7 @@ exports.updateWorkspace = async (req, res) => {
       return res.status(400).json({ message: "description must be a string" });
     }
 
-    const workspace = await Workspace.findById(id);
+    let workspace = await identity.workspaces.findById(id);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -1216,17 +1165,14 @@ exports.updateWorkspace = async (req, res) => {
       return res.status(403).json({ message: "Only admins and owners can update workspace settings" });
     }
 
-    if (icon !== undefined) workspace.icon = icon;
-    if (body.color !== undefined) workspace.color = body.color;
-    if (description !== undefined) workspace.description = description || "";
-    if (body.rules !== undefined) workspace.rules = body.rules || "";
-    if (!workspace.settings) workspace.settings = {};
-    for (const [k, v] of Object.entries(incoming)) {
-      workspace.settings[k] = v;
-    }
-    if (Object.keys(incoming).length) workspace.markModified('settings');
+    const patch = {};
+    if (icon !== undefined) patch.icon = icon;
+    if (body.color !== undefined) patch.color = body.color;
+    if (description !== undefined) patch.description = description || "";
+    if (body.rules !== undefined) patch.rules = body.rules || "";
+    if (Object.keys(incoming).length) patch.settings = { $merge: true, ...incoming };
 
-    await workspace.save();
+    workspace = await identity.workspaces.update(id, patch);
 
     const safeSettings = pickSafeSettings(workspace.settings);
     const io = req.app?.get("io");
@@ -1265,7 +1211,8 @@ exports.getWorkspaceStats = async (req, res) => {
     const id = req.params.workspaceId || req.params.id;
     const userId = req.user?.sub;
 
-    const workspace = await Workspace.findById(id).populate('createdBy', 'username email');
+    const workspace = await identity.workspaces.findById(id);
+    if (workspace) await hydrate(workspace, { createdBy: { type: 'user', fields: ['username', 'email'] } });
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
@@ -1308,7 +1255,7 @@ exports.cloneWorkspace = async (req, res) => {
 
     if (!name) return res.status(400).json({ message: 'New workspace name is required' });
 
-    const source = await Workspace.findById(sourceId);
+    const source = await identity.workspaces.findById(sourceId);
     if (!source) return res.status(404).json({ message: 'Source workspace not found' });
 
     const isMember = source.members.some(m => String(m.user) === String(userId));
@@ -1319,21 +1266,21 @@ exports.cloneWorkspace = async (req, res) => {
       return res.status(403).json({ message: 'Admin access required to clone' });
     }
 
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
 
     
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
     
-    const existing = await Workspace.findOne({ name: name.trim(), createdBy: userId });
+    const existing = await wsQueries.findByNameForCreator(name.trim(), userId);
     if (existing) return res.status(400).json({ message: 'Workspace name already exists in your account' });
 
     
     const cloneMembers = includeMembership
-      ? source.members.map(m => ({ user: m.user, role: m.role, status: 'active', joinedAt: new Date() }))
+      ? source.members.filter(m => m.status !== 'removed').map(m => ({ user: m.user, role: m.role, status: 'active', joinedAt: new Date() }))
       : [{ user: userId, role: 'owner' }];
 
-    const clone = await Workspace.create({
+    let clone = await identity.workspaces.create({
       company: resolvedCompanyId || null,
       type: source.type,
       name: name.trim(),
@@ -1343,7 +1290,7 @@ exports.cloneWorkspace = async (req, res) => {
       rules: source.rules || '',
       createdBy: userId,
       members: cloneMembers,
-      settings: { ...source.settings.toObject() }
+      settings: { ...(source.settings || {}) }
     });
 
     
@@ -1365,12 +1312,7 @@ exports.cloneWorkspace = async (req, res) => {
       clonedChannelIds.push(newChannel._id);
     }
 
-    clone.defaultChannels = clonedChannelIds.slice(0, 2);
-    await clone.save();
-
-    
-    user.workspaces.push({ workspace: clone._id, role: 'owner' });
-    await user.save();
+    clone = await identity.workspaces.update(clone._id, { defaultChannels: clonedChannelIds.slice(0, 2) });
 
     const io = req.app?.get('io');
     if (io) {
@@ -1397,7 +1339,7 @@ exports.exportWorkspace = async (req, res) => {
     const workspaceId = req.params.id;
     const userId = req.user?.sub;
 
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
@@ -1445,14 +1387,14 @@ exports.importWorkspace = async (req, res) => {
       return res.status(400).json({ message: 'Valid workspace snapshot is required' });
     }
 
-    const user = await User.findById(userId);
+    const user = await identity.users.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
     if (!resolvedCompanyId) {
       
-      const owned = await Workspace.countDocuments({ createdBy: userId });
+      const owned = await wsQueries.countCreatedBy(userId);
       if (owned >= 3) {
         return res.status(403).json({ message: 'Free plan limit: max 3 workspaces', isLimitReached: true });
       }
@@ -1462,10 +1404,10 @@ exports.importWorkspace = async (req, res) => {
     const name = (ws.name || 'Imported Workspace').trim();
 
     
-    const existing = await Workspace.findOne({ name, createdBy: userId });
+    const existing = await wsQueries.findByNameForCreator(name, userId);
     if (existing) return res.status(400).json({ message: 'Workspace name already exists — rename before importing' });
 
-    const imported = await Workspace.create({
+    let imported = await identity.workspaces.create({
       company: resolvedCompanyId || null,
       type: ws.type || 'team',
       name,
@@ -1495,11 +1437,9 @@ exports.importWorkspace = async (req, res) => {
       createdChannelIds.push(channel._id);
     }
 
-    imported.defaultChannels = createdChannelIds.filter((_, i) => channels[i]?.isDefault).slice(0, 2);
-    await imported.save();
-
-    user.workspaces.push({ workspace: imported._id, role: 'owner' });
-    await user.save();
+    imported = await identity.workspaces.update(imported._id, {
+      defaultChannels: createdChannelIds.filter((_, i) => channels[i]?.isDefault).slice(0, 2),
+    });
 
     return res.status(201).json({
       message: 'Workspace imported successfully',
@@ -1515,7 +1455,7 @@ exports.getWorkspaceAnalytics = async (req, res) => {
     const workspaceId = req.params.workspaceId;
     const userId = req.user?.sub;
 
-    const workspace = await Workspace.findById(workspaceId);
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
@@ -1524,7 +1464,7 @@ exports.getWorkspaceAnalytics = async (req, res) => {
     const [channelCount, messageCount, taskCount, noteCount] = await Promise.all([
       Channel.countDocuments({ workspace: workspaceId }),
       Message.countDocuments({ workspace: workspaceId }),
-      Task.countDocuments({ workspace: workspaceId }),
+      Tasks.countDocuments({ workspace: workspaceId }),
       Note.countDocuments({ workspace: workspaceId })
     ]);
 

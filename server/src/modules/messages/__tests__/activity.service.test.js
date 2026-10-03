@@ -9,14 +9,16 @@
 const Message = require('../message.model.js');
 const Channel = require('../../../features/channels/channel.model.js');
 const DMSession = require('../../../../models/DMSession');
-const Workspace = require('../../../../models/Workspace');
-const User = require('../../../../models/User');
+// Users and workspaces live in PostgreSQL: the identity repositories are mocked.
+const identity = require('../../../identity');
 
 jest.mock('../message.model.js');
 jest.mock('../../../features/channels/channel.model.js');
 jest.mock('../../../../models/DMSession');
-jest.mock('../../../../models/Workspace');
-jest.mock('../../../../models/User');
+jest.mock('../../../identity', () => ({
+    workspaces: { findById: jest.fn() },
+    users: { findManyByIds: jest.fn(), findById: jest.fn() },
+}));
 
 const { getWorkspaceActivity } = require('../activity.service');
 const messagesController = require('../messages.controller');
@@ -45,7 +47,7 @@ function query(value) {
 
 function workspace(members) {
     // Member entries are subdocuments with their own _id, like the real model.
-    Workspace.findById.mockReturnValue(query({ _id: WS, members: members.map((m, i) => ({ _id: oid(800 + i), ...m })) }));
+    identity.workspaces.findById.mockResolvedValue({ _id: WS, members: members.map((m, i) => ({ _id: oid(800 + i), ...m })) });
 }
 
 function row(conv, { unread = 1, mentions = 0, type = 'message', cipher = 'CIPHER', at = '2026-09-28T10:00:00Z', sender = BOB, text, gone = false, hiddenFor = [] } = {}) {
@@ -58,18 +60,24 @@ function row(conv, { unread = 1, mentions = 0, type = 'message', cipher = 'CIPHE
     };
 }
 
+/** The PostgreSQL users the repository knows about (everyone else is "not found"). */
+function setUsers(list) {
+    const byId = new Map(list.map(u => [u._id, u]));
+    identity.users.findManyByIds.mockImplementation(async (ids) => new Map(ids.filter(id => byId.has(String(id))).map(id => [String(id), byId.get(String(id))])));
+}
+
 beforeEach(() => {
     jest.resetAllMocks();
     workspace([{ user: ME, status: 'active' }, { user: BOB, status: 'active' }]);
     DMSession.find.mockReturnValue(query([]));
     Channel.find.mockReturnValue(query([]));
-    User.find.mockReturnValue(query([]));
+    setUsers([]);
     Message.aggregate.mockResolvedValue([]);
 });
 
 describe('access control', () => {
     test('404 for a missing workspace', async () => {
-        Workspace.findById.mockReturnValue(query(null));
+        identity.workspaces.findById.mockResolvedValue(null);
         await expect(getWorkspaceActivity(ME, WS)).rejects.toMatchObject({ status: 404 });
     });
 
@@ -107,15 +115,20 @@ describe('access control', () => {
 
 describe('items', () => {
     beforeEach(() => {
+        // DM sessions hold participant ids; the users come from PostgreSQL.
         DMSession.find.mockReturnValue(query([
-            { _id: DM1, participants: [{ _id: ME, username: 'alice' }, { _id: BOB, username: 'bob', profilePicture: 'b.png', isOnline: true }], mutedBy: [] },
-            { _id: DM2, participants: [{ _id: ME, username: 'alice' }, { _id: CAROL, username: 'carol' }], mutedBy: [{ user: ME }] },
+            { _id: DM1, participants: [ME, BOB], mutedBy: [] },
+            { _id: DM2, participants: [ME, CAROL], mutedBy: [{ user: ME }] },
         ]));
         Channel.find.mockReturnValue(query([
             { _id: CH1, name: 'general', members: [{ _id: oid(700), user: ME, joinedAt: new Date('2026-01-01') }], mutedBy: [] },
             { _id: CH2, name: 'random', isPrivate: true, members: [{ _id: oid(701), user: ME }], mutedBy: [{ _id: oid(702), user: ME }] },
         ]));
-        User.find.mockReturnValue(query([{ _id: CAROL, username: 'carol', profilePicture: 'c.png' }]));
+        setUsers([
+            { _id: ME, username: 'alice' },
+            { _id: BOB, username: 'bob', profilePicture: 'b.png', isOnline: true },
+            { _id: CAROL, username: 'carol', profilePicture: 'c.png' },
+        ]);
         Message.aggregate.mockImplementation(async (pipeline) => {
             const match = pipeline[0].$match;
             if (match.dm) {

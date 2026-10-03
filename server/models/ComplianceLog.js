@@ -68,4 +68,7 @@ ComplianceLogSchema.index({ actorId: 1, createdAt: -1 });
 ComplianceLogSchema.index({ category: 1, severity: 1, createdAt: -1 });
 ComplianceLogSchema.index({ resourceType: 1, resourceId: 1 });
 
+// Mirrored into PostgreSQL (compliance_log) while reads still come from MongoDB.
+ComplianceLogSchema.plugin(require('../src/shared/logStore').mirrorToPostgres, { kind: 'compliance' });
+
 module.exports = mongoose.model('ComplianceLog', ComplianceLogSchema);

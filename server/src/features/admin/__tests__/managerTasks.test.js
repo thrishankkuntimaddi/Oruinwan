@@ -39,19 +39,15 @@ function query(value) {
 let currentTask;
 const taskFind = jest.fn();
 
-jest.mock('../../../../models/User', () => ({
-    findById: jest.fn(),
-    find: jest.fn(),
-    countDocuments: jest.fn(),
-}));
-jest.mock('../../../../models/Department', () => ({ findById: jest.fn(), find: jest.fn() }));
-jest.mock('../../../../models/Workspace', () => ({ findById: jest.fn(), find: jest.fn() }));
+jest.mock('../../../identity', () => require('./identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('./identityStore').org);
+jest.mock('../../../identity/queries/auth', () => require('./identityStore').auth);
+jest.mock('../../../shared/postgres', () => require('./identityStore').postgres);
 jest.mock('../../../modules/messages/message.model.js', () => ({ countDocuments: jest.fn() }));
 jest.mock('../../../../models/TaskActivity', () => ({ create: jest.fn().mockResolvedValue({}) }));
-jest.mock('../../../../models/Task', () => ({ findById: jest.fn(), find: jest.fn() }));
+jest.mock('../../../../models/Task', () => ({ findById: jest.fn(), find: jest.fn(), findByIdAndUpdate: jest.fn() }));
 
-const User = require('../../../../models/User');
-const Department = require('../../../../models/Department');
+const store = require('./identityStore');
 const Task = require('../../../../models/Task');
 const router = require('../manager-dashboard.routes');
 
@@ -91,14 +87,15 @@ function call(method, path, userId, body) {
 beforeEach(() => {
     jest.clearAllMocks();
     currentTask = makeTask();
-    User.findById.mockImplementation(() => query({ _id: MANAGER, companyId: COMPANY, companyRole: 'manager', managedDepartments: [DEPT] }));
-    User.find.mockImplementation(() => query([{ _id: MEMBER }]));
-    User.countDocuments.mockImplementation(async (q) => (q._id.$in.map(String).includes(MEMBER) ? 1 : 0));
-    Department.findById.mockImplementation((id) => query(
-        String(id) === DEPT ? { _id: DEPT, company: COMPANY, managers: [], head: null }
-            : String(id) === OTHER_DEPT ? { _id: OTHER_DEPT, company: COMPANY, managers: [], head: null } : null));
-    Department.find.mockImplementation(() => query([{ _id: DEPT }]));
+    store.reset();
+    store.addDepartment({ _id: DEPT, company: COMPANY, name: 'Eng' });
+    store.addDepartment({ _id: OTHER_DEPT, company: COMPANY, name: 'Other' });
+    store.addUser({ _id: MANAGER, companyId: COMPANY, companyRole: 'manager', managedDepartments: [DEPT] });
+    store.addUser({ _id: MEMBER, companyId: COMPANY, companyRole: 'member', departments: [DEPT] });
+    store.addUser({ _id: STRANGER, companyId: COMPANY, companyRole: 'member' });
     Task.findById.mockImplementation(() => query(currentTask));
+    // The route patches through the task store (tasks.query → findByIdAndUpdate on MongoDB).
+    Task.findByIdAndUpdate.mockImplementation((id, patch) => { Object.assign(currentTask, patch); return query(currentTask); });
     Task.find.mockImplementation((q) => { taskFind(q); return query([]); });
 });
 
@@ -108,7 +105,7 @@ describe('PATCH /api/manager/tasks/:taskId/status', () => {
         const res = await call('PATCH', `/api/manager/tasks/${TASK}/status`, MANAGER, { status: 'done' });
         expect(res.status).toBe(400);
         expect(res.body.allowedTransitions).toEqual(['backlog', 'todo']);
-        expect(currentTask.save).not.toHaveBeenCalled();
+        expect(Task.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
     it('updates an in-scope task and records completion', async () => {

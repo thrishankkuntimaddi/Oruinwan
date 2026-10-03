@@ -3,8 +3,18 @@ const _mongoose = require('mongoose');
 
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
-const User = require('../../../models/User');
-const _Company = require('../../../models/Company');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
+
+const SENDER = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
+
+/** Mongo document(s) → plain objects with user references expanded from PostgreSQL. */
+async function expand(docs, paths) {
+    const toPlain = (d) => (d && typeof d.toObject === 'function' ? d.toObject() : d);
+    const out = Array.isArray(docs) ? docs.map(toPlain) : toPlain(docs);
+    await hydrate(out, paths);
+    return out;
+}
 
 const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
 
@@ -12,7 +22,7 @@ const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
 async function getCaller(req) {
     const userId = req.user && (req.user.sub || req.user._id);
     if (!userId) return null;
-    const user = await User.findById(userId).select('roles companyId').lean();
+    const user = await identity.users.findById(userId);
     if (!user) return null;
     return {
         id: String(userId),
@@ -66,14 +76,13 @@ exports.getMessages = async (req, res) => {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        const messages = await SupportMessage.find({
+        const messages = await expand(await SupportMessage.find({
             company: companyId,
             deletedAt: null
         })
-            .populate('sender', 'username email profilePicture')
             .populate('ticket', 'subject status')
             .sort({ createdAt: 1 })
-            .limit(parseInt(limit));
+            .limit(parseInt(limit)), { sender: SENDER });
 
         return res.json({ messages });
     } catch (error) {
@@ -99,7 +108,7 @@ exports.sendTicketMessage = async (req, res) => {
         }
 
         
-        const ticket = await SupportTicket.findById(ticketId).populate('companyId');
+        const ticket = await SupportTicket.findById(ticketId);
         const caller = await getCaller(req);
         if (!ticket || !canAccessCompany(caller, ticket.companyId)) {
             return res.status(404).json({ message: 'Ticket not found' });
@@ -120,16 +129,16 @@ exports.sendTicketMessage = async (req, res) => {
         const isPlatformAdmin = caller.isPlatformAdmin;
         const senderRole = isPlatformAdmin ? 'platform' : 'company';
 
-        const message = await SupportMessage.create({
+        const created = await SupportMessage.create({
             ticket: ticketId,
-            company: ticket.companyId._id,
+            company: ticket.companyId,
             sender: req.user.sub,
             senderRole,
             content: content.trim(),
             attachments: attachments || []
         });
 
-        await message.populate('sender', 'username email profilePicture');
+        const message = await expand(created, { sender: SENDER });
 
         logger.info('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
@@ -144,7 +153,7 @@ exports.sendTicketMessage = async (req, res) => {
             const io = req.app.get('io');
 
             
-            io.to(`company_${ticket.companyId._id}`).emit('support-message', {
+            io.to(`company_${ticket.companyId}`).emit('support-message', {
                 ticketId,
                 message
             });
@@ -218,7 +227,7 @@ exports.sendMessage = async (req, res) => {
         }
 
         
-        const message = await SupportMessage.create({
+        const created = await SupportMessage.create({
             ticket: ticket._id,
             company: companyId,
             sender: req.user.sub,
@@ -226,7 +235,7 @@ exports.sendMessage = async (req, res) => {
             content: content.trim()
         });
 
-        await message.populate('sender', 'username email profilePicture');
+        const message = await expand(created, { sender: SENDER });
 
         logger.info('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
@@ -303,12 +312,11 @@ exports.getTickets = async (req, res) => {
             query.priority = priority;
         }
 
-        const tickets = await SupportTicket.find(query)
+        const tickets = await expand(await SupportTicket.find(query)
             .select(caller.isPlatformAdmin ? '' : '-internalNotes')
-            .populate('creatorId', 'username email profilePicture')
             .sort({ createdAt: -1 })
             .limit(parseInt(limit))
-            .skip(parseInt(skip));
+            .skip(parseInt(skip)), { creatorId: SENDER });
 
         const total = await SupportTicket.countDocuments(query);
 
@@ -339,7 +347,7 @@ exports.createTicket = async (req, res) => {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        const ticket = await SupportTicket.create({
+        const ticketDoc = await SupportTicket.create({
             companyId,
             creatorId: req.user.sub || req.user._id,
             subject,
@@ -347,8 +355,7 @@ exports.createTicket = async (req, res) => {
             description,
             status: 'open'
         });
-
-        await ticket.populate('creatorId', 'username email profilePicture');
+        const ticket = await expand(ticketDoc, { creatorId: SENDER });
 
         
         const initialMessage = await SupportMessage.create({
@@ -410,9 +417,8 @@ exports.updateTicket = async (req, res) => {
         }
 
         await ticket.save();
-        await ticket.populate('creatorId', 'username email profilePicture');
 
-        return res.json({ ticket });
+        return res.json({ ticket: await expand(ticket, { creatorId: SENDER }) });
     } catch (error) {
         logger.error('UPDATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });

@@ -4,7 +4,11 @@ const router = express.Router();
 const SupportTicket = require('../../../models/SupportTicket');
 const logger = require('../../../utils/logger');
 
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
+
+const USER_EMAIL = { type: 'user', fields: ['username', 'email'] };
+const plain = (d) => (d && typeof d.toObject === 'function' ? d.toObject() : d);
 const requireAuth = require('../../shared/middleware/auth');
 const supportTickets = require('./supportTickets.service');
 
@@ -18,7 +22,7 @@ router.use(requireAuth);
 // Company users share their company's tickets; personal accounts see only their own.
 router.use(async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.sub).select('companyId').lean();
+        const user = await identity.users.findById(req.user.sub);
         if (!user) return res.status(401).json({ message: 'Authentication required' });
         req.supportCompanyId = user.companyId || null;
         next();
@@ -125,10 +129,10 @@ router.get('/tickets/mine', async (req, res) => {
 
 router.get('/tickets', async (req, res) => {
     try {
-        const tickets = await SupportTicket.find(visibleTo(req))
+        const tickets = (await SupportTicket.find(visibleTo(req))
             .select('-internalNotes')
-            .sort({ createdAt: -1 })
-            .populate('creatorId', 'username email');
+            .sort({ createdAt: -1 })).map(plain);
+        await hydrate(tickets, { creatorId: USER_EMAIL });
 
         res.json({ tickets });
     } catch (err) {
@@ -139,10 +143,9 @@ router.get('/tickets', async (req, res) => {
 
 router.get('/tickets/:id', async (req, res) => {
     try {
-        const ticket = await SupportTicket.findOne(visibleTo(req, { _id: req.params.id }))
-            .select('-internalNotes')
-            .populate('creatorId', 'username email')
-            .populate('messages.sender', 'username email profilePicture');
+        const ticket = plain(await SupportTicket.findOne(visibleTo(req, { _id: req.params.id }))
+            .select('-internalNotes'));
+        if (ticket) await hydrate(ticket, { creatorId: USER_EMAIL, 'messages.sender': { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
 
         if (!ticket) {
             return res.status(404).json({ message: 'Ticket not found' });

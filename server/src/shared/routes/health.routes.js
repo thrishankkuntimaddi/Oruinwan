@@ -4,6 +4,18 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const logger = require('../../../utils/logger');
+const { role } = require('../processRole');
+const { getRedis, isRedisConfigured, INSTANCE_ID } = require('../redis');
+const { scheduledJobs } = require('../jobs/scheduler');
+const { postgresStatus } = require('../postgres');
+
+/** 'disabled' | 'ready' | 'connecting' | 'down' — Redis is optional, so it never fails the check. */
+function redisStatus() {
+  if (!isRedisConfigured()) return 'disabled';
+  const r = getRedis();
+  if (!r) return 'down';
+  return r.status === 'ready' ? 'ready' : r.status || 'connecting';
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -28,6 +40,11 @@ router.get('/', async (req, res) => {
     res.json({
       status: 'healthy',
       mongodb: 'connected',
+      redis: redisStatus(),
+      postgres: await postgresStatus(),
+      role,
+      instance: INSTANCE_ID,
+      jobs: scheduledJobs(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),

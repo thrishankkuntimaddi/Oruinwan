@@ -18,8 +18,8 @@ const mongoose = require('mongoose');
 const Message = require('./message.model.js');
 const DMSession = require('../../../models/DMSession');
 const Channel = require('../../features/channels/channel.model.js');
-const Workspace = require('../../../models/Workspace');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 
 const KIND_LABELS = {
     image: '📷 Photo', video: '🎬 Video', voice: '🎵 Voice note', file: '📎 File',
@@ -91,7 +91,7 @@ function lastMessageOf(row, userId) {
 
 async function assertActiveMember(userId, workspaceId) {
     if (!mongoose.Types.ObjectId.isValid(String(workspaceId))) throw httpError(400, 'Invalid workspace id');
-    const workspace = await Workspace.findById(workspaceId).select('members').lean();
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) throw httpError(404, 'Workspace not found');
     const member = (workspace.members || []).find(m => idOf(m.user || m) === String(userId));
     if (!member || (member.status && member.status !== 'active')) throw httpError(403, 'Not a member of this workspace');
@@ -104,9 +104,9 @@ async function dmActivity(userId, workspaceId) {
         'hiddenFor.user': { $ne: userId },
     })
         .select('participants mutedBy')
-        .populate('participants', 'username profilePicture isOnline userStatus')
         .lean();
     if (!sessions.length) return [];
+    await hydrate(sessions, { participants: { type: 'user', fields: ['username', 'profilePicture', 'isOnline', 'userStatus'] } });
 
     const rows = await Message.aggregate(unreadPipeline(
         { dm: { $in: sessions.map(s => toObjectId(s._id)) }, ...unreadMatch(userId) },
@@ -187,7 +187,7 @@ async function getWorkspaceActivity(userId, workspaceId) {
     // Channel previews name the sender.
     const senderIds = [...new Set(items.filter(i => i.type === 'channel').map(i => i.lastMessage?.senderId).filter(Boolean))];
     if (senderIds.length) {
-        const users = await User.find({ _id: { $in: senderIds } }).select('username profilePicture').lean();
+        const users = [...(await identity.users.findManyByIds(senderIds)).values()];
         const names = new Map(users.map(u => [String(u._id), u]));
         for (const item of items) {
             const u = item.type === 'channel' ? names.get(item.lastMessage?.senderId) : null;

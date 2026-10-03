@@ -3,7 +3,9 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const User = require('../../../models/User');
+// Identity lives in PostgreSQL; userDocs returns a mutable user document with save() (see identity/queries/auth.js).
+const identity = require('../../identity');
+const { userDocs, emailTaken, companyByAllowedEmail, companyForAutoJoin, invites } = require('../../identity/queries/auth');
 const sendEmail = require('../../../utils/sendEmail');
 const {
   passwordResetTemplate,
@@ -46,8 +48,10 @@ function generateAccessToken(user) {
 }
 
 function generateRefreshToken(user) {
+  // jti makes every refresh token unique: two issued in the same second for the same
+  // user would otherwise hash to the same stored row.
   return jwt.sign(
-    { sub: user._id.toString() },
+    { sub: user._id.toString(), jti: crypto.randomBytes(9).toString('base64url') },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: `${REFRESH_DAYS}d` }
   );
@@ -61,16 +65,16 @@ exports.signup = async (req, res) => {
     if (!username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
 
-    if (await User.findOne({ email }))
+    if (await emailTaken(email))
       return res.status(409).json({ message: "Email already in use" });
 
     
-    if (await User.findOne({ username }))
+    if (await identity.users.findByUsername(username))
       return res.status(409).json({ message: "Username already in use" });
 
     
     if (phone) {
-      const existingPhone = await User.findOne({ phone: phone });
+      const existingPhone = await identity.users.findByPhone(phone);
       if (existingPhone) {
         return res.status(409).json({ message: "Phone number already in use" });
       }
@@ -92,9 +96,6 @@ exports.signup = async (req, res) => {
     
 
     const emailLower = email.toLowerCase();
-    const Company = require("../../../models/Company");
-    const Invite = require("../../../models/Invite");
-    const Workspace = require("../../../models/Workspace");
     const Channel = require("../channels/channel.model.js");
 
     
@@ -106,12 +107,7 @@ exports.signup = async (req, res) => {
     
     if (inviteToken) {
       const inviteHash = sha256(inviteToken);
-      const invite = await Invite.findOne({
-        tokenHash: inviteHash,
-        email: emailLower,
-        used: false,
-        expiresAt: { $gt: new Date() }
-      });
+      const invite = await invites.findUsable(inviteHash, emailLower);
 
       if (invite) {
         userType = "company";
@@ -125,10 +121,7 @@ exports.signup = async (req, res) => {
         }
 
         
-        invite.status = 'accepted'; 
-        invite.used = true;
-        invite.usedBy = null; 
-        await invite.save();
+        await invites.update(invite._id, { status: 'accepted', used: true, usedBy: null, usedAt: new Date() });
       } else {
         
       }
@@ -136,10 +129,7 @@ exports.signup = async (req, res) => {
 
     
     if (!companyId) {
-      const companyWithAllowedEmail = await Company.findOne({
-        allowedEmails: emailLower,
-        isActive: true
-      });
+      const companyWithAllowedEmail = await companyByAllowedEmail(emailLower);
 
       if (companyWithAllowedEmail) {
         userType = "company";
@@ -158,12 +148,7 @@ exports.signup = async (req, res) => {
       const domain = extractDomain(emailLower);
 
       if (domain) {
-        const companyWithDomain = await Company.findOne({
-          domain,
-          domainVerified: true,
-          autoJoinByDomain: true,
-          isActive: true
-        });
+        const companyWithDomain = await companyForAutoJoin(domain);
 
         if (companyWithDomain) {
           userType = "company";
@@ -182,7 +167,7 @@ exports.signup = async (req, res) => {
 
     
 
-    const user = new User({
+    const user = userDocs.build({
       username,
       email: emailLower,
       phone: phone || null,
@@ -247,17 +232,16 @@ exports.signup = async (req, res) => {
 
     
 
-    if (companyId && workspacesToJoin.length > 0) {
+    // An invite to a personal (company-less) workspace joins it too; it was consumed above.
+    if (workspacesToJoin.length > 0) {
       for (const workspaceId of workspacesToJoin) {
-        const workspace = await Workspace.findById(workspaceId);
+        const workspace = await identity.workspaces.findById(workspaceId);
 
         if (workspace && !workspace.isMember(user._id)) {
-          
-          workspace.members.push({
-            user: user._id,
-            role: "member"
-          });
-          await workspace.save();
+          await identity.workspaces.addMember(workspace._id, user._id, { role: 'member' });
+
+          require('../../shared/events/bus').publish('member.joined', { userId: String(user._id), role: 'member', source: 'registration' },
+            { workspaceId: workspace._id, companyId: workspace.company || companyId, actorId: user._id }).catch(() => {});
 
           
           user.workspaces.push({
@@ -352,11 +336,7 @@ exports.verifyEmail = async (req, res) => {
 
     const tokenHash = sha256(token);
 
-    const user = await User.findOne({
-      email,
-      verificationTokenHash: tokenHash,
-      verificationTokenExpires: { $gt: Date.now() }
-    });
+    const user = await userDocs.findByVerificationToken(email, tokenHash);
 
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" });
@@ -365,6 +345,8 @@ exports.verifyEmail = async (req, res) => {
     user.verified = true;
     user.verificationTokenHash = undefined;
     user.verificationTokenExpires = undefined;
+    // The sign-up address is the primary entry in the user's email list: verified now too.
+    for (const e of user.emails || []) if (e.email === String(user.email).toLowerCase()) e.verified = true;
 
     await saveWithRetry(user);
 
@@ -393,14 +375,13 @@ exports.login = async (req, res) => {
     let isCompanyAccount = false;
     let targetCompanyId = null;
 
-    const Company = require("../../../models/Company");
 
     
     
     
     if (domain) {
       
-      const company = await Company.findOne({ domain: domain, isActive: true });
+      const company = await identity.companies.findByDomain(domain);
       if (company) {
         if (company.verificationStatus === 'rejected') {
           return res.status(403).json({ message: `Company domain ${domain} is rejected. Contact support.` });
@@ -412,7 +393,9 @@ exports.login = async (req, res) => {
 
     
     
-    const user = await User.findOne({ email }).select('+otpCodes').populate("companyId");
+    const user = await userDocs.findByEmail(email);
+    // The login flow reads the company through user.companyId (populate in the old model).
+    if (user && user.companyId) user.companyId = (await identity.companies.findById(user.companyId)) || user.companyId;
 
     if (!user) {
       
@@ -521,7 +504,7 @@ exports.login = async (req, res) => {
       if (!otp) {
         return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
       }
-      const withSecret = await User.findById(user._id).select('+twoFactorSecret').lean();
+      const withSecret = user;
       const { verifyUserTotp } = require('../security/totp');
       if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
         user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
@@ -732,12 +715,16 @@ exports.refresh = async (req, res) => {
 
       const refreshHash = sha256(refreshToken);
 
-      const user = await User.findOne({
-        "refreshTokens.tokenHash": refreshHash
-      });
+      const user = await identity.users.findByRefreshTokenHash(refreshHash);
 
       if (!user) {
         logger.warn('[REFRESH] Invalid refresh token — no user found');
+        return res.status(403).json({ message: 'Invalid refresh token' });
+      }
+
+      // A rotated token past its grace period (or any expired one) is dead even before cleanup.
+      if (!user.refreshToken?.expiresAt || new Date(user.refreshToken.expiresAt) <= new Date()) {
+        logger.warn('[REFRESH] Refresh token expired');
         return res.status(403).json({ message: 'Invalid refresh token' });
       }
 
@@ -757,34 +744,19 @@ exports.refresh = async (req, res) => {
 
       logger.debug('[REFRESH] New tokens generated');
 
-      const oldTokenIndex = user.refreshTokens.findIndex(t => t.tokenHash === refreshHash);
-
-      if (oldTokenIndex !== -1) {
-        user.refreshTokens[oldTokenIndex].expiresAt = new Date(Date.now() + 30000);
-        logger.debug('[REFRESH] Old token marked for 30s grace period');
-      }
-
-      // The rotated token continues the same session: keep when it started.
-      const previous = oldTokenIndex !== -1 ? user.refreshTokens[oldTokenIndex] : null;
-      user.refreshTokens.push({
+      // Row-level writes (no whole-document save): two tabs refreshing at once must
+      // not drop each other's new token. The old token lives on for a 30 s grace period.
+      const graceEnd = new Date(Date.now() + 30000);
+      if (new Date(user.refreshToken.expiresAt) > graceEnd) await identity.users.expireRefreshToken(refreshHash, graceEnd);
+      await identity.users.addRefreshToken(user._id, {
         tokenHash: sha256(newRefresh),
         expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
         deviceInfo: req.get('User-Agent') || 'Unknown',
         ip: getClientIP(req),
-        startedAt: previous ? (previous.startedAt || previous.createdAt) : new Date(),
+        // The rotated token continues the same session: keep when it started.
+        startedAt: user.refreshToken?.startedAt || new Date(),
       });
-
-      
-      const beforeCleanup = user.refreshTokens.length;
-      user.refreshTokens = user.refreshTokens.filter(
-        t => t.expiresAt > new Date()
-      );
-
-      if (beforeCleanup !== user.refreshTokens.length) {
-        logger.debug({ cleaned: beforeCleanup - user.refreshTokens.length }, '[REFRESH] Expired tokens cleaned up');
-      }
-
-      await user.save();
+      await identity.users.pruneRefreshTokens(user._id);
       logger.debug('[REFRESH] User tokens persisted');
 
       
@@ -816,12 +788,7 @@ exports.logout = async (req, res) => {
 
     const hash = sha256(token);
 
-    const user = await User.findOne({ "refreshTokens.tokenHash": hash });
-
-    if (user) {
-      user.refreshTokens = user.refreshTokens.filter(t => t.tokenHash !== hash);
-      await saveWithRetry(user);
-    }
+    await identity.users.deleteRefreshToken(hash);
 
     clearRefreshTokenCookie(res);
 
@@ -849,7 +816,7 @@ exports.logoutAll = async (req, res) => {
     
     
     const tokenHash = sha256(token);
-    const user = await User.findOne({ 'refreshTokens.tokenHash': tokenHash });
+    const user = await identity.users.findByRefreshTokenHash(tokenHash);
 
     if (!user) {
       
@@ -857,7 +824,7 @@ exports.logoutAll = async (req, res) => {
       return res.json({ message: 'Logged out' });
     }
 
-    await User.findByIdAndUpdate(decoded.sub, { refreshTokens: [] });
+    await identity.users.deleteAllRefreshTokens(decoded.sub);
 
     clearRefreshTokenCookie(res);
 
@@ -873,7 +840,7 @@ exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await userDocs.findByEmail(email);
 
     if (!user) {
 
@@ -919,11 +886,8 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, email, password } = req.body;
 
-    const user = await User.findOne({
-      email,
-      resetPasswordTokenHash: sha256(token),
-      resetPasswordExpires: { $gt: Date.now() }
-    });
+    const found = token ? await userDocs.findByResetToken(sha256(token)) : null;
+    const user = found && String(found.email).toLowerCase() === String(email || '').toLowerCase() ? found : null;
 
     if (!user)
       return res.status(400).json({ message: "Invalid or expired token" });
@@ -998,9 +962,8 @@ exports.getMe = async (req, res) => {
  */
 async function loadMe(userId) {
     // passwordHash is loaded only to compute hasPassword; it is deleted below.
-    const user = await User.findById(userId)
-      .select("-refreshTokens -twoFactorSecret -otpCodes -inviteToken -resetPasswordTokenHash -verificationTokenHash -deviceTokens")
-      .populate('companyId', 'name displayName logo domain verificationStatus isSetupComplete setupStep defaultWorkspace plan isActive');
+    const user = await userDocs.findById(userId);
+    if (user && user.companyId) user.companyId = (await identity.companies.findById(user.companyId)) || user.companyId;
 
     if (!user) {
       return null;
@@ -1159,7 +1122,7 @@ const PHONE_CODE_RE = /^\+[1-9][0-9]{0,2}$/;
 exports.updateMe = async (req, res) => {
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    const user = await User.findById(req.user.sub);
+    const user = await userDocs.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (body.username !== undefined) {
@@ -1260,8 +1223,8 @@ exports.updateMe = async (req, res) => {
     }
 
     if (phoneChanged) {
-      const existingUser = await User.findOne({ phone: user.phone, _id: { $ne: user._id } }).select('_id').lean();
-      if (existingUser) {
+      const existingUser = await identity.users.findByPhone(user.phone);
+      if (existingUser && String(existingUser._id) !== String(user._id)) {
         return res.status(409).json({ message: "That phone number is already used by another account" });
       }
     }
@@ -1286,8 +1249,9 @@ exports.updateMe = async (req, res) => {
   } catch (_err) {
     logger.error({ err: _err.message, code: _err.code }, "UPDATE PROFILE ERROR");
 
-    if (_err.code === 11000) {
-      const field = Object.keys(_err.keyPattern || {})[0];
+    if (_err.code === '23505') {
+      // PostgreSQL unique violation, e.g. constraint users_phone_key.
+      const field = String(_err.constraint || '').replace(/^users_/, '').replace(/_key$/, '');
       if (field === 'phone') {
         return res.status(409).json({ message: "That phone number is already used by another account" });
       }
@@ -1353,7 +1317,7 @@ exports.updatePassword = async (req, res) => {
       return res.status(400).json({ message: "Current password and new password are required" });
     }
 
-    const user = await User.findById(req.user.sub);
+    const user = await userDocs.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
     if (!computeHasPassword(user)) {
       return res.status(400).json({ message: "Your account has no password yet. Set one instead.", code: 'NO_PASSWORD' });
@@ -1394,7 +1358,7 @@ exports.setPassword = async (req, res) => {
       return res.status(400).json({ message: "Password is required" });
     }
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -1474,7 +1438,7 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ message: "Missing Google token" });
     }
 
-    let user = await User.findOne({ email });
+    let user = await userDocs.findByEmail(email);
 
     
     let isNewUser = false;
@@ -1488,7 +1452,7 @@ exports.googleLogin = async (req, res) => {
       const randomPassword = crypto.randomBytes(16).toString("hex");
       const randomHash = await bcrypt.hash(randomPassword, 12);
 
-      user = await User.create({
+      user = await userDocs.create({
         username: name,
         email,
         verified: true,
@@ -1531,7 +1495,7 @@ exports.googleLogin = async (req, res) => {
         if (!otp) {
           return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
         }
-        const withSecret = await User.findById(user._id).select('+twoFactorSecret').lean();
+        const withSecret = user;
         const { verifyUserTotp } = require('../security/totp');
         if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
           user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
@@ -1638,7 +1602,7 @@ function currentTokenHash(req) {
  */
 exports.getSessions = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub);
+    const user = await userDocs.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const currentHash = currentTokenHash(req);
@@ -1679,7 +1643,7 @@ exports.getSessions = async (req, res) => {
 exports.revokeSession = async (req, res) => {
   try {
     const sessionId = String(req.params.id || '');
-    const user = await User.findById(req.user.sub);
+    const user = await userDocs.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const session = user.refreshTokens.find(t => String(t._id) === sessionId);
@@ -1702,7 +1666,7 @@ exports.revokeSession = async (req, res) => {
 /** DELETE /api/auth/sessions/others -> { message, revoked } (never the current session). */
 exports.revokeOtherSessions = async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub);
+    const user = await userDocs.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const currentHash = currentTokenHash(req);
@@ -1736,7 +1700,7 @@ exports.addEmail = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase();
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
 
     
     if (user.emails && user.emails.length >= 5) {
@@ -1749,14 +1713,7 @@ exports.addEmail = async (req, res) => {
     }
 
     
-    const existingUser = await User.findOne({
-      $or: [
-        { email: normalizedEmail },
-        { "emails.email": normalizedEmail }
-      ]
-    });
-
-    if (existingUser && existingUser._id.toString() !== userId) {
+    if (await emailTaken(normalizedEmail, userId)) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
@@ -1829,7 +1786,7 @@ exports.verifyEmailCode = async (req, res) => {
       return res.status(400).json({ message: "Verification code is required" });
     }
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     const emailEntry = user.emails.id(id);
 
     if (!emailEntry) {
@@ -1880,7 +1837,7 @@ exports.resendVerification = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.sub;
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     const emailEntry = user.emails.id(id);
 
     if (!emailEntry) {
@@ -1938,7 +1895,7 @@ exports.setPrimaryEmail = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.sub;
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     const emailEntry = user.emails.id(id);
 
     if (!emailEntry) {
@@ -1984,7 +1941,7 @@ exports.deleteEmail = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.sub;
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     const emailEntry = user.emails.id(id);
 
     if (!emailEntry) {
@@ -2026,7 +1983,7 @@ exports.skipPassword = async (req, res) => {
   logger.info('🔄 [MODULAR AUTH] Function invoked: skipPassword');
   try {
     const userId = req.user.sub;
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -2072,7 +2029,7 @@ exports.setupTempPassword = async (req, res) => {
       return res.status(400).json({ message: 'Password is required' });
     }
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -2134,10 +2091,9 @@ exports.getUsersList = async (req, res) => {
     const currentUserId = req.user.sub;
 
     
-    const users = await User.find({ _id: { $ne: currentUserId } })
-      .select("_id username email profilePicture")
-      .limit(100)
-      .lean();
+    const { query } = require('../../shared/postgres');
+    const { rows } = await query('SELECT id, username, email, profile_picture FROM users WHERE id <> $1 ORDER BY username LIMIT 100', [String(currentUserId)]);
+    const users = rows.map((r) => ({ _id: r.id, username: r.username, email: r.email, profilePicture: r.profile_picture }));
 
     res.json({ users });
   } catch (_err) {
@@ -2216,11 +2172,11 @@ exports.linkedinCallback = async (req, res) => {
     logger.info('LinkedIn user profile:', linkedinUser);
 
     
-    let user = await User.findOne({ linkedinId: linkedinUser.sub });
+    let user = await userDocs.findByProvider('linkedin', linkedinUser.sub);
 
     if (!user && linkedinUser.email) {
       
-      user = await User.findOne({ email: linkedinUser.email });
+      user = await userDocs.findByEmail(linkedinUser.email);
       if (user) {
         // Only link to an existing account when that account's email is verified,
         // it is not already linked elsewhere, and LinkedIn vouches for the email.
@@ -2236,7 +2192,7 @@ exports.linkedinCallback = async (req, res) => {
 
     if (!user) {
       
-      user = await User.create({
+      user = await userDocs.create({
         linkedinId: linkedinUser.sub,
         username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
         email: linkedinUser.email,
@@ -2269,7 +2225,7 @@ exports.deactivateAccount = async (req, res) => {
   try {
     const userId = req.user.sub;
 
-    const user = await User.findById(userId);
+    const user = await userDocs.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -2294,8 +2250,7 @@ exports.deactivateAccount = async (req, res) => {
     await saveWithRetry(user);
 
     try {
-      const UserDeviceSession = require('../../models/UserDeviceSession');
-      await UserDeviceSession.updateMany({ userId: String(userId), revokedAt: null }, { $set: { revokedAt: new Date() } });
+      await identity.deviceSessions.revokeAllExcept(userId, null);
     } catch (err) {
       logger.warn({ err: err.message }, 'Could not revoke device sessions on deactivate');
     }
@@ -2324,7 +2279,7 @@ exports.verifyReactivationOTP = async (req, res) => {
     }
 
     
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+otpCodes');
+    const user = await userDocs.findByEmail(email);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

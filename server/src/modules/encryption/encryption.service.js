@@ -103,10 +103,9 @@ async function bulkRevokeAccess(userIds, workspaceId) {
 
 async function getUserWorkspaceKeys(userId) {
     try {
-        const keys = await UserWorkspaceKey.find({ userId })
-            .populate('workspaceId', 'name icon')
-            .lean();
-        return keys;
+        const keys = await UserWorkspaceKey.find({ userId }).lean();
+        // Workspaces live in PostgreSQL: attach name/icon with hydrate instead of populate.
+        return require('../../identity/hydrate').hydrate(keys, { workspaceId: { type: 'workspace', fields: ['name', 'icon'] } });
     } catch (err) {
         logger.error('Failed to fetch user keys:', err);
         throw err;

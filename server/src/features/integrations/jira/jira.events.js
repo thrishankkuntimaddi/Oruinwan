@@ -11,8 +11,8 @@
  * workflow allows it.
  */
 
-const Task = require('../../../../models/Task');
-const Workspace = require('../../../../models/Workspace');
+const Tasks = require('../../tasks/tasks.query');
+const { workspaces } = require('../../../identity');
 const logger = require('../../../../utils/logger');
 const bot = require('../integration.bot');
 const links = require('../integration.tasks');
@@ -34,15 +34,15 @@ function issueUrl(config, issue) {
 
 async function createTaskFromIssue({ integration, channelId, issue, url, card }) {
   if (!integration.connectedBy) return null;
-  const { nextIssueKey, emitToTaskAudience, loadTaskForClient } = require('../../tasks/tasks.shared');
-  const ws = await Workspace.findById(integration.workspaceId).select('name company').lean();
+  const { emitToTaskAudience, loadTaskForClient } = require('../../tasks/tasks.shared');
+  const ws = await workspaces.findById(integration.workspaceId);
   if (!ws) return null;
   const fields = issue.fields || {};
   const status = CATEGORY_STATUS[fields.status?.statusCategory?.key] || 'todo';
-  const task = await Task.create({
+  // Tasks.create assigns the next issue key on whichever store holds tasks.
+  const task = await Tasks.create({
     company: ws.company || null,
     workspace: integration.workspaceId,
-    issueKey: await nextIssueKey(integration.workspaceId, ws.name),
     taskType: 'channel',
     visibility: 'channel',
     channel: channelId,

@@ -32,8 +32,17 @@ const workspaces = {
     members: [{ user: '64b0000000000000000000c1', role: 'owner', status: 'active' }],
   },
 };
-jest.mock('../../../../models/Workspace', () => ({
-  findOne: jest.fn((q) => ({ select: () => ({ lean: async () => workspaces[String(q._id)] || null }) })),
+// Workspaces and members live in PostgreSQL; the repositories are mocked.
+jest.mock('../../../identity/workspaces.repo', () => ({
+  ...jest.requireActual('../../../identity/workspaces.repo'),
+  findById: jest.fn(async (id) => workspaces[String(id)] || null),
+  findManyByIds: jest.fn(async (ids) => ids.map((id) => workspaces[String(id)]).filter(Boolean)),
+  memberWorkspaceIds: jest.fn(async (userId) => Object.values(workspaces)
+    .filter((w) => w.members.some((m) => m.user === String(userId) && m.status === 'active')).map((w) => w._id)),
+}));
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  findManyByIds: jest.fn(async (ids) => new Map(ids.map((id) => [id, { _id: id, username: `user-${id.slice(-2)}` }]))),
 }));
 
 function mockChain(result) {

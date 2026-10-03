@@ -1,15 +1,12 @@
 const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const XLSX = require('xlsx');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Workspace = require('../../../models/Workspace');
-const Channel = require('../channels/channel.model.js');
-const Invite = require('../../../models/Invite');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { invites } = require('../../identity/queries/auth');
 const sendEmail = require('../../../utils/sendEmail');
 const { sha256 } = require('../../../utils/hashUtils');
 const { logAction } = require('../../../utils/historyLogger');
-const { assignMembers } = require('../departments/department.service');
 
 const VALID_INVITE_ROLES = ['admin', 'manager', 'member', 'guest'];
 
@@ -50,19 +47,16 @@ async function _createInviteRecord({ companyId, email, role, invitedBy, departme
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = sha256(rawToken);
 
-    const invite = new Invite({
+    const invite = await invites.create({
         email: email.toLowerCase(),
         tokenHash,
         company: companyId,
         workspace: workspaceId || null,
         role,
         invitedBy,
-        
         department: departmentIds?.[0] || null,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
-
-    await invite.save();
 
     const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
     return { invite, inviteLink, rawToken };
@@ -108,13 +102,13 @@ async function inviteEmployee(params) {
         req,
     } = params;
 
-    const company = await Company.findById(companyId);
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) throw Object.assign(new Error('Company not found'), { status: 404 });
 
     const normalizedEmail = email.toLowerCase().trim();
 
     
-    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
+    const existingUser = await identity.users.findByEmail(normalizedEmail);
     if (existingUser) {
         if (existingUser.accountStatus === 'active') {
             throw Object.assign(new Error('A user with this email is already active on the platform.'), { status: 409 });
@@ -145,17 +139,18 @@ async function inviteEmployee(params) {
     
 
     
-    invite.metadata = {
-        ...(invite.metadata || {}),
-        firstName,
-        lastName,
-        jobTitle: jobTitle || null,
-        joiningDate: joiningDate || null,
-        departmentIds,
-        additionalWorkspaceIds,
-        emailSent: emailResult.sent,
-    };
-    await invite.save();
+    await invites.update(invite._id, {
+        metadata: {
+            ...(invite.metadata || {}),
+            firstName,
+            lastName,
+            jobTitle: jobTitle || null,
+            joiningDate: joiningDate || null,
+            departmentIds,
+            additionalWorkspaceIds,
+            emailSent: emailResult.sent,
+        },
+    });
 
     try {
         await logAction({
@@ -214,14 +209,10 @@ function _parseEmployeeFile(buffer) {
 const _delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invitedBy, req }) {
-    const company = await Company.findById(companyId).lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) throw Object.assign(new Error('Company not found'), { status: 404 });
 
-    
-    const { default: Department } = await import('../../../models/Department.js').catch(() =>
-        ({ default: require('../../../models/Department') })
-    );
-    const depts = await Department.find({ company: companyId, isActive: true }).select('_id name').lean();
+    const depts = await org.departments.find({ company: companyId, isActive: true }, { members: false });
     const deptNameMap = new Map(depts.map(d => [d.name.toLowerCase().trim(), d._id.toString()]));
 
     
@@ -330,17 +321,14 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
 }
 
 async function resendInvite({ userId, companyId, req }) {
-    const user = await User.findOne({ _id: userId, companyId, accountStatus: 'invited' }).lean();
+    const user = await org.users.findOne({ _id: userId, companyId, accountStatus: 'invited' });
     if (!user) throw Object.assign(new Error('User not found or no longer pending.'), { status: 404 });
 
-    const company = await Company.findById(companyId).lean();
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
     if (!company) throw Object.assign(new Error('Company not found'), { status: 404 });
 
     
-    await Invite.updateMany(
-        { email: user.email, company: companyId, acceptedAt: null },
-        { $set: { expiresAt: new Date() } } 
-    );
+    await org.expirePendingInvites(user.email, companyId);
 
     
     const { invite, inviteLink } = await _createInviteRecord({

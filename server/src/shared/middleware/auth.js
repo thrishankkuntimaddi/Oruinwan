@@ -1,7 +1,7 @@
 const logger = require('../../../utils/logger');
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const User = require("../../../models/User");
+const identity = require("../../identity");
 
 module.exports = async function requireAuth(req, res, next) {
   try {
@@ -82,17 +82,15 @@ module.exports = async function requireAuth(req, res, next) {
           .update(refreshToken)
           .digest("hex");
 
-        const user = await User.findOne({
-          "refreshTokens.tokenHash": refreshHash,
-        });
+        const user = await identity.users.findByRefreshTokenHash(refreshHash);
 
         if (!user) {
           return res.status(401).json({ message: "Invalid refresh token", code: 'REFRESH_INVALID' });
         }
 
         
-        const tokenEntry = user.refreshTokens.find(t => t.tokenHash === refreshHash);
-        if (!tokenEntry || tokenEntry.expiresAt < new Date()) {
+        const tokenEntry = user.refreshToken;
+        if (!tokenEntry || new Date(tokenEntry.expiresAt) < new Date()) {
           return res.status(401).json({ message: "Refresh token expired", code: 'REFRESH_EXPIRED' });
         }
 

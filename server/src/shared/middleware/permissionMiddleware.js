@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger');
-const Company = require('../../../models/Company');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { loadAuthUser } = require('../../identity/queries/auth');
 
 const checkRole = (allowedRoles) => {
     return (req, res, next) => {
@@ -25,7 +25,7 @@ const requireOwner = async (req, res, next) => {
         
         if (!req.user.companyRole || !req.user.companyId) {
             const userId = req.user.sub || req.user._id;
-            const fullUser = await User.findById(userId);
+            const fullUser = await loadAuthUser(userId);
 
             if (!fullUser) {
                 logger.error('[REQUIRE_OWNER] User not found:', userId);
@@ -63,7 +63,7 @@ const requireAdmin = async (req, res, next) => {
     try {
         if (!req.user.companyRole || !req.user.companyId) {
             const userId = req.user.sub || req.user._id;
-            const fullUser = await User.findById(userId);
+            const fullUser = await loadAuthUser(userId);
 
             if (!fullUser) {
                 return res.status(401).json({ message: "User not found" });
@@ -129,8 +129,8 @@ const canCreateWorkspace = async (req, res, next) => {
             return next();
         }
 
-        const company = await Company.findById(req.user.companyId);
-        if (company && company.settings.allowMemberWorkspaceCreation) {
+        const company = req.user.companyId ? await identity.companies.findById(req.user.companyId) : null;
+        if (company && company.settings?.allowMemberWorkspaceCreation) {
             return next();
         }
 
@@ -148,7 +148,7 @@ const requireManager = async (req, res, next) => {
     try {
         if (!req.user.companyRole || !req.user.companyId) {
             const userId = req.user.sub || req.user._id;
-            const fullUser = await User.findById(userId);
+            const fullUser = await loadAuthUser(userId);
 
             if (!fullUser) {
                 return res.status(401).json({ message: "User not found" });

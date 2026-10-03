@@ -6,6 +6,7 @@ const MessageReminder = require('../../modules/messages/messageReminder.model');
 const Message = require('../../modules/messages/message.model');
 const { canAccessMessage } = require('../../modules/messages/messageAccess');
 const mongoose = require('mongoose');
+const { hydrate, USER_MIN } = require('../../identity/hydrate');
 
 router.post('/messages/:id/remind', requireAuth, async (req, res) => {
   try {
@@ -50,11 +51,9 @@ router.get('/reminders', requireAuth, async (req, res) => {
       delivered: false
     })
       .sort({ remindAt: 1 })
-      .populate({
-        path: 'messageId',
-        populate: { path: 'sender', select: 'username profilePicture' }
-      })
+      .populate('messageId')
       .lean();
+    await hydrate(reminders, { 'messageId.sender': USER_MIN });
 
     res.json({ reminders });
   } catch (err) {

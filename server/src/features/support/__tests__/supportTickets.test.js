@@ -1,6 +1,8 @@
 'use strict';
 
 jest.mock('../../../../models/SupportMessage', () => ({ create: jest.fn(), find: jest.fn() }));
+// Users and companies come from PostgreSQL; nothing to expand in these tickets.
+jest.mock('../../../identity/hydrate', () => ({ hydrate: jest.fn(async (docs) => docs) }));
 const mockStore = {};
 jest.mock('../../../../models/SupportTicket', () => ({
   findById: jest.fn((id) => {
@@ -60,7 +62,7 @@ describe('adminUpdate on a personal-account ticket (companyId null)', () => {
       async save() { return this; },
     };
     mockStore.p1 = ticket;
-    SupportMessage.find.mockReturnValue({ populate: () => ({ sort: () => ({ lean: async () => [] }) }) });
+    SupportMessage.find.mockReturnValue({ sort: () => ({ lean: async () => [] }) });
     const io = { to: jest.fn(() => ({ emit: jest.fn() })) };
 
     const result = await adminUpdate('p1', { message: 'We are looking into it', adminId: 'admin1', io });

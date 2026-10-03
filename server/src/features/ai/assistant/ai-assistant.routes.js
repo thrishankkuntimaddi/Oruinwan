@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const { aiLimiter, requireAIAccess } = require('../ai.access');
-const gateway = require('../../../../ai/api/ai.gateway');
+const gateway = require('../ai.gatewayResolver');
 const logger = require('../../../../utils/logger');
 
 router.use(aiLimiter);

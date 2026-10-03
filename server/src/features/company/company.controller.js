@@ -1,6 +1,7 @@
 const logger = require('../../../utils/logger');
 const companyService = require("./company.service");
-const Company = require("../../../models/Company");
+const identity = require("../../identity");
+const org = require("../../identity/queries/org");
 const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -71,7 +72,7 @@ exports.getCompanyMembers = async (req, res) => {
         const userId = req.user.sub;
 
         
-        const company = await Company.findById(companyId);
+        const company = await org.companies.findOne({ _id: companyId }, { admins: false });
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -129,7 +130,8 @@ exports.checkCompanyName = async (req, res) => {
             return res.status(400).json({ message: "Company name is required" });
         }
 
-        const existingCompany = await Company.findOne({ name: new RegExp(`^${name}$`, 'i') });
+        const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const existingCompany = await org.companies.findOne({ name: new RegExp(`^${escaped}$`, 'i') }, { admins: false });
 
         return res.json({
             available: !existingCompany,
@@ -148,7 +150,7 @@ exports.checkCompanyDomain = async (req, res) => {
             return res.status(400).json({ message: "Domain is required" });
         }
 
-        const existingCompany = await Company.findOne({ domain: domain.toLowerCase() });
+        const existingCompany = await org.companies.findOne({ domain: domain.toLowerCase() }, { admins: false });
 
         return res.json({
             available: !existingCompany,
@@ -167,8 +169,7 @@ exports.checkEmail = async (req, res) => {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        const User = require("../../../models/User");
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        const existingUser = await identity.users.findByEmail(email.toLowerCase());
 
         return res.json({
             available: !existingUser,
@@ -187,9 +188,8 @@ exports.checkPhone = async (req, res) => {
             return res.status(400).json({ message: "Phone is required" });
         }
 
-        const User = require("../../../models/User");
-        const existingUser = await User.findOne({ phone });
-        const existingCompany = await Company.findOne({ ownerPhone: phone });
+        const existingUser = await identity.users.findByPhone(phone);
+        const existingCompany = await org.companies.findOne({ ownerPhone: phone }, { admins: false });
 
         return res.json({
             available: !existingUser && !existingCompany,
@@ -211,21 +211,15 @@ exports.startSetup = async (req, res) => {
             return res.status(403).json({ message: 'Only company admins can start setup' });
         }
 
-        const company = await Company.findByIdAndUpdate(
-            companyId,
-            {
-                $set: {
-                    setupStep: 1,
-                    'metadata.termsAcceptedAt': new Date(),
-                    'metadata.termsAcceptedBy': userId
-                }
-            },
-            { new: true }
-        );
+        const updated = await org.updateCompany(companyId, {
+            setupStep: 1,
+            'metadata.termsAcceptedAt': new Date(),
+            'metadata.termsAcceptedBy': userId
+        });
 
-        if (!company) return res.status(404).json({ message: 'Company not found' });
+        if (!updated) return res.status(404).json({ message: 'Company not found' });
 
-        return res.json({ message: 'Setup started', company });
+        return res.json({ message: 'Setup started', company: org.publicCompany(updated, { documents: false }) });
     } catch (err) {
         logger.error('START SETUP ERROR:', err);
         return res.status(500).json({ message: 'Server error' });

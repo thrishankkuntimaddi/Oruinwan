@@ -126,8 +126,8 @@ router.get('/missed', async (req, res) => {
             .sort({ _id: 1 })
             .limit(50)
             .select('-hiddenFor -readBy')
-            .populate('sender', 'username profilePicture')
             .lean();
+        await require('../../identity/hydrate').hydrate(messages, { sender: { type: 'user', fields: ['username', 'profilePicture'] } });
 
         return res.json({
             messages,

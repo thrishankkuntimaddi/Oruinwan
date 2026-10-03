@@ -1,6 +1,6 @@
 const logger = require('../../utils/logger');
 const Channel = require("../features/channels/channel.model.js");
-const ConversationKey = require('../../models/ConversationKey');
+const { conversationKeys } = require('../identity');
 
 async function generateAuditDigest() {
     logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -28,10 +28,7 @@ async function generateAuditDigest() {
 
         for (const channel of channels) {
             
-            const conversationKey = await ConversationKey.findOne({
-                conversationId: channel._id,
-                conversationType: 'channel'
-            }).lean();
+            const conversationKey = await conversationKeys.findByConversation(channel._id, 'channel');
 
             if (!conversationKey) {
                 

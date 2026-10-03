@@ -74,8 +74,7 @@ function isPlainObject(body) {
 
 async function getPrivacyPreferences(req, res) {
     try {
-        const User = require('../../../models/User');
-        const user = await User.findById(req.user.sub).select('preferences.privacy').lean();
+        const user = await require('../../identity').users.findById(req.user.sub);
         if (!user) return res.status(404).json({ message: 'User not found' });
         return res.json(privacyWithDefaults(user.preferences?.privacy));
     } catch (err) {
@@ -97,10 +96,7 @@ async function updatePrivacyPreferences(req, res) {
         if (!Object.keys($set).length) {
             return res.status(400).json({ message: `Provide at least one of: ${PRIVACY_FIELDS.join(', ')}` });
         }
-        const User = require('../../../models/User');
-        const user = await User.findByIdAndUpdate(req.user.sub, { $set }, { new: true })
-            .select('preferences.privacy')
-            .lean();
+        const user = await require('../../identity/queries/auth').setUserPaths(req.user.sub, $set);
         if (!user) return res.status(404).json({ message: 'User not found' });
         const privacy = privacyWithDefaults(user.preferences?.privacy);
         // Apply at once to typing / read-receipt / discovery enforcement on this instance.
@@ -114,8 +110,7 @@ async function updatePrivacyPreferences(req, res) {
 
 async function getRegionPreferences(req, res) {
     try {
-        const User = require('../../../models/User');
-        const user = await User.findById(req.user.sub).select('preferences.region').lean();
+        const user = await require('../../identity').users.findById(req.user.sub);
         if (!user) return res.status(404).json({ message: 'User not found' });
         return res.json(regionWithDefaults(user.preferences?.region));
     } catch (err) {
@@ -130,10 +125,7 @@ async function updateRegionPreferences(req, res) {
         if (!isPlainObject(body)) return res.status(400).json({ message: 'Request body must be an object' });
         const { $set, error } = validateRegionUpdate(body);
         if (error) return res.status(400).json({ message: error });
-        const User = require('../../../models/User');
-        const user = await User.findByIdAndUpdate(req.user.sub, { $set }, { new: true })
-            .select('preferences.region')
-            .lean();
+        const user = await require('../../identity/queries/auth').setUserPaths(req.user.sub, $set);
         if (!user) return res.status(404).json({ message: 'User not found' });
         return res.json(regionWithDefaults(user.preferences?.region));
     } catch (err) {

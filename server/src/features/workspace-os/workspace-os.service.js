@@ -2,13 +2,13 @@
 const logger = require('../../../utils/logger');
 
 const mongoose = require('mongoose');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const wsQueries = require('../../identity/queries/workspaces');
+const { hydrate } = require('../../identity/hydrate');
 const Channel = require('../channels/channel.model');
 const Message = require('../../modules/messages/message.model');
-const Task = require('../../../models/Task');
-const User = require('../../../models/User');
+const Tasks = require('../tasks/tasks.query');
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
-const WorkspacePermission = require('../../models/WorkspacePermission');
 const { invalidateWorkspaceFeatures } = require('../../shared/workspaceFeatures');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
@@ -18,13 +18,13 @@ const { recordAdminAction: logAction } = require('../../shared/adminAudit');
 const PERSONAL_WORKSPACE_LIMIT = 3;
 async function assertPersonalWorkspaceLimit(companyId, userId) {
     if (companyId) return;
-    if (await Workspace.countDocuments({ createdBy: userId }) >= PERSONAL_WORKSPACE_LIMIT) {
+    if (await wsQueries.countCreatedBy(userId) >= PERSONAL_WORKSPACE_LIMIT) {
         throw Object.assign(new Error(`Free plan limit reached. You can only create up to ${PERSONAL_WORKSPACE_LIMIT} workspaces.`), { status: 403, isLimitReached: true });
     }
 }
 
 exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMembers = false, companyId, ipAddress, userAgent }) {
-    const source = await Workspace.findById(sourceId).lean();
+    const source = await identity.workspaces.findById(sourceId);
     if (!source) throw Object.assign(new Error('Source workspace not found'), { status: 404 });
 
     
@@ -32,14 +32,14 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         throw Object.assign(new Error('Access denied to source workspace'), { status: 403 });
     }
 
-    const user = await User.findById(userId).select('companyId companyRole').lean();
+    const user = await identity.users.findById(userId);
     const resolvedCompanyId = user?.companyId || companyId || null;
     await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
     const cloneName = name || `${source.name} (Clone)`;
 
     
-    const cloned = await Workspace.create({
+    let cloned = await identity.workspaces.create({
         company: resolvedCompanyId,
         type: source.type,
         name: cloneName,
@@ -49,9 +49,9 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         rules: source.rules || '',
         createdBy: userId,
         members: includeMembers
-            ? source.members.map(m => ({ ...m, joinedAt: new Date(), suspendedAt: null, removedAt: null }))
+            ? source.members.filter(m => m.status !== 'removed').map(m => ({ user: m.user, role: m.role, status: m.status, joinedAt: new Date() }))
             : [{ user: userId, role: 'owner', joinedAt: new Date() }],
-        settings: { ...source.settings },
+        settings: { ...(source.settings || {}) },
         clonedFrom: source._id,
         templateId: source.templateId || null
     });
@@ -93,30 +93,26 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
 
     
     if (source.defaultChannels?.length) {
-        cloned.defaultChannels = source.defaultChannels
-            .map(id => channelIdMap[id.toString()])
-            .filter(Boolean);
-        await cloned.save();
+        cloned = await identity.workspaces.update(cloned._id, {
+            defaultChannels: source.defaultChannels.map(id => channelIdMap[id.toString()]).filter(Boolean),
+        });
     }
 
     // Feature toggles and workspace permissions come along; channel rules are remapped.
-    const sourcePerms = await WorkspacePermission.findOne({ workspace: sourceId }).lean();
+    const sourcePerms = await identity.workspacePermissions.get(sourceId);
     if (sourcePerms) {
-        const { _id, workspace: _ws, createdAt: _c, updatedAt: _u, __v, channelPermissions = [], ...rest } = sourcePerms;
-        await WorkspacePermission.create({
-            ...rest,
-            workspace: cloned._id,
+        const { channelPermissions = [] } = sourcePerms;
+        await identity.workspacePermissions.upsert(cloned._id, {
             company: resolvedCompanyId,
+            featureToggles: sourcePerms.featureToggles || {},
+            invitePermission: sourcePerms.invitePermission,
+            channelCreationPermission: sourcePerms.channelCreationPermission,
             channelPermissions: channelPermissions
                 .filter(cp => channelIdMap[String(cp.channel)])
-                .map(({ _id: _cpId, ...cp }) => ({ ...cp, channel: channelIdMap[String(cp.channel)] })),
+                .map(({ _id: _cpId, ...cp }) => ({ ...cp, channel: String(channelIdMap[String(cp.channel)]) })),
             updatedBy: userId,
         });
     }
-    
-    await User.findByIdAndUpdate(userId, {
-        $push: { workspaces: { workspace: cloned._id, role: 'owner' } }
-    });
 
     await logAction({
         userId, companyId: resolvedCompanyId,
@@ -131,11 +127,9 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
 };
 
 exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAddress, userAgent }) {
-    const workspace = await Workspace.findById(workspaceId)
-        .populate('createdBy', 'username email')
-        .populate('members.user', 'username email')
-        .lean();
+    const workspace = await identity.workspaces.findById(workspaceId);
     if (!workspace) throw Object.assign(new Error('Workspace not found'), { status: 404 });
+    await hydrate(workspace, { createdBy: { type: 'user', fields: ['username', 'email'] }, 'members.user': { type: 'user', fields: ['username', 'email'] } });
 
     const channels = await Channel.find({ workspace: workspaceId })
         .select('name description isPrivate isDefault isDiscoverable postingPolicy broadcastMentions settings')
@@ -165,11 +159,11 @@ exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAd
         })),
         memberCount: workspace.members?.length || 0,
         templateId: workspace.templateId?.toString() || null,
-        featureToggles: (await WorkspacePermission.findOne({ workspace: workspaceId }).select('featureToggles').lean())?.featureToggles || null
+        featureToggles: (await identity.workspacePermissions.get(workspaceId))?.featureToggles || null
     };
 
     
-    await Workspace.findByIdAndUpdate(workspaceId, { exportedAt: new Date() });
+    await identity.workspaces.update(workspaceId, { exportedAt: new Date() });
 
     await logAction({
         userId, companyId: companyId || workspace.company,
@@ -189,20 +183,19 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
         throw Object.assign(new Error('Invalid workspace bundle — missing required fields'), { status: 400 });
     }
 
-    const user = await User.findById(userId).select('companyId companyRole').lean();
+    const user = await identity.users.findById(userId);
     const resolvedCompanyId = user?.companyId || companyId || null;
     await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
     const { workspace: wsData, channels = [], featureToggles = null } = bundle;
 
     
-    const existingNames = await Workspace.distinct('name', { createdBy: userId });
     let finalName = wsData.name;
-    if (existingNames.includes(finalName)) {
+    if (await wsQueries.findByNameForCreator(finalName, userId)) {
         finalName = `${finalName} (Imported)`;
     }
 
-    const imported = await Workspace.create({
+    let imported = await identity.workspaces.create({
         company: resolvedCompanyId,
         type: wsData.type || 'team',
         name: finalName,
@@ -247,24 +240,17 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
         }
     }
 
-    imported.defaultChannels = defaultChannelIds;
-    await imported.save();
+    imported = await identity.workspaces.update(imported._id, { defaultChannels: defaultChannelIds });
 
     if (featureToggles && typeof featureToggles === 'object') {
         const toggles = {};
         for (const [key, value] of Object.entries(featureToggles)) {
-            if (typeof value === 'boolean') toggles[`featureToggles.${key}`] = value;
+            if (typeof value === 'boolean') toggles[key] = value;
         }
-        await WorkspacePermission.findOneAndUpdate(
-            { workspace: imported._id },
-            { $set: { ...toggles, company: resolvedCompanyId || null, updatedBy: userId } },
-            { upsert: true, setDefaultsOnInsert: true, strict: true }
-        );
+        await identity.workspacePermissions.upsert(imported._id, {
+            featureToggles: { $merge: true, ...toggles }, company: resolvedCompanyId || null, updatedBy: userId,
+        });
     }
-
-    await User.findByIdAndUpdate(userId, {
-        $push: { workspaces: { workspace: imported._id, role: 'owner' } }
-    });
 
     await logAction({
         userId, companyId: resolvedCompanyId,
@@ -291,11 +277,8 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
         taskStats
     ] = await Promise.all([
         Message.countDocuments({ workspace: workspaceId }),
-        Task.countDocuments({ workspace: workspaceId }),
-        Workspace.aggregate([
-            { $match: { _id: new mongoose.Types.ObjectId(workspaceId) } },
-            { $project: { count: { $size: '$members' } } }
-        ]).then(r => r[0]?.count || 0),
+        Tasks.countDocuments({ workspace: workspaceId }),
+        wsQueries.countMembers(workspaceId, { status: null }),
         Channel.countDocuments({ workspace: workspaceId }),
         
         Message.aggregate([
@@ -314,16 +297,7 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
             createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
         }).then(ids => ids.length),
         
-        Task.aggregate([
-            { $match: { workspace: new mongoose.Types.ObjectId(workspaceId) } },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: 1 },
-                    completed: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } }
-                }
-            }
-        ])
+        Tasks.totals({ workspace: workspaceId }).then((t) => [t])
     ]);
 
     const taskCompletionRate = taskStats[0]?.total > 0
@@ -331,13 +305,14 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
         : 0;
 
     
-    Workspace.findByIdAndUpdate(workspaceId, {
-        '$set': {
-            'analyticsCache.totalMessages': totalMessages,
-            'analyticsCache.totalTasks': totalTasks,
-            'analyticsCache.activeMembers7d': activeAuthorsSince7d,
-            'analyticsCache.lastComputedAt': new Date()
-        }
+    identity.workspaces.update(workspaceId, {
+        analyticsCache: {
+            $merge: true,
+            totalMessages,
+            totalTasks,
+            activeMembers7d: activeAuthorsSince7d,
+            lastComputedAt: new Date(),
+        },
     }).catch(err => logger.warn('[WorkspaceOS] Cache update failed:', err.message));
 
     return {
@@ -389,7 +364,12 @@ exports.applyTemplate = async function ({ workspace, templateId, userId, company
             members: [{ user: userId, joinedAt: creationDate }],
             systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }],
         });
-        if (ch.isDefault) await Workspace.updateOne({ _id: workspace._id }, { $addToSet: { defaultChannels: channel._id } });
+        if (ch.isDefault) {
+            const current = await identity.workspaces.findById(workspace._id);
+            const ids = new Set((current?.defaultChannels || []).map(String));
+            ids.add(String(channel._id));
+            await identity.workspaces.update(workspace._id, { defaultChannels: [...ids] });
+        }
         try {
             await conversationKeysService.bootstrapConversationKey({
                 conversationId: channel._id.toString(),
@@ -402,18 +382,17 @@ exports.applyTemplate = async function ({ workspace, templateId, userId, company
         }
     }
 
-    const settings = {};
-    for (const [key, value] of Object.entries(template.settings || {})) settings[`settings.${key}`] = value;
-    await Workspace.updateOne({ _id: workspace._id }, { $set: { ...settings, templateId: template._id } });
+    await identity.workspaces.update(workspace._id, {
+        settings: { $merge: true, ...(template.settings || {}) },
+        templateId: template._id,
+    });
 
     if (template.featureToggles) {
-        const toggles = {};
-        for (const [key, value] of Object.entries(template.featureToggles)) toggles[`featureToggles.${key}`] = value;
-        await WorkspacePermission.findOneAndUpdate(
-            { workspace: workspace._id },
-            { $set: { ...toggles, company: workspace.company || null, updatedBy: userId } },
-            { upsert: true, setDefaultsOnInsert: true }
-        );
+        await identity.workspacePermissions.upsert(workspace._id, {
+            featureToggles: { $merge: true, ...template.featureToggles },
+            company: workspace.company || null,
+            updatedBy: userId,
+        });
         invalidateWorkspaceFeatures(workspace._id);
     }
 

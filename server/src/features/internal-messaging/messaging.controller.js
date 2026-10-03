@@ -1,7 +1,49 @@
 const logger = require('../../../utils/logger');
 const InternalMessage = require('../../../models/InternalMessage');
-const User = require('../../../models/User');
-const _Department = require('../../../models/Department');
+const mongoose = require('mongoose');
+const identity = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
+
+// Users live in PostgreSQL, so InternalMessage's own populate() statics cannot
+// resolve sender/recipient; these queries mirror them and hydrate instead.
+const PERSON = { type: 'user', fields: ['username', 'email', 'profilePicture', 'companyRole'] };
+const toOid = (id) => new mongoose.Types.ObjectId(String(id));
+
+async function conversationBetween(userId1, userId2, limit = 50) {
+    const docs = await InternalMessage.find({
+        $or: [
+            { sender: userId1, recipient: userId2 },
+            { sender: userId2, recipient: userId1 },
+        ],
+    }).sort({ createdAt: 1 }).limit(limit);
+    return docs;
+}
+
+async function adminInbox(adminId, companyId) {
+    const admin = toOid(adminId);
+    const conversations = await InternalMessage.aggregate([
+        { $match: { companyId: toOid(companyId), $or: [{ sender: admin }, { recipient: admin }] } },
+        { $sort: { createdAt: -1 } },
+        {
+            $group: {
+                _id: { $cond: [{ $eq: ['$sender', admin] }, '$recipient', '$sender'] },
+                lastMessage: { $first: '$$ROOT' },
+                unreadCount: {
+                    $sum: { $cond: [{ $and: [{ $eq: ['$recipient', admin] }, { $eq: ['$read', false] }] }, 1, 0] },
+                },
+            },
+        },
+        { $sort: { 'lastMessage.createdAt': -1 } },
+    ]);
+    await hydrate(conversations, { 'lastMessage.sender': PERSON, 'lastMessage.recipient': PERSON });
+    return conversations;
+}
+
+async function withPeople(docs) {
+    const plain = Array.isArray(docs) ? docs.map(d => (d.toJSON ? d.toJSON() : d)) : (docs.toJSON ? docs.toJSON() : docs);
+    await hydrate(plain, { sender: PERSON, recipient: PERSON });
+    return plain;
+}
 
 exports.sendMessage = async (req, res) => {
     try {
@@ -23,7 +65,7 @@ exports.sendMessage = async (req, res) => {
         if (!require('mongoose').Types.ObjectId.isValid(String(recipientId))) {
             return res.status(400).json({ message: 'Invalid recipient' });
         }
-        const recipient = await User.findById(recipientId);
+        const recipient = await identity.users.findById(recipientId);
         if (!recipient) {
             return res.status(404).json({ message: 'Recipient not found' });
         }
@@ -74,21 +116,18 @@ exports.sendMessage = async (req, res) => {
             departmentId: departmentId || null
         });
 
-        await message.populate([
-            { path: 'sender', select: 'username email profilePicture companyRole' },
-            { path: 'recipient', select: 'username email profilePicture companyRole' }
-        ]);
+        const messageOut = await withPeople(message);
 
         
         if (req.app.get('io')) {
             const io = req.app.get('io');
             
-            io.to(`user:${recipientId}`).emit('internal-message', message);
+            io.to(`user:${recipientId}`).emit('internal-message', messageOut);
         }
 
         logger.info('[INTERNAL MESSAGE] Created successfully:', message._id);
 
-        return res.status(201).json({ message });
+        return res.status(201).json({ message: messageOut });
     } catch (error) {
         logger.error('SEND INTERNAL MESSAGE ERROR:', error);
         return res.status(500).json({
@@ -109,11 +148,7 @@ exports.getConversation = async (req, res) => {
 
         const currentUserId = req.user.sub;
 
-        const messages = await InternalMessage.getConversation(
-            currentUserId,
-            userId,
-            limit
-        );
+        const messages = await conversationBetween(currentUserId, userId, limit);
 
         
         const unreadMessages = messages.filter(
@@ -124,7 +159,7 @@ exports.getConversation = async (req, res) => {
             await Promise.all(unreadMessages.map(msg => msg.markAsRead()));
         }
 
-        return res.json({ messages });
+        return res.json({ messages: await withPeople(messages) });
     } catch (error) {
         logger.error('GET CONVERSATION ERROR:', error);
         return res.status(500).json({ message: 'Failed to load conversation' });
@@ -147,10 +182,7 @@ exports.getAdminInbox = async (req, res) => {
             ? req.user.companyId._id
             : req.user.companyId;
 
-        const conversations = await InternalMessage.getAdminInbox(
-            currentUserId,
-            companyId
-        );
+        const conversations = await adminInbox(currentUserId, companyId);
 
         return res.json({ conversations });
     } catch (error) {
@@ -172,13 +204,12 @@ exports.getManagerInbox = async (req, res) => {
             recipient: currentUserId,
             isFromAdmin: true
         })
-            .populate('sender', 'username email profilePicture companyRole')
             .sort({ createdAt: -1 })
             .limit(20);
 
         const unreadCount = await InternalMessage.getUnreadCount(currentUserId);
 
-        return res.json({ messages, unreadCount });
+        return res.json({ messages: await withPeople(messages), unreadCount });
     } catch (error) {
         logger.error('GET MANAGER INBOX ERROR:', error);
         return res.status(500).json({ message: 'Failed to load inbox' });

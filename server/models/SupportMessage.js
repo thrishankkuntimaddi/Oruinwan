@@ -108,8 +108,9 @@ SupportMessageSchema.statics.getTicketTimeline = async function (ticketId, optio
   return this.find(query)
     .sort({ createdAt: 1 })
     .limit(limit)
-    .populate('sender', 'username email profilePicture')
-    .lean();
+    .lean()
+    // Senders live in PostgreSQL: attach them with hydrate (populate cannot reach them).
+    .then((rows) => require('../src/identity/hydrate').hydrate(rows, { sender: require('../src/identity/hydrate').userSelect('username email profilePicture') }));
 };
 
 SupportMessageSchema.statics.markAsRead = async function (messageId, userId) {

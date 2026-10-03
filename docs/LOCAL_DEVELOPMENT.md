@@ -8,6 +8,9 @@ Everything you need to run the whole stack on your Mac without help: the web app
 | API | Express + Socket.IO (`server/`) | **8080** (from `PORT` in `server/.env`) |
 | AI engine | Ollama, running Oruinwan's own models (`qwen2.5:3b` for chat, `nomic-embed-text` for search) | **11434** |
 | Database | MongoDB (remote, from `MONGO_URI` in `server/.env`, or local) | 27017 if local |
+| PostgreSQL + pgvector | Identity, tasks, logs, AI embeddings, event outbox (Docker) | **5432** |
+| Redis | Presence, live huddles, job locks, socket fan-out, event stream (Docker) | **6379** |
+| Object storage (RustFS, S3 API) | Uploaded files (Docker); console on 9001 | **9000** |
 
 The web app proxies `/api` and `/uploads` to the API, so you only ever open **http://localhost:3000**.
 
@@ -19,6 +22,7 @@ The web app proxies `/api` and `/uploads` to the API, so you only ever open **ht
 # Tools (Homebrew)
 brew install node@20 ollama            # Node 20+ is required (22/24 also work)
 brew tap mongodb/brew && brew install mongodb-community@7.0   # only if you want a local database
+brew install colima docker docker-compose && colima start       # container runtime for postgres, redis, s3
 
 # Project dependencies (from the repo root)
 npm run install-all                    # root + client + server
@@ -110,7 +114,7 @@ These keys matter locally. `server/.env.example` documents all of them.
 | `LOCAL_LLM_BASE_URL` | `http://localhost:11434/v1` |
 | `LOCAL_LLM_MODEL` / `LOCAL_EMBED_MODEL` | `qwen2.5:3b` / `nomic-embed-text` |
 | `FEATURES_ENABLED` | Comma-separated release flags, e.g. `integrations` to show GitHub/Jira/Zoom (see `docs/integrations.md`) |
-| `STORAGE_DRIVER` | Optional. `local` stores uploads on disk (`LOCAL_UPLOAD_DIR`, default `server/uploads/objects`), `gcs` uses Google Cloud Storage. Unset: GCS when its credentials are present, otherwise local disk |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Object storage for uploads; defaults match the `s3` service in `docker-compose.yml`. Without them uploads go to local disk (`LOCAL_UPLOAD_DIR`). `STORAGE_DRIVER=s3|local` forces a driver |
 | Email (`BREVO_API_KEY` / `SMTP_*`) | Needed for sign-up verification, password reset and reactivation codes. Without it, sending fails with "Email not configured" in the API log |
 
 After changing `server/.env`, restart the API (in its terminal, type `rs` + Enter, or Ctrl+C and start it again). After changing `client/.env`, restart the web app.
@@ -173,3 +177,30 @@ npm run test:e2e              # Playwright browser tests (see below)
 | AI is slow the first time | The model is loading. It's fast once warm, and stays loaded for 30 minutes |
 | Emails (verification, OTP) don't arrive | Configure `BREVO_API_KEY` or `SMTP_*` in `server/.env`. The API log shows why sending failed, e.g. Brevo's "Authorised IPs" block |
 | Integrations don't show in Settings | Add `integrations` to `FEATURES_ENABLED` and restart the API |
+
+---
+
+## Infrastructure (Docker)
+
+```bash
+docker compose up -d          # from the repo root: postgres+pgvector :5432, redis :6379, s3 :9000 (console :9001)
+docker compose ps
+node server/scripts/migrate.js --status
+```
+
+The server applies PostgreSQL migrations and creates the upload bucket on boot.
+
+## Running two API instances (multi-instance check)
+
+With Redis running and `REDIS_URL` set, the same server can run several times on different ports and behave as one:
+
+```bash
+cd server
+PORT=8080 node server.js &    # instance 1
+PORT=8081 node server.js &    # instance 2
+curl -s localhost:8080/api/health | jq '{redis, instance, jobs}'
+curl -s localhost:8081/api/health | jq '{redis, instance, jobs}'
+redis-cli keys 'job:*'        # each lock names the one instance that ran that job this interval
+```
+
+A user connected to 8080 is online for people on 8081, a huddle started on one instance can be joined from the other, and reminders fire once, not twice. Details and the production stages are in `SCALING.md`.

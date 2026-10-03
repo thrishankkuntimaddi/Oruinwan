@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ApiKey = require('./apiKey.model');
 const requireAuth = require('../../shared/middleware/auth');
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const logger = require('../../../utils/logger');
 const {
   requireWorkspaceAccess, assertWorkspaceMember, sendAccessError, isValidId,
@@ -22,8 +23,8 @@ router.get('/api-keys', adminOfQuery, async (req, res) => {
   try {
     const keys = await ApiKey.find({ workspaceId: req.workspaceAccess.workspaceId, isActive: true })
       .select('name keyPrefix permissions createdAt lastUsedAt usageCount createdBy')
-      .populate('createdBy', 'username firstName lastName')
-      .lean();
+      .lean()
+      .then((rows) => hydrate(rows, { createdBy: userSelect('username firstName lastName') }));
 
     res.json({ keys });
   } catch (err) {

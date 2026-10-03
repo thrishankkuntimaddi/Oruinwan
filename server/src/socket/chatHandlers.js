@@ -1,8 +1,7 @@
 const Message = require("../modules/messages/message.model");
 const Channel = require("../features/channels/channel.model");
 const DMSession = require("../../models/DMSession");
-const Workspace = require("../../models/Workspace");
-const User = require("../../models/User");
+const identity = require("../identity");
 const logger = require("../../utils/logger");
 const messagesService = require("../modules/messages/messages.service");
 const ROOMS = require("../shared/utils/rooms");
@@ -94,7 +93,7 @@ module.exports = function registerChatHandlers(io, socket) {
     const joinedRooms = [];
 
     try {
-      const user = await User.findById(userId).select('companyId').lean();
+      const user = await identity.users.findById(userId);
       if (user && user.companyId) {
         const companyId = user.companyId.toString();
         socket.join(`company_${companyId}`);
@@ -271,7 +270,7 @@ module.exports = function registerChatHandlers(io, socket) {
       }
 
       
-      const workspace = await Workspace.findById(workspaceId).select("members").lean();
+      const workspace = await identity.workspaces.findById(workspaceId);
       if (!workspace) {
         socket.emit("join-error", { event: "join-workspace", code: "NOT_FOUND", message: "Workspace not found" });
         return;
@@ -305,7 +304,7 @@ module.exports = function registerChatHandlers(io, socket) {
       if (!companyId) return;
 
       
-      const user = await User.findById(userId).select('companyId').lean();
+      const user = await identity.users.findById(userId);
       if (!user || user.companyId?.toString() !== companyId.toString()) {
         logger.error(`[SECURITY] Unauthorized join-company-updates by user ${userId}`);
         return;
@@ -370,7 +369,7 @@ module.exports = function registerChatHandlers(io, socket) {
         // New DM via receiverId: both users must belong to the given workspace.
         if (!workspaceId) return fail("MISSING_WORKSPACE", "workspaceId required");
         if (sameId(receiverId, userId)) return fail("INVALID_TARGET", "Cannot DM yourself");
-        const ws = await Workspace.findById(workspaceId).select("members company").lean();
+        const ws = await identity.workspaces.findById(workspaceId);
         if (!ws) return fail("NOT_FOUND", "Workspace not found");
         if (!isWorkspaceMember(ws, userId) || !isWorkspaceMember(ws, receiverId)) {
           return fail("FORBIDDEN", "Both users must be members of this workspace");
@@ -540,7 +539,7 @@ module.exports = function registerChatHandlers(io, socket) {
       if (!(await sharesTyping(userId))) return;
 
       if (socket.data.username === undefined) {
-        const u = await User.findById(userId).select("username").lean();
+        const u = await identity.users.findById(userId);
         socket.data.username = u?.username || null;
       }
       const fromName = socket.data.username || "Someone";
@@ -643,7 +642,7 @@ module.exports = function registerChatHandlers(io, socket) {
 
       // Admin rights derive from the message's own channel -> workspace, never from client input.
       if (ctx.channel && ctx.channel.workspace) {
-        const workspace = await Workspace.findById(ctx.channel.workspace).select("members").lean();
+        const workspace = await identity.workspaces.findById(ctx.channel.workspace);
         const member = workspace?.members?.find(m => sameId(extractMemberId(m), userId));
         isAdmin = !!member && (member.role === "admin" || member.role === "owner");
       }
@@ -661,7 +660,7 @@ module.exports = function registerChatHandlers(io, socket) {
         return;
       }
 
-      const currentUser = await User.findById(userId).select("username").lean();
+      const currentUser = await identity.users.findById(userId);
       const deleterName = currentUser ? currentUser.username : "Unknown";
 
       message.isDeletedUniversally = true;
@@ -708,9 +707,10 @@ module.exports = function registerChatHandlers(io, socket) {
         { _id: messageId, channel: channelId },
         { isPinned: true, pinnedBy: userId, pinnedAt: new Date() },
         { new: true }
-      ).populate("pinnedBy", "username");
+      ).lean();
+      if (message) await require("../identity/hydrate").hydrate(message, { pinnedBy: { type: "user", fields: ["username"] } });
 
-      const pinner = await User.findById(userId).select("username").lean();
+      const pinner = await identity.users.findById(userId);
 
       io.to(`channel:${channelId}`).emit("message-pinned", {
         messageId,
@@ -753,7 +753,7 @@ module.exports = function registerChatHandlers(io, socket) {
       const KnowledgePage = require("../features/knowledge/KnowledgePage");
       const page = await KnowledgePage.findById(pageId).select("workspaceId").lean();
       if (!page) return;
-      const ws = await Workspace.findById(page.workspaceId).select("members").lean();
+      const ws = await identity.workspaces.findById(page.workspaceId);
       if (!isWorkspaceMember(ws, userId)) return;
       socket.join(`knowledge:${pageId}`);
       socket.to(`knowledge:${pageId}`).emit("knowledge:presence", {
@@ -792,7 +792,7 @@ module.exports = function registerChatHandlers(io, socket) {
       const WorkspaceFile = require("../features/files/WorkspaceFile");
       const file = await WorkspaceFile.findById(fileId).select("workspaceId").lean();
       if (!file) return;
-      const ws = await Workspace.findById(file.workspaceId).select("members").lean();
+      const ws = await identity.workspaces.findById(file.workspaceId);
       if (!isWorkspaceMember(ws, userId)) return;
       socket.join(`file:${fileId}`);
       socket.to(`file:${fileId}`).emit("file:presence", {

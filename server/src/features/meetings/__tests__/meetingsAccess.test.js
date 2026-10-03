@@ -11,7 +11,11 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();
 });
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn() }));
+// Workspaces and users live in PostgreSQL: mock the identity repositories.
+jest.mock('../../../identity/workspaces.repo', () => ({
+    findById: jest.fn(), findManyByIds: jest.fn(async () => []), membership: jest.fn(), memberWorkspaceIds: jest.fn(async () => []),
+}));
+jest.mock('../../../identity/users.repo', () => ({ findManyByIds: jest.fn(async () => new Map()), findById: jest.fn(async () => null) }));
 jest.mock('../../../models/ScheduledMeeting', () => ({
     findById: jest.fn(), find: jest.fn(), create: jest.fn(), deleteOne: jest.fn(), updateOne: jest.fn(),
 }));
@@ -31,7 +35,7 @@ jest.mock('../../collaboration/whiteboard.model', () => ({ findOne: jest.fn(), f
 jest.mock('../../collaboration/brainstorm.model', () => ({ findOne: jest.fn(), findOneAndUpdate: jest.fn() }));
 jest.mock('../../../modules/notifications/notificationService', () => ({ scheduleCreated: jest.fn(async () => []) }));
 
-const Workspace = require('../../../../models/Workspace');
+const workspacesRepo = require('../../../identity/workspaces.repo');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 const Whiteboard = require('../../collaboration/whiteboard.model');
 const meetingsService = require('../meetings.service');
@@ -83,7 +87,7 @@ beforeAll((done) => {
 afterAll((done) => { server.close(done); });
 
 beforeEach(() => {
-    Workspace.findOne.mockImplementation(() => chain(workspace));
+    workspacesRepo.findById.mockImplementation(async (id) => (String(id) === WS ? workspace : null));
     meetingDoc = {
         _id: MEETING, workspaceId: WS, createdBy: MEMBER, status: 'scheduled',
         save: jest.fn(async () => {}), populate: jest.fn(async function () { return this; }),

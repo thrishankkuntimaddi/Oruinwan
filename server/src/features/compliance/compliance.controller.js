@@ -1,6 +1,7 @@
 'use strict';
 
 const ComplianceLog = require('../../../models/ComplianceLog');
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const crypto = require('crypto');
 const { handleError } = require('../../../utils/responseHelpers');
 const { scopedCompanyId } = require('../../shared/middleware/requireCompanyAdmin');
@@ -36,8 +37,8 @@ exports.getComplianceLogs = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(cap)
-                .populate('actorId', 'username email profilePicture')
-                .lean(),
+                .lean()
+                .then((rows) => hydrate(rows, { actorId: userSelect('username email profilePicture') })),
             ComplianceLog.countDocuments(filter)
         ]);
 
@@ -71,9 +72,8 @@ exports.getComplianceLogs = async (req, res) => {
 
 exports.getComplianceLog = async (req, res) => {
     try {
-        const log = await ComplianceLog.findById(req.params.id)
-            .populate('actorId', 'username email')
-            .lean();
+        const log = await ComplianceLog.findById(req.params.id).lean();
+        if (log) await hydrate(log, { actorId: userSelect('username email') });
 
         // Another company's entry looks the same as a missing one.
         if (!log || (!req.isPlatformAdmin && String(log.companyId) !== req.companyId)) {

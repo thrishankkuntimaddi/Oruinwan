@@ -5,18 +5,15 @@ const service  = require('./automation.service');
 const templates = require('./automation.templates');
 
 const mongoose = require('mongoose');
-const Workspace = require('../../../models/Workspace');
+const { workspaces } = require('../../identity');
 
 async function _requireWorkspaceAdmin(userId, workspaceId, res) {
-    const ws = await Workspace.findById(workspaceId).select('members').lean();
+    const ws = await workspaces.findById(workspaceId);
     if (!ws) {
         res.status(404).json({ message: 'Workspace not found' });
         return false;
     }
-    const member = ws.members.find(m => {
-        const id = m.user?._id?.toString() || m.user?.toString() || m.toString();
-        return id === userId.toString();
-    });
+    const member = ws.members.find(m => m.user === String(userId) && m.status === 'active');
     if (!member || !['admin', 'owner'].includes(member.role)) {
         res.status(403).json({ message: 'Only workspace admins can manage automations' });
         return false;
@@ -29,15 +26,12 @@ async function _requireWorkspaceMember(userId, workspaceId, res) {
         res.status(400).json({ message: 'Invalid workspaceId' });
         return false;
     }
-    const ws = await Workspace.findById(workspaceId).select('members').lean();
+    const ws = await workspaces.findById(workspaceId);
     if (!ws) {
         res.status(404).json({ message: 'Workspace not found' });
         return false;
     }
-    const isMember = (ws.members || []).some(m => {
-        const id = m.user?._id?.toString() || m.user?.toString() || m.toString();
-        return id === userId.toString();
-    });
+    const isMember = ws.isMember(userId);
     if (!isMember) {
         res.status(403).json({ message: 'Not a member of this workspace' });
         return false;

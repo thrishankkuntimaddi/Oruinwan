@@ -1,12 +1,10 @@
 const logger = require('../../../utils/logger');
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Workspace = require('../../../models/Workspace');
-const Department = require('../../../models/Department');
+const identity = require('../../identity');
+const org = require('../../identity/queries/org');
+const { withTransaction } = require('../../shared/postgres');
 const Channel = require("../channels/channel.model.js");
 const _sendEmail = require('../../../utils/sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
@@ -38,22 +36,21 @@ async function processDocuments(documents) {
                     .replace(/^\.+/, '')
                     .slice(0, 100) || 'document';
                 const uniqueName = `${Date.now()}_${crypto.randomBytes(6).toString('hex')}_${safeBase}`;
-                const uploadDir = path.resolve(__dirname, '../../uploads/verification_docs');
+                const mimeType = (doc.content.match(/^data:([A-Za-z-+/]+);base64,/) || [])[1] || 'application/octet-stream';
 
-                if (!fs.existsSync(uploadDir)) {
-                    fs.mkdirSync(uploadDir, { recursive: true });
-                }
-
-                const filePath = path.resolve(uploadDir, uniqueName);
-                if (!filePath.startsWith(uploadDir + path.sep)) {
-                    logger.warn('Rejected verification document with unsafe name');
-                    continue;
-                }
-                fs.writeFileSync(filePath, buffer);
+                // Object storage (GCS, or local disk through the same driver) so every
+                // server instance can read the document; served via the authenticated
+                // uploads proxy, which restricts verification_docs/ to platform admins.
+                const objectPath = `verification_docs/${uniqueName}`;
+                const { writeObject } = require('../../modules/uploads/upload.service');
+                await writeObject(objectPath, buffer, {
+                    contentType: mimeType,
+                    metadata: { originalName: safeBase, kind: 'verification_document' },
+                });
 
                 processedDocuments.push({
                     name: safeBase,
-                    url: `/uploads/verification_docs/${uniqueName}`,
+                    url: `/api/v2/uploads/file?path=${encodeURIComponent(objectPath)}`,
                     uploadedAt: new Date()
                 });
             } catch (err) {
@@ -90,114 +87,92 @@ async function registerCompany(params) {
 
     
     if (personalEmail) {
-        const existingOwner = await User.findOne({
-            $or: [
-                { email: personalEmail.toLowerCase() },
-                { personalEmail: personalEmail.toLowerCase() },
-                { 'emails.email': personalEmail.toLowerCase() }
-            ],
-            userType: 'company',
-            companyRole: 'owner'
-        });
+        const ids = await org.userIdsByAnyEmail(personalEmail.toLowerCase());
+        const existingOwner = ids.length
+            ? await org.users.findOne({ _id: { $in: ids }, userType: 'company', companyRole: 'owner' })
+            : null;
 
         if (existingOwner) {
             throw new Error('Personal email is already linked to a registered company');
         }
     }
 
-    
     if (phone) {
-        const existingPhoneUser = await User.findOne({ phone, companyRole: 'owner' });
-        const existingCompanyPhone = await Company.findOne({ ownerPhone: phone });
+        const existingPhoneUser = await org.users.findOne({ phone, companyRole: 'owner' });
+        const existingCompanyPhone = await org.companies.findOne({ ownerPhone: phone });
 
         if (existingPhoneUser || existingCompanyPhone) {
             throw new Error('Phone number is already associated with a registered company');
         }
     }
 
-    
-    const existingUser = await User.findOne({ email: adminEmail });
+    const existingUser = await identity.users.findByEmail(adminEmail);
     if (existingUser) {
         throw new Error('Admin email already in use');
     }
 
-    
     if (domain && !isValidDomain(domain)) {
         throw new Error('Invalid domain format');
     }
 
-    
     if (domain) {
-        const existingCompany = await Company.findOne({ domain });
+        const existingCompany = await org.companies.findOne({ domain });
         if (existingCompany) {
             throw new Error('Domain already registered');
         }
     }
 
-    
     const processedDocuments = await processDocuments(documents);
-
-    
-    const company = new Company({
-        name: companyName,
-        domain: domain || null,
-        domainVerified: false,
-        ownerEmail: personalEmail || adminEmail,
-        ownerPhone: phone || null,
-        verificationStatus: 'pending',
-        documents: processedDocuments,
-        metadata: {
-            requestedDepartments: departments,
-            requestedWorkspaceName: workspaceName,
-            requestedWorkspaceDescription: workspaceDescription,
-            requestedChannels: defaultChannels,
-            companyRole: role
-        },
-        admins: []
-    });
-
-    await company.save();
-
-    
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-    const adminUser = new User({
-        username: adminName,
-        email: adminEmail.toLowerCase(),
-        personalEmail: personalEmail ? personalEmail.toLowerCase() : null,
-        passwordHash,
-        userType: 'company',
-        companyId: company._id,
-        companyRole: (role || 'owner').toLowerCase(), 
-        phone: phone || undefined,
-        phoneCode: params.phoneCode || '+91',
-        profile: {
-            name: adminName
-        },
-        emails: personalEmail && personalEmail !== adminEmail
-            ? [{ email: personalEmail, isPrimary: false, verified: true }]
-            : [],
-        verified: true,
-        accountStatus: 'pending_company',
-        departments: []
+    // Company, owner account, owner link and e-mail rows: all or nothing.
+    const { company, adminUser } = await withTransaction(async (tx) => {
+        const company = await org.insert('companies', {
+            name: companyName,
+            domain: domain || null,
+            domainVerified: false,
+            ownerEmail: personalEmail || adminEmail,
+            ownerPhone: phone || null,
+            verificationStatus: 'pending',
+            documents: processedDocuments,
+            metadata: {
+                requestedDepartments: departments,
+                requestedWorkspaceName: workspaceName,
+                requestedWorkspaceDescription: workspaceDescription,
+                requestedChannels: defaultChannels,
+                companyRole: role
+            },
+        }, { tx });
+
+        let adminUser;
+        try {
+            adminUser = await org.insert('users', {
+                username: adminName,
+                email: adminEmail.toLowerCase(),
+                personalEmail: personalEmail ? personalEmail.toLowerCase() : null,
+                passwordHash,
+                userType: 'company',
+                companyId: company._id,
+                companyRole: (role || 'owner').toLowerCase(),
+                phone: phone || null,
+                phoneCode: params.phoneCode || '+91',
+                profile: { name: adminName },
+                verified: true,
+                accountStatus: 'pending_company',
+            }, { tx });
+        } catch (err) {
+            throw new Error(`Failed to create admin user: ${err.message}`);
+        }
+
+        await org.addUserEmail(adminUser._id, adminEmail, { verified: true, isPrimary: true, tx });
+        if (personalEmail && personalEmail !== adminEmail) {
+            await org.addUserEmail(adminUser._id, personalEmail, { verified: true, tx });
+        }
+        await org.addCompanyAdmin(company._id, adminUser._id, 'owner', { tx });
+        company.admins = [{ user: adminUser._id, role: 'owner' }];
+        return { company, adminUser };
     });
 
-    try {
-        await adminUser.save();
-    } catch (err) {
-        
-        await Company.findByIdAndDelete(company._id);
-        throw new Error(`Failed to create admin user: ${err.message}`);
-    }
-
-    
-    company.admins.push({
-        user: adminUser._id,
-        role: 'owner'
-    });
-    await company.save();
-
-    
     await logAction({
         userId: adminUser._id,
         action: 'company_registration_requested',
@@ -212,26 +187,19 @@ async function registerCompany(params) {
     return { company, adminUser };
 }
 
-async function createWorkspaceWithChannels({ company, adminUser, deptName, deptId, isDefault, workspaceName }) {
-    const ws = new Workspace({
-        company: company._id,
-        type: 'company',
-        name: isDefault ? workspaceName : deptName,
-        description: isDefault ? 'Primary company workspace' : `${deptName} Team Workspace`,
-        createdBy: adminUser._id,
-        department: deptId || undefined,
-        members: [{ user: adminUser._id, role: 'owner' }]
-    });
-    await ws.save();
-
-    
+/**
+ * Default channels for a workspace that already exists in PostgreSQL: Mongo
+ * channel documents, their encryption keys, then the workspace's
+ * defaultChannels list. Runs after the identity transaction has committed.
+ */
+async function createDefaultChannels({ company, adminUser, workspace }) {
     const channelsToCreate = ['general', 'announcements'];
     const createdChanIds = [];
     const creationDate = new Date();
 
     for (const channelName of channelsToCreate) {
         const chan = new Channel({
-            workspace: ws._id,
+            workspace: workspace._id,
             company: company._id,
             name: channelName,
             isDefault: true,
@@ -247,16 +215,15 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
         createdChanIds.push(chan._id);
     }
 
-    ws.defaultChannels = createdChanIds;
-    await ws.save();
+    await identity.workspaces.update(workspace._id, { defaultChannels: createdChanIds.map(String) });
+    workspace.defaultChannels = createdChanIds;
 
-    
     for (const chanId of createdChanIds) {
         try {
             await conversationKeysService.bootstrapConversationKey({
                 conversationId: chanId.toString(),
                 conversationType: 'channel',
-                workspaceId: ws._id.toString(),
+                workspaceId: workspace._id.toString(),
                 members: [adminUser._id.toString()]
             });
         } catch (keyError) {
@@ -264,55 +231,62 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
             throw new Error('Failed to initialize channel encryption');
         }
     }
+    return workspace;
+}
 
+/** Workspace row plus owner membership, inside the caller's transaction. */
+async function insertWorkspace({ company, adminUser, deptName, deptId, isDefault, workspaceName }, tx) {
+    const ws = await org.insert('workspaces', {
+        company: company._id,
+        type: 'company',
+        name: isDefault ? workspaceName : deptName,
+        description: isDefault ? 'Primary company workspace' : `${deptName} Team Workspace`,
+        createdBy: adminUser._id,
+        department: deptId || null,
+    }, { tx });
+    await org.addWorkspaceMembers(ws._id, [{ user: adminUser._id, role: 'owner' }], { tx });
     return ws;
 }
 
-async function provisionCompanyResources({ company, adminUser }) {
-    const metadata = company.metadata || {};
-    const {
-        requestedDepartments = [],
-        requestedWorkspaceName,
-        _requestedChannels = ['general', 'announcements']
-    } = metadata;
+async function createWorkspaceWithChannels(args) {
+    const ws = await withTransaction((tx) => insertWorkspace(args, tx));
+    return createDefaultChannels({ ...args, workspace: ws });
+}
 
-    const createdDepartmentIds = [];
-    const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
-
-    
-    for (const deptName of requestedDepartments) {
-        const dept = new Department({
-            name: deptName,
-            company: company._id,
-            head: adminUser._id,
-            members: [adminUser._id],
-            createdAt: new Date()
-        });
-        await dept.save();
-        createdDepartmentIds.push(dept._id);
+/**
+ * On approval: requested departments, the default workspace with the owner as
+ * member, the company's default workspace and the owner's activation in one
+ * PostgreSQL transaction; channels in MongoDB afterwards.
+ * Accepts { company, adminUser } or { companyId } (the owner is looked up).
+ */
+async function provisionCompanyResources({ company, adminUser, companyId }) {
+    const id = String(company?._id || companyId);
+    company = await org.companies.findOne({ _id: id });
+    if (!company) throw new Error('Company not found');
+    if (!adminUser) {
+        const owner = company.admins.find((a) => a.role === 'owner') || company.admins[0];
+        adminUser = owner ? await identity.users.findById(owner.user) : null;
+        if (!adminUser) throw new Error('Company owner not found');
     }
 
-    
-    const defaultWorkspace = await createWorkspaceWithChannels({
-        company,
-        adminUser,
-        isDefault: true,
-        workspaceName
+    const metadata = company.metadata || {};
+    const { requestedDepartments = [], requestedWorkspaceName } = metadata;
+    const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
+
+    const { defaultWorkspace, createdDepartmentIds } = await withTransaction(async (tx) => {
+        const createdDepartmentIds = [];
+        for (const deptName of requestedDepartments) {
+            const dept = await org.insert('departments', { name: deptName, company: company._id, head: adminUser._id }, { tx });
+            await org.addDepartmentMembers(dept._id, [adminUser._id], 'member', { tx });
+            createdDepartmentIds.push(dept._id);
+        }
+        const defaultWorkspace = await insertWorkspace({ company, adminUser, isDefault: true, workspaceName }, tx);
+        await org.updateCompany(company._id, { defaultWorkspace: defaultWorkspace._id }, { tx });
+        await org.users.updateMany({ _id: adminUser._id }, { accountStatus: 'active' }, { tx });
+        return { defaultWorkspace, createdDepartmentIds };
     });
 
-    
-    company.defaultWorkspace = defaultWorkspace._id;
-
-    
-    adminUser.workspaces = [{
-        workspace: defaultWorkspace._id,
-        role: 'owner'
-    }];
-    adminUser.departments = createdDepartmentIds;
-    adminUser.accountStatus = 'active'; 
-
-    await adminUser.save();
-    await company.save();
+    await createDefaultChannels({ company, adminUser, workspace: defaultWorkspace });
 
     return {
         defaultWorkspace,

@@ -13,26 +13,28 @@
  */
 
 const logger = require('../../../utils/logger');
-const User = require('../../../models/User');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
+const { query } = require('../../shared/postgres');
 const { isValidId } = require('../../shared/utils/workspaceAccess');
 
 let presence = null;
 try { presence = require('../presence/presence.service'); } catch { presence = null; }
 
-const CARD_FIELDS = 'username email companyEmail profilePicture profile.name profile.about jobTitle departments '
-    + 'companyId companyRole userType preferences.region.timezone preferences.privacy.allowDiscovery '
-    + 'isOnline userStatus lastActivityAt lastLoginAt accountStatus';
-
 const GONE = new Set(['removed', 'blocked']);
 
-const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const same = (a, b) => a != null && b != null && String(a) === String(b);
 const memberUserId = (m) => (m && m.user && m.user._id ? m.user._id : m && m.user);
 const activeMember = (m) => (m.status || 'active') === 'active';
 
-function loadUser(query) {
-    return query.select(CARD_FIELDS).populate('departments', 'name').lean();
+/** The user with `departments` as [{ _id, name }] (what populate('departments', 'name') gave). */
+async function loadUser(user) {
+    if (!user) return null;
+    const { rows } = await query(
+        `SELECT d.id, d.name FROM department_members m JOIN departments d ON d.id = m.department_id WHERE m.user_id = $1 ORDER BY d.name`,
+        [user._id]
+    );
+    user.departments = rows.map((r) => ({ _id: r.id, name: r.name }));
+    return user;
 }
 
 /** The workspace member entry for userId, or null. */
@@ -40,9 +42,9 @@ function findMember(workspace, userId) {
     return (workspace?.members || []).find((m) => same(memberUserId(m), userId)) || null;
 }
 
-/** Live presence first (socket map), stored flags otherwise. */
-function presenceOf(user) {
-    const entry = presence?.getPresence ? presence.getPresence(String(user._id)) : null;
+/** Live presence first (any instance, prefetched by `livePresence`), stored flags otherwise. */
+function presenceOf(user, entry) {
+    if (entry == null) entry = presence?.getPresence ? presence.getPresence(String(user._id)) : null;
     const liveOnline = entry ? entry.status !== 'offline' : null;
     const isOnline = liveOnline != null ? liveOnline : !!user.isOnline;
     const lastSeen = (entry && entry.lastSeen) || user.lastActivityAt || user.lastLoginAt || null;
@@ -51,7 +53,13 @@ function presenceOf(user) {
     return { isOnline, userStatus, lastSeen };
 }
 
-function buildCard(user, { workspaceRole = null, showEmail = true, sameCompany = false } = {}) {
+/** Presence from every server instance (Redis-backed); `presenceOf` falls back to this instance's map. */
+async function livePresence(user) {
+    if (!presence?.getPresenceAsync) return undefined;
+    try { return await presence.getPresenceAsync(String(user._id)); } catch { return undefined; }
+}
+
+function buildCard(user, { workspaceRole = null, showEmail = true, sameCompany = false, presenceEntry } = {}) {
     const tz = user.preferences?.region?.timezone;
     const departments = (user.departments || [])
         .map((d) => (d && typeof d === 'object' ? d.name : null))
@@ -69,7 +77,7 @@ function buildCard(user, { workspaceRole = null, showEmail = true, sameCompany =
         companyRole: isCompanyUser && sameCompany ? user.companyRole || null : null,
         workspaceRole,
         timezone: tz && tz !== 'auto' ? tz : null,
-        ...presenceOf(user),
+        ...presenceOf(user, presenceEntry),
     };
 }
 
@@ -93,16 +101,15 @@ async function respond(req, res, target, workspace) {
         }
     }
     if (!sharesWorkspace && !isSelf) {
-        const shared = await Workspace.findOne({
-            $and: [
-                { members: { $elemMatch: { user: viewerId, status: { $nin: ['removed', 'suspended'] } } } },
-                { members: { $elemMatch: { user: target._id, status: { $ne: 'removed' } } } },
-            ],
-        }).select('_id').lean();
-        sharesWorkspace = !!shared;
+        const { rows } = await query(
+            `SELECT 1 FROM workspace_members v JOIN workspace_members t ON t.workspace_id = v.workspace_id
+             WHERE v.user_id = $1 AND v.status NOT IN ('removed', 'suspended') AND t.user_id = $2 AND t.status <> 'removed' LIMIT 1`,
+            [String(viewerId), String(target._id)]
+        );
+        sharesWorkspace = rows.length > 0;
     }
 
-    const viewer = await User.findById(viewerId).select('companyId').lean();
+    const viewer = await identity.users.findById(viewerId);
     const sameCompany = !!viewer?.companyId && same(viewer.companyId, target.companyId);
 
     if (!isSelf && !sharesWorkspace && !sameCompany) {
@@ -111,12 +118,13 @@ async function respond(req, res, target, workspace) {
 
     const discoverable = target.preferences?.privacy?.allowDiscovery !== false;
     const showEmail = isSelf || sharesWorkspace || discoverable;
-    return res.json({ card: buildCard(target, { workspaceRole, showEmail, sameCompany: sameCompany || isSelf }) });
+    const presenceEntry = await livePresence(target);
+    return res.json({ card: buildCard(target, { workspaceRole, showEmail, sameCompany: sameCompany || isSelf, presenceEntry }) });
 }
 
 async function loadWorkspace(workspaceId) {
     if (!workspaceId) return null;
-    return Workspace.findById(workspaceId).select('members.user members.role members.status company').lean();
+    return identity.workspaces.findById(workspaceId);
 }
 
 exports.getCardById = async (req, res) => {
@@ -126,7 +134,7 @@ exports.getCardById = async (req, res) => {
         if (!isValidId(id)) return res.status(400).json({ message: 'Invalid user id' });
         if (workspaceId && !isValidId(workspaceId)) return res.status(400).json({ message: 'Invalid workspaceId' });
 
-        const [target, workspace] = await Promise.all([loadUser(User.findById(id)), loadWorkspace(workspaceId)]);
+        const [target, workspace] = await Promise.all([identity.users.findById(id).then(loadUser), loadWorkspace(workspaceId)]);
         return await respond(req, res, target, workspace);
     } catch (err) {
         logger.error('USER CARD ERROR:', err);
@@ -150,10 +158,8 @@ exports.getCardByUsername = async (req, res) => {
 
         // Usernames are unique per workspace in practice, not globally: resolve among its members.
         const memberIds = (workspace.members || []).filter((m) => m.status !== 'removed').map(memberUserId);
-        const target = await loadUser(User.findOne({
-            _id: { $in: memberIds },
-            username: new RegExp(`^${escapeRegex(name)}$`, 'i'),
-        }));
+        const { rows } = await query('SELECT id FROM users WHERE id = ANY($1) AND lower(username) = lower($2) LIMIT 1', [memberIds.map(String), name]);
+        const target = rows[0] ? await identity.users.findById(rows[0].id).then(loadUser) : null;
         return await respond(req, res, target, workspace);
     } catch (err) {
         logger.error('USER CARD (username) ERROR:', err);

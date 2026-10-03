@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const registrationController = require("./registration.controller");
 const requireAuth = require("../../shared/middleware/auth");
-const User = require("../../../models/User");
+const identity = require("../../identity");
 const requireCompanyMember = require("../../shared/middleware/requireCompanyMember");
 const requireOwnCompany = require("../../shared/middleware/requireOwnCompany");
 const { requireCompanyRole } = require("../../shared/utils/companyRole");
@@ -13,7 +13,7 @@ const companyAdminGuard = [requireAuth, requireCompanyMember, requireOwnCompany(
 // Platform (Oruinwan) admin only — same rule as requireSuperAdmin in admin.routes.js.
 async function requireChttrixAdmin(req, res, next) {
     try {
-        const user = await User.findById(req.user.sub).select("roles").lean();
+        const user = await identity.users.findById(req.user.sub);
         if (user && Array.isArray(user.roles) && user.roles.includes("chttrix_admin")) return next();
         return res.status(403).json({ message: "Access denied: Super Admin only" });
     } catch (err) {

@@ -257,11 +257,20 @@ async function activeMembers(workspaceId) {
         .map((m) => idOf(m.user)));
 }
 
+/** Lean note with owner / sharedWith attached from PostgreSQL (users moved off MongoDB). */
+async function withNoteUsers(query) {
+    const note = await query;
+    if (note) {
+        const CARD = { type: 'user', fields: ['username', 'profilePicture'] };
+        await require('../../identity/hydrate').hydrate(note, { owner: CARD, sharedWith: CARD });
+    }
+    return note;
+}
+
 async function emitShared(io, noteId, userId) {
     if (!io) return;
     const Note = lazy.Note();
-    const populated = await Note.findById(noteId)
-        .populate('owner', 'username profilePicture').populate('sharedWith', 'username profilePicture').select('-versions');
+    const populated = await withNoteUsers(Note.findById(noteId).select('-versions').lean());
     if (populated) io.to(`user_${userId}`).emit('note-shared', populated);
 }
 
@@ -318,8 +327,7 @@ async function ensureNotes(userId, huddleId, io) {
         await Session.updateOne({ _id: fresh._id }, { $set: { notes: note._id } });
 
         if (io) {
-            const populated = await Note.findById(note._id)
-                .populate('owner', 'username profilePicture').populate('sharedWith', 'username profilePicture').select('-versions');
+            const populated = await withNoteUsers(Note.findById(note._id).select('-versions').lean());
             lazy.notesNotify().notifyNoteCreated(populated, io);
             io.to(`huddle:${huddleId}`).emit('huddle:notes_ready', { huddleId, noteId: idOf(note._id) });
         }
@@ -335,8 +343,7 @@ function scheduleNoteUpdated(io, noteId) {
     const t = setTimeout(async () => {
         broadcastTimers.delete(noteId);
         try {
-            const populated = await lazy.Note().findById(noteId)
-                .populate('owner', 'username profilePicture').populate('sharedWith', 'username profilePicture').select('-versions');
+            const populated = await withNoteUsers(lazy.Note().findById(noteId).select('-versions').lean());
             if (populated) lazy.notesNotify().notifyNoteUpdated(populated, io);
         } catch (err) {
             logger.warn(`[huddles] note-updated broadcast failed: ${err.message}`);

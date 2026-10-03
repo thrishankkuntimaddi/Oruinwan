@@ -14,10 +14,10 @@ router.get('/:id/export', requireAuth, requireWorkspaceMember, requireWorkspaceA
 
 // Importing creates a workspace: same company policy as POST /api/workspaces,
 // and the new workspace belongs to the caller's company.
-const User = require('../../../models/User');
+const identity = require('../../identity');
 async function workspaceCreationPolicy(req, res, next) {
     try {
-        const user = await User.findById(req.user.sub).select('companyId companyRole coOwnerOf').lean();
+        const user = await identity.users.findById(req.user.sub);
         if (!user) return res.status(401).json({ message: 'User not found' });
         req.user._dbUser = user;
         if (user.companyId) {

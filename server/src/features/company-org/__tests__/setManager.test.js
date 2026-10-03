@@ -1,23 +1,20 @@
 'use strict';
 
 // alice ← bob ← carol (carol reports to bob, bob reports to alice); dave is in another company.
-const people = {
-  alice: { _id: 'alice', companyId: 'c1', username: 'alice', reportsTo: null },
-  bob: { _id: 'bob', companyId: 'c1', username: 'bob', reportsTo: 'alice' },
-  carol: { _id: 'carol', companyId: 'c1', username: 'carol', reportsTo: 'bob' },
-  dave: { _id: 'dave', companyId: 'c2', username: 'dave', reportsTo: null },
-};
-const query = (value) => ({ select: () => ({ lean: async () => value }) });
-
-jest.mock('../../../../models/User', () => ({
-  findOne: jest.fn(({ _id, companyId }) => query(people[_id]?.companyId === companyId ? people[_id] : null)),
-  findById: jest.fn((id) => query(people[id] || null)),
-  updateOne: jest.fn(async ({ _id }, { $set }) => { people[_id].reportsTo = $set.reportsTo; }),
-}));
+jest.mock('../../../identity', () => require('../../admin/__tests__/identityStore').identity);
+jest.mock('../../../identity/queries/org', () => require('../../admin/__tests__/identityStore').org);
+jest.mock('../../../shared/postgres', () => require('../../admin/__tests__/identityStore').postgres);
 jest.mock('../../../shared/adminAudit', () => ({ recordAdminAction: jest.fn(async () => {}) }));
-jest.mock('../../../../models/Department', () => ({}));
-jest.mock('../../../models/Team', () => ({}));
-jest.mock('../../../../models/Company', () => ({}));
+
+const store = require('../../admin/__tests__/identityStore');
+
+beforeAll(() => {
+  store.reset();
+  store.addUser({ _id: 'alice', companyId: 'c1', username: 'alice', reportsTo: null });
+  store.addUser({ _id: 'bob', companyId: 'c1', username: 'bob', reportsTo: 'alice' });
+  store.addUser({ _id: 'carol', companyId: 'c1', username: 'carol', reportsTo: 'bob' });
+  store.addUser({ _id: 'dave', companyId: 'c2', username: 'dave', reportsTo: null });
+});
 
 const { setManager } = require('../org-chart.controller');
 const { recordAdminAction } = require('../../../shared/adminAudit');
@@ -38,6 +35,7 @@ describe('setManager', () => {
     const r = await call('carol', 'alice');
     expect(r).toMatchObject({ status: 200, body: { reportsTo: 'alice' } });
     expect(recordAdminAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'org.reporting_line_changed', companyId: 'c1' }));
+    expect(store.state.users.get('carol').reportsTo).toBe('alice');
     await call('carol', 'bob'); // restore
   });
 

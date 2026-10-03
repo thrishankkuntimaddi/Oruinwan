@@ -1,0 +1,20 @@
+{
+  "name": "@oruinwan/ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Oruinwan AI: orchestrator, agents, tools and providers; runs inside the API or as its own HTTP process (server.js)",
+  "main": "api/ai.gateway.js",
+  "scripts": {
+    "start": "AI_STANDALONE=1 node server.js",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
+  },
+  "license": "MIT"
+}

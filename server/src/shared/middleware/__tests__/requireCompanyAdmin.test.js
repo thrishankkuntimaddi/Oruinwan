@@ -7,8 +7,8 @@ const users = {
   staff: { companyId: null, companyRole: null, roles: ['chttrix_admin'] },
   personal: { companyId: null, companyRole: 'member', roles: ['user'] },
 };
-jest.mock('../../../../models/User', () => ({
-  findById: jest.fn((id) => ({ select: () => ({ lean: async () => users[id] || null }) })),
+jest.mock('../../../identity', () => ({
+  users: { findById: jest.fn(async (id) => users[id] || null) },
 }));
 
 const requireCompanyAdmin = require('../requireCompanyAdmin');

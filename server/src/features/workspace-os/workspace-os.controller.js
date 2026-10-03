@@ -1,7 +1,7 @@
 'use strict';
 
 const workspaceOsService = require('./workspace-os.service');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 const { handleError } = require('../../../utils/responseHelpers');
 
 const getIp = req => req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
@@ -15,7 +15,7 @@ exports.cloneWorkspace = async (req, res) => {
         const companyId = req.companyId || req.user?._dbUser?.companyId || null;
 
         
-        const source = await Workspace.findById(sourceId).lean();
+        const source = await identity.workspaces.findById(sourceId);
         if (!source) return res.status(404).json({ message: 'Source workspace not found' });
 
         const isMember = (source.members || []).some(m => String(m.user) === String(userId));
@@ -111,7 +111,7 @@ exports.getWorkspaceAnalytics = async (req, res) => {
         const range = Math.min(parseInt(req.query.range) || 30, 90); 
 
         
-        const workspace = await Workspace.findById(workspaceId).select('members company').lean();
+        const workspace = await identity.workspaces.findById(workspaceId);
         if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
         const analytics = await workspaceOsService.getWorkspaceAnalytics({

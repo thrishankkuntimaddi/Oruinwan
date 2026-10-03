@@ -1,22 +1,23 @@
 const TaskTemplate = require('../../../models/TaskTemplate');
-const Workspace = require('../../../models/Workspace');
-const User = require('../../../models/User');
+const identity = require('../../identity');
+const { hydrateTaskUsers } = require('../tasks/tasks.hydrate');
 
+/** Active member of the workspace (PostgreSQL identity store). */
 async function _validateMember(userId, workspaceId) {
-    const ws = await Workspace.findById(workspaceId);
-    if (!ws || !ws.isMember(userId)) {
+    const access = workspaceId ? await identity.workspaces.membership(workspaceId, userId) : null;
+    if (!access || !access.member) {
         const e = new Error('Access denied'); e.statusCode = 403; throw e;
     }
-    return ws;
+    return access.workspace;
 }
 
 async function getTemplates(userId, workspaceId) {
     if (!workspaceId) { const e = new Error('workspaceId required'); e.statusCode = 400; throw e; }
     await _validateMember(userId, workspaceId);
     const templates = await TaskTemplate.find({ workspace: workspaceId })
-        .populate('createdBy', 'username profilePicture')
         .sort({ createdAt: -1 })
         .lean();
+    await hydrateTaskUsers(templates, ['createdBy']);
     return { templates };
 }
 
@@ -25,7 +26,7 @@ async function createTemplate(userId, data) {
     if (!workspaceId || !name) {
         const e = new Error('workspaceId and name required'); e.statusCode = 400; throw e;
     }
-    const user = await User.findById(userId).lean();
+    const user = await identity.users.findById(userId);
     await _validateMember(userId, workspaceId);
     const template = await TaskTemplate.create({
         workspace: workspaceId,

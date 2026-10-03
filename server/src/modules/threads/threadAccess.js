@@ -3,7 +3,7 @@
 const Message = require('../messages/message.model.js');
 const Channel = require('../../features/channels/channel.model.js');
 const DMSession = require('../../../models/DMSession');
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 
 /**
  * Whether a user may see (and, with forWrite, reply to) the thread under a message.
@@ -35,8 +35,8 @@ async function checkConversationAccess({ channel, dm }, userId, { forWrite = fal
         const isMember = (doc.members || []).some((m) => String(m?.user?._id || m?.user || m) === uid);
         if (isMember) return { ok: true };
         if (!doc.isPrivate) {
-            const ws = await Workspace.exists({ _id: doc.workspace, members: { $elemMatch: { user: uid, status: 'active' } } });
-            if (ws) return { ok: true };
+            const access = doc.workspace ? await identity.workspaces.membership(doc.workspace, uid) : null;
+            if (access?.member) return { ok: true };
         }
         return { ok: false, status: 404, error: 'Conversation not found' };
     }

@@ -1,5 +1,5 @@
 const logger = require('../../utils/logger');
-const User = require('../../models/User');
+const { query } = require('../shared/postgres');
 
 const MENTION_REGEX = /@([a-zA-Z0-9_.-]+)/g;
 const HERE_REGEX = /@here\b/i;
@@ -31,14 +31,14 @@ async function resolveHandlesToIds(handles, companyId, senderId) {
     if (!handles || handles.length === 0) return [];
 
     try {
-        const users = await User.find({
-            username: { $in: handles.map(h => new RegExp(`^${h}$`, 'i')) },
-            companyId,
-            isActive: { $ne: false },
-        }).select('_id').lean();
+        const { rows } = await query(
+            `SELECT id FROM users WHERE lower(username) = ANY($1)
+               AND company_id IS NOT DISTINCT FROM $2 AND is_active = true`,
+            [handles.map(h => String(h).toLowerCase()), companyId ? String(companyId) : null]
+        );
 
-        return users
-            .map(u => u._id.toString())
+        return rows
+            .map(u => String(u.id))
             .filter(id => id !== senderId?.toString()); 
     } catch (err) {
         logger.error('[mentionParser] resolveHandlesToIds error:', err.message);

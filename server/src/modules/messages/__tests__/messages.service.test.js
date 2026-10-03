@@ -1,14 +1,18 @@
 const messagesService = require('../messages.service');
 const Message = require('../message.model.js');
 const DMSession = require('../../../../models/DMSession');
-const Workspace = require('../../../../models/Workspace');
+// Users and workspaces live in PostgreSQL: the identity repositories are mocked.
+const identity = require('../../../identity');
 
 jest.mock('../message.model.js');
 jest.mock('../../threads/threadAccess', () => ({
     checkConversationAccess: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('../../../../models/DMSession');
-jest.mock('../../../../models/Workspace');
+jest.mock('../../../identity', () => ({
+    workspaces: { findById: jest.fn() },
+    users: { findById: jest.fn(), findManyByIds: jest.fn(async (ids) => new Map(ids.map(id => [String(id), { _id: String(id), username: 'u' + id }]))) },
+}));
 
 jest.mock('../messageAccess', () => ({
     canAccessMessage: jest.fn().mockResolvedValue(true),
@@ -138,7 +142,7 @@ describe('Messages Service', () => {
             const mockNewSession = { _id: 'dm456', participants: ['user1', 'user2'] };
 
             DMSession.findOne = jest.fn().mockResolvedValue(null);
-            Workspace.findById = jest.fn().mockResolvedValue(mockWorkspace);
+            identity.workspaces.findById.mockResolvedValue(mockWorkspace);
             
             DMSession.findOneAndUpdate = jest.fn().mockResolvedValue(mockNewSession);
 
@@ -166,7 +170,8 @@ describe('Messages Service', () => {
                 populate: jest.fn().mockImplementation(() => {
                     populateCallCount++;
                     
-                    if (populateCallCount < 4) return mockQuery;
+                    // populate('parentId').populate('quotedMessageId'); users are hydrated afterwards.
+                    if (populateCallCount < 2) return mockQuery;
                     return Promise.resolve([...rawMessages]);
                 }),
             };

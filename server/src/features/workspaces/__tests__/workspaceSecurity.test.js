@@ -5,8 +5,21 @@
  * and admin hierarchy (W1-W7).
  */
 
-jest.mock('../../../../models/Workspace', () => ({ findById: jest.fn(), findOne: jest.fn(), updateOne: jest.fn(), findByIdAndDelete: jest.fn() }));
-jest.mock('../../../../models/User', () => ({ findById: jest.fn(), updateOne: jest.fn(), updateMany: jest.fn(), findByIdAndUpdate: jest.fn() }));
+// Identity lives in PostgreSQL: the repositories are mocked. The Mongo Workspace mock stays only for
+// requireWorkspaceMember (W7) in case shared middleware still reads it.
+jest.mock('../../../identity', () => ({
+    users: { findById: jest.fn(), findManyByIds: jest.fn(), update: jest.fn(), findByEmail: jest.fn() },
+    workspaces: {
+        findById: jest.fn(), update: jest.fn(), remove: jest.fn(), addMember: jest.fn(), updateMember: jest.fn(),
+        removeMember: jest.fn(), membership: jest.fn(), memberWorkspaceIds: jest.fn(),
+    },
+}));
+jest.mock('../../../identity/queries/workspaces', () => ({
+    membershipsForUser: jest.fn(), clearPersonalWorkspace: jest.fn(), countCreatedBy: jest.fn(),
+    findByNameForCreator: jest.fn(), findByNameForMember: jest.fn(), listByCompany: jest.fn(),
+}));
+jest.mock('../../../identity/hydrate', () => ({ ...jest.requireActual('../../../identity/hydrate'), hydrate: jest.fn(async (d) => d) }));
+jest.mock('../../../../models/Workspace', () => ({ findById: jest.fn(), findOne: jest.fn() }));
 jest.mock('../../channels/channel.model.js', () => ({ updateMany: jest.fn(), deleteMany: jest.fn() }));
 jest.mock('../../../modules/messages/message.model.js', () => ({ deleteMany: jest.fn() }));
 jest.mock('../../../../models/DMSession', () => ({ updateMany: jest.fn(), deleteMany: jest.fn() }));
@@ -14,7 +27,7 @@ jest.mock('../../../../models/Task', () => ({ deleteMany: jest.fn() }));
 jest.mock('../../../../models/Note', () => ({ deleteMany: jest.fn() }));
 jest.mock('../../../../models/Update', () => ({ deleteMany: jest.fn() }));
 jest.mock('../../../../models/Favorite', () => ({ deleteMany: jest.fn() }));
-jest.mock('../../../../models/Invite', () => ({ deleteMany: jest.fn() }));
+jest.mock('../../../identity/queries/auth', () => ({ invites: { deleteByWorkspace: jest.fn(async () => ({ deletedCount: 0 })) } }));
 jest.mock('../../../../utils/sendEmail', () => jest.fn());
 jest.mock('../../../modules/conversations/conversationKeys.service', () => ({}));
 jest.mock('../../../modules/messages/messages.service', () => ({}));
@@ -24,7 +37,8 @@ jest.mock('../../developer/bot.model', () => ({ updateMany: jest.fn() }));
 jest.mock('../../integrations/webhook.model', () => ({ updateMany: jest.fn() }));
 
 const Workspace = require('../../../../models/Workspace');
-const User = require('../../../../models/User');
+const identity = require('../../../identity');
+const wsQueries = require('../../../identity/queries/workspaces');
 const Channel = require('../../channels/channel.model.js');
 const ApiKey = require('../../developer/apiKey.model');
 const Bot = require('../../developer/bot.model');
@@ -54,8 +68,6 @@ function makeWs() {
         _id: WS, name: 'W', company: null, rules: '', icon: 'x', description: '',
         settings: { allowMemberInvite: true, allowMemberChannelCreation: true, ai: { enabled: true } },
         members,
-        save: jest.fn().mockResolvedValue(true),
-        markModified: jest.fn(),
     };
 }
 
@@ -75,8 +87,16 @@ const bodyOf = (res) => res.json.mock.calls[0][0];
 
 let ws;
 beforeEach(() => {
+    jest.clearAllMocks();
     ws = makeWs();
-    Workspace.findById.mockImplementation(() => Promise.resolve(ws));
+    identity.workspaces.findById.mockImplementation(() => Promise.resolve(ws));
+    // update applies the patch to the in-memory workspace, like the repository returns the new row.
+    identity.workspaces.update.mockImplementation(async (_id, patch) => {
+        for (const [k, v] of Object.entries(patch)) {
+            if (v && typeof v === 'object' && v.$merge) { const { $merge: _m, ...rest } = v; ws[k] = { ...(ws[k] || {}), ...rest }; } else ws[k] = v;
+        }
+        return ws;
+    });
 });
 
 describe('W1 updateWorkspace', () => {
@@ -89,7 +109,8 @@ describe('W1 updateWorkspace', () => {
         expect(ws.settings.allowMemberInvite).toBe(false);
         expect(ws.settings.allowMemberChannelCreation).toBe(false);
         expect(bodyOf(res).workspace.settings).not.toHaveProperty('ai');
-        expect(ws.save).toHaveBeenCalled();
+        expect(ws.settings.ai).toEqual({ enabled: true }); // merged, not replaced
+        expect(identity.workspaces.update).toHaveBeenCalled();
     });
     test('rejects oversized rules, non-boolean settings and malformed ids with 400', async () => {
         for (const body of [{ rules: 'x'.repeat(5001) }, { settings: { allowMemberInvite: 'no' } }, { settings: 'bad' }]) {
@@ -101,7 +122,7 @@ describe('W1 updateWorkspace', () => {
         const res = mkRes();
         await ctrl.updateWorkspace(mkReq({ user: ADMIN, params: { id: 'nope' }, body: {} }), res);
         expect(statusOf(res)).toBe(400);
-        expect(ws.save).not.toHaveBeenCalled();
+        expect(identity.workspaces.update).not.toHaveBeenCalled();
     });
     test('plain members get 403', async () => {
         const res = mkRes();
@@ -109,9 +130,10 @@ describe('W1 updateWorkspace', () => {
         expect(statusOf(res)).toBe(403);
     });
     test('listMyWorkspaces returns rules, safe settings and active member count', async () => {
-        const populated = { _id: WS, name: 'W', rules: 'R', settings: ws.settings, members: ws.members, type: 'team' };
-        User.findById.mockReturnValue({ populate: () => Promise.resolve({ workspaces: [{ workspace: populated, role: 'member' }] }) });
-        Workspace.findById.mockReturnValue({ populate: () => ({ lean: () => Promise.resolve({ ...populated, createdBy: { _id: OWNER, username: 'o' } }) }) });
+        const row = { _id: WS, name: 'W', rules: 'R', settings: ws.settings, members: ws.members, type: 'team', createdBy: OWNER };
+        identity.users.findById.mockResolvedValue({ _id: ADMIN });
+        wsQueries.membershipsForUser.mockResolvedValue([{ workspace: row, role: 'admin', status: 'active' }]);
+        identity.users.findManyByIds.mockResolvedValue(new Map([[OWNER, { _id: OWNER, username: 'o' }]]));
         const res = mkRes();
         await ctrl.listMyWorkspaces(mkReq({ user: ADMIN }), res);
         const [w] = bodyOf(res).workspaces;
@@ -119,6 +141,7 @@ describe('W1 updateWorkspace', () => {
         expect(w.settings).toEqual({ allowMemberInvite: true, allowMemberChannelCreation: true });
         expect(w.memberCount).toBe(4);
         expect(w.role).toBe('admin');
+        expect(w.ownerName).toBe('o');
     });
 });
 
@@ -126,7 +149,7 @@ describe('W3 getWorkspaceMembers', () => {
     test('includes the caller with role and membershipStatus', async () => {
         const populated = makeWs();
         populated.members = populated.members.map(m => ({ ...m, user: { _id: m.user, username: 'u' + m.user.slice(-2), isOnline: false } }));
-        Workspace.findById.mockReturnValue({ populate: () => Promise.resolve(populated) });
+        identity.workspaces.findById.mockResolvedValue(populated);
         const res = mkRes();
         await ctrl.getWorkspaceMembers(mkReq({ user: MEMBER, params: { workspaceId: WS } }), res);
         const { members } = bodyOf(res);
@@ -148,13 +171,12 @@ describe('W4 leaveWorkspace', () => {
         await ctrl.leaveWorkspace(mkReq({ user: OUTSIDER, params: { id: WS } }), res);
         expect(statusOf(res)).toBe(403);
     });
-    test('member is removed from workspace, channels and User.workspaces', async () => {
+    test('member row is deleted and channel membership pulled', async () => {
         const res = mkRes();
         await ctrl.leaveWorkspace(mkReq({ user: MEMBER, params: { id: WS } }), res);
         expect(statusOf(res)).toBe(200);
-        expect(Workspace.updateOne).toHaveBeenCalledWith({ _id: WS }, { $pull: { members: { user: MEMBER } } });
+        expect(identity.workspaces.removeMember).toHaveBeenCalledWith(WS, MEMBER, { hard: true });
         expect(Channel.updateMany).toHaveBeenCalledWith({ workspace: WS }, { $pull: { members: { user: MEMBER }, admins: MEMBER } });
-        expect(User.updateOne).toHaveBeenCalledWith({ _id: MEMBER }, { $pull: { workspaces: { workspace: WS } } });
     });
 });
 
@@ -166,6 +188,8 @@ describe('W6 deleteWorkspace', () => {
         expect(ApiKey.updateMany).toHaveBeenCalledWith({ workspaceId: WS }, { $set: { isActive: false } });
         expect(Bot.updateMany).toHaveBeenCalledWith({ workspaceId: WS }, { $set: { isActive: false } });
         expect(Webhook.updateMany).toHaveBeenCalledWith({ workspaceId: WS }, expect.objectContaining({ $set: expect.objectContaining({ isActive: false }) }));
+        expect(wsQueries.clearPersonalWorkspace).toHaveBeenCalledWith(WS);
+        expect(identity.workspaces.remove).toHaveBeenCalledWith(WS);
     });
 });
 
@@ -193,6 +217,7 @@ describe('W2/W5 admin hierarchy', () => {
         expect(statusOf(res)).toBe(200);
         expect(req._to).toHaveBeenCalledWith(`user_${ADMIN2}`);
         expect(req._emit).toHaveBeenCalledWith('workspace:access-revoked', { workspaceId: WS, reason: 'suspended' });
+        expect(identity.workspaces.updateMember).toHaveBeenCalledWith(WS, ADMIN2, expect.objectContaining({ status: 'suspended', suspendedBy: OWNER }));
     });
 
     test('a suspended admin cannot act', async () => {
@@ -202,15 +227,12 @@ describe('W2/W5 admin hierarchy', () => {
         expect(statusOf(res)).toBe(403);
     });
 
-    test('changeRole updates User.workspaces and notifies the user', async () => {
+    test('changeRole updates the membership row and notifies the user', async () => {
         const req = mkReq({ user: ADMIN, params: { workspaceId: WS, userId: MEMBER }, body: { newRole: 'admin' } });
         const res = mkRes();
         await admin.changeRole(req, res);
         expect(statusOf(res)).toBe(200);
-        expect(User.updateOne).toHaveBeenCalledWith(
-            { _id: MEMBER, 'workspaces.workspace': WS },
-            { $set: { 'workspaces.$.role': 'admin' } }
-        );
+        expect(identity.workspaces.updateMember).toHaveBeenCalledWith(WS, MEMBER, { role: 'admin' });
         expect(req._to).toHaveBeenCalledWith(`user_${MEMBER}`);
         expect(req._emit).toHaveBeenCalledWith('workspace:role-updated', { workspaceId: WS, userId: MEMBER, role: 'admin' });
     });
@@ -221,6 +243,7 @@ describe('W2/W5 admin hierarchy', () => {
         await admin.removeMember(req, res);
         expect(statusOf(res)).toBe(200);
         expect(Channel.updateMany).toHaveBeenCalledWith({ workspace: WS }, { $pull: { members: { user: MEMBER }, admins: MEMBER } });
+        expect(identity.workspaces.removeMember).toHaveBeenCalledWith(WS, MEMBER, { hard: true });
         expect(req._emit).toHaveBeenCalledWith('workspace:access-revoked', { workspaceId: WS, reason: 'removed' });
     });
 
@@ -240,6 +263,8 @@ describe('W7 requireWorkspaceMember', () => {
         expect(bodyOf(res).message).toBeTruthy();
 
         Workspace.findOne.mockReturnValue({ lean: () => Promise.resolve(makeWs()) });
+        const w = makeWs();
+        identity.workspaces.membership.mockResolvedValue({ workspace: w, member: null, role: null, isAdmin: false });
         res = mkRes();
         await requireWorkspaceMember({ params: { workspaceId: WS }, user: { sub: SUSPENDED } }, res, next);
         expect(statusOf(res)).toBe(403);

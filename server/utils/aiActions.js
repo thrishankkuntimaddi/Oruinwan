@@ -12,10 +12,10 @@
 const mongoose = require('mongoose');
 const logger = require('./logger');
 const Channel = require('../src/features/channels/channel.model');
-const Workspace = require('../models/Workspace');
-const User = require('../models/User');
+const identity = require('../src/identity');
+const { hydrate, USER_MIN } = require('../src/identity/hydrate');
 const Note = require('../models/Note');
-const Task = require('../models/Task');
+const Tasks = require('../src/features/tasks/tasks.query');
 
 const TASK_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
 
@@ -25,7 +25,7 @@ const ioFrom = (ctx) => ctx.io || ctx.req?.app?.get?.('io') || null;
 
 async function membership(ctx) {
     if (!ctx.workspaceId) return { error: fail('No current workspace. Ask the user to open a workspace first.') };
-    const ws = await Workspace.findById(ctx.workspaceId).select('name members settings').lean();
+    const ws = await identity.workspaces.findById(ctx.workspaceId);
     if (!ws) return { error: fail('Workspace not found') };
     const me = (ws.members || []).find(m => String(m.user?._id || m.user) === String(ctx.userId) && m.status !== 'removed');
     if (!me) return { error: fail('You are not a member of this workspace') };
@@ -54,7 +54,7 @@ async function getWorkspaceMembers(_args, ctx) {
     const { ws, error } = await membership(ctx);
     if (error) return error;
     const ids = (ws.members || []).filter(m => m.status !== 'removed').map(m => m.user?._id || m.user);
-    const users = await User.find({ _id: { $in: ids } }).select('username email').lean();
+    const users = [...(await identity.users.findManyByIds(ids)).values()];
     const roleOf = new Map((ws.members || []).map(m => [String(m.user?._id || m.user), m.role]));
     return {
         success: true,
@@ -120,7 +120,7 @@ async function sendDirectMessage({ userId: recipientId, message }, ctx) {
         messageIv: enc.messageIv,
         isEncrypted: true,
     }, ioFrom(ctx));
-    const recipient = await User.findById(recipientId).select('username').lean();
+    const recipient = await identity.users.findById(recipientId);
     return { success: true, to: recipient?.username || String(recipientId), dmSessionId: String(dm._id), messageId: String(saved._id) };
 }
 
@@ -153,8 +153,8 @@ async function listMyTasks({ status, limit = 20 }, ctx) {
     if (error) return error;
     const q = { workspace: ctx.workspaceId, deleted: { $ne: true }, $or: [{ assignedTo: ctx.userId }, { createdBy: ctx.userId }] };
     if (status && TASK_STATUSES.includes(status)) q.status = status;
-    const tasks = await Task.find(q).sort({ dueDate: 1, updatedAt: -1 }).limit(Math.min(Number(limit) || 20, 50))
-        .select('title status priority dueDate assignedTo').populate('assignedTo', 'username').lean();
+    const tasks = await Tasks.find(q, { sort: { dueDate: 1, updatedAt: -1 }, limit: Math.min(Number(limit) || 20, 50), select: 'title status priority dueDate assignedTo' })
+        .then((rows) => hydrate(rows, { assignedTo: USER_MIN }));
     return {
         success: true,
         count: tasks.length,
@@ -166,7 +166,7 @@ async function updateTaskStatus({ taskId, status }, ctx) {
     if (!oid(taskId) || !TASK_STATUSES.includes(status)) return fail('taskId and a valid status are required');
     const { error } = await membership(ctx);
     if (error) return error;
-    const task = await Task.findOne({ _id: taskId, workspace: ctx.workspaceId }).select('_id').lean();
+    const task = await Tasks.findOne({ _id: taskId, workspace: ctx.workspaceId }, { select: '_id' });
     if (!task) return fail('Task not found in this workspace');
     const tasksService = require('../src/features/tasks/tasks.service');
     try {
@@ -225,7 +225,7 @@ async function searchWorkspace({ query }, ctx) {
     const [pages, notes, tasks] = await Promise.all([
         KnowledgePage ? KnowledgePage.find({ _id: { $in: refs }, $or: [{ title: regex }, { content: regex }] }).limit(5).select('title content').lean() : [],
         Note.find({ _id: { $in: refs }, $or: [{ title: regex }, { content: regex }] }).limit(5).select('title content').lean(),
-        Task.find({ _id: { $in: refs }, $or: [{ title: regex }, { description: regex }] }).limit(5).select('title status priority dueDate').lean(),
+        Tasks.find({ _id: { $in: refs }, $or: [{ title: regex }, { description: regex }] }, { limit: 5, select: 'title status priority dueDate' }),
     ]);
     const snippet = (s) => String(s || '').replace(/\s+/g, ' ').slice(0, 240);
     return {
@@ -248,7 +248,7 @@ async function scheduleMeeting({ title, startsAt, durationMinutes = 30, particip
     try { ScheduledMeeting = require('../src/models/ScheduledMeeting'); } catch { return fail('Scheduling is not available'); }
     const memberIds = new Set((ws.members || []).map(m => String(m.user?._id || m.user)));
     const participants = (Array.isArray(participantIds) ? participantIds : []).map(String).filter(id => memberIds.has(id));
-    const me = await User.findById(ctx.userId).select('companyId').lean();
+    const me = await identity.users.findById(ctx.userId);
     const meeting = await ScheduledMeeting.create({
         companyId: me?.companyId || null,
         workspaceId: ctx.workspaceId,

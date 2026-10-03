@@ -71,8 +71,8 @@ function wrapForUser(conversationKeyBytes, userPublicKeyPem) {
  * wire and readable by every member.
  */
 async function encryptForConversation(conversationId, conversationType, plaintext) {
-    const ConversationKey = require('../../../models/ConversationKey');
-    const doc = await ConversationKey.findByConversation(conversationId, conversationType);
+    const { conversationKeyDocs } = require('../../identity/queries/auth');
+    const doc = await conversationKeyDocs.findByConversation(conversationId, conversationType);
     if (!doc || !doc.workspaceEncryptedKey) {
         throw new Error('Conversation key unavailable for server-side encryption');
     }

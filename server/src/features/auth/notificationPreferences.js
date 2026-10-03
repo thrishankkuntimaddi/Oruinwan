@@ -28,8 +28,7 @@ function withDefaults(stored) {
 
 async function getNotificationPreferences(req, res) {
     try {
-        const User = require('../../../models/User');
-        const user = await User.findById(req.user.sub).select('preferences.notifications').lean();
+        const user = await require('../../identity').users.findById(req.user.sub);
         if (!user) return res.status(404).json({ message: 'User not found' });
         return res.json(withDefaults(user.preferences?.notifications));
     } catch (err) {
@@ -55,10 +54,7 @@ async function updateNotificationPreferences(req, res) {
         if (!Object.keys($set).length) {
             return res.status(400).json({ message: `Provide at least one of: ${FIELDS.join(', ')}` });
         }
-        const User = require('../../../models/User');
-        const user = await User.findByIdAndUpdate(req.user.sub, { $set }, { new: true })
-            .select('preferences.notifications')
-            .lean();
+        const user = await require('../../identity/queries/auth').setUserPaths(req.user.sub, $set);
         if (!user) return res.status(404).json({ message: 'User not found' });
         return res.json(withDefaults(user.preferences?.notifications));
     } catch (err) {

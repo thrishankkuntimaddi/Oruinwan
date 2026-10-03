@@ -1,5 +1,26 @@
 const Task = require('../../../models/Task');
 const logger = require('../../../utils/logger');
+const { scheduleJob } = require('../../shared/jobs/scheduler');
+const { tasksStore } = require('./tasks.store');
+
+// Storage for the generator: MongoDB by default, PostgreSQL with TASKS_STORE=pg.
+const store = {
+    findDue(now) {
+        if (tasksStore() === 'pg') return require('./tasks.repository').findRecurringDue(now);
+        return Task.find({ 'recurring.isRecurring': true, 'recurring.nextDue': { $lte: now }, deleted: false }).lean();
+    },
+    async create(data) {
+        if (tasksStore() === 'pg') {
+            const repo = require('./tasks.repository');
+            return repo.insert({ ...data, issueKey: data.workspace ? await repo.nextIssueKey(data.workspace) : null });
+        }
+        return new Task(data).save();
+    },
+    setNextDue(task, nextDue) {
+        if (tasksStore() === 'pg') return require('./tasks.repository').update(task._id, { recurring: { ...task.recurring, nextDue } });
+        return Task.findByIdAndUpdate(task._id, { 'recurring.nextDue': nextDue });
+    },
+};
 
 async function runRecurringTaskJob() {
     logger.info('[TASKS_CRON] Running recurring task generator...');
@@ -7,17 +28,13 @@ async function runRecurringTaskJob() {
 
     try {
         
-        const recurringTasks = await Task.find({
-            'recurring.isRecurring': true,
-            'recurring.nextDue': { $lte: now },
-            deleted: false
-        }).lean();
+        const recurringTasks = await store.findDue(now);
 
         let count = 0;
         for (const task of recurringTasks) {
             try {
                 
-                const newTask = new Task({
+                await store.create({
                     company: task.company,
                     workspace: task.workspace,
                     project: task.project,
@@ -42,21 +59,20 @@ async function runRecurringTaskJob() {
                         nextDue: null
                     }
                 });
-                await newTask.save();
 
                 
                 const intervalDays = task.recurring.interval || 1;
                 let nextDue;
                 if (task.recurring.pattern === 'daily') {
-                    nextDue = new Date(task.recurring.nextDue.getTime() + intervalDays * 86400000);
+                    nextDue = new Date(new Date(task.recurring.nextDue).getTime() + intervalDays * 86400000);
                 } else if (task.recurring.pattern === 'weekly') {
-                    nextDue = new Date(task.recurring.nextDue.getTime() + 7 * 86400000);
+                    nextDue = new Date(new Date(task.recurring.nextDue).getTime() + 7 * 86400000);
                 } else {
                     
-                    nextDue = new Date(task.recurring.nextDue.getTime() + intervalDays * 86400000);
+                    nextDue = new Date(new Date(task.recurring.nextDue).getTime() + intervalDays * 86400000);
                 }
 
-                await Task.findByIdAndUpdate(task._id, { 'recurring.nextDue': nextDue });
+                await store.setNextDue(task, nextDue);
                 count++;
             } catch (taskErr) {
                 logger.error(`[TASKS_CRON] Error processing task ${task._id}:`, taskErr.message);
@@ -68,12 +84,14 @@ async function runRecurringTaskJob() {
     }
 }
 
+/** Generates the next occurrence of recurring tasks. One run per day fleet-wide. */
 function startRecurringTasksCron() {
     logger.info('[TASKS_CRON] Recurring task generator scheduled (runs every 24h).');
-    
-    runRecurringTaskJob();
-    
-    setInterval(runRecurringTaskJob, 24 * 60 * 60 * 1000);
+    return scheduleJob({
+        name: 'recurring-tasks',
+        intervalMs: 24 * 60 * 60 * 1000,
+        run: runRecurringTaskJob,
+    });
 }
 
-module.exports = { startRecurringTasksCron };
+module.exports = { startRecurringTasksCron, runRecurringTaskJob };

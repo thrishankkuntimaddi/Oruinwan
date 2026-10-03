@@ -1,5 +1,3 @@
-const _Workspace = require('../../../models/Workspace');
-
 const taskPermissionsLegacy = require('../../../utils/taskPermissions');
 
 async function isWorkspaceManager(userId, workspaceId) {

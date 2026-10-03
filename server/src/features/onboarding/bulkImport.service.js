@@ -2,9 +2,7 @@ const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
-const User = require('../../../models/User');
-const Company = require('../../../models/Company');
-const Department = require('../../../models/Department');
+const org = require('../../identity/queries/org');
 const BulkOnboardingJob = require('./BulkOnboardingJob');
 const { onboardIndividual, ASSIGNABLE_ROLES } = require('./onboarding.service');
 const sendEmail = require('../../../utils/sendEmail');
@@ -52,10 +50,7 @@ async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPa
 }
 
 async function _resolveDeptMap(companyId) {
-    const depts = await Department.find({
-        company: companyId,
-        isActive: true,
-    }).select('_id name').lean();
+    const depts = await org.departments.find({ company: companyId, isActive: true }, { members: false });
 
     return new Map(depts.map(d => [d.name.toLowerCase().trim(), d._id.toString()]));
 }
@@ -137,7 +132,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
         );
 
         
-        const company = await Company.findById(companyId).select('name').lean();
+        const company = await org.companies.findOne({ _id: companyId }, { admins: false });
         const companyName = company?.name || 'your company';
 
         for (let i = 0; i < rows.length; i += BATCH_SIZE) {

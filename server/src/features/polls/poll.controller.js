@@ -1,7 +1,18 @@
 const logger = require('../../../utils/logger');
 const Poll = require("./poll.model.js");
 const Channel = require("../channels/channel.model.js");
-const _User = require("../../../models/User");
+const { hydrate } = require("../../identity/hydrate");
+
+const CREATOR = { createdBy: { type: 'user', fields: ['username', 'email', 'profilePicture'] } };
+
+/** Poll(s) as JSON (what res.json sent before) with createdBy filled in from PostgreSQL. */
+async function forClient(pollOrPolls) {
+    const plain = Array.isArray(pollOrPolls)
+        ? pollOrPolls.map(p => (p.toJSON ? p.toJSON() : p))
+        : (pollOrPolls.toJSON ? pollOrPolls.toJSON() : pollOrPolls);
+    await hydrate(plain, CREATOR);
+    return plain;
+}
 
 exports.createPoll = async (req, res) => {
     logger.info('🔄 [POLLS:MODULAR] Function invoked: createPoll');
@@ -48,9 +59,8 @@ exports.createPoll = async (req, res) => {
         await poll.save();
 
         
-        await poll.populate('createdBy', 'username email profilePicture');
 
-        res.status(201).json({ poll });
+        res.status(201).json({ poll: await forClient(poll) });
     } catch (err) {
         logger.error("Error creating poll:", err);
         res.status(500).json({ error: "Failed to create poll" });
@@ -63,8 +73,7 @@ exports.getPollById = async (req, res) => {
         const { pollId } = req.params;
         const userId = req.user.sub;
 
-        const poll = await Poll.findById(pollId)
-            .populate('createdBy', 'username email profilePicture');
+        const poll = await Poll.findById(pollId);
 
         if (!poll) {
             return res.status(404).json({ error: "Poll not found" });
@@ -76,7 +85,7 @@ exports.getPollById = async (req, res) => {
             return res.status(403).json({ error: "You must be a channel member to view this poll" });
         }
 
-        res.json({ poll });
+        res.json({ poll: await forClient(poll) });
     } catch (err) {
         logger.error("Error fetching poll:", err);
         res.status(500).json({ error: "Failed to fetch poll" });
@@ -100,10 +109,9 @@ exports.getPollsByChannel = async (req, res) => {
         }
 
         const polls = await Poll.find({ channel: channelId, isActive: true })
-            .populate('createdBy', 'username email profilePicture')
             .sort({ createdAt: -1 });
 
-        res.json({ polls });
+        res.json({ polls: await forClient(polls) });
     } catch (err) {
         logger.error("Error fetching polls:", err);
         res.status(500).json({ error: "Failed to fetch polls" });
@@ -166,9 +174,8 @@ exports.vote = async (req, res) => {
         await poll.save();
 
         
-        await poll.populate('createdBy', 'username email profilePicture');
 
-        res.json({ poll });
+        res.json({ poll: await forClient(poll) });
     } catch (err) {
         logger.error("Error voting on poll:", err);
         res.status(500).json({ error: "Failed to vote" });
@@ -226,9 +233,8 @@ exports.closePoll = async (req, res) => {
 
         poll.isActive = false;
         await poll.save();
-        await poll.populate('createdBy', 'username email profilePicture');
 
-        res.json({ poll });
+        res.json({ poll: await forClient(poll) });
     } catch (err) {
         logger.error("Error closing poll:", err);
         res.status(500).json({ error: "Failed to close poll" });

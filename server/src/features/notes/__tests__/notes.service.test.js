@@ -6,8 +6,8 @@ jest.mock('../../../modules/uploads/upload.service', () => ({ deleteObject: jest
 
 const mongoose = require('mongoose');
 const Note = require('../../../../models/Note');
-const Workspace = require('../../../../models/Workspace');
-const User = require('../../../../models/User');
+// Identity is in PostgreSQL: spy on the repositories (shared module objects).
+const identity = require('../../../identity');
 const notificationService = require('../../../modules/notifications/notificationService');
 const uploadService = require('../../../modules/uploads/upload.service');
 const service = require('../notes.service');
@@ -34,7 +34,9 @@ const workspace = {
 
 function chain(value) {
     const q = {
-        populate: () => q, select: () => q, sort: () => q, lean: () => q,
+        // lean() hands back a plain copy, like MongoDB does, so hydrate() never touches the document.
+        populate: () => q, select: () => q, sort: () => q,
+        lean: () => chain(value && typeof value.toObject === 'function' ? value.toObject() : value),
         then: (res, rej) => Promise.resolve(value).then(res, rej),
         catch: (rej) => Promise.resolve(value).catch(rej),
     };
@@ -50,10 +52,11 @@ function makeNote(fields = {}) {
 let findSpy;
 beforeEach(() => {
     jest.restoreAllMocks();
-    jest.spyOn(Workspace, 'findOne').mockImplementation(({ _id }) => chain(String(_id) === WS ? workspace : null));
-    jest.spyOn(Workspace, 'find').mockImplementation(() => chain([{ _id: WS }]));
+    jest.spyOn(identity.workspaces, 'findById').mockImplementation(async (id) => (String(id) === WS ? workspace : null));
+    jest.spyOn(identity.workspaces, 'memberWorkspaceIds').mockImplementation(async () => [WS]);
+    jest.spyOn(identity.users, 'findById').mockImplementation(async () => ({ _id: ALICE, username: 'alice' }));
+    jest.spyOn(identity.users, 'findManyByIds').mockImplementation(async () => new Map());
     findSpy = jest.spyOn(Note, 'find').mockImplementation(() => chain([]));
-    jest.spyOn(User, 'findById').mockImplementation(() => chain({ username: 'alice' }));
 });
 
 function withNote(doc) {

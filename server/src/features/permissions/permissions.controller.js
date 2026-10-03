@@ -1,7 +1,8 @@
 'use strict';
 
 const permissionsService = require('./permissions.service');
-const WorkspacePermission = require('../../models/WorkspacePermission');
+const { workspacePermissions } = require('../../identity');
+const { hydrate } = require('../../identity/hydrate');
 const AuditLog = require('../../../models/AuditLog');
 const { handleError } = require('../../../utils/responseHelpers');
 const { scopedCompanyId } = require('../../shared/middleware/requireCompanyAdmin');
@@ -36,7 +37,7 @@ exports.updateMatrix = async (req, res) => {
         // Admins manage the roles below them; only the owner changes what admins may do.
         const touchesPrivileged = Object.keys(updates).some(role => ['owner', 'admin'].includes(role));
         if (touchesPrivileged && !req.isPlatformAdmin) {
-            const actor = await require('../../../models/User').findById(userId).select('companyRole coOwnerOf companyId').lean();
+            const actor = await require('../../identity').users.findById(userId);
             const isOwner = actor?.companyRole === 'owner'
                 || (actor?.coOwnerOf && String(actor.coOwnerOf) === String(actor.companyId));
             if (!isOwner) {
@@ -61,7 +62,7 @@ exports.updateMatrix = async (req, res) => {
 exports.getFeatureToggles = async (req, res) => {
     try {
         const { workspaceId } = req.params;
-        let perms = await WorkspacePermission.findOne({ workspace: workspaceId }).lean();
+        let perms = await workspacePermissions.get(workspaceId);
 
         if (!perms) {
             
@@ -102,11 +103,8 @@ exports.updateFeatureToggles = async (req, res) => {
         if (invitePermission) updateData.invitePermission = invitePermission;
         if (channelCreationPermission) updateData.channelCreationPermission = channelCreationPermission;
 
-        const updated = await WorkspacePermission.findOneAndUpdate(
-            { workspace: workspaceId },
-            { $set: updateData },
-            { upsert: true, new: true, runValidators: true }
-        );
+        if (companyId) updateData.company = String(companyId);
+        const updated = await workspacePermissions.upsert(workspaceId, updateData);
 
         
         await AuditLog.create({
@@ -161,8 +159,8 @@ exports.getAuditLogs = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(cap)
-                .populate('userId', 'username email profilePicture')
-                .lean(),
+                .lean()
+                .then((rows) => hydrate(rows, { userId: { type: 'user', fields: ['username', 'email', 'profilePicture'] } })),
             AuditLog.countDocuments(filter)
         ]);
 

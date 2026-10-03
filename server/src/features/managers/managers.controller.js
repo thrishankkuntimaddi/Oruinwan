@@ -1,9 +1,9 @@
 const logger = require('../../../utils/logger');
 const mongoose = require('mongoose');
-const User = require("../../../models/User");
-const Workspace = require("../../../models/Workspace");
-const Department = require("../../../models/Department");
-const Task = require("../../../models/Task");
+const identity = require("../../identity");
+const org = require("../../identity/queries/org");
+const { hydrate } = require("../../identity/hydrate");
+const Tasks = require("../tasks/tasks.query");
 const Channel = require("../channels/channel.model.js");
 
 /*
@@ -23,7 +23,7 @@ const deny = (status, message) => Object.assign(new Error(message), { status });
 /** Department in the caller's company that the caller may manage. */
 async function scopedDepartment(req, departmentId) {
     if (!isValidId(String(departmentId || ''))) throw deny(400, 'Invalid department id');
-    const dept = await Department.findOne({ _id: departmentId, company: req.companyId });
+    const dept = await org.departments.findOne({ _id: departmentId, company: req.companyId });
     if (!dept) throw deny(404, 'Department not found');
     if (!isCompanyAdmin(req) && !managedIds(req).includes(String(dept._id))) {
         throw deny(403, "You don't manage this department");
@@ -34,7 +34,7 @@ async function scopedDepartment(req, departmentId) {
 /** Workspace in the caller's company that the caller may manage. */
 async function scopedWorkspace(req, workspaceId) {
     if (!isValidId(String(workspaceId || ''))) throw deny(400, 'Invalid workspace id');
-    const ws = await Workspace.findOne({ _id: workspaceId, company: req.companyId });
+    const ws = await org.workspaces.findOne({ _id: workspaceId, company: req.companyId });
     if (!ws) throw deny(404, 'Workspace not found');
     if (isCompanyAdmin(req)) return ws;
     const me = String(req.user.sub);
@@ -49,7 +49,7 @@ async function companyUserIds(req, ids) {
     const list = (Array.isArray(ids) ? ids : [ids]).filter(Boolean).map(String);
     if (list.some((id) => !isValidId(id))) throw deny(400, 'Invalid user id');
     if (list.length === 0) return [];
-    const found = await User.find({ _id: { $in: list }, companyId: req.companyId }).select('_id').lean();
+    const found = await org.users.find({ _id: { $in: list }, companyId: req.companyId }, { select: '_id' });
     if (found.length !== new Set(list).size) throw deny(403, 'One or more users are not in your company');
     return found.map((u) => u._id);
 }
@@ -60,31 +60,36 @@ function fail(res, error, label) {
     return res.status(500).json({ message: 'Server error' });
 }
 
+/** The caller's managed departments (in this company) and the workspaces they administer. */
+async function managerReach(req) {
+    const me = await org.userWithOrg(req.user.sub);
+    if (!me) return null;
+    const deptIds = me.managedDepartments || [];
+    const departments = deptIds.length ? await org.departments.find({ _id: { $in: deptIds }, company: req.companyId }) : [];
+    const adminWsIds = (me.workspaces || []).filter((w) => w.role === 'owner' || w.role === 'admin').map((w) => w.workspace);
+    const workspaces = adminWsIds.length ? await org.workspaces.find({ _id: { $in: adminWsIds }, company: req.companyId }) : [];
+    return { me, departments, workspaces };
+}
+
 exports.getManagerScope = async (req, res) => {
     try {
-        const user = await User.findById(req.user.sub)
-            .populate({ path: 'managedDepartments', select: 'name description members company', match: { company: req.companyId } })
-            .populate('workspaces.workspace', 'name description members company')
-            .lean();
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const reach = await managerReach(req);
+        if (!reach) return res.status(404).json({ message: 'User not found' });
 
-        const managedDepts = (user.managedDepartments || []).filter(Boolean);
-
-        const managedWorkspaces = (user.workspaces || [])
-            .filter(w => (w.role === 'owner' || w.role === 'admin') && w.workspace && String(w.workspace.company) === String(req.companyId))
-            .map(w => w.workspace);
+        const managedDepts = reach.departments.map((d) => ({ _id: d._id, name: d.name, description: d.description, members: d.members, company: d.company }));
+        const managedWorkspaces = reach.workspaces.map((w) => ({ _id: w._id, name: w.name, description: w.description, members: w.members, company: w.company }));
 
         let companyContact = null;
-        const Company = require('../../../models/Company');
-        const company = await Company.findById(req.companyId)
-            .populate('admins.user', 'username email profilePicture')
-            .lean();
+        const company = await org.companies.findOne({ _id: req.companyId });
         if (company && company.admins && company.admins.length > 0) {
             const admin = company.admins.find(a => a.role === 'owner') || company.admins[0];
-            if (admin && admin.user) companyContact = admin.user;
+            if (admin && admin.user) {
+                await hydrate(admin, { user: { type: 'user', fields: ['username', 'email', 'profilePicture'] } });
+                companyContact = admin.user;
+            }
         }
 
-        const chatWorkspaceId = user.workspaces?.[0]?.workspace?._id || null;
+        const chatWorkspaceId = reach.me.workspaces?.[0]?.workspace || null;
 
         res.json({
             departments: managedDepts,
@@ -115,7 +120,7 @@ exports.getManagerMetrics = async (req, res) => {
         const { scopeType, scopeId } = req.query;
         const { memberIds, workspaceId } = await scopeMembers(req, scopeType, scopeId);
 
-        const activeUsers = await User.countDocuments({
+        const activeUsers = await org.users.count({
             _id: { $in: memberIds },
             companyId: req.companyId,
             $or: [
@@ -129,8 +134,8 @@ exports.getManagerMetrics = async (req, res) => {
         else taskQuery.assignedTo = { $in: memberIds };
 
         const [openTasks, overdueTasks] = await Promise.all([
-            Task.countDocuments(taskQuery),
-            Task.countDocuments({ ...taskQuery, dueDate: { $lt: new Date() } }),
+            Tasks.countDocuments(taskQuery),
+            Tasks.countDocuments({ ...taskQuery, dueDate: { $lt: new Date() } }),
         ]);
 
         res.json({ teamSize: memberIds.length, activeUsers, openTasks, overdueTasks });
@@ -148,11 +153,10 @@ exports.getManagerTasks = async (req, res) => {
         if (workspaceId) query.workspace = workspaceId;
         else query.assignedTo = { $in: memberIds };
 
-        const tasks = await Task.find(query)
-            .populate('assignedTo', 'username profilePicture')
-            .populate('createdBy', 'username')
-            .sort({ dueDate: 1, priority: -1 })
-            .limit(50);
+        const docs = await Tasks.find(query, { sort: { dueDate: 1, priority: -1 }, limit: 50 });
+        // Users live in PostgreSQL: expand assignees and creator after the Mongo read.
+        const tasks = docs.map((d) => (typeof d.toJSON === 'function' ? d.toJSON() : d));
+        await hydrate(tasks, { assignedTo: { type: 'user', fields: ['username', 'profilePicture'] }, createdBy: { type: 'user', fields: ['username'] } });
 
         res.json(tasks);
     } catch (error) {
@@ -177,33 +181,28 @@ exports.getActivitySummary = async (req, res) => {
 
 exports.getAllocations = async (req, res) => {
     try {
-        const user = await User.findById(req.user.sub)
-            .populate({
-                path: 'managedDepartments',
-                match: { company: req.companyId },
-                populate: { path: 'members', select: 'username email profilePicture isOnline companyId' }
-            })
-            .populate({ path: 'workspaces.workspace', select: 'name members company' });
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const reach = await managerReach(req);
+        if (!reach) return res.status(404).json({ message: 'User not found' });
 
         const members = [];
         const seen = new Set();
-        (user.managedDepartments || []).filter(Boolean).forEach(dept => {
-            (dept.members || []).forEach(m => {
-                if (!m || String(m.companyId) !== String(req.companyId) || seen.has(String(m._id))) return;
+        const allIds = [...new Set(reach.departments.flatMap((d) => d.members || []))];
+        const people = new Map((allIds.length ? await org.users.find({ _id: { $in: allIds }, companyId: req.companyId }) : []).map((u) => [String(u._id), u]));
+        reach.departments.forEach(dept => {
+            (dept.members || []).forEach(id => {
+                const m = people.get(String(id));
+                if (!m || seen.has(String(m._id))) return;
                 seen.add(String(m._id));
                 members.push({ _id: m._id, username: m.username, email: m.email, profilePicture: m.profilePicture, isOnline: m.isOnline, department: dept.name });
             });
         });
 
-        const managedWorkspaces = (user.workspaces || [])
-            .filter(w => (w.role === 'owner' || w.role === 'admin') && w.workspace && String(w.workspace.company) === String(req.companyId))
-            .map(w => w.workspace);
+        const managedWorkspaces = reach.workspaces;
 
         const allocationMatrix = {};
         members.forEach(m => {
             allocationMatrix[m._id] = managedWorkspaces
-                .filter(ws => (ws.members || []).some(wm => String(wm.user) === String(m._id)))
+                .filter(ws => (ws.members || []).some(wm => wm.status === 'active' && String(wm.user) === String(m._id)))
                 .map(ws => ws._id);
         });
 
@@ -226,17 +225,14 @@ exports.updateWorkspaceAllocation = async (req, res) => {
         const [targetId] = await companyUserIds(req, [userId]);
 
         if (action === 'add') {
-            if (workspace.members.some(m => String(m.user) === String(targetId))) {
+            if (workspace.members.some(m => m.status === 'active' && String(m.user) === String(targetId))) {
                 return res.json({ message: "Already a member" });
             }
-            workspace.members.push({ user: targetId, role: 'member', joinedAt: new Date() });
-            await User.findByIdAndUpdate(targetId, { $push: { workspaces: { workspace: workspace._id, role: 'member' } } });
+            await identity.workspaces.addMember(workspace._id, targetId, { role: 'member' });
         } else {
-            workspace.members = workspace.members.filter(m => String(m.user) !== String(targetId));
-            await User.findByIdAndUpdate(targetId, { $pull: { workspaces: { workspace: workspace._id } } });
+            await identity.workspaces.removeMember(workspace._id, targetId, { by: req.user.sub });
         }
 
-        await workspace.save();
         res.json({ success: true, message: `User ${action === 'add' ? 'added' : 'removed'} successfully` });
     } catch (error) {
         return fail(res, error, 'UPDATE ALLOCATION ERROR:');
@@ -250,12 +246,10 @@ exports.addMemberToDepartment = async (req, res) => {
         const dept = await scopedDepartment(req, departmentId);
 
         // Only people already in this company can be added.
-        const userToAdd = await User.findOne({ email: email.toLowerCase().trim(), companyId: req.companyId });
+        const userToAdd = await org.users.findOne({ email: email.toLowerCase().trim(), companyId: req.companyId });
         if (!userToAdd) return res.status(404).json({ message: "No one in your company has that email" });
 
-        await Department.findByIdAndUpdate(dept._id, { $addToSet: { members: userToAdd._id } });
-        userToAdd.departments.addToSet(dept._id);
-        await userToAdd.save();
+        await org.addDepartmentMembers(dept._id, [userToAdd._id], 'member');
 
         res.json({
             success: true,
@@ -274,7 +268,7 @@ exports.createTask = async (req, res) => {
         const workspace = await scopedWorkspace(req, workspaceId);
         const assignees = await companyUserIds(req, assignedTo || []);
 
-        const task = new Task({
+        const task = await Tasks.create({
             title,
             description,
             priority,
@@ -286,10 +280,10 @@ exports.createTask = async (req, res) => {
             status: 'todo'
         });
 
-        await task.save();
-        await task.populate('assignedTo', 'username profilePicture');
+        const out = { ...task };
+        await hydrate(out, { assignedTo: { type: 'user', fields: ['username', 'profilePicture'] } });
 
-        res.status(201).json(task);
+        res.status(201).json(out);
     } catch (error) {
         return fail(res, error, 'CREATE MANAGER TASK ERROR:');
     }

@@ -1,4 +1,4 @@
-const User = require('../../models/User');
+const identity = require('../identity');
 const DMSession = require('../../models/DMSession');
 const logger = require('../../utils/logger');
 const registerChatHandlers = require('./chatHandlers');
@@ -55,7 +55,7 @@ function registerSocketConnection(io) {
     (async () => {
       let dbUser = null;
       try {
-        dbUser = await User.findById(socketUserId).select('companyId roles').lean();
+        dbUser = await identity.users.findById(socketUserId);
       } catch (err) {
         logger.error({ err }, 'Error loading user for socket bootstrap');
       }

@@ -27,15 +27,33 @@ jest.mock('../integration.bot', () => ({
   upsertCard: jest.fn(async () => null),
   getBotUser: jest.fn(async (p) => ({ _id: `bot-${p}` })),
 }));
+// Workspaces and users live in PostgreSQL; the repositories read the fixtures below.
+jest.mock('../../../identity/workspaces.repo', () => ({
+  ...jest.requireActual('../../../identity/workspaces.repo'),
+  findById: jest.fn(async (id) => (String(id) === '64b000000000000000000001' ? mockWorkspace() : null)),
+  findManyByIds: jest.fn(async () => []),
+}));
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  findById: jest.fn(async (id) => ({ _id: String(id), username: 'bob' })),
+  findManyByIds: jest.fn(async (ids) => new Map(ids.map((id) => [id, { _id: id, username: 'bob' }]))),
+}));
+function mockWorkspace() {
+  return {
+    _id: '64b000000000000000000001', name: 'Acme', isActive: true, isArchived: false, company: null,
+    members: [
+      { user: '64b0000000000000000000a1', role: 'owner', status: 'active' },
+      { user: '64b0000000000000000000b1', role: 'member', status: 'active' },
+    ],
+  };
+}
 jest.mock('../../tasks/tasks.service', () => ({ applyExternalUpdate: jest.fn(async () => ({ statusChanged: false })) }));
 
 const axios = require('axios');
 const gateway = require('../../../../../ai/api/ai.gateway');
 const Integration = require('../integration.model');
-const Workspace = require('../../../../models/Workspace');
 const Channel = require('../../channels/channel.model.js');
 const Task = require('../../../../models/Task');
-const User = require('../../../../models/User');
 const Message = require('../../../modules/messages/message.model.js');
 const bot = require('../integration.bot');
 const tasksService = require('../../tasks/tasks.service');
@@ -65,8 +83,6 @@ beforeEach(() => {
   review.resetLimits();
   zoomClient.clearTokens();
   const chain = (value) => ({ lean: async () => value, select: () => ({ lean: async () => value }) });
-  jest.spyOn(Workspace, 'findOne').mockImplementation((q) => chain(String(q._id) === WS ? workspaceDoc : null));
-  jest.spyOn(Workspace, 'findById').mockImplementation((id) => chain(String(id) === WS ? workspaceDoc : null));
   jest.spyOn(Integration, 'findOne').mockImplementation((q) => ({ lean: async () => (String(q.workspaceId) === WS ? store[q.type] || null : null) }));
   jest.spyOn(Integration, 'findOneAndUpdate').mockImplementation((q, update) => ({
     lean: async () => {
@@ -80,7 +96,6 @@ beforeEach(() => {
   jest.spyOn(Task, 'find').mockImplementation((q) => ({
     select: () => ({ lean: async () => (q.issueKey && q.issueKey.$in.includes('ABC-7') ? [{ _id: TASK_ID, issueKey: 'ABC-7', title: 'Login', status: 'review', visibility: 'workspace', createdBy: OWNER, assignedTo: [] }] : []) }),
   }));
-  jest.spyOn(User, 'findById').mockImplementation(() => ({ select: () => ({ lean: async () => ({ username: 'bob' }) }) }));
   jest.spyOn(Message, 'findOne').mockImplementation(() => ({
     select: () => ({ lean: async () => ({ _id: '64b0000000000000000000f1', channel: CHANNEL, workspace: WS, type: 'integration', integration: { taskIds: [] } }) }),
     sort: () => ({ select: () => ({ lean: async () => ({ _id: '64b0000000000000000000f1', channel: CHANNEL, workspace: WS, type: 'integration', integration: { taskIds: [] } }) }) }),

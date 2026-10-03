@@ -1,4 +1,6 @@
+const { hydrate, userSelect } = require('../../identity/hydrate');
 const logger = require('../../../utils/logger');
+const { replicaRead } = require('../../shared/db');
 const express = require('express');
 const { sendError } = require('../../shared/utils/httpError');
 const router = express.Router();
@@ -97,12 +99,12 @@ router.get('/audit-logs', ...gate, auditQueryValidation, async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [logs, total] = await Promise.all([
-            AuditLog.find(filter)
-                .populate('userId', 'username email profilePicture')
+            replicaRead(AuditLog.find(filter))
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
-                .lean(),
+                .lean()
+                .then((rows) => hydrate(rows, { userId: userSelect('username email profilePicture') })),
             AuditLog.countDocuments(filter),
         ]);
 
@@ -122,10 +124,10 @@ router.get('/audit-logs/export', ...gate, async (req, res) => {
     try {
         const { format = 'json' } = req.query;
 
-        const logs = await AuditLog.find({ companyId: req.companyId })
-            .populate('userId', 'username email')
-            .sort({ createdAt: -1 })
-            .lean();
+        const logs = await hydrate(
+            await replicaRead(AuditLog.find({ companyId: req.companyId })).sort({ createdAt: -1 }).lean(),
+            { userId: userSelect('username email') }
+        );
 
         if (format === 'csv') {
             const header = 'Timestamp,Actor,Action,Resource,ResourceId,Description,IP\n';

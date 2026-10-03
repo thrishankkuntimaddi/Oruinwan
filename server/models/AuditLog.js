@@ -61,4 +61,7 @@ AuditLogSchema.index({ resource: 1, resourceId: 1 });
 AuditLogSchema.index({ createdAt: -1 });
 AuditLogSchema.index({ severity: 1, category: 1, createdAt: -1 });
 
+// Mirrored into PostgreSQL (audit_log) while reads still come from MongoDB.
+AuditLogSchema.plugin(require('../src/shared/logStore').mirrorToPostgres, { kind: 'audit' });
+
 module.exports = mongoose.model("AuditLog", AuditLogSchema);

@@ -3,8 +3,9 @@ const prefService = require('../notificationPreferenceService');
 const pushService = require('../../../features/push/push.service');
 
 jest.mock('../notification.model');
-jest.mock('../../../../models/Workspace', () => ({ findOne: jest.fn() }));
-const Workspace = require('../../../../models/Workspace');
+// Workspaces live in PostgreSQL: the identity repository is mocked.
+jest.mock('../../../identity', () => ({ workspaces: { findById: jest.fn() } }));
+const identity = require('../../../identity');
 jest.mock('../notificationPreferenceService', () => ({ getUserPreferences: jest.fn() }));
 jest.mock('../../../features/push/push.service', () => ({ sendToUser: jest.fn().mockResolvedValue(undefined) }));
 
@@ -27,9 +28,9 @@ describe('notificationService.create', () => {
             toObject: () => ({ ...doc, _id: 'n1' }),
         }));
         prefService.getUserPreferences.mockResolvedValue({ message: true, task: true, push: true });
-        Workspace.findOne.mockReturnValue({ select: () => ({ lean: () => Promise.resolve({
+        identity.workspaces.findById.mockResolvedValue({
             _id: WS, members: ['u1', 'u2', 'u9'].map(user => ({ user, status: 'active' })),
-        }) }) });
+        });
     });
 
     it('stores, emits to the recipient room and pushes', async () => {

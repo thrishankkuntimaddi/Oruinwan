@@ -3,8 +3,7 @@
 const Message  = require('../../../modules/messages/message.model');
 const logger   = require('../../../../utils/logger');
 
-let TaskModel = null;
-try { TaskModel = require('../../../../models/Task'); } catch { TaskModel = null; }
+const Tasks = require('../../tasks/tasks.query');
 
 function daysAgo(n) {
     const d = new Date();
@@ -25,12 +24,11 @@ async function getProductivityInsights(workspaceId, days = 7) {
         }),
 
         
-        TaskModel
-            ? Promise.all([
-                TaskModel.countDocuments ? TaskModel.countDocuments({ workspaceId, createdAt: { $gte: since } }).catch(() => 0) : Promise.resolve(0),
-                TaskModel.countDocuments ? TaskModel.countDocuments({ workspaceId, status: { $in: ['done', 'completed'] }, updatedAt: { $gte: since } }).catch(() => 0) : Promise.resolve(0),
-              ])
-            : Promise.resolve([0, 0]),
+        // Tasks reference their workspace as `workspace` (the old `workspaceId` filter matched nothing).
+        Promise.all([
+            Tasks.countDocuments({ workspace: workspaceId, createdAt: { $gte: since } }).catch(() => 0),
+            Tasks.countDocuments({ workspace: workspaceId, status: { $in: ['done', 'completed'] }, updatedAt: { $gte: since } }).catch(() => 0),
+        ]),
 
         
         Message.distinct('sender', {

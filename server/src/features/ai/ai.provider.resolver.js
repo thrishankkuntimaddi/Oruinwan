@@ -11,7 +11,7 @@
  * SDK clients; `invalidate(workspaceId)` is called when settings change.
  */
 
-const Workspace = require('../../../models/Workspace');
+const identity = require('../../identity');
 const AIProvider = require('../integrations/ai-provider.model');
 const { createProvider, modelsFor } = require('../../../../ai/providers');
 const aiConfig = require('../../../../ai/config');
@@ -38,7 +38,7 @@ async function resolveForWorkspace(workspaceId) {
     let value = { provider: null, model: null, providerName: aiConfig.provider, source: 'default', enabled: true };
     try {
         if (workspaceId) {
-            const ws = await Workspace.findById(workspaceId).select('settings.ai').lean();
+            const ws = await identity.workspaces.findById(workspaceId);
             const ai = ws?.settings?.ai || {};
             value.enabled = ai.enabled !== false;
             if (ai.provider && ai.provider !== 'default') {

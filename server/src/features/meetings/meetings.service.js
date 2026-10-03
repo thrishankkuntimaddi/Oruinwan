@@ -3,17 +3,15 @@
 const ScheduledMeeting = require('../../models/ScheduledMeeting');
 const { summarizeDocument } = require('../ai/ai.summarizer.service');
 
-const POPULATE_CREATED_BY = { path: 'createdBy', select: 'username firstName lastName avatarUrl' };
-const POPULATE_PARTICIPANTS = { path: 'participants', select: 'username firstName lastName avatarUrl' };
-const POPULATE_ACTION_ASSIGNED = { path: 'actionItems.assignedTo', select: 'username firstName lastName avatarUrl' };
+// Users live in PostgreSQL: attach them with hydrate (Mongoose populate cannot reach them).
+const { hydrate } = require('../../identity/hydrate');
+
+const PERSON = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
+const FULL_REFS = { createdBy: PERSON, participants: PERSON, 'actionItems.assignedTo': PERSON };
 
 async function populateMeeting(meeting) {
-    return ScheduledMeeting
-        .findById(meeting._id)
-        .populate(POPULATE_CREATED_BY)
-        .populate(POPULATE_PARTICIPANTS)
-        .populate(POPULATE_ACTION_ASSIGNED)
-        .lean();
+    const doc = await ScheduledMeeting.findById(meeting._id).lean();
+    return doc ? hydrate(doc, FULL_REFS) : doc;
 }
 
 async function getMeetings({ workspaceId, userId, companyId, limit = 20, includeCompleted = true }) {
@@ -22,24 +20,20 @@ async function getMeetings({ workspaceId, userId, companyId, limit = 20, include
     if (!includeCompleted) {
         query.status = { $in: ['scheduled', 'live'] };
     }
-    return ScheduledMeeting
+    const meetings = await ScheduledMeeting
         .find(query)
         .sort({ startTime: -1 })
         .limit(Number(limit))
-        .populate(POPULATE_CREATED_BY)
         .lean();
+    return hydrate(meetings, { createdBy: PERSON });
 }
 
 async function getMeeting(meetingId, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
 
-    return ScheduledMeeting
-        .findOne(query)
-        .populate(POPULATE_CREATED_BY)
-        .populate(POPULATE_PARTICIPANTS)
-        .populate(POPULATE_ACTION_ASSIGNED)
-        .lean();
+    const doc = await ScheduledMeeting.findOne(query).lean();
+    return doc ? hydrate(doc, FULL_REFS) : doc;
 }
 
 async function joinMeeting(meetingId, userId, { companyId } = {}) {

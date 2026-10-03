@@ -20,9 +20,17 @@ jest.mock('../../tasks/tasks.shared', () => ({
   loadTaskForClient: jest.fn(async (id) => ({ _id: id })),
 }));
 
+// System bot accounts and message senders live in PostgreSQL.
+jest.mock('../../../identity/queries/security', () => ({
+  upsertSystemUser: jest.fn(async ({ username }) => ({ _id: '64b0000000000000000000f1', username })),
+}));
+jest.mock('../../../identity/users.repo', () => ({
+  ...jest.requireActual('../../../identity/users.repo'),
+  findManyByIds: jest.fn(async (ids) => new Map(ids.map((id) => [id, { _id: id, username: 'GitHub' }]))),
+}));
+
 const Message = require('../../../modules/messages/message.model.js');
 const Channel = require('../../channels/channel.model.js');
-const User = require('../../../../models/User');
 const Task = require('../../../../models/Task');
 const TaskActivity = require('../../../../models/TaskActivity');
 const messagesService = require('../../../modules/messages/messages.service');
@@ -54,7 +62,6 @@ let cards; // channel+url -> fake message document
 beforeEach(() => {
   cards = new Map();
   io = { emitted: [], to(room) { return { emit: (event, data) => io.emitted.push({ room, event, data }) }; } };
-  jest.spyOn(User, 'findOneAndUpdate').mockImplementation(() => ({ lean: () => Promise.resolve({ _id: BOT_ID, username: 'GitHub' }) }));
   jest.spyOn(Channel, 'findOne').mockImplementation((q) => ({
     select: () => ({ lean: async () => (String(q.workspace) === WS && [CH_WEB, CH_ALL].includes(String(q._id)) ? { _id: q._id, workspace: WS, company: null } : null) }),
   }));
@@ -65,7 +72,7 @@ beforeEach(() => {
     return msg;
   });
   jest.spyOn(Message, 'create').mockImplementation(async (doc) => ({ _id: 'reply', ...doc, populate: async () => {}, toObject() { return { ...doc }; } }));
-  jest.spyOn(Message, 'findByIdAndUpdate').mockImplementation(() => ({ populate: () => ({ lean: async () => ({ _id: 'card', replyCount: 1 }) }) }));
+  jest.spyOn(Message, 'findByIdAndUpdate').mockImplementation(() => ({ lean: async () => ({ _id: 'card', replyCount: 1 }) }));
   jest.spyOn(Message, 'find').mockImplementation(() => ({ select: () => ({ lean: async () => [...cards.values()].map(c => ({ _id: c._id, channel: c.channel, integration: c.integration })) }) }));
   jest.spyOn(Task, 'find').mockImplementation((q) => ({
     select: () => ({
