@@ -4,8 +4,8 @@
 /**
  * Starts the API server for the browser tests against a throwaway database.
  *
- *   1. Drops and re-seeds the E2E database (never the dev/prod one: the URI must
- *      name a database ending in "_e2e").
+ *   1. Drops and re-seeds the E2E databases, MongoDB and PostgreSQL (never the
+ *      dev/prod ones: both must name a database ending in "_e2e").
  *   2. Spawns server/server.js with a fixed, self-contained environment so the
  *      run does not depend on server/.env and cannot send email or reach Redis.
  *
@@ -16,6 +16,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { E2E } = require('./config');
 const { seed } = require('./seed');
+const { e2eDatabaseName } = require('./pg');
 
 async function main() {
   const dbName = new URL(E2E.mongoUri).pathname.slice(1);
@@ -23,7 +24,9 @@ async function main() {
     throw new Error(`Refusing to wipe ${E2E.mongoUri}: E2E database names must end in "_e2e".`);
   }
 
-  await seed(E2E.mongoUri);
+  e2eDatabaseName(E2E.databaseUrl);
+
+  await seed(E2E.mongoUri, E2E.databaseUrl);
 
   const serverDir = path.join(__dirname, '..', '..', 'server');
   const env = {
@@ -32,6 +35,10 @@ async function main() {
     NODE_ENV: 'test',
     PORT: String(E2E.apiPort),
     MONGO_URI: E2E.mongoUri,
+    DATABASE_URL: E2E.databaseUrl,
+    // Pin store choices so a developer's server/.env cannot change what the tests exercise.
+    TASKS_STORE: 'pg',
+    PROCESS_ROLE: 'all',
     FRONTEND_URL: E2E.webUrl,
     BACKEND_URL: E2E.apiUrl,
     ACCESS_TOKEN_SECRET: E2E.accessTokenSecret,
@@ -53,6 +60,17 @@ async function main() {
     STORAGE_DRIVER: 'local',
     LOCAL_UPLOAD_DIR: path.join(__dirname, '..', '.auth', 'uploads'),
   };
+
+  // Blank every other key in a developer's server/.env, so dotenv cannot fill
+  // gaps from it and a local run behaves exactly like CI (where there is no .env).
+  const fs = require('fs');
+  const devEnvPath = path.join(serverDir, '.env');
+  if (fs.existsSync(devEnvPath)) {
+    for (const line of fs.readFileSync(devEnvPath, 'utf8').split(/\r?\n/)) {
+      const key = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/)?.[1];
+      if (key && !(key in env)) env[key] = '';
+    }
+  }
 
   const child = spawn(process.execPath, ['server.js'], { cwd: serverDir, env, stdio: 'inherit' });
   const stop = (signal) => { if (!child.killed) child.kill(signal); };

@@ -159,7 +159,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs
 
 ### Prerequisites
 
-- Node.js 20 or newer, npm 10 or newer
+- Node.js 20 or newer and [Yarn 1](https://classic.yarnpkg.com) (`npm install -g yarn`)
 - Docker with Compose (Docker Desktop, Colima or Docker Engine)
 - Optional: [Ollama](https://ollama.com) for the AI assistant
 
@@ -168,7 +168,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs
 ```bash
 git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
 cd Oruniwan
-npm run install-all
+yarn install          # one install for the client, server and e2e workspaces
 ```
 
 ### 2. Start the infrastructure
@@ -213,12 +213,15 @@ ollama pull nomic-embed-text
 ### 5. Run
 
 ```bash
-npm run dev          # API on :8080 and web app on :3000
-npm run dev:all      # also starts Ollama and a local MongoDB first
-npm run dev:status   # shows what is running
+yarn build           # build the web app once; `yarn dev` serves the build
+yarn dev             # API on :8080 and web app on :3000
+yarn dev:all         # also starts Ollama and a local MongoDB first
+yarn dev:status      # shows what is running
 ```
 
-Open http://localhost:3000. The web app proxies `/api` and `/uploads` to the API.
+For hot reload while working on the UI, run the API with `yarn server` and the web app with `yarn workspace client start`.
+
+Open http://localhost:3000. The web app proxies `/api` and `/uploads` to the API on `localhost:8080`. To reach an API on another machine, set `API_PROXY_TARGET` in `client/.env` and add the web app's address to `CORS_EXTRA_ORIGINS` in `server/.env`.
 
 The full guide, including stopping services and troubleshooting, is in [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
 
@@ -234,6 +237,7 @@ The full guide, including stopping services and troubleshooting, is in [docs/LOC
 | Encryption | `CRYPTO_KEK_ACTIVE_VERSION`, `CRYPTO_KEK_V1`, `CRYPTO_KEK_V2` | Each key is exactly 64 hex characters |
 | Object storage | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE` | The bucket is created on boot. `STORAGE_DRIVER=local` forces local disk |
 | Scaling | `REDIS_URL`, `PROCESS_ROLE` | Any role other than `all` needs Redis |
+| CORS | `CORS_EXTRA_ORIGINS` | Comma-separated origins allowed besides `FRONTEND_URL` and localhost |
 | AI | `AI_PROVIDER`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_EMBED_MODEL`, `AI_SERVICE_URL`, `AI_SERVICE_TOKEN` | Default provider is `local_llm` |
 | Email | `BREVO_API_KEY`, `EMAIL_FROM`, `SMTP_*`, `SMTP_FALLBACK_*` | Tried in that order |
 | OAuth | `GOOGLE_*`, `GITHUB_*`, `LINKEDIN_*` | Only Google's client id is required |
@@ -241,7 +245,7 @@ The full guide, including stopping services and troubleshooting, is in [docs/LOC
 | Retention | `AUDIT_LOG_RETENTION_DAYS`, `HISTORY_LOG_RETENTION_DAYS`, `ACTIVITY_RETENTION_DAYS`, `SECURITY_AUDIT_RETENTION_DAYS` | `0` keeps logs forever |
 | Feature flags | `FEATURES_ENABLED` | Comma list of `billing`, `sso`, `integrations`, `community`, or `all` |
 
-The client only needs `VITE_API_URL`, `VITE_BACKEND_URL` and `VITE_GOOGLE_CLIENT_ID`. Never put secrets in `client/.env`, because Vite bundles every `VITE_` variable into the browser build.
+The client only needs `VITE_API_URL`, `VITE_BACKEND_URL` and `VITE_GOOGLE_CLIENT_ID`. Never put secrets in `client/.env`, because Vite bundles every `VITE_` variable into the browser build. Production examples for both sides are in `server/.env.production.template` and `client/.env.production.template`.
 
 Generate secrets with:
 
@@ -386,13 +390,15 @@ await oruinwan.tasks.create({ title: 'Rotate credentials', priority: 'high' });
 ## Testing
 
 ```bash
-npm run lint       # ESLint for server, client, ai/ and sdk/
-npm test           # Jest for server, ai/ and sdk/; Vitest for the client
-npm run build      # Production web build into dist/
-npm run test:e2e   # Playwright: sign in, encrypted DM and thread, tasks, huddle, webhooks
+yarn lint          # ESLint for server, client, ai/ and sdk/
+yarn test          # Jest for server, ai/ and sdk/; Vitest for the client
+yarn build         # Production web build into dist/
+yarn test:e2e      # Playwright: sign in, encrypted DM and thread, tasks, huddle, webhooks
 ```
 
-The end-to-end suite starts its own API on port 8095 and web app on port 3095 against a throwaway `chttrix_e2e` MongoDB database, which it drops and re-seeds on every run. It refuses any database whose name does not end in `_e2e`. GitHub Actions runs lint, tests, the build and the end-to-end suite on every push and pull request.
+The end-to-end suite needs MongoDB and PostgreSQL running, for example from `docker compose --profile mongo up -d`. It starts its own API on port 8095 and web app on port 3095, against a throwaway `chttrix_e2e` MongoDB database and `oruinwan_e2e` PostgreSQL database. Both are dropped and re-seeded on every run, and the runner refuses any database whose name does not end in `_e2e`. Point it elsewhere with `E2E_MONGO_URI` and `E2E_DATABASE_URL`. Run `yarn playwright install chromium` inside `e2e/` once if you don't have Chrome installed.
+
+GitHub Actions runs lint, tests, the build and the end-to-end suite on every push and pull request.
 
 ---
 
@@ -467,7 +473,7 @@ Rate it. Break it. Improve it. Fork it. Whatever you do, **do it with me, not wi
 ## Contributing
 
 1. Fork the repository and create a branch: `git checkout -b feat/your-feature`.
-2. Make your change and run `npm run lint && npm test`.
+2. Make your change and run `yarn lint && yarn test`.
 3. Commit with [Conventional Commits](https://www.conventionalcommits.org), for example `feat(tasks): add recurring tasks` or `fix(mobile): show navbar on settings`.
 4. Open a pull request describing what changed and how you tested it.
 

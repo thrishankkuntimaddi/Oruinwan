@@ -1,7 +1,7 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { E2E, login, openWorkspace, openDm, waitForComposerReady, seedData, withDb } = require('./helpers');
+const { E2E, login, openWorkspace, openDm, waitForComposerReady, seedData, withDb, withPg } = require('./helpers');
 
 async function openWorkspaceSettings(page, tab) {
   await page.getByRole('button', { name: 'Home' }).first().click();
@@ -74,10 +74,11 @@ test.describe('workspace admin', () => {
     await clone.locator('input').first().fill('E2E Clone');
     await clone.getByRole('button', { name: 'Clone workspace' }).click();
     await expect(clone.getByText(/Created “E2E Clone”/)).toBeVisible();
-    const toggles = await withDb(async (db) => {
-      const wsDoc = await db.collection('workspaces').findOne({ name: 'E2E Clone' });
-      return (await db.collection('workspacepermissions').findOne({ workspace: wsDoc._id }))?.featureToggles;
-    });
+    // Workspaces and their permissions live in PostgreSQL.
+    const [row] = await withPg((sql) => sql(
+      `SELECT p.feature_toggles FROM workspaces w JOIN workspace_permissions p ON p.workspace_id = w.id
+       WHERE w.name = 'E2E Clone'`));
+    const toggles = row?.feature_toggles;
     expect(toggles).toMatchObject({ polls: false });
     await api(alice).put(`/api/workspaces/${ws()}/features`, { featureToggles: { polls: true } });
   });
@@ -105,20 +106,27 @@ test.describe('workspace admin', () => {
     expect(body.templateError).toBeUndefined();
     const newWs = String(body.workspace.id);
 
-    const state = await withDb(async (db) => {
+    // Channels and templates live in MongoDB; workspaces, permissions and keys in PostgreSQL.
+    const mongoState = await withDb(async (db) => {
       const { ObjectId } = require(require.resolve('mongodb', { paths: [require('path').join(__dirname, '..', '..', 'server')] }));
-      const wsDoc = await db.collection('workspaces').findOne({ _id: new ObjectId(newWs) });
-      const channel = await db.collection('channels').findOne({ workspace: wsDoc._id, name: 'design-reviews' });
-      const key = channel && await db.collection('conversationkeys').findOne({ conversationId: channel._id });
-      const perms = await db.collection('workspacepermissions').findOne({ workspace: wsDoc._id });
+      const channel = await db.collection('channels').findOne({ workspace: new ObjectId(newWs), name: 'design-reviews' });
       const template = await db.collection('workspacetemplates').findOne({ _id: new ObjectId(templateId) });
-      return { wsDoc, channel, key, perms, usage: template.usageCount };
+      return { channel, usage: template.usageCount };
     });
+    const pgState = await withPg(async (sql) => {
+      const [wsRow] = await sql('SELECT template_id, settings FROM workspaces WHERE id = $1', [newWs]);
+      const [perms] = await sql('SELECT feature_toggles FROM workspace_permissions WHERE workspace_id = $1', [newWs]);
+      const [key] = mongoState.channel
+        ? await sql('SELECT id FROM conversation_keys WHERE conversation_id = $1', [String(mongoState.channel._id)])
+        : [];
+      return { wsRow, perms, key };
+    });
+    const state = { ...mongoState, ...pgState };
     expect(state.channel).toBeTruthy();
     expect(state.key).toBeTruthy();
-    expect(String(state.wsDoc.templateId)).toBe(templateId);
-    expect(state.wsDoc.settings.allowMemberChannelCreation).toBe(false);
-    expect(state.perms.featureToggles).toMatchObject({ polls: false, huddles: false });
+    expect(String(state.wsRow.template_id)).toBe(templateId);
+    expect(state.wsRow.settings.allowMemberChannelCreation).toBe(false);
+    expect(state.perms.feature_toggles).toMatchObject({ polls: false, huddles: false });
     expect(state.usage).toBe(1);
 
     // The same template can be applied to an existing workspace; channels are not duplicated.

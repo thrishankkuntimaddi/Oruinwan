@@ -8,20 +8,20 @@
     "e2e"
   ],
   "scripts": {
-    "start": "npm run dev",
-    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run server\" \"npm run client\"",
+    "start": "yarn dev",
+    "dev": "concurrently -k -n server,client -c blue,magenta \"yarn server\" \"yarn client\"",
     "client": "cd client && npm run preview",
     "server": "cd server && npm run dev",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
-    "lint": "npm run lint --workspace=server && npm run lint --workspace=client && npm run lint:ai && npm run lint:sdk",
-    "test": "npm test --workspace=server && npm test --workspace=client",
-    "build": "npm run build --workspace=client",
+    "install-all": "yarn install",
+    "lint": "yarn workspace server lint && yarn workspace client lint && yarn lint:ai && yarn lint:sdk",
+    "test": "yarn workspace server test && yarn workspace client test",
+    "build": "yarn workspace client build",
     "lint:ai": "cd ai && eslint .",
     "lint:sdk": "cd sdk && eslint .",
-    "test:e2e": "npm test --workspace=e2e",
+    "test:e2e": "yarn workspace e2e test",
     "dev:services": "bash scripts/dev-services.sh",
     "dev:status": "bash scripts/dev-status.sh",
-    "dev:all": "bash scripts/dev-services.sh && npm run dev"
+    "dev:all": "bash scripts/dev-services.sh && yarn dev"
   },
   "engines": {
     "node": ">=20"

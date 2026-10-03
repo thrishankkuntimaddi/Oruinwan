@@ -9,6 +9,7 @@
 
 const path = require('path');
 const { E2E } = require('./config');
+const { usePostgres } = require('./pg');
 
 const serverDir = path.join(__dirname, '..', '..', 'server');
 const fromServer = (mod) => require(require.resolve(mod, { paths: [serverDir] }));
@@ -26,68 +27,69 @@ const COMPANY = {
   },
 };
 
-async function seedCompany(mongoUri = E2E.mongoUri) {
+async function seedCompany(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUrl) {
   if (!/_e2e$/.test(mongoUri)) throw new Error(`Refusing to seed a non-E2E database: ${mongoUri}`);
+  // Identity lives in PostgreSQL: point the server modules at the E2E database before loading them.
+  usePostgres(databaseUrl);
   process.env.SERVER_KEK = process.env.SERVER_KEK || E2E.serverKek;
   const mongoose = fromServer('mongoose');
   const bcrypt = fromServer('bcryptjs');
-  const User = require(path.join(serverDir, 'models', 'User'));
-  const Company = require(path.join(serverDir, 'models', 'Company'));
-  const Department = require(path.join(serverDir, 'models', 'Department'));
-  const Workspace = require(path.join(serverDir, 'models', 'Workspace'));
+  const identity = require(path.join(serverDir, 'src', 'identity'));
+  const org = require(path.join(serverDir, 'src', 'identity', 'queries', 'org'));
   const reg = require(path.join(serverDir, 'src', 'features', 'company-registration', 'registration.service'));
 
+  // Default channels are MongoDB documents, so registration still needs a Mongo connection.
   const wasConnected = mongoose.connection.readyState === 1;
   if (!wasConnected) await mongoose.connect(mongoUri);
   try {
     const u = COMPANY.users;
-    let owner = await User.findOne({ email: u.owner.email });
-    let company;
+    let owner = await identity.users.findByEmail(u.owner.email);
+    let companyId;
     if (!owner) {
       const out = await reg.registerCompany({
         companyName: COMPANY.name, adminName: u.owner.name, adminEmail: u.owner.email,
         adminPassword: COMPANY.password, domain: COMPANY.domain, role: 'owner',
         departments: ['Engineering', 'Design'], workspaceName: 'Acme E2E HQ',
       });
-      company = out.company; owner = out.adminUser;
-      company.verificationStatus = 'verified';
-      company.isSetupComplete = true;
-      await company.save();
-      await reg.provisionCompanyResources({ company, adminUser: owner });
+      companyId = String(out.company._id);
+      owner = out.adminUser;
+      await org.updateCompany(companyId, { verificationStatus: 'verified', isSetupComplete: true });
+      await reg.provisionCompanyResources({ companyId, adminUser: owner });
     } else {
-      company = await Company.findById(owner.companyId);
+      companyId = String(owner.companyId);
     }
-    const hq = await Workspace.findById(company.defaultWorkspace);
-    const depts = await Department.find({ company: company._id });
+    const company = await org.companies.findOne({ _id: companyId });
+    const hqId = String(company.defaultWorkspace);
+    const depts = await org.departments.find({ company: companyId });
     const byName = Object.fromEntries(depts.map((d) => [d.name, d]));
     const hash = await bcrypt.hash(COMPANY.password, 10);
     const ids = { owner: String(owner._id) };
 
     for (const [key, spec] of Object.entries(u)) {
       if (key === 'owner') continue;
-      let user = await User.findOne({ email: spec.email });
+      let user = await identity.users.findByEmail(spec.email);
       if (!user) {
         const dept = spec.dept ? byName[spec.dept] : null;
         const manages = spec.manages ? byName[spec.manages] : null;
         const wsRole = spec.role === 'admin' ? 'admin' : 'member';
-        user = await User.create({
+        user = await identity.users.create({
           username: spec.name, email: spec.email, passwordHash: hash, verified: true, userType: 'company',
-          companyId: company._id, companyRole: spec.role, accountStatus: 'active', authProvider: 'local',
-          profile: { name: spec.name }, refreshTokens: [],
-          departments: dept ? [dept._id] : [], managedDepartments: manages ? [manages._id] : [],
-          workspaces: [{ workspace: hq._id, role: wsRole, joinedAt: new Date() }],
+          companyId, companyRole: spec.role, accountStatus: 'active', authProvider: 'local',
+          profile: { name: spec.name },
         });
-        hq.members.push({ user: user._id, role: wsRole, status: 'active', joinedAt: new Date() });
-        if (dept) await Department.updateOne({ _id: dept._id }, { $addToSet: { members: user._id } });
-        if (manages) await Department.updateOne({ _id: manages._id }, { $addToSet: { managers: user._id }, $set: { head: user._id } });
-        if (spec.role === 'admin') await Company.updateOne({ _id: company._id }, { $push: { admins: { user: user._id, role: 'admin' } } });
+        await identity.workspaces.addMember(hqId, user._id, { role: wsRole, status: 'active' });
+        if (dept) await org.addDepartmentMembers(dept._id, [user._id], 'member');
+        if (manages) {
+          await org.addDepartmentMembers(manages._id, [user._id], 'manager');
+          await org.departments.updateMany({ _id: manages._id }, { head: user._id });
+        }
+        if (spec.role === 'admin') await org.addCompanyAdmin(companyId, user._id, 'admin');
       }
       ids[key] = String(user._id);
     }
-    await hq.save();
     return {
-      companyId: String(company._id),
-      workspaceId: String(hq._id),
+      companyId,
+      workspaceId: hqId,
       departments: Object.fromEntries(depts.map((d) => [d.name, String(d._id)])),
       users: ids,
     };

@@ -1,7 +1,7 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { login, openWorkspace, withDb, seedData } = require('./helpers');
+const { login, openWorkspace, withPg, seedData } = require('./helpers');
 
 function isoDate(daysFromToday) {
   const d = new Date();
@@ -30,8 +30,9 @@ test.describe('tasks', () => {
 
     await expect(page.getByText(title).first()).toBeVisible();
 
-    const saved = await withDb((db) => db.collection('tasks').findOne({ title }));
+    // Tasks live in PostgreSQL (TASKS_STORE=pg).
+    const [saved] = await withPg((sql) => sql('SELECT workspace_id FROM tasks WHERE title = $1', [title]));
     expect(saved).toBeTruthy();
-    expect(String(saved.workspace)).toBe(seedData().workspaceId);
+    expect(saved.workspace_id).toBe(seedData().workspaceId);
   });
 });

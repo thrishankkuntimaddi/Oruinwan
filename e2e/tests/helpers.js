@@ -82,3 +82,21 @@ async function withDb(fn) {
 }
 
 module.exports.withDb = withDb;
+
+/**
+ * Run read-only SQL against the E2E PostgreSQL database. Identity (workspaces,
+ * memberships, permissions, conversation keys) and tasks live there.
+ */
+async function withPg(fn) {
+  const serverDir = path.join(__dirname, '..', '..', 'server');
+  const { Client } = require(require.resolve('pg', { paths: [serverDir] }));
+  const client = new Client({ connectionString: E2E.databaseUrl });
+  await client.connect();
+  try {
+    return await fn((text, params = []) => client.query(text, params).then((r) => r.rows));
+  } finally {
+    await client.end();
+  }
+}
+
+module.exports.withPg = withPg;
