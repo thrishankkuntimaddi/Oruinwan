@@ -17,7 +17,11 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-passport.use(
+// GitHub sign-in is optional: register the strategy only when it is configured,
+// so a server without GITHUB_CLIENT_ID still boots (the routes answer 503).
+const githubConfigured = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+
+if (githubConfigured) passport.use(
     new GitHubStrategy(
         {
             clientID: process.env.GITHUB_CLIENT_ID,
@@ -75,3 +79,4 @@ passport.use(
 );
 
 module.exports = passport;
+module.exports.githubConfigured = githubConfigured;

@@ -143,7 +143,9 @@ async function createMessage(messageData, io = null) {
     
     // Badges, toasts and notifications for everyone else in the conversation.
     // Runs after the response; failures here never fail the send.
-    fanOutMessage(message, { channel, dm, workspace, sender, type, parentId, mentionText }, io)
+    // Pass the hydrated copy: the raw document's `sender` is only an id, so
+    // toasts and notifications would name the sender "Someone".
+    fanOutMessage(hydratedMessage, { channel, dm, workspace, sender, type, parentId, mentionText }, io)
         .catch(err => logger.error({ err }, '[createMessage] fan-out error (non-fatal)'));
 
     fireMessageSentWebhook(message, { channel, workspace, sender, type, parentId })

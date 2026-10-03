@@ -235,13 +235,21 @@ const generateToken = (user) => {
   );
 };
 
+// GitHub sign-in is optional (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET).
+const requireGithubConfigured = (req, res, next) => {
+  if (passport.githubConfigured) return next();
+  return res.status(503).json({ message: "GitHub sign-in is not configured on this server" });
+};
+
 router.get(
   "/github",
+  requireGithubConfigured,
   passport.authenticate("github", { scope: ["user:email"] })
 );
 
 router.get(
   "/github/callback",
+  requireGithubConfigured,
   passport.authenticate("github", { session: false, failureRedirect: "/login?error=github_failed" }),
   (req, res) => {
     
