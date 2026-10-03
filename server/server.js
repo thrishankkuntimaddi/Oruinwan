@@ -98,9 +98,10 @@ const allowedOrigins = [
   'http://localhost:8081',   // Expo web
   'http://localhost:19006',  // Expo web (classic)
   'http://localhost:19000',  // Expo DevTools
-  'http://100.70.234.41:3000',
   process.env.FRONTEND_URL,
-].filter(Boolean); 
+  // Extra origins, comma-separated, e.g. the web app on another machine: http://100.64.0.10:3000
+  ...(process.env.CORS_EXTRA_ORIGINS || '').split(',').map((o) => o.trim()),
+].filter(Boolean);
 
 logger.info('🌐 CORS allowed origins:', allowedOrigins);
 
