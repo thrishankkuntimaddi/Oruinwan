@@ -1,0 +1,20 @@
+# Oruniwan Microservices Architecture
+#
+# This file is the index. Use specific service files:
+#
+# Start individual services:
+#   docker-compose -f docker-compose.databases.yml up
+#   docker-compose -f docker-compose.cache.yml up
+#   docker-compose -f docker-compose.server.yml up
+#
+# Start multiple services in one command:
+#   docker-compose -f docker-compose.databases.yml -f docker-compose.cache.yml -f docker-compose.server.yml up
+#
+# Each service is independent and can be run separately.
+# The 'oruniwan-network' is shared across all services for inter-service communication.
+
+version: '3.8'
+
+networks:
+  oruniwan-network:
+    driver: bridge
