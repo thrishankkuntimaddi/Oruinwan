@@ -23,6 +23,13 @@ jest.mock('../messageAccess', () => ({
     }),
 }));
 
+// After a send, createMessage fans out in the background and looks up the channel. With no
+// database that query would buffer for 10 s and outlive this file, which Jest reports as a
+// failed run ("import after the environment has been torn down") even when every test passes.
+jest.mock('../../../features/channels/channel.model.js', () => ({
+    findById: jest.fn(() => ({ select: () => ({ lean: async () => null }) })),
+}));
+
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
     ensureDMConversationKey: jest.fn().mockResolvedValue({ status: "OK" }),
