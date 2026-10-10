@@ -80,7 +80,7 @@ Everything is self-hostable. The default AI runs on your own model server (Ollam
 ### Notifications
 - In-app notification center for DMs, mentions, thread replies, tasks, meetings and reminders
 - Browser and Electron native notifications, daily digests and email notifications
-- Mobile push through Expo, with previews decrypted on the device only
+- Mobile push through Expo, with previews decrypted on the device only (server side; the Android app does not register for push yet)
 - Per-workspace preferences enforced on the server
 
 ### Company administration
@@ -102,7 +102,7 @@ Some areas are still being built and are hidden behind `FEATURES_ENABLED`: `bill
 ## Architecture
 
 ```
-            Web (React 19 + Vite)   Desktop (Electron)   Mobile (Expo)   SDK
+            Web (React 19 + Vite)   Desktop (Electron)   Android (Capacitor)   SDK
                            \               |                 |           /
                             \______ HTTPS + WebSocket (one origin) _____/
                                                |
@@ -272,7 +272,7 @@ Oruniwan/
 │       └── socket/    Socket.IO setup and handlers
 ├── ai/                AI orchestrator, agents, tools, memory and providers (see ai/README.md)
 ├── desktop/           Electron app (see desktop/README.md)
-├── mobile/            React Native (Expo) app
+├── mobile/            Android app: phone-first React UI in a Capacitor shell (see mobile/README.md)
 ├── sdk/js/            @oruinwan/sdk JavaScript client (see sdk/js/README.md)
 ├── platform/          Code shared by web, server and mobile: API client, socket client, E2EE helpers
 ├── e2e/               Playwright browser tests
@@ -369,11 +369,12 @@ npm start              # loads http://localhost:3000; override with CHTTRIX_WEB_
 npm run build:mac      # or build:win / build:linux
 ```
 
-**Mobile.** `mobile/` is an Expo 54 app with the same encryption scheme in pure JavaScript, offline queueing of ciphertext, and push notifications. An account must sign in on the web once to create its identity keys before mobile can decrypt.
+**Android.** `mobile/` is a phone-first React app in a Capacitor shell: a 1.4 MB APK that signs in to any Oruinwan server (or runs a built-in demo), keeps messages end-to-end encrypted with the web client's scheme, and updates itself from GitHub Releases. Details, release steps and configuration are in [mobile/README.md](mobile/README.md).
 
 ```bash
-cd mobile && npm install --workspaces=false
-EXPO_PUBLIC_API_URL=http://<your-ip>:8080/api EXPO_PUBLIC_SOCKET_URL=http://<your-ip>:8080 npx expo start
+cd mobile && npm install
+npm run dev              # browser preview at http://localhost:5174
+npm run android:debug    # debug APK in android/app/build/outputs/apk/debug/
 ```
 
 **SDK.** `sdk/js` is a zero-dependency client for Node 18+ and browsers.
@@ -440,7 +441,7 @@ Oruinwan is under active development and is not yet production-hardened. Known g
 - Billing, SSO, integrations and the community page are incomplete and hidden behind feature flags.
 - Huddles are peer-to-peer mesh calls, capped at six participants until a media server is added.
 - Data is moving from MongoDB to PostgreSQL. Identity, tasks and logs have moved, and messages have not.
-- Mobile shows placeholders for attachments, polls and threads.
+- The Android app shows attachments and polls as labels (open them on the web) and has no push notifications yet.
 
 Issues and pull requests on any of these are welcome.
 

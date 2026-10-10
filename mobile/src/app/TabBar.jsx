@@ -70,6 +70,7 @@ export function TabBar() {
             <button
               key={it.id}
               type="button"
+              aria-label={`${it.label}${it.badge ? `, ${it.badge} new` : it.dot ? ', new activity' : ''}`}
               aria-current={active ? 'page' : undefined}
               onClick={() => setTab(it.id)}
               className={cx('relative flex flex-1 flex-col items-center justify-center gap-1', active ? 'text-accent-ink' : 'text-text-2')}

@@ -1,0 +1,32 @@
+{
+  "parameters": {
+    "features": {
+      "defaultValue": {
+        "value": "{\"ai\":true,\"notes\":true,\"knowledge\":true,\"files\":true,\"integrations\":true,\"threads\":true,\"huddles\":false,\"labs\":false}"
+      },
+      "description": "Feature flags for the Android app (see mobile/src/config/flags.js)",
+      "valueType": "JSON"
+    },
+    "android_release": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Optional update notice as JSON text, same shape as latest.json: version, apkUrl, sha256, notes, minVersion",
+      "valueType": "STRING"
+    },
+    "default_server_url": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Pre-fills the server address on the sign-in screen",
+      "valueType": "STRING"
+    },
+    "announcement": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "One-line banner on Home; empty hides it",
+      "valueType": "STRING"
+    }
+  }
+}

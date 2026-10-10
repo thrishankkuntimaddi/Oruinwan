@@ -1,0 +1,163 @@
+name: Mobile
+
+# Pull requests and main: lint, test, build, and a debug APK to try.
+# Tags named mobile-vX.Y.Z: a signed release APK published as a GitHub Release, with the
+# latest.json manifest the app's in-app updater reads.
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+    tags: ['mobile-v*']
+  pull_request:
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  # Public SHA-256 fingerprint of the permanent release key. A release signed with any other
+  # key would not install over existing copies, so publishing stops if it doesn't match.
+  RELEASE_CERT_SHA256: 95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  android:
+    name: Android APK
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+
+      - name: App configuration
+        env:
+          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
+        run: |
+          # Optional: the contents of mobile/.env (Firebase web config etc.). Without it the
+          # app builds with its built-in defaults.
+          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; echo "Using MOBILE_ENV"; else echo "::notice::MOBILE_ENV not set; building without Firebase Remote Config"; fi
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "mobile-v${VERSION}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match mobile/package.json version ${VERSION}. Bump the version, commit, then tag mobile-v${VERSION}."
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Restore the release key
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Release signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD under Settings → Secrets and variables → Actions → Repository secrets, then re-run this workflow. (A debug-signed release is never published: phones could not update to it.)"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.p12"
+            echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS"
+            echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          npm run build
+          npx cap sync android
+          cd android
+          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then ./gradlew --no-daemon assembleRelease; else ./gradlew --no-daemon assembleDebug; fi
+
+      - name: Debug APK artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: oruinwan-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Verify signature and write the update manifest
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        run: |
+          mkdir -p dist-release
+          cp android/app/build/outputs/apk/release/app-release.apk dist-release/Oruinwan-Android.apk
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          SIGNER=$("$APKSIGNER" verify --print-certs dist-release/Oruinwan-Android.apk | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+          if [ "$SIGNER" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::The APK is signed with $SIGNER, not the Oruinwan release key ($RELEASE_CERT_SHA256). Not publishing."
+            exit 1
+          fi
+          NOTES=release-notes/${VERSION}.md
+          [ -f "$NOTES" ] || { echo "::warning::$NOTES not found; publishing without notes"; echo "" > "$NOTES"; }
+          RELEASE_TAG="$GITHUB_REF_NAME" node scripts/write-manifest.mjs dist-release/Oruinwan-Android.apk dist-release/latest.json --notes "$NOTES"
+          SHA=$(node -p "require('./dist-release/latest.json').sha256")
+          SIZE=$(du -k dist-release/Oruinwan-Android.apk | cut -f1)
+          {
+            cat "$NOTES"
+            echo
+            echo "### Install"
+            echo
+            echo "1. On your Android phone (Android 7 or newer), download **Oruinwan-Android.apk** below."
+            echo "2. Open it. If Android asks, allow your browser to install apps, then tap **Install**."
+            echo "3. Already have Oruinwan? You don't need this page: the app offers the update itself (Settings → Updates) and keeps your data."
+            echo
+            echo "| File | Size | SHA-256 |"
+            echo "|---|---|---|"
+            echo "| Oruinwan-Android.apk | ${SIZE} KB | \`${SHA}\` |"
+            echo
+            echo "Signed with the Oruinwan release key (certificate SHA-256 \`${RELEASE_CERT_SHA256}\`). \`latest.json\` is read by the app's updater. You can ignore the automatic *Source code* archives."
+          } > dist-release/body.md
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Oruinwan for Android ${{ env.VERSION }}
+          body_path: mobile/dist-release/body.md
+          files: |
+            mobile/dist-release/Oruinwan-Android.apk
+            mobile/dist-release/latest.json
+          make_latest: true
