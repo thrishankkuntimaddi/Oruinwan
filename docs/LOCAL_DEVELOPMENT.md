@@ -20,7 +20,7 @@ The web app proxies `/api` and `/uploads` to the API, so you only ever open **ht
 
 ```bash
 # Tools (Homebrew)
-brew install node@20 ollama            # Node 20+ is required (22/24 also work)
+brew install node@22 ollama            # Node 22+ is required (24 also works)
 brew tap mongodb/brew && brew install mongodb-community@7.0   # only if you want a local database
 brew install colima docker docker-compose && colima start       # container runtime for postgres, redis, s3
 

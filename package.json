@@ -24,7 +24,7 @@
     "dev:all": "bash scripts/dev-services.sh && yarn dev"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

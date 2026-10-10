@@ -159,7 +159,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs
 
 ### Prerequisites
 
-- Node.js 20 or newer and [Yarn 1](https://classic.yarnpkg.com) (`npm install -g yarn`)
+- Node.js 22 or newer and [Yarn 1](https://classic.yarnpkg.com) (`npm install -g yarn`)
 - Docker with Compose (Docker Desktop, Colima or Docker Engine)
 - Optional: [Ollama](https://ollama.com) for the AI assistant
 
