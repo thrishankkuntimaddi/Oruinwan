@@ -4,7 +4,8 @@
   "webDir": "dist",
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#00000000"
+    "backgroundColor": "#0c0c0c",
+    "minWebViewVersion": 111
   },
   "plugins": {
     "SplashScreen": {
@@ -26,5 +27,8 @@
       "initialViewportFitValueHint": "cover",
       "style": "DEFAULT"
     }
+  },
+  "server": {
+    "errorPath": "webview-update.html"
   }
 }

@@ -14,6 +14,9 @@ server, or runs a built-in demo workspace with no account.
 
 Not yet: push notifications, sending files or photos, voice and video huddles, iPhone.
 
+Requires Android 7 or newer with an up-to-date **Android System WebView** (Chromium 111+, updated through
+the Play Store). Older WebViews get a page explaining how to update (`public/webview-update.html`).
+
 ## Develop
 
 ```bash
@@ -104,7 +107,8 @@ the release job stops with an explanation instead of publishing a debug-signed A
 ```
 
 It reads the key from `~/.local/oruinwan-signing/` (override with `ORUINWAN_SIGNING_DIR`), builds
-`release/Oruinwan-Android-<version>.apk` and `release/latest.json`, and prints the signer.
+`release/Oruinwan-Android.apk` (plus a versioned copy) and `release/latest.json`, and stops if the APK
+is not signed with the release key.
 
 **Back up `~/.local/oruinwan-signing/`.** If the key is lost, existing installs can't be updated and
 everyone has to uninstall and reinstall.

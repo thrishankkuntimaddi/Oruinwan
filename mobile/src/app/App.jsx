@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSession } from '../data/session.js';
+import { api, useSession } from '../data/session.js';
 import { useNav } from './nav.js';
 import { Shell } from './Shell.jsx';
 import { BrandMark } from './BrandMark.jsx';
@@ -49,6 +49,7 @@ export function App() {
     let off = () => {};
     onAppState((active) => {
       if (active) {
+        api().onResume?.();
         refreshRemoteConfig();
         checkForUpdate({ auto: true });
       }

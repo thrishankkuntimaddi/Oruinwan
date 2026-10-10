@@ -1,10 +1,12 @@
 // Live adapter: a self-hosted Oruinwan server. Same interface as ../demo/adapter.js;
 // every server shape is mapped into the app's own models here and nowhere else.
-import { api, absolute, accessToken, configure, loadTokens, saveTokens, serverUrl, request, ApiError } from './http.js';
+import {
+  api, absolute, accessToken, configure, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
+} from './http.js';
 import {
   conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
 } from './crypto.js';
-import { connectRealtime, disconnectRealtime, joinWorkspace, socketEmit } from './realtime.js';
+import { connectRealtime, disconnectRealtime, joinWorkspace, resumeRealtime, socketEmit } from './realtime.js';
 import { prefs } from '../../native/storage.js';
 import { useE2ee } from '../e2ee.js';
 import { normalizeServerUrl } from './server.js';
@@ -194,12 +196,19 @@ async function streamAi(body, { onToken, onTool, signal }) {
   // Streaming needs the browser's fetch (CapacitorHttp buffers whole responses), which in turn
   // needs the server to allow the app's origin. When it doesn't, the caller falls back.
   const webFetch = window.CapacitorWebFetch || window.fetch;
-  const res = await webFetch(`${serverUrl()}/api/ai/chat/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `Bearer ${accessToken()}`, 'x-client-platform': 'android' },
-    body: JSON.stringify(body),
-    signal,
-  });
+  const open = () =>
+    webFetch(`${serverUrl()}/api/ai/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `Bearer ${accessToken()}`, 'x-client-platform': 'android' },
+      body: JSON.stringify(body),
+      signal,
+    });
+  let res = await open();
+  if (res.status === 401) {
+    // Access tokens last 15 minutes; refresh once and try again.
+    await refreshSession();
+    res = await open();
+  }
   if (!res.ok || !res.body) throw new ApiError('stream unavailable', res.status, null);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -299,7 +308,10 @@ export const liveAdapter = {
     try {
       user = mapUser(await api.get('/auth/me'));
     } catch (err) {
-      if (!err.network) throw err;
+      // Offline, or the server is restarting/overloaded: keep the session and use the cached
+      // profile. Only an auth failure (handled by the refresh logic) signs the user out.
+      const transient = err.network || err.status >= 500 || err.status === 429;
+      if (!transient) throw err;
       user = prefs.get('live.user');
       offline = true;
       if (!user) throw err;
@@ -314,16 +326,23 @@ export const liveAdapter = {
   },
 
   async signOut() {
+    // A refresh in flight would rotate the token after we read it, leaving that session valid.
+    await settleRefresh();
     const tokensBefore = await loadTokens();
+    const userId = me?.id || prefs.get('live.user')?.id;
     disconnectRealtime();
     try {
-      if (tokensBefore?.refresh) await request('POST', '/auth/logout', { body: { refreshToken: tokensBefore.refresh } });
+      if (tokensBefore?.refresh) await request('POST', '/auth/logout', { body: { refreshToken: tokensBefore.refresh }, auth: false });
     } finally {
-      await forgetIdentity(me?.id);
-      await saveTokens(null);
+      await forgetIdentity(userId);
+      await endSession();
       prefs.set('live.user', null);
       me = null;
     }
+  },
+
+  onResume() {
+    resumeRealtime();
   },
 
   onWorkspace(id) {

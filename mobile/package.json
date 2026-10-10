@@ -1,6 +1,6 @@
 {
   "name": "oruinwan-mobile",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Oruinwan for Android: a lightweight Capacitor shell around a phone-first React UI",

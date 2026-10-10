@@ -6,7 +6,8 @@ import { accessToken, refreshSession } from './http.js';
 
 let socket = null;
 let workspaceId = null;
-let lastAuthRetry = 0;
+let retryTimer = null;
+let retryDelay = 2000;
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -32,21 +33,17 @@ export function connectRealtime(base) {
   });
 
   socket.on('connect', () => {
+    retryDelay = 2000;
+    clearTimeout(retryTimer);
+    retryTimer = null;
     emit('realtime', { connected: true });
     if (workspaceId) socket.emit('join-workspace', { workspaceId });
   });
   socket.on('disconnect', () => emit('realtime', { connected: false }));
-  socket.on('connect_error', async (err) => {
-    // Expired access token: refresh at most every 5 s, then reconnect.
-    if (/token|auth/i.test(err?.message || '') && Date.now() - lastAuthRetry > 5000) {
-      lastAuthRetry = Date.now();
-      try {
-        await refreshSession();
-        socket?.connect();
-      } catch {
-        /* auth:expired already emitted when the session is gone */
-      }
-    }
+  socket.on('connect_error', (err) => {
+    // The server rejected the handshake (usually an expired access token). Socket.IO does not
+    // retry those by itself, so refresh and reconnect with backoff until it works.
+    if (/token|auth/i.test(err?.message || '')) scheduleAuthRetry();
   });
 
   socket.on('new-message', messageEvent);
@@ -69,6 +66,28 @@ export function connectRealtime(base) {
   for (const ev of ['user:online', 'user:offline', 'user:idle', 'user-status-changed']) socket.on(ev, () => emit('data:changed', ['members']));
 }
 
+function scheduleAuthRetry() {
+  if (retryTimer || !socket) return;
+  retryTimer = setTimeout(async () => {
+    retryTimer = null;
+    try {
+      await refreshSession();
+    } catch (err) {
+      if (err?.status === 401 || err?.status === 403) return; // session is gone: auth:expired was emitted
+    }
+    retryDelay = Math.min(retryDelay * 2, 60000);
+    socket?.connect();
+  }, retryDelay);
+}
+
+/** Called when the app comes back to the foreground. */
+export function resumeRealtime() {
+  if (socket && !socket.connected) {
+    retryDelay = 2000;
+    socket.connect();
+  }
+}
+
 export function joinWorkspace(id) {
   workspaceId = id;
   if (socket?.connected && id) socket.emit('join-workspace', { workspaceId: id });
@@ -83,6 +102,8 @@ export function setActive(active) {
 }
 
 export function disconnectRealtime() {
+  clearTimeout(retryTimer);
+  retryTimer = null;
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();

@@ -72,9 +72,11 @@ export async function wipeDevice() {
     const { keys } = await Preferences.keys();
     await Promise.all(keys.filter((k) => k.startsWith(PREFIX)).map((key) => Preferences.remove({ key })));
   }
-  try {
-    indexedDB.deleteDatabase('oru-cache');
-  } catch {
-    /* ignore */
+  for (const name of ['oru-cache', 'oru-keys']) {
+    try {
+      indexedDB.deleteDatabase(name);
+    } catch {
+      /* ignore */
+    }
   }
 }

@@ -22,11 +22,20 @@ npx cap sync android
 (cd android && ./gradlew --no-daemon -q assembleRelease)
 
 mkdir -p release
-APK=release/Oruinwan-Android-$VERSION.apk
+# Oruinwan-Android.apk is the name latest.json points at; the versioned copy is for archiving.
+APK=release/Oruinwan-Android.apk
 cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+cp "$APK" "release/Oruinwan-Android-$VERSION.apk"
 NOTES=release-notes/$VERSION.md
 node scripts/write-manifest.mjs "$APK" release/latest.json ${NOTES:+$( [[ -f $NOTES ]] && echo --notes "$NOTES")}
 
+# Must match the permanent key (also pinned in .github/workflows/mobile.yml).
+EXPECTED=95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5
 BUILD_TOOLS=$(ls -d "${ANDROID_HOME:-$HOME/Android/Sdk}"/build-tools/* | sort -V | tail -1)
-"$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -E "Signer #1 certificate (DN|SHA-256)"
-ls -la "$APK"
+SIGNER=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+if [[ "$SIGNER" != "$EXPECTED" ]]; then
+  echo "The APK is signed with $SIGNER, not the Oruinwan release key. Do not publish it." >&2
+  exit 1
+fi
+echo "Signed with the release key ($SIGNER)"
+ls -la release/

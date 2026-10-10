@@ -120,9 +120,11 @@ public class AppUpdaterPlugin extends Plugin {
         File target = new File(dir, "Oruinwan-" + version + ".apk");
 
         HttpURLConnection conn = null;
+        boolean reached = false;
         String current = address;
-        // Follow redirects manually so https → https hops on other hosts (release CDNs) work.
-        for (int hop = 0; hop < 6; hop++) {
+        // Follow redirects manually so hops to other hosts (release CDNs) work, but never from
+        // https down to plain http.
+        for (int hop = 0; hop < 6 && !reached; hop++) {
             conn = (HttpURLConnection) new URL(current).openConnection();
             conn.setInstanceFollowRedirects(false);
             conn.setConnectTimeout(15000);
@@ -133,16 +135,20 @@ public class AppUpdaterPlugin extends Plugin {
                 String next = conn.getHeaderField("Location");
                 conn.disconnect();
                 if (next == null) throw new UpdateException("The download address redirected nowhere.", "DOWNLOAD");
-                current = new URL(new URL(current), next).toString();
+                String resolved = new URL(new URL(current), next).toString();
+                if (current.startsWith("https://") && !resolved.startsWith("https://")) {
+                    throw new UpdateException("The download tried to switch to an insecure address, so it was stopped.", "DOWNLOAD");
+                }
+                current = resolved;
                 continue;
             }
             if (code != 200) {
                 conn.disconnect();
                 throw new UpdateException("The update server answered " + code + ".", "DOWNLOAD");
             }
-            break;
+            reached = true;
         }
-        if (conn == null) throw new UpdateException("Too many redirects.", "DOWNLOAD");
+        if (!reached) throw new UpdateException("The download address redirected too many times.", "DOWNLOAD");
 
         long total = conn.getContentLengthLong();
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -184,7 +190,11 @@ public class AppUpdaterPlugin extends Plugin {
     private void verifyArchive(File apk) throws Exception {
         PackageManager pm = getContext().getPackageManager();
         String self = getContext().getPackageName();
-        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
+        // Android 9, 10 and early 13 builds only read an archive's certificates when GET_SIGNATURES
+        // is also set; without it signingInfo is null and every genuine update would be refused.
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            ? PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES
+            : PackageManager.GET_SIGNATURES;
 
         PackageInfo archive = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
         if (archive == null) throw new UpdateException("The download is not a valid Android app.", "INVALID");
@@ -197,17 +207,21 @@ public class AppUpdaterPlugin extends Plugin {
         if (archiveCode <= installedCode) {
             throw new UpdateException("This version is already installed.", "NOT_NEWER");
         }
-        if (!signaturesOf(installed).equals(signaturesOf(archive))) {
+        Set<String> installedSigners = signaturesOf(installed);
+        Set<String> archiveSigners = signaturesOf(archive);
+        // Two empty sets would compare equal, so a missing certificate must never pass.
+        if (installedSigners.isEmpty() || archiveSigners.isEmpty() || !installedSigners.equals(archiveSigners)) {
             throw new UpdateException("The update is not signed with Oruinwan's release key, so it was not installed.", "SIGNATURE");
         }
     }
 
     @SuppressWarnings("deprecation")
     private Set<String> signaturesOf(PackageInfo info) throws Exception {
-        Signature[] sigs;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            sigs = info.signingInfo == null ? null : info.signingInfo.getApkContentsSigners();
-        } else {
+        Signature[] sigs = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
+            sigs = info.signingInfo.getApkContentsSigners();
+        }
+        if (sigs == null || sigs.length == 0) {
             sigs = info.signatures;
         }
         Set<String> out = new HashSet<>();

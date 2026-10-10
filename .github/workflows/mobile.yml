@@ -23,6 +23,8 @@ env:
   # Public SHA-256 fingerprint of the permanent release key. A release signed with any other
   # key would not install over existing copies, so publishing stops if it doesn't match.
   RELEASE_CERT_SHA256: 95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5
+  # SHA-256 of the (password-protected) release keystore file, to catch a damaged secret early.
+  RELEASE_KEYSTORE_SHA256: 8193055c4e748cd0407d5e10d7b200bdf74d6a7512a7b1cf72ddbe66ac5b60bd
 
 jobs:
   check:
@@ -54,6 +56,8 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -66,14 +70,6 @@ jobs:
           cache: gradle
       - run: npm ci
 
-      - name: App configuration
-        env:
-          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
-        run: |
-          # Optional: the contents of mobile/.env (Firebase web config etc.). Without it the
-          # app builds with its built-in defaults.
-          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; echo "Using MOBILE_ENV"; else echo "::notice::MOBILE_ENV not set; building without Firebase Remote Config"; fi
-
       - name: Check the tag matches package.json
         if: startsWith(github.ref, 'refs/tags/mobile-v')
         run: |
@@ -84,32 +80,22 @@ jobs:
           fi
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Restore the release key
-        if: startsWith(github.ref, 'refs/tags/mobile-v')
+      # The web build runs npm and vite plugin code, so no signing secret is visible here.
+      - name: Build the web app
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "::error::Release signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD under Settings → Secrets and variables → Actions → Repository secrets, then re-run this workflow. (A debug-signed release is never published: phones could not update to it.)"
-            exit 1
-          fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
-          {
-            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.p12"
-            echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
-            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS"
-            echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
-          } >> "$GITHUB_ENV"
-
-      - name: Build
-        run: |
+          # Optional: the contents of mobile/.env (Firebase web config). Without it the app
+          # builds with its built-in defaults.
+          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; else echo "::notice::MOBILE_ENV not set; building without Firebase Remote Config"; fi
           npm run build
           npx cap sync android
-          cd android
-          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then ./gradlew --no-daemon assembleRelease; else ./gradlew --no-daemon assembleDebug; fi
+          rm -f .env
+
+      - name: Build a debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        working-directory: mobile/android
+        run: ./gradlew --no-daemon assembleDebug
 
       - name: Debug APK artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
@@ -118,6 +104,31 @@ jobs:
           name: oruinwan-android-debug
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+
+      # Secrets exist only inside this step, never in $GITHUB_ENV, and the key file is removed after.
+      - name: Build the signed release APK
+        if: startsWith(github.ref, 'refs/tags/mobile-v')
+        working-directory: mobile/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Release signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD under Settings → Secrets and variables → Actions → Repository secrets, then re-run this workflow. (A debug-signed release is never published: phones could not update to it.)"
+            exit 1
+          fi
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.p12"
+          trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
+          # Keep only base64 characters: a pasted secret often picks up line breaks, spaces or the
+          # "%" zsh prints after a line without a trailing newline.
+          printf '%s' "$KEYSTORE_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$ANDROID_KEYSTORE_PATH" || true
+          if [ "$(sha256sum "$ANDROID_KEYSTORE_PATH" | cut -d' ' -f1)" != "$RELEASE_KEYSTORE_SHA256" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 does not decode to the Oruinwan release keystore. Copy the whole of ~/.local/oruinwan-signing/keystore.base64.txt into the secret again (one long line ending in '='), then re-run."
+            exit 1
+          fi
+          ./gradlew --no-daemon assembleRelease
 
       - name: Verify signature and write the update manifest
         if: startsWith(github.ref, 'refs/tags/mobile-v')
@@ -153,7 +164,7 @@ jobs:
 
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/mobile-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: Oruinwan for Android ${{ env.VERSION }}
           body_path: mobile/dist-release/body.md

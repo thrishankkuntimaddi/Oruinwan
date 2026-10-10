@@ -9,6 +9,8 @@ import { emit } from '../../lib/bus.js';
 let base = '';
 let tokens = null; // { access, refresh }
 let refreshing = null;
+// Bumped on sign-out, so a refresh that finishes afterwards can't write tokens back.
+let generation = 0;
 
 const HEADERS = { Accept: 'application/json', 'x-client-platform': 'android' };
 export const NETWORK_MESSAGE = "Can't reach your server. Check your connection and try again.";
@@ -83,7 +85,9 @@ async function send(method, url, body, auth) {
 export async function refreshSession() {
   if (!tokens?.refresh) throw new ApiError('Not signed in', 401, null);
   refreshing ||= (async () => {
+    const gen = generation;
     const { res, data } = await send('POST', `${base}/api/auth/refresh`, { refreshToken: tokens.refresh }, false);
+    if (gen !== generation) throw new ApiError('Signed out', 401, null);
     if (res.status === 401 || res.status === 403) {
       await saveTokens(null);
       emit('auth:expired');
@@ -114,6 +118,21 @@ export async function request(method, path, { body, query, auth = true, retry = 
   }
   if (!res.ok) throw new ApiError(messageFrom(data, res.status), res.status, data);
   return data;
+}
+
+/** Waits for a token refresh that is already running, ignoring its outcome. */
+export async function settleRefresh() {
+  try {
+    await refreshing;
+  } catch {
+    /* the refresh's own caller handles its error */
+  }
+}
+
+/** Ends the local session: later refreshes are discarded and the tokens are deleted. */
+export async function endSession() {
+  generation += 1;
+  await saveTokens(null);
 }
 
 export const api = {
