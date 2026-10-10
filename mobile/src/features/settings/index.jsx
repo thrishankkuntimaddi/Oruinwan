@@ -30,6 +30,8 @@ import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { BrandMark } from '../../app/BrandMark.jsx';
 import { UpdateButton, UpdateDetails, UpdateProgress } from '../update/UpdatePanel.jsx';
+import { UnlockSheet } from '../chats/E2eeBanner.jsx';
+import { useE2ee } from '../../data/e2ee.js';
 
 const STATUS = [
   { value: 'active', label: 'Active', color: 'bg-success' },
@@ -232,8 +234,7 @@ export function ProfileSettings() {
 
 const E2EE_TEXT = {
   ready: { label: 'Unlocked on this phone', tone: 'text-success' },
-  locked: { label: 'Locked. Sign in again to unlock', tone: 'text-warning' },
-  password_required: { label: 'Locked. Sign in again to unlock', tone: 'text-warning' },
+  password_required: { label: 'Locked on this phone. Unlock with your password', tone: 'text-warning' },
   no_identity: { label: 'Not set up yet (set up on the web)', tone: 'text-text-2' },
   unsupported: { label: 'Not available for this account type yet', tone: 'text-text-2' },
   error: { label: "Couldn't check", tone: 'text-danger' },
@@ -241,8 +242,12 @@ const E2EE_TEXT = {
 
 export function SecuritySettings() {
   const web = useWebLink();
+  const mode = useSession((s) => s.mode);
   const { data, loading } = useQuery('security', () => api().securityStatus());
-  const e2ee = E2EE_TEXT[data?.e2ee] || E2EE_TEXT.error;
+  const live = useE2ee((s) => s.status);
+  const status = mode === 'live' ? live : data?.e2ee;
+  const e2ee = E2EE_TEXT[status] || E2EE_TEXT.error;
+  const [unlock, setUnlock] = useState(false);
   return (
     <Screen>
       <Header title="Password & security" />
@@ -253,7 +258,19 @@ export function SecuritySettings() {
           <>
             <Section title="End-to-end encryption">
               <RowGroup footer="Messages are encrypted on the sender's device and only decrypted on yours. Your password unlocks your keys; it is never stored on this phone.">
-                <Row icon={ShieldCheck} tile="success" title="Encryption keys" subtitle={<span className={e2ee.tone}>{e2ee.label}</span>} />
+                <Row
+                  icon={ShieldCheck}
+                  tile="success"
+                  title="Encryption keys"
+                  subtitle={<span className={e2ee.tone}>{e2ee.label}</span>}
+                  trailing={
+                    mode === 'live' && (status === 'password_required' || status === 'error') ? (
+                      <Button size="sm" onClick={() => setUnlock(true)}>
+                        Unlock
+                      </Button>
+                    ) : null
+                  }
+                />
               </RowGroup>
             </Section>
             <Section title="Sign-in">
@@ -273,6 +290,7 @@ export function SecuritySettings() {
           </>
         )}
       </Body>
+      <UnlockSheet open={unlock} onClose={() => setUnlock(false)} />
     </Screen>
   );
 }

@@ -6,6 +6,8 @@ const DAY = 24 * HOUR;
 
 export function toDate(v) {
   if (v instanceof Date) return v;
+  // new Date(null) is 1 Jan 1970, not invalid, so missing values must be caught first.
+  if (v === null || v === undefined || v === '') return null;
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d;
 }

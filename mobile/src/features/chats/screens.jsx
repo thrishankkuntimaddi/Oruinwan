@@ -22,6 +22,7 @@ import { ChannelTile, channelGlyph } from './ChatsScreen.jsx';
 import { openConversation } from './chatsUi.js';
 import { TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
+import { E2eeBanner } from './E2eeBanner.jsx';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
 
@@ -48,14 +49,27 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
         canThread={threadsOn && !threadOf}
         onReact={convo.react}
         onReply={() => nav.push('thread', { kind: conv.kind, convId: conv.id, messageId: active.id })}
-        onPin={async () => {
-          const pinned = await api().togglePin?.(conv, active.id);
-          toast(pinned ? 'Pinned to the conversation' : 'Unpinned');
-        }}
-        onSave={async () => {
-          const saved = await api().toggleSave?.(conv, active.id);
-          toast(saved ? 'Saved for later' : 'Removed from saved');
-        }}
+        onPin={
+          api().togglePin
+            ? async () => {
+                try {
+                  const pinned = await api().togglePin(conv, active.id);
+                  toast(pinned ? 'Pinned to the conversation' : 'Unpinned');
+                  invalidate(`messages:${conv.id}`);
+                } catch (err) {
+                  toast(err.message || 'Could not pin the message', 'danger');
+                }
+              }
+            : null
+        }
+        onSave={
+          api().toggleSave
+            ? async () => {
+                const saved = await api().toggleSave(conv, active.id);
+                toast(saved ? 'Saved for later' : 'Removed from saved');
+              }
+            : null
+        }
         onTask={() => setTaskFrom(active)}
         onEdit={() => setEditing(active)}
         onDelete={() => convo.remove(active.id)}
@@ -172,6 +186,7 @@ export function ConversationScreen({ kind, id }) {
         onLongPress={tools.onLongPress}
         onOpenThread={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
       />
+      <E2eeBanner className="mb-2" />
       {notMember ? (
         <div className="shrink-0 border-t border-line-soft bg-bg px-4 pt-3 pb-safe">
           <p className="text-center text-[13px] text-text-2">You're previewing #{meta.name}.</p>

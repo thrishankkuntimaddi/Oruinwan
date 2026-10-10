@@ -67,12 +67,15 @@ export function useConversation(conv, { threadOf } = {}) {
 
   const react = useCallback(
     async (messageId, emoji) => {
+      const current = getQueryData(key);
+      const target = current?.items?.find((m) => m.id === messageId) || (current?.parent?.id === messageId ? current.parent : null);
+      const add = !(target?.reactions?.[emoji] || []).includes(me);
       patch((items) => items.map((m) => (m.id === messageId ? toggleReaction(m, emoji, me) : m)));
       if (threadOf) {
         setQueryData(key, (d) => (d?.parent?.id === messageId ? { ...d, parent: toggleReaction(d.parent, emoji, me) } : d));
       }
       try {
-        await api().react(conv, messageId, emoji);
+        await api().react(conv, messageId, emoji, add);
       } catch (err) {
         toast(err.message || 'Could not react', 'danger');
         invalidate(key);

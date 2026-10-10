@@ -14,6 +14,7 @@ import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { plainPreview } from '../../ui/Markdown.jsx';
 import { useChatsUi, openConversation } from './chatsUi.js';
+import { E2eeBanner } from './E2eeBanner.jsx';
 
 export function channelGlyph(c) {
   if (c?.broadcast) return Megaphone;
@@ -60,7 +61,13 @@ function ConversationRow({ kind, item }) {
         </span>
         <span className="mt-0.5 flex items-center gap-2">
           <span className={cx('min-w-0 flex-1 truncate text-[13px]', unread ? 'text-text-2' : 'text-text-3')}>
-            {item.lastText ? plainPreview(item.lastText, 90) : kind === 'channel' ? item.topic || 'No messages yet' : 'No messages yet'}
+            {item.lastText
+              ? plainPreview(item.lastText, 90)
+              : kind === 'channel'
+                ? item.topic || `${item.memberCount} ${item.memberCount === 1 ? 'member' : 'members'}`
+                : item.lastAt
+                  ? 'Encrypted message'
+                  : 'No messages yet'}
           </span>
           {item.muted ? <Icon as={BellOff} size={14} className="shrink-0 text-text-3" aria-label="Muted" /> : <UnreadPill unread={item.unread} mentions={item.mentions} />}
         </span>
@@ -133,6 +140,7 @@ export function ChatsScreen() {
         </div>
       </TabHeader>
       <Body tab="chats" onRefresh={() => invalidate('channels', 'dms')}>
+        <E2eeBanner className="mt-1 mb-1" />
         {loading ? (
           <SkeletonRows count={8} />
         ) : (

@@ -117,13 +117,21 @@ export const useWorkspace = () => {
   return workspaces.find((w) => w.id === id) || null;
 };
 
+// Unread totals on the workspace switcher; coalesce bursts of realtime events.
+let reloadTimer = null;
+function reloadWorkspacesSoon() {
+  if (reloadTimer) return;
+  reloadTimer = setTimeout(() => {
+    reloadTimer = null;
+    if (useSession.getState().status === 'signed-in') useSession.getState().loadWorkspaces();
+  }, 1500);
+}
+
 // Data changes from an adapter (demo writes, socket events) refresh the matching queries.
 on('data:changed', (keys) => {
   if (keys.includes('*')) invalidate('');
   else invalidate(...keys);
-  if (keys.some((k) => k === 'channels' || k === 'dms')) {
-    useSession.getState().loadWorkspaces();
-  }
+  if (keys.some((k) => k === 'channels' || k === 'dms' || k === 'workspaces')) reloadWorkspacesSoon();
 });
 
 on('auth:expired', () => {

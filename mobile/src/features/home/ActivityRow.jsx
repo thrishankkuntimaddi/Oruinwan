@@ -18,7 +18,7 @@ export function ActivityRow({ item, directory }) {
       className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-surface-2"
     >
       <span className="relative">
-        <Avatar name={actor?.name || item.actorName} src={actor?.avatarUrl} size="md" />
+        <Avatar name={actor?.name || item.actorName || '?'} src={actor?.avatarUrl} size="md" />
         <span className="absolute -right-1 -bottom-1 grid h-5 w-5 place-items-center rounded-full bg-surface-3 text-accent-ink ring-2 ring-surface">
           <Icon as={Glyph} size={11} />
         </span>
@@ -26,8 +26,14 @@ export function ActivityRow({ item, directory }) {
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className="min-w-0 flex-1 truncate text-[14px]">
-            <span className="font-semibold">{actor?.name || item.actorName || 'Someone'}</span>{' '}
-            <span className="text-text-2">{item.text}</span>
+            {item.title ? (
+              <span className="font-medium">{item.title}</span>
+            ) : (
+              <>
+                <span className="font-semibold">{actor?.name || item.actorName || 'Someone'}</span>{' '}
+                <span className="text-text-2">{item.text}</span>
+              </>
+            )}
           </span>
           <span className="shrink-0 text-[11px] text-text-3">{shortAgo(item.at)}</span>
         </span>
