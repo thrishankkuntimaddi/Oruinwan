@@ -128,6 +128,26 @@ jobs:
             echo "::error::ANDROID_KEYSTORE_BASE64 does not decode to the Oruinwan release keystore. Copy the whole of ~/.local/oruinwan-signing/keystore.base64.txt into the secret again (one long line ending in '='), then re-run."
             exit 1
           fi
+          # Check the password before Gradle, forgiving what copy-paste adds: line breaks, spaces,
+          # or the "%" zsh prints after a file without a final newline.
+          export ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD
+          RAW="$ANDROID_KEYSTORE_PASSWORD"
+          TRIMMED=$(printf '%s' "$RAW" | tr -d '\r\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+          OK=""
+          for CANDIDATE in "$RAW" "$TRIMMED" "${TRIMMED%\%}"; do
+            export STOREPASS="$CANDIDATE"
+            if keytool -list -storetype PKCS12 -keystore "$ANDROID_KEYSTORE_PATH" -storepass:env STOREPASS >/dev/null 2>&1; then OK=1; break; fi
+          done
+          unset STOREPASS
+          if [ -z "$OK" ]; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the release keystore. Paste the 40 letters and digits from ~/.local/oruinwan-signing/password.txt into ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_PASSWORD (nothing else), then re-run."
+            exit 1
+          fi
+          # PKCS12 keystores use one password for the store and the key.
+          ANDROID_KEYSTORE_PASSWORD="$CANDIDATE"
+          ANDROID_KEY_PASSWORD="$CANDIDATE"
+          ANDROID_KEY_ALIAS=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n[:space:]' | sed 's/%$//')
+          export ANDROID_KEY_ALIAS
           ./gradlew --no-daemon assembleRelease
 
       - name: Verify signature and write the update manifest
