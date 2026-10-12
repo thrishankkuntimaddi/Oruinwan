@@ -1,22 +1,24 @@
 # Oruinwan for Mac, Windows and Linux
 
-The Oruinwan app from [`../mobile`](../mobile/README.md), the same build that ships as the Android
-APK, in an Electron window (Electron 44, electron-builder 26). On a laptop or desktop it uses the wide
-layout: a sidebar, with your list and the open conversation, task or note side by side. Narrow the
-window below 1024 px and it switches to the phone layout.
+The full Oruinwan web client ([`../client`](../client), built with `vite build --mode app`) in an
+Electron window (Electron 44, electron-builder 26): the same workspace as in the browser, with native
+notifications and an unread badge. The first launch asks for the team's server address
+(`client/src/appMode`), then the usual sign-in.
 
-Like the Android app it signs in to any self-hosted Oruinwan server, or runs the built-in demo. Nothing
-is loaded from a hosted web client.
+The same app build runs on Android tablets and iPads ([`../mobile`](../mobile/README.md)).
 
 ## Develop
 
 ```bash
-cd mobile && npm install && npm run dev     # the app on http://localhost:5174
-cd desktop && npm install && npm start      # Electron, loading that dev server (DevTools open)
+yarn install                                          # repo root: the web client's dependencies
+cd client && npx vite --mode app                      # the web client in app mode on http://localhost:3000
+cd desktop && npm install && npm start                # Electron, loading that dev server (DevTools open)
 ```
 
 `npm run start:bundled` builds the app and runs it the way the packaged app does, from `app://oruinwan`.
-Set `ORUINWAN_DEV_URL` to point `npm start` somewhere other than port 5174.
+Set `ORUINWAN_DEV_URL` to point `npm start` somewhere other than port 3000. To try it against a
+throwaway server, run `node e2e/scripts/start-stack.js` and connect to `localhost:8095`
+(`alice@e2e.oruinwan.test` / `E2e-Passw0rd!`).
 
 ## Build installers
 
@@ -26,8 +28,8 @@ npm run build:win      # dist/Oruinwan-Windows-Setup.exe
 npm run build:linux    # dist/Oruinwan-Linux.AppImage and dist/Oruinwan-Linux.deb
 ```
 
-Each first runs `npm run bundle`: it builds `../mobile` and copies `mobile/dist` into `app/`
-(git-ignored). Set `ORUINWAN_SKIP_WEB_BUILD=1` to copy an existing build instead.
+Each first runs `npm run bundle`: it builds `../client` in app mode and copies `client/dist-app` into
+`app/` (git-ignored). Set `ORUINWAN_SKIP_WEB_BUILD=1` to copy an existing build instead.
 
 Releases are built by CI, not by hand: pushing a `vX.Y.Z` tag runs the **Build apps** workflow, which
 publishes the APK and all desktop installers together. See "Releasing a new version" in
@@ -39,12 +41,12 @@ The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts
 
 | | |
 |---|---|
-| **Loading** | `electron/main.js` serves `app/` from the privileged `app://oruinwan` scheme (standard and secure, so localStorage, IndexedDB and WebCrypto keys work as on https). HTML responses carry a Content-Security-Policy. |
-| **Servers** | Self-hosted servers only allow their own web origins for CORS. Like Android's native HTTP, the main process answers CORS for the app's requests (preflights included) and drops `Cross-Origin-Resource-Policy` so avatars load. No server change is needed. |
-| **Bridge** | `electron/preload.js` exposes `window.oruinwanDesktop` = `{ platform, arch, version, setBadgeCount, openExternal }`. The app (`mobile/src/native/index.js`) detects the desktop through it. |
+| **Loading** | `electron/main.js` serves `app/` from the privileged `app://oruinwan` scheme (standard and secure, so localStorage, IndexedDB and WebCrypto keys work as on https). In-app routes (`/login`, `/workspace/…`) get `index.html`. HTML responses carry a Content-Security-Policy. |
+| **Servers** | Self-hosted servers only allow their own web origins for CORS, so the main process answers CORS for the app's requests (preflights included) and drops `Cross-Origin-Resource-Policy` so avatars load. Sign-in uses the server's app token mode (`x-client-platform: desktop`, refresh token in the response body) instead of the browser's cross-site cookie. |
+| **Bridge** | `electron/preload.js` exposes `window.electronAPI` (what `client/src/desktop/bridge.js` uses for notifications, the badge and notification clicks) and `window.oruinwanDesktop` (`{ platform, arch, version, setBadgeCount, openExternal }`, which marks the desktop app). |
 | **Security** | Sandboxed renderer, context isolation, no Node. Only `app://oruinwan` may load in the window; links and `window.open` go to the system browser (http, https and mailto only). Permissions are limited to notifications, clipboard, media and fullscreen, for the app's own origin. |
 | **Window** | Size and position are remembered (`window-state.json` in the user data folder). A second launch focuses the open window. The unread count shows on the dock (macOS), the launcher (Linux, where supported) and in the window title. |
-| **Updates** | The app reads `latest.json` from the latest GitHub release and offers the installer for that computer (Settings → Updates). Installing over the old version keeps your data. |
+| **Updates** | The app reads `latest.json` from the latest GitHub release and offers the installer for that computer. Installing over the old version keeps your data. |
 
 ## Installing unsigned builds
 

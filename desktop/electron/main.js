@@ -3,17 +3,17 @@
 /**
  * Oruinwan desktop — Electron main process.
  *
- * The window runs the same app as the Android build (mobile/, built with Vite), bundled into
- * app/ and served from app://oruinwan. Nothing is loaded from a remote web client: the app
- * signs in to whichever self-hosted Oruinwan server the user enters, or runs the demo.
+ * The window runs the Oruinwan web client (client/, built with `vite build --mode app`),
+ * bundled into app/ and served from app://oruinwan. On first launch it asks for the team's
+ * server address (client/src/appMode), then signs in to that self-hosted server.
  *
- *  1. app:// scheme serving the bundle, with a Content-Security-Policy
+ *  1. app:// scheme serving the bundle (with in-app routes), with a Content-Security-Policy
  *  2. Server access like Android's native HTTP: CORS answered here, so any server works
  *  3. Security: sandboxed renderer, navigation locked to the app, links open in the browser
- *  4. Window state, single instance, menu, dock/taskbar badge
+ *  4. Window state, single instance, menu, native notifications, dock/taskbar badge
  */
 
-const { app, BrowserWindow, Menu, ipcMain, nativeTheme, net, protocol, screen, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, ipcMain, net, protocol, screen, session, shell } = require('electron');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -33,8 +33,8 @@ function originOf(url) {
 }
 
 const IS_DEV = process.env.ELECTRON_IS_DEV === '1' || process.env.NODE_ENV === 'development';
-// Dev: the mobile app's Vite server (cd mobile && npm run dev). Prod: the bundled build.
-const DEV_URL = process.env.ORUINWAN_DEV_URL || 'http://localhost:5174';
+// Dev: the web client's Vite server in app mode (cd client && npx vite --mode app). Prod: the bundle.
+const DEV_URL = process.env.ORUINWAN_DEV_URL || 'http://localhost:3000';
 const SCHEME = 'app';
 const APP_ORIGIN = `${SCHEME}://oruinwan`;
 const START_URL = IS_DEV ? DEV_URL : `${APP_ORIGIN}/index.html`;
@@ -131,16 +131,17 @@ function contentSecurityPolicy() {
   }
   return [
     "default-src 'self'",
-    // Firebase Analytics (optional, see mobile/.env.example) loads gtag from Google.
-    `script-src 'self' ${hashes.join(' ')} https://www.googletagmanager.com`,
-    "style-src 'self' 'unsafe-inline'",
-    "font-src 'self' data:",
-    // Servers are self-hosted at any address, so http(s) and ws(s) to anywhere.
+    `script-src 'self' ${hashes.join(' ')}`.trim(),
+    // Inter comes from Google Fonts (client/index.html); offline, the system font is used.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    // Servers are self-hosted at any address, so http(s) and ws(s) to anywhere. Frames show
+    // PDF previews and video embeds.
     'img-src \'self\' data: blob: https: http:',
     'media-src \'self\' data: blob: https: http:',
     'connect-src \'self\' https: http: wss: ws:',
+    'frame-src \'self\' blob: data: https: http:',
     "worker-src 'self' blob:",
-    "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",
@@ -158,12 +159,18 @@ function registerAppScheme() {
     } catch {
       return new Response('Bad request', { status: 400 });
     }
-    const file = path.normalize(path.join(APP_DIR, rel === '/' ? '/index.html' : rel));
+    let file = path.normalize(path.join(APP_DIR, rel === '/' ? '/index.html' : rel));
     if (!file.startsWith(APP_DIR + path.sep)) return new Response('Forbidden', { status: 403 });
+    let exists = false;
     try {
-      if (!fs.statSync(file).isFile()) return new Response('Not found', { status: 404 });
+      exists = fs.statSync(file).isFile();
     } catch {
-      return new Response('Not found', { status: 404 });
+      /* missing */
+    }
+    if (!exists) {
+      // In-app routes (/login, /workspace/…) are the single-page app's index.html.
+      if (path.extname(rel)) return new Response('Not found', { status: 404 });
+      file = path.join(APP_DIR, 'index.html');
     }
     const res = await net.fetch(pathToFileURL(file).toString());
     if (!file.endsWith('.html')) return res;
@@ -253,7 +260,7 @@ function createWindow() {
     title: 'Oruinwan',
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0c0c' : '#f5f4f2',
+    backgroundColor: '#0c0c0c', // the web client's background
     icon: process.platform === 'linux' ? path.join(__dirname, '..', 'assets', 'icon.png') : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -314,6 +321,31 @@ function fromAppPage(event) {
 
 ipcMain.on('oruinwan:open-external', (event, url) => {
   if (fromAppPage(event) && typeof url === 'string' && url.length < 4096) openExternalSafely(url);
+});
+
+// Native notifications from the web client (client/src/desktop/bridge.js → preload.js).
+// Kept referenced until closed: Electron drops click handlers of collected notifications.
+const shownNotifications = new Set();
+const clip = (value, max) => (value === undefined || value === null ? '' : String(value).slice(0, max));
+
+ipcMain.on('oruinwan:notify', (event, payload) => {
+  if (!fromAppPage(event) || !Notification.isSupported()) return;
+  const p = payload && typeof payload === 'object' ? payload : {};
+  const where = p.channelName ? ` in #${clip(p.channelName, 100)}` : '';
+  const title = clip(p.title, 200)
+    || (p.type === 'task' ? 'Task reminder' : p.senderName ? `${clip(p.senderName, 100)}${where}` : 'Oruinwan');
+  const body = clip(p.body, 500) || clip(p.preview, 500) || clip(p.taskTitle, 200);
+  const target = { workspaceId: clip(p.workspaceId, 64), channelId: clip(p.channelId, 64), dmSessionId: clip(p.dmSessionId, 64) };
+  const notification = new Notification({ title, body });
+  shownNotifications.add(notification);
+  const forget = () => shownNotifications.delete(notification);
+  notification.on('click', () => {
+    forget();
+    showWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('oruinwan:notification-clicked', target);
+  });
+  notification.on('close', forget);
+  notification.show();
 });
 
 ipcMain.on('oruinwan:badge', (event, count) => {
