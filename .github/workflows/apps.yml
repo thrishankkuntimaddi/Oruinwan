@@ -1,0 +1,333 @@
+name: Build apps
+
+# Pull requests and main: lint and test the app, then build it for Android (debug APK), Mac,
+# Windows and Linux, as downloadable workflow artifacts.
+# Tags named vX.Y.Z: the same builds with the Android release key, published together as ONE
+# GitHub Release, plus latest.json (read by the in-app updaters on Android and desktop).
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', 'desktop/**', '.github/workflows/apps.yml']
+    tags: ['v*']
+  pull_request:
+    paths: ['mobile/**', 'desktop/**', '.github/workflows/apps.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: apps-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  # Public SHA-256 fingerprint of the permanent release key. A release signed with any other
+  # key would not install over existing copies, so publishing stops if it doesn't match.
+  RELEASE_CERT_SHA256: 95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5
+  # SHA-256 of the (password-protected) release keystore file, to catch a damaged secret early.
+  RELEASE_KEYSTORE_SHA256: 8193055c4e748cd0407d5e10d7b200bdf74d6a7512a7b1cf72ddbe66ac5b60bd
+  IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+jobs:
+  check:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+      - name: Check the tag matches package.json
+        if: env.IS_RELEASE == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match mobile/package.json version ${VERSION}. Bump the version, commit, then tag v${VERSION}."
+            exit 1
+          fi
+
+      # One web build for every desktop platform, so they all ship the same bundle.
+      - name: Build the app bundle
+        env:
+          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
+        run: |
+          # Optional: the contents of mobile/.env (Firebase web config). Without it the app
+          # builds with its built-in defaults.
+          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; else echo "::notice::MOBILE_ENV not set; building without Firebase Remote Config"; fi
+          npm run build
+          rm -f .env
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-bundle
+          path: mobile/dist
+          retention-days: 3
+
+  android:
+    name: Android
+    needs: check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+
+      # The web build runs npm and vite plugin code, so no signing secret is visible here.
+      - name: Build the web app
+        env:
+          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
+        run: |
+          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; fi
+          npm run build
+          npx cap sync android
+          rm -f .env
+
+      - name: Build a debug APK
+        if: env.IS_RELEASE != 'true'
+        working-directory: mobile/android
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Debug APK artifact
+        if: env.IS_RELEASE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oruinwan-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      # Secrets exist only inside this step, never in $GITHUB_ENV, and the key file is removed after.
+      - name: Build the signed release APK
+        if: env.IS_RELEASE == 'true'
+        working-directory: mobile/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Release signing secrets are missing. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD under Settings → Secrets and variables → Actions → Repository secrets, then re-run this workflow. (A debug-signed release is never published: phones could not update to it.)"
+            exit 1
+          fi
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.p12"
+          trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
+          # Keep only base64 characters: a pasted secret often picks up line breaks, spaces or the
+          # "%" zsh prints after a line without a trailing newline.
+          printf '%s' "$KEYSTORE_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$ANDROID_KEYSTORE_PATH" || true
+          if [ "$(sha256sum "$ANDROID_KEYSTORE_PATH" | cut -d' ' -f1)" != "$RELEASE_KEYSTORE_SHA256" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 does not decode to the Oruinwan release keystore. Copy the whole of ~/.local/oruinwan-signing/keystore.base64.txt into the secret again (one long line ending in '='), then re-run."
+            exit 1
+          fi
+          # Check the password before Gradle, forgiving what copy-paste adds: line breaks, spaces,
+          # or the "%" zsh prints after a file without a final newline.
+          export ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD
+          RAW="$ANDROID_KEYSTORE_PASSWORD"
+          TRIMMED=$(printf '%s' "$RAW" | tr -d '\r\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+          OK=""
+          for CANDIDATE in "$RAW" "$TRIMMED" "${TRIMMED%\%}"; do
+            export STOREPASS="$CANDIDATE"
+            if keytool -list -storetype PKCS12 -keystore "$ANDROID_KEYSTORE_PATH" -storepass:env STOREPASS >/dev/null 2>&1; then OK=1; break; fi
+          done
+          unset STOREPASS
+          if [ -z "$OK" ]; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the release keystore. Paste the 40 letters and digits from ~/.local/oruinwan-signing/password.txt into ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_PASSWORD (nothing else), then re-run."
+            exit 1
+          fi
+          # PKCS12 keystores use one password for the store and the key.
+          ANDROID_KEYSTORE_PASSWORD="$CANDIDATE"
+          ANDROID_KEY_PASSWORD="$CANDIDATE"
+          ANDROID_KEY_ALIAS=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n[:space:]' | sed 's/%$//')
+          export ANDROID_KEY_ALIAS
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Verify the release signature
+        if: env.IS_RELEASE == 'true'
+        run: |
+          mkdir -p dist-release
+          cp android/app/build/outputs/apk/release/app-release.apk dist-release/Oruinwan-Android.apk
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          SIGNER=$("$APKSIGNER" verify --print-certs dist-release/Oruinwan-Android.apk | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+          if [ "$SIGNER" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::The APK is signed with $SIGNER, not the Oruinwan release key ($RELEASE_CERT_SHA256). Not publishing."
+            exit 1
+          fi
+      - name: Release APK artifact
+        if: env.IS_RELEASE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: mobile/dist-release/Oruinwan-Android.apk
+          retention-days: 7
+
+  desktop:
+    name: Desktop (${{ matrix.label }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux
+            key: linux
+            os: ubuntu-latest
+            args: --linux
+          - label: Mac Apple Silicon
+            key: mac-arm64
+            os: macos-latest
+            args: --mac --arm64
+          # Built on the same Apple Silicon runners: the app has no native modules, so
+          # electron-builder can package the Intel (x64) Electron there.
+          - label: Mac Intel
+            key: mac-x64
+            os: macos-latest
+            args: --mac --x64
+          - label: Windows
+            key: windows
+            os: windows-latest
+            args: --win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-bundle
+          path: mobile/dist
+      - run: npm ci
+
+      - name: Package
+        env:
+          ORUINWAN_SKIP_WEB_BUILD: '1'
+          # Never pick up a signing identity from the runner: Mac builds are ad-hoc signed
+          # (mac.identity "-" in package.json), Windows builds are unsigned.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          VERSION=$(node -p "require('../mobile/package.json').version")
+          npm run bundle
+          npx electron-builder ${{ matrix.args }} --publish never -c.extraMetadata.version="$VERSION"
+          mkdir -p out
+          case "${{ matrix.key }}" in
+            linux)     mv dist/Oruinwan-Linux.AppImage dist/Oruinwan-Linux.deb out/ ;;
+            mac-arm64) mv dist/Oruinwan-Mac-arm64.dmg out/Oruinwan-Mac-AppleSilicon.dmg ;;
+            mac-x64)   mv dist/Oruinwan-Mac-x64.dmg out/Oruinwan-Mac-Intel.dmg ;;
+            windows)   mv dist/Oruinwan-Windows-Setup.exe out/ ;;
+          esac
+          ls -la out
+
+      - name: Check the Mac app
+        if: runner.os == 'macOS'
+        run: |
+          APP=$(ls -d dist/mac*/Oruinwan.app)
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E 'Signature|Identifier|Format'
+          lipo -archs "$APP/Contents/MacOS/Oruinwan"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IS_RELEASE == 'true' && format('release-{0}', matrix.key) || format('oruinwan-desktop-{0}', matrix.key) }}
+          path: desktop/out/*
+          retention-days: ${{ env.IS_RELEASE == 'true' && 7 || 14 }}
+
+  publish:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [android, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist-release
+          merge-multiple: true
+
+      - name: Write the update manifest and release notes
+        run: |
+          VERSION=$(node -p "require('./mobile/package.json').version")
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          cd dist-release
+          for f in Oruinwan-Android.apk Oruinwan-Mac-AppleSilicon.dmg Oruinwan-Mac-Intel.dmg Oruinwan-Windows-Setup.exe Oruinwan-Linux.AppImage Oruinwan-Linux.deb; do
+            [ -f "$f" ] || { echo "::error::$f is missing from the build artifacts. Not publishing."; exit 1; }
+          done
+          NOTES=../mobile/release-notes/${VERSION}.md
+          [ -f "$NOTES" ] || { echo "::warning::$NOTES not found; publishing without notes"; NOTES=$(mktemp); }
+          RELEASE_TAG="$GITHUB_REF_NAME" node ../mobile/scripts/write-manifest.mjs Oruinwan-Android.apk latest.json --notes "$NOTES"
+          row() { echo "| $1 | **$2** | $(( $(wc -c < "$2") / 1048576 )) MB | \`$(sha256sum "$2" | cut -d' ' -f1)\` |"; }
+          {
+            cat "$NOTES"
+            echo
+            echo "### Download"
+            echo
+            echo "| Platform | File | Size | SHA-256 |"
+            echo "|---|---|---|---|"
+            row "Android 7+" Oruinwan-Android.apk
+            row "Mac (Apple Silicon: M1 and newer)" Oruinwan-Mac-AppleSilicon.dmg
+            row "Mac (Intel)" Oruinwan-Mac-Intel.dmg
+            row "Windows 10 / 11" Oruinwan-Windows-Setup.exe
+            row "Linux (any distribution)" Oruinwan-Linux.AppImage
+            row "Linux (Debian, Ubuntu)" Oruinwan-Linux.deb
+            echo
+            echo "### Install"
+            echo
+            echo "- **Android:** open the APK and allow your browser to install apps if asked. Already installed? The app offers the update itself (Settings → Updates) and keeps your data."
+            echo "- **Mac:** open the .dmg and drag Oruinwan to Applications. The app isn't notarized by Apple yet, so the first time macOS refuses to open it: go to System Settings → Privacy & Security, click **Open Anyway**, then confirm. (Or run \`xattr -dr com.apple.quarantine /Applications/Oruinwan.app\` in Terminal.)"
+            echo "- **Windows:** run the installer. The app isn't code-signed yet, so SmartScreen may warn: click **More info → Run anyway**."
+            echo "- **Linux:** \`chmod +x Oruinwan-Linux.AppImage\` and run it, or \`sudo apt install ./Oruinwan-Linux.deb\`."
+            echo
+            echo "The APK is signed with the Oruinwan release key (certificate SHA-256 \`${RELEASE_CERT_SHA256}\`). \`latest.json\` is read by the apps' updaters. You can ignore the automatic *Source code* archives."
+          } > body.md
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          name: Oruinwan ${{ env.VERSION }}
+          body_path: dist-release/body.md
+          files: |
+            dist-release/Oruinwan-Android.apk
+            dist-release/Oruinwan-Mac-AppleSilicon.dmg
+            dist-release/Oruinwan-Mac-Intel.dmg
+            dist-release/Oruinwan-Windows-Setup.exe
+            dist-release/Oruinwan-Linux.AppImage
+            dist-release/Oruinwan-Linux.deb
+            dist-release/latest.json
+          make_latest: true

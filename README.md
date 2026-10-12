@@ -79,7 +79,7 @@ Everything is self-hostable. The default AI runs on your own model server (Ollam
 
 ### Notifications
 - In-app notification center for DMs, mentions, thread replies, tasks, meetings and reminders
-- Browser and Electron native notifications, daily digests and email notifications
+- Browser native notifications, daily digests and email notifications
 - Mobile push through Expo, with previews decrypted on the device only (server side; the Android app does not register for push yet)
 - Per-workspace preferences enforced on the server
 
@@ -271,8 +271,8 @@ Oruniwan/
 │       ├── shared/    Database clients, Redis, event bus, jobs, feature flags, middleware
 │       └── socket/    Socket.IO setup and handlers
 ├── ai/                AI orchestrator, agents, tools, memory and providers (see ai/README.md)
-├── desktop/           Electron app (see desktop/README.md)
-├── mobile/            Android app: phone-first React UI in a Capacitor shell (see mobile/README.md)
+├── desktop/           Mac, Windows and Linux app: mobile/ in an Electron shell (see desktop/README.md)
+├── mobile/            The Oruinwan app for Android (Capacitor), desktop and the web (see mobile/README.md)
 ├── sdk/js/            @oruinwan/sdk JavaScript client (see sdk/js/README.md)
 ├── platform/          Code shared by web, server and mobile: API client, socket client, E2EE helpers
 ├── e2e/               Playwright browser tests
@@ -361,20 +361,19 @@ The company permission matrix maps each company role to capabilities such as cre
 
 **Web.** The React app in `client/` is responsive. Below 768 px wide it switches to a mobile layout with a bottom tab bar.
 
-**Desktop.** `desktop/` wraps the web app in a sandboxed Electron shell with native notifications, a tray icon, unread badges, `oruinwan://` deep links and auto-update.
+**The Oruinwan app: Android, desktop and web.** `mobile/` is one React app that signs in to any Oruinwan server (or runs a built-in demo) and keeps messages end-to-end encrypted with the web client's scheme. Phones get a phone layout; laptops and desktops get a sidebar with the list and the open item side by side. It ships as:
 
-```bash
-cd desktop && npm install --workspaces=false
-npm start              # loads http://localhost:3000; override with CHTTRIX_WEB_URL
-npm run build:mac      # or build:win / build:linux
-```
+- **Android:** a 1.4 MB APK in a Capacitor shell that updates itself from GitHub Releases.
+- **Mac, Windows and Linux:** `desktop/` runs the same build in a sandboxed Electron shell ([desktop/README.md](desktop/README.md)).
+- **Web:** the same build on GitHub Pages.
 
-**Android.** `mobile/` is a phone-first React app in a Capacitor shell: a 1.4 MB APK that signs in to any Oruinwan server (or runs a built-in demo), keeps messages end-to-end encrypted with the web client's scheme, and updates itself from GitHub Releases. Details, release steps and configuration are in [mobile/README.md](mobile/README.md).
+Pushing a `vX.Y.Z` tag publishes the APK and every desktop installer in one GitHub Release. Details, release steps and configuration are in [mobile/README.md](mobile/README.md).
 
 ```bash
 cd mobile && npm install
 npm run dev              # browser preview at http://localhost:5174
 npm run android:debug    # debug APK in android/app/build/outputs/apk/debug/
+cd ../desktop && npm install && npm start   # the desktop app, loading the dev server
 ```
 
 **SDK.** `sdk/js` is a zero-dependency client for Node 18+ and browsers.
@@ -441,7 +440,7 @@ Oruinwan is under active development and is not yet production-hardened. Known g
 - Billing, SSO, integrations and the community page are incomplete and hidden behind feature flags.
 - Huddles are peer-to-peer mesh calls, capped at six participants until a media server is added.
 - Data is moving from MongoDB to PostgreSQL. Identity, tasks and logs have moved, and messages have not.
-- The Android app shows attachments and polls as labels (open them on the web) and has no push notifications yet.
+- The Oruinwan app (Android, desktop and web) shows attachments and polls as labels (open them in the web client) and has no push or desktop notifications yet.
 
 Issues and pull requests on any of these are welcome.
 
