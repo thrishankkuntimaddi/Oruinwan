@@ -102,9 +102,9 @@ Some areas are still being built and are hidden behind `FEATURES_ENABLED`: `bill
 ## Architecture
 
 ```
-            Web (React 19 + Vite)   Desktop (Electron)   Android (Capacitor)   SDK
-                           \               |                 |           /
-                            \______ HTTPS + WebSocket (one origin) _____/
+            Web (React 19 + Vite)   Desktop (Electron)   Android/iOS (Capacitor)   SDK
+                           \               |                 |               /
+                            \______ HTTPS + WebSocket (one origin) _________/
                                                |
                  ┌─────────────────────────────▼─────────────────────────────┐
                  │  server/  Express 5 + Socket.IO 4                          │
@@ -271,8 +271,8 @@ Oruniwan/
 │       ├── shared/    Database clients, Redis, event bus, jobs, feature flags, middleware
 │       └── socket/    Socket.IO setup and handlers
 ├── ai/                AI orchestrator, agents, tools, memory and providers (see ai/README.md)
-├── desktop/           Mac, Windows and Linux app: mobile/ in an Electron shell (see desktop/README.md)
-├── mobile/            The Oruinwan app for Android (Capacitor), desktop and the web (see mobile/README.md)
+├── desktop/           Mac, Windows and Linux app: the web client in an Electron shell (see desktop/README.md)
+├── mobile/            Android and iOS app: phone UI, and the web client on tablets (see mobile/README.md)
 ├── sdk/js/            @oruinwan/sdk JavaScript client (see sdk/js/README.md)
 ├── platform/          Code shared by web, server and mobile: API client, socket client, E2EE helpers
 ├── e2e/               Playwright browser tests
@@ -359,21 +359,19 @@ The company permission matrix maps each company role to capabilities such as cre
 
 ## Clients: web, desktop, mobile, SDK
 
-**Web.** The React app in `client/` is responsive. Below 768 px wide it switches to a mobile layout with a bottom tab bar.
+**Web.** The React app in `client/` is the main client; each server hosts it (`server/server.js` serves `dist/`). Below 768 px wide it switches to a mobile layout with a bottom tab bar; tablets (iPad included) keep the full layout down to 600 px. Besides the default build it has two modes: `vite build --mode app` (the desktop and tablet apps: the user picks the server, sign-in uses the server's app token mode, see `client/src/appMode`) and `vite build --mode site` (the product website on GitHub Pages).
 
-**The Oruinwan app: Android, desktop and web.** `mobile/` is one React app that signs in to any Oruinwan server (or runs a built-in demo) and keeps messages end-to-end encrypted with the web client's scheme. Phones get a phone layout; laptops and desktops get a sidebar with the list and the open item side by side. It ships as:
+**Desktop.** `desktop/` runs the web client's app build in a sandboxed Electron shell for Mac, Windows and Linux, with native notifications and an unread badge ([desktop/README.md](desktop/README.md)).
 
-- **Android:** a 1.4 MB APK in a Capacitor shell that updates itself from GitHub Releases.
-- **Mac, Windows and Linux:** `desktop/` runs the same build in a sandboxed Electron shell ([desktop/README.md](desktop/README.md)).
-- **Web:** the same build on GitHub Pages.
+**Android, iPhone and iPad.** `mobile/` is a Capacitor app with two UIs: a phone-first React UI (a 1.4 MB app on phones, with a built-in demo) and, on tablets and iPads, the web client's app build. It keeps messages end-to-end encrypted with the web client's scheme; the Android app updates itself from GitHub Releases, the iOS app ships through TestFlight. Details, release steps and configuration are in [mobile/README.md](mobile/README.md).
 
-Pushing a `vX.Y.Z` tag publishes the APK and every desktop installer in one GitHub Release. Details, release steps and configuration are in [mobile/README.md](mobile/README.md).
+Pushing a `vX.Y.Z` tag builds every app and publishes the APK and the desktop installers in one GitHub Release (`.github/workflows/apps.yml`).
 
 ```bash
 cd mobile && npm install
-npm run dev              # browser preview at http://localhost:5174
+npm run dev              # phone UI preview at http://localhost:5174
 npm run android:debug    # debug APK in android/app/build/outputs/apk/debug/
-cd ../desktop && npm install && npm start   # the desktop app, loading the dev server
+cd ../desktop && npm install && npm start   # the desktop app (start `npx vite --mode app` in client/ first)
 ```
 
 **SDK.** `sdk/js` is a zero-dependency client for Node 18+ and browsers.
@@ -440,7 +438,7 @@ Oruinwan is under active development and is not yet production-hardened. Known g
 - Billing, SSO, integrations and the community page are incomplete and hidden behind feature flags.
 - Huddles are peer-to-peer mesh calls, capped at six participants until a media server is added.
 - Data is moving from MongoDB to PostgreSQL. Identity, tasks and logs have moved, and messages have not.
-- The Oruinwan app (Android, desktop and web) shows attachments and polls as labels (open them in the web client) and has no push or desktop notifications yet.
+- The phone app (Android phones, iPhone) shows attachments and polls as labels (open them in the web client) and has no push notifications yet.
 
 Issues and pull requests on any of these are welcome.
 
