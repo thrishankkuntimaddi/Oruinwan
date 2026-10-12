@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders the Android launcher icons, launch-screen logo, favicon and desktop app icon from the master logo
+# Renders the Android and iOS app icons and launch screens, the favicon and the desktop app icon from the master logo
 # (client/public/icons/Oruinwan.png). Needs ImageMagick 7 (`magick`). Run after changing the logo.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -50,4 +50,12 @@ magick -size 824x824 xc:'#000000' \( "$TMP/art.png" -resize 640x640 \) -gravity 
   "$TMP/desktop-tile.png"
 magick -size 1024x1024 xc:none "$TMP/desktop-tile.png" -gravity center -compose over -composite -strip -depth 8 ../desktop/assets/icon.png
 
-echo "Icons written to $RES, public/ and ../desktop/assets/"
+# iOS (ios/App/App/Assets.xcassets): one opaque 1024px app icon (iOS rounds the corners itself)
+# and the launch image, the logo centred on black and cropped to fit every screen.
+IOS=ios/App/App/Assets.xcassets
+magick -size 1024x1024 xc:'#000000' \( "$TMP/art.png" -resize 720x720 \) -gravity center -composite -alpha off -strip -depth 8 "$IOS/AppIcon.appiconset/AppIcon-512@2x.png"
+magick -size 2732x2732 xc:'#0c0c0c' \( "$TMP/art.png" -resize 560x560 \) -gravity center -composite -alpha off -strip -depth 8 "$IOS/Splash.imageset/splash-2732x2732.png"
+cp "$IOS/Splash.imageset/splash-2732x2732.png" "$IOS/Splash.imageset/splash-2732x2732-1.png"
+cp "$IOS/Splash.imageset/splash-2732x2732.png" "$IOS/Splash.imageset/splash-2732x2732-2.png"
+
+echo "Icons written to $RES, public/, ios/ and ../desktop/assets/"

@@ -10,6 +10,7 @@ import { connectRealtime, disconnectRealtime, joinWorkspace, resumeRealtime, soc
 import { prefs } from '../../native/storage.js';
 import { useE2ee } from '../e2ee.js';
 import { normalizeServerUrl } from './server.js';
+import { clientPlatform } from '../../native/index.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -199,7 +200,7 @@ async function streamAi(body, { onToken, onTool, signal }) {
   const open = () =>
     webFetch(`${serverUrl()}/api/ai/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `Bearer ${accessToken()}`, 'x-client-platform': 'android' },
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `Bearer ${accessToken()}`, 'x-client-platform': clientPlatform },
       body: JSON.stringify(body),
       signal,
     });

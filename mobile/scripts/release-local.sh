@@ -18,6 +18,7 @@ export ANDROID_KEY_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"
 
 VERSION=$(node -p "require('./package.json').version")
 npm run build
+node scripts/assemble-native.mjs   # phone UI + the web client for tablets (needs yarn install at the repo root)
 npx cap sync android
 (cd android && ./gradlew --no-daemon -q assembleRelease)
 

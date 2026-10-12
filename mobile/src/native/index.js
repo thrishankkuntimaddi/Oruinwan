@@ -15,6 +15,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 export const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
 export const isNative = Capacitor.isNativePlatform();
 export const isAndroid = platform === 'android';
+export const isIOS = platform === 'ios';
 
 // The desktop app (desktop/, Electron) runs this same build and exposes a small bridge from
 // its preload script: { platform, arch, version, setBadgeCount, openExternal }.
@@ -31,7 +32,12 @@ export const platformLabel = isDesktop
   ? { darwin: 'Mac', win32: 'Windows', linux: 'Linux' }[desktop.platform] || 'Desktop'
   : isWeb
     ? 'Web'
-    : 'Android';
+    : isIOS
+      ? 'iPhone'
+      : 'Android';
+
+/** Sent as x-client-platform: the server then hands apps their refresh token in the body. */
+export const clientPlatform = isIOS ? 'ios' : 'android';
 
 // Native side: android/app/src/main/java/com/oruinwan/app/AppWindowPlugin.java
 const AppWindow = registerPlugin('AppWindow');

@@ -1,9 +1,10 @@
 // HTTP client for a self-hosted Oruinwan server.
 //
-// On Android, CapacitorHttp performs these requests natively, so the server needs no CORS
-// entry for the app. `x-client-platform: android` makes the server return refresh tokens in
-// the JSON body (server/utils/cookieHelper.js) instead of a cross-site cookie.
+// On Android and iOS, CapacitorHttp performs these requests natively, so the server needs no
+// CORS entry for the app. `x-client-platform: android|ios` makes the server return refresh
+// tokens in the JSON body (server/utils/cookieHelper.js) instead of a cross-site cookie.
 import { secure } from '../../native/storage.js';
+import { clientPlatform } from '../../native/index.js';
 import { emit } from '../../lib/bus.js';
 
 let base = '';
@@ -12,7 +13,7 @@ let refreshing = null;
 // Bumped on sign-out, so a refresh that finishes afterwards can't write tokens back.
 let generation = 0;
 
-const HEADERS = { Accept: 'application/json', 'x-client-platform': 'android' };
+const HEADERS = { Accept: 'application/json', 'x-client-platform': clientPlatform };
 export const NETWORK_MESSAGE = "Can't reach your server. Check your connection and try again.";
 
 export class ApiError extends Error {

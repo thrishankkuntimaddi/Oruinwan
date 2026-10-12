@@ -1,12 +1,13 @@
 // Checks for a newer build and installs it (Android) or opens its download (desktop).
 // Sources, newest wins: Firebase Remote Config "android_release", then latest.json
 // published with each GitHub release. Automatic checks run at most every 6 hours.
-// The web app is redeployed on every change, so it never checks.
+// The web app is redeployed on every change and iPhones update through the App Store or
+// TestFlight, so neither checks.
 import { create } from 'zustand';
 import { registerPlugin } from '@capacitor/core';
 import { UPDATE_MANIFEST_URL, RELEASES_PAGE } from '../config/env.js';
 import { refreshRemoteConfig, remoteSnapshot } from '../config/remote.js';
-import { desktop, isAndroid, isDesktop, isNative, isWeb, nativeAppInfo, openExternal } from '../native/index.js';
+import { desktop, isAndroid, isDesktop, isIOS, isNative, isWeb, nativeAppInfo, openExternal } from '../native/index.js';
 import { prefs } from '../native/storage.js';
 import { desktopDownload, evaluate, normalizeManifest, pickNewest } from './manifest.js';
 
@@ -39,7 +40,7 @@ async function fetchManifestUrl() {
 
 export async function checkForUpdate({ auto = false } = {}) {
   const state = useUpdate.getState();
-  if (isWeb) {
+  if (isWeb || isIOS) {
     useUpdate.setState({ status: 'current', manifest: null, error: null });
     return useUpdate.getState();
   }

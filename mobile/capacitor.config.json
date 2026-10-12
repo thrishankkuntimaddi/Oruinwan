@@ -1,7 +1,7 @@
 {
   "appId": "com.oruinwan.app",
   "appName": "Oruinwan",
-  "webDir": "dist",
+  "webDir": "www",
   "android": {
     "allowMixedContent": true,
     "backgroundColor": "#0c0c0c",
