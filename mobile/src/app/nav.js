@@ -3,10 +3,19 @@
 import { create } from 'zustand';
 import { uid } from '../lib/id.js';
 import { tap } from '../native/index.js';
+import { isSplit, useWide } from './layout.js';
 
 export const TABS = ['home', 'chats', 'ai', 'tasks', 'notes'];
 
 const emptyStacks = () => Object.fromEntries(TABS.map((t) => [t, []]));
+
+// Which pane the user last clicked or typed in ({ tab, pane: 'list' | 'detail' | 'sidebar' }),
+// set by the wide layout. In a split tab, opening something from the list replaces what the
+// detail pane shows; only screens opened inside the detail pane stack on top of each other.
+let origin = null;
+export function markPane(tab, pane) {
+  origin = { tab, pane };
+}
 
 export const useNav = create((set, get) => ({
   tab: 'home',
@@ -28,7 +37,10 @@ export const useNav = create((set, get) => ({
   push(name, params = {}, { tab } = {}) {
     const target = tab || get().tab;
     const route = { key: uid('r'), name, params };
-    set((s) => ({ tab: target, stacks: { ...s.stacks, [target]: [...s.stacks[target], route] } }));
+    const fresh = isSplit(target) && !(origin?.pane === 'detail' && origin.tab === target);
+    // Anything else opened before the next click (open() then push()) stacks on this screen.
+    origin = { tab: target, pane: 'detail' };
+    set((s) => ({ tab: target, stacks: { ...s.stacks, [target]: fresh ? [route] : [...s.stacks[target], route] } }));
   },
 
   replace(name, params = {}) {
@@ -48,6 +60,7 @@ export const useNav = create((set, get) => ({
 
   /** Open a route from anywhere (notification, search, deep link) in the right tab. */
   open(tab, name, params = {}) {
+    origin = { tab, pane: 'detail' };
     set((s) => ({
       tab,
       stacks: { ...s.stacks, [tab]: name ? [{ key: uid('r'), name, params }] : [] },
@@ -80,6 +93,16 @@ export const useNav = create((set, get) => ({
     return false;
   },
 }));
+
+/** True when a wide window's detail pane shows this item, so its list row can be highlighted. */
+export function useIsOpen(name, id) {
+  const wide = useWide();
+  const open = useNav((s) => {
+    const top = s.stacks[s.tab][0];
+    return Boolean(top && top.name === name && top.params.id === id);
+  });
+  return wide && open;
+}
 
 export const nav = {
   push: (...a) => useNav.getState().push(...a),

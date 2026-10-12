@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
-import { nav } from '../../app/nav.js';
+import { nav, useIsOpen } from '../../app/nav.js';
 import { useChannels, useDms } from '../../data/hooks.js';
 import { invalidate } from '../../data/query.js';
 import { Body, Screen } from '../../ui/Screen.jsx';
@@ -45,11 +45,13 @@ function UnreadPill({ unread, mentions }) {
 function ConversationRow({ kind, item }) {
   const unread = item.unread > 0 && !item.muted;
   const title = kind === 'channel' ? item.name : item.user?.name;
+  const selected = useIsOpen('conversation', item.id);
   return (
     <button
       type="button"
       onClick={() => openConversation(kind, item.id)}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2"
+      aria-current={selected ? 'true' : undefined}
+      className={cx('flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
     >
       {kind === 'channel' ? <ChannelTile channel={item} /> : <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="md" presence={item.user?.presence} className="m-0.5" />}
       <span className="min-w-0 flex-1">

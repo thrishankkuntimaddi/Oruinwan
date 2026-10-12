@@ -12,7 +12,7 @@ import { prefs } from '../../native/storage.js';
 import { DEFAULT_SERVER_URL } from '../../config/env.js';
 import { remoteSnapshot } from '../../config/remote.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
-import { openExternal } from '../../native/index.js';
+import { deviceNoun, openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 
 const POINTS = [
@@ -223,7 +223,7 @@ function SignIn({ onBack }) {
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>
-            Your password also unlocks your encryption keys on this phone. It is never stored.
+            Your password also unlocks your encryption keys on this {deviceNoun}. It is never stored.
             {base && (
               <>
                 {' '}

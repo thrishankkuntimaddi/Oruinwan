@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon.jsx';
 import { dueLabel } from '../lib/time.js';
 import { useKeyboard } from '../native/keyboard.js';
 
-function useDueSoonCount() {
+export function useDueSoonCount() {
   const { data } = useTasks();
   const me = useSession((s) => s.user?.id);
   return (data || []).filter(

@@ -16,6 +16,23 @@ export const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
 export const isNative = Capacitor.isNativePlatform();
 export const isAndroid = platform === 'android';
 
+// The desktop app (desktop/, Electron) runs this same build and exposes a small bridge from
+// its preload script: { platform, arch, version, setBadgeCount, openExternal }.
+export const desktop = (!isNative && typeof window !== 'undefined' && window.oruinwanDesktop) || null;
+export const isDesktop = Boolean(desktop);
+/** A plain browser tab: the web app or the dev preview. */
+export const isWeb = !isNative && !isDesktop;
+// Lets CSS style the desktop app like any mouse-driven device (styles/index.css).
+if (isDesktop) document.documentElement.dataset.desktop = '';
+
+/** What to call the thing the app runs on, in user-facing copy. */
+export const deviceNoun = isDesktop ? 'computer' : isWeb ? 'browser' : 'phone';
+export const platformLabel = isDesktop
+  ? { darwin: 'Mac', win32: 'Windows', linux: 'Linux' }[desktop.platform] || 'Desktop'
+  : isWeb
+    ? 'Web'
+    : 'Android';
+
 // Native side: android/app/src/main/java/com/oruinwan/app/AppWindowPlugin.java
 const AppWindow = registerPlugin('AppWindow');
 
@@ -55,6 +72,10 @@ export async function tap(kind = 'light') {
 
 export async function openExternal(url) {
   if (!url) return;
+  if (isDesktop) {
+    desktop.openExternal(url);
+    return;
+  }
   if (isNative) {
     try {
       await Browser.open({ url, presentationStyle: 'popover' });
@@ -113,8 +134,19 @@ export async function hideKeyboard() {
   }
 }
 
+/** Unread count on the dock, taskbar or launcher icon (desktop only). */
+export function setBadgeCount(count) {
+  if (!isDesktop) return;
+  try {
+    desktop.setBadgeCount(Math.max(0, count | 0));
+  } catch {
+    /* some Linux desktops have no badges */
+  }
+}
+
 /** Native app version (versionName) when installed; the bundle version otherwise. */
 export async function nativeAppInfo() {
+  if (isDesktop) return { version: desktop.version || __APP_VERSION__, build: null };
   if (!isNative) return { version: __APP_VERSION__, build: null };
   try {
     const info = await App.getInfo();

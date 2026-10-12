@@ -1,7 +1,7 @@
 // Tracks whether the on-screen keyboard is open so the tab bar can step aside.
 import { create } from 'zustand';
 import { Keyboard } from '@capacitor/keyboard';
-import { isNative } from './index.js';
+import { isDesktop, isNative } from './index.js';
 
 export const useKeyboard = create(() => ({ open: false }));
 
@@ -19,7 +19,8 @@ export async function watchKeyboard() {
     }
   }
   const vv = window.visualViewport;
-  if (!vv) return;
+  // Mouse-driven devices have no on-screen keyboard; resizing the window must not count as one.
+  if (!vv || isDesktop || matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   const base = { h: window.innerHeight };
   const check = () => {
     // On the web the layout viewport stays put while the visual viewport shrinks.

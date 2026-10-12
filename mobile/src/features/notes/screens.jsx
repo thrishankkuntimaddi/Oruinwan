@@ -3,7 +3,7 @@ import {
   FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
-import { nav } from '../../app/nav.js';
+import { nav, useIsOpen } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
 import { useDirectory, useMembers, useNotes } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
@@ -34,11 +34,13 @@ const FILTERS = [
 
 function NoteRow({ note, directory }) {
   const shared = (note.sharedWith || []).map((id) => directory[id]).filter(Boolean);
+  const selected = useIsOpen('note', note.id);
   return (
     <button
       type="button"
       onClick={() => nav.push('note', { id: note.id })}
-      className="flex w-full flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2"
+      aria-current={selected ? 'true' : undefined}
+      className={cx('flex w-full flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
     >
       <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">
         {NOTE_TYPES[note.type] || 'Note'}

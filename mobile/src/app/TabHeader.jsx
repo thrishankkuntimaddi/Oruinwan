@@ -1,5 +1,6 @@
 // Header used by every tab root: workspace switcher on the left, page actions and the
-// profile avatar (→ Settings) on the right.
+// profile avatar (→ Settings) on the right. Wide windows have both in the sidebar, so there
+// the header is just the title and the actions.
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useSession, useWorkspace } from '../data/session.js';
@@ -8,6 +9,7 @@ import { nav } from './nav.js';
 import { Avatar } from '../ui/Avatar.jsx';
 import { Icon } from '../ui/Icon.jsx';
 import { cx } from '../ui/cx.js';
+import { useWide } from './layout.js';
 import { WorkspaceTile } from '../features/workspace/WorkspaceTile.jsx';
 import { WorkspaceSheet } from '../features/workspace/WorkspaceSheet.jsx';
 
@@ -16,6 +18,19 @@ export function TabHeader({ title, actions, children, className }) {
   const workspace = useWorkspace();
   const user = useSession((s) => s.user);
   const update = useUpdate((s) => s.status);
+  const wide = useWide();
+
+  if (wide) {
+    return (
+      <header className={cx('z-10 shrink-0 bg-bg/95 pt-safe backdrop-blur-md', className)}>
+        <div className="flex h-16 items-center gap-2 pl-5 pr-2">
+          <h1 className="min-w-0 flex-1 truncate text-[20px] font-bold tracking-tight">{title}</h1>
+          {actions}
+        </div>
+        {children}
+      </header>
+    );
+  }
 
   return (
     <header className={cx('z-10 shrink-0 bg-bg/95 pt-safe backdrop-blur-md', className)}>

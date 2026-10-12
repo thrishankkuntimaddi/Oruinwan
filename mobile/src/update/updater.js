@@ -1,13 +1,14 @@
-// Checks for a newer Android build and installs it.
+// Checks for a newer build and installs it (Android) or opens its download (desktop).
 // Sources, newest wins: Firebase Remote Config "android_release", then latest.json
 // published with each GitHub release. Automatic checks run at most every 6 hours.
+// The web app is redeployed on every change, so it never checks.
 import { create } from 'zustand';
 import { registerPlugin } from '@capacitor/core';
 import { UPDATE_MANIFEST_URL, RELEASES_PAGE } from '../config/env.js';
 import { refreshRemoteConfig, remoteSnapshot } from '../config/remote.js';
-import { isAndroid, isNative, nativeAppInfo, openExternal } from '../native/index.js';
+import { desktop, isAndroid, isDesktop, isNative, isWeb, nativeAppInfo, openExternal } from '../native/index.js';
 import { prefs } from '../native/storage.js';
-import { evaluate, normalizeManifest, pickNewest } from './manifest.js';
+import { desktopDownload, evaluate, normalizeManifest, pickNewest } from './manifest.js';
 
 // Native side: android/app/src/main/java/com/oruinwan/app/AppUpdaterPlugin.java
 const AppUpdater = registerPlugin('AppUpdater');
@@ -38,6 +39,10 @@ async function fetchManifestUrl() {
 
 export async function checkForUpdate({ auto = false } = {}) {
   const state = useUpdate.getState();
+  if (isWeb) {
+    useUpdate.setState({ status: 'current', manifest: null, error: null });
+    return useUpdate.getState();
+  }
   if (state.status === 'checking') return state;
   if (auto && state.checkedAt && Date.now() - state.checkedAt < AUTO_INTERVAL && state.status !== 'idle') {
     return state;
@@ -81,10 +86,17 @@ export function skipVersion(version) {
 
 let progressSub = null;
 
-/** Downloads the APK, verifies its SHA-256, and hands it to Android's installer. */
+/**
+ * Android: downloads the APK, verifies its SHA-256, and hands it to Android's installer.
+ * Desktop: opens the installer for this computer in the browser.
+ */
 export async function installUpdate() {
   const { manifest } = useUpdate.getState();
   if (!manifest) return { ok: false };
+  if (isDesktop) {
+    await openExternal(desktopDownload(manifest, desktop) || RELEASES_PAGE);
+    return { ok: true, via: 'browser' };
+  }
   if (!isNative || !isAndroid || !manifest.apkUrl) {
     await openExternal(manifest.pageUrl || manifest.apkUrl || RELEASES_PAGE);
     return { ok: true, via: 'browser' };

@@ -2,8 +2,12 @@
 //
 // Manifest shape (latest.json on a release, or Remote Config "android_release"):
 //   { "version": "1.1.0", "apkUrl": "https://…/Oruinwan-Android.apk", "sha256": "<hex>",
-//     "notes": "What changed", "minVersion": "1.0.0", "publishedAt": "2026-10-10T…Z" }
+//     "notes": "What changed", "minVersion": "1.0.0", "publishedAt": "2026-10-10T…Z",
+//     "downloads": { "mac-arm64": "https://…/Oruinwan-Mac-AppleSilicon.dmg", "mac-x64": "…",
+//                    "win-x64": "…", "linux-appimage": "…", "linux-deb": "…" } }
 import { compareVersions, parseVersion } from '../lib/version.js';
+
+const httpsUrl = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
 
 export function normalizeManifest(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -12,6 +16,10 @@ export function normalizeManifest(raw) {
   const apkUrl = typeof raw.apkUrl === 'string' && /^https?:\/\//.test(raw.apkUrl) ? raw.apkUrl : null;
   const sha256 = typeof raw.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(raw.sha256) ? raw.sha256.toLowerCase() : null;
   const minVersion = parseVersion(raw.minVersion) ? String(raw.minVersion).replace(/^v/i, '') : null;
+  const downloads = {};
+  if (raw.downloads && typeof raw.downloads === 'object') {
+    for (const [key, url] of Object.entries(raw.downloads)) if (httpsUrl(url)) downloads[key] = url;
+  }
   return {
     version,
     apkUrl,
@@ -19,8 +27,19 @@ export function normalizeManifest(raw) {
     minVersion,
     notes: typeof raw.notes === 'string' ? raw.notes.trim() : '',
     publishedAt: raw.publishedAt || null,
-    pageUrl: typeof raw.pageUrl === 'string' ? raw.pageUrl : null,
+    pageUrl: httpsUrl(raw.pageUrl),
+    downloads,
   };
+}
+
+/**
+ * The installer for this desktop, from a manifest's downloads. Linux has two formats and the
+ * app can't tell which one is installed, so Linux (and anything unknown) gets the release page.
+ */
+export function desktopDownload(manifest, { platform, arch } = {}) {
+  const d = manifest?.downloads || {};
+  const key = platform === 'darwin' ? (arch === 'arm64' ? 'mac-arm64' : 'mac-x64') : platform === 'win32' ? 'win-x64' : null;
+  return (key && d[key]) || manifest?.pageUrl || null;
 }
 
 /**

@@ -2,8 +2,9 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown, Bookmark, Copy, CornerDownRight, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip, SmilePlus,
+  ArrowDown, Bookmark, Copy, CornerDownRight, Ellipsis, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip, SmilePlus,
 } from 'lucide-react';
+import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
 import { clock, dayLabel, isSameDay, shortAgo } from '../../lib/time.js';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -17,9 +18,11 @@ import { Spinner } from '../../ui/Feedback.jsx';
 
 const GROUP_GAP = 5 * 60_000;
 
+/** Long press (touch), or right-click with a mouse. */
 export function useLongPress(callback, ms = 420) {
   const timer = useRef(null);
   const origin = useRef(null);
+  const pointer = useRef(null);
   const clear = () => {
     clearTimeout(timer.current);
     timer.current = null;
@@ -27,7 +30,9 @@ export function useLongPress(callback, ms = 420) {
   return {
     onPointerDown: (e) => {
       origin.current = { x: e.clientX, y: e.clientY };
+      pointer.current = e.pointerType;
       clear();
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       timer.current = setTimeout(() => {
         tap('medium');
         callback();
@@ -40,7 +45,13 @@ export function useLongPress(callback, ms = 420) {
     onPointerUp: clear,
     onPointerCancel: clear,
     onPointerLeave: clear,
-    onContextMenu: (e) => e.preventDefault(),
+    onContextMenu: (e) => {
+      e.preventDefault();
+      if (pointer.current === 'mouse') {
+        clear();
+        callback();
+      }
+    },
   };
 }
 
@@ -131,7 +142,7 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
     <div
       {...press}
       className={cx(
-        'flex gap-3 px-4 transition-colors select-none',
+        'group relative flex gap-3 px-4 transition-colors select-none hover:bg-surface-2/40',
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
         highlight && 'bg-accent/10',
         m.pending && 'opacity-60',
@@ -163,6 +174,17 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
         <Reactions m={m} me={me} onReact={onReact} />
         {!hideThread && <ThreadSummary m={m} directory={directory} onOpen={() => onOpenThread(m)} />}
       </div>
+      {/* Mouse users get the actions on hover; touch keeps the long press. */}
+      <button
+        type="button"
+        aria-label="Message actions"
+        title="More actions"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => onLongPress(m)}
+        className="absolute top-1 right-3 hidden h-8 w-8 place-items-center rounded-lg border border-line bg-surface text-text-2 hover:text-text group-hover:grid"
+      >
+        <Icon as={Ellipsis} size={16} />
+      </button>
     </div>
   );
 }
@@ -366,6 +388,13 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
     setText('');
     tap('light');
   };
+  // With a physical keyboard, Enter sends and Shift+Enter starts a new line.
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
+      e.preventDefault();
+      send();
+    }
+  };
 
   return (
     <div className="shrink-0 border-t border-line-soft bg-bg/95 backdrop-blur-md pb-safe">
@@ -397,6 +426,7 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
             value={text}
             autoFocus={autoFocus}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
             placeholder={placeholder}
             enterKeyHint="enter"
             className="block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3"

@@ -1,4 +1,4 @@
-// Shown when this phone can't read encrypted messages yet, with a one-time password unlock.
+// Shown when this device can't read encrypted messages yet, with a one-time password unlock.
 import { useState } from 'react';
 import { Lock, ShieldAlert } from 'lucide-react';
 import { useE2ee } from '../../data/e2ee.js';
@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button.jsx';
 import { Field } from '../../ui/Controls.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { toast } from '../../lib/bus.js';
+import { deviceNoun } from '../../native/index.js';
 
 export function UnlockSheet({ open, onClose }) {
   const [password, setPassword] = useState('');
@@ -22,7 +23,7 @@ export function UnlockSheet({ open, onClose }) {
     try {
       const status = await api().unlock(password);
       if (status === 'ready') {
-        toast('Messages unlocked on this phone', 'success');
+        toast(`Messages unlocked on this ${deviceNoun}`, 'success');
         invalidate('messages', 'thread', 'dms');
         setPassword('');
         onClose();
@@ -46,7 +47,7 @@ export function UnlockSheet({ open, onClose }) {
     >
       <form onSubmit={submit} className="px-5 pb-4">
         <p className="mb-4 text-sm text-text-2">
-          Messages are end-to-end encrypted. Enter your Oruinwan password once to unlock them on this phone. It is used here and never stored.
+          Messages are end-to-end encrypted. Enter your Oruinwan password once to unlock them on this {deviceNoun}. It is used here and never stored.
         </p>
         <Field type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)} error={error} autoFocus autoComplete="current-password" />
       </form>
@@ -65,7 +66,7 @@ export function E2eeBanner({ className = '' }) {
       <div className={`mx-4 flex items-start gap-3 rounded-card border border-warning/30 bg-warning/10 px-3.5 py-3 ${className}`}>
         <Icon as={canUnlock ? Lock : ShieldAlert} size="sm" className="mt-0.5 shrink-0 text-warning" />
         <div className="min-w-0 flex-1 text-[13px]">
-          <p className="font-medium text-text">{canUnlock ? 'Messages are locked on this phone' : 'Encrypted messages are unavailable'}</p>
+          <p className="font-medium text-text">{canUnlock ? `Messages are locked on this ${deviceNoun}` : 'Encrypted messages are unavailable'}</p>
           <p className="text-text-2">{canUnlock ? 'Unlock once with your password to read and send.' : message}</p>
         </div>
         {canUnlock && (

@@ -1,7 +1,7 @@
 // The update card used by the launch sheet, the blocking gate and Settings → Updates.
 import { Download, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useUpdate, installUpdate } from '../../update/updater.js';
-import { isAndroid, isNative } from '../../native/index.js';
+import { isAndroid, isDesktop, isNative } from '../../native/index.js';
 import { Button } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Markdown } from '../../ui/Markdown.jsx';
@@ -45,7 +45,7 @@ export function UpdateDetails({ manifest, compact }) {
       ) : (
         <p className="text-sm text-text-2">Bug fixes and improvements.</p>
       )}
-      {manifest.sha256 && (
+      {manifest.sha256 && isNative && isAndroid && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-text-2">
           <Icon as={ShieldCheck} size={14} className="text-success" />
           The download is checked before it is installed.
@@ -61,7 +61,7 @@ export function UpdateButton({ block = true }) {
   const inApp = isNative && isAndroid;
   return (
     <Button block={block} size="lg" icon={inApp ? Download : ExternalLink} loading={busy} onClick={installUpdate}>
-      {inApp ? (download?.state === 'failed' ? 'Try again' : 'Update now') : 'Open download page'}
+      {inApp ? (download?.state === 'failed' ? 'Try again' : 'Update now') : isDesktop ? 'Download the update' : 'Open download page'}
     </Button>
   );
 }

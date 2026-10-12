@@ -90,7 +90,7 @@ function isRsa(algorithm) {
 
 /** Loads the cached private key for this phone, if it was unlocked before. */
 export async function restoreIdentity(userId) {
-  if (!subtle) return setE2ee('unsupported', 'This phone’s web view has no WebCrypto.');
+  if (!subtle) return setE2ee('unsupported', 'WebCrypto is not available here, so encrypted messages cannot be read.');
   const cached = await cacheGet(`id:${userId}`);
   if (cached?.privateKey) {
     identity = { userId, ...cached };
@@ -111,7 +111,7 @@ async function uploadPublicKey(pem, algorithm, version = 1) {
  */
 export async function unlockIdentity(userId, password) {
   if (!subtle) {
-    setE2ee('unsupported', 'This phone’s web view has no WebCrypto.');
+    setE2ee('unsupported', 'WebCrypto is not available here, so encrypted messages cannot be read.');
     return 'unsupported';
   }
   let state = null;

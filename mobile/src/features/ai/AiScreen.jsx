@@ -20,6 +20,7 @@ import { uid } from '../../lib/id.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { BrandMark } from '../../app/BrandMark.jsx';
+import { finePointer } from '../../app/layout.js';
 import { useAiUi } from './aiUi.js';
 import { openConversation } from '../chats/chatsUi.js';
 
@@ -278,6 +279,13 @@ export function AiScreen() {
             rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              // With a physical keyboard, Enter sends and Shift+Enter starts a new line.
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
+                e.preventDefault();
+                if (!busy && input.trim()) ask(input);
+              }
+            }}
             placeholder="Message Oruinwan AI…"
             className="block max-h-[132px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 outline-none placeholder:text-text-3"
           />

@@ -1,6 +1,6 @@
 // Sheets and dialogs render through a portal on document.body, so an animated parent
 // can never trap them under the tab bar. Each one registers with the nav store so the
-// Android back button closes it first.
+// Android back button (or Escape) closes it first. On wide windows a sheet is a centred dialog.
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNav } from '../app/nav.js';
@@ -50,7 +50,7 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
   }, [open]);
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" role="presentation">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center lg:p-8" role="presentation">
       <button
         type="button"
         aria-label="Close"
@@ -64,17 +64,18 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
         aria-label={typeof title === 'string' ? title : undefined}
         className={cx(
           'relative flex max-h-[92%] flex-col rounded-t-3xl border-t border-line bg-surface pb-safe',
-          'transition-transform duration-200',
-          closing ? 'translate-y-full' : 'animate-sheet-in',
-          full && 'h-[92%]',
+          'lg:max-h-[85vh] lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:pb-2',
+          'transition-[transform,opacity] duration-200',
+          closing ? 'translate-y-full lg:translate-y-0 lg:scale-95 lg:opacity-0' : 'animate-sheet-in',
+          full && 'h-[92%] lg:h-[80vh]',
           className,
         )}
         style={{ boxShadow: 'var(--shadow-sheet)' }}
       >
-        <div className="flex justify-center pt-2.5 pb-1">
-          <span className="h-1 w-10 rounded-full bg-line-strong" />
+        <div className="flex justify-center pt-2.5 pb-1 lg:pt-2">
+          <span className="h-1 w-10 rounded-full bg-line-strong lg:hidden" />
         </div>
-        {title && <h2 className="px-5 pt-1 pb-3 text-[17px] font-semibold">{title}</h2>}
+        {title && <h2 className="px-5 pt-1 pb-3 text-[17px] font-semibold lg:pt-3">{title}</h2>}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
         {footer && <div className="border-t border-line-soft px-4 pt-3 pb-3">{footer}</div>}
       </div>

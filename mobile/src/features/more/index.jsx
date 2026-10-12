@@ -376,7 +376,7 @@ export function FilesScreen() {
                 subtitle={[formatSize(f.size), directory[f.owner]?.name, shortAgo(f.at)].filter(Boolean).join(' · ')}
                 chevron={false}
                 trailing={f.url ? <Icon as={ExternalLink} size="sm" className="text-text-3" /> : null}
-                onClick={() => (f.url ? openExternal(f.url) : toast('Opening files on the phone arrives in a later update. Use the web app for now.'))}
+                onClick={() => (f.url ? openExternal(f.url) : toast('Opening files in the app arrives in a later update. Use the web client for now.'))}
               />
             ))}
           </RowGroup>

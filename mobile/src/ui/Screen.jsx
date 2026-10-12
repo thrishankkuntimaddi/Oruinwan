@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNav } from '../app/nav.js';
+import { usePane } from '../app/layout.js';
 import { cx } from './cx.js';
 import { IconButton } from './Button.jsx';
 
@@ -12,12 +13,15 @@ export function Screen({ children, className }) {
 
 export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack }) {
   const pop = useNav((s) => s.pop);
+  // The first screen in a wide window's detail pane sits beside its list: nothing to go back to.
+  const { split, depth } = usePane();
+  const showBack = back && !(split && depth === 0 && !onBack);
   return (
     <header className={cx('shrink-0 bg-bg/95 pt-safe backdrop-blur-md z-10', border && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">
         {leading ||
-          (back ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || pop} /> : <span className="w-2" />)}
-        <div className={cx('min-w-0 flex-1', back ? 'pl-1' : 'pl-2')}>
+          (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || pop} /> : <span className="w-2" />)}
+        <div className={cx('min-w-0 flex-1', showBack ? 'pl-1' : 'pl-2')}>
           {!large && (
             <>
               <h1 className="truncate text-[17px] font-semibold leading-tight">{title}</h1>
@@ -83,7 +87,7 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, ..
   return (
     <div
       ref={ref}
-      className={cx('relative min-h-0 flex-1 overflow-y-auto overscroll-contain', padBottom && 'pb-28', className)}
+      className={cx('relative min-h-0 flex-1 overflow-y-auto overscroll-contain', padBottom && 'pb-28 lg:pb-10', className)}
       {...touch}
       {...rest}
     >

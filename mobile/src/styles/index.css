@@ -215,10 +215,34 @@
 .animate-fade-in { animation: fade-in 180ms ease-out both; }
 .animate-sheet-in { animation: sheet-in 280ms var(--ease-out-soft) both; }
 .animate-pop-in { animation: pop-in 180ms var(--ease-out-soft) both; }
+/* Wide windows: sheets are centred dialogs (ui/Overlay.jsx), so they pop in instead. */
+@media (min-width: 1024px) {
+  .animate-sheet-in { animation: pop-in 180ms var(--ease-out-soft) both; }
+}
 .skeleton {
   background: linear-gradient(90deg, rgb(var(--c-surface-2)) 0, rgb(var(--c-surface-3)) 50%, rgb(var(--c-surface-2)) 100%);
   background-size: 400px 100%;
   animation: shimmer 1.2s linear infinite;
+}
+
+/* Mouse and trackpad: hover feedback on every tappable row (they all use active:bg-surface-2),
+   and slim scrollbars in the theme's colours. Touch screens never match this query. */
+@media (hover: hover) and (pointer: fine) {
+  .active\:bg-surface-2:not(:disabled):hover {
+    background-color: rgb(var(--c-surface-2) / 0.7);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-line-strong)) transparent;
+  }
+}
+/* The desktop app (desktop/, Electron) always counts as mouse-driven. */
+[data-desktop] .active\:bg-surface-2:not(:disabled):hover {
+  background-color: rgb(var(--c-surface-2) / 0.7);
+}
+[data-desktop] * {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-line-strong)) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

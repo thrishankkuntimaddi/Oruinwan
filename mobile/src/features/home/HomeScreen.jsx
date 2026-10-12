@@ -26,6 +26,7 @@ import { htmlToText } from '../../ui/sanitize.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { ActivityRow } from './ActivityRow.jsx';
 import { openChats } from '../chats/chatsUi.js';
+import { deviceNoun } from '../../native/index.js';
 
 function StatTile({ value, label, tone, onClick, icon }) {
   return (
@@ -123,7 +124,7 @@ export function HomeScreen() {
           >
             <Icon as={FlaskConical} size="sm" className="shrink-0 text-accent-ink" />
             <span className="min-w-0 flex-1 text-[13px]">
-              <span className="font-medium">Demo workspace.</span> <span className="text-text-2">Sample data, stored only on this phone.</span>
+              <span className="font-medium">Demo workspace.</span> <span className="text-text-2">Sample data, stored only on this {deviceNoun}.</span>
             </span>
             <span className="shrink-0 text-[13px] font-medium text-accent-ink">Sign in</span>
           </button>

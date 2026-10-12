@@ -15,7 +15,7 @@ import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
 import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
 import { prefs } from '../../native/storage.js';
-import { isNative, openExternal, platform } from '../../native/index.js';
+import { deviceNoun, isDesktop, isNative, isWeb, openExternal, platformLabel } from '../../native/index.js';
 import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button } from '../../ui/Button.jsx';
@@ -153,7 +153,7 @@ export function SettingsScreen() {
           </RowGroup>
         </Section>
         <p className="mt-6 text-center text-xs text-text-3">
-          Oruinwan {current} · {platform === 'web' ? 'Web preview' : 'Android'}
+          Oruinwan {current} · {platformLabel}
         </p>
       </Body>
 
@@ -169,8 +169,8 @@ export function SettingsScreen() {
         title={mode === 'demo' ? 'Leave the demo?' : 'Sign out?'}
         body={
           mode === 'demo'
-            ? 'Your demo changes stay on this phone in case you come back.'
-            : 'Messages you can read now will need your password again to unlock on this phone.'
+            ? `Your demo changes stay on this ${deviceNoun} in case you come back.`
+            : `Messages you can read now will need your password again to unlock on this ${deviceNoun}.`
         }
         confirmLabel={mode === 'demo' ? 'Leave' : 'Sign out'}
         danger
@@ -233,8 +233,8 @@ export function ProfileSettings() {
 }
 
 const E2EE_TEXT = {
-  ready: { label: 'Unlocked on this phone', tone: 'text-success' },
-  password_required: { label: 'Locked on this phone. Unlock with your password', tone: 'text-warning' },
+  ready: { label: `Unlocked on this ${deviceNoun}`, tone: 'text-success' },
+  password_required: { label: `Locked on this ${deviceNoun}. Unlock with your password`, tone: 'text-warning' },
   no_identity: { label: 'Not set up yet (set up on the web)', tone: 'text-text-2' },
   unsupported: { label: 'Not available for this account type yet', tone: 'text-text-2' },
   error: { label: "Couldn't check", tone: 'text-danger' },
@@ -257,7 +257,7 @@ export function SecuritySettings() {
         ) : (
           <>
             <Section title="End-to-end encryption">
-              <RowGroup footer="Messages are encrypted on the sender's device and only decrypted on yours. Your password unlocks your keys; it is never stored on this phone.">
+              <RowGroup footer={`Messages are encrypted on the sender's device and only decrypted on yours. Your password unlocks your keys; it is never stored on this ${deviceNoun}.`}>
                 <Row
                   icon={ShieldCheck}
                   tile="success"
@@ -332,7 +332,7 @@ export function DevicesSettings() {
                     icon={DEVICE_ICON(s)}
                     tile={s.current ? 'success' : 'neutral'}
                     title={s.device || s.client || 'Unknown device'}
-                    subtitle={[s.client, s.os, s.location, s.current ? 'This phone' : s.lastActive && `Active ${shortAgo(s.lastActive)}`].filter(Boolean).join(' · ')}
+                    subtitle={[s.client, s.os, s.location, s.current ? `This ${deviceNoun}` : s.lastActive && `Active ${shortAgo(s.lastActive)}`].filter(Boolean).join(' · ')}
                     chevron={false}
                     trailing={
                       !s.current && (
@@ -359,7 +359,7 @@ export function DevicesSettings() {
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
         title={confirm === 'others' ? 'Sign out everywhere else?' : `Sign out ${confirm?.device || 'this device'}?`}
-        body="That device will need to sign in again. This phone stays signed in."
+        body={`That device will need to sign in again. This ${deviceNoun} stays signed in.`}
         confirmLabel="Sign out"
         danger
         busy={busy}
@@ -467,7 +467,7 @@ export function AppearanceSettings() {
             <ThemeCard value="light" label="Light" icon={Sun} selected={theme === 'light'} onSelect={() => setTheme('light')} />
             <ThemeCard value="dark" label="Dark" icon={Moon} selected={theme === 'dark'} onSelect={() => setTheme('dark')} />
           </div>
-          <p className="mx-5 mt-2 text-xs text-text-2">Saved on this phone only, so each device can look the way you like.</p>
+          <p className="mx-5 mt-2 text-xs text-text-2">Saved on this {deviceNoun} only, so each device can look the way you like.</p>
         </Section>
         <Section title="Message text size">
           <div className="px-4">
@@ -555,8 +555,8 @@ export function AiSettings() {
             behalf when you ask it to.
           </div>
         </Section>
-        <Section title="On this phone">
-          <RowGroup footer="Past AI conversations are stored on this phone only.">
+        <Section title={`On this ${deviceNoun}`}>
+          <RowGroup footer={`Past AI conversations are stored on this ${deviceNoun} only.`}>
             <Row icon={MessageSquareText} title="Saved conversations" value={String(count)} chevron={false} />
             <Row icon={Eraser} danger title="Clear AI conversations" chevron={false} disabled={!count} onClick={() => setConfirm(true)} />
           </RowGroup>
@@ -571,7 +571,7 @@ export function AiSettings() {
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Clear AI conversations?"
-        body="This removes past AI conversations for this workspace from this phone."
+        body={`This removes past AI conversations for this workspace from this ${deviceNoun}.`}
         confirmLabel="Clear"
         danger
         onConfirm={() => {
@@ -636,7 +636,11 @@ export function UpdateSettings() {
           </Button>
         </div>
         <p className="mx-5 mt-3 text-xs leading-relaxed text-text-2">
-          The app checks for updates when it opens, at most every few hours. Updates install over this version and keep your data.
+          {isWeb
+            ? 'The web app always runs the latest version. Reload the page to pick up a new release.'
+            : isDesktop
+              ? 'The app checks for updates when it opens, at most every few hours. Install the new version over this one: your data is kept.'
+              : 'The app checks for updates when it opens, at most every few hours. Updates install over this version and keep your data.'}
           {isNative ? ' Android asks you to confirm each install.' : ''}
         </p>
         <Section title="Features in this version">
@@ -676,7 +680,7 @@ export function ServerSettings() {
         {mode === 'demo' ? (
           <>
             <Section title="Connection">
-              <RowGroup footer="The demo runs entirely on this phone. Nothing is sent to a server.">
+              <RowGroup footer={`The demo runs entirely on this ${deviceNoun}. Nothing is sent to a server.`}>
                 <Row icon={FlaskConical} tile="accent" title="Demo workspace" subtitle="Sample data on this device" chevron={false} />
               </RowGroup>
             </Section>
@@ -713,7 +717,7 @@ export function ServerSettings() {
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Switch server?"
-        body="You'll be signed out of this server on this phone."
+        body={`You'll be signed out of this server on this ${deviceNoun}.`}
         confirmLabel="Sign out"
         danger
         onConfirm={() => {
@@ -756,7 +760,7 @@ export function DataSettings() {
     demo: { title: 'Reset the demo?', body: 'All changes you made in the demo are replaced with the original sample data.', label: 'Reset demo' },
     device: {
       title: 'Clear this device?',
-      body: 'Signs you out and removes everything Oruinwan stored on this phone: settings, cached messages and AI conversations. Your account and server data are not touched.',
+      body: `Signs you out and removes everything Oruinwan stored on this ${deviceNoun}: settings, cached messages and AI conversations. Your account and server data are not touched.`,
       label: 'Clear device',
     },
   }[confirm || 'cache'];
@@ -764,7 +768,7 @@ export function DataSettings() {
     <Screen>
       <Header title="Data & storage" />
       <Body>
-        <Section title="On this phone">
+        <Section title={`On this ${deviceNoun}`}>
           <RowGroup>
             <Row icon={RefreshCw} title="Clear cached data" subtitle="Keeps you signed in" chevron={false} onClick={() => setConfirm('cache')} />
             {mode === 'demo' && <Row icon={FlaskConical} title="Reset demo data" subtitle="Back to the original sample workspace" chevron={false} onClick={() => setConfirm('demo')} />}

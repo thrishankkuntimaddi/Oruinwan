@@ -59,6 +59,27 @@ export function App() {
 
   useEffect(() => on('session:ended', () => useNav.getState().resetAll()), []);
 
+  // Escape: close the top sheet or dialog, leave a text field, then go back a screen.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const { overlays } = useNav.getState();
+      if (overlays.length) {
+        e.preventDefault();
+        overlays[overlays.length - 1].close();
+        return;
+      }
+      const el = document.activeElement;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) {
+        el.blur();
+        return;
+      }
+      if (useSession.getState().status === 'signed-in' && useNav.getState().pop()) e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Links must never navigate the app's own WebView; open them in the browser instead.
   useEffect(() => {
     const onClick = (e) => {
