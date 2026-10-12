@@ -702,7 +702,7 @@ exports.refresh = async (req, res) => {
   while (attempts < MAX_RETRIES) {
     try {
       
-      // Web: httpOnly cookie only. Native (x-client-platform: ios|android): body.refreshToken (cookie fallback).
+      // Web: httpOnly cookie only. Apps (x-client-platform: ios|android|desktop): body.refreshToken (cookie fallback).
       const nativeClient = isNativeClient(req);
       const refreshToken = getRefreshTokenFromRequest(req);
 

@@ -51,10 +51,11 @@ function clearRefreshTokenCookie(res) {
     logger.info('🗑️ [COOKIE] Refresh token cookie cleared');
 }
 
-// Native mobile clients (iOS/Android) cannot use the httpOnly `jwt` cookie, so they
-// identify themselves with the `x-client-platform` header and exchange the refresh
-// token in the JSON body instead. Web clients must use the cookie only.
-const NATIVE_PLATFORMS = new Set(['ios', 'android']);
+// App clients cannot use the httpOnly `jwt` cookie (their origin is never the server's): the
+// Android and iOS apps and the desktop app (desktop/) identify themselves with the
+// `x-client-platform` header and exchange the refresh token in the JSON body instead.
+// Web clients must use the cookie only.
+const NATIVE_PLATFORMS = new Set(['ios', 'android', 'desktop']);
 
 function isNativeClient(req) {
     const raw = (req && req.headers && req.headers['x-client-platform']) || '';
