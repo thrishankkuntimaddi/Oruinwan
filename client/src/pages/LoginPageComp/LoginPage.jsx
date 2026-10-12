@@ -6,6 +6,18 @@ import LoginForm from '../../components/loginpage/LoginForm';
 import SignupForm from '../../components/loginpage/SignupForm';
 import AuthShell from '../../components/public/AuthShell';
 import BrandMark from '../../shared/components/ui/BrandMark';
+import { IS_APP, serverLabel, setServer } from '../../appMode/env';
+import { forgetSession } from '../../appMode/network';
+
+// Desktop and tablet apps: which server this sign-in goes to, and a way to pick another.
+const ServerLine = () => (
+    <p className="orw-auth__note" style={{ marginTop: 0, marginBottom: 18, textAlign: 'left' }}>
+        Server <span className="orw-code">{serverLabel()}</span>{' '}
+        <button type="button" className="orw-link" onClick={() => { forgetSession(); setServer(''); window.location.replace('/'); }}>
+            Change
+        </button>
+    </p>
+);
 
 const LoginPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -77,6 +89,8 @@ const LoginPage = () => {
                     </div>
                 </div>
             )}
+
+            {IS_APP && <ServerLine />}
 
             <div className="orw-auth__tabs" role="tablist" aria-label="Account">
                 {[{ label: 'Sign in', val: false }, { label: 'Create account', val: true }].map(tab => (

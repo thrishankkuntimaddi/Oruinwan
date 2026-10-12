@@ -129,7 +129,7 @@ export default function Brand() {
 
             <Block eyebrow="Media & press kit" title="Assets for press and partners." slab>
                 <div data-reveal style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    <a href="/icons/oruinwan-512.png" download={`${BRAND.name.toLowerCase()}-logo-512.png`} className="orw-btn orw-btn--primary">
+                    <a href={`${import.meta.env.BASE_URL}icons/oruinwan-512.png`} download={`${BRAND.name.toLowerCase()}-logo-512.png`} className="orw-btn orw-btn--primary">
                         <Download size={14} aria-hidden="true" /> Logo mark (PNG, 512px)
                     </a>
                     {PRESS_ASSETS.map(item => (

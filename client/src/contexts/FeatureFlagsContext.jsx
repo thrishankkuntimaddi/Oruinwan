@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '../services/api';
 import logger from '../utils/logger';
+import { IS_SITE } from '../appMode/env';
 
 // Release flags served by GET /api/flags (server/src/shared/featureFlags).
 // Anything not reported as enabled is treated as off, including while loading
@@ -13,6 +14,11 @@ export function FeatureFlagsProvider({ children }) {
 
     useEffect(() => {
         let cancelled = false;
+        // The product website has no server, so no release flags either.
+        if (IS_SITE) {
+            setState({ flags: {}, loaded: true });
+            return undefined;
+        }
         api.get('/api/flags')
             .then(({ data }) => {
                 if (!cancelled) setState({ flags: data?.flags || {}, loaded: true });

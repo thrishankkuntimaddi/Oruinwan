@@ -5,8 +5,8 @@ import BRAND from '../../brand';
 // 512px variant is picked on high-density screens for large sizes.
 const BrandMark = ({ size = 28, title = BRAND.name, className, style }) => (
     <img
-        src="/icons/oruinwan-128.png"
-        srcSet="/icons/oruinwan-128.png 1x, /icons/oruinwan-512.png 4x"
+        src={`${import.meta.env.BASE_URL}icons/oruinwan-128.png`}
+        srcSet={`${import.meta.env.BASE_URL}icons/oruinwan-128.png 1x, ${import.meta.env.BASE_URL}icons/oruinwan-512.png 4x`}
         width={size}
         height={size}
         alt={title || ''}

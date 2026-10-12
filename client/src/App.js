@@ -47,6 +47,11 @@ import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
 import KnowledgeGraph from "./pages/SidebarComp/KnowledgeGraph";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import Landing from "./pages/landing/Landing";
+import { IS_APP, IS_SITE } from "./appMode/env";
+import OpenWebApp from "./appMode/OpenWebApp";
+
+// The product website lives under a path on GitHub Pages (vite `base`, e.g. /Oruniwan/).
+const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/";
 
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
@@ -169,7 +174,7 @@ function App() {
     <ToastProvider>
       <ThemeProvider>
         <FeatureFlagsProvider>
-        <Router>
+        <Router basename={ROUTER_BASE}>
           <ScrollToTop />
           <SocketProvider>
             <ContactsProvider>
@@ -682,7 +687,7 @@ function App() {
                           />
 
                           {}
-                          <Route path="/" element={<Landing />} />
+                          <Route path="/" element={IS_APP ? <Navigate to="/login" replace /> : <Landing />} />
                           <Route path="/features" element={<Landing />} />
                           {/* /docs, /docs/:section and /docs/:section/:page (one route so the shell stays mounted) */}
                           <Route path="/docs/*" element={<Suspense fallback={<DocsFallback />}><ChttrixDocs /></Suspense>} />
@@ -725,11 +730,12 @@ function App() {
 
                           {}
                           {}
-                          <Route path="/login" element={<LoginPage />} />
-                          <Route path="/register-company" element={<RegisterCompany />} />
+                          {/* On the product website these open the visitor's own server. */}
+                          <Route path="/login" element={IS_SITE ? <OpenWebApp /> : <LoginPage />} />
+                          <Route path="/register-company" element={IS_SITE ? <OpenWebApp /> : <RegisterCompany />} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
-                          <Route path="/forgot-password" element={<ForgotPassword />} />
+                          <Route path="/forgot-password" element={IS_SITE ? <OpenWebApp /> : <ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />
                           <Route path="/oauth-success" element={<OAuthSuccess />} />

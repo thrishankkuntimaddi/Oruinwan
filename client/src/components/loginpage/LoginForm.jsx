@@ -5,6 +5,11 @@ import { useToast } from '../../contexts/ToastContext';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '@services/api';
 import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { IS_APP, IS_SITE } from '../../appMode/env';
+
+// Apps and the product website render no GoogleOAuthProvider (main.jsx) and never load
+// Google's script.
+const useGoogleSignIn = IS_APP || IS_SITE ? () => () => {} : useGoogleLogin;
 
 const GoogleIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -120,7 +125,7 @@ const LoginForm = ({ initialEmail = '' }) => {
         }
     };
 
-    const googleLogin = useGoogleLogin({
+    const googleLogin = useGoogleSignIn({
         onSuccess: tokenResponse => signInWithGoogle(tokenResponse.access_token),
         onError: () => showToast('Login Failed', 'error'),
     });
@@ -141,8 +146,12 @@ const LoginForm = ({ initialEmail = '' }) => {
     const socials = [
         // Shown only when the build has a Google client id (VITE_GOOGLE_CLIENT_ID).
         ...(import.meta.env.VITE_GOOGLE_CLIENT_ID ? [{ icon: <GoogleIcon />, label: 'Google', onClick: googleLogin }] : []),
-        { icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } },
-        { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } },
+        // These sign-ins return to the server's own web page, so the desktop and tablet apps
+        // (src/appMode) offer email and password only.
+        ...(IS_APP ? [] : [
+            { icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } },
+            { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } },
+        ]),
     ];
 
     if (twoFactor) {
@@ -213,16 +222,20 @@ const LoginForm = ({ initialEmail = '' }) => {
                 </button>
             </form>
 
-            <div className="orw-auth__divider">Or continue with</div>
+            {socials.length > 0 && (
+                <>
+                    <div className="orw-auth__divider">Or continue with</div>
 
-            <div className="orw-auth__social">
-                {socials.map(btn => (
-                    <button key={btn.label} type="button" className="orw-btn orw-btn--ghost" onClick={btn.onClick}
-                        aria-label={`Continue with ${btn.label}`} title={`Continue with ${btn.label}`}>
-                        {btn.icon}
-                    </button>
-                ))}
-            </div>
+                    <div className="orw-auth__social">
+                        {socials.map(btn => (
+                            <button key={btn.label} type="button" className="orw-btn orw-btn--ghost" onClick={btn.onClick}
+                                aria-label={`Continue with ${btn.label}`} title={`Continue with ${btn.label}`}>
+                                {btn.icon}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
 
         </div>
     );

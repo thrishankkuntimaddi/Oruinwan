@@ -4,6 +4,7 @@ import api from '@services/api';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
 import logger from '../utils/logger';
 import { clearAllAiHistory } from '../utils/aiChatHistoryStorage';
+import { IS_SITE } from '../appMode/env';
 
 export const AuthContext = createContext(null);
 
@@ -214,7 +215,9 @@ export const AuthProvider = ({ children }) => {
     };
     window.addEventListener('auth:force-logout', handleForceLogout);
 
-    loadUser();
+    // The product website has no server: nobody is signed in there.
+    if (IS_SITE) setLoading(false);
+    else loadUser();
 
     return () => {
       window.removeEventListener('auth:force-logout', handleForceLogout);

@@ -25,7 +25,10 @@ const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 function navigate(path) {
   if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) return;
   if (window.location.pathname === path) return;
-  window.location.assign(path);
+  // Client-side navigation: React Router follows popstate. A full reload would lock the
+  // encryption keys again and ask for the password.
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
 /** Work out the current workspace from the URL (/workspace/:workspaceId/...). */
