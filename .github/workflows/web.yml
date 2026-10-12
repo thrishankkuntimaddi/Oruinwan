@@ -1,7 +1,8 @@
 name: Deploy web app
 
 # The Oruinwan app (mobile/) in the browser, on GitHub Pages: redeployed on every change to main.
-# One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
+# Live at https://thrishankkuntimaddi.github.io/Oruniwan/
+# One-time setup (done 2026-10-12): Settings → Pages → Build and deployment → Source: GitHub Actions.
 on:
   push:
     branches: [main]
