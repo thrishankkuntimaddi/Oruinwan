@@ -1,333 +1,339 @@
 'use strict';
 
 /**
- * Oruinwan Desktop — Electron Main Process
+ * Oruinwan desktop — Electron main process.
  *
- * Responsibilities:
- *  1. Create and manage the main BrowserWindow (loads the Oruinwan web client)
- *  2. Persist and restore window state (bounds, maximized) via electron-store
- *  3. Security: navigation guard, permission handlers, CSP for local pages
- *  4. System tray integration (open, DnD, updates, quit)
- *  5. Native desktop notifications with deep-link click routing
- *  6. IPC bridge: notify, badge, settings, version, deep-link events
- *  7. Background running — closing the window hides it; quit via tray/menu
- *  8. Single instance + oruinwan:// (and legacy chttrix://) deep links + auto-update
+ * The window runs the same app as the Android build (mobile/, built with Vite), bundled into
+ * app/ and served from app://oruinwan. Nothing is loaded from a remote web client: the app
+ * signs in to whichever self-hosted Oruinwan server the user enters, or runs the demo.
+ *
+ *  1. app:// scheme serving the bundle, with a Content-Security-Policy
+ *  2. Server access like Android's native HTTP: CORS answered here, so any server works
+ *  3. Security: sandboxed renderer, navigation locked to the app, links open in the browser
+ *  4. Window state, single instance, menu, dock/taskbar badge
  */
 
-const {
-  app, BrowserWindow, ipcMain, session, shell, Menu, dialog,
-} = require('electron');
-const path = require('path');
-const { fileURLToPath } = require('url');
-const store = require('./store');
-const { createTray, setUnreadCount, refreshTrayMenu } = require('./tray');
-const notifications = require('./notifications');
+const { app, BrowserWindow, Menu, ipcMain, nativeTheme, net, protocol, screen, session, shell } = require('electron');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
-// ─── Configuration ────────────────────────────────────────────────────────────
-const IS_DEV = process.env.ELECTRON_IS_DEV === '1' ||
-               process.env.NODE_ENV === 'development';
-
-const PROD_URL = 'https://app.oruinwan.com';
-// Dev: the client's Vite server (client/vite.config.js → port 3000, strictPort).
-// Prod: the hosted client. Either can be overridden via CHTTRIX_WEB_URL.
-const WEB_URL = process.env.CHTTRIX_WEB_URL ||
-  (IS_DEV ? 'http://localhost:3000' : PROD_URL);
-
-// Deep-link schemes. `chttrix://` is kept for links already in the wild.
-const PROTOCOLS = ['oruinwan', 'chttrix'];
-const OFFLINE_PAGE = path.join(__dirname, '..', 'renderer', 'index.html');
-
+/**
+ * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
+ * app://, which would make every custom-scheme URL look like the app's own origin.
+ */
 function originOf(url) {
-  try { return new URL(url).origin; } catch { return null; }
+  try {
+    const u = new URL(url);
+    return u.host ? `${u.protocol}//${u.host}` : null;
+  } catch {
+    return null;
+  }
 }
 
-// Origins the app window may navigate to / open in-app.
-const DEV_ORIGINS = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5001'];
-const ALLOWED_ORIGINS = new Set([
-  PROD_URL,
-  'https://api.oruinwan.com',
-  originOf(WEB_URL),                       // C12: CHTTRIX_WEB_URL override
-  ...(IS_DEV ? DEV_ORIGINS : []),          // C4: dev ports only in dev
-].filter(Boolean));
+const IS_DEV = process.env.ELECTRON_IS_DEV === '1' || process.env.NODE_ENV === 'development';
+// Dev: the mobile app's Vite server (cd mobile && npm run dev). Prod: the bundled build.
+const DEV_URL = process.env.ORUINWAN_DEV_URL || 'http://localhost:5174';
+const SCHEME = 'app';
+const APP_ORIGIN = `${SCHEME}://oruinwan`;
+const START_URL = IS_DEV ? DEV_URL : `${APP_ORIGIN}/index.html`;
+const PAGE_ORIGIN = originOf(START_URL);
+const APP_DIR = path.join(__dirname, '..', 'app');
+const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
 
-// Origins allowed to receive media / notification / clipboard permissions.
-const PERMISSION_ORIGINS = new Set([
-  PROD_URL,
-  originOf(WEB_URL),
-  ...(IS_DEV ? DEV_ORIGINS : []),
-].filter(Boolean));
-const GRANTABLE_PERMISSIONS = new Set([
-  'media', 'notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen',
+const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:']);
+const GRANTABLE = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'media', 'fullscreen']);
+
+// Must run before the app is ready. `standard` + `secure` give the bundle a real origin, so
+// localStorage, IndexedDB and WebCrypto (the encryption keys) work as they do on https.
+protocol.registerSchemesAsPrivileged([
+  { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
-// Schemes we are willing to hand to the OS (C3). Everything else is dropped.
-const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:']);
-
-// Content-Security-Policy for local (file://) pages — the offline fallback.
-const LOCAL_CSP = [
-  "default-src 'none'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join('; ');
-
-// ─── State ────────────────────────────────────────────────────────────────────
 let mainWindow = null;
-let isQuitting = false;        // C5: lets close handlers distinguish hide vs quit
-let pendingDeepLink = null;    // deep link received before the web client loaded
-let autoUpdater = null;
 
-// ─── Single-instance lock (P1) ────────────────────────────────────────────────
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
+if (!app.requestSingleInstanceLock()) {
   app.quit();
+} else {
+  app.on('second-instance', () => showWindow());
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function isLocalAppFile(urlString) {
+
+function openExternalSafely(url) {
   try {
-    if (!urlString.startsWith('file://')) return false;
-    return fileURLToPath(urlString).startsWith(app.getAppPath());
-  } catch {
-    return false;
-  }
-}
-
-function isAllowedUrl(urlString) {
-  if (isLocalAppFile(urlString)) return true;
-  const origin = originOf(urlString);
-  return origin !== null && ALLOWED_ORIGINS.has(origin);
-}
-
-// Identity providers whose sign-in popups must open inside the app.
-const OAUTH_POPUP_ORIGINS = new Set([
-  'https://accounts.google.com',
-  'https://github.com',
-  'https://www.linkedin.com',
-]);
-
-function isOAuthPopupUrl(urlString) {
-  try {
-    const { origin, protocol } = new URL(urlString);
-    return protocol === 'https:' && OAUTH_POPUP_ORIGINS.has(origin);
-  } catch {
-    return false;
-  }
-}
-
-function openExternalSafely(urlString) {
-  try {
-    const { protocol } = new URL(urlString);
-    if (EXTERNAL_PROTOCOLS.has(protocol)) {
-      shell.openExternal(urlString).catch((err) =>
-        console.warn('[Security] openExternal failed:', err.message));
-      return;
+    if (EXTERNAL_PROTOCOLS.has(new URL(url).protocol)) {
+      shell.openExternal(url).catch((err) => console.warn('[links] openExternal failed:', err.message));
+      return true;
     }
   } catch {
-    // unparsable → fall through and deny
+    /* unparsable: refuse */
   }
-  console.warn('[Security] Refused to open external URL:', urlString);
+  console.warn('[links] refused to open:', url);
+  return false;
 }
 
-function isTrustedPermissionOrigin(url) {
-  const origin = originOf(url || '');
-  return origin !== null && PERMISSION_ORIGINS.has(origin);
-}
-
-function windowAlive() {
-  return mainWindow && !mainWindow.isDestroyed();
-}
-
-/** Show + focus the window, recreating it if it was destroyed (C6). */
 function showWindow() {
   if (!app.isReady()) return;
-  if (!windowAlive()) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
     createWindow();
-    return; // shown on ready-to-show
+    return;
   }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
 }
 
-function toggleWindow() {
-  if (windowAlive() && mainWindow.isVisible() && mainWindow.isFocused()) {
-    mainWindow.hide();
-  } else {
-    showWindow();
-  }
-}
+// ─── Window state (a small JSON file; no extra dependency) ────────────────────
 
-function sendToRenderer(channel, payload) {
-  if (windowAlive()) mainWindow.webContents.send(channel, payload);
-}
+const stateFile = () => path.join(app.getPath('userData'), 'window-state.json');
 
-function isOnWebClient() {
-  return windowAlive() && isAllowedUrl(mainWindow.webContents.getURL()) &&
-    !isLocalAppFile(mainWindow.webContents.getURL());
-}
-
-function loadWebClient() {
-  if (!windowAlive()) return;
-  mainWindow.loadURL(WEB_URL).catch((err) => {
-    console.error('[Main] Failed to load URL:', WEB_URL, err.message);
-    if (!windowAlive()) return;
-    mainWindow.loadFile(OFFLINE_PAGE).catch((fileErr) => {
-      console.error('[Main] Failed to load offline page:', fileErr.message);
-    });
-  });
-}
-
-// ─── Notification state (single code path for tray + IPC, C8) ────────────────
-function broadcastNotificationState() {
-  refreshTrayMenu();
-  sendToRenderer('notifications-toggled', {
-    enabled: notifications.isEnabled(),
-    doNotDisturb: notifications.isDoNotDisturb(),
-  });
-}
-
-function applyNotificationsEnabled(enabled) {
-  notifications.setEnabled(enabled);
-  store.set('notificationsEnabled', !!enabled);
-  broadcastNotificationState();
-}
-
-function applyDoNotDisturb(value) {
-  notifications.setDoNotDisturb(value);
-  store.set('doNotDisturb', !!value);
-  broadcastNotificationState();
-}
-
-// ─── Deep links (P2) ──────────────────────────────────────────────────────────
-const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
-const WORKSPACE_SECTIONS = new Set([
-  'home', 'channels', 'messages', 'tasks', 'notes', 'files', 'knowledge',
-  'updates', 'apps', 'search', 'huddles',
-]);
-const WORKSPACE_ITEMS = new Set(['channel', 'dm', 'notes', 'files', 'knowledge', 'meetings']);
-
-/**
- * Parse oruinwan://workspace/<wsId>[/<section>[/<id>]] (or the legacy chttrix://
- * scheme) into a safe in-app route.
- * Returns null for anything unrecognised.
- *   oruinwan://workspace/abc/channel/123 → { path: '/workspace/abc/channel/123', ... }
- */
-function parseDeepLink(raw) {
-  if (typeof raw !== 'string' || raw.length > 2048) return null;
-  let url;
-  try { url = new URL(raw); } catch { return null; }
-  if (!PROTOCOLS.some((p) => url.protocol === `${p}:`)) return null;
-
-  // oruinwan://workspace/abc → host "workspace", path "/abc"
-  let parts;
+function loadWindowState() {
   try {
-    parts = [url.hostname, ...url.pathname.split('/')].filter(Boolean)
-      .map((p) => decodeURIComponent(p));
+    const saved = JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
+    const b = saved.bounds;
+    if (!b || ![b.x, b.y, b.width, b.height].every(Number.isFinite)) return { maximized: Boolean(saved.maximized) };
+    // Forget the position if that screen is gone (e.g. an unplugged monitor).
+    const visible = screen.getAllDisplays().some(({ workArea: a }) =>
+      b.x < a.x + a.width && b.x + b.width > a.x && b.y < a.y + a.height && b.y + b.height > a.y);
+    return {
+      bounds: visible ? b : { width: b.width, height: b.height },
+      maximized: Boolean(saved.maximized),
+    };
   } catch {
-    return null; // malformed percent-encoding
-  }
-
-  if (parts[0] === 'workspaces' && parts.length === 1) {
-    return { path: '/workspaces', kind: 'workspaces' };
-  }
-  if (parts[0] !== 'workspace' || !ID_RE.test(parts[1] || '')) return null;
-  const workspaceId = parts[1];
-  const [, , section, id] = parts;
-
-  if (!section) return { path: `/workspace/${workspaceId}/home`, workspaceId, kind: 'home' };
-  if (id !== undefined) {
-    if (!WORKSPACE_ITEMS.has(section) || !ID_RE.test(id) || parts.length > 4) return null;
-    return { path: `/workspace/${workspaceId}/${section}/${id}`, workspaceId, kind: section, id };
-  }
-  if (!WORKSPACE_SECTIONS.has(section)) return null;
-  return { path: `/workspace/${workspaceId}/${section}`, workspaceId, kind: section };
-}
-
-function handleDeepLink(raw) {
-  const link = parseDeepLink(raw);
-  if (!link) {
-    if (raw) console.warn('[DeepLink] Ignored:', raw);
-    return;
-  }
-  showWindow();
-  if (isOnWebClient() && !mainWindow.webContents.isLoading()) {
-    sendToRenderer('deep-link', link);
-  } else {
-    pendingDeepLink = link; // flushed on did-finish-load
+    return {};
   }
 }
 
-function findDeepLinkArg(argv = []) {
-  return argv.find((a) => typeof a === 'string' && PROTOCOLS.some((p) => a.startsWith(`${p}://`)));
-}
-
-function registerProtocol() {
+function saveWindowState(win) {
+  if (win.isDestroyed() || win.isMinimized()) return;
+  const state = { maximized: win.isMaximized(), bounds: win.isMaximized() ? win.getNormalBounds() : win.getBounds() };
   try {
-    for (const protocol of PROTOCOLS) {
-      if (process.defaultApp && process.argv.length >= 2) {
-        // `electron .` in development: register the electron binary + app path
-        app.setAsDefaultProtocolClient(protocol, process.execPath, [path.resolve(process.argv[1])]);
-      } else {
-        app.setAsDefaultProtocolClient(protocol);
-      }
+    fs.writeFileSync(stateFile(), JSON.stringify(state));
+  } catch (err) {
+    console.warn('[window] could not save state:', err.message);
+  }
+}
+
+// ─── app:// — the bundled app ─────────────────────────────────────────────────
+
+/** CSP for the bundle. Inline scripts in index.html (the theme bootstrap) are allowed by hash. */
+function contentSecurityPolicy() {
+  const hashes = [];
+  try {
+    const html = fs.readFileSync(path.join(APP_DIR, 'index.html'), 'utf8');
+    for (const [, body] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+      hashes.push(`'sha256-${crypto.createHash('sha256').update(body).digest('base64')}'`);
     }
-  } catch (err) {
-    console.warn('[DeepLink] Could not register protocol:', err.message);
+  } catch {
+    /* no bundle yet: the page will 404 anyway */
   }
+  return [
+    "default-src 'self'",
+    // Firebase Analytics (optional, see mobile/.env.example) loads gtag from Google.
+    `script-src 'self' ${hashes.join(' ')} https://www.googletagmanager.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    // Servers are self-hosted at any address, so http(s) and ws(s) to anywhere.
+    'img-src \'self\' data: blob: https: http:',
+    'media-src \'self\' data: blob: https: http:',
+    'connect-src \'self\' https: http: wss: ws:',
+    "worker-src 'self' blob:",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+  ].join('; ');
 }
 
-// ─── Auto-update (P3) ─────────────────────────────────────────────────────────
-let manualUpdateCheck = false;
+function registerAppScheme() {
+  const csp = contentSecurityPolicy();
+  protocol.handle(SCHEME, async (request) => {
+    const url = new URL(request.url);
+    if (url.host !== 'oruinwan') return new Response('Not found', { status: 404 });
+    let rel;
+    try {
+      rel = decodeURIComponent(url.pathname);
+    } catch {
+      return new Response('Bad request', { status: 400 });
+    }
+    const file = path.normalize(path.join(APP_DIR, rel === '/' ? '/index.html' : rel));
+    if (!file.startsWith(APP_DIR + path.sep)) return new Response('Forbidden', { status: 403 });
+    try {
+      if (!fs.statSync(file).isFile()) return new Response('Not found', { status: 404 });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+    const res = await net.fetch(pathToFileURL(file).toString());
+    if (!file.endsWith('.html')) return res;
+    const headers = new Headers(res.headers);
+    headers.set('Content-Security-Policy', csp);
+    return new Response(res.body, { status: res.status, headers });
+  });
+}
 
-function initAutoUpdater() {
-  if (!app.isPackaged) return;
+// ─── Servers: answer CORS like Android's native HTTP does ─────────────────────
+//
+// The app talks to self-hosted servers (fetch with Authorization and x-client-platform
+// headers, socket.io over WebSocket). Servers only list their own web origins for CORS, so
+// for this app's session the main process answers CORS itself: preflights succeed, responses
+// carry Access-Control-Allow-Origin for the app, and Cross-Origin-Resource-Policy (helmet's
+// same-origin default) is dropped so avatars and uploads display. This session only ever
+// hosts the app's own page (navigation is locked below), so nothing else gains this access.
+
+function answerCors(ses) {
+  const filter = { urls: ['http://*/*', 'https://*/*'] };
+  // request id → { origin, headers } from the request, needed to answer its response.
+  // After a cross-origin redirect (e.g. GitHub release downloads) Chromium sends Origin: null.
+  const requests = new Map();
+  const header = (headers, name) => headers[Object.keys(headers).find((k) => k.toLowerCase() === name)];
+
+  ses.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+    const origin = header(details.requestHeaders, 'origin');
+    if (origin === PAGE_ORIGIN || origin === 'null') {
+      requests.set(details.id, { origin, headers: header(details.requestHeaders, 'access-control-request-headers') });
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
+  ses.webRequest.onHeadersReceived(filter, (details, callback) => {
+    const request = requests.get(details.id);
+    requests.delete(details.id);
+    if (!request) {
+      // Not a CORS request from the app (images, navigations): only let uploads display.
+      const headers = { ...details.responseHeaders };
+      for (const name of Object.keys(headers)) if (name.toLowerCase() === 'cross-origin-resource-policy') delete headers[name];
+      callback({ responseHeaders: headers });
+      return;
+    }
+    const headers = {};
+    for (const [name, value] of Object.entries(details.responseHeaders || {})) {
+      const lower = name.toLowerCase();
+      if (lower.startsWith('access-control-') || lower === 'cross-origin-resource-policy') continue;
+      headers[name] = value;
+    }
+    headers['Access-Control-Allow-Origin'] = [request.origin];
+    headers['Access-Control-Allow-Credentials'] = ['true'];
+    headers['Access-Control-Expose-Headers'] = [Object.keys(headers).join(', ')];
+    if (details.method === 'OPTIONS') {
+      headers['Access-Control-Allow-Methods'] = ['GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS'];
+      headers['Access-Control-Allow-Headers'] = [request.headers || 'Authorization, Content-Type, Accept, x-client-platform'];
+      headers['Access-Control-Max-Age'] = ['600'];
+      callback({ responseHeaders: headers, statusLine: 'HTTP/1.1 204 No Content' });
+      return;
+    }
+    callback({ responseHeaders: headers });
+  });
+
+  ses.webRequest.onCompleted(filter, (details) => requests.delete(details.id));
+  ses.webRequest.onErrorOccurred(filter, (details) => requests.delete(details.id));
+}
+
+function lockDownPermissions(ses) {
+  ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const origin = originOf((details && details.requestingUrl) || webContents.getURL());
+    callback(GRANTABLE.has(permission) && origin === PAGE_ORIGIN);
+  });
+  ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) =>
+    GRANTABLE.has(permission) && originOf(requestingOrigin) === PAGE_ORIGIN);
+}
+
+// ─── Window ───────────────────────────────────────────────────────────────────
+
+function createWindow() {
+  const state = loadWindowState();
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    ...state.bounds,
+    // Narrow windows get the phone layout, wide ones the sidebar layout.
+    minWidth: 380,
+    minHeight: 560,
+    title: 'Oruinwan',
+    show: false,
+    autoHideMenuBar: true,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c0c0c' : '#f5f4f2',
+    icon: process.platform === 'linux' ? path.join(__dirname, '..', 'assets', 'icon.png') : undefined,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      spellcheck: true,
+      additionalArguments: [`--oruinwan-version=${app.getVersion()}`],
+    },
+  });
+  mainWindow = win;
+
+  win.once('ready-to-show', () => {
+    if (state.maximized) win.maximize();
+    win.show();
+    if (IS_DEV) win.webContents.openDevTools({ mode: 'detach' });
+  });
+
+  let saveTimer = null;
+  const queueSave = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveWindowState(win), 400);
+  };
+  win.on('resize', queueSave);
+  win.on('move', queueSave);
+  win.on('close', () => saveWindowState(win));
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+  // The title carries the unread count (see oruinwan:badge); the page's <title> must not reset it.
+  win.on('page-title-updated', (event) => event.preventDefault());
+
+  // Only the app itself may load in the window; every other link opens in the browser.
+  win.webContents.on('will-navigate', (event) => {
+    if (originOf(event.url) === PAGE_ORIGIN) return;
+    event.preventDefault();
+    openExternalSafely(event.url);
+  });
+  win.webContents.on('will-redirect', (event) => {
+    if (event.isMainFrame && originOf(event.url) !== PAGE_ORIGIN) event.preventDefault();
+  });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalSafely(url);
+    return { action: 'deny' };
+  });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
+
+  win.loadURL(START_URL).catch((err) => console.error('[window] failed to load', START_URL, err.message));
+  return win;
+}
+
+// ─── IPC (see preload.js) ─────────────────────────────────────────────────────
+
+function fromAppPage(event) {
+  return originOf(event.senderFrame && event.senderFrame.url) === PAGE_ORIGIN;
+}
+
+ipcMain.on('oruinwan:open-external', (event, url) => {
+  if (fromAppPage(event) && typeof url === 'string' && url.length < 4096) openExternalSafely(url);
+});
+
+ipcMain.on('oruinwan:badge', (event, count) => {
+  if (!fromAppPage(event)) return;
+  const n = Number.isFinite(count) ? Math.max(0, Math.min(9999, Math.floor(count))) : 0;
   try {
-    ({ autoUpdater } = require('electron-updater'));
-    autoUpdater.on('error', (err) => {
-      console.warn('[Updater] error:', err && err.message);
-      if (manualUpdateCheck) {
-        manualUpdateCheck = false;
-        dialog.showMessageBox({ type: 'error', message: 'Could not check for updates.', detail: String(err && err.message) });
-      }
-    });
-    autoUpdater.on('update-not-available', () => {
-      if (!manualUpdateCheck) return;
-      manualUpdateCheck = false;
-      dialog.showMessageBox({ type: 'info', message: 'Oruinwan is up to date.', detail: `Version ${app.getVersion()}` });
-    });
-    autoUpdater.on('update-available', () => { manualUpdateCheck = false; });
-    // Make sure hide-on-close doesn't block the updater's quit-and-install.
-    autoUpdater.on('before-quit-for-update', () => { isQuitting = true; });
-    autoUpdater.checkForUpdatesAndNotify().catch((err) =>
-      console.warn('[Updater] check failed:', err && err.message));
-  } catch (err) {
-    autoUpdater = null;
-    console.warn('[Updater] unavailable:', err.message);
+    app.setBadgeCount(n); // dock (macOS) and Unity launchers (Linux); a no-op elsewhere
+  } catch {
+    /* unsupported desktop */
   }
-}
-
-function checkForUpdatesManually() {
-  if (!autoUpdater) {
-    dialog.showMessageBox({
-      type: 'info',
-      message: 'Updates are only available in packaged builds.',
-      detail: `Version ${app.getVersion()}`,
-    });
-    return;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setTitle(n ? `Oruinwan (${n})` : 'Oruinwan');
   }
-  manualUpdateCheck = true;
-  autoUpdater.checkForUpdatesAndNotify().catch((err) =>
-    console.warn('[Updater] manual check failed:', err && err.message));
-}
+});
 
-// ─── Application menu (P5) ────────────────────────────────────────────────────
-function buildAppMenu() {
+// ─── Menu ─────────────────────────────────────────────────────────────────────
+
+function buildMenu() {
   const isMac = process.platform === 'darwin';
-  const template = [
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
     ...(isMac ? [{ role: 'appMenu' }] : []),
     { role: 'fileMenu' },
     { role: 'editMenu' },
@@ -336,333 +342,33 @@ function buildAppMenu() {
     {
       role: 'help',
       submenu: [
-        { label: 'Check for Updates…', click: checkForUpdatesManually },
+        { label: 'Oruinwan on GitHub', click: () => openExternalSafely(REPO_URL) },
+        { label: 'All releases', click: () => openExternalSafely(`${REPO_URL}/releases`) },
+        { label: 'Report a problem', click: () => openExternalSafely(`${REPO_URL}/issues/new`) },
       ],
     },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  ]));
 }
-
-// ─── Session security (registered once, C2 + C4) ─────────────────────────────
-function configureSession() {
-  const ses = session.defaultSession;
-
-  // C2: inject a CSP for local pages only; remote pages keep their own headers.
-  // (The offline page also carries an equivalent <meta> CSP, since some
-  // Electron versions do not route file:// responses through webRequest.)
-  ses.webRequest.onHeadersReceived((details, callback) => {
-    if (details.url.startsWith('file://')) {
-      const responseHeaders = { ...(details.responseHeaders || {}) };
-      for (const key of Object.keys(responseHeaders)) {
-        if (key.toLowerCase() === 'content-security-policy') delete responseHeaders[key];
-      }
-      responseHeaders['Content-Security-Policy'] = [LOCAL_CSP];
-      callback({ responseHeaders });
-      return;
-    }
-    callback({});
-  });
-
-  // C4: grant only to the Oruinwan web client's own origin(s).
-  ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    const requestingUrl = (details && details.requestingUrl) || webContents.getURL();
-    callback(GRANTABLE_PERMISSIONS.has(permission) && isTrustedPermissionOrigin(requestingUrl));
-  });
-
-  ses.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
-    if (!GRANTABLE_PERMISSIONS.has(permission)) return false;
-    const url = requestingOrigin || (webContents ? webContents.getURL() : '');
-    return isTrustedPermissionOrigin(url);
-  });
-}
-
-// ─── Window Factory ───────────────────────────────────────────────────────────
-function createWindow() {
-  const savedBounds   = store.get('windowBounds');
-  const wasMaximized  = store.get('windowMaximized');
-
-  mainWindow = new BrowserWindow({
-    ...savedBounds,
-    minWidth:  900,
-    minHeight: 600,
-    title: 'Oruinwan',
-    show: false,  // show after ready-to-show to avoid blank flash
-    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    backgroundColor: '#0c0c0c',  // match Oruinwan dark theme
-    webPreferences: {
-      preload:          path.join(__dirname, 'preload.js'),
-      nodeIntegration:  false,   // NEVER expose Node.js to renderer
-      contextIsolation: true,    // isolate preload context from renderer world
-      sandbox:          true,    // Chromium sandbox
-      webSecurity:      true,    // enforce same-origin
-      allowRunningInsecureContent: false,
-    },
-  });
-
-  const win = mainWindow;
-
-  // ── Show once ready to paint ───────────────────────────────────────────────
-  win.once('ready-to-show', () => {
-    if (wasMaximized) win.maximize();
-    win.show();
-    if (IS_DEV) win.webContents.openDevTools();
-  });
-
-  // ── Load the Oruinwan web client (falls back to the offline page) ──────────
-  loadWebClient();
-
-  // ── Flush a deep link that arrived before the client was ready ────────────
-  win.webContents.on('did-finish-load', () => {
-    if (pendingDeepLink && isOnWebClient()) {
-      const link = pendingDeepLink;
-      pendingDeepLink = null;
-      // Give the SPA a moment to mount its bridge listeners.
-      setTimeout(() => sendToRenderer('deep-link', link), 500);
-    }
-  });
-
-  // ── Persist window state on resize / move ─────────────────────────────────
-  const saveBounds = () => {
-    if (win.isDestroyed() || win.isMaximized() || win.isMinimized()) return;
-    store.set('windowBounds', win.getBounds());
-  };
-  win.on('resize', saveBounds);
-  win.on('move',   saveBounds);
-  win.on('maximize',   () => store.set('windowMaximized', true));
-  win.on('unmaximize', () => store.set('windowMaximized', false));
-
-  // ── Hide instead of close on every platform unless quitting (C5/C6) ───────
-  win.on('close', (event) => {
-    saveBounds();
-    if (!isQuitting) {
-      event.preventDefault();
-      win.hide();
-    }
-  });
-
-  win.on('closed', () => {
-    if (mainWindow === win) mainWindow = null;
-  });
-
-  // ── Security: block navigation to untrusted origins (C3) ──────────────────
-  win.webContents.on('will-navigate', (event, url) => {
-    if (!isAllowedUrl(url)) {
-      event.preventDefault();
-      console.warn('[Security] Blocked navigation to:', url);
-      openExternalSafely(url);
-    }
-  });
-
-  // ── Security: open external links in the system browser (C3) ──────────────
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (isAllowedUrl(url)) return { action: 'allow' };
-
-    // OAuth providers open a popup (window.open) and talk back to the opener
-    // with postMessage, so they must stay inside Electron. The popup gets a
-    // locked-down, preload-free window and no access to the desktop bridge.
-    if (isOAuthPopupUrl(url)) {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          width: 520,
-          height: 680,
-          autoHideMenuBar: true,
-          title: 'Sign in',
-          webPreferences: {
-            preload: undefined,
-            nodeIntegration: false,
-            contextIsolation: true,
-            sandbox: true,
-          },
-        },
-      };
-    }
-
-    openExternalSafely(url);
-    return { action: 'deny' };
-  });
-
-  return win;
-}
-
-// ─── IPC Handlers ─────────────────────────────────────────────────────────────
-
-function str(value, max = 500) {
-  if (value === undefined || value === null) return undefined;
-  return String(value).slice(0, max);
-}
-
-// ── Notifications ──────────────────────────────────────────────────────────
-ipcMain.on('notify', (_e, payload) => {
-  try {
-    const p = payload && typeof payload === 'object' ? payload : {};
-    const type = ['message', 'task', 'mention', 'system'].includes(p.type) ? p.type : 'system';
-    const ctx = {
-      type,
-      workspaceId: str(p.workspaceId, 64),
-      channelId:   str(p.channelId, 64),
-      dmSessionId: str(p.dmSessionId, 64),
-    };
-
-    const onClick = () => {
-      showWindow();
-      sendToRenderer('notification-clicked', ctx);
-    };
-
-    switch (type) {
-      case 'message':
-        notifications.notifyMessage({ senderName: str(p.senderName, 100), preview: str(p.preview), onClick });
-        break;
-      case 'task':
-        notifications.notifyTaskReminder({ taskTitle: str(p.taskTitle, 200), dueDate: str(p.dueDate, 64), onClick });
-        break;
-      case 'mention':
-        notifications.notifyMention({ senderName: str(p.senderName, 100), channelName: str(p.channelName, 100), onClick });
-        break;
-      default:
-        notifications.showNotification({ title: str(p.title, 200), body: str(p.body), onClick });
-    }
-  } catch (err) {
-    console.warn('[IPC] notify failed:', err.message);
-  }
-});
-
-// ── Badge / Unread Count (C9) ──────────────────────────────────────────────
-ipcMain.on('set-unread-count', (_e, payload) => {
-  const count = payload && typeof payload === 'object' ? payload.count : undefined;
-  if (!Number.isInteger(count) || count < 0) return;
-  try {
-    setUnreadCount(Math.min(count, 99999));
-  } catch (err) {
-    console.warn('[IPC] set-unread-count failed:', err.message);
-  }
-});
-
-// ── Toggle Notifications (from renderer) ───────────────────────────────────
-ipcMain.on('toggle-notifications', () => {
-  applyNotificationsEnabled(!notifications.isEnabled());
-});
-
-// ── Query Notification State ───────────────────────────────────────────────
-ipcMain.handle('get-notification-state', () => ({
-  enabled: notifications.isEnabled(),
-  doNotDisturb: notifications.isDoNotDisturb(),
-}));
-
-// ── Settings (allowlisted key-value, C8) ───────────────────────────────────
-const SETTINGS = {
-  notificationSound:    (v) => typeof v === 'boolean',
-  lastUrl:              (v) => typeof v === 'string' && v.length <= 2048,
-  doNotDisturb:         (v) => typeof v === 'boolean',
-  notificationsEnabled: (v) => typeof v === 'boolean',
-};
-
-ipcMain.handle('get-settings', () => {
-  const out = {};
-  for (const key of Object.keys(SETTINGS)) out[key] = store.get(key);
-  return out;
-});
-
-ipcMain.on('save-setting', (_e, payload) => {
-  try {
-    const { key, value } = payload && typeof payload === 'object' ? payload : {};
-    if (!Object.prototype.hasOwnProperty.call(SETTINGS, key) || !SETTINGS[key](value)) {
-      console.warn('[IPC] save-setting rejected:', key);
-      return;
-    }
-    switch (key) {
-      case 'notificationsEnabled': applyNotificationsEnabled(value); break;
-      case 'doNotDisturb':         applyDoNotDisturb(value); break;
-      case 'notificationSound':
-        notifications.setSoundEnabled(value);
-        store.set(key, value);
-        break;
-      default:
-        store.set(key, value);
-    }
-  } catch (err) {
-    console.warn('[IPC] save-setting failed:', err.message);
-  }
-});
-
-// ── App Version ────────────────────────────────────────────────────────────
-ipcMain.handle('get-app-version', () => app.getVersion());
-
-// ── Show Window (from renderer or notification click) ─────────────────────
-ipcMain.on('show-window', () => showWindow());
-
-// ── Offline page retry ─────────────────────────────────────────────────────
-ipcMain.on('retry-connect', (event) => {
-  if (!windowAlive() || event.sender !== mainWindow.webContents) return;
-  if (!isLocalAppFile(mainWindow.webContents.getURL())) return; // only from offline page
-  loadWebClient();
-});
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
-if (gotLock) {
-  // Win/Linux: a second launch (incl. clicking an oruinwan:// or chttrix:// link) lands here.
-  app.on('second-instance', (_event, argv) => {
-    const link = findDeepLinkArg(argv);
-    if (link) handleDeepLink(link);
-    else showWindow();
-  });
+if (process.platform === 'win32') app.setAppUserModelId('com.oruinwan.desktop');
 
-  // macOS: deep links arrive via open-url (may fire before ready).
-  app.on('open-url', (event, url) => {
-    event.preventDefault();
-    if (app.isReady()) handleDeepLink(url);
-    else pendingDeepLink = parseDeepLink(url);
-  });
+app.whenReady().then(() => {
+  registerAppScheme();
+  answerCors(session.defaultSession);
+  lockDownPermissions(session.defaultSession);
+  buildMenu();
+  createWindow();
 
-  app.whenReady().then(() => {
-    // Restore notification state from store
-    notifications.setEnabled(store.get('notificationsEnabled'));
-    notifications.setDoNotDisturb(store.get('doNotDisturb'));
-    notifications.setSoundEnabled(store.get('notificationSound'));
-
-    configureSession();
-    registerProtocol();
-    buildAppMenu();
-
-    // Cold start via deep link on Windows/Linux
-    const argvLink = findDeepLinkArg(process.argv);
-    if (argvLink) pendingDeepLink = parseDeepLink(argvLink);
-
-    createWindow();
-    createTray({
-      openWindow: showWindow,
-      toggleWindow,
-      setNotificationsEnabled: applyNotificationsEnabled,
-      setDoNotDisturb: applyDoNotDisturb,
-      checkForUpdates: checkForUpdatesManually,
-      quit: () => app.quit(),
-    });
-
-    initAutoUpdater();
-
-    // macOS: dock icon clicked (C7)
-    app.on('activate', () => {
-      if (windowAlive()) showWindow();
-      else createWindow();
-    });
-  });
-}
-
-// Keep the app alive in the background (tray-based persistence).
-// Windows are hidden rather than closed, so this only fires while quitting.
-app.on('window-all-closed', () => {
-  // Intentionally empty: the tray keeps the app alive; quit via tray/menu.
+  app.on('activate', () => showWindow()); // macOS: dock icon click with no window open
 });
 
-// Quit from tray, app menu, Cmd+Q, OS shutdown or updater (C5).
-app.on('before-quit', () => {
-  isQuitting = true;
-  if (windowAlive()) {
-    store.set('windowMaximized', mainWindow.isMaximized());
-    if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
-      store.set('windowBounds', mainWindow.getBounds());
-    }
-  }
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+// Belt and braces: no window, frame or webview may ever be created by page content.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-attach-webview', (event) => event.preventDefault());
 });

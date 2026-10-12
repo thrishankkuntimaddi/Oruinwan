@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders the Android launcher icons and launch-screen logo from the master logo
+# Renders the Android launcher icons, launch-screen logo, favicon and desktop app icon from the master logo
 # (client/public/icons/Oruinwan.png). Needs ImageMagick 7 (`magick`). Run after changing the logo.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -40,6 +40,14 @@ magick -size 504x504 xc:'#000000' \( "$TMP/art.png" -resize 414x414 \) -gravity 
   \( -size 504x504 xc:none -fill white -draw 'roundrectangle 0,0 503,503 112,112' \) -compose DstIn -composite \
   -quality 86 -define webp:alpha-quality=90 "$RES/drawable-nodpi/splash_logo.webp"
 
-# Favicon for the browser preview.
+# Favicon for the browser preview and the web app.
 magick -size 192x192 xc:'#000000' \( "$TMP/art.png" -resize 150x150 \) -gravity center -composite -strip -depth 8 public/icon-192.png
-echo "Icons written to $RES"
+
+# Desktop app icon (desktop/assets/icon.png). electron-builder turns it into .icns and .ico.
+# macOS layout: an 824px rounded square centred on a transparent 1024px canvas.
+magick -size 824x824 xc:'#000000' \( "$TMP/art.png" -resize 640x640 \) -gravity center -composite -alpha set \
+  \( -size 824x824 xc:none -fill white -draw 'roundrectangle 0,0 823,823 185,185' \) -compose DstIn -composite \
+  "$TMP/desktop-tile.png"
+magick -size 1024x1024 xc:none "$TMP/desktop-tile.png" -gravity center -compose over -composite -strip -depth 8 ../desktop/assets/icon.png
+
+echo "Icons written to $RES, public/ and ../desktop/assets/"
