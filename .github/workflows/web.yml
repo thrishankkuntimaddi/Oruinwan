@@ -1,12 +1,14 @@
 name: Deploy web app
 
-# The Oruinwan app (mobile/) in the browser, on GitHub Pages: redeployed on every change to main.
+# The Oruinwan product website on GitHub Pages: the web client's landing, docs and legal pages
+# built with `vite --mode site`, with download links to the latest release. "Log in" and "Get
+# started" send visitors to their own team's server, which hosts the web app itself.
 # Live at https://thrishankkuntimaddi.github.io/Oruniwan/
 # One-time setup (done 2026-10-12): Settings → Pages → Build and deployment → Source: GitHub Actions.
 on:
   push:
     branches: [main]
-    paths: ['mobile/**', '.github/workflows/web.yml']
+    paths: ['client/**', 'platform/**', 'yarn.lock', '.github/workflows/web.yml']
   workflow_dispatch:
 
 permissions:
@@ -20,9 +22,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,23 +29,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
+          cache: yarn
+          cache-dependency-path: yarn.lock
+      - run: yarn install --frozen-lockfile
       - name: Build
+        working-directory: client
+        # Project pages live under /<repository>/.
         env:
-          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
-        run: |
-          # Optional Firebase web config, the same as the Android and desktop builds.
-          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; fi
-          npm run build
-          rm -f .env
-          # Android-only page (outdated System WebView); not part of the web app.
-          rm -f dist/webview-update.html
+          SITE_BASE: /${{ github.event.repository.name }}/
+        run: npx vite build --mode site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: mobile/dist
+          path: client/dist-site
 
   deploy:
     needs: build

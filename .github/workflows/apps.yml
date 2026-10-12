@@ -1,16 +1,20 @@
 name: Build apps
 
-# Pull requests and main: lint and test the app, then build it for Android (debug APK), Mac,
-# Windows and Linux, as downloadable workflow artifacts.
-# Tags named vX.Y.Z: the same builds with the Android release key, published together as ONE
-# GitHub Release, plus latest.json (read by the in-app updaters on Android and desktop).
+# Two UIs, one release:
+#  - the phone UI (mobile/) on Android phones and iPhones
+#  - the web client (client/, built with `vite --mode app`) on Mac, Windows and Linux (desktop/)
+#    and on Android tablets and iPads (bundled next to the phone UI, see mobile/scripts/assemble-native.mjs)
+# Pull requests and main: lint, test and build everything as downloadable workflow artifacts
+# (iOS as a simulator build). Tags named vX.Y.Z: the same builds with the Android release key,
+# published together as ONE GitHub Release with latest.json (read by the in-app updaters), and
+# the iOS app uploaded to TestFlight when the Apple secrets are set.
 on:
   push:
     branches: [main]
-    paths: ['mobile/**', 'desktop/**', '.github/workflows/apps.yml']
+    paths: ['mobile/**', 'desktop/**', 'client/**', 'platform/**', 'yarn.lock', '.github/workflows/apps.yml']
     tags: ['v*']
   pull_request:
-    paths: ['mobile/**', 'desktop/**', '.github/workflows/apps.yml']
+    paths: ['mobile/**', 'desktop/**', 'client/**', 'platform/**', 'yarn.lock', '.github/workflows/apps.yml']
   workflow_dispatch:
 
 concurrency:
@@ -57,8 +61,8 @@ jobs:
             exit 1
           fi
 
-      # One web build for every desktop platform, so they all ship the same bundle.
-      - name: Build the app bundle
+      # The phone UI, built once for Android and iOS.
+      - name: Build the phone UI
         env:
           MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
         run: |
@@ -69,13 +73,36 @@ jobs:
           rm -f .env
       - uses: actions/upload-artifact@v4
         with:
-          name: app-bundle
+          name: phone-bundle
           path: mobile/dist
+          retention-days: 3
+
+  # The web client in app mode, built once for the desktop apps, Android tablets and iPads.
+  client-app:
+    name: Web client (app build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+      - run: yarn install --frozen-lockfile
+      - name: Build
+        working-directory: client
+        run: ORUINWAN_APP_VERSION=$(node -p "require('../mobile/package.json').version") npx vite build --mode app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-app-bundle
+          path: client/dist-app
           retention-days: 3
 
   android:
     name: Android
-    needs: check
+    needs: [check, client-app]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,16 +122,21 @@ jobs:
           java-version: 21
           cache: gradle
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: phone-bundle
+          path: mobile/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-app-bundle
+          path: client/dist-app
 
-      # The web build runs npm and vite plugin code, so no signing secret is visible here.
-      - name: Build the web app
-        env:
-          MOBILE_ENV: ${{ secrets.MOBILE_ENV }}
+      # Phone UI + web client for tablets, copied into the Android project. No signing secret
+      # is visible to these npm steps.
+      - name: Assemble the app
         run: |
-          if [ -n "$MOBILE_ENV" ]; then printf '%s\n' "$MOBILE_ENV" > .env; fi
-          npm run build
+          ORUINWAN_SKIP_WEB_BUILD=1 node scripts/assemble-native.mjs
           npx cap sync android
-          rm -f .env
 
       - name: Build a debug APK
         if: env.IS_RELEASE != 'true'
@@ -185,7 +217,7 @@ jobs:
 
   desktop:
     name: Desktop (${{ matrix.label }})
-    needs: check
+    needs: [check, client-app]
     strategy:
       fail-fast: false
       matrix:
@@ -224,8 +256,8 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - uses: actions/download-artifact@v4
         with:
-          name: app-bundle
-          path: mobile/dist
+          name: client-app-bundle
+          path: client/dist-app
       - run: npm ci
 
       - name: Package
@@ -260,6 +292,112 @@ jobs:
           name: ${{ env.IS_RELEASE == 'true' && format('release-{0}', matrix.key) || format('oruinwan-desktop-{0}', matrix.key) }}
           path: desktop/out/*
           retention-days: ${{ env.IS_RELEASE == 'true' && 7 || 14 }}
+
+  ios:
+    name: iOS
+    needs: [check, client-app]
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: phone-bundle
+          path: mobile/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-app-bundle
+          path: client/dist-app
+      - name: Assemble the app
+        run: |
+          ORUINWAN_SKIP_WEB_BUILD=1 node scripts/assemble-native.mjs
+          npx cap sync ios
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          # Same build number scheme as Android's versionCode: major*10000 + minor*100 + patch.
+          echo "BUILD_NUMBER=$(node -p "const [a,b,c]='${VERSION}'.split('.').map(Number); a*10000+b*100+c")" >> "$GITHUB_ENV"
+
+      - name: Build for the simulator (unsigned)
+        if: env.IS_RELEASE != 'true'
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" CODE_SIGNING_ALLOWED=NO \
+            build | tail -20
+
+      # Signs with a distribution certificate and App Store provisioning profile, then uploads
+      # to App Store Connect (TestFlight). Secrets exist only in this step; the keychain and
+      # key files live in RUNNER_TEMP and are removed after. See mobile/README.md for setup.
+      - name: Archive and upload to TestFlight
+        if: env.IS_RELEASE == 'true'
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          for v in TEAM_ID CERT_P12_BASE64 CERT_PASSWORD PROFILE_BASE64 ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64; do
+            if [ -z "${!v}" ]; then
+              echo "::warning::iOS signing secrets are not set (missing $v), so this release has no TestFlight build. See mobile/README.md → iOS."
+              exit 0
+            fi
+          done
+          KEYCHAIN="$RUNNER_TEMP/oruinwan.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          trap 'security delete-keychain "$KEYCHAIN" 2>/dev/null; rm -f "$RUNNER_TEMP"/oruinwan.p12 "$RUNNER_TEMP"/AuthKey.p8' EXIT
+          printf '%s' "$CERT_P12_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/oruinwan.p12"
+          printf '%s' "$ASC_KEY_P8_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/AuthKey.p8"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/oruinwan.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          # The provisioning profile: its UUID and name come from the profile itself.
+          PROFILE="$RUNNER_TEMP/oruinwan.mobileprovision"
+          printf '%s' "$PROFILE_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > "$PROFILE"
+          security cms -D -i "$PROFILE" > "$RUNNER_TEMP/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          node scripts/ios-release-signing.mjs "$TEAM_ID" "$PROFILE_NAME"
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Oruinwan.xcarchive" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN" \
+            archive | tail -20
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>com.oruinwan.app</key><string>${PROFILE_NAME}</string></dict>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Oruinwan.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -20
+          echo "::notice::Oruinwan $VERSION ($BUILD_NUMBER) was uploaded to App Store Connect; it appears in TestFlight after Apple's processing."
 
   publish:
     name: Publish release
@@ -300,7 +438,7 @@ jobs:
             echo
             echo "| Platform | File | Size | SHA-256 |"
             echo "|---|---|---|---|"
-            row "Android 7+" Oruinwan-Android.apk
+            row "Android 7+ (phones and tablets)" Oruinwan-Android.apk
             row "Mac (Apple Silicon: M1 and newer)" Oruinwan-Mac-AppleSilicon.dmg
             row "Mac (Intel)" Oruinwan-Mac-Intel.dmg
             row "Windows 10 / 11" Oruinwan-Windows-Setup.exe
@@ -309,10 +447,13 @@ jobs:
             echo
             echo "### Install"
             echo
-            echo "- **Android:** open the APK and allow your browser to install apps if asked. Already installed? The app offers the update itself (Settings → Updates) and keeps your data."
+            echo "- **Android:** open the APK and allow your browser to install apps if asked. Phones get the phone app, tablets the full workspace. Already installed? The app offers the update itself and keeps your data."
+            echo "- **iPhone and iPad:** through TestFlight while the app is in testing (ask your admin for an invite); iPads get the full workspace."
             echo "- **Mac:** open the .dmg and drag Oruinwan to Applications. The app isn't notarized by Apple yet, so the first time macOS refuses to open it: go to System Settings → Privacy & Security, click **Open Anyway**, then confirm. (Or run \`xattr -dr com.apple.quarantine /Applications/Oruinwan.app\` in Terminal.)"
             echo "- **Windows:** run the installer. The app isn't code-signed yet, so SmartScreen may warn: click **More info → Run anyway**."
             echo "- **Linux:** \`chmod +x Oruinwan-Linux.AppImage\` and run it, or \`sudo apt install ./Oruinwan-Linux.deb\`."
+            echo
+            echo "The desktop and tablet apps ask for your team's server address the first time, then sign in as on the web."
             echo
             echo "The APK is signed with the Oruinwan release key (certificate SHA-256 \`${RELEASE_CERT_SHA256}\`). \`latest.json\` is read by the apps' updaters. You can ignore the automatic *Source code* archives."
           } > body.md
