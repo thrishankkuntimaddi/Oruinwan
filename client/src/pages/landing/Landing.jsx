@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-    ArrowRight, Play, Check, CheckCircle2, User, Building2, Globe, Monitor, Smartphone, ShieldCheck,
+    ArrowRight, Play, Check, CheckCircle2, User, Building2, Download, Globe, Monitor, Smartphone, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingScreen from '../../shared/components/ui/LoadingScreen';
@@ -15,6 +15,17 @@ import LandingFooter from './LandingFooter';
 import { CAPABILITIES, FEATURES, SECURITY, STEPS } from './data';
 import { prefersReducedMotion, scrollToId, useRevealAll } from './hooks';
 import './landing.css';
+
+// Release files keep the same names in every release (.github/workflows/apps.yml), so these
+// links always fetch the newest version.
+const RELEASE_DOWNLOADS = 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/';
+const DESKTOP_DOWNLOADS = [
+    { label: 'Mac · Apple Silicon', file: 'Oruinwan-Mac-AppleSilicon.dmg', primary: true },
+    { label: 'Mac · Intel', file: 'Oruinwan-Mac-Intel.dmg' },
+    { label: 'Windows', file: 'Oruinwan-Windows-Setup.exe' },
+    { label: 'Linux · AppImage', file: 'Oruinwan-Linux.AppImage' },
+    { label: 'Linux · .deb', file: 'Oruinwan-Linux.deb' },
+];
 
 const VISITED_KEY = 'oruinwan_visited';
 
@@ -280,12 +291,12 @@ const Landing = () => {
                 <section id="download" className="orw-section orw-section--slab" aria-label="Download">
                     <div className="orw-container">
                         <SectionHead eyebrow="Available everywhere" title="Your workspace, wherever you are."
-                            lead="Use it in the browser today. Native apps are on the way and will sync in real time." />
+                            lead="Use it in the browser, or install the app on your computer, phone or tablet. Everything syncs in real time." />
                         <div className="orw-dl" data-reveal>
                             <div className="orw-dl__item">
                                 <div className="orw-dl__head"><span className="orw-dl__icon"><Globe size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Available now</span></div>
                                 <h3>Web app</h3>
-                                <p>Works in any modern browser. Nothing to install, always up to date.</p>
+                                <p>Works in any modern browser, including Safari on iPad. Nothing to install, always up to date.</p>
                                 <div className="orw-dl__actions">
                                     <button type="button" className="orw-btn orw-btn--primary orw-btn--block" onClick={() => navigate('/login')}>
                                         Open {BRAND.name} web <ArrowRight size={14} />
@@ -293,24 +304,32 @@ const Landing = () => {
                                 </div>
                             </div>
                             <div className="orw-dl__item">
-                                <div className="orw-dl__head"><span className="orw-dl__icon"><Monitor size={20} aria-hidden="true" /></span><span className="orw-tag">Coming soon</span></div>
+                                <div className="orw-dl__head"><span className="orw-dl__icon"><Monitor size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Available now</span></div>
                                 <h3>Desktop app</h3>
-                                <p>Native notifications, system tray and keyboard-first navigation.</p>
+                                <p>The full workspace in its own window, with native notifications and an unread badge.</p>
                                 <div className="orw-dl__actions">
-                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>macOS · coming soon</button>
-                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>Windows · coming soon</button>
+                                    {DESKTOP_DOWNLOADS.map((d) => (
+                                        <a key={d.file} className={`orw-btn orw-btn--block ${d.primary ? 'orw-btn--primary' : 'orw-btn--ghost'}`} href={`${RELEASE_DOWNLOADS}${d.file}`}>
+                                            <Download size={14} aria-hidden="true" /> {d.label}
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
                             <div className="orw-dl__item">
-                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag">Coming soon</span></div>
-                                <h3>Mobile app</h3>
-                                <p>Channels, DMs and huddles in your pocket, with push notifications.</p>
+                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Android now</span></div>
+                                <h3>Mobile and tablet</h3>
+                                <p>A phone app built for one hand, and the full workspace on tablets. Updates itself.</p>
                                 <div className="orw-dl__actions">
-                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>iOS · coming soon</button>
-                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>Android · coming soon</button>
+                                    <a className="orw-btn orw-btn--primary orw-btn--block" href={`${RELEASE_DOWNLOADS}Oruinwan-Android.apk`}>
+                                        <Download size={14} aria-hidden="true" /> Android phones and tablets
+                                    </a>
+                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>iPhone and iPad · coming soon</button>
                                 </div>
                             </div>
                         </div>
+                        <p className="orw-plans__note" data-reveal>
+                            Every version, with checksums and release notes: <a className="orw-link" href="https://github.com/thrishankkuntimaddi/Oruniwan/releases">GitHub Releases</a>
+                        </p>
                     </div>
                 </section>
 
