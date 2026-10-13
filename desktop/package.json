@@ -1,6 +1,6 @@
 {
   "name": "oruinwan-desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Channels, direct messages, tasks, notes and Oruinwan AI for your team",
   "main": "electron/main.js",
   "desktopName": "oruinwan.desktop",
