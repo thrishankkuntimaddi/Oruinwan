@@ -11,7 +11,7 @@ Both run in a [Capacitor](https://capacitorjs.com) shell on the system WebView (
 `scripts/assemble-native.mjs` builds `www/`, the bundle the apps load: the web client at the root and
 the phone UI in `www/phone/`. A two-line script at the top of `www/index.html` sends devices whose
 shortest screen side is under 600 dp (phones) to the phone UI; tablets stay on the web client, which
-asks for the team's server address the first time.
+asks for the team's server address the first time, or opens the demo workspace.
 
 The desktop apps (`../desktop`) run the same web client build. The phone UI also has a wide layout
 (`src/app/layout.js`) for large windows, used when you preview it in a desktop browser.

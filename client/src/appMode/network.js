@@ -6,8 +6,11 @@
 // which makes the server return the refresh token in the response body
 // (server/utils/cookieHelper.js), exactly as for the phone app. The app keeps that token on the
 // device and sends it back only to the endpoints that need it.
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import api from '../services/api';
+import { DEMO_SERVER } from './env';
+import { demoRequest } from './demo/backend';
+import { leaveDemo } from './demo/session';
 
 const TOKEN_KEY = 'oruinwan.refreshToken';
 const SENDS_TOKEN = /^\/api\/auth\/(refresh|logout|logout-all|sessions\/others)\/?$/;
@@ -121,12 +124,55 @@ function patchAxios(instance) {
   );
 }
 
+// ── The demo: requests to DEMO_SERVER are answered on the device (demo/backend.js) ──
+
+const parseBody = (body) => {
+  if (body == null || body === '') return null;
+  if (typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob)) return body;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
+};
+
+async function answerDemo(method, url, body) {
+  const u = new URL(url, `${DEMO_SERVER}/`);
+  const result = await demoRequest(method, u.pathname, u.searchParams, parseBody(body));
+  // Signing out of the demo leaves it.
+  if (/^\/api\/auth\/logout/.test(u.pathname)) setTimeout(leaveDemo, 0);
+  return result;
+}
+
+function installDemo() {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async function demoFetch(input, init) {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input?.url;
+    if (!url || !url.startsWith(DEMO_SERVER)) return realFetch(input, init);
+    const method = init?.method || (input instanceof Request ? input.method : 'GET');
+    const { status, data, stream, contentType } = await answerDemo(method, url, init?.body);
+    if (stream) return new Response(stream, { status, headers: { 'content-type': contentType } });
+    return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+  };
+  const adapter = async (config) => {
+    const url = new URL(config.url || '', config.baseURL ? `${config.baseURL}/` : `${DEMO_SERVER}/`);
+    for (const [key, value] of Object.entries(config.params || {})) if (value != null) url.searchParams.set(key, value);
+    const { status, data } = await answerDemo(config.method || 'get', url.href, config.data);
+    const response = { data, status, statusText: String(status), headers: { 'content-type': 'application/json' }, config, request: {} };
+    if (status >= 400) throw new AxiosError(data?.message || `Request failed with status code ${status}`, AxiosError.ERR_BAD_RESPONSE, config, {}, response);
+    return response;
+  };
+  axios.defaults.adapter = adapter;
+  api.defaults.adapter = adapter;
+}
+
 /** Call once, before anything talks to the server. */
 export function installAppNetwork(server, appPlatformName) {
   const u = new URL(server);
   origin = u.origin;
   prefix = u.pathname.replace(/\/+$/, '');
   platform = appPlatformName;
+  if (server === DEMO_SERVER) installDemo();
   patchFetch();
   patchAxios(axios);
   patchAxios(api);

@@ -3,6 +3,7 @@ import sdkSocketClient from '@platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
 import { refreshAccessToken } from '../services/api';
 import logger from '../utils/logger';
+import { isDemoMode } from '../appMode/env';
 
 const SocketContext = createContext(null);
 
@@ -71,7 +72,8 @@ export const SocketProvider = ({ children }) => {
     // profile/theme/status updates don't tear down the connection.
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
-        if (!token || !userId) {
+        // The demo (desktop and tablet apps) has no server to stay connected to.
+        if (!token || !userId || isDemoMode()) {
             setSocket(null);
             setIsConnected(false);
             return undefined;

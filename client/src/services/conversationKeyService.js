@@ -3,6 +3,8 @@ import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX2551
 import identityKeyService from './identityKeyService';
 import api from './api';
 import logger from '../utils/logger';
+import { isDemoMode } from '../appMode/env';
+import { demoConversationKey } from '../appMode/demo/crypto';
 
 // Current user id from the initialized identity (set on login/rehydration),
 // falling back to the access token's `sub` claim.
@@ -338,6 +340,9 @@ class ConversationKeyService {
 
     
     async getConversationKey(conversationId, conversationType) {
+        // The demo (desktop and tablet apps) has one key for every conversation, made on the device.
+        if (isDemoMode()) return demoConversationKey();
+
         const cacheKey = `${conversationType}:${conversationId}`;
 
         

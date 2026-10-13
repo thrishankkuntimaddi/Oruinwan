@@ -8,6 +8,13 @@ export const IS_SITE = import.meta.env.MODE === 'site';
 
 const SERVER_KEY = 'oruinwan.server';
 
+/** The demo's reserved address (.invalid never resolves): requests to it are answered on the
+ * device by src/appMode/demo/backend.js. */
+export const DEMO_SERVER = 'https://demo.oruinwan.invalid';
+
+/** True while the desktop or tablet app is running the demo workspace. */
+export const isDemoMode = () => IS_APP && getServer() === DEMO_SERVER;
+
 /** 'desktop' | 'android' | 'ios': sent as x-client-platform, which puts the server in token mode. */
 export function appPlatform() {
   if (typeof window === 'undefined') return 'desktop';

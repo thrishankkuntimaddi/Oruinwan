@@ -2,10 +2,11 @@
 // self-hosted, so the address is the one the team opens in the browser.
 import React, { useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { ArrowRight, TriangleAlert } from 'lucide-react';
+import { ArrowRight, FlaskConical, TriangleAlert } from 'lucide-react';
 import AuthShell from '../components/public/AuthShell';
 import { getServer, normalizeServer, serverLabel, setServer } from './env';
 import { forgetSession } from './network';
+import { startDemo } from './demo/session';
 
 async function isOruinwanServer(url) {
   const res = await fetch(`${url}/api/health`, { cache: 'no-store' });
@@ -90,6 +91,12 @@ export default function ConnectServer() {
             {busy ? 'Connecting…' : <>Continue <ArrowRight size={15} /></>}
           </button>
         </form>
+
+        <div className="orw-auth__divider">No server yet?</div>
+        <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={startDemo}>
+          <FlaskConical size={15} aria-hidden="true" /> Explore the demo
+        </button>
+        <p className="orw-auth__note">A sample workspace with channels, messages, tasks and notes. It stays on this device; no account needed.</p>
       </AuthShell>
     </MemoryRouter>
   );

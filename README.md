@@ -359,7 +359,7 @@ The company permission matrix maps each company role to capabilities such as cre
 
 ## Clients: web, desktop, mobile, SDK
 
-**Web.** The React app in `client/` is the main client; each server hosts it (`server/server.js` serves `dist/`). Below 768 px wide it switches to a mobile layout with a bottom tab bar; tablets (iPad included) keep the full layout down to 600 px. Besides the default build it has two modes: `vite build --mode app` (the desktop and tablet apps: the user picks the server, sign-in uses the server's app token mode, see `client/src/appMode`) and `vite build --mode site` (the product website on GitHub Pages).
+**Web.** The React app in `client/` is the main client; each server hosts it (`server/server.js` serves `dist/`). Below 768 px wide it switches to a mobile layout with a bottom tab bar; tablets (iPad included) keep the full layout down to 600 px. Besides the default build it has two modes: `vite build --mode app` (the desktop and tablet apps: the user picks the server, sign-in uses the server's app token mode, and "Explore the demo" opens a sample workspace answered on the device; see `client/src/appMode`) and `vite build --mode site` (the product website on GitHub Pages).
 
 **Desktop.** `desktop/` runs the web client's app build in a sandboxed Electron shell for Mac, Windows and Linux, with native notifications and an unread badge ([desktop/README.md](desktop/README.md)).
 

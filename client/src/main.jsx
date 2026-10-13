@@ -9,11 +9,12 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import logger from './utils/logger';
-import { IS_APP, IS_SITE, appPlatform, getServer } from './appMode/env';
+import { IS_APP, IS_SITE, appPlatform, getServer, isDemoMode } from './appMode/env';
 import ConnectServer from './appMode/ConnectServer';
 import { installAppNetwork } from './appMode/network';
 import UpdateNotice from './appMode/UpdateNotice';
 import { prepareNativeShell } from './appMode/nativeShell';
+import DemoBar from './appMode/demo/DemoBar';
 
 // Google sign-in is optional. The Google library throws while rendering the login
 // form when the client id is empty, so pass a placeholder; LoginForm hides the button.
@@ -23,6 +24,8 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'google-sign-in-
 // way the phone app does (src/appMode/network.js).
 const needsServer = IS_APP && !getServer();
 if (IS_APP) prepareNativeShell();
+const demo = isDemoMode();
+if (demo) document.documentElement.classList.add('oruinwan-demo');
 if (IS_APP && !needsServer) installAppNetwork(getServer(), appPlatform());
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -35,6 +38,7 @@ root.render(
         <AuthProvider>
           <App />
         </AuthProvider>
+        {demo && <DemoBar />}
         {IS_APP && <UpdateNotice />}
       </>
     ) : (

@@ -3,7 +3,8 @@
 The full Oruinwan web client ([`../client`](../client), built with `vite build --mode app`) in an
 Electron window (Electron 44, electron-builder 26): the same workspace as in the browser, with native
 notifications and an unread badge. The first launch asks for the team's server address
-(`client/src/appMode`), then the usual sign-in.
+(`client/src/appMode`), then the usual sign-in, or opens a demo workspace that runs entirely on the
+device (`client/src/appMode/demo`).
 
 The same app build runs on Android tablets and iPads ([`../mobile`](../mobile/README.md)).
 

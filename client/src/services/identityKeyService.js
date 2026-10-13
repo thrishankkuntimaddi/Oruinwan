@@ -7,6 +7,7 @@ import {
     checkCryptoSupport
 } from '../utils/cryptoIdentity';
 import logger from '../utils/logger';
+import { isDemoMode } from '../appMode/env';
 
 const DB_NAME = 'ChttrixE2EE';
 const DB_VERSION = 1;
@@ -162,6 +163,12 @@ class IdentityKeyService {
 
     
     async initializeIdentityKeys(userId, password = null) {
+        // The demo has no identity keys to unlock: its conversations use a key made on the device.
+        if (isDemoMode()) {
+            this.myUserId = userId;
+            return { status: 'READY', existed: true, algorithm: 'DEMO' };
+        }
+
         const support = checkCryptoSupport();
         if (!support.indexedDB) {
             throw new Error('IndexedDB not available - cannot use E2EE');
