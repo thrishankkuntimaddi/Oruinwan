@@ -159,7 +159,7 @@ npm run test:e2e              # Playwright browser tests (see below)
 | Production build of the web app | `npm run build` (output in `dist/`) |
 | Preview the production build | `cd client && npx vite preview` |
 | Desktop app (Electron, loads :3000) | `cd desktop && npm install && npm start` |
-| Mobile app (Expo) | `cd mobile && EXPO_PUBLIC_API_URL=http://<your-ip>:8080/api EXPO_PUBLIC_SOCKET_URL=http://<your-ip>:8080 npx expo start` |
+| Phone app (Capacitor) | `cd mobile && npm install && npm run dev` serves the phone UI in a browser; `npm run android:debug` builds the Android app (see `mobile/README.md`) |
 | GitHub/Jira webhooks reaching your laptop | `ngrok http 8080` or `cloudflared tunnel --url http://localhost:8080`, then use the https URL as the webhook host (details in `docs/integrations.md`) |
 
 ---

@@ -195,7 +195,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs
 ### Message encryption
 How the keys fit together:
 
-1. Password → PBKDF2-SHA256 (100,000 iterations) → the user's master key (UMEK). Users who sign up with OAuth get a random UMEK instead.
+1. Password → PBKDF2-SHA256 (100,000 iterations) → the user's master key (UMEK). It is derived on the device and never sent to the server. Users who sign up with OAuth get a random UMEK instead, which the server stores sealed under the active `CRYPTO_KEK_*` key so they can unlock on a new device.
 2. The UMEK encrypts the user's RSA-2048 identity private key. The encrypted key is stored on the server; once unlocked, it is cached on each device in IndexedDB as a non-extractable key.
 3. The server generates one AES-256 key per channel or DM. It wraps a copy for each member with that member's RSA-OAEP public key, and seals one more copy under `SERVER_KEK`.
 4. Messages are encrypted with that key using AES-256-GCM, with a fresh IV for every message.
@@ -327,15 +327,23 @@ cp server/.env.example server/.env
 cp client/.env.example client/.env
 ```
 
-At minimum, set these in `server/.env`:
+Fill in fresh secrets. A `.env` file can't run commands such as `$(openssl rand -hex 32)` itself, so this writes the values in:
+
+```bash
+node -e '
+const fs = require("fs"), { randomBytes } = require("crypto");
+let env = fs.readFileSync("server/.env", "utf8");
+for (const key of ["ACCESS_TOKEN_SECRET", "REFRESH_TOKEN_SECRET", "SERVER_KEK", "CRYPTO_KEK_V1"])
+  env = env.replace(new RegExp(`^${key}=.*$`, "m"), `${key}=${randomBytes(32).toString("hex")}`);
+fs.writeFileSync("server/.env", env);
+'
+```
+
+Then set at least these in `server/.env`:
 
 ```bash
 MONGO_URI=mongodb://127.0.0.1:27017/oruinwan
 DATABASE_URL=postgres://oruinwan:oruinwan-dev@localhost:5432/oruinwan
-ACCESS_TOKEN_SECRET=$(openssl rand -hex 32)
-REFRESH_TOKEN_SECRET=$(openssl rand -hex 32)
-SERVER_KEK=$(openssl rand -hex 32)
-CRYPTO_KEK_V1=$(openssl rand -hex 32)    # exactly 64 hex characters
 FRONTEND_URL=http://localhost:3000
 BACKEND_URL=http://localhost:8080
 GOOGLE_CLIENT_ID=placeholder             # or a real client id for Google sign-in
@@ -515,15 +523,19 @@ The product website is deployed to GitHub Pages from `main` (`.github/workflows/
 
 ## Deployment
 
-The smallest production setup is one server running everything:
+The smallest production setup is one server running everything.
 
-1. Run PostgreSQL (with pgvector) and MongoDB, either from `docker-compose.yml` with changed passwords or as managed services. Add Redis when you run more than one process.
-2. Create an S3 bucket, or any S3-compatible bucket, and set the `S3_*` variables.
-3. Build the web app from the repository root: `yarn install && yarn build`. The output goes to `dist/`.
-4. Start the server from `server/` with `NODE_ENV=production node server.js`, using `server/.env`. It applies migrations, creates the bucket if needed, and serves the API and `dist/` from one origin.
-5. Put a TLS-terminating reverse proxy in front (Caddy, Nginx or a cloud load balancer) with WebSocket upgrades enabled. The server serves `dist/` as static files without an `index.html` fallback, so let the proxy serve `index.html` for unknown non-API paths (deep links).
+**With Docker.** The root `Dockerfile` builds one image with the API server, the AI module, the database migrations and the web app. `docker-compose.yml` runs it next to PostgreSQL, Redis, S3 storage and MongoDB:
 
-**Docker.** `server/Dockerfile` and `server/Dockerfile.prod` currently copy only the server source. They leave out `server/db/migrations`, the root `ai/` package and the web build, and they use Node 20. Until they are updated, run from source as above.
+1. Create `server/.env` and fill in the secrets as in [Configure](#3-configure). Set `GOOGLE_CLIENT_ID` (a placeholder is fine) and the email settings.
+2. Next to `docker-compose.yml`, create a `.env` with the public address and new passwords: `APP_URL=https://chat.example.com`, `POSTGRES_PASSWORD=…`, `S3_SECRET_KEY=…`. Set `APP_MONGO_URI` to use MongoDB Atlas instead of the bundled MongoDB.
+3. Start everything: `docker compose --profile mongo --profile app up -d --build`. Oruinwan listens on port 8080, applies migrations on boot and creates the bucket.
+4. Create the platform admin: `docker compose exec app node scripts/createChttrixAdmin.js` (prints a generated password unless `CHTTRIX_ADMIN_PASS` is set).
+5. Put a TLS-terminating reverse proxy in front (Caddy, Nginx or a cloud load balancer) with WebSocket upgrades enabled. Sign-in cookies need HTTPS anywhere but `localhost`.
+
+To offer Google sign-in in the web app, build with `VITE_GOOGLE_CLIENT_ID` set (`docker build --build-arg VITE_GOOGLE_CLIENT_ID=…`, or in that `.env` for compose). `railway.json` builds the same image on Railway.
+
+**From source.** Run PostgreSQL (with pgvector), MongoDB and an S3-compatible bucket, build the web app from the repository root with `yarn install && yarn build` (output in `dist/`), and start the server from `server/` with `NODE_ENV=production node server.js`. It serves the API and `dist/` from one origin, including deep links.
 
 To scale out, set `REDIS_URL` and run more instances, or split them with `PROCESS_ROLE`. Route `/socket.io` to realtime nodes and everything else to API nodes. Sticky sessions are only needed if clients fall back to HTTP long-polling. See [docs/SCALING.md](docs/SCALING.md).
 
@@ -555,7 +567,6 @@ Oruinwan is under active development and is not yet production-hardened. Known g
     - No load testing or latency measurements have been done yet.
 - **Single-process state.** Auth rate limits, OTP codes and AI chat memory live in process memory, so they aren't shared across instances yet.
 - **Automations.** Only scheduled and integration-webhook triggers fire today.
-- **Docker.** The images are incomplete (see [Deployment](#deployment)).
 - **Phone app.** On Android phones and iPhone, attachments and polls appear as labels (open them in the web client), and there are no push notifications yet.
 
 Issues and pull requests on any of these are welcome.
