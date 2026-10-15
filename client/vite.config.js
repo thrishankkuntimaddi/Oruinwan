@@ -23,7 +23,7 @@ const apiProxyTarget = loadEnv(process.env.NODE_ENV === 'production' ? 'producti
 // server-hosted client keeps them.
 const NOT_IN_APPS = [
   'assets/Background.jpg', 'assets/ChttrixAI-logo.png', 'assets/ChttrixFavico.png',
-  'ChttrixAI-animation.mp4', 'hover-animation.mp4', 'venkatech_team.xlsx', 'chttrix-logo.jpg',
+  'ChttrixAI-animation.mp4', 'hover-animation.mp4', 'chttrix-logo.jpg',
   'icons/Oruinwan.png', 'sw.js',
 ];
 const pruneAppBundle = (outDir) => ({
@@ -48,6 +48,15 @@ export default defineConfig(({ mode }) => {
   const app = mode === 'app';
   const site = mode === 'site';
   const outDir = app ? path.resolve(__dirname, 'dist-app') : site ? path.resolve(__dirname, 'dist-site') : path.resolve(__dirname, '../dist');
+  // A server-hosted build made without VITE_BACKEND_URL (the Docker image) talks to the server
+  // it was loaded from, so one build works on any domain.
+  const env = loadEnv(mode, __dirname, 'VITE_');
+  const sameOrigin = !app && !site && !env.VITE_BACKEND_URL
+    ? {
+        'import.meta.env.VITE_BACKEND_URL': 'globalThis.location.origin',
+        ...(env.VITE_API_URL ? {} : { 'import.meta.env.VITE_API_URL': '"/api"' }),
+      }
+    : {};
   return {
     plugins: [react(), ...(app || site ? [pruneAppBundle(outDir)] : []), ...(site ? [pagesFallback(outDir)] : [])],
 
@@ -62,7 +71,7 @@ export default defineConfig(({ mode }) => {
           // The Oruinwan app version (mobile/package.json), for the in-app update check.
           'import.meta.env.VITE_ORUINWAN_APP_VERSION': JSON.stringify(process.env.ORUINWAN_APP_VERSION || '0.0.0'),
         }
-      : {},
+      : sameOrigin,
 
     // Tell Vite/esbuild to treat .js files as JSX (matches CRA Babel behavior)
     esbuild: {

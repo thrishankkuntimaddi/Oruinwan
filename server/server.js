@@ -71,10 +71,13 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+// Behind the TLS proxy every request says X-Forwarded-Proto: https. Health checks from the
+// container runtime, and trying the server out on the same machine, stay on plain HTTP.
+const PLAIN_HTTP_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
-    
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+
+    if (req.headers['x-forwarded-proto'] !== 'https' && req.path !== '/api/health' && !PLAIN_HTTP_HOSTS.has(req.hostname)) {
       logger.info('⚠️ HTTP request detected, redirecting to HTTPS');
       return res.redirect(301, `https://${req.headers.host}${req.url}`);
     }
@@ -392,7 +395,16 @@ if (processRole.serves.sockets) {
 
 app.use('/api/scheduled-meetings', requireAuth, require('./src/features/meetings/scheduled-meetings.routes'));
 
-app.use(notFoundHandler);    
+// Single-origin deploys: any other page URL (a refresh on /workspace/…) loads the web app,
+// whose router takes it from there. API paths and missing files still 404.
+const WEB_INDEX = path.join(__dirname, '../dist/index.html');
+const NOT_WEB_PATHS = /^\/(api|uploads|socket\.io)(\/|$)/;
+app.get(/.*/, (req, res, next) => {
+  if (NOT_WEB_PATHS.test(req.path) || path.extname(req.path) || !req.accepts('html')) return next();
+  res.sendFile(WEB_INDEX, (err) => { if (err) next(); });
+});
+
+app.use(notFoundHandler);
 app.use(globalErrorHandler); 
 
 const PORT = process.env.PORT || 8080;
