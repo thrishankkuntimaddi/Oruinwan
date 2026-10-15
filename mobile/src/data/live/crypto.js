@@ -189,11 +189,9 @@ async function createIdentity(userId, password) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, umek, enc.encode(JSON.stringify(jwk)));
 
-  // Same payload as the web client's first sign-in, so either client can unlock it later, with
-  // one deliberate difference: the web client also uploads the password-derived key itself as
-  // umekEnvelope, which would let the server decrypt the identity without the password. Password
-  // accounts are unlocked from umekSalt + password only, and the server just needs a non-empty
-  // value here, so a marker is sent instead.
+  // Same payload as the web client's first sign-in, so either client can unlock it later.
+  // Password accounts are unlocked from umekSalt + password only, so umekEnvelope is just a
+  // marker (the server stores the marker whatever is sent).
   await api.post('/v2/crypto/identity/init', {
     identityPublicKey: pem,
     encryptedIdentityPrivateKey: toB64(encrypted),

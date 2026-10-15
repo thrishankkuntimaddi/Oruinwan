@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger');
-const crypto = require('crypto');
 const { cryptoState: cryptoStateRepo } = require('../../identity');
+const { PASSWORD_DERIVED, decodeUmek, isUnsealedUmek, sealUmek, openUmek, wrapForDevice } = require('./umekEnvelope');
 
 // The crypto state lives in PostgreSQL (user_crypto_state, next to the user row).
 // Handlers below edit fields and save, as they did with the Mongo model.
@@ -27,7 +27,6 @@ exports.initIdentityCryptoState = async (req, res) => {
             encryptedIdentityPrivateKey,
             identityPrivateKeyIv,
             umekEnvelope,
-            umekEnvelopeIv,
             umekSalt,
             umekProtectionType,
             algorithm,
@@ -36,7 +35,7 @@ exports.initIdentityCryptoState = async (req, res) => {
         } = req.body;
 
         
-        if (!identityPublicKey || !encryptedIdentityPrivateKey || !identityPrivateKeyIv || !umekEnvelope || !umekProtectionType) {
+        if (!identityPublicKey || !encryptedIdentityPrivateKey || !identityPrivateKeyIv || !umekProtectionType) {
             return res.status(400).json({
                 message: 'Missing required fields'
             });
@@ -56,6 +55,22 @@ exports.initIdentityCryptoState = async (req, res) => {
             });
         }
 
+        // Never store a usable UMEK: password accounts derive it on the device, and a
+        // SERVER_KEK account's UMEK is kept sealed under the KEK.
+        let umekBytes = null;
+        if (umekProtectionType === 'SERVER_KEK') {
+            try {
+                umekBytes = decodeUmek(umekEnvelope);
+            } catch {
+                return res.status(400).json({
+                    message: 'umekEnvelope must be the 32-byte UMEK for SERVER_KEK protection'
+                });
+            }
+        }
+        const { envelope: storedEnvelope, kekVersion } = umekBytes
+            ? sealUmek(umekBytes)
+            : { envelope: PASSWORD_DERIVED, kekVersion: null };
+
         
         let cryptoState = await UserCryptoState.findOne({ userId });
 
@@ -74,8 +89,9 @@ exports.initIdentityCryptoState = async (req, res) => {
             cryptoState.identityPublicKey = identityPublicKey;
             cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
             cryptoState.identityPrivateKeyIv = identityPrivateKeyIv;
-            cryptoState.umekEnvelope = umekEnvelope;
-            cryptoState.umekEnvelopeIv = umekEnvelopeIv || null;
+            cryptoState.umekEnvelope = storedEnvelope;
+            cryptoState.umekEnvelopeIv = null;
+            cryptoState.kekVersion = kekVersion;
             cryptoState.umekSalt = umekSalt || null;
             cryptoState.umekProtectionType = umekProtectionType;
             cryptoState.algorithm = algorithm || 'RSA-2048';
@@ -92,10 +108,11 @@ exports.initIdentityCryptoState = async (req, res) => {
                 identityPublicKey,
                 encryptedIdentityPrivateKey,
                 identityPrivateKeyIv,
-                umekEnvelope,
-                umekEnvelopeIv: umekEnvelopeIv || null,
+                umekEnvelope: storedEnvelope,
+                umekEnvelopeIv: null,
                 umekSalt: umekSalt || null,
                 umekProtectionType,
+                kekVersion,
                 algorithm: algorithm || 'RSA-2048',
                 version: version || 1
             });
@@ -165,46 +182,15 @@ exports.getIdentityCryptoState = async (req, res) => {
     }
 };
 
-exports.wrapUmekWithServerKEK = (umekBytes) => {
-    try {
-        const kekManager = require('../../services/kekManager.service');
-        const { version, key } = kekManager.getActiveKEK();
-
-        logger.info(`🔐 [PHASE 4D] Wrapping UMEK with KEK version ${version}`);
-
-        
-        const iv = crypto.randomBytes(12);
-        const cipher = crypto.createCipheriv(
-            'aes-256-gcm',
-            key,
-            iv
-        );
-
-        const encrypted = Buffer.concat([
-            cipher.update(umekBytes),
-            cipher.final()
-        ]);
-
-        const authTag = cipher.getAuthTag();
-
-        
-        const envelope = Buffer.concat([iv, authTag, encrypted]).toString('base64');
-
-        return { envelope, kekVersion: version };
-    } catch (err) {
-        logger.error('❌ [wrapUmekWithServerKEK] Error:', err);
-        throw new Error('Failed to wrap UMEK');
-    }
-};
-
 exports.unwrapUmekWithServerKEK = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const { umekEnvelope, clientEphemeralPublicKey } = req.body;
+        // The stored envelope is used; any envelope in the body (older clients send one) is ignored.
+        const { clientEphemeralPublicKey } = req.body;
 
-        if (!umekEnvelope || !clientEphemeralPublicKey) {
+        if (!clientEphemeralPublicKey) {
             return res.status(400).json({
-                message: 'Missing umekEnvelope or clientEphemeralPublicKey'
+                message: 'Missing clientEphemeralPublicKey'
             });
         }
 
@@ -227,77 +213,30 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
         }
 
         
-        const kekManager = require('../../services/kekManager.service');
-        const kekVersion = cryptoState.kekVersion || 1;  
-
-        let kekKey;
-        try {
-            kekKey = kekManager.getKEKForUnwrap(kekVersion);
-            logger.info(`🔓 [PHASE 4D] Unwrapping UMEK with KEK version ${kekVersion}`);
-        } catch (error) {
-            logger.error(`❌ [PHASE 4D] KEK version ${kekVersion} not available:`, error);
-            return res.status(500).json({
-                message: 'Server encryption key not available',
-                code: 'KEK_NOT_AVAILABLE'
-            });
+        let umekBytes;
+        if (isUnsealedUmek(cryptoState.umekEnvelope)) {
+            // Written before envelopes were sealed; sealStoredUmeks seals these at boot.
+            umekBytes = Buffer.from(cryptoState.umekEnvelope, 'base64');
+        } else {
+            try {
+                umekBytes = openUmek(cryptoState.umekEnvelope, cryptoState.kekVersion);
+            } catch (error) {
+                logger.error(`❌ [unwrapUmekWithServerKEK] Cannot open UMEK for user ${userId} (KEK v${cryptoState.kekVersion || 1}):`, error.message);
+                return res.status(500).json({
+                    message: 'Server encryption key not available',
+                    code: 'KEK_NOT_AVAILABLE'
+                });
+            }
         }
 
         
-        const envelopeBuffer = Buffer.from(umekEnvelope, 'base64');
-        const iv = envelopeBuffer.slice(0, 12);
-        const authTag = envelopeBuffer.slice(12, 28);
-        const encryptedUmek = envelopeBuffer.slice(28);
-
-        const decipher = crypto.createDecipheriv(
-            'aes-256-gcm',
-            kekKey,
-            iv
-        );
-        decipher.setAuthTag(authTag);
-
-        const umekBytes = Buffer.concat([
-            decipher.update(encryptedUmek),
-            decipher.final()
-        ]);
-
-        
-        
-
-        
-        const clientPubKeyBytes = Buffer.from(clientEphemeralPublicKey, 'base64');
-
-        
-        const { publicKey: serverEphemeralPublicKey, privateKey: serverEphemeralPrivateKey } =
-            crypto.generateKeyPairSync('x25519');
-
-        
-        const sharedSecret = crypto.diffieHellman({
-            privateKey: serverEphemeralPrivateKey,
-            publicKey: crypto.createPublicKey({
-                key: clientPubKeyBytes,
-                format: 'raw',
-                type: 'spki'
-            })
-        });
-
-        
-        const sessionKey = crypto.createHash('sha256').update(sharedSecret).digest();
-
-        
-        const wrappedIv = crypto.randomBytes(12);
-        const sessionCipher = crypto.createCipheriv('aes-256-gcm', sessionKey, wrappedIv);
-        const wrappedUmek = Buffer.concat([
-            sessionCipher.update(umekBytes),
-            sessionCipher.final()
-        ]);
-        const wrappedAuthTag = sessionCipher.getAuthTag();
-
-        return res.json({
-            serverEphemeralPublicKey: serverEphemeralPublicKey.toString('base64'),
-            wrappedUmek: wrappedUmek.toString('base64'),
-            wrappedIv: wrappedIv.toString('base64'),
-            wrappedAuthTag: wrappedAuthTag.toString('base64')
-        });
+        try {
+            return res.json(wrapForDevice(umekBytes, clientEphemeralPublicKey));
+        } catch {
+            return res.status(400).json({
+                message: 'clientEphemeralPublicKey must be a raw P-256 public key'
+            });
+        }
 
     } catch (err) {
         logger.error('❌ [unwrapUmekWithServerKEK] Error:', err);
@@ -360,6 +299,9 @@ exports.rotateUMEK = async (req, res) => {
 
         logger.info(`🔄 [PHASE 2] Rotating UMEK for user ${userId} (${cryptoState.umekProtectionType} → ${umekProtectionType})`);
 
+        const oldProtectionType = cryptoState.umekProtectionType;
+        const hadServerKEK = oldProtectionType === 'SERVER_KEK';
+
         
         cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
         cryptoState.identityPrivateKeyIv = identityPrivateKeyIv;
@@ -371,9 +313,9 @@ exports.rotateUMEK = async (req, res) => {
             cryptoState.umekSalt = umekSalt;
 
             
-            const hadServerKEK = cryptoState.umekEnvelope !== null;
             cryptoState.umekEnvelope = null;
             cryptoState.umekEnvelopeIv = null;
+            cryptoState.kekVersion = null;
 
             if (hadServerKEK) {
                 logger.info(`🔒 [PHASE 2] Wiped SERVER_KEK envelope for user ${userId} (migration is IRREVERSIBLE)`);
@@ -400,7 +342,7 @@ exports.rotateUMEK = async (req, res) => {
                 eventType: wasMigration ? 'OAUTH_TO_PASSWORD_MIGRATION' : 'UMEK_ROTATED',
                 req,
                 metadata: {
-                    oldProtectionType: cryptoState.umekProtectionType,
+                    oldProtectionType,
                     newProtectionType: umekProtectionType,
                     newVersion: cryptoState.version
                 }

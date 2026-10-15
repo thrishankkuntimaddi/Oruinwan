@@ -402,7 +402,13 @@ connectDatabase()
     logger.success("MongoDB Connected ✔");
 
     // PostgreSQL (relational side). Off until DATABASE_URL is set; applies db/migrations on boot.
-    await connectPostgres();
+    const pg = await connectPostgres();
+
+    // Rows from before UMEK envelopes were sealed: drop password-derived UMEKs, seal the rest.
+    if (pg) {
+      await require('./src/features/crypto/umekEnvelope').sealStoredUmeks()
+        .catch((err) => logger.error('[CRYPTO] Could not seal stored UMEKs:', err.message));
+    }
 
     // Object storage: make sure the bucket exists (S3 driver only).
     await require('./src/modules/uploads/upload.service').ensureBucket();

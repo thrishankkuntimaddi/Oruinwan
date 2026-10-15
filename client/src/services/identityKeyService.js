@@ -307,22 +307,17 @@ class IdentityKeyService {
                     umekProtectionType = 'PASSWORD';
                     umekSalt = arrayBufferToBase64(salt);
 
-                    
-                    
-                    const umekBytes = await exportKey(umek);
-                    umekEnvelope = arrayBufferToBase64(umekBytes);
+                    // The password re-derives the UMEK on any device, so the server only gets a marker.
+                    umekEnvelope = 'password-derived';
                 } else {
-                    
+
                     logger.debug('🔑 [PHASE 1] Generating random UMEK...');
                     umek = await generateUMEK();
                     umekProtectionType = 'SERVER_KEK';
 
-                    
+                    // Sent once over TLS; the server stores it sealed under its KEK.
                     const umekBytes = await exportKey(umek);
-                    const umekBase64 = arrayBufferToBase64(umekBytes);
-
-                    
-                    umekEnvelope = umekBase64; 
+                    umekEnvelope = arrayBufferToBase64(umekBytes);
                 }
 
                 
