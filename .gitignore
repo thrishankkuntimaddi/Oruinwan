@@ -68,3 +68,8 @@ client/public/build/
 # User-uploaded files (local storage driver). Never commit: they hold personal documents.
 server/src/uploads/
 server/uploads/
+
+# Test runs and local tool state
+test-results/
+.claude/worktrees/
+.claude/settings.local.json

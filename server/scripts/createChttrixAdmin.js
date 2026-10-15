@@ -4,16 +4,18 @@
 /**
  * Create (or promote) the Oruinwan platform admin account in PostgreSQL.
  *   node scripts/createChttrixAdmin.js
- * CHTTRIX_ADMIN_EMAIL / CHTTRIX_ADMIN_PASS override the defaults.
+ * CHTTRIX_ADMIN_EMAIL overrides the default email. CHTTRIX_ADMIN_PASS sets the password;
+ * without it a random one is generated and printed once.
  */
 
 require('dotenv').config({ path: '.env' });
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { closePostgres } = require('../src/shared/postgres');
 const { users } = require('../src/identity');
 
 const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || 'chttrix-admin@chttrix.com';
-const CHTTRIX_ADMIN_PASSWORD = process.env.CHTTRIX_ADMIN_PASS || 'xm4kcjwf89';
+const CHTTRIX_ADMIN_PASSWORD = process.env.CHTTRIX_ADMIN_PASS || crypto.randomBytes(12).toString('base64url');
 const CHTTRIX_ADMIN_USERNAME = 'Oruinwan Admin';
 
 async function createChttrixAdmin() {
