@@ -30,10 +30,25 @@ logger.info('✅ All required environment variables present');
 const serverKekHex = process.env.SERVER_KEK || '';
 if (serverKekHex.length !== 64) {
   logger.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);
-  logger.error('   Generate a valid key with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"');
+  logger.error('   Generate a valid key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
   process.exit(1);
 }
 logger.info(`✅ SERVER_KEK validated (64 hex chars = 32 bytes, AES-256 ready)`);
+
+// The versioned keys that seal each user's master key (services/kekManager.service.js).
+// A wrong one used to pass boot and only fail later, when someone signed up with Google.
+const activeKekVersion = process.env.CRYPTO_KEK_ACTIVE_VERSION || '1';
+const badKeks = Object.keys(process.env)
+  .filter(name => /^CRYPTO_KEK_V\d+$/.test(name) && process.env[name] && !/^[0-9a-f]{64}$/i.test(process.env[name]));
+const activeKekMissing = !process.env[`CRYPTO_KEK_V${activeKekVersion}`]
+  && !(activeKekVersion === '1' && process.env.SERVER_CRYPTO_KEK);
+if (badKeks.length || activeKekMissing) {
+  if (badKeks.length) logger.error(`❌ FATAL: ${badKeks.join(', ')} must be exactly 64 hex characters / 32 bytes`);
+  if (activeKekMissing) logger.error(`❌ FATAL: CRYPTO_KEK_ACTIVE_VERSION is ${activeKekVersion} but CRYPTO_KEK_V${activeKekVersion} is not set`);
+  logger.error('   Generate a valid key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+logger.info(`✅ CRYPTO_KEK_V${activeKekVersion} validated (active key-encryption key)`);
 logger.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 
 const express = require("express");

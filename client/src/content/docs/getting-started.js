@@ -39,8 +39,8 @@ export default {
         {
             id: 'create-account',
             title: 'Create your account',
-            summary: 'Sign up with your email (or Google, GitHub or LinkedIn), verify your address, and sign in.',
-            keywords: 'sign up signup register account email verify verification password login sign in google github linkedin',
+            summary: 'Sign up with your email (or Google or GitHub), verify your address, and sign in.',
+            keywords: 'sign up signup register account email verify verification password login sign in google github',
             blocks: [
                 { h: 'Sign up with email' },
                 { steps: [
@@ -51,7 +51,7 @@ export default {
                     'Open the link. Oruinwan confirms your address and you can sign in.',
                 ] },
                 { callout: 'note', text: 'Some areas (like **Settings**) need a verified email. If the link expired, sign in and ask for a new one.' },
-                { h: 'Sign up with Google, GitHub or LinkedIn' },
+                { h: 'Sign up with Google or GitHub' },
                 'On the sign-in page, under **Or continue with**, pick a provider. The first time, Oruinwan may ask you to set a password so that your end-to-end encryption keys can be protected.',
                 { h: 'Signing in' },
                 { steps: [

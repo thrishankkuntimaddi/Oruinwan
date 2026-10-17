@@ -1,4 +1,4 @@
-import { useState, useContext, useId } from 'react';
+import { useState, useEffect, useContext, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -44,6 +44,15 @@ const LoginForm = ({ initialEmail = '' }) => {
     const { showToast } = useToast();
     const navigate = useNavigate();
     const uid = useId();
+
+    // The sign-ins this server has keys for (GET /api/auth/providers). Until it answers, only
+    // email and password show, so no button leads to a sign-in that isn't set up.
+    const [providers, setProviders] = useState({});
+    useEffect(() => {
+        let live = true;
+        api.get('/api/auth/providers').then(r => { if (live) setProviders(r.data || {}); }).catch(() => {});
+        return () => { live = false; };
+    }, []);
 
     const isFormValid = formData.email && formData.password.length >= 6;
 
@@ -144,13 +153,13 @@ const LoginForm = ({ initialEmail = '' }) => {
     const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
 
     const socials = [
-        // Shown only when the build has a Google client id (VITE_GOOGLE_CLIENT_ID).
-        ...(import.meta.env.VITE_GOOGLE_CLIENT_ID ? [{ icon: <GoogleIcon />, label: 'Google', onClick: googleLogin }] : []),
+        // Google also needs the build's client id (VITE_GOOGLE_CLIENT_ID) to load its script.
+        ...(import.meta.env.VITE_GOOGLE_CLIENT_ID && providers.google ? [{ icon: <GoogleIcon />, label: 'Google', onClick: googleLogin }] : []),
         // These sign-ins return to the server's own web page, so the desktop and tablet apps
         // (src/appMode) offer email and password only.
         ...(IS_APP ? [] : [
-            { icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } },
-            { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } },
+            ...(providers.github ? [{ icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } }] : []),
+            ...(providers.linkedin ? [{ icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } }] : []),
         ]),
     ];
 

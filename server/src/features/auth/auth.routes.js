@@ -241,6 +241,22 @@ const requireGithubConfigured = (req, res, next) => {
   return res.status(503).json({ message: "GitHub sign-in is not configured on this server" });
 };
 
+// LinkedIn sign-in is optional too (LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET).
+const linkedinConfigured = () => Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
+const requireLinkedinConfigured = (req, res, next) => {
+  if (linkedinConfigured()) return next();
+  return res.status(503).json({ message: "LinkedIn sign-in is not configured on this server" });
+};
+
+// Which sign-in buttons the login page offers: only the providers this server has keys for.
+router.get("/providers", (req, res) => {
+  res.json({
+    google: Boolean(process.env.GOOGLE_CLIENT_ID),
+    github: Boolean(passport.githubConfigured),
+    linkedin: linkedinConfigured(),
+  });
+});
+
 router.get(
   "/github",
   requireGithubConfigured,
@@ -258,7 +274,7 @@ router.get(
   }
 );
 
-router.get("/linkedin", (req, res) => {
+router.get("/linkedin", requireLinkedinConfigured, (req, res) => {
   
   
   const { randomBytes } = require('crypto');
@@ -286,7 +302,7 @@ router.get("/linkedin", (req, res) => {
   );
 });
 
-router.get("/linkedin/callback", async (req, res) => {
+router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => {
   try {
     const { code, state, error, error_description } = req.query;
 

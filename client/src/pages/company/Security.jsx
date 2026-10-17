@@ -63,7 +63,7 @@ const SECTIONS = [
                     'Four roles (owner, admin, manager and member) mapped to a permission matrix',
                     'Channel membership decides who receives a conversation’s encryption key',
                     'A complete audit trail of administrative actions',
-                    'Sign in with email and password, or with Google, GitHub or LinkedIn',
+                    'Sign in with email and password, or with Google or GitHub',
                 ]} />
             </>
         ),

@@ -1409,34 +1409,60 @@ exports.setPassword = async (req, res) => {
   }
 };
 
+const googleRefusal = (status, message) => Object.assign(new Error(message), { status });
+
+// Who a Google token belongs to, trusted only if Google issued it to this server's client id
+// and the account's email is verified. An access token alone says nothing about which app asked
+// for it, so without the client-id check a token from any other Google sign-in would work here.
+async function verifyGoogleIdentity({ credential, accessToken }) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) throw googleRefusal(503, "Google sign-in is not configured on this server");
+
+  let profile;
+  if (credential) {
+    try {
+      const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+      profile = ticket.getPayload();
+    } catch {
+      throw googleRefusal(401, "Google sign-in failed");
+    }
+  } else {
+    let info;
+    try {
+      info = await client.getTokenInfo(accessToken);
+    } catch {
+      throw googleRefusal(401, "Google sign-in failed");
+    }
+    if (info.aud !== clientId) throw googleRefusal(401, "Google sign-in failed");
+    const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    profile = response.data;
+    if (info.sub && profile.sub !== info.sub) throw googleRefusal(401, "Google sign-in failed");
+  }
+
+  if (!profile?.email || profile.email_verified !== true) {
+    throw googleRefusal(401, "Your Google account's email address isn't verified");
+  }
+  return { email: profile.email, name: profile.name, picture: profile.picture, googleId: profile.sub };
+}
+
 exports.googleLogin = async (req, res) => {
   logger.info('🔄 [MODULAR AUTH] Function invoked: googleLogin');
   try {
     const { credential, accessToken: googleAccessToken } = req.body;
-
-    let email, name, picture, googleId;
-
-    if (credential) {
-      const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      email = payload.email;
-      name = payload.name;
-      picture = payload.picture;
-      googleId = payload.sub;
-    } else if (googleAccessToken) {
-      const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${googleAccessToken}` },
-      });
-      email = response.data.email;
-      name = response.data.name;
-      picture = response.data.picture;
-      googleId = response.data.sub;
-    } else {
+    if (!credential && !googleAccessToken) {
       return res.status(400).json({ message: "Missing Google token" });
     }
+
+    let identityFromGoogle;
+    try {
+      identityFromGoogle = await verifyGoogleIdentity({ credential, accessToken: googleAccessToken });
+    } catch (err) {
+      if (!err.status) throw err;
+      return res.status(err.status).json({ message: err.message });
+    }
+    const { email, name, picture, googleId } = identityFromGoogle;
 
     let user = await userDocs.findByEmail(email);
 
