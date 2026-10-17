@@ -20,7 +20,7 @@ const localFast = env.LOCAL_LLM_FAST_MODEL || localChat;
 
 const byProvider = {
   local_llm: { chat: localChat, fast: localFast },
-  gemini: { chat: env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash', fast: env.GEMINI_FAST_MODEL || 'gemini-2.5-flash' },
+  gemini: { chat: env.GEMINI_CHAT_MODEL || 'gemini-3.5-flash', fast: env.GEMINI_FAST_MODEL || 'gemini-3.5-flash' },
   openai: { chat: env.OPENAI_CHAT_MODEL || 'gpt-4o-mini', fast: env.OPENAI_FAST_MODEL || 'gpt-4o-mini' },
   anthropic: { chat: env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-4-5', fast: env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001' },
   mock: { chat: 'mock', fast: 'mock' },

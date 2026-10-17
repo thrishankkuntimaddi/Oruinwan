@@ -249,11 +249,13 @@ const requireLinkedinConfigured = (req, res, next) => {
 };
 
 // Which sign-in buttons the login page offers: only the providers this server has keys for.
+// `sms` says whether phone numbers can be verified by text message (Twilio).
 router.get("/providers", (req, res) => {
   res.json({
     google: Boolean(process.env.GOOGLE_CLIENT_ID),
     github: Boolean(passport.githubConfigured),
     linkedin: linkedinConfigured(),
+    sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
   });
 });
 

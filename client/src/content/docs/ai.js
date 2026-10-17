@@ -216,7 +216,7 @@ export default {
                 'Set the provider and its key in `server/.env`, then restart the server. Every workspace that has not chosen something else uses it.',
                 { codeTabs: [
                     { label: 'Claude', lang: 'bash', code: 'AI_PROVIDER=anthropic          # "claude" also works\nANTHROPIC_API_KEY=sk-ant-...\nANTHROPIC_CHAT_MODEL=claude-sonnet-4-5                 # default\nANTHROPIC_FAST_MODEL=claude-haiku-4-5-20251001         # default\n# ANTHROPIC_BASE_URL=https://api.anthropic.com/v1' },
-                    { label: 'Gemini', lang: 'bash', code: 'AI_PROVIDER=gemini\nGEMINI_API_KEY=...              # GOOGLE_AI_KEY is also read\nGEMINI_CHAT_MODEL=gemini-2.5-flash   # default\nGEMINI_FAST_MODEL=gemini-2.5-flash   # default' },
+                    { label: 'Gemini', lang: 'bash', code: 'AI_PROVIDER=gemini\nGEMINI_API_KEY=...              # GOOGLE_AI_KEY is also read\nGEMINI_CHAT_MODEL=gemini-3.5-flash   # default\nGEMINI_FAST_MODEL=gemini-3.5-flash   # default' },
                     { label: 'OpenAI', lang: 'bash', code: 'AI_PROVIDER=openai\nOPENAI_API_KEY=sk-...\nOPENAI_CHAT_MODEL=gpt-4o-mini   # default\nOPENAI_FAST_MODEL=gpt-4o-mini   # default\n# OPENAI_BASE_URL=https://api.openai.com/v1' },
                 ] },
                 { table: { caption: 'AI_PROVIDER values', head: ['AI_PROVIDER', 'Uses'], rows: [

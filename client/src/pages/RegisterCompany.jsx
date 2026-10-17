@@ -22,6 +22,14 @@ const RegisterCompany = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    // Phone numbers are verified by SMS only when the server can send it (GET /api/auth/providers).
+    const [smsOn, setSmsOn] = useState(false);
+    useEffect(() => {
+        let live = true;
+        api.get('/api/auth/providers').then(r => { if (live) setSmsOn(Boolean(r.data?.sms)); }).catch(() => {});
+        return () => { live = false; };
+    }, []);
+
     
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -244,7 +252,7 @@ const RegisterCompany = () => {
         if (verificationStatus.personalEmail !== "verified") {
             newErrors.personalEmail = newErrors.personalEmail || "Please verify your email before proceeding";
         }
-        if (verificationStatus.phone !== "verified") {
+        if (smsOn && verificationStatus.phone !== "verified") {
             newErrors.phone = newErrors.phone || "Please verify your phone number before proceeding";
         }
 
@@ -462,6 +470,7 @@ const RegisterCompany = () => {
                         validationStatus={validationStatus}
                         verificationStatus={verificationStatus}
                         onVerify={handleVerify}
+                        phoneNeedsVerify={smsOn}
                         ROLES={ROLES}
                         PHONE_CODES={PHONE_CODES}
                         theme={theme}

@@ -12,10 +12,10 @@ test.describe('sign in', () => {
   });
 
   test('the sign-in page offers only the sign-ins the server has set up', async ({ page }) => {
-    // The E2E server has a Google client id but no GitHub or LinkedIn keys.
+    // The E2E server has a Google client id but no GitHub, LinkedIn or SMS keys.
     const providers = page.waitForResponse((r) => r.url().includes('/api/auth/providers'));
     await page.goto('/login');
-    expect(await (await providers).json()).toEqual({ google: true, github: false, linkedin: false });
+    expect(await (await providers).json()).toEqual({ google: true, github: false, linkedin: false, sms: false });
     await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Continue with GitHub' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Continue with LinkedIn' })).toHaveCount(0);
@@ -29,5 +29,17 @@ test.describe('sign in', () => {
     await page.locator('button[type="submit"]').click();
     expect((await response).status()).toBeGreaterThanOrEqual(400);
     await expect(page).toHaveURL(/\/login/);
+  });
+});
+
+test.describe('company sign-up', () => {
+  test('the phone number needs no SMS code when the server cannot send SMS', async ({ page }) => {
+    await page.goto('/register-company');
+    await page.locator('input[name="companyName"]').fill('Phone Optional Co');
+    await page.locator('input[name="companyDomain"]').fill('phone-optional-e2e.test');
+    await page.getByRole('button', { name: /Continue/ }).click();
+    await expect(page.locator('input[name="phone"]')).toBeVisible();
+    // Only the email keeps its Verify button: the E2E server has no SMS keys.
+    await expect(page.getByRole('button', { name: 'Verify' })).toHaveCount(1);
   });
 });

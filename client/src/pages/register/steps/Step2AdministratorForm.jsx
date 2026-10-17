@@ -48,11 +48,12 @@ const Step2AdministratorForm = ({
     formData, onChange, onRoleChange, errors,
     validationStatus, verificationStatus,
     onVerify, ROLES, PHONE_CODES, theme,
+    phoneNeedsVerify = true,
 }) => {
     const [focused, setFocused] = useState(null);
 
     const emailSuccess = validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified';
-    const phoneSuccess = validationStatus.phone === 'available' && verificationStatus.phone === 'verified';
+    const phoneSuccess = validationStatus.phone === 'available' && (!phoneNeedsVerify || verificationStatus.phone === 'verified');
 
     return (
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -139,7 +140,7 @@ const Step2AdministratorForm = ({
                                 onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)}
                                 style={{ ...inp(!!errors.phone || validationStatus.phone === 'taken', phoneSuccess), width: '100%', boxSizing: 'border-box', borderColor: errors.phone || validationStatus.phone === 'taken' ? '#e05252' : phoneSuccess ? '#5aba8a' : focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
                         </div>
-                        <VerifyBtn status={verificationStatus.phone} onClick={() => onVerify('phone')} />
+                        {phoneNeedsVerify && <VerifyBtn status={verificationStatus.phone} onClick={() => onVerify('phone')} />}
                     </div>
                     <ErrMsg msg={errors.phone} />
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
