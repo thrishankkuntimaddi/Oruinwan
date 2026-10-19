@@ -12,7 +12,7 @@ import { prefs } from '../../native/storage.js';
 import { DEFAULT_SERVER_URL } from '../../config/env.js';
 import { remoteSnapshot } from '../../config/remote.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
-import { deviceNoun, openExternal } from '../../native/index.js';
+import { deviceNoun, isWeb, openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 
 const POINTS = [
@@ -96,9 +96,37 @@ function ServerStatus({ probe }) {
   );
 }
 
+// In a browser the app can be served by the Oruinwan server itself (the web, desktop and
+// tablet builds). Then the page's own address is the server and nobody should have to type it.
+const PAGE_ORIGIN = isWeb && typeof location !== 'undefined' && /^https?:$/.test(location.protocol) ? location.origin : '';
+
+/** The known server as one line, with a way to type a different one. */
+function ServerLine({ server, onChange }) {
+  let host = server;
+  try {
+    host = new URL(server).host;
+  } catch {
+    /* keep as typed */
+  }
+  return (
+    <p className="mb-6 flex items-center gap-2 text-sm text-text-2">
+      <Icon as={Server} size="sm" className="shrink-0 text-text-3" />
+      <span className="min-w-0 truncate">
+        Signing in to <span className="font-medium text-text">{host}</span>
+      </span>
+      <button type="button" onClick={onChange} className="ml-auto shrink-0 font-medium text-accent-ink underline">
+        Change
+      </button>
+    </p>
+  );
+}
+
 function SignIn({ onBack }) {
   const signIn = useSession((s) => s.signIn);
   const [server, setServer] = useState(() => prefs.get('lastServer') || remoteSnapshot().defaultServerUrl || DEFAULT_SERVER_URL);
+  // Collapsed to one line once the server answers; the full field shows when nothing is known,
+  // the server doesn't answer, or the person chooses Change.
+  const [editServer, setEditServer] = useState(false);
   const [email, setEmail] = useState(() => prefs.get('lastEmail') || '');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -117,7 +145,22 @@ function SignIn({ onBack }) {
   };
 
   useEffect(() => {
-    if (server) check(server);
+    if (server) {
+      check(server);
+      return undefined;
+    }
+    if (!PAGE_ORIGIN) return undefined;
+    // Try the page's own address quietly: if no Oruinwan server answers there, the field stays
+    // empty, without an error the person didn't cause.
+    let live = true;
+    probeServer(PAGE_ORIGIN).then((result) => {
+      if (!live || result.state !== 'ok') return;
+      setServer(PAGE_ORIGIN);
+      setProbe(result);
+    });
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -147,16 +190,21 @@ function SignIn({ onBack }) {
   };
 
   const base = normalizeServerUrl(server);
+  const serverKnown = probe?.state === 'ok' && !editServer;
 
   return (
     <div className="flex h-full flex-col bg-bg">
       <Header title="Sign in" onBack={onBack} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
-        <p className="mb-6 text-sm text-text-2">
-          Oruinwan is self-hosted. Enter the address your team uses for Oruinwan on the web.
-        </p>
+        {serverKnown ? (
+          <ServerLine server={base} onChange={() => setEditServer(true)} />
+        ) : (
+          <p className="mb-6 text-sm text-text-2">
+            Oruinwan is self-hosted. Enter the address your team uses for Oruinwan on the web.
+          </p>
+        )}
         <div className="space-y-4">
-          <div>
+          <div hidden={serverKnown}>
             <Field
               label="Server address"
               icon={Server}
