@@ -123,12 +123,17 @@ app.use(helmet());
 app.use(passport.initialize());
 
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = [
+// Local dev servers only outside production: a live server must not accept logged-in requests
+// from whatever page happens to run on a visitor's localhost.
+const DEV_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:8081',   // Expo web
   'http://localhost:19006',  // Expo web (classic)
   'http://localhost:19000',  // Expo DevTools
+];
+const allowedOrigins = [
+  ...(isProduction ? [] : DEV_ORIGINS),
   process.env.FRONTEND_URL,
   // Extra origins, comma-separated, e.g. the web app on another machine: http://100.64.0.10:3000
   ...(process.env.CORS_EXTRA_ORIGINS || '').split(',').map((o) => o.trim()),
