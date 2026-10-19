@@ -34,7 +34,10 @@ exports.registerCompany = async (req, res) => {
             'Phone number is already associated with a registered company': 409,
             'Admin email already in use': 409,
             'Invalid domain format': 400,
-            'Domain already registered': 409
+            'Domain already registered': 409,
+            'Verify your personal email before registering': 400,
+            'Verify your phone number before registering': 400,
+            'Phone number is required': 400
         };
 
         const statusCode = errorStatusMap[err.message] || 500;

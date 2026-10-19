@@ -1,5 +1,6 @@
 const otpService = require("../services/otp.service");
 const otpStore = require("../services/otpStore");
+const otpProof = require("../services/otpProof");
 const { handleError } = require("../../../utils/responseHelpers");
 const identity = require("../../identity");
 const { query } = require("../postgres");
@@ -58,6 +59,7 @@ exports.verifyOtp = async (req, res) => {
             return res.status(400).json({ message: result.error });
         }
 
+        otpProof.markVerified(target);
         return res.json({ message: "Verified successfully", verified: true });
 
     } catch (err) {

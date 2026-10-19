@@ -9,6 +9,7 @@ const Channel = require("../channels/channel.model.js");
 const _sendEmail = require('../../../utils/sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
+const { assertSignupContactsVerified } = require('./signupProof');
 
 function isValidDomain(domain) {
     const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
@@ -84,6 +85,8 @@ async function registerCompany(params) {
     if (!companyName || !adminName || !adminEmail || !adminPassword) {
         throw new Error('Company name, admin name, email, and password are required');
     }
+
+    assertSignupContactsVerified({ personalEmail, phone, phoneCode: params.phoneCode });
 
     
     if (personalEmail) {

@@ -255,7 +255,7 @@ router.get("/providers", (req, res) => {
     google: Boolean(process.env.GOOGLE_CLIENT_ID),
     github: Boolean(passport.githubConfigured),
     linkedin: linkedinConfigured(),
-    sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+    sms: require('../../shared/services/otpProof').smsConfigured(),
   });
 });
 
