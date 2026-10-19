@@ -1498,87 +1498,18 @@ exports.googleLogin = async (req, res) => {
         passwordHash: randomHash, 
       });
     } else {
-      
-      
+
+
       if (user.googleAccount && !user.passwordHash) {
         needsPasswordSetup = true;
       }
 
       // Same gates as password login: Google must not bypass suspension, deactivation or 2FA.
-      if (user.lockedUntil && user.lockedUntil > new Date()) {
-        const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
-        return res.status(429).json({ message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).` });
-      }
-      if (user.accountStatus === 'suspended' || user.accountStatus === 'removed') {
-        return res.status(403).json({ message: "Account Suspended." });
-      }
-      if (user.deactivatedAt) {
-        const otpCode = crypto.randomInt(100000, 1000000).toString();
-        user.otpCodes = user.otpCodes || [];
-        user.otpCodes.push({ code: otpCode, type: 'reactivation', expiresAt: new Date(Date.now() + 10 * 60 * 1000), used: false });
-        await user.save();
-        try {
-          const reactivateTpl = reactivateAccountTemplate(user.username, otpCode);
-          await sendEmail({ to: user.email, subject: reactivateTpl.subject, html: reactivateTpl.html, text: reactivateTpl.text });
-        } catch (emailErr) {
-          logger.error({ err: emailErr }, 'Failed to send reactivation OTP email');
-        }
-        return res.status(403).json({ message: "Account is deactivated", requiresReactivation: true, email: user.email });
-      }
-      if (user.twoFactorEnabled) {
-        const otp = String(req.body.otp || '').replace(/\s+/g, '');
-        if (!otp) {
-          return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
-        }
-        const withSecret = user;
-        const { verifyUserTotp } = require('../security/totp');
-        if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
-          user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-          if (user.failedLoginAttempts >= 5) {
-            user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-            user.failedLoginAttempts = 0;
-          }
-          await user.save();
-          return res.status(401).json({ requires2FA: true, invalidCode: true, message: "That code didn't work. Check your authenticator app and try again." });
-        }
-      }
+      const stop = await signInGates(user, req.body.otp);
+      if (stop) return res.status(stop.status).json(stop.body);
     }
 
-
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    user.refreshTokens.push({
-      tokenHash: sha256(refreshToken),
-      expiresAt: new Date(Date.now() + 7 * 86400000),
-      deviceInfo: req.get('User-Agent') || 'Unknown',
-      ip: getClientIP(req),
-      startedAt: new Date(),
-    });
-
-    
-    user.lastLoginMethod = 'oauth';
-    user.lastLoginMethodAt = new Date();
-
-    await saveWithRetry(user);
-
-    
-    setRefreshTokenCookie(res, refreshToken);
-
-    return res.json({
-      message: "Google login success",
-      accessToken,
-      ...(isNativeClient(req) ? { refreshToken } : {}),
-      isFirstLogin: isNewUser,  
-      requiresPasswordSetup: needsPasswordSetup,  
-      user: {
-        username: user.username,
-        email: user.email,
-        profilePicture: user.profilePicture,
-        userStatus: user.userStatus,
-        googleAccount: user.googleAccount,
-      },
-    });
+    return issueSignInSession(req, res, user, { message: "Google login success", isNewUser, needsPasswordSetup });
 
   } catch (_err) {
     logger.error("GOOGLE LOGIN ERROR:", _err);
@@ -1587,6 +1518,120 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.googleAuth = exports.googleLogin;
+
+/**
+ * The checks every sign-in that doesn't use a password makes once it knows who the person is:
+ * lockout, suspension, deactivation and two-factor. Returns null when sign-in may continue,
+ * or { status, body } for the response that stops it (body.requires2FA asks for a code).
+ */
+async function signInGates(user, otpInput) {
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
+    return { status: 429, body: { message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).` } };
+  }
+  if (user.accountStatus === 'suspended' || user.accountStatus === 'removed') {
+    return { status: 403, body: { message: "Account Suspended." } };
+  }
+  if (user.deactivatedAt) {
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
+    user.otpCodes = user.otpCodes || [];
+    user.otpCodes.push({ code: otpCode, type: 'reactivation', expiresAt: new Date(Date.now() + 10 * 60 * 1000), used: false });
+    await user.save();
+    try {
+      const reactivateTpl = reactivateAccountTemplate(user.username, otpCode);
+      await sendEmail({ to: user.email, subject: reactivateTpl.subject, html: reactivateTpl.html, text: reactivateTpl.text });
+    } catch (emailErr) {
+      logger.error({ err: emailErr }, 'Failed to send reactivation OTP email');
+    }
+    return { status: 403, body: { message: "Account is deactivated", requiresReactivation: true, email: user.email } };
+  }
+  if (user.twoFactorEnabled) {
+    const otp = String(otpInput || '').replace(/\s+/g, '');
+    if (!otp) {
+      return { status: 401, body: { requires2FA: true, message: "Enter the 6-digit code from your authenticator app." } };
+    }
+    const { verifyUserTotp } = require('../security/totp');
+    if (!(await verifyUserTotp(user.twoFactorSecret, otp))) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.failedLoginAttempts = 0;
+      }
+      await user.save();
+      return { status: 401, body: { requires2FA: true, invalidCode: true, message: "That code didn't work. Check your authenticator app and try again." } };
+    }
+  }
+  return null;
+}
+
+/** Issues an access and a refresh token, records the session (visible under Devices) and answers. */
+async function issueSignInSession(req, res, user, { message, isNewUser, needsPasswordSetup }) {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  user.refreshTokens.push({
+    tokenHash: sha256(refreshToken),
+    expiresAt: new Date(Date.now() + 7 * 86400000),
+    deviceInfo: req.get('User-Agent') || 'Unknown',
+    ip: getClientIP(req),
+    startedAt: new Date(),
+  });
+  user.failedLoginAttempts = 0;
+  user.lastLoginMethod = 'oauth';
+  user.lastLoginMethodAt = new Date();
+
+  await saveWithRetry(user);
+  setRefreshTokenCookie(res, refreshToken);
+
+  return res.json({
+    message,
+    accessToken,
+    ...(isNativeClient(req) ? { refreshToken } : {}),
+    isFirstLogin: Boolean(isNewUser),
+    requiresPasswordSetup: Boolean(needsPasswordSetup),
+    user: {
+      username: user.username,
+      email: user.email,
+      profilePicture: user.profilePicture,
+      userStatus: user.userStatus,
+      googleAccount: user.googleAccount,
+    },
+  });
+}
+
+/**
+ * Finishes a redirect-based sign-in (GitHub, LinkedIn): swaps the one-time code from the
+ * callback for a session, after the same checks as every other sign-in. A code that needs a
+ * two-factor code stays valid (for its two minutes) so the app can resend it with `otp`.
+ */
+exports.oauthExchange = async (req, res) => {
+  try {
+    const { peekHandoff, consumeHandoff } = require('./oauthHandoff');
+    const { code, otp } = req.body || {};
+    const handoff = await peekHandoff(code);
+    if (!handoff) {
+      return res.status(400).json({ message: "This sign-in link has expired. Sign in again." });
+    }
+    const user = await userDocs.findById(handoff.userId);
+    if (!user) {
+      await consumeHandoff(code);
+      return res.status(400).json({ message: "This sign-in link has expired. Sign in again." });
+    }
+
+    const stop = await signInGates(user, otp);
+    if (stop) {
+      if (!stop.body.requires2FA) await consumeHandoff(code);
+      return res.status(stop.status).json(stop.body);
+    }
+
+    await consumeHandoff(code);
+    const needsPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
+    return issueSignInSession(req, res, user, { message: "Sign-in complete", isNewUser: false, needsPasswordSetup });
+  } catch (err) {
+    logger.error("OAUTH EXCHANGE ERROR:", err);
+    return res.status(500).json({ message: "Sign-in failed" });
+  }
+};
 
 // A rotated refresh token lives on for a 30s grace period; hide those so one device
 // does not show up twice.

@@ -158,8 +158,8 @@ const LoginForm = ({ initialEmail = '' }) => {
         // These sign-ins return to the server's own web page, so the desktop and tablet apps
         // (src/appMode) offer email and password only.
         ...(IS_APP ? [] : [
-            ...(providers.github ? [{ icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github`; } }] : []),
-            ...(providers.linkedin ? [{ icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin`; } }] : []),
+            ...(providers.github ? [{ icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github?return=${encodeURIComponent(window.location.origin)}`; } }] : []),
+            ...(providers.linkedin ? [{ icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin?return=${encodeURIComponent(window.location.origin)}`; } }] : []),
         ]),
     ];
 

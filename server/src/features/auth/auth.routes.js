@@ -217,22 +217,17 @@ router.post("/google", googleAuth);
 
 const passport = require("../../../config/passport");
 const { userDocs } = require("../../identity/queries/auth");
-const jwt = require("jsonwebtoken");
+// GitHub and LinkedIn callbacks redirect with a one-time code, never a session token; the app
+// swaps it at POST /oauth/exchange after the usual checks (see oauthHandoff.js).
+const { rememberReturn, redirectWithHandoff, returnOrigin, RETURN_COOKIE } = require("./oauthHandoff");
 
-// Access token goes in the URL fragment (never the query string) so it does not reach
-// server logs, Referer headers or proxies. Format: /oauth-success#access=<jwt>&requiresPasswordSetup=<bool>
-const oauthSuccessRedirect = (res, user, token) => {
-  const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
-  const params = new URLSearchParams({ access: token, requiresPasswordSetup: String(requiresPasswordSetup) });
-  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#${params.toString()}`);
-};
+router.post("/oauth/exchange", require("./auth.controller").oauthExchange);
 
-const generateToken = (user) => {
-  return jwt.sign(
-    { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' } 
-  );
+/** Where a failed redirect sign-in sends the browser: the app that started it. */
+const failedSignIn = (req, res, error) => {
+  const back = returnOrigin(req.cookies?.[RETURN_COOKIE]);
+  res.clearCookie(RETURN_COOKIE);
+  res.redirect(`${back}/login?error=${encodeURIComponent(error)}`);
 };
 
 // GitHub sign-in is optional (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET).
@@ -262,21 +257,18 @@ router.get("/providers", (req, res) => {
 router.get(
   "/github",
   requireGithubConfigured,
+  rememberReturn,
   passport.authenticate("github", { scope: ["user:email"] })
 );
 
-router.get(
-  "/github/callback",
-  requireGithubConfigured,
-  passport.authenticate("github", { session: false, failureRedirect: "/login?error=github_failed" }),
-  (req, res) => {
-    
-    const token = generateToken(req.user);
-    oauthSuccessRedirect(res, req.user, token);
-  }
-);
+router.get("/github/callback", requireGithubConfigured, (req, res, next) => {
+  passport.authenticate("github", { session: false }, (err, user) => {
+    if (err || !user) return failedSignIn(req, res, 'github_failed');
+    return redirectWithHandoff(req, res, user, 'github').catch(next);
+  })(req, res, next);
+});
 
-router.get("/linkedin", requireLinkedinConfigured, (req, res) => {
+router.get("/linkedin", requireLinkedinConfigured, rememberReturn, (req, res) => {
   
   
   const { randomBytes } = require('crypto');
@@ -310,7 +302,7 @@ router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => 
 
     if (error) {
       logger.error('LinkedIn OAuth error:', error, error_description);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
+      return failedSignIn(req, res, 'linkedin_failed');
     }
 
     
@@ -320,7 +312,7 @@ router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => 
     if (!state || !storedState || state !== storedState) {
       logger.error('LinkedIn OAuth: state mismatch — potential CSRF attack');
       res.clearCookie('linkedin_oauth_state');
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_state_mismatch`);
+      return failedSignIn(req, res, 'oauth_state_mismatch');
     }
     
     res.clearCookie('linkedin_oauth_state');
@@ -368,7 +360,7 @@ router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => 
         // it is not already linked elsewhere, and LinkedIn vouches for the email.
         // Otherwise an attacker could take over an account by registering its email.
         if (!user.verified || user.linkedinId || linkedinUser.email_verified === false) {
-          return res.redirect(`${process.env.FRONTEND_URL}/login?error=account_exists`);
+          return failedSignIn(req, res, 'account_exists');
         }
         user.linkedinId = linkedinUser.sub;
         if (linkedinUser.picture) user.profilePicture = linkedinUser.picture;
@@ -389,12 +381,10 @@ router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => 
       });
     }
 
-    const token = generateToken(user);
-    
-    oauthSuccessRedirect(res, user, token);
+    await redirectWithHandoff(req, res, user, 'linkedin');
   } catch (err) {
     logger.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
+    failedSignIn(req, res, 'linkedin_failed');
   }
 });
 
