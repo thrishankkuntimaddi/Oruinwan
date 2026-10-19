@@ -6,6 +6,14 @@ import { createRequire } from 'module';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const require = createRequire(import.meta.url);
+// CI installs only the phone app's packages, so the server's logger (pino) can't load there.
+// wrapForDevice never logs; a silent stand-in lets the real server file load anywhere.
+const silent = () => {};
+const loggerPath = require.resolve('../../../../server/utils/logger.js');
+require.cache[loggerPath] = {
+  id: loggerPath, filename: loggerPath, loaded: true,
+  exports: { info: silent, warn: silent, error: silent, debug: silent },
+};
 const { wrapForDevice } = require('../../../../server/src/features/crypto/umekEnvelope.js');
 
 const mockApi = { get: vi.fn(), post: vi.fn() };
