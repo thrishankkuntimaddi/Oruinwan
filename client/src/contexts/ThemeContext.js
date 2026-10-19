@@ -43,7 +43,9 @@ if (typeof document !== 'undefined') {
 export const ThemeProvider = ({ children }) => {
     const { user, setUser } = useAuth();
 
-    const [theme, setThemeState] = useState(() => normalizeTheme(store.get(THEME_KEY)) || 'dark');
+    // No saved choice follows the device. The server uses the same default, so signing in
+    // never flips the theme.
+    const [theme, setThemeState] = useState(() => normalizeTheme(store.get(THEME_KEY)) || 'auto');
     const [systemDark, setSystemDark] = useState(() => darkQuery()?.matches ?? true);
     const [textSize, setTextSizeState] = useState(() => normalizeTextSize(store.get(TEXT_SIZE_KEY)));
     const [reduceMotion, setReduceMotionState] = useState(() => store.get(REDUCE_MOTION_KEY) === 'true');

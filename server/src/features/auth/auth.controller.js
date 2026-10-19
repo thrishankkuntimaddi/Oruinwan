@@ -65,6 +65,10 @@ exports.signup = async (req, res) => {
     if (!username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
 
+    // The sign-up forms check this too, but the API is the only place it can't be skipped.
+    if (!isStrongPassword(password))
+      return res.status(400).json({ message: PASSWORD_RULE });
+
     if (await emailTaken(email))
       return res.status(409).json({ message: "Email already in use" });
 
@@ -892,6 +896,10 @@ exports.resetPassword = async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid or expired token" });
 
+    // Same rule as sign-up and password change; the web form checks it too, but the API must.
+    if (!isStrongPassword(password))
+      return res.status(400).json({ message: PASSWORD_RULE });
+
     user.passwordHash = await bcrypt.hash(password, 12);
     user.resetPasswordTokenHash = undefined;
     user.resetPasswordExpires = undefined;
@@ -932,7 +940,8 @@ function serializePreferences(prefs) {
     if (typeof p.notifications?.[k] === 'boolean') notifications[k] = p.notifications[k];
   }
   return {
-    theme: THEMES.includes(p.theme) ? p.theme : 'light',
+    // No saved choice follows the device, like the web client's own default and the phone app.
+    theme: THEMES.includes(p.theme) ? p.theme : 'auto',
     appearance: { textSize: TEXT_SIZES.includes(p.appearance?.textSize) ? p.appearance.textSize : 'default' },
     privacy: privacyWithDefaults(p.privacy),
     region: regionWithDefaults(p.region),
