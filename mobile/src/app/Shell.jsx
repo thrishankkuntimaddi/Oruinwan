@@ -1,13 +1,15 @@
 // Signed-in layout: each tab keeps its own stack; tab roots are mounted on first visit and
 // stay mounted, so switching tabs never loses scroll position or drafts.
 //  - Phones: pushed screens slide over the tab root, with the tab bar at the bottom.
-//  - Wide windows (app/layout.js): a sidebar, and for list tabs the list on the left with the
-//    open screen beside it. The AI tab stays a single centred column.
+//  - Split windows (tablets in portrait, app/layout.js): list tabs keep the phone layout in a
+//    column on the left, tab bar included, with the open screen beside it.
+//  - Wide windows: a sidebar, and for list tabs the list on the left with the open screen
+//    beside it. The AI tab stays a single centred column.
 import { Suspense, useEffect, useState } from 'react';
 import { FileText, House, MessagesSquare, SquareCheckBig } from 'lucide-react';
 import { TABS, markPane, useNav } from './nav.js';
 import { TAB_ROOTS, ROUTES } from './routes.js';
-import { PaneContext, SPLIT_TABS, useWide } from './layout.js';
+import { PaneContext, SPLIT_TABS, useSplit, useWide } from './layout.js';
 import { TabBar } from './TabBar.jsx';
 import { Sidebar } from './Sidebar.jsx';
 import { ErrorBoundary } from './ErrorBoundary.jsx';
@@ -104,7 +106,6 @@ function WideTab({ tab, stack }) {
       </div>
     );
   }
-  const empty = PLACEHOLDER[tab];
   return (
     <div className="flex h-full">
       <section
@@ -114,18 +115,48 @@ function WideTab({ tab, stack }) {
       >
         <Root tab={tab} />
       </section>
-      <section
-        aria-label="Details"
-        className="relative h-full min-w-0 flex-1"
-        {...paneEvents(tab, 'detail')}
-      >
-        {stack.length === 0 && (
-          <div className="grid h-full place-items-center">
-            <EmptyState icon={empty.icon} title={empty.title} body={empty.body} />
-          </div>
-        )}
-        <Stack stack={stack} split />
+      <DetailPane tab={tab} stack={stack} />
+    </div>
+  );
+}
+
+/** The open item beside a list: its stack, or a hint while nothing is open. */
+function DetailPane({ tab, stack }) {
+  const empty = PLACEHOLDER[tab];
+  return (
+    <section aria-label="Details" className="relative h-full min-w-0 flex-1" {...paneEvents(tab, 'detail')}>
+      {stack.length === 0 && (
+        <div className="grid h-full place-items-center">
+          <EmptyState icon={empty.icon} title={empty.title} body={empty.body} />
+        </div>
+      )}
+      <Stack stack={stack} split />
+    </section>
+  );
+}
+
+/**
+ * Split layout (768-1023 px): the list keeps the phone layout, tab bar included, in a column
+ * on the left, and the open item fills the rest. The tab bar stays inside the list column so it
+ * never covers the open item's composer. Tabs that aren't lists (AI) use the phone layout.
+ */
+function SplitTab({ tab, stack }) {
+  if (!SPLIT_TABS.has(tab)) {
+    return (
+      <div className="relative h-full">
+        <Root tab={tab} />
+        <Stack stack={stack} split={false} />
+        {stack.length === 0 && <TabBar />}
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full">
+      <section aria-label="List" className="relative h-full w-[340px] shrink-0 border-r border-line-soft" {...paneEvents(tab, 'list')}>
+        <Root tab={tab} />
+        <TabBar />
       </section>
+      <DetailPane tab={tab} stack={stack} />
     </div>
   );
 }
@@ -135,6 +166,7 @@ export function Shell() {
   const stacks = useNav((s) => s.stacks);
   const flags = useFlags((s) => s.flags);
   const wide = useWide();
+  const split = useSplit();
   const [visited, setVisited] = useState(() => new Set(['home']));
 
   useEffect(() => {
@@ -175,6 +207,19 @@ export function Shell() {
             </div>
           ))}
         </main>
+      </div>
+    );
+  }
+
+  if (split) {
+    return (
+      <div className="relative h-full overflow-hidden bg-bg">
+        {TABS.filter((t) => visited.has(t)).map((t) => (
+          <div key={t} className="absolute inset-0" hidden={t !== tab}>
+            <SplitTab tab={t} stack={stacks[t]} />
+          </div>
+        ))}
+        <UnreadBadge />
       </div>
     );
   }

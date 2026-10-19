@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { uid } from '../lib/id.js';
 import { tap } from '../native/index.js';
-import { isSplit, useWide } from './layout.js';
+import { isSplit, useSplit } from './layout.js';
 
 export const TABS = ['home', 'chats', 'ai', 'tasks', 'notes'];
 
@@ -94,14 +94,14 @@ export const useNav = create((set, get) => ({
   },
 }));
 
-/** True when a wide window's detail pane shows this item, so its list row can be highlighted. */
+/** True when the detail pane (split or wide layout) shows this item, so its list row can be highlighted. */
 export function useIsOpen(name, id) {
-  const wide = useWide();
+  const split = useSplit();
   const open = useNav((s) => {
     const top = s.stacks[s.tab][0];
     return Boolean(top && top.name === name && top.params.id === id);
   });
-  return wide && open;
+  return split && open;
 }
 
 export const nav = {
