@@ -1,7 +1,7 @@
 'use strict';
 
 // Company sign-up needs a code-verified email (and phone when SMS is on), checked on the server.
-jest.mock('../../../shared/services/otp.service', () => ({ verifyOTP: jest.fn(() => ({ valid: true, error: null })) }));
+jest.mock('../../../shared/services/otp.service', () => ({ verifyOTP: jest.fn(async () => ({ valid: true, error: null })) }));
 jest.mock('../../../identity', () => ({}));
 jest.mock('../../../shared/postgres', () => ({ query: jest.fn() }));
 
@@ -14,39 +14,40 @@ beforeEach(() => {
   for (const k of Object.keys(SMS_ENV)) delete process.env[k];
 });
 
-test('refuses sign-up when the personal email was never verified', () => {
-  expect(() => assertSignupContactsVerified({ personalEmail: 'owner@example.com', phone: '', phoneCode: '+91' }))
-    .toThrow('Verify your personal email before registering');
+test('refuses sign-up when the personal email was never verified', async () => {
+  await expect(assertSignupContactsVerified({ personalEmail: 'owner@example.com', phone: '', phoneCode: '+91' }))
+    .rejects.toThrow('Verify your personal email before registering');
 });
 
-test('accepts a verified email in a different letter case', () => {
-  otpProof.markVerified('Owner@Example.com');
-  expect(() => assertSignupContactsVerified({ personalEmail: 'owner@example.com', phone: '', phoneCode: '+91' })).not.toThrow();
+test('accepts a verified email in a different letter case', async () => {
+  await otpProof.markVerified('Owner@Example.com');
+  await expect(assertSignupContactsVerified({ personalEmail: 'owner@example.com', phone: '', phoneCode: '+91' }))
+    .resolves.toBeUndefined();
 });
 
-test('refuses sign-up without a personal email at all', () => {
-  expect(() => assertSignupContactsVerified({ phone: '', phoneCode: '+91' })).toThrow('Verify your personal email');
+test('refuses sign-up without a personal email at all', async () => {
+  await expect(assertSignupContactsVerified({ phone: '', phoneCode: '+91' })).rejects.toThrow('Verify your personal email');
 });
 
-test('does not ask for a phone code when SMS is not configured', () => {
-  otpProof.markVerified('hello@example.org');
-  expect(() => assertSignupContactsVerified({ personalEmail: 'hello@example.org', phone: '9876543210', phoneCode: '+91' }))
-    .not.toThrow();
+test('does not ask for a phone code when SMS is not configured', async () => {
+  await otpProof.markVerified('hello@example.org');
+  await expect(assertSignupContactsVerified({ personalEmail: 'hello@example.org', phone: '9876543210', phoneCode: '+91' }))
+    .resolves.toBeUndefined();
 });
 
-test('requires a verified phone when SMS is configured, matching the code target format', () => {
+test('requires a verified phone when SMS is configured, matching the code target format', async () => {
   Object.assign(process.env, SMS_ENV);
-  otpProof.markVerified('a@example.com');
+  await otpProof.markVerified('a@example.com');
 
-  expect(() => assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '', phoneCode: '+91' }))
-    .toThrow('Phone number is required');
-  expect(() => assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '98765 43210', phoneCode: '+91' }))
-    .toThrow('Verify your phone number before registering');
+  await expect(assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '', phoneCode: '+91' }))
+    .rejects.toThrow('Phone number is required');
+  await expect(assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '98765 43210', phoneCode: '+91' }))
+    .rejects.toThrow('Verify your phone number before registering');
 
   // The page sends the code to "+91" + the number as typed (spaces and dashes included).
-  otpProof.markVerified('+91 98765-43210');
-  expect(() => assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '9876543210', phoneCode: '+91' }))
-    .not.toThrow();
+  await otpProof.markVerified('+91 98765-43210');
+  await expect(assertSignupContactsVerified({ personalEmail: 'a@example.com', phone: '9876543210', phoneCode: '+91' }))
+    .resolves.toBeUndefined();
 });
 
 test('a successful code verification records the proof through the verify endpoint', async () => {
@@ -55,15 +56,15 @@ test('a successful code verification records the proof through the verify endpoi
   await otpController.verifyOtp({ body: { target: 'New.Owner@Example.com', otp: '123456' } }, res);
 
   expect(res.body.verified).toBe(true);
-  expect(otpProof.isVerified('new.owner@example.com')).toBe(true);
+  expect(await otpProof.isVerified('new.owner@example.com')).toBe(true);
 });
 
-test('proofs expire', () => {
+test('proofs expire', async () => {
   jest.useFakeTimers();
   try {
-    otpProof.markVerified('late@example.com');
+    await otpProof.markVerified('late@example.com');
     jest.advanceTimersByTime(otpProof.PROOF_TTL_MS + 1000);
-    expect(otpProof.isVerified('late@example.com')).toBe(false);
+    expect(await otpProof.isVerified('late@example.com')).toBe(false);
   } finally {
     jest.useRealTimers();
   }

@@ -6,7 +6,7 @@ import SystemEventItem from '../SystemEventItem';
 import MeetingEvent from './MeetingEvent';
 import IntegrationEvent from '../../integrations/IntegrationEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
-import { Loader2, Lock, Hash } from 'lucide-react';
+import { Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
 import { useToast } from '../../../contexts/ToastContext';
 import { useDateFormatter } from '../../../hooks/useUserPreferences';

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from '@services/api';
 import { useToast } from "../../contexts/ToastContext";
-import { API_BASE } from '@services/api';
+
 import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
 
 import ModalHeader from "./channelManagementComponents/ModalHeader";

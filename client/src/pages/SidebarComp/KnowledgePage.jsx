@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-    Sparkles, Link2, ArrowLeft, Trash2, Save, Eye, Edit3,
-    Network, Tag, Plus, X, Clock, ChevronRight, Loader2, BookOpen
-} from 'lucide-react';
+import { Sparkles, Link2, Trash2, Eye, Edit3, Tag, Plus, X, ChevronRight, Loader2, BookOpen } from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
 import { useToast } from '../../contexts/ToastContext';
 

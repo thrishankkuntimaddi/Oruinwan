@@ -15,12 +15,12 @@ function proofKey(target) {
   return `otp-verified:${normalized}`;
 }
 
-function markVerified(target) {
-  otpStore.set(proofKey(target), true, PROOF_TTL_MS);
+async function markVerified(target) {
+  await otpStore.set(proofKey(target), true, PROOF_TTL_MS);
 }
 
-function isVerified(target) {
-  return otpStore.get(proofKey(target)) === true;
+async function isVerified(target) {
+  return (await otpStore.get(proofKey(target))) === true;
 }
 
 function smsConfigured() {

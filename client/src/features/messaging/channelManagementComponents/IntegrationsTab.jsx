@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Puzzle, ExternalLink, CheckCircle2, Circle } from "lucide-react";
+import { Puzzle, ExternalLink, CheckCircle2 } from "lucide-react";
 import { MOCK_INTEGRATIONS } from "../../../components/apps/mock/mockIntegrations";
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';

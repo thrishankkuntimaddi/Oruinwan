@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Network, ZoomIn, ZoomOut, RefreshCw, BookOpen } from 'lucide-react';
+import { Network, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
 
 function runForce(nodes, edges, width, height, iterations = 200) {

@@ -86,7 +86,7 @@ async function registerCompany(params) {
         throw new Error('Company name, admin name, email, and password are required');
     }
 
-    assertSignupContactsVerified({ personalEmail, phone, phoneCode: params.phoneCode });
+    await assertSignupContactsVerified({ personalEmail, phone, phoneCode: params.phoneCode });
 
     
     if (personalEmail) {

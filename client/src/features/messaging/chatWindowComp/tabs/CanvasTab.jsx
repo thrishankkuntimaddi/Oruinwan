@@ -1,13 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import ContentEditable from 'react-contenteditable';
-import {
-    Bold, Italic, Underline, Strikethrough,
-    Heading1, Heading2, Heading3, Type,
-    List, ListOrdered, Link, Code, Quote, Minus,
-    AlignLeft, AlignCenter, AlignRight,
-    Undo, Redo, WifiOff, Maximize2, Minimize2,
-    Check, Loader2, Users, Circle, PanelRight
-} from 'lucide-react';
+import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Heading3, Type, List, ListOrdered, Link, Code, Quote, Minus, AlignLeft, AlignCenter, AlignRight, Undo, Redo, WifiOff, Maximize2, Minimize2, Check, Loader2, Users } from 'lucide-react';
 
 function countWords(html) {
     const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();

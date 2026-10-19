@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Info, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 const PWD_RULES = [
     { label: '8–16 characters',    test: p => p.length >= 8 && p.length <= 16 },

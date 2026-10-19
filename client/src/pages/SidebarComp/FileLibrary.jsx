@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Grid3X3, List, Search, Tag, X, RefreshCw, Folder, Image, FileText, Video, Music, File as FileIcon, Download, Trash2, Share2, Eye, Plus, MoreVertical } from 'lucide-react';
+import { Upload, Grid3X3, List, Search, Tag, X, Download, Trash2, MoreVertical } from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
 import { useToast } from '../../contexts/ToastContext';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, HelpCircle, LogOut, ChevronRight, Shield } from 'lucide-react';
+import { HelpCircle, LogOut, ChevronRight, Shield } from 'lucide-react';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 
 const STATUS_CONFIG = {

@@ -9,7 +9,6 @@ import { useDateFormatter } from '../../../hooks/useUserPreferences';
 import PrLinkChips from '../../integrations/PrLinkChips';
 import { useFlag } from '../../../contexts/FeatureFlagsContext';
 
-
 function MessageEvent({
     event,
     actions = {},

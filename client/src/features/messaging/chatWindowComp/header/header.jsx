@@ -94,7 +94,6 @@ export default function Header({
     setShowClearChatConfirm(false);
   };
 
-
   return (
     <>
       <style>{`

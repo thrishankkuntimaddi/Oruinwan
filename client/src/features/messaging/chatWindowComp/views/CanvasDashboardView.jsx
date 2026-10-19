@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Grid, List as ListIcon, Plus, FileText, Clock } from 'lucide-react';
+import { Search, Grid, List as ListIcon, Plus, FileText } from 'lucide-react';
 import CanvasCard from '../CanvasCard.jsx';
 
 const COVER_COLORS = [

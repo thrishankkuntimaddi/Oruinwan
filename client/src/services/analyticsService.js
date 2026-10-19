@@ -1,4 +1,4 @@
-import api, { API_BASE } from './api';
+import api from './api';
 
 export const getAnalyticsSummary = async (period = 30) => {
     const response = await api.get(`/api/dashboard/analytics/summary?period=${period}`);

@@ -27,6 +27,19 @@ if (missing.length > 0) {
 logger.info('✅ All required environment variables present');
 
 
+// The docker-compose defaults are for local development only. Refuse to run in production
+// with them, so a server started with the sample passwords cannot go live unnoticed.
+const DEV_SECRETS = ['oruinwan-dev', 'oruinwan-dev-secret'];
+if (process.env.NODE_ENV === 'production') {
+  const leaked = ['DATABASE_URL', 'S3_SECRET_KEY', 'S3_ACCESS_KEY', 'MONGO_URI', 'REDIS_URL']
+    .filter(name => DEV_SECRETS.some(s => String(process.env[name] || '').includes(s))
+      || (name === 'S3_ACCESS_KEY' && process.env[name] === 'oruinwan'));
+  if (leaked.length) {
+    logger.error(`❌ FATAL: ${leaked.join(', ')} still use a development password from docker-compose.yml. Set your own values in .env.`);
+    process.exit(1);
+  }
+}
+
 const serverKekHex = process.env.SERVER_KEK || '';
 if (serverKekHex.length !== 64) {
   logger.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);

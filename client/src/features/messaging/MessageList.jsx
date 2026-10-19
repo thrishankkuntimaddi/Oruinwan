@@ -1,13 +1,13 @@
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import api from '@services/api';
-import { Search, Plus, Archive, Users, Hash, Lock, MessageCircle, MoreVertical, CheckCheck, X } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Search, Plus, Hash } from "lucide-react";
+import { useParams } from "react-router-dom";
 import CreateChannelModal from "./CreateChannelModal";
 import JoinChannelModal from "./JoinChannelModal";
 import NewDMModal from "./NewDMModal";
 import { AuthContext } from "../../contexts/AuthContext";
 import { SocketContext } from "../../contexts/SocketContext";
-import { API_BASE } from '@services/api';
+
 import { channelService } from "../../services/channelService";
 
 import { Button, Input, Avatar, Badge } from "../../shared/components/ui";

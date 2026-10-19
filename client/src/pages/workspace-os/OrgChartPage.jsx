@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-    Building2, Users, ChevronDown, ChevronRight,
-    RefreshCw, User2, Crown, Briefcase
-} from 'lucide-react';
+import { Building2, Users, ChevronDown, ChevronRight, RefreshCw, Crown, Briefcase } from 'lucide-react';
 
 const Avatar = ({ name, src, size = 8 }) => {
     const initials = (name || '?').slice(0, 2).toUpperCase();

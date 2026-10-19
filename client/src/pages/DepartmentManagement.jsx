@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+
 import { useCompany } from '../contexts/CompanyContext';
 import { useDepartment } from '../contexts/DepartmentContext';
 import { useToast } from '../contexts/ToastContext';

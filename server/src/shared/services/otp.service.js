@@ -9,33 +9,24 @@ const logger = require('../utils/logger');
 const MAX_VERIFY_ATTEMPTS = 5;          // per issued code
 const SEND_WINDOW_MS = 15 * 60 * 1000;  // per-target send throttle window
 const MAX_SENDS_PER_WINDOW = 5;
-const _sendLog = new Map();             // target -> [timestamps]
 
 function generateOTP() {
   return crypto.randomInt(100000, 1000000).toString();
 }
 
-function storeOTP(target, otp, expiryMinutes = 5) {
-  otpStore.set(target, { otp, expires: Date.now() + expiryMinutes * 60 * 1000, attempts: 0 }, expiryMinutes * 60 * 1000);
+async function storeOTP(target, otp, expiryMinutes = 5) {
+  await otpStore.set(target, { otp, expires: Date.now() + expiryMinutes * 60 * 1000 }, expiryMinutes * 60 * 1000);
 }
 
 // Per-target send throttle (complements the per-IP express-rate-limit on the routes).
-function checkSendThrottle(target) {
-  const now = Date.now();
-  const recent = (_sendLog.get(target) || []).filter(t => now - t < SEND_WINDOW_MS);
-  if (recent.length >= MAX_SENDS_PER_WINDOW) {
-    _sendLog.set(target, recent);
+// Counted in the shared store, so it holds across server instances.
+async function checkSendThrottle(target) {
+  const sends = await otpStore.incr(`send:${target}`, SEND_WINDOW_MS);
+  if (sends > MAX_SENDS_PER_WINDOW) {
     const err = new Error('Too many OTP requests. Please try again later.');
     err.status = 429;
     err.statusCode = 429;
     throw err;
-  }
-  recent.push(now);
-  _sendLog.set(target, recent);
-  if (_sendLog.size > 10000) {
-    for (const [k, v] of _sendLog) {
-      if (!v.some(t => now - t < SEND_WINDOW_MS)) _sendLog.delete(k);
-    }
   }
 }
 
@@ -49,8 +40,9 @@ function getOTP(target) {
   return otpStore.get(target);
 }
 
-function deleteOTP(target) {
-  otpStore.delete(target);
+async function deleteOTP(target) {
+  await otpStore.delete(target);
+  await otpStore.delete(`${target}:tries`);
 }
 
 async function sendOTPEmail(email, otp, options = {}) {
@@ -99,45 +91,45 @@ async function sendOTPByType({ target, type, otp, options = {} }) {
   }
 }
 
-function verifyOTP(target, otp) {
-  const data = getOTP(target);
+async function verifyOTP(target, otp) {
+  const data = await getOTP(target);
 
   if (!data) {
     return { valid: false, error: 'OTP not found or expired' };
   }
 
   if (Date.now() > data.expires) {
-    deleteOTP(target);
+    await deleteOTP(target);
     return { valid: false, error: 'OTP expired' };
   }
 
-  if ((data.attempts || 0) >= MAX_VERIFY_ATTEMPTS) {
-    deleteOTP(target);
+  // Every guess counts, including parallel ones: the counter is incremented atomically.
+  const tries = await otpStore.incr(`${target}:tries`, Math.max(1000, data.expires - Date.now()));
+  if (tries > MAX_VERIFY_ATTEMPTS) {
+    await deleteOTP(target);
     return { valid: false, error: 'Too many attempts. Please request a new code.' };
   }
 
   if (!safeEqual(data.otp, otp)) {
-    data.attempts = (data.attempts || 0) + 1;
-    if (data.attempts >= MAX_VERIFY_ATTEMPTS) {
-      deleteOTP(target);
+    if (tries >= MAX_VERIFY_ATTEMPTS) {
+      await deleteOTP(target);
       return { valid: false, error: 'Too many attempts. Please request a new code.' };
     }
     return { valid: false, error: 'Invalid OTP' };
   }
 
-  
-  deleteOTP(target);
+  await deleteOTP(target);
   return { valid: true, error: null };
 }
 
 async function generateAndSendOTP({ target, type, options = {} }) {
-  checkSendThrottle(target);
+  await checkSendThrottle(target);
   const otp = generateOTP();
-  storeOTP(target, otp);
+  await storeOTP(target, otp);
 
   const sendResult = await sendOTPByType({ target, type, otp, options });
   if (!sendResult.success) {
-    deleteOTP(target);
+    await deleteOTP(target);
     const err = new Error('Failed to deliver verification code');
     err.status = 502;
     err.statusCode = 502;

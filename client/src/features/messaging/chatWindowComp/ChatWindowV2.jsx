@@ -846,7 +846,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         if (conversationType !== 'dm') return;
         if (!rawSocket || !conversationId) return;
 
-
         rawSocket.emit('join-dm', { dmSessionId: conversationId });
 
         

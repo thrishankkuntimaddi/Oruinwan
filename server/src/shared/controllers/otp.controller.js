@@ -53,13 +53,13 @@ exports.verifyOtp = async (req, res) => {
             return res.status(400).json({ message: "Target and OTP are required" });
         }
 
-        const result = otpService.verifyOTP(target, String(otp));
+        const result = await otpService.verifyOTP(target, String(otp));
 
         if (!result.valid) {
             return res.status(400).json({ message: result.error });
         }
 
-        otpProof.markVerified(target);
+        await otpProof.markVerified(target);
         return res.json({ message: "Verified successfully", verified: true });
 
     } catch (err) {
@@ -88,14 +88,14 @@ exports.sendPhoneOtp = async (req, res) => {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        otpService.checkSendThrottle(phoneKey(companyId));
+        await otpService.checkSendThrottle(phoneKey(companyId));
         const otp = otpService.generateOTP();
         // Phone is only written to the company after successful verification.
-        otpStore.set(phoneKey(companyId), { otp, phone, expires: Date.now() + 5 * 60 * 1000, attempts: 0 }, 5 * 60 * 1000);
+        await otpStore.set(phoneKey(companyId), { otp, phone, expires: Date.now() + 5 * 60 * 1000 }, 5 * 60 * 1000);
 
         const sendResult = await otpService.sendOTPByType({ target: phone, type: "phone", otp });
         if (!sendResult.success) {
-            otpStore.delete(phoneKey(companyId));
+            await otpService.deleteOTP(phoneKey(companyId));
             return res.status(502).json({ message: "Failed to deliver verification code" });
         }
 
@@ -116,9 +116,9 @@ exports.verifyPhoneOtp = async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const pending = otpStore.get(phoneKey(companyId));
+        const pending = await otpStore.get(phoneKey(companyId));
         const phone = pending && pending.phone;
-        const result = otpService.verifyOTP(phoneKey(companyId), String(otp));
+        const result = await otpService.verifyOTP(phoneKey(companyId), String(otp));
         if (!result.valid) {
             return res.status(400).json({ message: result.error });
         }

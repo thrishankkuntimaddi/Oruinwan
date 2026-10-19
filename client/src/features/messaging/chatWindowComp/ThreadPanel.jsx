@@ -5,7 +5,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import ThreadSummaryModal from "./modals/ThreadSummaryModal";
 import FooterInput from "./footer/footerInput";
-import { API_BASE } from '@services/api';
+
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";

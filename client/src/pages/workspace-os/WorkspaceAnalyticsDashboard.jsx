@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, BarChart, Bar
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useWorkspaceAnalytics } from '../../hooks/useWorkspaceAnalytics';
 import {
     MessageSquare, Users, CheckSquare, Hash,

@@ -4,7 +4,7 @@ import EmojiPicker from "./emojiPicker";
 import AttachMenu from "./attachMenu";
 import VoiceRecorder from "./VoiceRecorder";
 import TurndownService from "turndown";
-import { Button } from "../../../../shared/components/ui";
+
 import ReplyPreview from "../messages/replyPreview";
 import MentionAutocomplete from "./MentionAutocomplete";
 import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete";
