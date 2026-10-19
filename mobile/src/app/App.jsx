@@ -4,7 +4,7 @@ import { useNav } from './nav.js';
 import { Shell } from './Shell.jsx';
 import { BrandMark } from './BrandMark.jsx';
 import { ToastHost } from '../ui/Feedback.jsx';
-import { AuthFlow } from '../features/auth/AuthFlow.jsx';
+import { AuthFlow, ProtectAccount } from '../features/auth/AuthFlow.jsx';
 import { UpdateGate } from '../features/update/UpdateGate.jsx';
 import { hideSplash, onAppState, onBackButton, openExternal } from '../native/index.js';
 import { checkForUpdate } from '../update/updater.js';
@@ -22,6 +22,7 @@ function Splash() {
 
 export function App() {
   const status = useSession((s) => s.status);
+  const needsPassword = useSession((s) => s.needsPassword);
 
   useEffect(() => {
     watchKeyboard();
@@ -97,7 +98,7 @@ export function App() {
 
   return (
     <>
-      {status === 'booting' ? <Splash /> : status === 'signed-in' ? <Shell /> : <AuthFlow />}
+      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : <Shell />) : <AuthFlow />}
       <ToastHost />
       <UpdateGate />
     </>

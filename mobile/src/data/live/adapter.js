@@ -1,10 +1,10 @@
 // Live adapter: a self-hosted Oruinwan server. Same interface as ../demo/adapter.js;
 // every server shape is mapped into the app's own models here and nowhere else.
 import {
-  api, absolute, accessToken, configure, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
+  api, absolute, accessToken, configure, currentRefreshToken, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
 } from './http.js';
 import {
-  conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
+  conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
 } from './crypto.js';
 import { connectRealtime, disconnectRealtime, joinWorkspace, resumeRealtime, socketEmit } from './realtime.js';
 import { prefs } from '../../native/storage.js';
@@ -270,6 +270,40 @@ async function afterSignIn(user) {
   connectRealtime(serverUrl());
 }
 
+/**
+ * Shared end of Google and GitHub sign-in: the same two-factor, deactivation and session
+ * handling as password sign-in. Keys unlock now when the server holds them; password-protected
+ * keys ask for the password in Chats; accounts with no password yet choose one next.
+ */
+async function finishProviderSignIn(path, body) {
+  let data;
+  try {
+    data = await request('POST', path, { body, auth: false });
+  } catch (err) {
+    if (err.data?.requires2FA) {
+      throw Object.assign(new Error(err.data.invalidCode ? "That code didn't work. Try the newest one." : 'Enter the code from your authenticator app.'), {
+        code: '2FA_REQUIRED',
+        invalidCode: Boolean(err.data.invalidCode),
+      });
+    }
+    if (err.data?.requiresReactivation) throw new Error('This account is deactivated. Reactivate it from the web app first.');
+    throw err;
+  }
+  if (!data?.accessToken || !data?.refreshToken) throw new Error('The server did not return a mobile session. Update your Oruinwan server.');
+  await saveTokens({ access: data.accessToken, refresh: data.refreshToken });
+  const user = mapUser(await api.get('/auth/me').catch(() => data.user));
+  await afterSignIn(user);
+  const requiresPasswordSetup = Boolean(data.requiresPasswordSetup);
+  if (!requiresPasswordSetup) {
+    try {
+      await unlockIdentity(user.id);
+    } catch {
+      /* status is shown in Chats */
+    }
+  }
+  return { user, requiresPasswordSetup };
+}
+
 export const liveAdapter = {
   kind: 'live',
   serverUrl,
@@ -310,6 +344,34 @@ export const liveAdapter = {
     return { user };
   },
 
+  /** Google sign-in with an access token from Google's sign-in window. */
+  async googleSignIn({ server, accessToken: googleToken, otp }) {
+    configure(normalizeServerUrl(server));
+    return finishProviderSignIn('/auth/google-login', { accessToken: googleToken, ...(otp ? { otp } : {}) });
+  },
+
+  /** GitHub sign-in: swaps the one-time code from the redirect back to the app for a session. */
+  async oauthExchange({ server, code, otp }) {
+    configure(normalizeServerUrl(server));
+    return finishProviderSignIn('/auth/oauth/exchange', { code, ...(otp ? { otp } : {}) });
+  },
+
+  /**
+   * For accounts without a password (first Google / GitHub sign-in): set one. Encryption keys
+   * are then locked with it (created, or moved off the server if it held them), so the server
+   * can't read messages. The current session stays.
+   */
+  async protectWithPassword(userId, password) {
+    await request('POST', '/auth/oauth/set-password', { body: { password, refreshToken: currentRefreshToken() } });
+    await protectIdentityWithPassword(userId, password);
+  },
+
+  /** Or keep signing in with Google / GitHub only: the server holds the key, sealed. */
+  async skipPassword(userId) {
+    await request('POST', '/auth/oauth/skip-password', { body: {} });
+    await unlockIdentity(userId, null, { serverProtected: true });
+  },
+
   async restore({ server }) {
     configure(server);
     if (!(await loadTokens())) throw new Error('Not signed in');
@@ -327,7 +389,9 @@ export const liveAdapter = {
       if (!user) throw err;
     }
     await afterSignIn(user);
-    await restoreIdentity(user.id);
+    // Keys the server holds (accounts without a password) unlock again without asking if this
+    // device lost its copy; password-protected keys stay locked until the password is typed.
+    if (!(await restoreIdentity(user.id)) && !offline) await unlockIdentity(user.id).catch(() => {});
     return { user, offline };
   },
 

@@ -248,6 +248,8 @@ const requireLinkedinConfigured = (req, res, next) => {
 router.get("/providers", (req, res) => {
   res.json({
     google: Boolean(process.env.GOOGLE_CLIENT_ID),
+    // Public by design (it is in every page that shows Google's sign-in); the phone app reads it here.
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     github: Boolean(passport.githubConfigured),
     linkedin: linkedinConfigured(),
     sms: require('../../shared/services/otpProof').smsConfigured(),

@@ -31,6 +31,8 @@ export function configure(server) {
 }
 export const serverUrl = () => base;
 export const accessToken = () => tokens?.access || null;
+/** Sent with password changes, so the server keeps this session when it signs out the others. */
+export const currentRefreshToken = () => tokens?.refresh || null;
 
 export async function loadTokens() {
   try {

@@ -15,6 +15,7 @@ import { remoteSnapshot } from '../../config/remote.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
 import { deviceNoun, isWeb, openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
+import { googleAccessToken } from '../../data/live/google.js';
 
 const POINTS = [
   { icon: MessagesSquare, title: 'Channels and direct messages', body: 'End-to-end encrypted, on your own server.' },
@@ -221,11 +222,34 @@ function SignIn({ onBack, onCreate }) {
     if (needsOtp) otpRef.current?.focus();
   }, [needsOtp]);
 
+  const signInWithProvider = useSession((s) => s.signInWithProvider);
+  const providers = useProviders(addr.known ? base : '');
+  // A Google sign-in waiting for its two-factor code keeps Google's token here.
+  const [googleToken, setGoogleToken] = useState(null);
+
+  const failed = (err) => {
+    if (err.code === '2FA_REQUIRED') {
+      setNeedsOtp(true);
+      setError(err.invalidCode ? 'That code did not work. Try the newest one.' : '');
+    } else setError(err.message || 'Could not sign in.');
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     const url = normalizeServerUrl(server);
     if (!url) return setError('Enter your server address, for example https://chat.example.com');
+    if (googleToken) {
+      setBusy(true);
+      try {
+        await signInWithProvider('google', { server: url, accessToken: googleToken, otp: otp.trim() });
+      } catch (err) {
+        failed(err);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!email.trim() || !password) return setError('Enter your email and password.');
     setBusy(true);
     try {
@@ -233,13 +257,35 @@ function SignIn({ onBack, onCreate }) {
       prefs.set('lastServer', url);
       prefs.set('lastEmail', email.trim());
     } catch (err) {
-      if (err.code === '2FA_REQUIRED') {
-        setNeedsOtp(true);
-        setError(err.invalidCode ? 'That code did not work. Try the newest one.' : '');
-      } else setError(err.message || 'Could not sign in.');
+      failed(err);
     } finally {
       setBusy(false);
     }
+  };
+
+  const google = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      const token = await googleAccessToken(providers.googleClientId);
+      prefs.set('lastServer', base);
+      try {
+        await signInWithProvider('google', { server: base, accessToken: token });
+      } catch (err) {
+        if (err.code === '2FA_REQUIRED') setGoogleToken(token);
+        throw err;
+      }
+    } catch (err) {
+      failed(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const github = () => {
+    prefs.set('lastServer', base);
+    // GitHub returns to /oauth-success on this page's address with a one-time code.
+    window.location.assign(`${base}/api/auth/github?return=${encodeURIComponent(window.location.origin)}`);
   };
 
   return (
@@ -247,7 +293,13 @@ function SignIn({ onBack, onCreate }) {
       <Header title="Sign in" onBack={onBack} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
         <ServerSection addr={addr} verb="Signing in to" />
+        {googleToken && (
+          <p className="mb-4 flex items-center gap-2 text-sm text-text-2">
+            <GoogleMark /> Signing in with Google. One more step.
+          </p>
+        )}
         <div className="space-y-4">
+          <div hidden={Boolean(googleToken)} className="space-y-4">
           <Field
             label="Email"
             icon={Mail}
@@ -273,6 +325,7 @@ function SignIn({ onBack, onCreate }) {
               </button>
             }
           />
+          </div>
           {needsOtp && (
             <Field
               ref={otpRef}
@@ -291,7 +344,28 @@ function SignIn({ onBack, onCreate }) {
         <Button type="submit" block size="lg" className="mt-6" loading={busy}>
           {needsOtp ? 'Verify and sign in' : 'Sign in'}
         </Button>
-        <p className="mt-4 text-center text-sm text-text-2">
+        {!needsOtp && (providers.google || providers.github) && (
+          <>
+            <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-text-3" aria-hidden>
+              <span className="h-px flex-1 bg-line-soft" />
+              or
+              <span className="h-px flex-1 bg-line-soft" />
+            </div>
+            <div className="space-y-2.5">
+              {providers.google && (
+                <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
+                  <GoogleMark /> Continue with Google
+                </Button>
+              )}
+              {providers.github && (
+                <Button type="button" block size="lg" variant="secondary" onClick={github} disabled={busy}>
+                  <GitHubMark /> Continue with GitHub
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+        <p className="mt-5 text-center text-sm text-text-2">
           New to Oruinwan?{' '}
           <button type="button" className="font-medium text-accent-ink underline" onClick={onCreate}>
             Create an account
@@ -304,7 +378,7 @@ function SignIn({ onBack, onCreate }) {
             {base && (
               <>
                 {' '}
-                Google sign-in or a forgotten password?{' '}
+                {isWeb ? 'Forgotten your password?' : 'Google or GitHub sign-in, or a forgotten password?'}{' '}
                 <button type="button" className="font-medium text-accent-ink underline" onClick={() => openExternal(`${base}/login`)}>
                   Open the web app
                 </button>
@@ -313,6 +387,225 @@ function SignIn({ onBack, onCreate }) {
             )}
           </span>
         </div>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * The sign-ins this server offers (GET /api/auth/providers). Only in a browser for now: native
+ * builds need Google's native SDK and an app link for GitHub's return, which come later.
+ */
+function useProviders(base) {
+  const [providers, setProviders] = useState({});
+  useEffect(() => {
+    if (!isWeb || !base) return setProviders({});
+    let live = true;
+    fetch(`${base}/api/auth/providers`, { headers: { Accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((p) => live && setProviders({ google: Boolean(p.google && p.googleClientId), googleClientId: p.googleClientId, github: Boolean(p.github) }))
+      .catch(() => live && setProviders({}));
+    return () => {
+      live = false;
+    };
+  }, [base]);
+  return providers;
+}
+
+function GoogleMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  );
+}
+
+function GitHubMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-1.455-3.795-1.455-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.86 2.805 1.32 3.495 1.005.105-.78.42-1.32.765-1.62-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.28-1.56 3.285-1.245 3.285-1.245.675 1.65.255 2.88.135 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
+
+// GitHub sends the browser back to <app>/oauth-success#code=<one-time code>. Read it once at
+// startup and take it out of the address bar.
+const OAUTH_CODE = (() => {
+  if (!isWeb || typeof location === 'undefined' || !/\/oauth-success\/?$/.test(location.pathname)) return null;
+  const code = new URLSearchParams(location.hash.replace(/^#/, '')).get('code');
+  try {
+    history.replaceState(null, '', location.pathname.replace(/oauth-success\/?$/, ''));
+  } catch {
+    /* ignore */
+  }
+  return code;
+})();
+
+/** Back from GitHub: swaps the code for a session, asking for the two-factor code if needed. */
+function OAuthReturn({ code, onDone }) {
+  const signInWithProvider = useSession((s) => s.signInWithProvider);
+  const server = prefs.get('lastServer') || PAGE_ORIGIN;
+  const [needsOtp, setNeedsOtp] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const started = useRef(false);
+
+  const finish = async (otpValue) => {
+    setBusy(true);
+    setError('');
+    try {
+      await signInWithProvider('github', { server, code, otp: otpValue });
+    } catch (err) {
+      if (err.code === '2FA_REQUIRED') {
+        setNeedsOtp(true);
+        setError(err.invalidCode ? 'That code did not work. Try the newest one.' : '');
+      } else {
+        setNeedsOtp(false);
+        setError(err.message || 'Sign-in did not finish.');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    if (!code || !server) {
+      setError('Sign-in did not finish. Try again.');
+      return;
+    }
+    finish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="flex h-full flex-col bg-bg">
+      <Header title="Signing in" onBack={onDone} />
+      <form
+        className="flex-1 overflow-y-auto px-5 pb-10"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (otp.length === 6) finish(otp);
+        }}
+      >
+        <p className="mb-5 flex items-center gap-2 text-sm text-text-2">
+          <GitHubMark /> {busy && !needsOtp ? 'Finishing your GitHub sign-in…' : 'Signing in with GitHub.'}
+        </p>
+        {needsOtp && (
+          <>
+            <Field
+              label="Two-factor code"
+              icon={KeyRound}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="6-digit code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              hint="Open your authenticator app and enter the current code."
+            />
+            <ErrorNote text={error} />
+            <Button type="submit" block size="lg" className="mt-6" loading={busy} disabled={otp.length !== 6}>
+              Verify and sign in
+            </Button>
+          </>
+        )}
+        {!needsOtp && error && (
+          <>
+            <ErrorNote text={error} />
+            <Button type="button" block size="lg" className="mt-6" onClick={onDone}>
+              Back to sign in
+            </Button>
+          </>
+        )}
+      </form>
+    </div>
+  );
+}
+
+/**
+ * After a first Google or GitHub sign-in the account has no password. A password keeps the
+ * encryption keys out of the server's reach; skipping lets the server hold them (sealed), as
+ * the web app does. Shown before the app opens, and again after a reload until chosen.
+ */
+export function ProtectAccount() {
+  const protect = useSession((s) => s.protectWithPassword);
+  const skip = useSession((s) => s.skipPassword);
+  const signOut = useSession((s) => s.signOut);
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  const run = async (kind) => {
+    setError('');
+    if (kind === 'set' && !PASSWORD_RULES.every((r) => r.test(password))) return setError('Your password needs everything in the list below it.');
+    setBusy(kind);
+    try {
+      if (kind === 'set') await protect(password);
+      else await skip();
+    } catch (err) {
+      setError(err.message || 'That did not work. Try again.');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-bg pt-safe">
+      <form
+        className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10 pt-6"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          run('set');
+        }}
+      >
+        <span className="grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+          <Icon as={ShieldCheck} />
+        </span>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">Protect your messages</h1>
+        <p className="mt-2 text-sm text-text-2">
+          Set a password and your encryption keys are locked with it, so not even the server can read your messages.
+          You'll also be able to sign in with your email.
+        </p>
+        <div className="mt-6">
+          <Field
+            label="New password"
+            icon={Lock}
+            type={show ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            trailing={
+              <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'} className="text-text-3">
+                <Icon as={show ? EyeOff : Eye} size="sm" />
+              </button>
+            }
+          />
+          <PasswordRules password={password} />
+        </div>
+        <ErrorNote text={error} />
+        <Button type="submit" block size="lg" className="mt-6" loading={busy === 'set'} disabled={Boolean(busy)}>
+          Set password
+        </Button>
+        <Button type="button" block size="lg" variant="secondary" className="mt-2.5" loading={busy === 'skip'} disabled={Boolean(busy)} onClick={() => run('skip')}>
+          Skip for now
+        </Button>
+        <p className="mt-3 text-center text-[13px] text-text-3">
+          If you skip, messages stay encrypted and the server keeps your key sealed. You can set a password later from the web app.
+        </p>
+        <p className="mt-6 text-center text-sm text-text-2">
+          <button type="button" className="font-medium text-accent-ink underline" onClick={() => signOut()}>
+            Sign out
+          </button>
+        </p>
       </form>
     </div>
   );
@@ -469,7 +762,7 @@ function SignUp({ onBack, onSignIn }) {
 }
 
 export function AuthFlow() {
-  const [step, setStep] = useState('welcome');
+  const [step, setStep] = useState(OAUTH_CODE ? 'oauth' : 'welcome');
   const [from, setFrom] = useState('welcome');
   const go = (next) => {
     setFrom(step);
@@ -485,6 +778,7 @@ export function AuthFlow() {
     return () => removeOverlay('auth-form');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, from]);
+  if (step === 'oauth') return <OAuthReturn code={OAUTH_CODE} onDone={() => setStep('signin')} />;
   if (step === 'signin') return <SignIn onBack={back} onCreate={() => go('signup')} />;
   if (step === 'signup') return <SignUp onBack={back} onSignIn={() => go('signin')} />;
   return <Welcome onSignIn={() => go('signin')} />;

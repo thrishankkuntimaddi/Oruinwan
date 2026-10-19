@@ -27,10 +27,13 @@ export const useSession = create((set, get) => ({
   workspaces: prefs.get('workspaces.cache') || [],
   workspaceId: saved.workspaceId || null,
   offline: false,
+  // A first Google / GitHub sign-in still has to choose how its keys are protected (set a
+  // password, or let the server hold them). Saved, so a reload asks again instead of skipping.
+  needsPassword: Boolean(saved.needsPassword),
 
   persist() {
-    const { mode, server, workspaceId } = get();
-    prefs.set('session', { mode, server, workspaceId });
+    const { mode, server, workspaceId, needsPassword } = get();
+    prefs.set('session', { mode, server, workspaceId, needsPassword });
   },
 
   async boot() {
@@ -77,6 +80,33 @@ export const useSession = create((set, get) => ({
     logEvent('login', { method: 'password' });
   },
 
+  /**
+   * Google (`{ server, accessToken }`) or GitHub (`{ server, code }`) sign-in. Throws
+   * { code: '2FA_REQUIRED' } when a one-time code is needed; call again with `otp`.
+   */
+  async signInWithProvider(kind, params) {
+    const live = await loadLive();
+    const { user, requiresPasswordSetup } = kind === 'google' ? await live.googleSignIn(params) : await live.oauthExchange(params);
+    adapter = live;
+    clearQueries();
+    set({ mode: 'live', server: live.serverUrl(), user, status: 'signed-in', workspaceId: null, offline: false, needsPassword: requiresPasswordSetup });
+    get().persist();
+    await get().loadWorkspaces().catch(() => {});
+    logEvent('login', { method: kind });
+  },
+
+  async protectWithPassword(password) {
+    await adapter.protectWithPassword(get().user.id, password);
+    set({ needsPassword: false });
+    get().persist();
+  },
+
+  async skipPassword() {
+    await adapter.skipPassword(get().user.id);
+    set({ needsPassword: false });
+    get().persist();
+  },
+
   async loadWorkspaces() {
     try {
       const workspaces = await adapter.workspaces();
@@ -112,7 +142,7 @@ export const useSession = create((set, get) => ({
     clearQueries();
     prefs.set('workspaces.cache', null);
     if (wipe) await wipeDevice();
-    set({ status: 'signed-out', mode: null, user: null, workspaces: [], workspaceId: null });
+    set({ status: 'signed-out', mode: null, user: null, workspaces: [], workspaceId: null, needsPassword: false });
     get().persist();
     emit('session:ended');
   },
