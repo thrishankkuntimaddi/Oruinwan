@@ -8,6 +8,23 @@ const { role } = require('../processRole');
 const { getRedis, isRedisConfigured, INSTANCE_ID } = require('../redis');
 const { scheduledJobs } = require('../jobs/scheduler');
 const { postgresStatus } = require('../postgres');
+const jwt = require('jsonwebtoken');
+
+// Instance name, job list, uptime and environment help an outsider map the system, so only a
+// signed-in platform admin (the admin dashboards) gets them. Everyone else, including load
+// balancers and the public status page, gets the up/down states.
+async function isPlatformAdmin(req) {
+  const header = req.headers?.authorization || '';
+  if (!header.startsWith('Bearer ')) return false;
+  try {
+    const payload = jwt.verify(header.slice(7), process.env.ACCESS_TOKEN_SECRET);
+    const identity = require('../../identity');
+    const user = await identity.users.findById(payload.sub);
+    return Boolean(user && Array.isArray(user.roles) && user.roles.includes('chttrix_admin'));
+  } catch {
+    return false;
+  }
+}
 
 /** 'disabled' | 'ready' | 'connecting' | 'down' — Redis is optional, so it never fails the check. */
 function redisStatus() {
@@ -28,11 +45,15 @@ router.get('/', async (req, res) => {
       3: 'disconnecting',
     };
 
+    const details = (await isPlatformAdmin(req))
+      ? { role, instance: INSTANCE_ID, jobs: scheduledJobs(), uptime: process.uptime(), environment: process.env.NODE_ENV || 'development' }
+      : {};
+
     if (dbStatus !== 1) {
       return res.status(503).json({
         status: 'unhealthy',
         mongodb: dbStatusMap[dbStatus] || 'unknown',
-        uptime: process.uptime(),
+        ...details,
         timestamp: new Date().toISOString(),
       });
     }
@@ -42,18 +63,13 @@ router.get('/', async (req, res) => {
       mongodb: 'connected',
       redis: redisStatus(),
       postgres: await postgresStatus(),
-      role,
-      instance: INSTANCE_ID,
-      jobs: scheduledJobs(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
+      ...details,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
     logger.error('Health check failed:', err);
     res.status(503).json({
       status: 'unhealthy',
-      error: err.message,
       timestamp: new Date().toISOString(),
     });
   }

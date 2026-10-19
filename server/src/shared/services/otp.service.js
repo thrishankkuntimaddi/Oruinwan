@@ -71,11 +71,11 @@ async function sendOTPByType({ target, type, otp, options = {} }) {
   try {
     if (type === 'phone') {
       await sendOTPSMS(target, otp);
-      logger.info({ type, target }, 'Phone OTP sent');
+      logger.info({ type }, 'Phone OTP sent');
       return { success: true, devMode: false };
     } else if (type === 'email') {
       await sendOTPEmail(target, otp, options);
-      logger.info({ type, target }, 'Email OTP sent');
+      logger.info({ type }, 'Email OTP sent');
       return { success: true, devMode: false };
     } else {
       throw new Error(`Invalid OTP type: ${type}`);

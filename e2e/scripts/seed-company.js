@@ -46,7 +46,11 @@ async function seedCompany(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUr
     let owner = await identity.users.findByEmail(u.owner.email);
     let companyId;
     if (!owner) {
+      // Sign-up requires a code-verified personal email; record that proof as the verify step would.
+      const otpProof = require(path.join(serverDir, 'src', 'shared', 'services', 'otpProof'));
+      await otpProof.markVerified(u.owner.email);
       const out = await reg.registerCompany({
+        personalEmail: u.owner.email,
         companyName: COMPANY.name, adminName: u.owner.name, adminEmail: u.owner.email,
         adminPassword: COMPANY.password, domain: COMPANY.domain, role: 'owner',
         departments: ['Engineering', 'Design'], workspaceName: 'Acme E2E HQ',
