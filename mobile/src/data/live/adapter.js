@@ -274,6 +274,15 @@ export const liveAdapter = {
   kind: 'live',
   serverUrl,
 
+  /**
+   * Creates an account. Nothing is signed in: the server emails a link that must be opened
+   * first. Server messages (email or username taken, weak password) come back as errors.
+   */
+  async signUp({ server, username, email, password }) {
+    configure(normalizeServerUrl(server));
+    await request('POST', '/auth/signup', { body: { username, email, password }, auth: false });
+  },
+
   /** Throws { code: '2FA_REQUIRED' } when the account needs a one-time code. */
   async signIn({ server, email, password, otp }) {
     configure(normalizeServerUrl(server));

@@ -58,6 +58,13 @@ export const useSession = create((set, get) => ({
     logEvent('demo_started');
   },
 
+  /** Creates an account on a server. Nothing is signed in until the email is verified. */
+  async signUp({ server, username, email, password }) {
+    const live = await loadLive();
+    await live.signUp({ server, username, email, password });
+    logEvent('sign_up', { method: 'password' });
+  },
+
   /** Throws { code: '2FA_REQUIRED' } when a one-time code is needed. */
   async signIn({ server, email, password, otp }) {
     const live = await loadLive();

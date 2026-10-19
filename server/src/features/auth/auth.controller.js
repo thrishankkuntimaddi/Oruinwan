@@ -313,7 +313,7 @@ exports.signup = async (req, res) => {
         // Never log tokens in production; the user can request a resend.
         logger.error({ err: _emailError.message, email }, 'Verification email could not be sent');
       } else {
-        logger.warn({ err: _emailError.message }, 'Email delivery failed — logging verification link (development only)');
+        logger.warn({ err: _emailError.message, email }, 'Verification email could not be sent (development: configure email, or mark the user verified)');
         logger.info({ email, verifyUrl }, 'EMAIL VERIFICATION LINK');
       }
     }
