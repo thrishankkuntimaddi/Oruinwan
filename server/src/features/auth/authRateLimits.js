@@ -33,6 +33,7 @@ const CREDENTIAL_PATHS = new Set([
   '/google-login',
   '/google',
   '/google-signup',
+  '/google/desktop-token',
 ]);
 
 function limits(env = process.env) {

@@ -22,3 +22,9 @@
 
 # Oruinwan: keep the app's own Capacitor plugins (called by name from JavaScript).
 -keep class com.oruinwan.app.** { *; }
+
+# Credential Manager (GoogleSignInPlugin) finds its Google Play services provider by reflection.
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}

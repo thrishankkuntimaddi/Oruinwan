@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // App-specific plugins must be registered before the bridge starts.
         registerPlugin(AppUpdaterPlugin.class);
         registerPlugin(AppWindowPlugin.class);
+        registerPlugin(GoogleSignInPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

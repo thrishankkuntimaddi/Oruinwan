@@ -21,7 +21,7 @@ jest.mock('../../../../models/AuditLog', () => ({ create: jest.fn().mockResolved
 
 const axios = require('axios');
 const { userDocs } = require('../../../identity/queries/auth');
-const { googleLogin, googleSignup } = require('../auth.controller');
+const { googleLogin, googleSignup, exchangeDesktopGoogleCode } = require('../auth.controller');
 
 function run(body, handler = googleLogin) {
   const req = { body, headers: {}, get: () => 'jest', ip: '127.0.0.1', cookies: {}, socket: {} };
@@ -82,7 +82,7 @@ test('refuses an ID token for another app', async () => {
   mockGoogle.verifyIdToken.mockRejectedValue(new Error('Wrong recipient, payload audience != requiredAudience'));
   const res = await run({ credential: 'id-token' });
   expect(res.statusCode).toBe(401);
-  expect(mockGoogle.verifyIdToken).toHaveBeenCalledWith({ idToken: 'id-token', audience: 'our-app.apps.googleusercontent.com' });
+  expect(mockGoogle.verifyIdToken).toHaveBeenCalledWith({ idToken: 'id-token', audience: ['our-app.apps.googleusercontent.com'] });
 });
 
 test('says Google sign-in is off when the server has no client id', async () => {
@@ -147,5 +147,63 @@ describe('Google sign-up joins the company that verified the email domain', () =
     expect(res.statusCode).toBe(200);
     expect(companyForAutoJoin).toHaveBeenCalledWith('example.com');
     expect(userDocs.create).toHaveBeenCalledWith(expect.objectContaining({ userType: 'company', companyId: 'co1', companyRole: 'member' }));
+  });
+});
+
+describe('desktop app: Google code exchange and its ID tokens', () => {
+  const VERIFIER = 'v'.repeat(64);
+  const body = { code: 'c-1', codeVerifier: VERIFIER, redirectUri: 'http://127.0.0.1:53111/callback' };
+
+  beforeEach(() => {
+    process.env.GOOGLE_DESKTOP_CLIENT_ID = 'desktop.apps.googleusercontent.com';
+    process.env.GOOGLE_DESKTOP_CLIENT_SECRET = 'desktop-secret';
+  });
+  afterEach(() => {
+    delete process.env.GOOGLE_DESKTOP_CLIENT_ID;
+    delete process.env.GOOGLE_DESKTOP_CLIENT_SECRET;
+  });
+
+  test('swaps the code for an ID token with the secret the server holds', async () => {
+    axios.post.mockResolvedValue({ data: { id_token: 'id-tok' } });
+    const res = await run(body, exchangeDesktopGoogleCode);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ idToken: 'id-tok' });
+    const [url, form] = axios.post.mock.calls[0];
+    expect(url).toBe('https://oauth2.googleapis.com/token');
+    const sent = new URLSearchParams(form);
+    expect(sent.get('client_secret')).toBe('desktop-secret');
+    expect(sent.get('code_verifier')).toBe(VERIFIER);
+    expect(sent.get('redirect_uri')).toBe(body.redirectUri);
+  });
+
+  test('only accepts a return address on this computer', async () => {
+    for (const redirectUri of ['https://evil.example/callback', 'http://localhost:5000/callback', 'http://127.0.0.1:5000/other']) {
+      const res = await run({ ...body, redirectUri }, exchangeDesktopGoogleCode);
+      expect(res.statusCode).toBe(400);
+    }
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test('says so when the server has no desktop client', async () => {
+    delete process.env.GOOGLE_DESKTOP_CLIENT_SECRET;
+    const res = await run(body, exchangeDesktopGoogleCode);
+    expect(res.statusCode).toBe(503);
+  });
+
+  test('a code Google refuses signs nobody in', async () => {
+    axios.post.mockRejectedValue(Object.assign(new Error('bad'), { response: { status: 400, data: { error: 'invalid_grant' } } }));
+    const res = await run(body, exchangeDesktopGoogleCode);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.idToken).toBeUndefined();
+  });
+
+  test('ID tokens may be for the web client or the desktop client, nothing else', async () => {
+    mockGoogle.verifyIdToken.mockResolvedValue({ getPayload: () => profile });
+    const res = await run({ credential: 'id-tok' });
+    expect(res.statusCode).toBe(200);
+    expect(mockGoogle.verifyIdToken).toHaveBeenCalledWith({
+      idToken: 'id-tok',
+      audience: ['our-app.apps.googleusercontent.com', 'desktop.apps.googleusercontent.com'],
+    });
   });
 });

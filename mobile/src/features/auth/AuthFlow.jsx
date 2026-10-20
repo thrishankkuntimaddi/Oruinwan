@@ -11,9 +11,9 @@ import { Icon } from '../../ui/Icon.jsx';
 import { prefs } from '../../native/storage.js';
 import { SERVER_URL } from '../../config/env.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
-import { deviceNoun, isWeb, openExternal } from '../../native/index.js';
+import { deviceNoun, openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
-import { googleAccessToken } from '../../data/live/google.js';
+import { googleSignInToken, googleSupported } from '../../data/live/google.js';
 import { Intro } from './Intro.jsx';
 
 /**
@@ -81,6 +81,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
   const [googleToken, setGoogleToken] = useState(initialGoogleToken || null);
 
   const failed = (err) => {
+    if (err.cancelled) return;
     if (err.code === 'EMAIL_NOT_VERIFIED') {
       onUnverified?.(err.email || email.trim(), normalizeServerUrl(server));
       return;
@@ -99,7 +100,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
     if (googleToken) {
       setBusy(true);
       try {
-        await signInWithProvider('google', { server: url, accessToken: googleToken, otp: otp.trim() });
+        await signInWithProvider('google', { server: url, ...googleToken, otp: otp.trim() });
       } catch (err) {
         failed(err);
       } finally {
@@ -124,10 +125,10 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
     setError('');
     setBusy(true);
     try {
-      const token = await googleAccessToken(providers.googleClientId);
+      const token = await googleSignInToken(providers.googleClientId);
       prefs.set('lastServer', base);
       try {
-        const result = await signInWithProvider('google', { server: base, accessToken: token });
+        const result = await signInWithProvider('google', { server: base, ...token });
         if (result?.needsSignup) onGoogleSignup?.(result.ticket);
       } catch (err) {
         if (err.code === '2FA_REQUIRED') setGoogleToken(token);
@@ -221,7 +222,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
             {base && (
               <>
                 {' '}
-                {isWeb ? 'Forgotten your password?' : 'Google sign-in or a forgotten password?'}{' '}
+                {googleSupported ? 'Forgotten your password?' : 'Google sign-in or a forgotten password?'}{' '}
                 <button type="button" className="font-medium text-accent-ink underline" onClick={() => openExternal(`${base}/login`)}>
                   Open the web app
                 </button>
@@ -242,7 +243,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
 function useProviders(base) {
   const [providers, setProviders] = useState({});
   useEffect(() => {
-    if (!isWeb || !base) return setProviders({});
+    if (!googleSupported || !base) return setProviders({});
     let live = true;
     fetch(`${base}/api/auth/providers`, { headers: { Accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : {}))
@@ -493,14 +494,14 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
     setError('');
     setBusy(true);
     try {
-      const token = await googleAccessToken(providers.googleClientId);
+      const token = await googleSignInToken(providers.googleClientId);
       prefs.set('lastServer', addr.base);
-      const result = await signInWithProvider('google', { server: addr.base, accessToken: token });
+      const result = await signInWithProvider('google', { server: addr.base, ...token });
       if (result?.needsSignup) onGoogleSignup(result.ticket);
     } catch (err) {
       // An existing account with two-step verification finishes on the sign-in screen.
       if (err.code === '2FA_REQUIRED') onSignIn();
-      else setError(err.message || 'Google sign-in failed.');
+      else setError(err.cancelled ? '' : err.message || 'Google sign-in failed.');
     } finally {
       setBusy(false);
     }
@@ -692,13 +693,13 @@ function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa }) 
     setBusy(true);
     let token = null;
     try {
-      token = await googleAccessToken(providers.googleClientId);
+      token = await googleSignInToken(providers.googleClientId);
       prefs.set('lastServer', addr.base);
-      const result = await signInWithProvider('google', { server: addr.base, accessToken: token });
+      const result = await signInWithProvider('google', { server: addr.base, ...token });
       if (result?.needsSignup) onGoogleSignup(result.ticket);
     } catch (err) {
       if (err.code === '2FA_REQUIRED' && token) onGoogle2fa(token);
-      else setError(err.message || 'Google sign-in failed.');
+      else setError(err.cancelled ? '' : err.message || 'Google sign-in failed.');
     } finally {
       setBusy(false);
     }

@@ -58,6 +58,7 @@ const NO_REFRESH_AUTH_PATHS = [
     '/api/auth/register',
     '/api/auth/signup',
     '/api/auth/google-signup',
+    '/api/auth/google/desktop-token',
     '/api/auth/resend-verification',
     '/api/auth/passkeys/login',
 ];

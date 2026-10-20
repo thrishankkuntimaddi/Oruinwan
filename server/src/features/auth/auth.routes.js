@@ -214,6 +214,7 @@ router.get("/users", requireAuth, async (req, res) => {
 router.post("/google-login", googleLogin);
 router.post("/google", googleAuth);  
 router.post("/google-signup", require("./auth.controller").googleSignup);
+router.post("/google/desktop-token", require("./auth.controller").exchangeDesktopGoogleCode);
 router.post("/resend-verification", require("./auth.controller").resendSignupVerification);
 
 // Passkeys (WebAuthn): sign-in without a password, managed under Settings → Security.
@@ -225,6 +226,8 @@ router.get("/providers", (req, res) => {
     google: Boolean(process.env.GOOGLE_CLIENT_ID),
     // Public by design (it is in every page that shows Google's sign-in); the phone app reads it here.
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+    // The desktop app's own Google client (a "Desktop app" client; public, like the one above).
+    googleDesktopClientId: (process.env.GOOGLE_DESKTOP_CLIENT_ID && process.env.GOOGLE_DESKTOP_CLIENT_SECRET) ? process.env.GOOGLE_DESKTOP_CLIENT_ID : null,
     sms: require('../../shared/services/otpProof').smsConfigured(),
   });
 });

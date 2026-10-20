@@ -18,6 +18,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { googleSignIn } = require('./googleSignIn');
 
 /**
  * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
@@ -321,6 +322,20 @@ function fromAppPage(event) {
 
 ipcMain.on('oruinwan:open-external', (event, url) => {
   if (fromAppPage(event) && typeof url === 'string' && url.length < 4096) openExternalSafely(url);
+});
+
+// "Continue with Google": the person's own browser, back to a local address (googleSignIn.js).
+// Errors cross IPC as plain { error, code } so the page can tell a cancel from a failure.
+ipcMain.handle('oruinwan:google-sign-in', async (event, clientId) => {
+  if (!fromAppPage(event)) return { error: 'Not allowed', code: 'FAILED' };
+  if (typeof clientId !== 'string' || !/^[\w.-]{10,200}\.apps\.googleusercontent\.com$/.test(clientId)) {
+    return { error: 'Google sign-in is not set up on this server', code: 'NOT_CONFIGURED' };
+  }
+  try {
+    return await googleSignIn({ clientId, openExternal: openExternalSafely, focusApp: showWindow });
+  } catch (err) {
+    return { error: err.message, code: err.code || 'FAILED' };
+  }
 });
 
 // Native notifications from the web client (client/src/desktop/bridge.js → preload.js).

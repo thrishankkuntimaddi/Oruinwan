@@ -436,9 +436,11 @@ export const liveAdapter = {
    * Google sign-in with an access token from Google's sign-in window. For an email with no
    * account it returns { needsSignup, ticket } and signs nothing in.
    */
-  async googleSignIn({ server, accessToken: googleToken, otp }) {
+  async googleSignIn({ server, accessToken, credential, otp }) {
     configure(normalizeServerUrl(server));
-    return finishProviderSignIn('/auth/google-login', { accessToken: googleToken, ...(otp ? { otp } : {}) });
+    // accessToken: Google's pop-up in a browser. credential: an ID token from the Android app.
+    const token = credential ? { credential } : { accessToken };
+    return finishProviderSignIn('/auth/google-login', { ...token, ...(otp ? { otp } : {}) });
   },
 
   /** Creates the account a Google sign-in asked to create (`ticket` from googleSignIn), then signs in. */

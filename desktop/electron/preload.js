@@ -29,6 +29,11 @@ contextBridge.exposeInMainWorld('oruinwanDesktop', {
   setBadgeCount,
   /** Opens an http(s) or mailto link in the default browser or mail app. */
   openExternal,
+  /**
+   * Continue with Google in the default browser. Resolves with { code, codeVerifier, redirectUri }
+   * for the server to finish, or { error, code } ('CANCELLED' when the person backed out).
+   */
+  googleSignIn: (clientId) => ipcRenderer.invoke('oruinwan:google-sign-in', String(clientId || '')),
 });
 
 contextBridge.exposeInMainWorld('electronAPI', {

@@ -6,6 +6,7 @@ import api from '@services/api';
 import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { IS_APP } from '../../appMode/env';
+import { appGoogleAvailable, appGoogleToken } from '../../appMode/appGoogle';
 import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, finishGoogleSession } from './googleContinue';
 import CheckEmailPanel from './CheckEmailPanel';
 
@@ -81,9 +82,10 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         }
     };
 
+    // googleToken: { accessToken } from the browser pop-up, or { credential } (an ID token) from the apps.
     const signInWithGoogle = async (googleToken, code) => {
         try {
-            const res = await api.post('/api/auth/google-login', { accessToken: googleToken, ...(code ? { otp: code } : {}) });
+            const res = await api.post('/api/auth/google-login', { ...googleToken, ...(code ? { otp: code } : {}) });
             if (res.data?.needsSignup) { onGoogleSignup?.(res.data); return; }
             showToast('Signed in with Google', 'success');
             finishGoogleSession(res.data, { setUser, navigate });
@@ -105,9 +107,22 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     };
 
     const googleLogin = useGoogleSignIn({
-        onSuccess: tokenResponse => signInWithGoogle(tokenResponse.access_token),
+        onSuccess: tokenResponse => signInWithGoogle({ accessToken: tokenResponse.access_token }),
         onError: () => showToast('Login Failed', 'error'),
     });
+
+    // Desktop and Android apps: Google's own sign-in outside the web view (appMode/appGoogle.js).
+    const [appGoogleBusy, setAppGoogleBusy] = useState(false);
+    const signInWithAppGoogle = async () => {
+        setAppGoogleBusy(true);
+        try {
+            await signInWithGoogle(await appGoogleToken(providers));
+        } catch (err) {
+            if (!err?.cancelled) showToast(err.response?.data?.message || err.message || 'Google sign-in failed', 'error');
+        } finally {
+            setAppGoogleBusy(false);
+        }
+    };
 
     const submitCode = async e => {
         e.preventDefault();
@@ -156,9 +171,8 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
 
     const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
 
-    // Google sign-in returns to the server's own web page, so the desktop and tablet apps
-    // (src/appMode) offer email and password only.
-    const showGoogle = !IS_APP && googleAvailable(providers);
+    // In the desktop and Android apps Google's web pop-up can't run; they use appGoogle.js instead.
+    const showGoogle = IS_APP ? appGoogleAvailable(providers) : googleAvailable(providers);
     // Passkeys are bound to the web origin, so the desktop and tablet apps leave them out too.
     const showPasskey = !IS_APP && typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
 
@@ -235,7 +249,7 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
             </form>
 
             {(showGoogle || showPasskey) && <div className="orw-auth__divider">Or</div>}
-            {showGoogle && <ContinueWithGoogle onClick={googleLogin} />}
+            {showGoogle && <ContinueWithGoogle onClick={IS_APP ? signInWithAppGoogle : googleLogin} disabled={appGoogleBusy} />}
             {showPasskey && (
                 <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={signInWithPasskey}
                     disabled={passkeyBusy} aria-busy={passkeyBusy} data-testid="sign-in-with-passkey"

@@ -3,6 +3,7 @@ import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, Loader, Check } from 'lucide-react';
 import { IS_APP } from '../../appMode/env';
+import { appGoogleAvailable, appGoogleToken } from '../../appMode/appGoogle';
 import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, latestDob } from './googleContinue';
 import CheckEmailPanel from './CheckEmailPanel';
 
@@ -41,23 +42,38 @@ const SignupForm = ({ onSwitch, onGoogleSignup, onGoogleSignedIn }) => {
         api.get('/api/auth/providers').then(r => { if (live) setProviders(r.data || {}); }).catch(() => {});
         return () => { live = false; };
     }, []);
-    const showGoogle = !IS_APP && googleAvailable(providers);
+    const showGoogle = IS_APP ? appGoogleAvailable(providers) : googleAvailable(providers);
+
+    // googleToken: { accessToken } from the browser pop-up, or { credential } from the apps (appMode/appGoogle.js).
+    const continueWithGoogle = async (googleToken) => {
+        try {
+            const res = await api.post('/api/auth/google-login', googleToken);
+            if (res.data?.needsSignup) onGoogleSignup?.(res.data);
+            else onGoogleSignedIn?.(res.data);
+        } catch (err) {
+            const data = err.response?.data;
+            // An existing account with two-step verification finishes on the sign-in tab.
+            if (data?.requires2FA) { showToast('You already have an account. Sign in to continue.', 'info'); onSwitch(); return; }
+            showToast(data?.message || 'Google sign-in failed', 'error');
+        }
+    };
 
     const googleLogin = useGoogleSignIn({
-        onSuccess: async (tokenResponse) => {
-            try {
-                const res = await api.post('/api/auth/google-login', { accessToken: tokenResponse.access_token });
-                if (res.data?.needsSignup) onGoogleSignup?.(res.data);
-                else onGoogleSignedIn?.(res.data);
-            } catch (err) {
-                const data = err.response?.data;
-                // An existing account with two-step verification finishes on the sign-in tab.
-                if (data?.requires2FA) { showToast('You already have an account. Sign in to continue.', 'info'); onSwitch(); return; }
-                showToast(data?.message || 'Google sign-in failed', 'error');
-            }
-        },
+        onSuccess: (tokenResponse) => continueWithGoogle({ accessToken: tokenResponse.access_token }),
         onError: () => showToast('Google sign-in failed', 'error'),
     });
+
+    const [appGoogleBusy, setAppGoogleBusy] = useState(false);
+    const appGoogle = async () => {
+        setAppGoogleBusy(true);
+        try {
+            await continueWithGoogle(await appGoogleToken(providers));
+        } catch (err) {
+            if (!err?.cancelled) showToast(err.response?.data?.message || err.message || 'Google sign-in failed', 'error');
+        } finally {
+            setAppGoogleBusy(false);
+        }
+    };
 
     
     useEffect(() => {
@@ -216,7 +232,7 @@ const SignupForm = ({ onSwitch, onGoogleSignup, onGoogleSignedIn }) => {
                             {showGoogle && (
                                 <>
                                     <div className="orw-auth__divider" style={{ margin: '6px 0' }}>Or</div>
-                                    <ContinueWithGoogle onClick={googleLogin} />
+                                    <ContinueWithGoogle onClick={IS_APP ? appGoogle : googleLogin} disabled={appGoogleBusy} />
                                 </>
                             )}
                         </div>

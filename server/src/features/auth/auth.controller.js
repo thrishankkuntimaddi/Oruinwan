@@ -1493,8 +1493,11 @@ async function verifyGoogleIdentity({ credential, accessToken }) {
 
   let profile;
   if (credential) {
+    // ID tokens come from the web client (browsers, and the Android app, which asks for tokens
+    // issued to the web client id) or from the desktop app's own client (exchangeDesktopGoogleCode).
+    const audience = [clientId, process.env.GOOGLE_DESKTOP_CLIENT_ID].filter(Boolean);
     try {
-      const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+      const ticket = await client.verifyIdToken({ idToken: credential, audience });
       profile = ticket.getPayload();
     } catch {
       throw googleRefusal(401, "Google sign-in failed");
@@ -1519,6 +1522,42 @@ async function verifyGoogleIdentity({ credential, accessToken }) {
   }
   return { email: profile.email, name: profile.name, picture: profile.picture, googleId: profile.sub };
 }
+
+// The desktop app signs in with Google in the person's own browser, which redirects back to a
+// one-off address on their computer (http://127.0.0.1:<port>). The app sends the code here; the
+// server swaps it for an ID token with the desktop client's secret, so the secret never ships
+// inside the app. The app then signs in with that token at /google-login like any other.
+const LOOPBACK_REDIRECT = /^http:\/\/127\.0\.0\.1:\d{2,5}\/callback$/;
+
+exports.exchangeDesktopGoogleCode = async (req, res) => {
+  const desktopClientId = process.env.GOOGLE_DESKTOP_CLIENT_ID;
+  const desktopSecret = process.env.GOOGLE_DESKTOP_CLIENT_SECRET;
+  if (!desktopClientId || !desktopSecret) {
+    return res.status(503).json({ message: "Google sign-in for the desktop app is not set up on this server" });
+  }
+  const { code, codeVerifier, redirectUri } = req.body || {};
+  if (typeof code !== 'string' || !code || code.length > 2048
+    || typeof codeVerifier !== 'string' || !/^[A-Za-z0-9._~-]{43,128}$/.test(codeVerifier)
+    || typeof redirectUri !== 'string' || !LOOPBACK_REDIRECT.test(redirectUri)) {
+    return res.status(400).json({ message: "Google sign-in failed" });
+  }
+  try {
+    const response = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: redirectUri,
+      client_id: desktopClientId,
+      client_secret: desktopSecret,
+      grant_type: 'authorization_code',
+    }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 });
+    const idToken = response.data?.id_token;
+    if (!idToken) return res.status(401).json({ message: "Google sign-in failed" });
+    return res.json({ idToken });
+  } catch (err) {
+    logger.warn({ status: err.response?.status, error: err.response?.data?.error }, 'Desktop Google code exchange failed');
+    return res.status(401).json({ message: "Google sign-in failed. Try again." });
+  }
+};
 
 exports.googleLogin = async (req, res) => {
   logger.info('🔄 [MODULAR AUTH] Function invoked: googleLogin');
