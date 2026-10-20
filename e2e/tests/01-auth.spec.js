@@ -15,7 +15,7 @@ test.describe('sign in', () => {
     // The E2E server has a Google client id but no SMS keys.
     const providers = page.waitForResponse((r) => r.url().includes('/api/auth/providers'));
     await page.goto('/login');
-    expect(await (await providers).json()).toEqual({ google: true, googleClientId: 'e2e-google-client-id', sms: false });
+    expect(await (await providers).json()).toEqual({ google: true, googleClientId: 'e2e-google-client-id', googleDesktopClientId: null, sms: false });
     await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
     await expect(page.getByRole('button', { name: /GitHub|LinkedIn/ })).toHaveCount(0);
   });
