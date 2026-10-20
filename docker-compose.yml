@@ -82,6 +82,8 @@ services:
       context: .
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-}
+        VITE_API_URL: ${VITE_API_URL:-}
     image: oruinwan:local
     container_name: oruinwan-app
     restart: unless-stopped
@@ -96,8 +98,9 @@ services:
       S3_ENDPOINT: http://s3:9000
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-oruinwan}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-oruinwan-dev-secret}
-      FRONTEND_URL: ${APP_URL:-http://localhost:8080}
-      BACKEND_URL: ${APP_URL:-http://localhost:8080}
+      # FRONTEND_URL / BACKEND_URL when the web app and API have separate addresses; else APP_URL.
+      FRONTEND_URL: ${FRONTEND_URL:-${APP_URL:-http://localhost:8080}}
+      BACKEND_URL: ${BACKEND_URL:-${APP_URL:-http://localhost:8080}}
       # Set here, not only in the image: env_file values would otherwise override the image's NODE_ENV.
       NODE_ENV: production
       PORT: 8080

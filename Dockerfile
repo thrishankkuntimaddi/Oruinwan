@@ -21,6 +21,14 @@ COPY platform platform
 COPY client client
 ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+# When the API lives on its own address (e.g. https://api.example.com), the web app is built
+# to call it there. Empty: the web app calls the server it was loaded from.
+ARG VITE_BACKEND_URL=""
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+# Enough memory for the web build on a small (1 GB + swap) server.
+ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN yarn workspace client build
 
 # ---- server dependencies (production only, versions from yarn.lock) ---------------------
