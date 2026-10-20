@@ -100,7 +100,8 @@ test.describe('composer', () => {
     const d = new Date(Date.now() + 86400000);
     await form.locator('input[type="date"]').fill(d.toISOString().slice(0, 10));
     await form.locator('button[type="submit"]').click();
-    await expect(bob.getByText(title)).toBeVisible();
+    // The card in the conversation (the title also shows in Bob's activity list and invite).
+    await expect(bob.locator('[id^="msg-"]').filter({ hasText: title })).toBeVisible();
   });
 
   test('/call starts a voice huddle', async () => {

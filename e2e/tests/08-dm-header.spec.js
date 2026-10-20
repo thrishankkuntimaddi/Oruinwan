@@ -106,7 +106,7 @@ test.describe('DM header actions', () => {
   });
 
   test('delete chat hides it until a new message arrives', async () => {
-    await headerMenu(alice, 'Delete Chat');
+    await headerMenu(alice, 'Delete chat');
     await alice.getByRole('button', { name: 'Delete', exact: true }).last().click();
     const token = await alice.evaluate(() => localStorage.getItem('accessToken'));
     const listDms = async () => (await (await alice.request.get(`${E2E.apiUrl}/api/v2/messages/workspace/${seedData().workspaceId}/dms`, { headers: { Authorization: `Bearer ${token}` } })).json()).sessions || [];
