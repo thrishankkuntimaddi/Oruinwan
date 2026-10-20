@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Users, UserCheck, Clock, ShieldCheck, MessageSquare, CheckCircle2, AlertTriangle, ListTodo,
+    Users, UserCheck, Clock, ShieldCheck, CheckCircle2, AlertTriangle, ListTodo,
     RefreshCw, Gauge, FolderKanban, FileBarChart, CheckSquare,
 } from 'lucide-react';
 import api from '@services/api';
@@ -72,7 +72,6 @@ export default function ManagerOverview() {
 
                         <Section title="This week" lead="Last 7 days">
                             <KpiGrid>
-                                <Kpi label="Messages sent" icon={MessageSquare} value={m?.activity?.messagesThisWeek} loading={metrics.loading && !m} hint="By department members" />
                                 <Kpi label="Tasks completed" icon={CheckCircle2} tone="success" value={doneThisWeek} loading={tasks.loading && !t} hint="Marked done this week" />
                                 <Kpi label="Overdue" icon={AlertTriangle} tone={overdue ? 'danger' : 'muted'} value={overdue} loading={tasks.loading && !t} hint="Past due, not done" onClick={() => navigate('/manager/dashboard/tasks')} />
                                 <Kpi label="Open tasks" icon={ListTodo} value={open != null && inProgress != null ? open + inProgress : null} loading={tasks.loading && !t} hint="To do + in progress" />

@@ -475,6 +475,17 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         }
     }, [conversationId, conversationType, workspaceId, reset, loadMessages]); 
 
+    // Messages loaded before encryption was unlocked couldn't be decrypted: load them again.
+    const wasReadyRef = useRef(encryptionReady);
+    useEffect(() => {
+        const was = wasReadyRef.current;
+        wasReadyRef.current = encryptionReady;
+        if (!was && encryptionReady && conversationId) {
+            reset();
+            loadMessages();
+        }
+    }, [encryptionReady, conversationId, reset, loadMessages]);
+
     useEffect(() => () => {
         generationRef.current += 1;
         if (abortRef.current) abortRef.current.abort();

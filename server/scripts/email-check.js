@@ -4,8 +4,8 @@
 /**
  * Checks the email setup end to end without printing any secret.
  *
- *   npm run email:check                      static checks + Brevo account/sender lookup
- *   npm run email:check -- --send you@x.com  also sends one test email
+ *   npm run email:check                            static checks + Brevo account/sender lookup
+ *   npm run email:check -- --send you@example.com  also sends one test email
  */
 
 const path = require('path');

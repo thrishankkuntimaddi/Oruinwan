@@ -1,126 +1,69 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Grid3X3, List, Search, Tag, X, Download, Trash2, MoreVertical } from 'lucide-react';
+import {
+    Upload, LayoutGrid, List, X, Download, Trash2, FolderOpen, MessageSquare, History, Loader2, Send,
+} from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
 import { useToast } from '../../contexts/ToastContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import {
+    DashPage, PageHead, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip, Grid,
+    LoadingState, ErrorState, EmptyState, Confirm, timeAgo,
+} from '../../components/ui/page';
+import { fileKind, formatSize, FILES_CHANGED, announceFilesChanged } from './fileKinds';
 
-function getMimeEmoji(mimeType = '') {
-    if (mimeType.startsWith('image/')) return { emoji: '🖼️', color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' };
-    if (mimeType.startsWith('video/')) return { emoji: '🎬', color: 'bg-red-50 text-red-600 dark:bg-red-900/20' };
-    if (mimeType.startsWith('audio/')) return { emoji: '🎵', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' };
-    if (mimeType.includes('pdf')) return { emoji: '📄', color: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' };
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return { emoji: '📊', color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' };
-    return { emoji: '📎', color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' };
+const SOURCE = 'library';
+
+/** Square mark with the file-kind icon (or a thumbnail for images in the grid). */
+function KindMark({ file, size = 16 }) {
+    const { Icon } = fileKind(file.mimeType);
+    return <span className="gl-empty-mark" style={{ margin: 0, flexShrink: 0 }}><Icon size={size} /></span>;
 }
 
-function formatSize(bytes) {
-    if (!bytes) return '—';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
-}
-
-function DropZone({ onFiles }) {
-    const [dragging, setDragging] = useState(false);
-    const inputRef = useRef();
-    const handleDrop = useCallback(e => {
-        e.preventDefault(); setDragging(false);
-        const files = [...e.dataTransfer.files];
-        if (files.length) onFiles(files);
-    }, [onFiles]);
+function FileCard({ file, onOpen, onDelete }) {
+    const { Icon, label } = fileKind(file.mimeType);
+    const [broken, setBroken] = useState(false);
+    const isImage = file.mimeType?.startsWith('image/') && !broken;
     return (
-        <div
-            onDragEnter={() => setDragging(true)}
-            onDragLeave={() => setDragging(false)}
-            onDragOver={e => e.preventDefault()}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-            style={{ border: `2px dashed ${dragging ? '#b8956a' : 'rgba(255,255,255,0.1)'}`, padding: '28px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(184,149,106,0.06)' : 'rgba(255,255,255,0.02)', transition: 'all 150ms ease' }}
-        >
-            <Upload size={26} style={{ margin: '0 auto 8px', color: dragging ? '#b8956a' : 'rgba(228,228,228,0.2)' }} />
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                Drop files here or <span style={{ color: '#b8956a', fontWeight: 700 }}>browse</span>
-            </p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Images, PDFs, docs, videos — up to 50 MB</p>
-            <input ref={inputRef} type="file" multiple style={{ display: 'none' }} onChange={e => onFiles([...e.target.files])} />
+        <div className="gl-card gl-card--interactive fl-card">
+            <button type="button" className="fl-card-main" onClick={() => onOpen(file)} aria-label={`Open ${file.name}`}>
+                <span className="fl-thumb">
+                    {isImage
+                        ? <img src={file.url} alt="" onError={() => setBroken(true)} />
+                        : <Icon size={28} style={{ color: 'var(--accent)' }} />}
+                </span>
+                <span className="fl-card-text">
+                    <strong className="fl-name">{file.name}</strong>
+                    <span className="fl-meta">{label} · {formatSize(file.size)} · {timeAgo(file.createdAt)}</span>
+                </span>
+            </button>
+            <span className="fl-actions fl-card-actions">
+                <IconBtn label={`Download ${file.name}`} onClick={() => window.open(file.url, '_blank')}><Download size={14} /></IconBtn>
+                <IconBtn label={`Delete ${file.name}`} onClick={() => onDelete(file)}><Trash2 size={14} /></IconBtn>
+            </span>
         </div>
     );
 }
 
-function FileCard({ file, onClick, onDelete }) {
-    const { emoji } = getMimeEmoji(file.mimeType);
-    const [showMenu, setShowMenu] = useState(false);
-    const isImage = file.mimeType?.startsWith('image/');
+function FileRow({ file, first, active, onOpen, onDelete }) {
+    const { label } = fileKind(file.mimeType);
     return (
-        <div onClick={() => onClick(file)}
-            style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.07)', background: '#111', cursor: 'pointer', transition: 'border-color 150ms ease' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
-        >
-            <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)', overflow: 'hidden' }}>
-                {isImage
-                    ? <img src={file.url} alt={file.name} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
-                    : <span style={{ fontSize: '32px' }}>{emoji}</span>
-                }
-            </div>
-            <div style={{ padding: '10px 12px' }}>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
-                <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'Inter, system-ui, sans-serif' }}>{formatSize(file.size)} · {timeAgo(file.createdAt)}</p>
-            </div>
-            <div style={{ position: 'absolute', top: '6px', right: '6px', opacity: 0, transition: 'opacity 150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.opacity = 1}
-            >
-                <button onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}
-                    style={{ padding: '4px', background: 'rgba(12,12,12,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    <MoreVertical size={12} />
-                </button>
-            </div>
-            {showMenu && (
-                <div style={{ position: 'absolute', top: '30px', right: '6px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', zIndex: 20, width: '130px' }}>
-                    <button onClick={e => { e.stopPropagation(); window.open(file.url, '_blank'); setShowMenu(false); }}
-                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <Download size={11} /> Download
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); onDelete(file._id); setShowMenu(false); }}
-                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <Trash2 size={11} /> Delete
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function FileRow({ file, onClick, onDelete }) {
-    const { emoji } = getMimeEmoji(file.mimeType);
-    return (
-        <div onClick={() => onClick(file)}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 150ms ease' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-            <span style={{ fontSize: '18px', flexShrink: 0 }}>{emoji}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
-                {file.tags?.length > 0 && <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{file.tags.map(t => `#${t}`).join(' ')}</p>}
-            </div>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{formatSize(file.size)}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{timeAgo(file.createdAt)}</span>
-            <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={e => { e.stopPropagation(); window.open(file.url, '_blank'); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Download size={13} /></button>
-                <button onClick={e => { e.stopPropagation(); onDelete(file._id); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Trash2 size={13} /></button>
-            </div>
-        </div>
+        <li className="fl-row" data-active={active ? 'true' : undefined} style={{ borderTop: first ? 'none' : '1px solid var(--border-subtle)' }}>
+            <button type="button" className="fl-row-main" onClick={() => onOpen(file)}>
+                <KindMark file={file} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                    <strong className="fl-name" style={{ fontSize: 14 }}>{file.name}</strong>
+                    <span className="fl-meta">
+                        {label} · {formatSize(file.size)} · {timeAgo(file.createdAt)}
+                        {file.tags?.length > 0 && ` · ${file.tags.map((t) => `#${t}`).join(' ')}`}
+                    </span>
+                </span>
+            </button>
+            <span className="fl-actions">
+                <IconBtn label={`Download ${file.name}`} onClick={() => window.open(file.url, '_blank')}><Download size={14} /></IconBtn>
+                <IconBtn label={`Delete ${file.name}`} onClick={() => onDelete(file)}><Trash2 size={14} /></IconBtn>
+            </span>
+        </li>
     );
 }
 
@@ -128,47 +71,79 @@ const FileLibrary = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { files, loading, listFiles, uploadFile, deleteFile } = useFiles();
-    const [view, setView] = useState('grid'); 
+    const { activeWorkspace } = useWorkspace();
+    const { files, loading, error, listFiles, uploadFile, deleteFile } = useFiles();
+    const [view, setView] = useState('grid');
     const [search, setSearch] = useState('');
     const [tagFilter, setTagFilter] = useState('');
-    const [uploading, setUploading] = useState(false);
+    const [uploading, setUploading] = useState(0);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [dragging, setDragging] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    const dragDepth = useRef(0);
+    const inputRef = useRef(null);
 
-    useEffect(() => {
-        if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
+    const reload = useCallback(async () => {
+        if (!workspaceId) return;
+        await listFiles(workspaceId, { folderId: 'root' });
+        setLoaded(true);
     }, [workspaceId, listFiles]);
 
-    
+    useEffect(() => { reload(); }, [reload]);
+
+    // The side panel uploads too: reload when it changes the list.
     useEffect(() => {
-        if (id && files.length) {
-            const f = files.find(f => f._id === id);
+        const onChange = (e) => { if (e.detail?.source !== SOURCE) reload(); };
+        window.addEventListener(FILES_CHANGED, onChange);
+        return () => window.removeEventListener(FILES_CHANGED, onChange);
+    }, [reload]);
+
+    useEffect(() => {
+        if (!id) { setSelectedFile(null); return; }
+        if (files.length) {
+            const f = files.find((x) => x._id === id);
             if (f) setSelectedFile(f);
         }
     }, [id, files]);
 
     const handleUpload = async (fileList) => {
-        setUploading(true);
+        const list = [...(fileList || [])];
+        if (!list.length) return;
+        setUploading(list.length);
         let successCount = 0;
-        for (const file of fileList) {
+        for (const file of list) {
             try {
                 await uploadFile(workspaceId, file, { tags: [] });
                 successCount++;
-            } catch (err) {
-                showToast(`Failed to upload ${file.name}`, 'error');
+            } catch {
+                showToast(`Couldn’t upload ${file.name}`, 'error');
             }
         }
-        setUploading(false);
-        if (successCount > 0) showToast(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`, 'success');
+        setUploading(0);
+        if (successCount > 0) {
+            showToast(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`, 'success');
+            announceFilesChanged(SOURCE);
+        }
     };
 
-    const handleDelete = async (fileId) => {
+    const pickFiles = () => inputRef.current?.click();
+
+    const handleDelete = async () => {
+        const file = confirmDelete;
+        if (!file) return;
+        setDeleting(true);
         try {
-            await deleteFile(fileId);
-            showToast('File deleted', 'success');
-            if (selectedFile?._id === fileId) setSelectedFile(null);
+            await deleteFile(file._id);
+            showToast(`Deleted “${file.name}”`, 'success');
+            announceFilesChanged(SOURCE);
+            if (selectedFile?._id === file._id) closePreview();
+            setConfirmDelete(null);
         } catch {
-            showToast('Failed to delete', 'error');
+            showToast('Couldn’t delete the file', 'error');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -177,107 +152,142 @@ const FileLibrary = () => {
         navigate(`/workspace/${workspaceId}/files/${file._id}`, { replace: true });
     };
 
-    const allTags = [...new Set(files.flatMap(f => f.tags || []))];
+    function closePreview() {
+        setSelectedFile(null);
+        navigate(`/workspace/${workspaceId}/files`, { replace: true });
+    }
 
-    const filtered = files.filter(f => {
-        const matchesSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
-        const matchesTag = !tagFilter || (f.tags || []).includes(tagFilter);
-        return matchesSearch && matchesTag;
-    });
+    // Drop anywhere on the page to upload.
+    const dropHandlers = {
+        onDragEnter: (e) => { if (e.dataTransfer?.types?.includes('Files')) { dragDepth.current += 1; setDragging(true); } },
+        onDragLeave: () => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); },
+        onDragOver: (e) => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); },
+        onDrop: (e) => {
+            if (!e.dataTransfer?.files?.length) return;
+            e.preventDefault();
+            dragDepth.current = 0;
+            setDragging(false);
+            handleUpload(e.dataTransfer.files);
+        },
+    };
+
+    const allTags = useMemo(() => [...new Set(files.flatMap((f) => f.tags || []))], [files]);
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return files.filter((f) => (!q || f.name.toLowerCase().includes(q)) && (!tagFilter || (f.tags || []).includes(tagFilter)));
+    }, [files, search, tagFilter]);
+
+    const hasAny = files.length > 0;
+    const firstLoad = loading && !loaded;
 
     return (
-        <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)' }}>
-            {}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                {}
-                <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                    <h1 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
-                        <span>📁</span> File Library
-                    </h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ position: 'relative' }}>
-                            <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search files..."
-                                style={{ paddingLeft: '28px', paddingRight: '10px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }} />
-                        </div>
-                        <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '2px' }}>
-                            <button onClick={() => setView('grid')} style={{ padding: '4px 6px', background: view === 'grid' ? 'rgba(184,149,106,0.2)' : 'transparent', border: 'none', color: view === 'grid' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}><Grid3X3 size={13} /></button>
-                            <button onClick={() => setView('list')} style={{ padding: '4px 6px', background: view === 'list' ? 'rgba(184,149,106,0.2)' : 'transparent', border: 'none', color: view === 'list' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}><List size={13} /></button>
-                        </div>
-                    </div>
-                </div>
-
-                {}
-                {allTags.length > 0 && (
-                    <div style={{ padding: '6px 24px', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', flexShrink: 0 }}>
-                        <Tag size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                        {[null, ...allTags].map((tag, i) => (
-                            <button key={i} onClick={() => setTagFilter(tag === tagFilter ? '' : (tag || ''))}
-                                style={{ fontSize: '11px', padding: '2px 10px', background: (!tag && !tagFilter) || tagFilter === tag ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${(!tag && !tagFilter) || tagFilter === tag ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.07)'}`, color: (!tag && !tagFilter) || tagFilter === tag ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                {tag ? `#${tag}` : 'All'}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', scrollbarWidth: 'thin' }}>
-                    {}
-                    <div style={{ marginBottom: '20px' }}>
-                        {uploading ? (
-                            <div style={{ border: '2px dashed rgba(184,149,106,0.4)', padding: '28px', textAlign: 'center', background: 'rgba(184,149,106,0.05)' }}>
-                                <div style={{ width: '24px', height: '24px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 8px' }} />
-                                <p style={{ fontSize: '13px', color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>Uploading…</p>
-                            </div>
-                        ) : (
-                            <DropZone onFiles={handleUpload} />
-                        )}
-                    </div>
-
-                    {loading ? (
-                        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-                            <div style={{ width: '24px', height: '24px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                            <span style={{ fontSize: '48px' }}>📂</span>
-                            <p style={{ color: 'var(--text-muted)', marginTop: '10px', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif' }}>No files found</p>
-                        </div>
-                    ) : view === 'grid' ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
-                            {filtered.map(file => <FileCard key={file._id} file={file} onClick={handleFileClick} onDelete={handleDelete} />)}
-                        </div>
-                    ) : (
-                        <div style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div style={{ padding: '6px 16px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '10px' }}>
-                                {['Name', 'Size', 'Uploaded', ''].map((h, i) => <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Inter, system-ui, sans-serif' }}>{h}</span>)}
-                            </div>
-                            {filtered.map(file => <FileRow key={file._id} file={file} onClick={handleFileClick} onDelete={handleDelete} />)}
-                        </div>
+        <div className="fl-wrap" {...dropHandlers}>
+            <input ref={inputRef} type="file" multiple hidden onChange={(e) => { handleUpload(e.target.files); e.target.value = ''; }} />
+            <div className="fl-main">
+                <DashPage
+                    wide
+                    head={(
+                        <PageHead
+                            eyebrow={activeWorkspace?.name ? `${activeWorkspace.name} · Files` : 'Files'}
+                            title="Files"
+                            icon={FolderOpen}
+                            lead="Documents, images and recordings the whole workspace can find, preview and discuss."
+                            actions={hasAny && (
+                                <Btn variant="primary" icon={Upload} loading={uploading > 0} onClick={pickFiles}>Upload files</Btn>
+                            )}
+                        />
                     )}
-                </div>
+                >
+                    {firstLoad ? (
+                        <LoadingState label="Loading files…" />
+                    ) : error && !hasAny ? (
+                        <ErrorState message={error} onRetry={reload} />
+                    ) : !hasAny ? (
+                        <Panel className="fl-drop" style={dragging ? { borderColor: 'var(--accent)', background: 'var(--gl-accent-soft)' } : undefined}>
+                            <EmptyState
+                                icon={uploading ? Loader2 : FolderOpen}
+                                title={uploading ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}…` : 'No files yet'}
+                                text="Keep specs, designs and recordings in one place so everyone works from the same copy. Drop files here or pick them from your device — up to 50 MB each."
+                                action={!uploading && <Btn variant="primary" icon={Upload} onClick={pickFiles}>Upload your first file</Btn>}
+                            />
+                        </Panel>
+                    ) : (
+                        <>
+                            <Toolbar>
+                                <SearchBox value={search} onChange={setSearch} placeholder="Find a file" label="Find a file" />
+                                {allTags.length > 0 && (
+                                    <FilterTabs value={tagFilter} onChange={setTagFilter} label="Tag" options={[
+                                        { value: '', label: 'All', count: files.length },
+                                        ...allTags.map((t) => ({ value: t, label: `#${t}` })),
+                                    ]} />
+                                )}
+                                <span className="cd-toolbar-spacer" />
+                                <div className="gl-tabs" role="tablist" aria-label="Layout">
+                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'grid'} aria-label="Grid" title="Grid" onClick={() => setView('grid')}><LayoutGrid size={14} /></button>
+                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'list'} aria-label="List" title="List" onClick={() => setView('list')}><List size={14} /></button>
+                                </div>
+                            </Toolbar>
+
+                            <button type="button" className="fl-strip" data-dragging={dragging ? 'true' : undefined} onClick={pickFiles} disabled={uploading > 0}>
+                                {uploading
+                                    ? <><Loader2 size={14} className="cd-spin" /><span>Uploading {uploading} file{uploading > 1 ? 's' : ''}…</span></>
+                                    : <><Upload size={14} style={{ flexShrink: 0 }} /><span>{dragging ? 'Drop to upload' : <>Drop files anywhere here, or <span style={{ color: 'var(--accent)', fontWeight: 600 }}>browse</span> — up to 50 MB each</>}</span></>}
+                            </button>
+
+                            {filtered.length === 0 ? (
+                                <Panel><EmptyState title="No files match" text="Try a different name or tag." /></Panel>
+                            ) : view === 'grid' ? (
+                                <Grid min={170}>
+                                    {filtered.map((file) => <FileCard key={file._id} file={file} onOpen={handleFileClick} onDelete={setConfirmDelete} />)}
+                                </Grid>
+                            ) : (
+                                <Panel flush>
+                                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                        {filtered.map((file, i) => (
+                                            <FileRow key={file._id} file={file} first={i === 0} active={selectedFile?._id === file._id} onOpen={handleFileClick} onDelete={setConfirmDelete} />
+                                        ))}
+                                    </ul>
+                                </Panel>
+                            )}
+                        </>
+                    )}
+                </DashPage>
             </div>
 
             {selectedFile && (
                 <FilePreviewPanel
                     file={selectedFile}
-                    onClose={() => { setSelectedFile(null); navigate(`/workspace/${workspaceId}/files`, { replace: true }); }}
-                    workspaceId={workspaceId}
+                    onClose={closePreview}
+                    onDelete={() => setConfirmDelete(selectedFile)}
                 />
             )}
+
+            <Confirm
+                open={Boolean(confirmDelete)}
+                title={`Delete “${confirmDelete?.name}”?`}
+                confirmLabel="Delete file"
+                tone="danger"
+                busy={deleting}
+                onConfirm={handleDelete}
+                onClose={() => setConfirmDelete(null)}
+            >
+                The file, its versions and comments are removed for everyone in the workspace. This can’t be undone.
+            </Confirm>
+            <style>{FILES_CSS}</style>
         </div>
     );
 };
 
-function FilePreviewPanel({ file, onClose, workspaceId }) {
+function FilePreviewPanel({ file, onClose, onDelete }) {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
-    const [activeTab, setActiveTab] = useState('preview'); 
+    const [posting, setPosting] = useState(false);
+    const [activeTab, setActiveTab] = useState('preview');
     const { getComments, addComment, getVersions } = useFiles();
     const [versions, setVersions] = useState([]);
     const { showToast } = useToast();
 
-    const { emoji } = getMimeEmoji(file.mimeType);
+    const { Icon, label } = fileKind(file.mimeType);
     const isImage = file.mimeType?.startsWith('image/');
     const isVideo = file.mimeType?.startsWith('video/');
     const isAudio = file.mimeType?.startsWith('audio/');
@@ -285,178 +295,195 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
 
     useEffect(() => {
         if (activeTab === 'comments') getComments(file._id).then(setComments).catch(() => { });
-        if (activeTab === 'versions') getVersions(file._id).then(d => setVersions(d.versions || [])).catch(() => { });
+        if (activeTab === 'versions') getVersions(file._id).then((d) => setVersions(d.versions || [])).catch(() => { });
     }, [activeTab, file._id, getComments, getVersions]);
+
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.cd-dialog')) onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const handleAddComment = async () => {
         if (!newComment.trim()) return;
+        setPosting(true);
         try {
             const c = await addComment(file._id, newComment.trim());
-            setComments(prev => [...prev, c]);
+            setComments((prev) => [...prev, c]);
             setNewComment('');
         } catch {
-            showToast('Failed to add comment', 'error');
+            showToast('Couldn’t post the comment', 'error');
+        } finally {
+            setPosting(false);
         }
     };
 
+    const facts = [
+        ['Size', formatSize(file.size)],
+        ['Version', `v${file.currentVersion || 1}`],
+        ['Uploaded', timeAgo(file.createdAt)],
+        ['Type', (file.mimeType || '').split('/')[1] || label],
+    ];
+
     return (
-        <div style={{ width: '380px', borderLeft: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', background: '#111', flexShrink: 0 }}>
-            {}
-            <div className="h-14 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
-                <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base">{emoji}</span>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
+        <aside className="fl-preview" aria-label={`Preview of ${file.name}`}>
+            <div className="fl-preview-head">
+                <span className="gl-empty-mark" style={{ margin: 0, width: 30, height: 30 }}><Icon size={15} /></span>
+                <strong className="fl-name" style={{ flex: 1, fontSize: 14 }} title={file.name}>{file.name}</strong>
+                <IconBtn label="Close preview" onClick={onClose}><X size={16} /></IconBtn>
+            </div>
+
+            <div className="fl-preview-tabs">
+                <div className="gl-tabs" role="tablist" aria-label="File details">
+                    {[['preview', 'Preview'], ['comments', 'Comments'], ['versions', 'Versions']].map(([key, text]) => (
+                        <button key={key} type="button" role="tab" className="gl-tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>{text}</button>
+                    ))}
                 </div>
-                <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded transition-colors shrink-0">
-                    <X size={16} />
-                </button>
             </div>
 
-            {}
-            <div className="flex border-b border-gray-200 dark:border-gray-800">
-                {['preview', 'comments', 'versions'].map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors border-b-2 ${activeTab === tab ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                    >{tab}</button>
-                ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-                {}
+            <div className="fl-preview-body">
                 {activeTab === 'preview' && (
-                    <div className="p-4 space-y-4">
-                        {}
-                        <div className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                            {isImage && <img src={file.url} alt={file.name} className="w-full object-contain max-h-72" />}
-                            {isVideo && <video src={file.url} controls className="w-full max-h-72" />}
-                            {isAudio && <audio src={file.url} controls className="w-full p-4" />}
-                            {isPDF && <iframe src={file.url} className="w-full h-72 border-none" title={file.name} />}
+                    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="fl-media">
+                            {isImage && <img src={file.url} alt={file.name} />}
+                            {isVideo && <video src={file.url} controls />}
+                            {isAudio && <audio src={file.url} controls style={{ width: '100%', padding: 16, boxSizing: 'border-box' }} />}
+                            {isPDF && <iframe src={file.url} title={file.name} style={{ width: '100%', height: 300, border: 0 }} />}
                             {!isImage && !isVideo && !isAudio && !isPDF && (
-                                <div className="flex flex-col items-center py-10">
-                                    <span className="text-5xl mb-3">{emoji}</span>
-                                    <p className="text-xs text-gray-400">{file.mimeType || 'Unknown type'}</p>
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium flex items-center gap-1">
-                                        <Download size={12} /> Download file
-                                    </a>
-                                </div>
+                                <EmptyState icon={Icon} title="No preview for this type" text={`${file.mimeType || 'Unknown type'} — download it to open on your device.`} />
                             )}
                         </div>
 
-                        {}
-                        <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                    <p className="text-gray-400 mb-0.5">Size</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-200">{formatSize(file.size)}</p>
+                        <dl className="fl-facts">
+                            {facts.map(([k, v]) => (
+                                <div key={k}>
+                                    <dt>{k}</dt>
+                                    <dd>{v}</dd>
                                 </div>
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                    <p className="text-gray-400 mb-0.5">Version</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-200">v{file.currentVersion}</p>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                    <p className="text-gray-400 mb-0.5">Uploaded</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-200">{timeAgo(file.createdAt)}</p>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                    <p className="text-gray-400 mb-0.5">Type</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{(file.mimeType || '').split('/')[1] || '—'}</p>
-                                </div>
+                            ))}
+                        </dl>
+
+                        {file.tags?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {file.tags.map((tag) => <Chip key={tag} tone="accent">#{tag}</Chip>)}
                             </div>
-                            {}
-                            {file.tags?.length > 0 && (
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-1.5 font-medium">Tags</p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {file.tags.map(tag => (
-                                            <span key={tag} className="text-xs px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full">#{tag}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <a
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                            >
-                                <Download size={14} /> Download
+                        )}
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="gl-btn gl-btn--primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
+                                <Download size={13} /> Download
                             </a>
+                            <Btn variant="ghost" icon={Trash2} onClick={onDelete}>Delete</Btn>
                         </div>
                     </div>
                 )}
 
-                {}
                 {activeTab === 'comments' && (
-                    <div className="flex flex-col h-full">
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                             {comments.length === 0 && (
-                                <div className="text-center py-8">
-                                    <p className="text-xs text-gray-400">No comments yet</p>
-                                </div>
+                                <EmptyState icon={MessageSquare} title="No comments yet" text="Ask a question or leave feedback — everyone with access to the file sees it." />
                             )}
-                            {comments.map(c => (
-                                <div key={c._id} className="flex gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
-                                        {(c.author?.username || 'U')[0].toUpperCase()}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-[10px] text-gray-400 mb-0.5">{c.author?.username} · {timeAgo(c.createdAt)}</p>
-                                        <p className="text-xs text-gray-700 dark:text-gray-300">{c.content}</p>
+                            {comments.map((c) => (
+                                <div key={c._id} style={{ display: 'flex', gap: 10 }}>
+                                    <span className="fl-avatar">{(c.author?.username || 'U')[0].toUpperCase()}</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p className="fl-meta" style={{ margin: '0 0 2px' }}>
+                                            <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{c.author?.username}</strong> · {timeAgo(c.createdAt)}
+                                        </p>
+                                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>{c.content}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+                        <div className="fl-compose">
                             <input
+                                className="gl-input"
                                 value={newComment}
-                                onChange={e => setNewComment(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleAddComment()}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                                 placeholder="Add a comment…"
-                                className="flex-1 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 rounded-lg border-none outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500"
+                                aria-label="Add a comment"
+                                style={{ flex: 1, minWidth: 0 }}
                             />
-                            <button
-                                onClick={handleAddComment}
-                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg font-semibold transition-colors"
-                            >Post</button>
+                            <Btn variant="primary" icon={Send} loading={posting} disabled={!newComment.trim()} onClick={handleAddComment}>Post</Btn>
                         </div>
                     </div>
                 )}
 
-                {}
                 {activeTab === 'versions' && (
-                    <div className="p-4 space-y-2">
-                        {}
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                                v{file.currentVersion}
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Current version</p>
-                                <p className="text-[10px] text-indigo-500">{timeAgo(file.updatedAt || file.createdAt)}</p>
-                            </div>
-                        </div>
-                        {}
-                        {versions.map(v => (
-                            <div key={v._id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 transition-colors">
-                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">
-                                    v{v.versionNumber}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{v.changeNote || `Version ${v.versionNumber}`}</p>
-                                    <p className="text-[10px] text-gray-400">{timeAgo(v.createdAt)}</p>
-                                </div>
-                            </div>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <li className="fl-version" data-current="true">
+                            <span className="fl-vnum">v{file.currentVersion || 1}</span>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                                <strong style={{ display: 'block', fontSize: 13, color: 'var(--text-primary)' }}>Current version</strong>
+                                <span className="fl-meta">{timeAgo(file.updatedAt || file.createdAt)}</span>
+                            </span>
+                            <Chip tone="accent">Current</Chip>
+                        </li>
+                        {versions.map((v) => (
+                            <li key={v._id} className="fl-version">
+                                <span className="fl-vnum">v{v.versionNumber}</span>
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    <strong style={{ display: 'block', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{v.changeNote || `Version ${v.versionNumber}`}</strong>
+                                    <span className="fl-meta">{timeAgo(v.createdAt)}</span>
+                                </span>
+                            </li>
                         ))}
                         {versions.length === 0 && (
-                            <p className="text-xs text-gray-400 text-center py-4">No previous versions</p>
+                            <EmptyState icon={History} title="No earlier versions" text="When someone uploads a new version, the older ones are kept here." />
                         )}
-                    </div>
+                    </ul>
                 )}
             </div>
-        </div>
+        </aside>
     );
 }
+
+const FILES_CSS = `
+.fl-wrap { display: flex; height: 100%; min-height: 0; background: var(--bg-base); position: relative; }
+.fl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.fl-name { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-meta { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-drop { border-style: dashed; transition: border-color 150ms ease, background 150ms ease; }
+.fl-strip { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; font: inherit; font-size: 12.5px; color: var(--text-secondary); background: transparent; border: 1px dashed var(--border-default); border-radius: var(--gl-radius); cursor: pointer; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; }
+.fl-strip:hover:not(:disabled), .fl-strip[data-dragging='true'] { border-color: var(--gl-accent-line); background: var(--gl-accent-soft); color: var(--text-primary); }
+.fl-strip:disabled { cursor: progress; }
+.fl-card { position: relative; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fl-card-main { display: flex; flex-direction: column; width: 100%; padding: 0; background: none; border: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.fl-thumb { height: 110px; display: flex; align-items: center; justify-content: center; background: var(--bg-hover); border-bottom: 1px solid var(--border-subtle); overflow: hidden; }
+.fl-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.fl-card-text { display: block; padding: 10px 12px 12px; min-width: 0; }
+.fl-card-actions { position: absolute; top: 6px; right: 6px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.fl-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.fl-row { display: flex; align-items: center; gap: 8px; padding: 2px 12px 2px 4px; }
+.fl-row:hover, .fl-row[data-active='true'] { background: var(--bg-hover); }
+.fl-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+@media (hover: hover) and (pointer: fine) {
+  .fl-actions { opacity: 0; transition: opacity 150ms ease; }
+  .fl-row:hover .fl-actions, .fl-row:focus-within .fl-actions, .fl-card:hover .fl-actions, .fl-card:focus-within .fl-actions { opacity: 1; }
+}
+.fl-preview { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; background: var(--bg-surface); border-left: 1px solid var(--border-subtle); }
+.fl-preview-head { height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; border-bottom: 1px solid var(--border-subtle); min-width: 0; }
+.fl-preview-tabs { padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+.fl-preview-tabs .gl-tabs { display: flex; }
+.fl-preview-tabs .gl-tab { flex: 1; justify-content: center; }
+.fl-preview-body { flex: 1; min-height: 0; overflow-y: auto; }
+.fl-media { background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); overflow: hidden; }
+.fl-media img, .fl-media video { display: block; width: 100%; max-height: 300px; object-fit: contain; }
+.fl-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 0; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); overflow: hidden; }
+.fl-facts > div { padding: 10px 12px; background: var(--bg-surface); min-width: 0; }
+.fl-facts dt { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.fl-facts dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-compose { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border-subtle); }
+.fl-avatar { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--gl-radius); }
+.fl-version { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.fl-version[data-current='true'] { border-color: var(--gl-accent-line); background: var(--gl-accent-soft); }
+.fl-vnum { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); }
+.fl-version[data-current='true'] .fl-vnum { color: var(--accent); border-color: var(--gl-accent-line); }
+@media (max-width: 1180px) {
+  .fl-preview { position: absolute; inset: 0; width: auto; z-index: 30; border-left: 0; }
+}
+`;
 
 export default FileLibrary;

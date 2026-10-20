@@ -1,186 +1,204 @@
-import React from 'react';
-import { ChevronLeft, Trash2, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
-import { getAvatarUrl } from '../../../utils/avatarUtils';
+import { forgetAvatar, rememberAvatar } from '../../../utils/avatarUtils';
+import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, Trash2, CheckCircle2, AlertCircle, Plus, ImagePlus, Loader2, ArrowUpRight } from 'lucide-react';
+import api from '@services/api';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
+import { Btn, Chip, Confirm, Field, IconBtn, errorMessage } from '../../ui/page';
+import '../profileMenu.css';
 
-const inp = {
-    width: '100%', padding: '8px 12px', fontSize: '13px',
-    background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)',
-    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
-    fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', transition: '150ms ease',
-};
-const lbl = {
-    display: 'block', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
-    textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px',
-    fontFamily: 'Inter, system-ui, sans-serif',
-};
-const focusAmber = e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)';
-const blurDefault = e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+// Matches the server's limits on POST /api/auth/me/profile-picture (multer, field `profilePicture`).
+const MAX_PHOTO_MB = 5;
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+function PhotoField({ user }) {
+    const { setUser } = useAuth();
+    const { showToast } = useToast();
+    const fileRef = useRef(null);
+    const [busy, setBusy] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const hasPhoto = !!user?.profilePicture;
+
+    const updateUser = (profilePicture) => {
+        forgetAvatar(user);
+        if (profilePicture) rememberAvatar({ ...user, profilePicture });
+        setUser?.((prev) => (prev ? { ...prev, profilePicture } : prev));
+    };
+
+    const onFile = async (e) => {
+        const file = e.target.files?.[0];
+        if (fileRef.current) fileRef.current.value = '';
+        if (!file) return;
+        if (!PHOTO_TYPES.includes(file.type)) { showToast('Use a JPG, PNG, WebP or GIF image', 'error'); return; }
+        if (file.size > MAX_PHOTO_MB * 1024 * 1024) { showToast(`Images must be ${MAX_PHOTO_MB} MB or smaller`, 'error'); return; }
+        setBusy(true);
+        try {
+            const form = new FormData();
+            form.append('profilePicture', file);
+            const { data } = await api.post('/api/auth/me/profile-picture', form);
+            if (data?.profilePicture) updateUser(data.profilePicture);
+            showToast('Profile photo updated', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not upload your photo'), 'error');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const onRemove = async () => {
+        setBusy(true);
+        try {
+            await api.delete('/api/auth/me/profile-picture');
+            updateUser(null);
+            showToast('Profile photo removed', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not remove your photo'), 'error');
+        } finally {
+            setBusy(false);
+            setConfirmRemove(false);
+        }
+    };
+
+    return (
+        <div className="pm-photo">
+            <div className="pm-photo-img" aria-busy={busy ? 'true' : undefined}>
+                {hasPhoto
+                    ? <img src={user.profilePicture} alt="Your profile" />
+                    : <span className="pm-photo-initial" aria-hidden="true">{(user?.username || user?.email || '?').charAt(0).toUpperCase()}</span>}
+                {busy && <span className="pm-photo-busy" role="status" aria-label="Updating photo"><Loader2 size={18} className="cd-spin" /></span>}
+            </div>
+            <div className="pm-photo-actions">
+                <div className="pm-row">
+                    <Btn size="sm" icon={ImagePlus} onClick={() => fileRef.current?.click()} disabled={busy}>
+                        {hasPhoto ? 'Change photo' : 'Upload photo'}
+                    </Btn>
+                    {hasPhoto && (
+                        <Btn size="sm" variant="ghost" onClick={() => setConfirmRemove(true)} disabled={busy}>Remove</Btn>
+                    )}
+                </div>
+                <span className="pm-hint">JPG, PNG, WebP or GIF, up to {MAX_PHOTO_MB} MB.</span>
+                <input ref={fileRef} type="file" accept={PHOTO_TYPES.join(',')} onChange={onFile} hidden />
+            </div>
+            <Confirm
+                open={confirmRemove}
+                title="Remove your photo?"
+                confirmLabel="Remove photo"
+                tone="danger"
+                busy={busy}
+                onConfirm={onRemove}
+                onClose={() => setConfirmRemove(false)}
+            >
+                People will see your initials instead until you add a new one.
+            </Confirm>
+        </div>
+    );
+}
 
 const ProfileView = ({
     user, formData, setFormData, phoneCode, setPhoneCode,
     emails, newEmail, setNewEmail,
     onBack, onSaveProfile, onAddEmail, onDeleteEmail, onMakePrimary, onVerifyEmail, onResendCode
 }) => {
+    const navigate = useNavigate();
+    const [saving, setSaving] = useState(false);
+    const save = async () => {
+        setSaving(true);
+        try { await onSaveProfile(); } finally { setSaving(false); }
+    };
+
     return (
-        <div style={{
-            width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden', display: 'flex',
-            flexDirection: 'column', maxHeight: '80vh', fontFamily: 'Inter, system-ui, sans-serif',
-        }}>
-            {}
-            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
-                <button onClick={onBack}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
-                >
-                    <ChevronLeft size={13} /> Back
-                </button>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Edit Profile</span>
-                <div style={{ width: '40px' }} />
+        <div className="pm" data-wide="true" role="dialog" aria-label="Edit profile">
+            <div className="pm-head">
+                <button type="button" className="pm-back" onClick={onBack}><ChevronLeft size={14} /> Back</button>
+                <h2>Edit profile</h2>
+                <span />
             </div>
 
-            {}
-            <div style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }} className="custom-scrollbar">
+            <div className="pm-body">
+                <PhotoField user={user} />
 
-                {}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div style={{ position: 'relative' }} title="Profile Picture Upload coming soon">
-                        <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundImage: `url(${getAvatarUrl(user)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                        <button style={{ position: 'absolute', bottom: 0, right: 0, width: '18px', height: '18px', borderRadius: '50%', background: '#b8956a', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#0c0c0c' }}>
-                            <Plus size={11} />
-                        </button>
-                    </div>
-                </div>
+                <Field label="Display name" htmlFor="pm-name">
+                    <input id="pm-name" className="gl-input" type="text" value={formData.username || ''}
+                        onChange={e => setFormData({ ...formData, username: e.target.value })} maxLength={50} />
+                </Field>
 
-                {}
-                <div>
-                    <label style={lbl}>Full Name</label>
-                    <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })}
-                        style={inp} onFocus={focusAmber} onBlur={blurDefault} />
-                </div>
+                <Field label="Date of birth" htmlFor="pm-dob">
+                    <input id="pm-dob" className="gl-input" type="date" value={formData.dob || ''}
+                        onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                        max={new Date().toISOString().split('T')[0]} min="1900-01-01" />
+                </Field>
 
-                {}
-                <div>
-                    <label style={lbl}>Date of Birth</label>
-                    <input type="date" value={formData.dob || ''} onChange={e => setFormData({ ...formData, dob: e.target.value })}
-                        max={new Date().toISOString().split('T')[0]} min="1900-01-01"
-                        style={inp} onFocus={focusAmber} onBlur={blurDefault} />
-                </div>
-
-                {}
-                <div>
-                    <label style={lbl}>Phone</label>
-                    <div style={{ display: 'flex' }}>
-                        <select value={phoneCode} onChange={e => setPhoneCode(e.target.value)}
-                            style={{ ...inp, width: '70px', flexShrink: 0, borderRight: 'none' }}
-                            onFocus={focusAmber} onBlur={blurDefault}
-                        >
+                <Field label="Phone" htmlFor="pm-phone">
+                    <div className="pm-phone">
+                        <select className="gl-input" value={phoneCode} onChange={e => setPhoneCode(e.target.value)} aria-label="Country code">
                             <option value="+1">+1</option>
                             <option value="+44">+44</option>
                             <option value="+91">+91</option>
                             <option value="+81">+81</option>
                         </select>
-                        <input type="tel" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                            style={{ ...inp, flex: 1 }} onFocus={focusAmber} onBlur={blurDefault}
+                        <input id="pm-phone" className="gl-input" type="tel" value={formData.phone || ''}
+                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
                             placeholder={phoneCode === '+91' ? '98765 43210' : '123-456-7890'} />
                     </div>
-                </div>
+                </Field>
 
-                {}
-                <div>
-                    <label style={lbl}>Email Addresses</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <Field label="Email addresses">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {emails.map(email => (
-                            <div key={email.id || email._id} style={{ padding: '10px 12px', border: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.email}</span>
+                            <div key={email.id || email._id} className="pm-email">
+                                <div className="pm-email-top">
+                                    <span className="pm-email-addr">{email.email}</span>
                                     {!email.isPrimary && (
-                                        <button onClick={() => onDeleteEmail(email.id)}
-                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', transition: '150ms' }}
-                                            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
-                                        ><Trash2 size={13} /></button>
+                                        <IconBtn label={`Remove ${email.email}`} onClick={() => onDeleteEmail(email.id)} style={{ width: 26, height: 26 }}>
+                                            <Trash2 size={13} />
+                                        </IconBtn>
                                     )}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                    {email.verified ? (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)', color: '#34d399' }}>
-                                            <CheckCircle2 size={9} /> Verified
-                                        </span>
-                                    ) : (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
-                                            <AlertCircle size={9} /> Unverified
-                                        </span>
-                                    )}
-                                    {email.isPrimary && (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.25)', color: '#b8956a' }}>
-                                            Primary
-                                        </span>
-                                    )}
+                                <div className="pm-email-chips">
+                                    {email.verified
+                                        ? <Chip tone="success"><CheckCircle2 size={10} /> Verified</Chip>
+                                        : <Chip tone="warning"><AlertCircle size={10} /> Not verified</Chip>}
+                                    {email.isPrimary && <Chip tone="accent">Primary</Chip>}
                                 </div>
-                                {(!email.verified || (email.verified && !email.isPrimary)) && (
-                                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
+                                {(!email.verified || !email.isPrimary) && (
+                                    <div className="pm-email-acts">
                                         {!email.verified && (
                                             <>
-                                                <button onClick={() => onVerifyEmail(email.id)}
-                                                    style={{ fontSize: '10px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}>
-                                                    Verify Now
-                                                </button>
-                                                <button onClick={() => onResendCode(email.id)}
-                                                    style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
-                                                    Resend Code
-                                                </button>
+                                                <button type="button" className="pm-link" data-tone="accent" onClick={() => onVerifyEmail(email.id)}>Enter code</button>
+                                                <button type="button" className="pm-link" onClick={() => onResendCode(email.id)}>Send a new code</button>
                                             </>
                                         )}
                                         {email.verified && !email.isPrimary && (
-                                            <button onClick={() => onMakePrimary(email.id)}
-                                                style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
-                                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
-                                                Set as Primary
-                                            </button>
+                                            <button type="button" className="pm-link" onClick={() => onMakePrimary(email.id)}>Make primary</button>
                                         )}
                                     </div>
                                 )}
                             </div>
                         ))}
-                        {}
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                                placeholder="Add another email..." style={{ ...inp, flex: 1 }}
-                                onFocus={focusAmber} onBlur={blurDefault} />
-                            <button onClick={onAddEmail}
-                                style={{ padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', cursor: 'pointer', transition: '150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#e4e4e4'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
-                            ><Plus size={16} /></button>
+                        <div className="pm-add">
+                            <input className="gl-input" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') onAddEmail(); }}
+                                placeholder="Add another email" aria-label="Add another email" />
+                            <IconBtn label="Add email" onClick={onAddEmail} disabled={!newEmail.trim()}><Plus size={16} /></IconBtn>
                         </div>
                     </div>
-                </div>
+                </Field>
 
-                {}
-                <div>
-                    <label style={lbl}>About</label>
-                    <textarea value={formData.about || ''} onChange={e => setFormData({ ...formData, about: e.target.value })}
-                        style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }} rows={3}
-                        placeholder="Tell us a bit about yourself..." maxLength={500}
-                        onFocus={focusAmber} onBlur={blurDefault} />
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '4px' }}>
-                        {(formData.about || '').length} / 500
-                    </div>
-                </div>
+                <Field label="About you" htmlFor="pm-about">
+                    <textarea id="pm-about" className="gl-input" value={formData.about || ''}
+                        onChange={e => setFormData({ ...formData, about: e.target.value })}
+                        style={{ resize: 'vertical', lineHeight: 1.6, minHeight: 72 }} rows={3}
+                        placeholder="A line or two about what you work on" maxLength={500} />
+                    <div className="pm-count">{(formData.about || '').length} / 500</div>
+                </Field>
             </div>
 
-            {}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-                <button onClick={onSaveProfile}
-                    style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 700, background: '#b8956a', color: '#0c0c0c', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                    Save Changes
+            <div className="pm-foot">
+                <button type="button" className="pm-link" onClick={() => navigate('/settings?tab=profile', { state: { from: window.location.pathname } })}>
+                    All profile settings <ArrowUpRight size={12} />
                 </button>
+                <Btn variant="primary" onClick={save} loading={saving}>Save</Btn>
             </div>
         </div>
     );

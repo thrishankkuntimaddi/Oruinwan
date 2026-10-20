@@ -24,9 +24,19 @@ import { useToast } from '../../contexts/ToastContext';
 import { PRIORITIES, PRIORITY_META, priorityLabel, statusLabel, canTransition, isClosed, STATUSES } from '../../utils/taskMeta';
 import { taskAbilities, isCreator, isAssignee, deleteOnlyHides } from '../../utils/taskPermissions';
 import WorkspacePanel, { PanelSection } from '../../components/layout/WorkspacePanel';
+import { EmptyState } from '../../components/ui/page';
 import '../../styles/gloss-x-panels.css';
 
 /* ── Views: one filter per sidebar entry, used for both the list and its count ── */
+// What an empty view means and what to do next.
+const EMPTY = {
+  'my-tasks': { title: 'Nothing on your list', text: 'Write down what you need to do. Only you see tasks you keep for yourself.' },
+  'shared-tasks': { title: 'Nothing assigned to you', text: 'When a teammate gives you a task, it shows up here.' },
+  'assigned-tasks': { title: 'You haven’t given out any tasks', text: 'Assign work to a teammate and follow its progress here.' },
+  'all-tasks': { title: 'No tasks in this workspace yet', text: 'Tasks you and your team create appear here.' },
+  'completed-tasks': { title: 'Nothing finished yet', text: 'Tasks marked done or cancelled move here.' },
+};
+
 const VIEWS = [
   { key: 'my-tasks', label: 'My Issues', desc: 'Tasks you created for yourself.', Icon: Circle, scope: (t, me) => isCreator(t, me) && isAssignee(t, me) },
   { key: 'shared-tasks', label: 'Incoming', desc: 'Tasks assigned to you by others.', Icon: Inbox, scope: (t, me) => isAssignee(t, me) && !isCreator(t, me) },
@@ -297,7 +307,16 @@ export default function MyTasks() {
     );
   }
 
-  const emptyText = view.trash ? 'Trash is empty' : (search || channelFilter !== 'all' || priorityFilter !== 'all') ? 'No matching tasks' : 'No tasks here';
+  // A task you just created must be visible: drop filters that would hide it.
+  const createAndReveal = async (data) => {
+    const created = await createTask(data);
+    if (created?.length && applyFilters(created).length === 0) {
+      setSearch(''); setChannelFilter('all'); setPriorityFilter('all');
+    }
+    return created;
+  };
+
+  const filtered = Boolean(search || channelFilter !== 'all' || priorityFilter !== 'all');
 
   return (
     <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)', fontFamily: FONT }}>
@@ -397,14 +416,19 @@ export default function MyTasks() {
             {viewMode === 'workload' ? (
               <WorkloadPanel workspaceId={workspaceId} />
             ) : shown.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '10px', padding: '24px', textAlign: 'center' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {view.trash ? <Trash2 size={20} style={{ color: 'var(--text-secondary)' }} /> : <CheckCircle2 size={20} style={{ color: 'var(--text-secondary)' }} />}
-                </div>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{emptyText}</p>
-                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  {view.trash ? 'Tasks you delete appear here for restoring.' : canCreate ? 'Use Create to add a task.' : ''}
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <EmptyState
+                  icon={view.trash ? Trash2 : filtered ? Search : view.Icon}
+                  title={view.trash ? 'Trash is empty' : filtered ? 'No matching tasks' : EMPTY[view.key]?.title || 'No tasks here'}
+                  text={view.trash ? 'Tasks you delete appear here so you can restore them.' : filtered ? 'Try a different search or clear the filters.' : EMPTY[view.key]?.text}
+                  action={filtered ? (
+                    <button type="button" className="gl-btn gl-btn--ghost" onClick={() => { setSearch(''); setChannelFilter('all'); setPriorityFilter('all'); }}>Clear filters</button>
+                  ) : canCreate && (
+                    <button type="button" className="gl-btn gl-btn--primary" onClick={() => setShowModal(true)}>
+                      <Plus size={13} strokeWidth={2.5} /> {view.key === 'assigned-tasks' ? 'Assign a task' : 'Create task'}
+                    </button>
+                  )}
+                />
               </div>
             ) : viewMode === 'board' ? (
               <KanbanBoard tasks={shown} onTaskClick={openTask} onStatusChange={changeStatus} canMove={(t) => !t.deleted && abilitiesOf(t).status} />
@@ -472,7 +496,7 @@ export default function MyTasks() {
           channels={channels || []}
           teamMembers={members || []}
           onClose={() => setShowModal(false)}
-          onAddTask={createTask}
+          onAddTask={createAndReveal}
         />
       )}
 

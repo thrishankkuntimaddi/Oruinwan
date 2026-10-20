@@ -119,6 +119,10 @@ function HuddleProviderImpl({ workspaceId, children }) {
     const [panelCall, setPanelCall] = useState(null);
     // Call UIs rendered by a page (chat overlay, Huddles room): the floating pill hides for them.
     const [inlineUIs, setInlineUIs] = useState({});
+    // A DM call ringing for me: { huddleId, dmId, workspaceId, startedBy, video }.
+    const [incomingCall, setIncomingCall] = useState(null);
+    const currentUserIdRef = useRef(null);
+    currentUserIdRef.current = currentUser?.id || currentUser?._id || currentUser?.sub || null;
 
     const huddleRef = useRef(huddle);
     huddleRef.current = huddle;
@@ -329,9 +333,12 @@ function HuddleProviderImpl({ workspaceId, children }) {
         const inWorkspace = (p) => String(p?.workspaceId || '') === String(workspaceId);
         let timer = null;
 
+        // The server lists workspace huddles plus channel and DM huddles of my conversations.
         const loadActive = () => {
             socket.emit('huddle:list', { workspaceId }, (res) => {
-                setListedHuddles((res?.huddles || []).filter(h => !h.dmId).map(toEntry));
+                const all = (res?.huddles || []).map(toEntry);
+                setListedHuddles(all.filter(h => h.scope !== 'dm'));
+                setDmHuddles(all.filter(h => h.scope === 'dm'));
             });
         };
         // Participant changes come in bursts (join + roster); refresh once.
@@ -347,6 +354,11 @@ function HuddleProviderImpl({ workspaceId, children }) {
                     ...prev,
                     toEntry({ ...payload, startedAt: payload.timestamp, participants: [] }),
                 ]));
+                // Someone calls me in a DM: ring, unless I'm already in a call.
+                const mine = String(currentUserIdRef.current || '');
+                if (String(payload.startedBy?._id || '') !== mine && !huddleRef.current.active) {
+                    setIncomingCall({ huddleId: payload.huddleId, dmId: String(payload.dmId), workspaceId: String(payload.workspaceId), startedBy: payload.startedBy || null, video: !!payload.video });
+                }
                 return;
             }
             reload();
@@ -354,6 +366,7 @@ function HuddleProviderImpl({ workspaceId, children }) {
 
         const onEnded = ({ huddleId } = {}) => {
             if (!huddleId) return;
+            setIncomingCall(prev => (prev?.huddleId === huddleId ? null : prev));
             setListedHuddles(prev => prev.filter(h => h.id !== huddleId));
             setDmHuddles(prev => prev.filter(h => h.id !== huddleId));
             refreshHistorySoon();
@@ -379,6 +392,32 @@ function HuddleProviderImpl({ workspaceId, children }) {
             socket.off('connect', loadActive);
         };
     }, [socket, workspaceId, refreshHistorySoon]);
+
+    // A ring lasts 45 seconds, and stops once I'm in a call.
+    useEffect(() => {
+        if (!incomingCall) return undefined;
+        if (huddle.active) { setIncomingCall(null); return undefined; }
+        const t = setTimeout(() => setIncomingCall(null), 45000);
+        return () => clearTimeout(t);
+    }, [incomingCall, huddle.active]);
+
+    // Starting a huddle where one was already running joins that one: follow its id.
+    useEffect(() => {
+        const hid = huddle.huddleId;
+        if (!hid) return;
+        const follow = (c) => (c && c.status === 'live' && c.id !== hid ? { ...c, id: hid, meetingId: meetingIdFromHuddleId(hid) } : c);
+        setSelectedHuddle(follow);
+        setPanelCall(follow);
+    }, [huddle.huddleId]);
+
+    // Every live huddle I can see, mine included (sidebar "live" markers).
+    const liveHuddles = useMemo(() => {
+        const seen = new Set();
+        const mine = huddle.active && huddle.huddleId && huddle.callScope
+            ? [{ id: huddle.huddleId, scope: huddle.callScope.channelId ? 'channel' : huddle.callScope.dmId ? 'dm' : 'workspace', channelId: huddle.callScope.channelId || null, dmId: huddle.callScope.dmId || null, participants: huddle.participants }]
+            : [];
+        return [...mine, ...listedHuddles, ...dmHuddles].filter(h => (seen.has(h.id) ? false : (seen.add(h.id), true)));
+    }, [listedHuddles, dmHuddles, huddle.active, huddle.huddleId, huddle.callScope, huddle.participants]);
 
     // Everything live except the huddle I'm in (that one is shown as "Your huddle").
     const activeWorkspaceHuddles = useMemo(() => {
@@ -410,6 +449,8 @@ function HuddleProviderImpl({ workspaceId, children }) {
         leaveHuddle: leaveAndDeselect,
         toggleMute: huddle.toggleMute,
         toggleCamera: huddle.toggleCamera,
+        handRaised: huddle.handRaised,
+        toggleHand: huddle.toggleHand,
         startScreenShare: huddle.startScreenShare,
         stopScreenShare: huddle.stopScreenShare,
 
@@ -424,6 +465,9 @@ function HuddleProviderImpl({ workspaceId, children }) {
         historyLoading,
         refreshHistory: loadHistory,
         activeWorkspaceHuddles,
+        liveHuddles,
+        incomingCall,
+        dismissIncomingCall: () => setIncomingCall(null),
 
         workspaceId: workspaceId || null,
         session: session && session.huddleId === (panelCall?.id || huddle.huddleId) ? session : null,

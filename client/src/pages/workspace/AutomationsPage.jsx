@@ -1,42 +1,62 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getAutomations,
-  deleteAutomation,
-  updateAutomation
-} from '../../services/automationsService';
+  Workflow, Plus, Pencil, Trash2, Pause, Play, MessageSquare, ListPlus, UserCheck, Bell, Webhook,
+  Clock, GitMerge, FileUp, CalendarCheck, CheckCircle2, AlertTriangle, Zap, Sparkles,
+} from 'lucide-react';
+import { getAutomations, deleteAutomation, updateAutomation } from '../../services/automationsService';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useToast } from '../../contexts/ToastContext';
+import {
+  DashPage, PageHead, Section, Panel, KpiGrid, Kpi, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip,
+  LoadingState, ErrorState, EmptyState, Confirm, Grid, timeAgo,
+} from '../../components/ui/page';
 
-const TRIGGER_LABELS = {
-  'message.sent':      { label: 'Message sent',     icon: '💬', color: '#6366f1' },
-  'task.created':      { label: 'Task created',     icon: '📋', color: '#10b981' },
-  'task.completed':    { label: 'Task completed',   icon: '✅', color: '#10b981' },
-  'meeting.completed': { label: 'Meeting ended',    icon: '📅', color: '#f59e0b' },
-  'file.uploaded':     { label: 'File uploaded',    icon: '📁', color: '#8b5cf6' },
-  'github.pr_merged':  { label: 'PR merged',        icon: '🔀', color: '#1f2937' },
-  'webhook.received':  { label: 'Webhook received', icon: '🔗', color: '#06b6d4' },
-  'scheduled':         { label: 'Scheduled',        icon: '⏰', color: '#f97316' },
+const TRIGGERS = {
+  'message.sent': { label: 'A message is sent', Icon: MessageSquare },
+  'task.created': { label: 'A task is created', Icon: ListPlus },
+  'task.completed': { label: 'A task is completed', Icon: CheckCircle2 },
+  'meeting.completed': { label: 'A meeting ends', Icon: CalendarCheck },
+  'file.uploaded': { label: 'A file is uploaded', Icon: FileUp },
+  'github.pr_merged': { label: 'A pull request is merged', Icon: GitMerge },
+  'webhook.received': { label: 'A webhook arrives', Icon: Webhook },
+  scheduled: { label: 'On a schedule', Icon: Clock },
 };
 
-const ACTION_LABELS = {
-  send_message:       { label: 'Send message',       icon: '💬' },
-  create_task:        { label: 'Create task',         icon: '📋' },
-  assign_task:        { label: 'Assign task',         icon: '👤' },
-  send_notification:  { label: 'Send notification',  icon: '🔔' },
-  call_webhook:       { label: 'Call webhook',        icon: '🔗' },
-  post_to_slack:      { label: 'Post to Slack',      icon: '💼' },
-  trigger_ci_pipeline:{ label: 'Trigger CI',         icon: '⚙️' },
+const ACTIONS = {
+  send_message: { label: 'Send a message', Icon: MessageSquare },
+  create_task: { label: 'Create a task', Icon: ListPlus },
+  assign_task: { label: 'Assign a task', Icon: UserCheck },
+  send_notification: { label: 'Notify someone', Icon: Bell },
+  call_webhook: { label: 'Call a webhook', Icon: Webhook },
+  post_to_slack: { label: 'Post to Slack', Icon: MessageSquare },
+  trigger_ci_pipeline: { label: 'Start a CI run', Icon: Zap },
 };
 
+// What people usually build first; each opens the builder, which offers ready-made templates.
+const IDEAS = [
+  { Icon: Clock, title: 'Weekly reminder', text: 'Post a stand-up or planning reminder in a channel every week.' },
+  { Icon: Webhook, title: 'Alerts from other tools', text: 'Turn an incoming webhook into a channel message or a task.' },
+  { Icon: GitMerge, title: 'Ship notes', text: 'Announce merged pull requests in your team channel.' },
+];
+
+const triggerOf = (type) => TRIGGERS[type] || { label: type || 'Trigger', Icon: Zap };
+const actionOf = (type) => ACTIONS[type] || { label: type, Icon: Zap };
+
+/** Agents & tools → Workflows: rules that run on their own (when X happens, do Y). */
 export default function AutomationsPage() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
+  const { activeWorkspace } = useWorkspace();
+  const { showToast } = useToast();
 
   const [automations, setAutomations] = useState([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [togglingId, setTogglingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
 
   const fetchAutomations = useCallback(async () => {
     try {
@@ -44,9 +64,8 @@ export default function AutomationsPage() {
       setError(null);
       const { data } = await getAutomations(workspaceId);
       setAutomations(data.automations || []);
-      setTotal(data.total || 0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load automations');
+      setError(err.response?.data?.message || 'Could not load workflows');
     } finally {
       setLoading(false);
     }
@@ -54,410 +73,175 @@ export default function AutomationsPage() {
 
   useEffect(() => { fetchAutomations(); }, [fetchAutomations]);
 
-  const handleToggle = async (automation) => {
-    setTogglingId(automation._id);
+  const create = () => navigate(`/workspace/${workspaceId}/automations/new`);
+  const edit = (a) => navigate(`/workspace/${workspaceId}/automations/${a._id}/edit`);
+
+  const toggle = async (a) => {
+    setBusyId(a._id);
     try {
-      await updateAutomation(automation._id, {
-        workspaceId,
-        isActive: !automation.isActive
-      });
-      setAutomations(prev =>
-        prev.map(a => a._id === automation._id ? { ...a, isActive: !a.isActive } : a)
-      );
+      await updateAutomation(a._id, { workspaceId, isActive: !a.isActive });
+      setAutomations((prev) => prev.map((x) => (x._id === a._id ? { ...x, isActive: !x.isActive } : x)));
+      showToast(a.isActive ? `Paused “${a.name}”` : `“${a.name}” is running`, 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update automation');
+      showToast(err.response?.data?.message || 'Could not update the workflow', 'error');
     } finally {
-      setTogglingId(null);
+      setBusyId(null);
     }
   };
 
-  const handleDelete = async (automation) => {
-    if (!window.confirm(`Delete "${automation.name}"? This cannot be undone.`)) return;
-    setDeletingId(automation._id);
+  const remove = async () => {
+    const a = confirmDelete;
+    setBusyId(a._id);
     try {
-      await deleteAutomation(automation._id, workspaceId);
-      setAutomations(prev => prev.filter(a => a._id !== automation._id));
-      setTotal(t => t - 1);
+      await deleteAutomation(a._id, workspaceId);
+      setAutomations((prev) => prev.filter((x) => x._id !== a._id));
+      showToast(`Deleted “${a.name}”`, 'success');
+      setConfirmDelete(null);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete automation');
+      showToast(err.response?.data?.message || 'Could not delete the workflow', 'error');
     } finally {
-      setDeletingId(null);
+      setBusyId(null);
     }
   };
 
-  const triggerInfo = (type) => TRIGGER_LABELS[type] || { label: type, icon: '⚡', color: '#6b7280' };
-  const actionLabel = (type) => ACTION_LABELS[type]?.label || type;
-  const actionIcon  = (type) => ACTION_LABELS[type]?.icon  || '⚡';
+  const counts = useMemo(() => ({
+    all: automations.length,
+    running: automations.filter((a) => a.isActive).length,
+    paused: automations.filter((a) => !a.isActive).length,
+    errors: automations.filter((a) => a.lastError).length,
+    runs: automations.reduce((n, a) => n + (a.runCount || 0), 0),
+  }), [automations]);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return automations.filter((a) => (filter === 'all' || (filter === 'running' ? a.isActive : !a.isActive))
+      && (!q || `${a.name} ${a.description || ''}`.toLowerCase().includes(q)));
+  }, [automations, query, filter]);
+
+  const hasAny = automations.length > 0;
 
   return (
-    <div style={styles.page}>
-      {}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>⚡ Automations</h1>
-          <p style={styles.subtitle}>
-            Rule-based automations for your workspace.{' '}
-            <span style={styles.count}>{total} total</span>
-          </p>
-        </div>
-        <button
-          style={styles.createBtn}
-          onClick={() => navigate(`/workspace/${workspaceId}/automations/new`)}
-        >
-          + New Automation
-        </button>
-      </div>
-
-      {}
-      {loading && (
-        <div style={styles.centered}>
-          <div style={styles.spinner} />
-          <p style={{ color: '#94a3b8', marginTop: 12 }}>Loading automations...</p>
-        </div>
+    <DashPage
+      head={(
+        <PageHead
+          eyebrow={activeWorkspace?.name ? `${activeWorkspace.name} · Agents & tools` : 'Agents & tools'}
+          title="Workflows"
+          icon={Workflow}
+          lead="Rules that run on their own: when something happens, Oruinwan does the next step for you."
+          actions={hasAny && <Btn variant="primary" icon={Plus} onClick={create}>New workflow</Btn>}
+        />
       )}
+    >
+      {loading ? (
+        <LoadingState label="Loading workflows…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={fetchAutomations} />
+      ) : !hasAny ? (
+        <>
+          <Panel>
+            <EmptyState
+              icon={Workflow}
+              title="No workflows yet"
+              text="Save your team the busywork: a workflow watches for an event and does the next step automatically."
+              action={<Btn variant="primary" icon={Plus} onClick={create}>Create your first workflow</Btn>}
+            />
+          </Panel>
+          <Section title="Ideas to start with" lead="Each one opens the builder with ready-made templates.">
+            <Grid min={220}>
+              {IDEAS.map(({ Icon, title, text }) => (
+                <button key={title} type="button" className="gl-card gl-card--interactive" onClick={create}
+                  style={{ padding: 16, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span className="gl-empty-mark" style={{ marginBottom: 0 }}><Icon size={16} /></span>
+                  <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{title}</strong>
+                  <span style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{text}</span>
+                </button>
+              ))}
+            </Grid>
+          </Section>
+        </>
+      ) : (
+        <>
+          <KpiGrid min={160}>
+            <Kpi label="Running" value={counts.running} icon={Play} tone="success" />
+            <Kpi label="Paused" value={counts.paused} icon={Pause} tone="muted" />
+            <Kpi label="Total runs" value={counts.runs} icon={Sparkles} />
+            <Kpi label="Need attention" value={counts.errors} icon={AlertTriangle} tone={counts.errors ? 'danger' : 'muted'} />
+          </KpiGrid>
 
-      {!loading && error && (
-        <div style={styles.errorBox}>
-          <span>⚠️ {error}</span>
-          <button onClick={fetchAutomations} style={styles.retryBtn}>Retry</button>
-        </div>
-      )}
+          <Toolbar>
+            <SearchBox value={query} onChange={setQuery} placeholder="Find a workflow" label="Find a workflow" />
+            <FilterTabs value={filter} onChange={setFilter} label="Show" options={[
+              { value: 'all', label: 'All', count: counts.all },
+              { value: 'running', label: 'Running', count: counts.running },
+              { value: 'paused', label: 'Paused', count: counts.paused },
+            ]} />
+          </Toolbar>
 
-      {!loading && !error && automations.length === 0 && (
-        <div style={styles.empty}>
-          <div style={styles.emptyIcon}>⚡</div>
-          <h3 style={styles.emptyTitle}>No automations yet</h3>
-          <p style={styles.emptyText}>
-            Create your first automation to streamline repetitive workflows.
-          </p>
-          <button
-            style={styles.createBtn}
-            onClick={() => navigate(`/workspace/${workspaceId}/automations/new`)}
-          >
-            + New Automation
-          </button>
-        </div>
-      )}
-
-      {}
-      {!loading && !error && automations.length > 0 && (
-        <div style={styles.list}>
-          {automations.map(automation => {
-            const trig = triggerInfo(automation.trigger?.type);
-            return (
-              <div
-                key={automation._id}
-                style={{
-                  ...styles.card,
-                  opacity: automation.isActive ? 1 : 0.6,
-                  borderLeft: `4px solid ${trig.color}`
-                }}
-              >
-                {}
-                <div style={styles.cardLeft}>
-                  <div style={styles.cardHeader}>
-                    <span style={{ ...styles.triggerBadge, background: trig.color + '22', color: trig.color }}>
-                      {trig.icon} {trig.label}
-                    </span>
-                    {automation.conditions?.length > 0 && (
-                      <span style={styles.condBadge}>
-                        {automation.conditions.length} condition{automation.conditions.length > 1 ? 's' : ''}
+          <Panel flush>
+            {shown.length === 0 ? (
+              <EmptyState title="No workflows match" text="Try a different name or filter." />
+            ) : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {shown.map((a, i) => {
+                  const trig = triggerOf(a.trigger?.type);
+                  return (
+                    <li key={a._id} className="wf-row" style={{ borderTop: i ? '1px solid var(--border-subtle)' : 'none' }}>
+                      <button type="button" className="wf-row-main" onClick={() => edit(a)}>
+                        <span className="gl-empty-mark" style={{ margin: 0, opacity: a.isActive ? 1 : 0.55 }}><trig.Icon size={16} /></span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: 14, color: 'var(--text-primary)' }}>{a.name}</strong>
+                            {a.isActive ? <Chip tone="success">Running</Chip> : <Chip>Paused</Chip>}
+                            {a.lastError && <Chip tone="danger">Last run failed</Chip>}
+                          </span>
+                          <span style={{ display: 'block', marginTop: 3, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                            When {trig.label.charAt(0).toLowerCase() + trig.label.slice(1)}
+                            {a.conditions?.length ? ` (and ${a.conditions.length} condition${a.conditions.length > 1 ? 's' : ''})` : ''}
+                            {' → '}
+                            {(a.actions || []).map((x) => actionOf(x.type).label.toLowerCase()).join(', ') || 'no steps yet'}
+                          </span>
+                          <span style={{ display: 'block', marginTop: 3, fontSize: 11.5, color: 'var(--text-muted)' }}>
+                            {a.runCount ? `Ran ${a.runCount} time${a.runCount === 1 ? '' : 's'}` : 'Hasn’t run yet'}
+                            {a.lastRunAt ? ` · last ${timeAgo(a.lastRunAt)}` : ''}
+                            {a.createdBy?.username ? ` · by ${a.createdBy.username}` : ''}
+                          </span>
+                        </span>
+                      </button>
+                      <span className="wf-row-actions">
+                        <Btn size="sm" variant="ghost" icon={a.isActive ? Pause : Play} loading={busyId === a._id} onClick={() => toggle(a)}>
+                          {a.isActive ? 'Pause' : 'Resume'}
+                        </Btn>
+                        <IconBtn label={`Edit ${a.name}`} onClick={() => edit(a)}><Pencil size={14} /></IconBtn>
+                        <IconBtn label={`Delete ${a.name}`} onClick={() => setConfirmDelete(a)}><Trash2 size={14} /></IconBtn>
                       </span>
-                    )}
-                  </div>
-
-                  <h3 style={styles.cardTitle}>{automation.name}</h3>
-                  {automation.description && (
-                    <p style={styles.cardDesc}>{automation.description}</p>
-                  )}
-
-                  {}
-                  <div style={styles.actionsList}>
-                    {(automation.actions || []).map((action, i) => (
-                      <span key={i} style={styles.actionChip}>
-                        {actionIcon(action.type)} {actionLabel(action.type)}
-                      </span>
-                    ))}
-                  </div>
-
-                  {}
-                  <div style={styles.meta}>
-                    <span>Runs: {automation.runCount || 0}</span>
-                    {automation.lastRunAt && (
-                      <span>
-                        Last: {new Date(automation.lastRunAt).toLocaleDateString()}
-                      </span>
-                    )}
-                    {automation.createdBy?.username && (
-                      <span>By: {automation.createdBy.username}</span>
-                    )}
-                    {automation.lastError && (
-                      <span style={{ color: '#f87171' }}>⚠️ Last run had errors</span>
-                    )}
-                  </div>
-                </div>
-
-                {}
-                <div style={styles.cardRight}>
-                  {}
-                  <button
-                    title={automation.isActive ? 'Disable' : 'Enable'}
-                    onClick={() => handleToggle(automation)}
-                    disabled={togglingId === automation._id}
-                    style={{
-                      ...styles.toggle,
-                      background: automation.isActive ? '#10b981' : '#374151'
-                    }}
-                  >
-                    {togglingId === automation._id ? '...' : automation.isActive ? 'ON' : 'OFF'}
-                  </button>
-
-                  {}
-                  <button
-                    title="Edit"
-                    onClick={() =>
-                      navigate(`/workspace/${workspaceId}/automations/${automation._id}/edit`)
-                    }
-                    style={styles.iconBtn}
-                  >
-                    ✏️
-                  </button>
-
-                  {}
-                  <button
-                    title="Delete"
-                    onClick={() => handleDelete(automation)}
-                    disabled={deletingId === automation._id}
-                    style={{ ...styles.iconBtn, color: '#f87171' }}
-                  >
-                    {deletingId === automation._id ? '...' : '🗑️'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+        </>
       )}
-    </div>
+
+      <Confirm
+        open={Boolean(confirmDelete)}
+        title={`Delete “${confirmDelete?.name}”?`}
+        confirmLabel="Delete workflow"
+        tone="danger"
+        busy={busyId === confirmDelete?._id}
+        onConfirm={remove}
+        onClose={() => setConfirmDelete(null)}
+      >
+        It stops running and its run history is removed. This can’t be undone.
+      </Confirm>
+      <style>{`
+        .wf-row { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; }
+        .wf-row:hover { background: var(--bg-hover); }
+        .wf-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px; background: none; border: 0; text-align: left; cursor: pointer; font-family: var(--font); color: inherit; }
+        .wf-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+        @media (hover: hover) and (pointer: fine) { .wf-row-actions { opacity: 0; transition: opacity 150ms ease; } .wf-row:hover .wf-row-actions, .wf-row:focus-within .wf-row-actions { opacity: 1; } }
+        @media (max-width: 640px) { .wf-row { flex-direction: column; align-items: stretch; padding: 4px 4px 8px; } .wf-row-actions { padding-left: 64px; } }
+      `}</style>
+    </DashPage>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-    padding: '32px',
-    color: '#e2e8f0',
-    fontFamily: "'Inter', 'Segoe UI', sans-serif",
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 32,
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 700,
-    margin: 0,
-    background: 'linear-gradient(135deg, #818cf8, #34d399)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  subtitle: {
-    margin: '6px 0 0',
-    color: '#94a3b8',
-    fontSize: 14,
-  },
-  count: {
-    background: 'rgba(99,102,241,0.15)',
-    color: '#818cf8',
-    padding: '2px 8px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  createBtn: {
-    background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    padding: '10px 20px',
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
-    transition: 'transform 0.15s, box-shadow 0.15s',
-  },
-  centered: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '80px 0',
-  },
-  spinner: {
-    width: 40,
-    height: 40,
-    border: '3px solid rgba(99,102,241,0.2)',
-    borderTop: '3px solid #6366f1',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  },
-  errorBox: {
-    background: 'rgba(248,113,113,0.1)',
-    border: '1px solid rgba(248,113,113,0.3)',
-    borderRadius: 12,
-    padding: '16px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  retryBtn: {
-    background: 'rgba(248,113,113,0.15)',
-    color: '#f87171',
-    border: '1px solid rgba(248,113,113,0.3)',
-    borderRadius: 8,
-    padding: '6px 14px',
-    cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 600,
-  },
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '80px 24px',
-    textAlign: 'center',
-    gap: 12,
-  },
-  emptyIcon: {
-    fontSize: 56,
-    marginBottom: 8,
-    filter: 'grayscale(0.3)',
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 700,
-    color: '#e2e8f0',
-    margin: 0,
-  },
-  emptyText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    maxWidth: 360,
-    margin: 0,
-  },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-  },
-  card: {
-    background: 'rgba(30,41,59,0.8)',
-    border: '1px solid rgba(148,163,184,0.1)',
-    borderRadius: 14,
-    padding: '20px 24px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 16,
-    backdropFilter: 'blur(8px)',
-    transition: 'box-shadow 0.2s',
-  },
-  cardLeft: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardHeader: {
-    display: 'flex',
-    gap: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-    flexWrap: 'wrap',
-  },
-  triggerBadge: {
-    fontSize: 12,
-    fontWeight: 600,
-    padding: '3px 10px',
-    borderRadius: 20,
-    letterSpacing: 0.3,
-  },
-  condBadge: {
-    fontSize: 11,
-    color: '#94a3b8',
-    background: 'rgba(148,163,184,0.1)',
-    padding: '3px 8px',
-    borderRadius: 20,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 700,
-    color: '#f1f5f9',
-    margin: '0 0 4px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  cardDesc: {
-    fontSize: 13,
-    color: '#94a3b8',
-    margin: '0 0 10px',
-    lineHeight: 1.5,
-  },
-  actionsList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 10,
-  },
-  actionChip: {
-    fontSize: 12,
-    color: '#818cf8',
-    background: 'rgba(99,102,241,0.1)',
-    border: '1px solid rgba(99,102,241,0.2)',
-    borderRadius: 20,
-    padding: '3px 10px',
-    fontWeight: 500,
-  },
-  meta: {
-    display: 'flex',
-    gap: 16,
-    fontSize: 12,
-    color: '#64748b',
-    flexWrap: 'wrap',
-  },
-  cardRight: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 8,
-    flexShrink: 0,
-  },
-  toggle: {
-    border: 'none',
-    borderRadius: 20,
-    padding: '6px 14px',
-    fontSize: 12,
-    fontWeight: 700,
-    color: '#fff',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-    minWidth: 52,
-    letterSpacing: 0.5,
-  },
-  iconBtn: {
-    background: 'rgba(148,163,184,0.08)',
-    border: '1px solid rgba(148,163,184,0.12)',
-    borderRadius: 8,
-    padding: '7px 10px',
-    cursor: 'pointer',
-    fontSize: 16,
-    color: '#94a3b8',
-    transition: 'background 0.15s',
-  },
-};

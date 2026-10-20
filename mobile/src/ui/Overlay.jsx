@@ -9,7 +9,7 @@ import { Button } from './Button.jsx';
 import { Icon } from './Icon.jsx';
 import { hideKeyboard } from '../native/index.js';
 
-function useOverlay(open, onClose) {
+export function useOverlay(open, onClose) {
   const id = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -22,7 +22,7 @@ function useOverlay(open, onClose) {
 }
 
 /** Keeps the overlay mounted for its exit animation. */
-function usePresence(open, ms = 200) {
+export function usePresence(open, ms = 200) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
   useEffect(() => {
@@ -56,28 +56,28 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className={cx('absolute inset-0 bg-overlay/60 transition-opacity duration-200', closing ? 'opacity-0' : 'animate-fade-in')}
+        className={cx('scrim absolute inset-0 transition-opacity duration-200', closing ? 'opacity-0' : 'animate-fade-in')}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cx(
-          'relative flex max-h-[92%] flex-col rounded-t-3xl border-t border-line bg-surface pb-safe',
+          'glass-strong relative flex max-h-[92%] flex-col rounded-t-3xl border-t pb-safe',
           'lg:max-h-[85vh] lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:pb-2',
           'transition-[transform,opacity] duration-200',
           closing ? 'translate-y-full lg:translate-y-0 lg:scale-95 lg:opacity-0' : 'animate-sheet-in',
           full && 'h-[92%] lg:h-[80vh]',
           className,
         )}
-        style={{ boxShadow: 'var(--shadow-sheet)' }}
+        style={{ boxShadow: 'var(--glass-edge), var(--shadow-sheet)' }}
       >
         <div className="flex justify-center pt-2.5 pb-1 lg:pt-2">
-          <span className="h-1 w-10 rounded-full bg-line-strong lg:hidden" />
+          <span className="h-1 w-10 rounded-full bg-text-3/40 lg:hidden" />
         </div>
         {title && <h2 className="px-5 pt-1 pb-3 text-[17px] font-semibold lg:pt-3">{title}</h2>}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
-        {footer && <div className="border-t border-line-soft px-4 pt-3 pb-3">{footer}</div>}
+        {footer && <div className="border-t border-[var(--glass-border)] px-4 pt-3 pb-3">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -126,17 +126,17 @@ export function Dialog({ open, onClose, title, body, confirmLabel = 'Confirm', d
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className={cx('absolute inset-0 bg-overlay/65', closing ? 'opacity-0 transition-opacity' : 'animate-fade-in')}
+        className={cx('scrim absolute inset-0', closing ? 'opacity-0 transition-opacity' : 'animate-fade-in')}
       />
       <div
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
         className={cx(
-          'relative w-full max-w-sm rounded-3xl border border-line bg-surface p-5',
+          'glass-strong relative w-full max-w-sm rounded-3xl border p-5',
           closing ? 'scale-95 opacity-0 transition-all duration-150' : 'animate-pop-in',
         )}
-        style={{ boxShadow: 'var(--shadow-pop)' }}
+        style={{ boxShadow: 'var(--glass-edge), var(--shadow-pop)' }}
       >
         <h2 className="text-[17px] font-semibold">{title}</h2>
         {body && <p className="mt-2 text-sm leading-relaxed text-text-2">{body}</p>}

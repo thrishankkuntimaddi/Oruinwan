@@ -30,11 +30,12 @@ function Count({ value }) {
   );
 }
 
-function Item({ icon, label, active, badge, dot, hint, onClick }) {
+function Item({ icon, label, active, badge, dot, hint, onClick, tour }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      data-tour={tour}
       title={label}
       aria-label={`${label}${badge ? `, ${badge} new` : dot ? ', new activity' : ''}`}
       aria-current={active ? 'page' : undefined}
@@ -98,6 +99,7 @@ export function Sidebar() {
         type="button"
         onClick={() => setSwitcher(true)}
         aria-label={`Workspace: ${workspace?.name || 'none'}. Switch workspace`}
+        data-tour="workspace"
         title={workspace?.name || 'Switch workspace'}
         className="mx-3 mt-3 mb-2 flex items-center justify-center gap-2.5 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-2 xl:justify-start"
       >
@@ -111,11 +113,11 @@ export function Sidebar() {
 
       <div className="no-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {main.map((it) => (
-          <Item key={it.id} {...it} active={tab === it.id && !hub} onClick={() => (hub && it.id === 'home' ? open('home') : setTab(it.id))} />
+          <Item key={it.id} {...it} tour={it.id} active={tab === it.id && !hub} onClick={() => (hub && it.id === 'home' ? open('home') : setTab(it.id))} />
         ))}
         <div className="mx-1 my-3 border-t border-line-soft" />
         {more.map((it) => (
-          <Item key={it.route} {...it} active={hub === it.route} onClick={() => open('home', it.route)} />
+          <Item key={it.route} {...it} tour={it.route} active={hub === it.route} onClick={() => open('home', it.route)} />
         ))}
       </div>
 
@@ -124,6 +126,7 @@ export function Sidebar() {
           type="button"
           onClick={() => open('home', 'settings')}
           aria-label="Profile and settings"
+          data-tour="profile"
           title="Profile and settings"
           aria-current={hub?.startsWith('settings') ? 'page' : undefined}
           className={cx(

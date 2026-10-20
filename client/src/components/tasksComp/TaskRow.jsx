@@ -1,10 +1,27 @@
+import { Trash2, RotateCcw } from "lucide-react";
+
+// Priority colours come from the theme (danger / warning / accent / success / muted).
 const priorityColors = {
-  Emergency: "bg-red-500 text-white",
-  High: "bg-orange-500 text-white",
-  Moderate: "bg-yellow-400 text-black",
-  Low: "bg-green-400 text-black",
-  Later: "bg-gray-300 text-black",
+  Emergency: "var(--state-danger)",
+  High: "var(--color-warning)",
+  Moderate: "var(--accent)",
+  Low: "var(--state-success)",
+  Later: "var(--text-secondary)",
 };
+
+const selectStyle = (tone) => ({
+  padding: "3px 8px",
+  fontSize: 12,
+  fontWeight: 600,
+  fontFamily: "var(--font)",
+  borderRadius: "var(--gl-radius, 3px)",
+  color: tone || "var(--text-primary)",
+  background: tone ? `color-mix(in srgb, ${tone} 10%, transparent)` : "var(--bg-input)",
+  border: `1px solid ${tone ? `color-mix(in srgb, ${tone} 35%, transparent)` : "var(--border-default)"}`,
+});
+
+const cell = { padding: "8px 16px", fontSize: 13 };
+const mutedCell = { ...cell, color: "var(--text-secondary)" };
 
 const statusOrder = ["In Progress", "To Do", "Completed", "Overdue"];
 
@@ -18,17 +35,18 @@ const TaskRow = ({
   permanentlyDelete,
 }) => {
   return (
-    <tr className="border-t border-gray-200">
-      <td className="px-4 py-2">{task.task}</td>
-      <td className="px-4 py-2 text-gray-600">{task.project}</td>
-      <td className="px-4 py-2 text-gray-600">{task.assignee}</td>
-      <td className="px-4 py-2 text-gray-600">{task.dueDate}</td>
-      <td className="px-4 py-2">
+    <tr style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <td style={{ ...cell, color: "var(--text-primary)" }}>{task.task}</td>
+      <td style={mutedCell}>{task.project}</td>
+      <td style={mutedCell}>{task.assignee}</td>
+      <td style={mutedCell}>{task.dueDate}</td>
+      <td style={cell}>
         {activeTab === "Deleted" ? (
           task.priority
         ) : (
           <select
-            className={`rounded px-2 py-1 text-xs font-medium ${priorityColors[task.priority]}`}
+            aria-label="Priority"
+            style={selectStyle(priorityColors[task.priority])}
             value={task.priority}
             onChange={(e) => updateTaskField(index, "priority", e.target.value)}
           >
@@ -40,12 +58,13 @@ const TaskRow = ({
           </select>
         )}
       </td>
-      <td className="px-4 py-2">
+      <td style={cell}>
         {activeTab === "Deleted" ? (
           task.status
         ) : (
           <select
-            className="bg-gray-100 rounded px-2 py-1 text-xs"
+            aria-label="Status"
+            style={selectStyle()}
             value={task.status}
             onChange={(e) => updateTaskField(index, "status", e.target.value)}
           >
@@ -57,28 +76,19 @@ const TaskRow = ({
           </select>
         )}
       </td>
-      <td className="px-4 py-2">
+      <td style={cell}>
         {activeTab === "Deleted" ? (
-          <div className="flex gap-2">
-            <button
-              onClick={() => restoreTask(index)}
-              className="text-green-600 hover:underline text-xs"
-            >
-              Restore
+          <div style={{ display: "flex", gap: 4 }}>
+            <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => restoreTask(index)}>
+              <RotateCcw size={12} /> Restore
             </button>
-            <button
-              onClick={() => permanentlyDelete(index)}
-              className="text-red-600 hover:underline text-xs"
-            >
-              Delete
+            <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" style={{ color: "var(--state-danger)" }} onClick={() => permanentlyDelete(index)}>
+              <Trash2 size={12} /> Delete forever
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => deleteTask(index)}
-            className="text-red-500 text-lg hover:scale-110"
-          >
-            🗑️
+          <button type="button" className="gl-icon-btn" onClick={() => deleteTask(index)} aria-label={`Delete ${task.task}`} title="Delete task">
+            <Trash2 size={14} />
           </button>
         )}
       </td>

@@ -1,4 +1,4 @@
-// Live adapter: a self-hosted Oruinwan server. Same interface as ../demo/adapter.js;
+// Live adapter: the Oruinwan server. Screens reach it through api() in ../session.js;
 // every server shape is mapped into the app's own models here and nowhere else.
 import {
   api, absolute, accessToken, configure, currentRefreshToken, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
@@ -6,11 +6,14 @@ import {
 import {
   conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
 } from './crypto.js';
-import { connectRealtime, disconnectRealtime, joinWorkspace, resumeRealtime, socketEmit } from './realtime.js';
+import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
 import { prefs } from '../../native/storage.js';
 import { useE2ee } from '../e2ee.js';
 import { normalizeServerUrl } from './server.js';
 import { clientPlatform } from '../../native/index.js';
+import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, searchIndex, unloaded } from './messageIndex.js';
+import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
+import { fileIconKind } from '../../lib/files.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -39,6 +42,8 @@ export function mapUser(u) {
     title: u.jobTitle || null,
     about: u.about ?? u.profile?.about ?? '',
     presence: presenceOf(u),
+    // The first-run tour (features/tour): only /auth/me carries preferences; unknown = undefined.
+    tourDone: u.preferences?.tour ? u.preferences.tour.done === true : undefined,
   };
 }
 
@@ -86,6 +91,12 @@ function mapReactions(list) {
 
 async function mapMessage(conv, m) {
   const { text, state } = await readMessage(conv, m);
+  const mapped = toAppMessage(conv, m, text, state);
+  indexMessages(conv, [mapped]);
+  return mapped;
+}
+
+function toAppMessage(conv, m, text, state) {
   return {
     id: idOf(m),
     convId: conv.id,
@@ -101,6 +112,8 @@ async function mapMessage(conv, m) {
     parentId: idOf(m.parentId),
     edited: Boolean(m.editedAt),
     pinned: Boolean(m.isPinned),
+    // Channel and DM attachments are on the message; thread replies keep them in the payload.
+    attachments: (m.attachments?.length ? m.attachments : m.payload?.attachments || []).map(mapAttachment).filter(Boolean),
   };
 }
 
@@ -123,11 +136,48 @@ function mapTask(t) {
     createdBy: idOf(t.createdBy),
     project: t.project?.name || t.issueKey || null,
     subtasks: subtasks.length ? { done: subtasks.filter((s) => s.status === 'done').length, total: subtasks.length } : null,
-    comments: t.commentsCount || 0,
     blockedReason: t.blockedReason || null,
     updatedAt: t.updatedAt,
     channelId: idOf(t.channel),
   };
+}
+
+const escHtml = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * Notes written on the web are stored as a JSON list of blocks; the phone edits HTML. Turn blocks
+ * into HTML here (text blocks already hold sanitised HTML). Plain HTML content passes through.
+ */
+export function noteContentToHtml(content) {
+  let blocks = null;
+  try { blocks = JSON.parse(content); } catch { /* HTML or plain text */ }
+  if (!Array.isArray(blocks)) return content || '';
+  const parse = (v, fallback) => { try { return JSON.parse(v); } catch { return fallback; } };
+  return blocks.filter((b) => b && typeof b === 'object').map((b) => {
+    switch (b.type) {
+      case 'text': return b.content ? `<p>${b.content}</p>` : '';
+      case 'heading': {
+        const level = Math.min(Math.max(Number(b.meta?.level) || 1, 1), 3);
+        return b.content ? `<h${level}>${escHtml(b.content)}</h${level}>` : '';
+      }
+      case 'checklist': {
+        const items = parse(b.content, []);
+        return Array.isArray(items) && items.length
+          ? `<ul>${items.map((it) => `<li>${it.done ? '☑' : '☐'} ${escHtml(it.text)}</li>`).join('')}</ul>` : '';
+      }
+      case 'code': return b.content ? `<pre>${escHtml(b.content)}</pre>` : '';
+      case 'callout': return b.content ? `<blockquote>${escHtml(b.content)}</blockquote>` : '';
+      case 'toggle': return `<p><strong>${escHtml(b.meta?.title || 'Toggle')}</strong></p>${b.content ? `<p>${escHtml(b.content)}</p>` : ''}`;
+      case 'divider': return '<hr>';
+      case 'table': {
+        const t = parse(b.content, {}) || {};
+        const row = (cells, tag) => `<tr>${(cells || []).map((c) => `<${tag}>${escHtml(c)}</${tag}>`).join('')}</tr>`;
+        return `<table>${row(t.headers, 'th')}${(t.rows || []).map((r) => row(r, 'td')).join('')}</table>`;
+      }
+      case 'image': return b.content ? `<p><img src="${escHtml(b.content)}" alt=""></p>` : '';
+      default: return b.content && typeof b.content === 'string' ? `<p>${escHtml(b.content)}</p>` : '';
+    }
+  }).join('');
 }
 
 function mapNote(n) {
@@ -135,7 +185,7 @@ function mapNote(n) {
     id: idOf(n),
     title: n.title || 'Untitled',
     type: n.type || 'note',
-    content: n.content || '',
+    content: noteContentToHtml(n.content),
     pinned: Boolean(n.isPinned),
     archived: Boolean(n.isArchived),
     ownerId: idOf(n.owner),
@@ -154,8 +204,15 @@ function targetOf(n) {
   const meta = n.meta || {};
   if (meta.taskId) return { kind: 'task', id: String(meta.taskId) };
   if (meta.noteId) return { kind: 'note', id: String(meta.noteId) };
+  // A thread reply opens its thread (in a channel or a DM).
+  const parent = meta.parentMessageId || meta.parentId;
+  if (parent && (meta.channelId || meta.dmSessionId)) {
+    return meta.channelId
+      ? { kind: 'thread', id: String(parent), conv: String(meta.channelId), convKind: 'channel' }
+      : { kind: 'thread', id: String(parent), conv: String(meta.dmSessionId), convKind: 'dm' };
+  }
+  if (meta.scheduledMeetingId) return { kind: 'meeting', id: String(meta.scheduledMeetingId) };
   if (meta.dmSessionId) return { kind: 'dm', id: String(meta.dmSessionId) };
-  if (meta.parentId && meta.channelId) return { kind: 'thread', id: String(meta.parentId), conv: String(meta.channelId) };
   if (meta.channelId) return { kind: 'channel', id: String(meta.channelId) };
   const link = n.link || '';
   const ch = link.match(/channels?\/([0-9a-f]{24})/i);
@@ -170,7 +227,9 @@ function mapNotification(n) {
     id: idOf(n),
     type: n.type?.startsWith('task') ? 'task' : NOTIF_TYPE[n.type] || 'note',
     actorId: idOf(n.actor || n.sender || n.meta?.actorId || n.meta?.senderId),
-    actorName: n.meta?.assignerUsername || n.meta?.senderUsername || n.meta?.senderName || n.meta?.actorName || (n.title || '').split(' ')[0],
+    actorName: n.meta?.assignerUsername || n.meta?.senderUsername || n.meta?.senderName || n.meta?.actorName
+      || (typeof n.meta?.startedBy === 'string' ? n.meta.startedBy : n.meta?.startedBy?.username) // huddles
+      || (n.title || '').split(' ')[0],
     title: n.title,
     text: n.title,
     preview: n.body || '',
@@ -180,12 +239,28 @@ function mapNotification(n) {
   };
 }
 
-function fileKind(f) {
-  const t = `${f.mimeType || f.type || ''} ${f.name || ''}`.toLowerCase();
-  if (/image|\.png|\.jpe?g|\.gif|\.webp/.test(t)) return 'image';
-  if (/sheet|excel|csv|\.xlsx?/.test(t)) return 'sheet';
-  if (/pdf/.test(t)) return 'pdf';
-  return 'doc';
+function mapPage(p) {
+  return {
+    id: idOf(p),
+    parentId: idOf(p.parentId),
+    title: p.title || 'Untitled page',
+    icon: p.icon || '📄',
+    updatedAt: p.updatedAt,
+    excerpt: p.summary || p.excerpt || '',
+    content: p.content ?? undefined,
+    createdBy: idOf(p.createdBy),
+  };
+}
+
+/** A one-line excerpt from Markdown, for page lists. */
+function plainExcerpt(md) {
+  return String(md || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/^#+\s.*$/m, '')
+    .replace(/[#>*_`~[\]()-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
 }
 
 // ---------------------------------------------------------------- AI
@@ -271,7 +346,7 @@ async function afterSignIn(user) {
 }
 
 /**
- * Shared end of Google and GitHub sign-in: the same two-factor, deactivation and session
+ * Shared end of Google sign-in and Google sign-up: the same two-factor, deactivation and session
  * handling as password sign-in. Keys unlock now when the server holds them; password-protected
  * keys ask for the password in Chats; accounts with no password yet choose one next.
  */
@@ -288,6 +363,10 @@ async function finishProviderSignIn(path, body) {
     }
     if (err.data?.requiresReactivation) throw new Error('This account is deactivated. Reactivate it from the web app first.');
     throw err;
+  }
+  // No account for this Google email yet: nothing is created until the person confirms.
+  if (data?.needsSignup) {
+    return { needsSignup: true, ticket: { signupToken: data.signupToken, email: data.email, name: data.name || '' } };
   }
   if (!data?.accessToken || !data?.refreshToken) throw new Error('The server did not return a mobile session. Update your Oruinwan server.');
   await saveTokens({ access: data.accessToken, refresh: data.refreshToken });
@@ -312,9 +391,15 @@ export const liveAdapter = {
    * Creates an account. Nothing is signed in: the server emails a link that must be opened
    * first. Server messages (email or username taken, weak password) come back as errors.
    */
-  async signUp({ server, username, email, password }) {
+  async signUp({ server, username, email, dob, password }) {
     configure(normalizeServerUrl(server));
-    await request('POST', '/auth/signup', { body: { username, email, password }, auth: false });
+    await request('POST', '/auth/signup', { body: { username, email, dob, password }, auth: false });
+  },
+
+  /** Sends a new verification link. The server answers the same whether or not the account exists. */
+  async resendVerification({ server, email }) {
+    configure(normalizeServerUrl(server));
+    await request('POST', '/auth/resend-verification', { body: { email }, auth: false });
   },
 
   /** Throws { code: '2FA_REQUIRED' } when the account needs a one-time code. */
@@ -328,6 +413,9 @@ export const liveAdapter = {
         throw Object.assign(new Error('Enter the code from your authenticator app.'), { code: '2FA_REQUIRED', invalidCode: Boolean(err.data.invalidCode) });
       }
       if (err.data?.requiresReactivation) throw new Error('This account is deactivated. Reactivate it from the web app first.');
+      if (err.data?.emailNotVerified) {
+        throw Object.assign(new Error('Verify your email first. Open the link we sent you.'), { code: 'EMAIL_NOT_VERIFIED', email: err.data.email || email });
+      }
       if (err.status === 400 || err.status === 401) throw new Error('That email and password do not match.');
       throw err;
     }
@@ -344,20 +432,23 @@ export const liveAdapter = {
     return { user };
   },
 
-  /** Google sign-in with an access token from Google's sign-in window. */
+  /**
+   * Google sign-in with an access token from Google's sign-in window. For an email with no
+   * account it returns { needsSignup, ticket } and signs nothing in.
+   */
   async googleSignIn({ server, accessToken: googleToken, otp }) {
     configure(normalizeServerUrl(server));
     return finishProviderSignIn('/auth/google-login', { accessToken: googleToken, ...(otp ? { otp } : {}) });
   },
 
-  /** GitHub sign-in: swaps the one-time code from the redirect back to the app for a session. */
-  async oauthExchange({ server, code, otp }) {
+  /** Creates the account a Google sign-in asked to create (`ticket` from googleSignIn), then signs in. */
+  async googleSignUp({ server, signupToken, username, dob }) {
     configure(normalizeServerUrl(server));
-    return finishProviderSignIn('/auth/oauth/exchange', { code, ...(otp ? { otp } : {}) });
+    return finishProviderSignIn('/auth/google-signup', { signupToken, username, dob });
   },
 
   /**
-   * For accounts without a password (first Google / GitHub sign-in): set one. Encryption keys
+   * For accounts without a password (first Google sign-in): set one. Encryption keys
    * are then locked with it (created, or moved off the server if it held them), so the server
    * can't read messages. The current session stays.
    */
@@ -366,7 +457,7 @@ export const liveAdapter = {
     await protectIdentityWithPassword(userId, password);
   },
 
-  /** Or keep signing in with Google / GitHub only: the server holds the key, sealed. */
+  /** Or keep signing in with Google only: the server holds the key, sealed. */
   async skipPassword(userId) {
     await request('POST', '/auth/oauth/skip-password', { body: {} });
     await unlockIdentity(userId, null, { serverProtected: true });
@@ -409,10 +500,24 @@ export const liveAdapter = {
       if (tokensBefore?.refresh) await request('POST', '/auth/logout', { body: { refreshToken: tokensBefore.refresh }, auth: false });
     } finally {
       await forgetIdentity(userId);
+      clearMessageIndex();
+      clearMediaCache();
       await endSession();
       prefs.set('live.user', null);
       me = null;
     }
+  },
+
+  /**
+   * Permanently erases the account on the server (DELETE /users/me). The server refuses
+   * company-managed accounts and accounts under legal hold with a readable message. The
+   * session ends here too, so the sign-out that follows makes no further calls as this user.
+   */
+  async deleteAccount() {
+    await settleRefresh();
+    await api.del('/users/me');
+    disconnectRealtime();
+    await endSession();
   },
 
   onResume() {
@@ -434,6 +539,14 @@ export const liveAdapter = {
     prefs.set('live.user', me);
     return me;
   },
+  /** The first-run tour was finished or skipped: saved on the account, so it shows once everywhere. */
+  async markTourDone() {
+    await api.put('/auth/me', { preferences: { tour: { done: true } } });
+    if (me) {
+      me = { ...me, tourDone: true };
+      prefs.set('live.user', me);
+    }
+  },
   async setPresence(presence) {
     await api.patch('/users/status', { status: presence });
     return presence;
@@ -443,6 +556,48 @@ export const liveAdapter = {
     const data = await api.get('/workspaces/my');
     return (data.workspaces || []).map(mapWorkspace);
   },
+  /** Creates a workspace (with #general, #random and the project's channel). You are its owner. */
+  async createWorkspace({ name, icon, color, project }) {
+    const data = await api.post('/workspaces/create', { name, icon, color, ...(project ? { project } : {}) });
+    const w = data.workspace;
+    return { ...mapWorkspace({ ...w, role: 'owner', memberCount: 1 }), channels: (w.channels || []).map((c) => ({ id: idOf(c), name: c.name })) };
+  },
+
+  /** A team invite link anyone can use to join for 7 days. */
+  async teamInviteLink(ws) {
+    const data = await api.post(`/workspaces/${ws}/invite`, { inviteType: 'link', reusable: true, role: 'member' });
+    return data.inviteLink;
+  },
+
+  /** What an invitation link is for, before joining: { workspaceName, invitedBy, memberCount, role, … }. */
+  async inviteDetails(token) {
+    const d = await api.get(`/workspaces/invite/${encodeURIComponent(token)}`);
+    return {
+      name: d.workspaceName,
+      description: d.workspaceDescription || '',
+      icon: d.workspaceIcon || null,
+      color: d.workspaceColor || '#b8956a',
+      invitedBy: d.invitedBy || null,
+      memberCount: d.memberCount ?? null,
+      role: d.role || 'member',
+    };
+  },
+
+  /** Joins the workspace an invitation is for. Resolves with { id, name }. */
+  async joinWithInvite(token) {
+    try {
+      const data = await api.post('/workspaces/join', { token });
+      return { id: idOf(data.workspace), name: data.workspace?.name };
+    } catch (err) {
+      if (err.status === 400 && /already a member/i.test(err.message)) throw Object.assign(new Error(err.message), { code: 'ALREADY_MEMBER' });
+      throw err;
+    }
+  },
+
+  async inviteByEmail(ws, emails) {
+    await api.post(`/workspaces/${ws}/invite`, { emails, inviteType: 'email' });
+  },
+
   async members(ws) {
     const data = await api.get(`/workspaces/${ws}/members`);
     return (data.members || []).map(mapUser).sort((a, b) => a.name.localeCompare(b.name));
@@ -450,7 +605,9 @@ export const liveAdapter = {
 
   async channels(ws) {
     const data = await api.get(`/workspaces/${ws}/channels`);
-    return (data.channels || []).map(mapChannel);
+    const list = (data.channels || []).map(mapChannel);
+    for (const c of list) nameConversation(c.id, { kind: 'channel', name: `#${c.name}`, ws });
+    return list;
   },
   async joinChannel(id) {
     await api.post(`/channels/${id}/join`);
@@ -472,7 +629,7 @@ export const liveAdapter = {
     const list = await Promise.all(
       (data.sessions || []).map(async (s) => {
         const user = mapUser(s.otherUser) || { id: s.otherUserId, name: 'Unknown', presence: 'offline' };
-        const dm = { id: idOf(s), userId: user.id, user, unread: s.unreadCount || 0, lastAt: s.lastMessageAt || null, lastText: null };
+        const dm = { id: idOf(s), userId: user.id, user, unread: s.unreadCount || 0, lastAt: s.lastMessageAt || null, lastText: null, agentId: s.isAgent ? s.agentId || 'default' : null };
         if (s.lastMessagePreview?.ciphertext && useE2ee.getState().status === 'ready') {
           try {
             const key = await conversationKey({ kind: 'dm', id: dm.id });
@@ -482,6 +639,7 @@ export const liveAdapter = {
           }
         }
         dmCache.set(dm.id, dm);
+        nameConversation(dm.id, { kind: 'dm', name: user.name, ws });
         return dm;
       }),
     );
@@ -499,6 +657,7 @@ export const liveAdapter = {
         ? await api.get(`/v2/messages/channel/${conv.id}`, { limit: 50 })
         : await api.get(`/v2/messages/workspace/${ws}/dm/${conv.id}`, { limit: 50 });
     const items = chronological(await mapMessages(conv, data.messages));
+    indexMessages(conv, [], { complete: true });
     return { items: items.filter((m) => !m.parentId), hasMore: Boolean(data.hasMore) };
   },
   async thread(conv, parentId) {
@@ -525,6 +684,34 @@ export const liveAdapter = {
     const saved = data.message || data.reply || data;
     return mapMessage(conv, saved);
   },
+  /** Uploads a file for this conversation (not yet sent). Resolves with the attachment. */
+  async uploadAttachment(conv, file, { onProgress, signal } = {}) {
+    return uploadFile(file, { conversationId: conv.id, conversationType: conv.kind === 'channel' ? 'channel' : 'dm', onProgress, signal });
+  },
+
+  /**
+   * Sends an uploaded attachment as its own message, like the web client. Thread replies must
+   * carry encrypted text, so there the file's name is the (encrypted) caption.
+   */
+  async sendAttachment(conv, attachment, { parentId, clientTempId } = {}) {
+    let data;
+    if (parentId) {
+      const key = await conversationKey(conv).catch(() => {
+        throw new Error('Unlock your messages first (Chats → Unlock).');
+      });
+      data = await api.post(`/v2/messages/thread/${parentId}`, { ...(await encryptText(key, attachment.name)), attachments: [attachmentDoc(attachment)], clientTempId });
+    } else {
+      data = await api.post(conv.kind === 'channel' ? '/v2/messages/channel' : '/v2/messages/direct', attachmentMessageBody(conv, attachment, { workspaceId: currentWs, clientTempId }));
+    }
+    const mapped = await mapMessage(conv, data.message || data.reply || data);
+    return mapped.attachments.length ? mapped : { ...mapped, attachments: [attachment] };
+  },
+
+  /** A URL the app can load the file from (signed for a few minutes). */
+  async mediaUrl(attachment, opts) {
+    return mediaUrl(attachment, opts);
+  },
+
   async editMessage(conv, id, text) {
     const key = await conversationKey(conv);
     const { ciphertext, messageIv } = await encryptText(key, text);
@@ -532,6 +719,7 @@ export const liveAdapter = {
   },
   async deleteMessage(conv, id) {
     await api.del(`/v2/messages/${id}`, { scope: 'everyone' });
+    forgetMessage(conv.id, id);
   },
   async react(conv, id, emoji, add) {
     if (add === false) await api.del(`/v2/messages/${id}/react`, { emoji });
@@ -614,21 +802,35 @@ export const liveAdapter = {
     return this.updateNote(id, { archived });
   },
 
+  /** Every page in the workspace (sub-pages carry their parentId), newest first. */
   async knowledge(ws) {
-    const data = await api.get('/v2/knowledge/pages', { workspaceId: ws, parentId: 'root' });
-    return (data.pages || []).map((p) => ({
-      id: idOf(p),
-      parentId: null,
-      title: p.title,
-      icon: p.icon || '📄',
-      updatedAt: p.updatedAt,
-      excerpt: p.summary || p.excerpt || '',
-    }));
+    const data = await api.get('/v2/knowledge/pages', { workspaceId: ws });
+    return (data.pages || []).map((p) => {
+      const { content, ...page } = mapPage(p);
+      return { ...page, excerpt: page.excerpt || plainExcerpt(content) };
+    });
   },
   async page(id) {
     const data = await api.get(`/v2/knowledge/pages/${id}`);
-    const p = data.page || data;
-    return { id: idOf(p), title: p.title, icon: p.icon || '📄', updatedAt: p.updatedAt, content: p.content || '' };
+    const p = mapPage(data.page || data);
+    return { ...p, content: p.content || '' };
+  },
+  /** A new page (Markdown, like the web). */
+  async createPage(ws, { title, content = '', icon, parentId } = {}) {
+    const data = await api.post('/v2/knowledge/pages', { workspaceId: ws, title: title?.trim() || 'Untitled page', content, ...(icon ? { icon } : {}), ...(parentId ? { parentId } : {}) });
+    const p = mapPage(data.page || data);
+    return { ...p, content: p.content || '' };
+  },
+  /** patch: { title, content, icon } */
+  async updatePage(id, patch) {
+    const body = {};
+    for (const k of ['title', 'content', 'icon']) if (k in patch) body[k] = patch[k];
+    const data = await api.put(`/v2/knowledge/pages/${id}`, body);
+    const p = mapPage(data.page || data);
+    return { ...p, content: p.content || '' };
+  },
+  async deletePage(id) {
+    await api.del(`/v2/knowledge/pages/${id}`);
   },
 
   async files(ws) {
@@ -637,10 +839,13 @@ export const liveAdapter = {
       id: idOf(f),
       name: f.name || f.originalName || 'File',
       size: f.size,
-      kind: fileKind(f),
-      owner: idOf(f.uploadedBy || f.owner),
+      mimeType: f.mimeType || '',
+      kind: fileIconKind(f),
+      owner: idOf(f.createdBy || f.uploadedBy || f.owner),
       at: f.createdAt,
-      url: null,
+      // Opened through the same signed links as attachments.
+      url: f.url || null,
+      gcsPath: f.gcsPath || null,
     }));
   },
 
@@ -714,9 +919,59 @@ export const liveAdapter = {
     return { twoFactor: Boolean(u.twoFactorEnabled), e2ee: useE2ee.getState().status, hasPassword: u.authProvider === 'local' || u.hasPassword };
   },
 
-  async aiAsk(ws, history, { onToken, onTool, signal } = {}) {
+  /** Agents installed in this workspace (Oruinwan AI is always there). */
+  async agents(ws) {
+    const data = await api.get('/agents', { workspaceId: ws });
+    return (data.agents || [])
+      .filter((a) => a.installed)
+      .map((a) => ({ id: a.id, name: a.name, maker: a.maker, tagline: a.tagline, icon: absolute(a.icon), mention: a.mention }));
+  },
+
+  /**
+   * Every agent and tool with how it's connected for you: installed for the workspace, connected
+   * just for you (your own key or account), and which one answers you. Plus the workspace policy.
+   */
+  async agentDirectory(ws) {
+    const data = await api.get('/agents', { workspaceId: ws });
+    const own = (c) => (c ? { method: c.method, model: c.model || null, login: c.account?.login || null, connectedAt: c.connectedAt || null } : null);
+    return {
+      policy: data.policy || { canConnectOwn: false, membersMayConnect: false },
+      canManage: Boolean(data.canManage),
+      agents: (data.agents || []).map((a) => ({
+        id: a.id, name: a.name, maker: a.maker, tagline: a.tagline, icon: absolute(a.icon), mention: a.mention, builtIn: Boolean(a.builtIn),
+        installed: Boolean(a.installed), installedForWorkspace: Boolean(a.installedForWorkspace), inUse: a.inUse || null, model: a.model || null,
+        connectedForYou: own(a.connectedForYou),
+        authorization: a.authorization ? { label: a.authorization.label, keysUrl: a.authorization.keysUrl, keyHint: a.authorization.keyHint } : null,
+      })),
+      tools: (data.tools || []).filter((t) => t.personal).map((t) => ({ id: t.id, name: t.name, maker: t.maker, tagline: t.tagline, actsAs: t.personal.actsAs, connectedForYou: own(t.connectedForYou) })),
+    };
+  },
+
+  /** Connect your own key for an agent (checked live with the provider before it's saved). */
+  async connectOwnAgent(ws, agentId, apiKey, model) {
+    await api.post(`/connections/agents/${agentId}`, { workspaceId: ws, apiKey, ...(model ? { model } : {}) });
+  },
+
+  /** Remove your own connection ('anthropic', 'github', …). */
+  async disconnectOwn(ws, provider) {
+    await api.del(`/connections/${provider}?workspaceId=${encodeURIComponent(ws)}`);
+  },
+
+  /** The conversation with an agent (created on first use). Returns the DM id. */
+  async openAgentDm(ws, agentId) {
+    const data = await api.post(`/agents/${agentId}/dm`, { workspaceId: ws });
+    return String(data.dmSessionId);
+  },
+
+  /** Oruinwan AI plus each model the workspace connected (Claude, ChatGPT, Gemini, Grok). */
+  async assistants(ws) {
+    const data = await api.get('/ai/assistants', { workspaceId: ws });
+    return (data.assistants || []).map((a) => ({ id: a.id, name: a.name, mention: a.mention, model: a.model || null }));
+  },
+
+  async aiAsk(ws, history, { onToken, onTool, signal, assistant } = {}) {
     const last = history[history.length - 1]?.content || '';
-    const body = { message: last, history: history.slice(0, -1).slice(-12), workspaceId: ws };
+    const body = { message: last, history: history.slice(0, -1).slice(-12), workspaceId: ws, ...(assistant && assistant !== 'default' ? { assistant } : {}) };
     let result;
     try {
       result = await streamAi(body, { onToken, onTool, signal });
@@ -736,8 +991,75 @@ export const liveAdapter = {
     return { text: result.text || '', actions: mapActions(result.actionsExecuted), sources: mapSources(result.sources), provider: result.provider };
   },
 
-  async searchMessages() {
-    // Message bodies are end-to-end encrypted, so the server cannot search them.
-    return [];
+  /**
+   * Asks Oruinwan AI to answer in this conversation (after a message that mentions @ai).
+   * The answer streams over the socket ('ai:reply') and is then saved as a normal message.
+   */
+  async askAiInConversation(conv, { prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant }) {
+    const data = await api.post('/ai/reply', {
+      workspaceId: currentWs,
+      conversationId: conv.id,
+      conversationType: conv.kind === 'channel' ? 'channel' : 'dm',
+      parentId,
+      triggerMessageId,
+      conversationName,
+      prompt,
+      messages: messages.slice(-40),
+      ...(assistant && assistant !== 'default' ? { assistant } : {}),
+    });
+    return data?.replyId || null;
+  },
+
+  /**
+   * Message search. Bodies are end-to-end encrypted, so this searches on the phone: the
+   * messages already decrypted here, plus the latest messages of conversations not fetched
+   * lately (a few at a time, at most 30 conversations per search).
+   */
+  /** Whether this server can send push notifications: { android, ios }. */
+  async pushStatus() {
+    return api.get('/push/status');
+  },
+  async registerPushToken(token, platform) {
+    await api.post('/push/register', { token, platform });
+  },
+  async unregisterPushToken(token) {
+    await api.post('/push/unregister', { token });
+  },
+
+  // ---- Huddles (voice calls). Signalling runs over the socket; see features/huddles/huddle.js.
+  huddles: {
+    emit: socketEmit,
+    request: socketRequest,
+    connected: realtimeConnected,
+    async iceServers() {
+      return api.get('/v2/huddles/ice-servers');
+    },
+    async meetings(ws) {
+      const data = await api.get('/scheduled-meetings', { workspaceId: ws, limit: 20 });
+      return data.meetings || [];
+    },
+    async joinMeeting(id) {
+      const data = await api.post(`/v2/meetings/${id}/join`, {});
+      return data.meeting || null;
+    },
+  },
+
+  async searchMessages(ws, query) {
+    if (useE2ee.getState().status !== 'ready') return [];
+    const [channels, dms] = await Promise.all([
+      liveAdapter.channels(ws).catch(() => []),
+      liveAdapter.dms(ws).catch(() => []),
+    ]);
+    const convs = [
+      ...channels.filter((c) => c.isMember).map((c) => ({ kind: 'channel', id: c.id, ws, lastAt: c.lastAt })),
+      ...dms.map((d) => ({ kind: 'dm', id: d.id, ws, lastAt: d.lastAt })),
+    ];
+    const todo = unloaded(ws, convs)
+      .sort((a, b) => String(b.lastAt || '').localeCompare(String(a.lastAt || '')))
+      .slice(0, 30);
+    for (let i = 0; i < todo.length; i += 4) {
+      await Promise.all(todo.slice(i, i + 4).map((c) => liveAdapter.messages(c).catch(() => null)));
+    }
+    return searchIndex(ws, query);
   },
 };

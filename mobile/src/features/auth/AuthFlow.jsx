@@ -1,197 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowRight, AtSign, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, MessagesSquare, Server, Sparkles, SquareCheckBig, ShieldCheck, TriangleAlert, CircleCheck, Loader2,
+  ArrowRight, AtSign, CalendarDays, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, RotateCw, Sparkles, ShieldCheck, TriangleAlert, CircleCheck,
 } from 'lucide-react';
 import { cx } from '../../ui/cx.js';
 import { useSession } from '../../data/session.js';
-import { BrandMark } from '../../app/BrandMark.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Field } from '../../ui/Controls.jsx';
 import { Header } from '../../ui/Screen.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { prefs } from '../../native/storage.js';
-import { DEFAULT_SERVER_URL } from '../../config/env.js';
-import { remoteSnapshot } from '../../config/remote.js';
+import { SERVER_URL } from '../../config/env.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
 import { deviceNoun, isWeb, openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 import { googleAccessToken } from '../../data/live/google.js';
-
-const POINTS = [
-  { icon: MessagesSquare, title: 'Channels and direct messages', body: 'End-to-end encrypted, on your own server.' },
-  { icon: SquareCheckBig, title: 'Tasks and notes', body: 'Plan, track and write with your team.' },
-  { icon: Sparkles, title: 'Oruinwan AI', body: 'Summaries, drafts and answers from your workspace.' },
-];
-
-function Welcome({ onSignIn }) {
-  const startDemo = useSession((s) => s.startDemo);
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="relative flex h-full flex-col overflow-y-auto bg-bg px-6 pt-safe pb-safe">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[55%] opacity-70"
-        style={{ background: 'radial-gradient(60% 50% at 50% 20%, rgb(var(--c-accent) / 0.16), transparent 70%)' }}
-      />
-      <div className="relative flex flex-1 flex-col items-center justify-center pt-10 text-center">
-        <BrandMark size={96} glow />
-        <h1 className="mt-6 text-[32px] font-bold tracking-tight">Oruinwan</h1>
-        <p className="mt-1.5 text-[15px] text-text-2">The collaboration platform for teams that ship.</p>
-        <ul className="mt-9 w-full max-w-sm space-y-4 text-left">
-          {POINTS.map((p) => (
-            <li key={p.title} className="flex gap-3.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-surface text-accent-ink">
-                <Icon as={p.icon} />
-              </span>
-              <span>
-                <span className="block text-[15px] font-medium">{p.title}</span>
-                <span className="block text-[13px] text-text-2">{p.body}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="relative mx-auto w-full max-w-sm space-y-2.5 pt-8 pb-6">
-        <Button block size="lg" iconRight={ArrowRight} onClick={onSignIn}>
-          Sign in to your workspace
-        </Button>
-        <Button
-          block
-          size="lg"
-          variant="secondary"
-          loading={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              await startDemo();
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Explore the demo
-        </Button>
-        <p className="pt-2 text-center text-xs text-text-3">Version {__APP_VERSION__} · Open source (MIT)</p>
-      </div>
-    </div>
-  );
-}
-
-function ServerStatus({ probe }) {
-  if (!probe) return null;
-  if (probe.state === 'checking')
-    return (
-      <p className="mt-1.5 flex items-center gap-1.5 text-xs text-text-2">
-        <Loader2 size={13} className="animate-spin" /> Checking server…
-      </p>
-    );
-  if (probe.state === 'ok')
-    return (
-      <p className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
-        <Icon as={CircleCheck} size={13} /> Connected{probe.insecure ? ' (not HTTPS — messages are still end-to-end encrypted)' : ''}
-      </p>
-    );
-  return (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-danger">
-      <Icon as={TriangleAlert} size={13} /> {probe.message}
-    </p>
-  );
-}
-
-// In a browser the app can be served by the Oruinwan server itself (the web, desktop and
-// tablet builds). Then the page's own address is the server and nobody should have to type it.
-const PAGE_ORIGIN = isWeb && typeof location !== 'undefined' && /^https?:$/.test(location.protocol) ? location.origin : '';
-
-/** The known server as one line, with a way to type a different one. */
-function ServerLine({ server, verb, onChange }) {
-  let host = server;
-  try {
-    host = new URL(server).host;
-  } catch {
-    /* keep as typed */
-  }
-  return (
-    <p className="mb-6 flex items-center gap-2 text-sm text-text-2">
-      <Icon as={Server} size="sm" className="shrink-0 text-text-3" />
-      <span className="min-w-0 truncate">
-        {verb} <span className="font-medium text-text">{host}</span>
-      </span>
-      <button type="button" onClick={onChange} className="ml-auto shrink-0 font-medium text-accent-ink underline">
-        Change
-      </button>
-    </p>
-  );
-}
+import { Intro } from './Intro.jsx';
 
 /**
- * Which server to talk to. Starts from the remembered, remote-configured or build-time server;
- * otherwise quietly tries the page's own address. `known` is true once the server answers and
- * the person hasn't asked to change it, so the form can show one line instead of the field.
+ * The server is fixed for this build (config/env.js SERVER_URL). This only checks it answers,
+ * so a sign-in screen can say so when it can't be reached.
  */
 function useServerAddress() {
-  const [server, setServer] = useState(() => prefs.get('lastServer') || remoteSnapshot().defaultServerUrl || DEFAULT_SERVER_URL);
-  const [editing, setEditing] = useState(false);
   const [probe, setProbe] = useState(null);
-
-  const check = async (value = server) => {
-    const url = normalizeServerUrl(value);
-    if (!url) return setProbe(null);
+  const check = async () => {
     setProbe({ state: 'checking' });
-    setProbe(await probeServer(url));
+    setProbe(await probeServer(SERVER_URL));
   };
-
   useEffect(() => {
-    if (server) {
-      check(server);
-      return undefined;
-    }
-    if (!PAGE_ORIGIN) return undefined;
-    // Try the page's own address quietly: if no Oruinwan server answers there, the field stays
-    // empty, without an error the person didn't cause.
-    let live = true;
-    probeServer(PAGE_ORIGIN).then((result) => {
-      if (!live || result.state !== 'ok') return;
-      setServer(PAGE_ORIGIN);
-      setProbe(result);
-    });
-    return () => {
-      live = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    check();
   }, []);
-
-  const base = normalizeServerUrl(server);
-  return { server, setServer, probe, check, base, known: probe?.state === 'ok' && !editing, edit: () => setEditing(true) };
+  return { server: SERVER_URL, base: SERVER_URL, probe, check, known: true };
 }
 
-/** The server line, or the intro text and the address field when the server isn't known. */
-function ServerSection({ addr, verb }) {
+/** Only shown when the server can't be reached. */
+function ServerSection({ addr }) {
+  if (!addr.probe || addr.probe.state !== 'error') return null;
   return (
-    <>
-      {addr.known ? (
-        <ServerLine server={addr.base} verb={verb} onChange={addr.edit} />
-      ) : (
-        <p className="mb-6 text-sm text-text-2">
-          Oruinwan is self-hosted. Enter the address your team uses for Oruinwan on the web.
-        </p>
-      )}
-      <div hidden={addr.known} className="mb-4">
-        <Field
-          label="Server address"
-          icon={Server}
-          value={addr.server}
-          onChange={(e) => addr.setServer(e.target.value)}
-          onBlur={() => addr.check()}
-          placeholder="https://chat.example.com"
-          inputMode="url"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="next"
-        />
-        <ServerStatus probe={addr.probe} />
-      </div>
-    </>
+    <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
+      <Icon as={TriangleAlert} size="sm" className="mt-0.5 shrink-0" />
+      <span>
+        Can't reach Oruinwan right now. Check your internet connection.{' '}
+        <button type="button" className="font-medium underline" onClick={() => addr.check()}>
+          Try again
+        </button>
+      </span>
+    </p>
   );
 }
 
@@ -205,14 +58,14 @@ function ErrorNote({ text }) {
   );
 }
 
-function SignIn({ onBack, onCreate }) {
+function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, initialGoogleToken }) {
   const signIn = useSession((s) => s.signIn);
   const addr = useServerAddress();
   const { server, base } = addr;
-  const [email, setEmail] = useState(() => prefs.get('lastEmail') || '');
+  const [email, setEmail] = useState(() => initialEmail || prefs.get('lastEmail') || '');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [needsOtp, setNeedsOtp] = useState(false);
+  const [needsOtp, setNeedsOtp] = useState(Boolean(initialGoogleToken));
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -225,9 +78,13 @@ function SignIn({ onBack, onCreate }) {
   const signInWithProvider = useSession((s) => s.signInWithProvider);
   const providers = useProviders(addr.known ? base : '');
   // A Google sign-in waiting for its two-factor code keeps Google's token here.
-  const [googleToken, setGoogleToken] = useState(null);
+  const [googleToken, setGoogleToken] = useState(initialGoogleToken || null);
 
   const failed = (err) => {
+    if (err.code === 'EMAIL_NOT_VERIFIED') {
+      onUnverified?.(err.email || email.trim(), normalizeServerUrl(server));
+      return;
+    }
     if (err.code === '2FA_REQUIRED') {
       setNeedsOtp(true);
       setError(err.invalidCode ? 'That code did not work. Try the newest one.' : '');
@@ -238,7 +95,7 @@ function SignIn({ onBack, onCreate }) {
     e.preventDefault();
     setError('');
     const url = normalizeServerUrl(server);
-    if (!url) return setError('Enter your server address, for example https://chat.example.com');
+    if (!url) return setError("Can't reach Oruinwan right now. Check your internet connection.");
     if (googleToken) {
       setBusy(true);
       try {
@@ -270,7 +127,8 @@ function SignIn({ onBack, onCreate }) {
       const token = await googleAccessToken(providers.googleClientId);
       prefs.set('lastServer', base);
       try {
-        await signInWithProvider('google', { server: base, accessToken: token });
+        const result = await signInWithProvider('google', { server: base, accessToken: token });
+        if (result?.needsSignup) onGoogleSignup?.(result.ticket);
       } catch (err) {
         if (err.code === '2FA_REQUIRED') setGoogleToken(token);
         throw err;
@@ -280,12 +138,6 @@ function SignIn({ onBack, onCreate }) {
     } finally {
       setBusy(false);
     }
-  };
-
-  const github = () => {
-    prefs.set('lastServer', base);
-    // GitHub returns to /oauth-success on this page's address with a one-time code.
-    window.location.assign(`${base}/api/auth/github?return=${encodeURIComponent(window.location.origin)}`);
   };
 
   return (
@@ -306,7 +158,7 @@ function SignIn({ onBack, onCreate }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="you@example.com"
             autoComplete="username"
             autoCapitalize="none"
             enterKeyHint="next"
@@ -344,25 +196,16 @@ function SignIn({ onBack, onCreate }) {
         <Button type="submit" block size="lg" className="mt-6" loading={busy}>
           {needsOtp ? 'Verify and sign in' : 'Sign in'}
         </Button>
-        {!needsOtp && (providers.google || providers.github) && (
+        {!needsOtp && providers.google && (
           <>
             <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-text-3" aria-hidden>
               <span className="h-px flex-1 bg-line-soft" />
               or
               <span className="h-px flex-1 bg-line-soft" />
             </div>
-            <div className="space-y-2.5">
-              {providers.google && (
-                <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
-                  <GoogleMark /> Continue with Google
-                </Button>
-              )}
-              {providers.github && (
-                <Button type="button" block size="lg" variant="secondary" onClick={github} disabled={busy}>
-                  <GitHubMark /> Continue with GitHub
-                </Button>
-              )}
-            </div>
+            <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
+              <GoogleMark /> Continue with Google
+            </Button>
           </>
         )}
         <p className="mt-5 text-center text-sm text-text-2">
@@ -378,7 +221,7 @@ function SignIn({ onBack, onCreate }) {
             {base && (
               <>
                 {' '}
-                {isWeb ? 'Forgotten your password?' : 'Google or GitHub sign-in, or a forgotten password?'}{' '}
+                {isWeb ? 'Forgotten your password?' : 'Google sign-in or a forgotten password?'}{' '}
                 <button type="button" className="font-medium text-accent-ink underline" onClick={() => openExternal(`${base}/login`)}>
                   Open the web app
                 </button>
@@ -394,7 +237,7 @@ function SignIn({ onBack, onCreate }) {
 
 /**
  * The sign-ins this server offers (GET /api/auth/providers). Only in a browser for now: native
- * builds need Google's native SDK and an app link for GitHub's return, which come later.
+ * builds need Google's native SDK, which comes later.
  */
 function useProviders(base) {
   const [providers, setProviders] = useState({});
@@ -403,7 +246,7 @@ function useProviders(base) {
     let live = true;
     fetch(`${base}/api/auth/providers`, { headers: { Accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : {}))
-      .then((p) => live && setProviders({ google: Boolean(p.google && p.googleClientId), googleClientId: p.googleClientId, github: Boolean(p.github) }))
+      .then((p) => live && setProviders({ google: Boolean(p.google && p.googleClientId), googleClientId: p.googleClientId }))
       .catch(() => live && setProviders({}));
     return () => {
       live = false;
@@ -423,114 +266,8 @@ function GoogleMark() {
   );
 }
 
-function GitHubMark() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-1.455-3.795-1.455-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.86 2.805 1.32 3.495 1.005.105-.78.42-1.32.765-1.62-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.28-1.56 3.285-1.245 3.285-1.245.675 1.65.255 2.88.135 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  );
-}
-
-// GitHub sends the browser back to <app>/oauth-success#code=<one-time code>. Read it once at
-// startup and take it out of the address bar.
-const OAUTH_CODE = (() => {
-  if (!isWeb || typeof location === 'undefined' || !/\/oauth-success\/?$/.test(location.pathname)) return null;
-  const code = new URLSearchParams(location.hash.replace(/^#/, '')).get('code');
-  try {
-    history.replaceState(null, '', location.pathname.replace(/oauth-success\/?$/, ''));
-  } catch {
-    /* ignore */
-  }
-  return code;
-})();
-
-/** Back from GitHub: swaps the code for a session, asking for the two-factor code if needed. */
-function OAuthReturn({ code, onDone }) {
-  const signInWithProvider = useSession((s) => s.signInWithProvider);
-  const server = prefs.get('lastServer') || PAGE_ORIGIN;
-  const [needsOtp, setNeedsOtp] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const started = useRef(false);
-
-  const finish = async (otpValue) => {
-    setBusy(true);
-    setError('');
-    try {
-      await signInWithProvider('github', { server, code, otp: otpValue });
-    } catch (err) {
-      if (err.code === '2FA_REQUIRED') {
-        setNeedsOtp(true);
-        setError(err.invalidCode ? 'That code did not work. Try the newest one.' : '');
-      } else {
-        setNeedsOtp(false);
-        setError(err.message || 'Sign-in did not finish.');
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    if (!code || !server) {
-      setError('Sign-in did not finish. Try again.');
-      return;
-    }
-    finish();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <div className="flex h-full flex-col bg-bg">
-      <Header title="Signing in" onBack={onDone} />
-      <form
-        className="flex-1 overflow-y-auto px-5 pb-10"
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (otp.length === 6) finish(otp);
-        }}
-      >
-        <p className="mb-5 flex items-center gap-2 text-sm text-text-2">
-          <GitHubMark /> {busy && !needsOtp ? 'Finishing your GitHub sign-in…' : 'Signing in with GitHub.'}
-        </p>
-        {needsOtp && (
-          <>
-            <Field
-              label="Two-factor code"
-              icon={KeyRound}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="6-digit code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              hint="Open your authenticator app and enter the current code."
-            />
-            <ErrorNote text={error} />
-            <Button type="submit" block size="lg" className="mt-6" loading={busy} disabled={otp.length !== 6}>
-              Verify and sign in
-            </Button>
-          </>
-        )}
-        {!needsOtp && error && (
-          <>
-            <ErrorNote text={error} />
-            <Button type="button" block size="lg" className="mt-6" onClick={onDone}>
-              Back to sign in
-            </Button>
-          </>
-        )}
-      </form>
-    </div>
-  );
-}
-
 /**
- * After a first Google or GitHub sign-in the account has no password. A password keeps the
+ * After a first Google sign-in the account has no password. A password keeps the
  * encryption keys out of the server's reach; skipping lets the server hold them (sealed), as
  * the web app does. Shown before the app opens, and again after a reload until chosen.
  */
@@ -638,32 +375,113 @@ function PasswordRules({ password }) {
   );
 }
 
+/** Latest date of birth that is at least 13 years ago, as YYYY-MM-DD (the server's rule). */
+function latestDob(today = new Date()) {
+  const d = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function DobField({ value, onChange }) {
+  return (
+    <Field
+      label="Date of birth"
+      icon={CalendarDays}
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      max={latestDob()}
+      min="1900-01-01"
+      autoComplete="bday"
+      hint="You need to be at least 13. Only you can see this."
+    />
+  );
+}
+
+/**
+ * "Check your email": after creating an account, and when someone signs in before verifying.
+ * Has a resend button with a short wait between sends.
+ */
+function CheckEmail({ email, server, reason, onBack, onSignIn }) {
+  const resendVerification = useSession((s) => s.resendVerification);
+  const [wait, setWait] = useState(reason === 'signup' ? 30 : 0);
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  const resend = async () => {
+    setStatus('sending');
+    try {
+      await resendVerification({ server, email });
+      setStatus('sent');
+    } catch {
+      setStatus('failed');
+    }
+    setWait(30);
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-bg">
+      <Header title="Check your email" onBack={onBack} />
+      <div className="flex-1 overflow-y-auto px-5 pb-10">
+        <div className="mt-6 flex flex-col items-center text-center">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+            <Icon as={MailCheck} />
+          </span>
+          <h2 className="mt-4 text-xl font-bold tracking-tight">{reason === 'signup' ? 'Verify your email' : 'Verify your email first'}</h2>
+          <p className="mt-2 max-w-sm text-sm text-text-2">
+            {reason === 'signup' ? 'We sent a link to' : "Your account isn't verified yet. Open the link we sent to"}{' '}
+            <span className="font-medium text-text">{email}</span>, then sign in here. The link works for 24 hours.
+          </p>
+          {status && (
+            <p role="status" className={cx('mt-3 text-sm', status === 'failed' ? 'text-danger' : 'text-success')}>
+              {status === 'sent' ? 'A new link is on its way.' : status === 'failed' ? "Couldn't send a new link. Try again in a moment." : 'Sending…'}
+            </p>
+          )}
+        </div>
+        <Button block size="lg" className="mt-8" onClick={onSignIn}>
+          Go to sign in
+        </Button>
+        <Button block size="lg" variant="secondary" className="mt-2.5" onClick={resend} disabled={wait > 0 || status === 'sending'}>
+          <Icon as={RotateCw} size="sm" /> {wait > 0 ? `Resend link in ${wait}s` : 'Resend verification email'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Account creation. The server emails a link that must be opened before the first sign-in. */
-function SignUp({ onBack, onSignIn }) {
+function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
   const signUp = useSession((s) => s.signUp);
+  const signInWithProvider = useSession((s) => s.signInWithProvider);
   const addr = useServerAddress();
+  const providers = useProviders(addr.known ? addr.base : '');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail || '');
+  const [dob, setDob] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [sentTo, setSentTo] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     const url = normalizeServerUrl(addr.server);
-    if (!url) return setError('Enter your server address, for example https://chat.example.com');
-    if (username.trim().length < 3) return setError('Choose a username of at least 3 characters.');
+    if (!url) return setError("Can't reach Oruinwan right now. Check your internet connection.");
+    if (username.trim().length < 2) return setError('Choose a username of at least 2 characters.');
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Enter a valid email address.');
+    if (!dob) return setError('Enter your date of birth.');
     if (!PASSWORD_RULES.every((r) => r.test(password))) return setError('Your password needs everything in the list below it.');
     setBusy(true);
     try {
-      await signUp({ server: url, username: username.trim(), email: email.trim(), password });
+      await signUp({ server: url, username: username.trim(), email: email.trim(), dob, password });
       prefs.set('lastServer', url);
       prefs.set('lastEmail', email.trim());
-      setSentTo(email.trim());
+      onSent(email.trim(), url);
     } catch (err) {
       setError(err.message || 'Could not create the account.');
     } finally {
@@ -671,34 +489,40 @@ function SignUp({ onBack, onSignIn }) {
     }
   };
 
-  if (sentTo) {
-    return (
-      <div className="flex h-full flex-col bg-bg">
-        <Header title="Check your email" onBack={onBack} />
-        <div className="flex-1 overflow-y-auto px-5 pb-10">
-          <div className="mt-6 flex flex-col items-center text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
-              <Icon as={MailCheck} />
-            </span>
-            <h2 className="mt-4 text-xl font-bold tracking-tight">Verify your email</h2>
-            <p className="mt-2 max-w-sm text-sm text-text-2">
-              We sent a link to <span className="font-medium text-text">{sentTo}</span>. Open it to confirm your address,
-              then sign in here. The link works for 24 hours.
-            </p>
-          </div>
-          <Button block size="lg" className="mt-8" onClick={onSignIn}>
-            Go to sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const google = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      const token = await googleAccessToken(providers.googleClientId);
+      prefs.set('lastServer', addr.base);
+      const result = await signInWithProvider('google', { server: addr.base, accessToken: token });
+      if (result?.needsSignup) onGoogleSignup(result.ticket);
+    } catch (err) {
+      // An existing account with two-step verification finishes on the sign-in screen.
+      if (err.code === '2FA_REQUIRED') onSignIn();
+      else setError(err.message || 'Google sign-in failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col bg-bg">
       <Header title="Create an account" onBack={onBack} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
         <ServerSection addr={addr} verb="Creating an account on" />
+        {providers.google && (
+          <>
+            <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
+              <GoogleMark /> Continue with Google
+            </Button>
+            <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-text-3" aria-hidden>
+              <span className="h-px flex-1 bg-line-soft" />
+              or with email
+              <span className="h-px flex-1 bg-line-soft" />
+            </div>
+          </>
+        )}
         <div className="space-y-4">
           <Field
             label="Username"
@@ -719,11 +543,12 @@ function SignUp({ onBack, onSignIn }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="you@example.com"
             autoComplete="email"
             autoCapitalize="none"
             enterKeyHint="next"
           />
+          <DobField value={dob} onChange={setDob} />
           <div>
             <Field
               label="Password"
@@ -761,15 +586,188 @@ function SignUp({ onBack, onSignIn }) {
   );
 }
 
-export function AuthFlow() {
-  const [step, setStep] = useState(OAUTH_CODE ? 'oauth' : 'welcome');
-  const [from, setFrom] = useState('welcome');
-  const go = (next) => {
-    setFrom(step);
-    setStep(next);
+/**
+ * "Continue with Google" for an email with no account. Nothing exists until the person confirms
+ * here with a username and date of birth. Google already verified the email.
+ */
+function GoogleSignUp({ ticket, onBack }) {
+  const googleSignUp = useSession((s) => s.googleSignUp);
+  const [username, setUsername] = useState(ticket.name || '');
+  const [dob, setDob] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (username.trim().length < 2) return setError('Choose a username of at least 2 characters.');
+    if (!dob) return setError('Enter your date of birth.');
+    setBusy(true);
+    try {
+      await googleSignUp({ server: prefs.get('lastServer'), signupToken: ticket.signupToken, username: username.trim(), dob });
+    } catch (err) {
+      setError(err.message || 'Could not create the account.');
+    } finally {
+      setBusy(false);
+    }
   };
-  // Back from Create account returns to where it was opened; back from Sign in to the welcome screen.
-  const back = () => setStep(step === 'signup' ? from : 'welcome');
+
+  return (
+    <div className="flex h-full flex-col bg-bg">
+      <Header title="Create an account" onBack={onBack} />
+      <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
+        <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+          <Icon as={Sparkles} />
+        </span>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">You're creating a new account</h1>
+        <p className="mt-2 text-sm text-text-2">
+          There's no Oruinwan account for <span className="font-medium text-text">{ticket.email}</span> yet. Welcome to the team.
+          Add a couple of details and you're in.
+        </p>
+        <div className="mt-6 space-y-4">
+          <Field
+            label="Username"
+            icon={AtSign}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            maxLength={40}
+            hint="Your team sees this name."
+          />
+          <DobField value={dob} onChange={setDob} />
+        </div>
+        <ErrorNote text={error} />
+        <Button type="submit" block size="lg" className="mt-6" loading={busy} iconRight={ArrowRight}>
+          Create my account
+        </Button>
+        <Button type="button" block size="lg" variant="secondary" className="mt-2.5" onClick={onBack} disabled={busy}>
+          Use a different account
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * "Get started": one email field. Existing accounts go on to sign in, new ones to create an
+ * account, with the email filled in. Google works from here too.
+ */
+function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa }) {
+  const signInWithProvider = useSession((s) => s.signInWithProvider);
+  const addr = useServerAddress();
+  const providers = useProviders(addr.known ? addr.base : '');
+  const [email, setEmail] = useState(() => prefs.get('lastEmail') || '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const url = normalizeServerUrl(addr.server);
+    if (!url) return setError("Can't reach Oruinwan right now. Check your internet connection.");
+    const value = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(value)) return setError('Enter a valid email address.');
+    setBusy(true);
+    try {
+      const res = await fetch(`${url}/api/users/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: value }),
+      });
+      if (!res.ok) throw new Error();
+      const { exists } = await res.json();
+      prefs.set('lastServer', url);
+      prefs.set('lastEmail', value);
+      if (exists) onExisting(value);
+      else onNew(value);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const google = async () => {
+    setError('');
+    setBusy(true);
+    let token = null;
+    try {
+      token = await googleAccessToken(providers.googleClientId);
+      prefs.set('lastServer', addr.base);
+      const result = await signInWithProvider('google', { server: addr.base, accessToken: token });
+      if (result?.needsSignup) onGoogleSignup(result.ticket);
+    } catch (err) {
+      if (err.code === '2FA_REQUIRED' && token) onGoogle2fa(token);
+      else setError(err.message || 'Google sign-in failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-bg">
+      <Header title="" onBack={onBack} />
+      <form onSubmit={submit} className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10" noValidate>
+        <h1 className="text-[28px] font-bold leading-tight tracking-tight">Enter your email</h1>
+        <p className="mb-6 mt-2 text-[15px] text-text-2">We'll sign you in, or help you create an account if you're new.</p>
+        <ServerSection addr={addr} verb="Connecting to" />
+        <Field
+          label="Email"
+          icon={Mail}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@example.com"
+          autoComplete="email"
+          autoCapitalize="none"
+          enterKeyHint="go"
+          autoFocus
+        />
+        <ErrorNote text={error} />
+        <Button type="submit" block size="lg" className="mt-6" loading={busy} iconRight={ArrowRight} data-testid="email-continue">
+          Continue
+        </Button>
+        {providers.google && (
+          <>
+            <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-text-3" aria-hidden>
+              <span className="h-px flex-1 bg-line-soft" />
+              or
+              <span className="h-px flex-1 bg-line-soft" />
+            </div>
+            <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
+              <GoogleMark /> Continue with Google
+            </Button>
+          </>
+        )}
+        <p className="mt-6 text-center text-[13px] text-text-3">
+          By continuing you agree to the{' '}
+          <button type="button" className="underline" onClick={() => openExternal(`${addr.base || ''}/terms`)} disabled={!addr.base}>
+            Terms
+          </button>{' '}
+          and{' '}
+          <button type="button" className="underline" onClick={() => openExternal(`${addr.base || ''}/privacy`)} disabled={!addr.base}>
+            Privacy Policy
+          </button>
+          .
+        </p>
+      </form>
+    </div>
+  );
+}
+
+export function AuthFlow() {
+  const [step, setStep] = useState('welcome');
+  // "Continue with Google" for an email with no account: the server's sign-up ticket.
+  const [googleTicket, setGoogleTicket] = useState(null);
+  // Where a verification link went: { email, server, reason: 'signup' | 'unverified' }.
+  const [checkEmail, setCheckEmail] = useState(null);
+  // From "Enter your email": the address, and a Google token waiting for its two-factor code.
+  const [startEmail, setStartEmail] = useState('');
+  const [pendingGoogle, setPendingGoogle] = useState(null);
+  const go = setStep;
+  // Back from Sign in or Create account returns to "Enter your email"; from the steps after them, to Sign in.
+  const back = () =>
+    setStep(step === 'signin' || step === 'signup' ? 'start' : step === 'google-signup' || step === 'check-email' ? 'signin' : 'welcome');
   // Android back on a form does the same.
   useEffect(() => {
     if (step === 'welcome') return undefined;
@@ -777,9 +775,62 @@ export function AuthFlow() {
     pushOverlay('auth-form', back);
     return () => removeOverlay('auth-form');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, from]);
-  if (step === 'oauth') return <OAuthReturn code={OAUTH_CODE} onDone={() => setStep('signin')} />;
-  if (step === 'signin') return <SignIn onBack={back} onCreate={() => go('signup')} />;
-  if (step === 'signup') return <SignUp onBack={back} onSignIn={() => go('signin')} />;
-  return <Welcome onSignIn={() => go('signin')} />;
+  }, [step]);
+  const startGoogleSignup = (ticket) => {
+    setGoogleTicket(ticket);
+    go('google-signup');
+  };
+  const showCheckEmail = (info) => {
+    setCheckEmail(info);
+    go('check-email');
+  };
+  if (step === 'google-signup' && googleTicket) return <GoogleSignUp ticket={googleTicket} onBack={back} />;
+  if (step === 'check-email' && checkEmail) {
+    return <CheckEmail {...checkEmail} onBack={back} onSignIn={() => setStep('signin')} />;
+  }
+  if (step === 'start') {
+    return (
+      <EmailStart
+        onBack={() => setStep('welcome')}
+        onExisting={(email) => {
+          setStartEmail(email);
+          go('signin');
+        }}
+        onNew={(email) => {
+          setStartEmail(email);
+          go('signup');
+        }}
+        onGoogleSignup={startGoogleSignup}
+        onGoogle2fa={(token) => {
+          setPendingGoogle(token);
+          go('signin');
+        }}
+      />
+    );
+  }
+  if (step === 'signin') {
+    return (
+      <SignIn
+        key={pendingGoogle || startEmail}
+        initialEmail={startEmail}
+        initialGoogleToken={pendingGoogle}
+        onBack={back}
+        onCreate={() => go('signup')}
+        onGoogleSignup={startGoogleSignup}
+        onUnverified={(email, server) => showCheckEmail({ email, server, reason: 'unverified' })}
+      />
+    );
+  }
+  if (step === 'signup') {
+    return (
+      <SignUp
+        initialEmail={startEmail}
+        onBack={back}
+        onSignIn={() => go('signin')}
+        onGoogleSignup={startGoogleSignup}
+        onSent={(email, server) => showCheckEmail({ email, server, reason: 'signup' })}
+      />
+    );
+  }
+  return <Intro onGetStarted={() => go('start')} />;
 }

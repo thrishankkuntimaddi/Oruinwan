@@ -15,7 +15,7 @@
           var pref = localStorage.getItem('oru.theme') || 'system';
           var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-          document.querySelector('meta[name="theme-color"]').content = dark ? '#0c0c0c' : '#f5f4f2';
+          document.querySelector('meta[name="theme-color"]').content = dark ? '#0c0c0c' : '#f6f3ee';
         } catch (e) {}
       })();
     </script>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import { Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Check } from 'lucide-react';
 import AuthShell from '../../components/public/AuthShell';
+import { AuthMark } from '../../components/public/AuthParts';
 
 const RULES = [
     { key: 'length', label: '8–16 characters', test: p => p.length >= 8 && p.length <= 16 },
@@ -62,7 +63,7 @@ export default function ResetPassword() {
     if (!token) {
         return (
             <AuthShell title="Reset password" aside={aside}>
-                <span className="orw-card__icon" style={{ '--c': '#ff8f8f' }}><AlertCircle size={19} aria-hidden="true" /></span>
+                <AuthMark icon={AlertCircle} tone="bad" />
                 <div className="orw-auth__panel-head">
                     <h2>This link isn’t valid</h2>
                     <p>The reset link is missing its token. It may have been copied incompletely. Request a fresh link and open it from the email.</p>
@@ -76,7 +77,7 @@ export default function ResetPassword() {
 
     return (
         <AuthShell title="Reset password" aside={aside}>
-            <span className="orw-card__icon"><ShieldCheck size={19} aria-hidden="true" /></span>
+            <AuthMark icon={ShieldCheck} />
             <div className="orw-auth__panel-head">
                 <h2>Set a new password</h2>
                 <p>{email ? <>For <strong style={{ color: 'var(--o-text)' }}>{email}</strong>. </> : null}Make it strong. You’ll use it to unlock encryption too.</p>
@@ -95,7 +96,7 @@ export default function ResetPassword() {
                     </div>
                     <ul className="orw-pwd-rules" id="reset-rules" aria-label="Password requirements">
                         {rules.map(r => (
-                            <li key={r.key} className={r.met ? 'is-met' : ''}>{r.label}<span className="orw-sr">{r.met ? ' (met)' : ' (not met)'}</span></li>
+                            <li key={r.key} className={r.met ? 'is-met' : ''}><span className="orw-pwd-rules__tick" aria-hidden="true">{r.met && <Check size={10} strokeWidth={3} />}</span>{r.label}<span className="orw-sr">{r.met ? ' (met)' : ' (not met)'}</span></li>
                         ))}
                     </ul>
                 </div>
@@ -120,7 +121,7 @@ export default function ResetPassword() {
                 </button>
             </form>
 
-            <p className="orw-auth__note"><Link to="/login" className="orw-link">Back to sign in</Link></p>
+            <p className="orw-auth__note">Remembered it? <Link to="/login" className="orw-link">Back to sign in</Link></p>
         </AuthShell>
     );
 }

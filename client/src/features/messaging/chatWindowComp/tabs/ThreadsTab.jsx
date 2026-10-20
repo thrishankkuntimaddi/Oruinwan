@@ -57,9 +57,10 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         const handleMessageUpdated = (data) => {
             const { messageId, updates } = data;
             if (updates?.replyCount !== undefined) {
-                setThreads(prev => prev.map(thread =>
-                    thread._id === messageId ? { ...thread, replyCount: updates.replyCount } : thread
-                ));
+                // A thread whose last reply was deleted leaves the list.
+                setThreads(prev => prev
+                    .map(thread => (thread._id === messageId ? { ...thread, replyCount: updates.replyCount, ...(updates.lastReplyAt !== undefined && { lastReplyAt: updates.lastReplyAt }) } : thread))
+                    .filter(thread => thread.replyCount > 0));
             }
         };
 

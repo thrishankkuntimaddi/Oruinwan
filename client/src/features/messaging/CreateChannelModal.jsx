@@ -111,7 +111,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
     return (
         <div style={{
             position: 'fixed', inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
+            backgroundColor: 'var(--bg-overlay)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 100, padding: '24px',
@@ -123,7 +123,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                     border: '1px solid var(--border-accent)',
                     borderRadius: '2px',
                     width: '100%', maxWidth: '700px',
-                    boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+                    boxShadow: 'var(--lg-shadow-sm)',
                     display: 'flex', flexDirection: 'column',
                     overflow: 'hidden',
                     maxHeight: '90vh',
@@ -344,7 +344,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 flexShrink: 0, transition: '150ms ease',
                                             }}>
-                                                {isDiscoverable && <Check size={10} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
+                                                {isDiscoverable && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <h5 style={{
@@ -555,7 +555,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         transition: '150ms ease',
                                                     }}>
-                                                        {isSelected && <Check size={11} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
+                                                        {isSelected && <Check size={11} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
                                                     </div>
                                                 </div>
                                             );
@@ -615,7 +615,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '6px',
                                     padding: '7px 20px', fontSize: '13px', fontWeight: 600,
-                                    color: !name.trim() ? 'var(--text-muted)' : '#0c0c0c',
+                                    color: !name.trim() ? 'var(--text-muted)' : 'var(--bg-base)',
                                     backgroundColor: !name.trim() ? 'var(--bg-active)' : 'var(--accent)',
                                     border: 'none', borderRadius: '2px', outline: 'none',
                                     cursor: !name.trim() ? 'not-allowed' : 'pointer',
@@ -635,7 +635,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '6px',
                                     padding: '7px 20px', fontSize: '13px', fontWeight: 600,
-                                    color: !canCreate ? 'var(--text-muted)' : '#0c0c0c',
+                                    color: !canCreate ? 'var(--text-muted)' : 'var(--bg-base)',
                                     backgroundColor: !canCreate ? 'var(--bg-active)' : 'var(--accent)',
                                     border: 'none', borderRadius: '2px', outline: 'none',
                                     cursor: !canCreate ? 'not-allowed' : 'pointer',

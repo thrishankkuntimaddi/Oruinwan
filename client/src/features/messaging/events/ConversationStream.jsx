@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import MessageEvent from './MessageEvent';
 import PollEvent from './PollEvent';
 import SystemEvent from './SystemEvent';
@@ -41,6 +41,12 @@ function ConversationStream({
 }) {
         const streamRef = useRef(null);
     const bottomRef = useRef(null);
+    // Scroll only the message list. scrollIntoView would also scroll every ancestor (even
+    // overflow:hidden ones), pushing the channel header off screen.
+    const scrollToEnd = useCallback((behavior) => {
+        const el = streamRef.current;
+        if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+    }, []);
     const lastBlurTimeRef = useRef(0);
     const isJumpingRef = useRef(false);
     const prevScrollHeight = useRef(0);
@@ -72,7 +78,7 @@ function ConversationStream({
         
         if (bottomRef.current) {
             requestAnimationFrame(() => {
-                bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+                scrollToEnd('instant');
             });
         }
     }, [conversationId]);
@@ -93,7 +99,7 @@ function ConversationStream({
             }
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    bottomRef.current?.scrollIntoView({ behavior: 'instant' });
+                    scrollToEnd('instant');
                 });
             });
         } else if (isNewMessage) {
@@ -103,7 +109,7 @@ function ConversationStream({
                 ? el.scrollHeight - el.scrollTop - el.clientHeight < 200
                 : true;
             if (isNearBottom) {
-                bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+                scrollToEnd('smooth');
             }
         }
 

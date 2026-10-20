@@ -26,6 +26,7 @@ import { hasEditHistory } from '../../../../utils/messageActionUtils';
 
 import MessageMarkdown from '../../../../shared/components/messages/MessageMarkdown';
 import ProfileTrigger from '../../../profileCard/ProfileTrigger';
+import ThreadSummaryLink from './ThreadSummaryLink';
 import logger from '../../../../utils/logger';
 
 function ChannelMessageItem({
@@ -161,6 +162,7 @@ function ChannelMessageItem({
                     <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '4px 0' }}>
                         Message deleted by {String(msg.deletedBy) === String(currentUserId) ? 'You' : (msg.deletedByName || 'Unknown')}
                     </div>
+                    <ThreadSummaryLink count={count} participants={msg.threadParticipants} lastReplyAt={msg.lastReplyAt} onOpen={onOpenThread ? () => onOpenThread(msg.id) : null} />
                 </div>
             </div>
         );
@@ -206,7 +208,7 @@ function ChannelMessageItem({
             </div>
 
             {}
-            <div className="flex-1 min-w-0 pr-24 relative">
+            <div className="flex-1 min-w-0 pr-24 relative msg-main">
                 {}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -264,7 +266,7 @@ function ChannelMessageItem({
                 {}
                 {}
                 {(!msg.attachment || msg.text) && msg.type !== 'contact' && msg.type !== 'meeting' && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'file' && msg.type !== 'voice' && (
-                    <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
+                    <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: 'var(--msg-max, 60%)' }} className="message-content">
                         {msg.isDeleted ? (
                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Message deleted</span>
                         ) : tb.isEditing ? (
@@ -336,39 +338,7 @@ function ChannelMessageItem({
                 {msg.failed && <div style={{ fontSize: '12px', color: 'var(--state-danger)', fontWeight: 500, marginTop: '4px' }}>Failed to send</div>}
 
                 {}
-                {count > 0 && onOpenThread && !msg.isDeleted && (
-                    <div
-                        onClick={(e) => { e.stopPropagation(); onOpenThread(msg.id); }}
-                        style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                    >
-                        {}
-                        <div style={{ display: 'flex' }}>
-                            {msg.replyAvatars && msg.replyAvatars.length > 0 ? (
-                                msg.replyAvatars.map((url, i) => (
-                                    <img
-                                        key={i}
-                                        src={url}
-                                        alt="Replier"
-                                        style={{ width: '18px', height: '18px', borderRadius: '2px', objectFit: 'cover', border: '1px solid var(--bg-surface)', marginLeft: i > 0 ? '-4px' : 0, position: 'relative', zIndex: msg.replyAvatars.length - i }}
-                                    />
-                                ))
-                            ) : (
-                                <div style={{ display: 'flex' }}>
-                                    <div style={{ width: '18px', height: '18px', borderRadius: '2px', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-default)' }} />
-                                    <div style={{ width: '18px', height: '18px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', marginLeft: '-4px' }} />
-                                </div>
-                            )}
-                        </div>
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font)' }}>
-                            {count} {count === 1 ? 'reply' : 'replies'}
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>
-                            Last reply today at {formatTime(msg.lastReplyAt || msg.ts)}
-                        </span>
-                    </div>
-                )}
+                <ThreadSummaryLink count={count} participants={msg.threadParticipants} lastReplyAt={msg.lastReplyAt} onOpen={onOpenThread ? () => onOpenThread(msg.id) : null} />
 
             </div>
 
@@ -377,7 +347,7 @@ function ChannelMessageItem({
                 position: 'absolute', top: '2px', right: '96px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
                 borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
-                zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                zIndex: 10, boxShadow: 'var(--lg-shadow-sm)',
                 opacity: toolbarVisible ? 1 : 0,
                 pointerEvents: toolbarVisible ? 'auto' : 'none',
                 transition: 'opacity 100ms ease',
@@ -447,6 +417,7 @@ export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
         p.failed === n.failed &&
         p.replyCount === n.replyCount &&
         p.lastReplyAt === n.lastReplyAt &&
+        (p.threadParticipants?.length || 0) === (n.threadParticipants?.length || 0) &&
         p.channelId === n.channelId &&
         prevProps.selectMode === nextProps.selectMode &&
         prevProps.selectedIds === nextProps.selectedIds &&

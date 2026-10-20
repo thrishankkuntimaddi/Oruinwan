@@ -1,5 +1,5 @@
 // End-to-end encryption status for the signed-in user, shown in Chats and Settings.
-//   none                demo mode or signed out
+//   none                signed out
 //   ready               keys unlocked on this phone
 //   password_required   keys exist but this phone needs the password once
 //   unsupported         an account type this app can't unlock yet

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import api from '@services/api';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
-import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
+import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2 } from "lucide-react";
+import { split } from "../../split/splitStore";
 import ThreadSummaryModal from "./modals/ThreadSummaryModal";
 import FooterInput from "./footer/footerInput";
 
@@ -19,8 +20,10 @@ import BRAND from '../../../shared/brand';
 import MessageMarkdown from '../../../shared/components/messages/MessageMarkdown';
 import ProfileTrigger from '../../profileCard/ProfileTrigger';
 import { setOpenThread, clearOpenThread } from '../../notifications/attention';
+import { indexConversation } from '../../../utils/localMessageIndex';
+import { useAuth } from '../../../contexts/AuthContext';
 
-export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
+export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {} }) {
     const { showToast } = useToast();
 
     
@@ -128,8 +131,6 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
         setLoading(true);
         try {
-            const token = localStorage.getItem("accessToken");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
             
             const messageId = parentMessage._id || parentMessage.id;
@@ -243,6 +244,15 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     useEffect(() => {
         loadThread();
     }, [loadThread]);
+
+    // Opened before encryption was unlocked (e.g. from a notification on a fresh load): decrypt again once it is.
+    const { encryptionReady } = useAuth() || {};
+    const wasReadyRef = useRef(encryptionReady);
+    useEffect(() => {
+        const was = wasReadyRef.current;
+        wasReadyRef.current = encryptionReady;
+        if (!was && encryptionReady) loadThread();
+    }, [encryptionReady, loadThread]);
 
     
     useEffect(() => {
@@ -364,8 +374,6 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
         setSending(true);
         try {
-            const token = localStorage.getItem("accessToken");
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const messageId = parentMessage._id || parentMessage.id;
 
             
@@ -417,6 +425,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
             if (mentionsAI(replyText) || threadAI.isFollowUp(messageId)) {
                 threadAI.ask({
+                    assistant: !mentionsAI(replyText) ? threadAI.followUpAssistantFor(messageId) : undefined,
                     prompt: replyText,
                     parentId: messageId,
                     triggerMessageId: res.data?.reply?._id || null,
@@ -493,6 +502,99 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     
 
     
+    // Edit and delete my own replies. Edits are encrypted with the conversation key, like any message.
+    const [editingId, setEditingId] = useState(null);
+    const [editText, setEditText] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
+
+    const startEdit = (reply) => {
+        setEditingId(reply._id);
+        setEditText(reply.decryptedContent || reply.payload?.text || reply.text || '');
+    };
+
+    const saveEdit = async () => {
+        const text = editText.trim();
+        const id = editingId;
+        if (!id || !text || savingEdit) return;
+        const current = replies.find(r => r._id === id);
+        if (current && text === (current.decryptedContent || current.text || '')) { setEditingId(null); return; }
+        setSavingEdit(true);
+        try {
+            const enc = await encryptMessageForSending(text, channelId, conversationType);
+            if (!enc?.ciphertext || !enc?.messageIv) throw new Error('Could not encrypt your edit, so it was not saved.');
+            const { data } = await api.patch(`/api/v2/messages/${id}`, { ciphertext: enc.ciphertext, messageIv: enc.messageIv });
+            setReplies(prev => prev.map(r => (r._id === id ? {
+                ...r, decryptedContent: text, text, editedAt: data?.message?.editedAt || new Date().toISOString(),
+                payload: { ...(r.payload || {}), ciphertext: enc.ciphertext, messageIv: enc.messageIv },
+            } : r)));
+            setEditingId(null);
+        } catch (err) {
+            showToast(err?.response?.data?.message || err.message || 'Failed to edit reply', 'error');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const deleteReply = async (reply) => {
+        if (!window.confirm('Delete this reply for everyone?')) return;
+        try {
+            await api.delete(`/api/v2/messages/${reply._id}`, { data: { scope: 'everyone' } });
+            setReplies(prev => prev.filter(r => r._id !== reply._id));
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to delete reply', 'error');
+        }
+    };
+
+    // Other people's edits and deletes, live.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const threadId = String(parentMessage._id || parentMessage.id);
+        const onEdited = async (msg) => {
+            const id = String(msg?._id || msg?.id || '');
+            if (!id) return;
+            const isParent = id === threadId;
+            if (!isParent && String(msg.parentId?._id || msg.parentId || '') !== threadId) return;
+            let decrypted = msg;
+            if (msg.payload?.ciphertext && msg.payload?.messageIv) {
+                try {
+                    const [d] = await batchDecryptMessages([{ ...msg, id }], channelId, conversationType, null);
+                    if (d) decrypted = d;
+                } catch (err) {
+                    logger.warn('[THREAD] Could not decrypt an edit:', err?.message);
+                }
+            }
+            const patch = { decryptedContent: decrypted.decryptedContent, editedAt: msg.editedAt, payload: decrypted.payload || msg.payload };
+            if (isParent) setParentMessageState(p => (p ? { ...p, ...patch } : p));
+            else setReplies(prev => prev.map(r => (String(r._id) === id ? { ...r, ...patch } : r)));
+        };
+        const onDeleted = (data) => {
+            const id = String(data?.messageId || '');
+            if (!id || data?.isLocal) return;
+            if (id === threadId) {
+                setParentMessageState(p => (p ? { ...p, isDeleted: true, decryptedContent: '', text: '', payload: { isDeleted: true } } : p));
+                return;
+            }
+            setReplies(prev => prev.filter(r => String(r._id) !== id));
+        };
+        socket.on('message:edited', onEdited);
+        socket.on('message:deleted', onDeleted);
+        socket.on('message-deleted', onDeleted);
+        return () => {
+            socket.off('message:edited', onEdited);
+            socket.off('message:deleted', onDeleted);
+            socket.off('message-deleted', onDeleted);
+        };
+    }, [socket, parentMessage._id, parentMessage.id, channelId, conversationType]);
+
+    // Decrypted replies join this session's message search (they open this thread from results).
+    useEffect(() => {
+        if (!channelId || replies.length === 0) return;
+        indexConversation(
+            { id: channelId, type: conversationType, name: conversationName, workspaceId: threadWorkspaceId },
+            replies.filter(r => r._id && !String(r._id).startsWith('temp-')).map(r => ({ ...r, id: r._id, parentId: threadRootId })),
+        );
+    }, [replies, channelId, conversationType, conversationName, threadWorkspaceId, threadRootId]);
+
     useEffect(() => {
         const handleEsc = (e) => {
             if (e.key === "Escape") onClose();
@@ -512,7 +614,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             height: '100%',
             backgroundColor: 'var(--bg-surface)',
             borderLeft: '1px solid var(--border-accent)',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
+            boxShadow: 'var(--lg-shadow-sm)',
             display: 'flex', flexDirection: 'column',
             flexShrink: 0,
             width: 'clamp(280px, 35vw, 400px)',
@@ -521,7 +623,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             fontFamily: FONT,
             ...style,
         }}>
-            {}
+            <style>{`.thread-reply-row .thread-reply-actions{opacity:0;transition:opacity 120ms ease}
+.thread-reply-row:hover .thread-reply-actions,.thread-reply-actions:focus-within{opacity:1}
+@media (hover:none){.thread-reply-row .thread-reply-actions{opacity:1}}
+@media (max-width:640px){.chat-content{position:relative}.chat-content>[data-testid="thread-panel"]{position:absolute;inset:0;width:100%!important;z-index:20;border-left:none!important}}`}</style>
             {!channelId ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                     <div style={{ textAlign: 'center' }}>
@@ -553,7 +658,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1, overflow: 'hidden' }}>
                                 <h3 style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT, flexShrink: 0 }}>Thread</h3>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{parentMessageState?.channelId?.name || 'discussion'}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conversationType === 'dm' ? (conversationName ? `with ${conversationName}` : 'Direct message') : `#${String(conversationName || parentMessageState?.channelId?.name || 'channel').replace(/^#/, '')}`}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                                 <button
@@ -592,6 +697,19 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                         ? <><BellOff size={12} /> <span>Following{followerCount > 0 ? ` (${followerCount})` : ''}</span></>
                                         : <><Bell size={12} /> <span>Follow</span></>}
                                 </button>
+                                {canOpenBeside && threadWorkspaceId && typeof window !== 'undefined' && window.innerWidth >= 900 && (
+                                    <button
+                                        onClick={() => {
+                                            split.open(`/workspace/${threadWorkspaceId}/thread/${conversationType === 'dm' ? 'dm' : 'channel'}/${channelId}/${messageId}`, threadWorkspaceId);
+                                            onClose?.();
+                                        }}
+                                        title="Open in split view"
+                                        aria-label="Open in split view"
+                                        style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+                                    >
+                                        <Columns2 size={14} />
+                                    </button>
+                                )}
                                 <button
                                     onClick={onClose}
                                     style={{
@@ -673,7 +791,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                         e.target.parentNode.style.display = 'flex';
                                                         e.target.parentNode.style.alignItems = 'center';
                                                         e.target.parentNode.style.justifyContent = 'center';
-                                                        e.target.parentNode.innerHTML = `<span style="color:#0c0c0c;font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
+                                                        e.target.parentNode.innerHTML = `<span style="color:var(--bg-base);font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
                                                     }}
                                                 />
                                             </div>
@@ -697,7 +815,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                     WebkitLineClamp: parentExpanded ? undefined : 4,
                                                     WebkitBoxOrient: 'vertical',
                                                 }}>
-                                                    <MessageMarkdown text={parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || ''} />
+                                                    {parentMessageState.isDeleted || parentMessageState.isDeletedUniversally || parentMessageState.payload?.isDeleted
+                                                        ? <em data-testid="thread-parent-deleted" style={{ color: 'var(--text-muted)' }}>This message was deleted.</em>
+                                                        : <MessageMarkdown text={parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || ''} />}
                                                 </div>
                                                 {(() => {
                                                     const txt = parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || '';
@@ -742,7 +862,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                             const initials = (senderName || 'U').charAt(0).toUpperCase();
 
                                             return (
-                                                <div key={reply._id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                                <div key={reply._id} data-testid="thread-reply" className="thread-reply-row" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', position: 'relative' }}>
                                                     {}
                                                     <ProfileTrigger userId={senderIdOf(reply)} username={senderName} style={{ flexShrink: 0 }}>
                                                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -753,7 +873,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             onError={(e) => {
                                                                 e.target.style.display = 'none';
                                                                 e.target.parentNode.style.backgroundColor = 'var(--accent)';
-                                                                e.target.parentNode.innerHTML = `<span style="color:#0c0c0c;font-weight:700;font-size:12px">${initials}</span>`;
+                                                                e.target.parentNode.innerHTML = `<span style="color:var(--bg-base);font-weight:700;font-size:12px">${initials}</span>`;
                                                             }}
                                                         />
                                                     </div>
@@ -762,8 +882,38 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
                                                             <ProfileTrigger userId={senderIdOf(reply)} username={senderName}><span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span></ProfileTrigger>
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
+                                                            {reply.editedAt && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>(edited)</span>}
+                                                            {String(senderIdOf(reply)) === String(currentUserId) && !String(reply._id).startsWith('temp-') && editingId !== reply._id && (
+                                                                <span className="thread-reply-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '2px' }}>
+                                                                    <button type="button" className="gl-icon-btn" title="Edit reply" aria-label="Edit reply" onClick={() => startEdit(reply)} style={{ width: 22, height: 22 }}>
+                                                                        <Pencil size={11} />
+                                                                    </button>
+                                                                    <button type="button" className="gl-icon-btn" title="Delete reply" aria-label="Delete reply" onClick={() => deleteReply(reply)} style={{ width: 22, height: 22, color: 'var(--state-danger)' }}>
+                                                                        <Trash2 size={11} />
+                                                                    </button>
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        {senderName === BRAND.ai ? (
+                                                        {editingId === reply._id ? (
+                                                            <div data-testid="thread-reply-editor" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <textarea
+                                                                    className="gl-input"
+                                                                    value={editText}
+                                                                    autoFocus
+                                                                    rows={Math.min(6, Math.max(2, editText.split('\n').length))}
+                                                                    onChange={(e) => setEditText(e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                                                                        if (e.key === 'Escape') { e.stopPropagation(); setEditingId(null); }
+                                                                    }}
+                                                                    style={{ width: '100%', resize: 'vertical', fontSize: '13px', fontFamily: FONT }}
+                                                                />
+                                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                                    <button type="button" className="gl-btn" onClick={() => setEditingId(null)}>Cancel</button>
+                                                                    <button type="button" className="gl-btn gl-btn--primary" onClick={saveEdit} disabled={savingEdit || !editText.trim()}>{savingEdit ? 'Saving…' : 'Save'}</button>
+                                                                </div>
+                                                            </div>
+                                                        ) : senderName === BRAND.ai ? (
                                                             <AIMarkdown text={reply.decryptedContent || reply.payload?.text || reply.text} />
                                                         ) : (
                                                             <div className="message-content" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'anywhere', fontFamily: FONT }}>

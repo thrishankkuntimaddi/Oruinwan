@@ -78,7 +78,7 @@ function MeetingEvent({ event, currentUserId }) {
                 style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     backgroundColor: joinUrl ? 'var(--accent)' : 'var(--bg-hover)',
-                    color: joinUrl ? '#0c0c0c' : 'var(--text-muted)',
+                    color: joinUrl ? 'var(--bg-base)' : 'var(--text-muted)',
                     border: 'none', outline: 'none',
                     borderRadius: '2px',
                     padding: '6px 14px',

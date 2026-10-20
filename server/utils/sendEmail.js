@@ -14,6 +14,7 @@ const axios = require('axios');
  */
 
 const { resolveSender, diagnoseEmailConfig } = require('./emailConfig');
+const devMail = require('./devMail');
 
 function smtpFrom() {
   const { name, email } = resolveSender();
@@ -105,6 +106,13 @@ function noteFailure(errors, provider, detail) {
 }
 
 async function sendEmail({ to, subject, text, html }) {
+  // Development only: copy every email to the console and the local outbox file, so codes
+  // and links are reachable without a real inbox. Never runs in production or tests.
+  const recorded = devMail.recordDevMail({ to, subject, text, html });
+  if (recorded && (devMail.consoleOnly() || !isEmailConfigured())) {
+    return { provider: 'dev-outbox', id: null };
+  }
+
   if (!isEmailConfigured()) {
     throw new Error('Email not configured: set BREVO_API_KEY, SMTP_* or SMTP_FALLBACK_*');
   }

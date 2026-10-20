@@ -4,26 +4,18 @@ import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from '../../components/loginpage/LoginForm';
 import SignupForm from '../../components/loginpage/SignupForm';
+import GoogleSignupStep from '../../components/loginpage/GoogleSignupStep';
+import { finishGoogleSession } from '../../components/loginpage/googleContinue';
 import AuthShell from '../../components/public/AuthShell';
 import BrandMark from '../../shared/components/ui/BrandMark';
-import { IS_APP, serverLabel, setServer } from '../../appMode/env';
-import { forgetSession } from '../../appMode/network';
-
-// Desktop and tablet apps: which server this sign-in goes to, and a way to pick another.
-const ServerLine = () => (
-    <p className="orw-auth__note" style={{ marginTop: 0, marginBottom: 18, textAlign: 'left' }}>
-        Server <span className="orw-code">{serverLabel()}</span>{' '}
-        <button type="button" className="orw-link" onClick={() => { forgetSession(); setServer(''); window.location.replace('/'); }}>
-            Change
-        </button>
-    </p>
-);
 
 const LoginPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const mode = searchParams.get('mode');
     const [isSignup, setIsSignup] = useState(mode === 'signup');
-    const { user, loading } = useAuth();
+    const { user, loading, setUser } = useAuth();
+    // "Continue with Google" for an email with no account: the server's sign-up ticket.
+    const [googleTicket, setGoogleTicket] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const registrationMessage = location.state?.message;
@@ -78,7 +70,7 @@ const LoginPage = () => {
     if (user) return null;
 
     return (
-        <AuthShell title={isSignup ? 'Create account' : 'Sign in'}>
+        <AuthShell title={googleTicket ? 'Create account' : isSignup ? 'Create account' : 'Sign in'}>
             {registrationMessage && (
                 <div className="orw-auth__alert orw-auth__alert--good" role="status" style={{ marginBottom: 22 }}>
                     <CheckCircle2 size={16} aria-hidden="true" />
@@ -90,8 +82,9 @@ const LoginPage = () => {
                 </div>
             )}
 
-            {IS_APP && <ServerLine />}
-
+            {googleTicket ? (
+                <GoogleSignupStep ticket={googleTicket} onCancel={() => setGoogleTicket(null)} />
+            ) : (<>
             <div className="orw-auth__tabs" role="tablist" aria-label="Account">
                 {[{ label: 'Sign in', val: false }, { label: 'Create account', val: true }].map(tab => (
                     <button key={tab.label} type="button" role="tab" className="orw-auth__tab"
@@ -103,9 +96,11 @@ const LoginPage = () => {
 
             <div role="tabpanel" aria-label={isSignup ? 'Create account' : 'Sign in'}>
                 {isSignup
-                    ? <SignupForm onSwitch={() => switchTo(false)} />
-                    : <LoginForm onSwitch={() => switchTo(true)} initialEmail={prefilledEmail} />}
+                    ? <SignupForm onSwitch={() => switchTo(false)} onGoogleSignup={setGoogleTicket}
+                        onGoogleSignedIn={(data) => finishGoogleSession(data, { setUser, navigate })} />
+                    : <LoginForm onSwitch={() => switchTo(true)} initialEmail={prefilledEmail} onGoogleSignup={setGoogleTicket} />}
             </div>
+            </>)}
 
             <p className="orw-auth__note">
                 Setting up for an organisation? <Link className="orw-link" to="/register-company">Register your company</Link>

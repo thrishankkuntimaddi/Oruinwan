@@ -9,8 +9,9 @@ const BASE = '/api/v2/integrations';
 
 export const PROVIDER_LABEL = { github: 'GitHub', gitlab: 'GitLab', jira: 'Jira', zoom: 'Zoom' };
 
-export const notConnectedMessage = (type) =>
-    `${PROVIDER_LABEL[type] || type} isn't connected — an admin can connect it in Settings → Integrations.`;
+export const notConnectedMessage = (type) => (['github', 'jira'].includes(type)
+    ? `${PROVIDER_LABEL[type] || type} isn't connected. Connect your own in Agents → Tools, or an admin can connect it in Settings → Integrations.`
+    : `${PROVIDER_LABEL[type] || type} isn't connected — an admin can connect it in Settings → Integrations.`);
 
 // Server error codes with friendlier wording.
 const KNOWN_CODES = {
@@ -80,7 +81,8 @@ export async function isConnected(type, workspaceId) {
     if (hit && Date.now() - hit.at < 60_000) return hit.value;
     try {
         const data = await getIntegrationConfig(type, workspaceId);
-        const value = { connected: !!data?.connected, config: data?.config || {} };
+        // Usable when the workspace connected it, or when you connected your own (Agents → Tools).
+        const value = { connected: !!(data?.connected || data?.connectedForYou), forYou: !!data?.connectedForYou, config: data?.config || {} };
         statusCache.set(key, { at: Date.now(), value });
         return value;
     } catch (err) {

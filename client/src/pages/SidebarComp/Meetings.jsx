@@ -1,13 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff,
-    Users, PanelRight, Hand, Radio, Calendar, X, AlertTriangle, RotateCcw,
+    Users, PanelRight, Hand, X, AlertTriangle, RotateCcw,
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useHuddleContext, meetingHuddleId, meetingConversationPath, callTitle } from '../../features/huddles/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
+import { HuddlesLanding } from './landing/Landings';
 import api from '../../services/api';
 
 const FONT = 'Inter, system-ui, sans-serif';
@@ -33,7 +34,7 @@ const CONNECTION_LABELS = {
 
 const primaryButton = (disabled) => ({
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '11px 20px',
-    background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '2px', color: '#0c0c0c', fontWeight: 700, fontSize: '14px',
+    background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--bg-base)', fontWeight: 700, fontSize: '14px',
     cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, fontFamily: FONT, whiteSpace: 'nowrap',
 });
 const secondaryButton = {
@@ -62,29 +63,6 @@ const IconBadge = ({ icon: Icon, tone = 'accent' }) => (
     }}>
         <Icon size={28} style={{ color: tone === 'danger' ? 'var(--state-danger)' : 'var(--accent)' }} />
     </div>
-);
-
-const LandingView = ({ onStart, onStartVideo, onSchedule, starting }) => (
-    <CenteredPanel>
-        <IconBadge icon={Radio} />
-        <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-            Huddles
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '28px', fontSize: '14px', lineHeight: 1.6 }}>
-            Start a quick call with your workspace, or join one that is live now from the list on the left.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '260px' }}>
-            <button onClick={onStart} disabled={starting} style={primaryButton(starting)}>
-                {starting ? <><Spinner color="#0c0c0c" /> Starting…</> : <><Mic size={16} /> Start huddle</>}
-            </button>
-            <button onClick={onStartVideo} disabled={starting} style={{ ...secondaryButton, opacity: starting ? 0.6 : 1 }}>
-                <Video size={15} /> Start video huddle
-            </button>
-            <button onClick={onSchedule} style={{ ...secondaryButton, border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
-                <Calendar size={14} /> Schedule a meeting
-            </button>
-        </div>
-    </CenteredPanel>
 );
 
 const ConnectingView = ({ label }) => (
@@ -138,6 +116,11 @@ const ParticipantTile = ({ participant, stream, showVideo, mirror, connection })
                     : <MicOff size={12} style={{ color: 'var(--state-danger)' }} />}
                 <span style={{ fontSize: '12px', fontWeight: 600, color: hasVideo ? '#fff' : 'var(--text-primary)' }}>{label}</span>
             </div>
+            {participant.handRaised && (
+                <div data-testid="room-hand-raised" title="Hand raised" style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '2px', background: 'var(--accent)', color: 'var(--bg-base)', fontSize: '11px', fontWeight: 700 }}>
+                    <Hand size={11} /> Hand raised
+                </div>
+            )}
             {status && (
                 <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', fontSize: '11px', color: connection === 'failed' ? 'var(--state-danger)' : 'var(--text-secondary)' }}>
                     {connection !== 'failed' && <Spinner size={9} />}
@@ -154,7 +137,7 @@ const ParticipantTile = ({ participant, stream, showVideo, mirror, connection })
  */
 const DockButton = ({ icon: Icon, label, onClick, active = false, danger = false, unavailable = false, badge, wide = false, testId }) => {
     const bg = danger ? 'var(--state-danger)' : active ? 'var(--accent)' : 'var(--bg-active)';
-    const color = danger ? '#fff' : active ? '#0c0c0c' : 'var(--text-primary)';
+    const color = danger ? '#fff' : active ? 'var(--bg-base)' : 'var(--text-primary)';
     return (
         <button
             type="button"
@@ -202,6 +185,7 @@ const ParticipantsPanel = ({ participants, peerStates, onClose }) => (
                             </p>
                             {status && <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{status}</p>}
                         </div>
+                        {p.handRaised ? <Hand size={14} style={{ color: 'var(--accent)' }} aria-label="Hand raised" /> : null}
                         {p.videoEnabled ? <Video size={14} style={{ color: 'var(--text-secondary)' }} /> : null}
                         {p.audioEnabled === false
                             ? <MicOff size={14} style={{ color: 'var(--state-danger)' }} aria-label="Muted" />
@@ -234,17 +218,13 @@ const ActiveRoom = ({ huddle, onLeave }) => {
     const { huddleId, registerInlineUI } = huddle;
     useEffect(() => (huddleId && registerInlineUI ? registerInlineUI(huddleId) : undefined), [huddleId, registerInlineUI]);
 
-    const hasCameraTrack = !!localStream && localStream.getVideoTracks().length > 0;
     const sharing = !!screenStream;
-    const cameraLabel = !isVideo
-        ? 'Camera is available in video huddles'
-        : !hasCameraTrack ? 'No camera available'
-            : sharing ? 'Stop sharing to change the camera'
-                : cameraOn ? 'Turn camera off' : 'Turn camera on';
-    const screenLabel = !isVideo
-        ? 'Screen sharing is available in video huddles'
-        : !hasCameraTrack ? 'Screen sharing needs a camera connection'
-            : sharing ? 'Stop sharing screen' : 'Share screen';
+    const canShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
+    // Voice huddles can turn a camera or a shared screen on mid-call.
+    const cameraLabel = sharing ? 'Stop sharing to change the camera' : cameraOn ? 'Turn camera off' : 'Turn camera on';
+    const screenLabel = !canShare ? 'Screen sharing is not supported in this browser' : sharing ? 'Stop sharing screen' : 'Share screen';
+    const { handRaised, toggleHand } = huddle;
+    const anyVideo = isVideo || sharing || cameraOn || participants.some(p => !p.isLocal && p.videoEnabled);
 
     const handleScreen = async () => {
         if (sharing) { stopScreenShare(); return; }
@@ -278,7 +258,7 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                     )}
                 </div>
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                    {isVideo ? 'Video huddle' : 'Voice huddle'} · {count} {count === 1 ? 'participant' : 'participants'}
+                    {anyVideo ? 'Video huddle' : 'Voice huddle'} · {count} {count === 1 ? 'participant' : 'participants'}
                 </span>
             </header>
 
@@ -290,7 +270,7 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                                 key={p.userId}
                                 participant={p}
                                 stream={p.isLocal ? (screenStream || localStream) : remoteStreams[p.userId]}
-                                showVideo={p.isLocal ? (sharing || cameraOn) : p.videoEnabled !== false && isVideo}
+                                showVideo={p.isLocal ? (sharing || cameraOn) : !!p.videoEnabled}
                                 mirror={p.isLocal && !sharing}
                                 connection={peerStates[p.userId]}
                             />
@@ -310,11 +290,11 @@ const ActiveRoom = ({ huddle, onLeave }) => {
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     <DockButton testId="room-mute" icon={muted ? MicOff : Mic} label={muted ? 'Unmute' : 'Mute'} onClick={toggleMute} danger={muted} />
-                    <DockButton testId="room-camera" icon={isVideo && cameraOn ? Video : VideoOff} label={cameraLabel} onClick={toggleCamera}
-                        unavailable={!isVideo || !hasCameraTrack || sharing} />
+                    <DockButton testId="room-camera" icon={cameraOn ? Video : VideoOff} label={cameraLabel} onClick={toggleCamera}
+                        active={cameraOn} unavailable={sharing} />
                     <DockButton testId="room-screen" icon={sharing ? MonitorOff : Monitor} label={screenLabel} onClick={handleScreen}
-                        active={sharing} unavailable={!isVideo || !hasCameraTrack} />
-                    <DockButton icon={Hand} label="Raise hand: coming soon" unavailable />
+                        active={sharing} unavailable={!canShare} />
+                    <DockButton testId="room-hand" icon={Hand} label={handRaised ? 'Lower hand' : 'Raise hand'} onClick={toggleHand} active={!!handRaised} />
                     <DockButton testId="room-workspace" icon={PanelRight} label={huddle.workspaceOpen ? 'Hide huddle workspace' : 'Notes, tasks, chat and wrap-up'}
                         onClick={() => (huddle.workspaceOpen ? huddle.closeWorkspace() : huddle.openWorkspace())} active={!!huddle.workspaceOpen} />
                     <span style={{ width: '1px', height: '28px', background: 'var(--border-default)', margin: '0 4px' }} />
@@ -371,9 +351,13 @@ const Meetings = () => {
             }
             const path = meetingConversationPath(workspaceId, meeting);
             if (path) {
-                // Meetings scheduled in a conversation meet in that conversation's huddle.
-                showToast('This meeting happens in its conversation. Start or join the huddle there.', 'info');
+                // Meetings scheduled in a conversation meet there: open it and start (or join) the meeting's huddle.
+                const idOf = (v) => (v && typeof v === 'object' ? (v._id || v.id) : v) || null;
+                const channelId = idOf(meeting.channelId);
+                const scope = channelId ? { channelId: String(channelId) } : { dmId: String(idOf(meeting.dmSessionId)) };
                 navigate(path, { replace: true });
+                startHuddle(meeting.title || stateTitle || 'Meeting', { huddleId: meetingHuddleId(meetingParam), scope, quiet: true })
+                    .catch(() => showToast('Could not start the meeting huddle. Allow the microphone and try again.', 'error'));
                 return;
             }
             clearParams();
@@ -443,7 +427,7 @@ const Meetings = () => {
 
     return (
         <>
-            <LandingView
+            <HuddlesLanding
                 onStart={() => handleStart(false)}
                 onStartVideo={() => handleStart(true)}
                 onSchedule={() => setShowScheduleModal(true)}

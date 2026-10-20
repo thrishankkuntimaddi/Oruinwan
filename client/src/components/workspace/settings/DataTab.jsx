@@ -33,7 +33,7 @@ export default function DataTab({ workspaceId, workspaceName }) {
                     <input type="checkbox" checked={includeMembers} onChange={e => setIncludeMembers(e.target.checked)} /> Include current members
                 </label>
                 <button onClick={clone} disabled={!name.trim() || status === 'cloning'}
-                    style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: 'var(--accent)', color: '#0c0c0c', border: 'none', borderRadius: 2, cursor: 'pointer' }}>
+                    style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-base)', border: 'none', borderRadius: 2, cursor: 'pointer' }}>
                     {status === 'cloning' ? 'Cloning…' : 'Clone workspace'}
                 </button>
                 {status?.ok && (

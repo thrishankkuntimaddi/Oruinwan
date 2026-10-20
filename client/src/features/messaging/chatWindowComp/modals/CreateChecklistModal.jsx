@@ -32,7 +32,7 @@ export default function CreateChecklistModal({ onCreate, onClose }) {
 
     return (
         <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <form data-testid="checklist-modal" onSubmit={submit}
                 style={{ width: 380, background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 2, padding: 18, fontFamily: FONT, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -46,7 +46,7 @@ export default function CreateChecklistModal({ onCreate, onClose }) {
                     {error || `${items.length} item${items.length === 1 ? '' : 's'}`}
                 </div>
                 <button type="submit" disabled={saving}
-                    style={{ padding: '9px 0', fontSize: 13, fontWeight: 600, background: 'var(--accent)', color: '#0c0c0c', border: 'none', borderRadius: 2, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+                    style={{ padding: '9px 0', fontSize: 13, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-base)', border: 'none', borderRadius: 2, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
                     {saving ? 'Sending…' : 'Send checklist'}
                 </button>
             </form>

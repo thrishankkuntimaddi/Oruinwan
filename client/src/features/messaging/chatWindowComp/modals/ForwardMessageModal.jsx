@@ -69,7 +69,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
         <div style={{
             position: 'absolute', inset: 0, zIndex: 50,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
+            backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)',
             fontFamily: FONT,
             animation: 'fadeIn 180ms ease',
         }}>
@@ -78,7 +78,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
                 borderRadius: '4px',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--lg-shadow-sm)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
             }}>
@@ -165,7 +165,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                                 {member.profilePicture ? (
                                                     <img src={member.profilePicture} alt={member.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
-                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#0c0c0c' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--bg-base)' }}>
                                                         {(member.username || 'U')[0].toUpperCase()}
                                                     </span>
                                                 )}
@@ -250,7 +250,7 @@ function ListItem({ isSelected, onClick, avatar, primary, secondary }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: '100ms',
             }}>
-                {isSelected && <span style={{ color: '#0c0c0c', fontSize: '9px', fontWeight: 700 }}>✓</span>}
+                {isSelected && <span style={{ color: 'var(--bg-base)', fontSize: '9px', fontWeight: 700 }}>✓</span>}
             </div>
             {avatar}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -293,7 +293,7 @@ function ForwardBtn({ onClick, disabled, children }) {
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
             style={{
                 padding: '7px 16px', fontSize: '12px', fontWeight: 600,
-                color: disabled ? 'var(--text-muted)' : '#0c0c0c',
+                color: disabled ? 'var(--text-muted)' : 'var(--bg-base)',
                 backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
                 border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
                 borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',

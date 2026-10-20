@@ -3,8 +3,9 @@ const SENDER = { type: 'user', fields: ['username', 'profilePicture'] };
 const logger = require('../../../utils/logger');
 const Message = require("../messages/message.model.js");
 const Channel = require("../../features/channels/channel.model.js");
-const { followThread, unfollowThread, getFollowStatus, getFollowerIds } = require('./threads.service');
+const { followThread, unfollowThread, getFollowStatus, LIVE_REPLY, followAndNotify } = require('./threads.service');
 const { checkThreadAccess } = require('./threadAccess');
+const { sanitizeAttachments } = require('../uploads/attachmentSanitizer');
 
 exports.getChannelThreads = async (req, res) => {
     try {
@@ -60,38 +61,28 @@ exports.getThread = async (req, res) => {
         const { messageId } = req.params;
         const userId = req.user.sub;
 
-        
         const parentMessage = await Message.findById(messageId).lean();
-
         if (!parentMessage) {
             return res.status(404).json({ message: "Message not found" });
         }
+
+        // Same rule as replying: DM participants, channel members (public channels: workspace members).
+        const access = await checkThreadAccess(parentMessage, userId);
+        if (!access.ok) return res.status(access.status === 404 ? 403 : access.status).json({ message: "Access denied" });
         await hydrate(parentMessage, { sender: SENDER });
 
-        
-        if (parentMessage.dm) {
-            const DMSession = require("../../../models/DMSession");
-            const dmSession = await DMSession.findById(parentMessage.dm);
-
-            if (!dmSession || !dmSession.participants.map(String).includes(String(userId))) {
-                return res.status(403).json({ message: "Access denied" });
-            }
-        } else if (parentMessage.channel) {
-            const Channel = require("../../features/channels/channel.model.js");
-            const channel = await Channel.findById(parentMessage.channel);
-
-            if (!channel || !channel.members.map(m => String(m.user || m)).includes(String(userId))) {
-                return res.status(403).json({ message: "Access denied" });
-            }
+        // A deleted parent keeps its thread, but not its content.
+        if (parentMessage.isDeletedUniversally || parentMessage.isDeleted) {
+            parentMessage.payload = { isDeleted: true };
+            parentMessage.text = '';
         }
 
-        
-        const replies = await Message.find({ parentId: messageId })
+        // Replies deleted for everyone, or hidden by this user, are left out.
+        const replies = await Message.find({ parentId: messageId, ...LIVE_REPLY, hiddenFor: { $ne: userId } })
             .sort({ createdAt: 1 })
             .lean();
         await hydrate(replies, { sender: SENDER });
 
-        
         const followerStrings = (parentMessage.followers || []).map(String);
         const isFollowing = followerStrings.includes(String(userId));
 
@@ -124,7 +115,6 @@ exports.getThread = async (req, res) => {
             resolved: !!parentMessage.resolvedThreadAt,
             resolvedThreadAt: parentMessage.resolvedThreadAt || null,
             resolvedBy,
-            
             followStatus: {
                 following: isFollowing,
                 followerCount: followerStrings.length,
@@ -139,161 +129,94 @@ exports.getThread = async (req, res) => {
 exports.postThreadReply = async (req, res) => {
     try {
         const { messageId } = req.params;
-        
-        const { ciphertext, messageIv, attachments = [], clientTempId } = req.body;
+        const { ciphertext, messageIv, attachments = [], clientTempId } = req.body || {};
         const userId = req.user.sub;
 
         if (!ciphertext || !messageIv) {
             return res.status(400).json({ message: "Encrypted payload required (ciphertext + messageIv)" });
         }
 
-        
-        const parentMessage = await Message.findById(messageId);
-
+        const parentMessage = await Message.findById(messageId).lean();
         if (!parentMessage) {
             return res.status(404).json({ message: "Parent message not found" });
+        }
+        // Threads are one level deep: a reply cannot start its own thread.
+        if (parentMessage.parentId) {
+            return res.status(400).json({ message: "Reply in the original thread instead" });
         }
 
         const access = await checkThreadAccess(parentMessage, userId, { forWrite: true });
         if (!access.ok) return res.status(access.status).json({ message: access.error });
 
-        
+        // Same check as channel and DM messages: only files the sender uploaded and can read,
+        // since a file referenced by a message becomes readable to that conversation.
+        let cleanAttachments;
+        try {
+            cleanAttachments = await sanitizeAttachments(attachments, userId);
+        } catch (err) {
+            if (err && err.status && err.status < 500) return res.status(err.status).json({ message: err.message, code: err.code });
+            throw err;
+        }
+
         const replyData = {
             type: 'message',
             sender: userId,
             payload: {
                 ciphertext,
                 messageIv,
-                attachments,
                 isEncrypted: true
             },
+            // Files sit on the message like channel and DM files (the payload schema has no
+            // attachments field, so files put there were silently dropped).
+            attachments: cleanAttachments,
             parentId: messageId,
             readBy: [userId],
             workspace: parentMessage.workspace,
             company: parentMessage.company,
             clientTempId
         };
-
-        
-        if (parentMessage.dm) {
-            replyData.dm = parentMessage.dm;
-        } else if (parentMessage.channel) {
-            replyData.channel = parentMessage.channel;
-        }
+        if (parentMessage.dm) replyData.dm = parentMessage.dm;
+        else if (parentMessage.channel) replyData.channel = parentMessage.channel;
 
         const reply = await Message.create(replyData);
-
-        
         const replyOut = reply.toObject();
         await hydrate(replyOut, { sender: SENDER });
 
-        
-        await Message.findByIdAndUpdate(messageId, {
+        const lastReplyAt = replyOut.createdAt || new Date();
+        const updatedParent = await Message.findByIdAndUpdate(messageId, {
             $inc: { replyCount: 1 },
-            $set: { lastReplyAt: new Date() }
-        });
-
-        
-        const updatedParent = await Message.findById(messageId).lean();
+            $set: { lastReplyAt }
+        }, { new: true }).lean();
         if (updatedParent) await hydrate(updatedParent, { sender: SENDER });
 
-        
         const io = req.app?.get("io");
+        if (io && updatedParent) {
+            const roomName = parentMessage.channel ? `channel:${parentMessage.channel}` : `dm:${parentMessage.dm}`;
+            const lastReplyIso = new Date(lastReplyAt).toISOString();
 
-        if (io) {
-            const roomName = parentMessage.channel
-                ? `channel:${parentMessage.channel}`
-                : `dm:${parentMessage.dm}`;
-
-            
             if (updatedParent.replyCount === 1) {
                 io.to(roomName).emit("thread:created", {
                     parentMessageId: messageId,
                     channelId: parentMessage.channel,
                     dmId: parentMessage.dm,
                     replyCount: 1,
-                    lastReplyAt: new Date().toISOString(),
+                    lastReplyAt: lastReplyIso,
                     parentMessage: updatedParent
                 });
             }
-
-            if (parentMessage.channel) {
-                io.to(`channel:${parentMessage.channel}`).emit("thread-reply", {
-                    parentId: messageId,
-                    reply: replyOut,
-                    clientTempId
-                });
-
-                io.to(`channel:${parentMessage.channel}`).emit("message-updated", {
-                    messageId: messageId,
-                    updates: { replyCount: updatedParent.replyCount },
-                    fullMessage: updatedParent
-                });
-            } else if (parentMessage.dm) {
-                io.to(`dm:${parentMessage.dm}`).emit("thread-reply", {
-                    parentId: messageId,
-                    reply: replyOut,
-                    clientTempId
-                });
-
-                io.to(`dm:${parentMessage.dm}`).emit("message-updated", {
-                    messageId: messageId,
-                    updates: { replyCount: updatedParent.replyCount },
-                    fullMessage: updatedParent
-                });
-            }
+            io.to(roomName).emit("thread-reply", { parentId: messageId, reply: replyOut, clientTempId });
+            io.to(roomName).emit("message-updated", {
+                messageId,
+                channelId: parentMessage.channel ? String(parentMessage.channel) : null,
+                dmId: parentMessage.dm ? String(parentMessage.dm) : null,
+                updates: { replyCount: updatedParent.replyCount, lastReplyAt: lastReplyIso },
+                fullMessage: updatedParent
+            });
         }
 
-        
-        
-        
-        
-        (async () => {
-            try {
-                const notificationService = require('../notifications/notificationService');
-
-                
-                // The replier follows the thread; on the first reply the message's
-                // author does too (after that, their follow choice is respected).
-                const autoFollow = [userId];
-                if ((parentMessage.replyCount || 0) === 0 && parentMessage.sender) autoFollow.push(parentMessage.sender);
-                await Message.findByIdAndUpdate(messageId, {
-                    $addToSet: { followers: { $each: autoFollow } }
-                });
-
-                
-                const allFollowers = await getFollowerIds(messageId);
-                const recipientIds = allFollowers.filter(id => id !== String(userId));
-
-                if (recipientIds.length === 0) return;
-
-                
-                let channelName = null;
-                if (parentMessage.channel) {
-                    try {
-                        const channelDoc = await Channel.findById(parentMessage.channel).select('name').lean();
-                        channelName = channelDoc?.name || null;
-                    } catch (_) {  }
-                }
-
-                const senderUsername = replyOut.sender?.username || 'Someone';
-
-                
-                await notificationService.threadReply(io, {
-                    followerIds: recipientIds,
-                    senderUsername,
-                    workspaceId: parentMessage.workspace,
-                    channelId: parentMessage.channel ? String(parentMessage.channel) : null,
-                    dmSessionId: parentMessage.dm ? String(parentMessage.dm) : null,
-                    channelName,
-                    parentMessageId: String(messageId),
-                });
-
-                logger.info(`[THREADS] 🔔 thread_reply notifications → ${recipientIds.length} follower(s)`);
-            } catch (followErr) {
-                logger.error('[THREADS] Follow/notify error (non-fatal):', followErr.message);
-            }
-        })();
+        // Following and notifications never delay or fail the reply.
+        followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username })
+            .catch((err) => logger.error('[THREADS] Follow/notify error (non-fatal):', err.message));
 
         return res.status(201).json({ reply: replyOut });
     } catch (err) {
@@ -305,7 +228,9 @@ exports.postThreadReply = async (req, res) => {
 exports.getThreadCount = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const count = await Message.countDocuments({ parentId: messageId });
+        const access = await checkThreadAccess(messageId, req.user.sub);
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
+        const count = await Message.countDocuments({ parentId: messageId, ...LIVE_REPLY });
         return res.json({ count });
     } catch (err) {
         logger.error("GET THREAD COUNT ERROR:", err);

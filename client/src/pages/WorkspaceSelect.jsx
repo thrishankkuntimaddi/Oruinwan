@@ -11,7 +11,6 @@ import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import Header from './workspaceSelectComponents/Header.jsx';
 import WorkspaceGrid from "./workspaceSelectComponents/WorkspaceGrid.jsx";
 import CreateWorkspaceModal from "./workspaceSelectComponents/CreateWorkspaceModal.jsx";
-import { DEFAULT_WORKSPACE_COLOR } from "../utils/workspaceIcons";
 import LoadingState from "./workspaceSelectComponents/LoadingState.jsx";
 import ErrorState from "./workspaceSelectComponents/ErrorState.jsx";
 import EmptyState from "./workspaceSelectComponents/EmptyState.jsx";
@@ -53,19 +52,6 @@ const WorkspaceSelect = () => {
 
     
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [createStep, setCreateStep] = useState(1);
-    const [nameError, setNameError] = useState("");
-    const [createData, setCreateData] = useState({
-        name: "",
-        adminName: "",
-        icon: "rocket",
-        color: DEFAULT_WORKSPACE_COLOR,
-        rules: "",
-        invites: ""
-    });
-    const [termsAccepted, setTermsAccepted] = useState(false);
-    const [creating, setCreating] = useState(false);
-
     // "Create workspace" from the in-workspace switcher lands here with the wizard open.
     React.useEffect(() => {
         if (location.state?.createWorkspace) {
@@ -119,103 +105,6 @@ const WorkspaceSelect = () => {
 
     const handleWorkspaceClick = (workspaceId) => {
         navigate(`/workspace/${workspaceId}/home`);
-    };
-
-    
-    const resetCreateModal = React.useCallback(() => {
-        setIsCreateModalOpen(false);
-        setCreateStep(1);
-        setCreateData({
-            name: "",
-            adminName: "",
-            icon: "rocket",
-            color: DEFAULT_WORKSPACE_COLOR,
-            rules: "",
-            invites: ""
-        });
-        setNameError("");
-        setTermsAccepted(false);
-        setCreating(false);
-    }, []);
-
-    const handleCreateSubmit = async (e) => {
-        e.preventDefault();
-
-        
-        if (createStep === 1) {
-            if (!createData.name.trim()) {
-                setNameError("Please enter a workspace name");
-                return;
-            }
-            setCreateStep(2);
-            return;
-        }
-
-        if (createStep === 2) {
-            setCreateStep(3);
-            return;
-        }
-
-        if (createStep === 3) {
-            if (!termsAccepted) {
-                setNameError("You must acknowledge the workspace guidelines to proceed");
-                return;
-            }
-            setNameError("");
-            setCreateStep(4);
-            return;
-        }
-
-        
-        if (createStep === 4) {
-            if (creating) return;
-            setCreating(true);
-            setNameError("");
-            try {
-
-                
-                const res = await api.post('/api/workspaces/create', {
-                    name: createData.name,
-                    icon: createData.icon,
-                    color: createData.color,
-                    rules: createData.rules,
-                    ...(createData.templateId ? { templateId: createData.templateId } : {})
-                });
-
-                const newWorkspaceId = res.data.workspace.id;
-
-                
-                // One address per comma or line.
-                const emails = [...new Set((createData.invites || '')
-                    .split(/[\s,;]+/)
-                    .map(e => e.trim())
-                    .filter(Boolean))];
-                if (emails.length) {
-                    try {
-                        await api.post(`/api/workspaces/${newWorkspaceId}/invite`, {
-                            emails,
-                            inviteType: 'email'
-                        });
-                        showToast(`Invitation${emails.length === 1 ? '' : 's'} sent to ${emails.length} ${emails.length === 1 ? 'person' : 'people'}`, 'success');
-                    } catch (inviteError) {
-                        logger.error("Failed to send invites", inviteError);
-                        showToast(inviteError.response?.data?.message || 'Workspace created, but the invitations could not be sent', 'error');
-                    }
-                }
-
-                await loadWorkspaces(); 
-                resetCreateModal();
-                navigate(`/workspace/${newWorkspaceId}/home`);
-            } catch (error) {
-                logger.error("Failed to create workspace", error);
-                setCreating(false);
-                if (error.response?.data?.message) {
-                    setNameError(error.response.data.message);
-                } else {
-                    setNameError('Failed to create workspace. Please try again.');
-                }
-            }
-        }
     };
 
     
@@ -343,18 +232,10 @@ const WorkspaceSelect = () => {
 
             <CreateWorkspaceModal
                 isOpen={isCreateModalOpen}
-                onClose={resetCreateModal}
-                createStep={createStep}
-                setCreateStep={setCreateStep}
-                createData={createData}
-                setCreateData={setCreateData}
-                nameError={nameError}
-                setNameError={setNameError}
-                termsAccepted={termsAccepted}
-                setTermsAccepted={setTermsAccepted}
-                onSubmit={handleCreateSubmit}
-                submitting={creating}
-                user={user}
+                onClose={() => setIsCreateModalOpen(false)}
+                onCreated={() => loadWorkspaces()}
+                onOpen={(workspaceId) => { setIsCreateModalOpen(false); navigate(`/workspace/${workspaceId}/home`); }}
+                showToast={showToast}
             />
 
             <JoinInviteDialog open={showJoin} onClose={closeJoin} />

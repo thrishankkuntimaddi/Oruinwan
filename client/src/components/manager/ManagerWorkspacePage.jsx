@@ -7,7 +7,7 @@ import {
 } from '../company-dash/dashUi';
 import './manager.css';
 
-/** Workspaces the manager belongs to, with members, open tasks and weekly messages. */
+/** Workspaces the manager belongs to, with members and task counts. */
 export default function ManagerWorkspacePage() {
     const navigate = useNavigate();
     const [q, setQ] = useState('');
@@ -62,7 +62,7 @@ export default function ManagerWorkspacePage() {
                                     <div className="mg-stats">
                                         <span className="mg-stat"><b>{ws.memberCount ?? 0}</b> members</span>
                                         <span className="mg-stat"><b>{ws.activity?.tasksActive ?? 0}</b> open tasks</span>
-                                        <span className="mg-stat"><b>{ws.activity?.messages ?? 0}</b> messages / 7d</span>
+                                        <span className="mg-stat"><b>{ws.activity?.tasksCompleted ?? 0}</b> done</span>
                                     </div>
                                     <div>
                                         <Btn size="sm" onClick={() => navigate(`/workspace/${ws._id}/home`)}>

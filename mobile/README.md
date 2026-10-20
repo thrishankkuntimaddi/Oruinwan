@@ -10,8 +10,8 @@ One native app per platform, two UIs inside it:
 Both run in a [Capacitor](https://capacitorjs.com) shell on the system WebView (`android/`, `ios/`).
 `scripts/assemble-native.mjs` builds `www/`, the bundle the apps load: the web client at the root and
 the phone UI in `www/phone/`. A two-line script at the top of `www/index.html` sends devices whose
-shortest screen side is under 600 dp (phones) to the phone UI; tablets stay on the web client, which
-asks for the team's server address the first time, or opens the demo workspace.
+shortest screen side is under 600 dp (phones) to the phone UI; tablets stay on the web client. Both
+talk to one server fixed at build time (`VITE_SERVER_URL`; a local server until production exists).
 
 The desktop apps (`../desktop`) run the same web client build. The phone UI also has a wide layout
 (`src/app/layout.js`) for large windows, used when you preview it in a desktop browser.
@@ -24,8 +24,24 @@ The desktop apps (`../desktop`) run the same web client build. The phone UI also
 | **Feature flags** | Firebase Remote Config can switch features on or off, or roll them out to a percentage of installs, without a new build. |
 | **Themes** | Light, dark and system, in the web client's "Monolith Gloss" palette. |
 
-Not yet in the phone UI: push notifications, sending files or photos, voice and video huddles (tablets
-have them, through the web client).
+| **Workspaces** | Create one in three steps (name, project, teammates: share a team invite link or invite by email). After sign-in, a "Welcome back" list of your workspaces. |
+| **Oruinwan AI in chats** | Mention `@ai` in a channel, DM or thread; typing `@a` suggests it. The answer streams in live for everyone in the conversation. |
+| **Search** | Messages are searched on the phone (they're end-to-end encrypted): what's been decrypted, plus the latest messages of conversations not opened yet. Kept in memory only. |
+| **Push notifications** | Android through Firebase, iPhone through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). |
+
+Not yet in the phone UI: sending files or photos, voice and video huddles (tablets have them, through
+the web client). Tablets don't get push notifications yet.
+
+### Turning on push notifications
+
+- **Android:** in Firebase console, add an Android app with package `com.oruinwan.app`, download
+  `google-services.json` into `android/app/`, and build. Push is only switched on in builds that include
+  that file (`vite.config.js` → `__ANDROID_PUSH__`); without it the app never asks for a token. On the
+  server, set `FIREBASE_SERVICE_ACCOUNT` from the same Firebase project.
+- **iPhone:** in Xcode, App target → Signing & Capabilities, check that **Push Notifications** is listed
+  (the entitlement is in `ios/App/App/App.entitlements`). Create an APNs auth key (.p8) at
+  developer.apple.com and set `APNS_KEY_FILE`, `APNS_KEY_ID`, `APNS_TEAM_ID` and `APNS_BUNDLE_ID` on the
+  server; `APNS_PRODUCTION=true` for TestFlight and App Store builds.
 
 Requires Android 7 or newer with an up-to-date **Android System WebView** (Chromium 111+, updated through
 the Play Store). Older WebViews get a page explaining how to update (`public/webview-update.html`).
@@ -35,7 +51,7 @@ the Play Store). Older WebViews get a page explaining how to update (`public/web
 ```bash
 cd mobile
 npm install
-npm run dev            # browser preview at http://localhost:5174 (demo works fully)
+npm run dev            # browser preview at http://localhost:5174 (talks to VITE_SERVER_URL)
 npm run lint
 npm test               # Vitest
 npm run android:debug  # debug APK (phone UI + web client): android/app/build/outputs/apk/debug/app-debug.apk
@@ -71,7 +87,7 @@ Copy `.env.example` to `.env`. Every value is public client configuration, never
 src/app/         shell: tab bar or sidebar (layout.js), per-tab navigation stacks, theme, routes
 src/ui/          shared components (Button, Row, Sheet, Dialog, Markdown, …)
 src/features/    screens: home, chats, ai, tasks, notes, settings, more, auth, update
-src/data/        session, query cache, demo adapter, live adapter (server, crypto, realtime)
+src/data/        session, query cache, live adapter (server, crypto, realtime)
 src/native/      platform bridge (Capacitor on Android, window.oruinwanDesktop on desktop): system bars, back button, storage, keyboard
 src/update/      update manifest checks and the installer bridge
 src/config/      build config, feature flags, Firebase Remote Config
@@ -82,7 +98,7 @@ release-notes/   one Markdown file per version, shown in the app and on the rele
 ```
 
 Screens never call the server directly: they use `api()` from `src/data/session.js`, which is
-either the demo adapter or the live adapter. Both return the same shapes.
+the live adapter while signed in (and a stub that rejects every call while signed out).
 
 ## Releasing a new version
 

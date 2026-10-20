@@ -16,15 +16,15 @@ export const isManagerUser = (user) => user?.companyRole === 'manager';
 
 export const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', manager: 'Manager', member: 'Member', guest: 'Guest' };
 
-/** Navigation for each console. `ctx` = { billingEnabled, hasWorkspaces, canAdmin }. */
-export function navFor(role, ctx = {}) {
+/** Navigation for each console. (`_ctx` is kept for callers that pass { billingEnabled }.) */
+export function navFor(role, _ctx = {}) {
     if (role === 'owner') {
         return [
             { label: 'Overview', items: [
                 { to: '/owner/dashboard', label: 'Dashboard', icon: LayoutDashboard },
                 { to: '/owner/analytics', label: 'Activity health', icon: Activity },
                 { to: '/owner/insights', label: 'Insights', icon: BarChart3 },
-                ...(ctx.billingEnabled ? [{ to: '/owner/billing', label: 'Billing & plan', icon: CreditCard }] : []),
+                { to: '/owner/billing', label: 'Billing & plan', icon: CreditCard },
                 { to: '/owner/security', label: 'Security & risk', icon: Shield },
             ] },
             { label: 'Organization', items: [

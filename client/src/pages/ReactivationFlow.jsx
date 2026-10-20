@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Mail, KeyRound } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { RotateCcw, Mail, AlertCircle, ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import api from '@services/api';
+import { useToast } from '../contexts/ToastContext';
+import AuthShell from '../components/public/AuthShell';
+import { AuthMark, AuthHead } from '../components/public/AuthParts';
 
 const ReactivationFlow = () => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [searchParams] = useSearchParams();
     const emailFromUrl = searchParams.get('email') || '';
 
     const [email] = useState(emailFromUrl);
     const [otpCode, setOtpCode] = useState('');
     const [password, setPassword] = useState('');
+    const [showPwd, setShowPwd] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -18,12 +23,12 @@ const ReactivationFlow = () => {
         e.preventDefault();
 
         if (otpCode.length !== 6) {
-            setError('Please enter a valid 6-digit code');
+            setError('Enter the 6-digit code from the email');
             return;
         }
 
         if (!password) {
-            setError('Please enter your password');
+            setError('Enter your password');
             return;
         }
 
@@ -36,19 +41,16 @@ const ReactivationFlow = () => {
                 { email, otpCode, password }
             );
 
-            
             if (response.data.accessToken) {
                 localStorage.setItem('accessToken', response.data.accessToken);
             }
 
-            
-            alert('Account reactivated successfully!');
+            showToast('Welcome back. Your account is active again.', 'success');
 
-            
             navigate('/workspaces');
         } catch (err) {
-            setError(err.response?.data?.message || 'Reactivation failed. Please try again.');
-            
+            setError(err.response?.data?.message || 'We couldn’t reactivate your account. Try again.');
+
             if (err.response?.data?.message?.includes('OTP') || err.response?.data?.message?.includes('expired')) {
                 setOtpCode('');
             }
@@ -58,96 +60,82 @@ const ReactivationFlow = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                {}
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Lock className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-2">
-                        Reactivate Your Account
-                    </h1>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Enter the verification code sent to your email
-                    </p>
-                </div>
+        <AuthShell
+            title="Reactivate account"
+            aside={<>
+                <h1 className="orw-auth__title">Welcome<br /><span className="orw-gloss-text">back.</span></h1>
+                <p className="orw-auth__lead">Your messages, channels and settings are where you left them. Confirm it’s you to switch your account back on.</p>
+            </>}
+        >
+            <AuthMark icon={RotateCcw} />
+            <AuthHead eyebrow="Deactivated account" title="Reactivate your account">
+                Enter the code we emailed you and your password. You’ll go straight to your workspaces.
+            </AuthHead>
 
-                {}
+            <form onSubmit={handleReactivate} className="orw-form">
                 {error && (
-                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-                        {error}
-                    </div>
+                    <div className="orw-auth__alert" role="alert"><AlertCircle size={16} aria-hidden="true" />{error}</div>
                 )}
 
-                {}
-                <form onSubmit={handleReactivate} className="space-y-6">
-                    <div>
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                            <Mail size={16} />
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            disabled
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white disabled:opacity-70"
-                        />
-                    </div>
+                <div className="orw-field">
+                    <span className="orw-label">Email</span>
+                    <div className="orw-auth-value"><Mail size={15} aria-hidden="true" /><span>{email || 'No email in this link'}</span></div>
+                </div>
 
-                    <div>
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                            <KeyRound size={16} />
-                            Verification Code
-                        </label>
-                        <input
-                            type="text"
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="Enter 6-digit code"
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-center text-2xl tracking-widest font-bold"
-                            maxLength={6}
-                            autoFocus
-                        />
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                            Check your email for the verification code (expires in 10 minutes)
-                        </p>
-                    </div>
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reactivate-code">Verification code</label>
+                    <input
+                        id="reactivate-code"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="orw-input"
+                        style={{ letterSpacing: '0.4em', fontSize: 18, textAlign: 'center' }}
+                        maxLength={6}
+                        autoFocus
+                        aria-describedby="reactivate-code-hint"
+                    />
+                    <p className="orw-hint" id="reactivate-code-hint">The code is in your inbox and works for 10 minutes.</p>
+                </div>
 
-                    <div>
-                        <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                            <Lock size={16} />
-                            Password
-                        </label>
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reactivate-password">Password</label>
+                    <div className="orw-input-wrap">
                         <input
-                            type="password"
+                            id="reactivate-password"
+                            type={showPwd ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter your password"
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                            autoComplete="current-password"
+                            className="orw-input"
                         />
+                        <button type="button" className="orw-input-wrap__btn" onClick={() => setShowPwd(!showPwd)}
+                            aria-label={showPwd ? 'Hide password' : 'Show password'} aria-pressed={showPwd}>
+                            {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
                     </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading || otpCode.length !== 6 || !password}
-                        className="w-full py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? 'Reactivating...' : 'Reactivate Account'}
-                    </button>
-                </form>
-
-                {}
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={() => navigate('/login')}
-                        className="text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium"
-                    >
-                        ← Back to Login
-                    </button>
                 </div>
-            </div>
-        </div>
+
+                <button
+                    type="submit"
+                    disabled={loading || otpCode.length !== 6 || !password}
+                    aria-busy={loading}
+                    className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block"
+                >
+                    {loading ? 'Reactivating…' : <>Reactivate account <ArrowRight size={15} /></>}
+                </button>
+            </form>
+
+            <p className="orw-auth__note">
+                <Link to="/login" className="orw-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ArrowLeft size={13} aria-hidden="true" /> Back to sign in
+                </Link>
+            </p>
+        </AuthShell>
     );
 };
 

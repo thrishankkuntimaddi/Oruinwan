@@ -22,7 +22,7 @@ export function TabHeader({ title, actions, children, className }) {
 
   if (wide) {
     return (
-      <header className={cx('z-10 shrink-0 bg-bg/95 pt-safe backdrop-blur-md', className)}>
+      <header className={cx('glass-header z-10 shrink-0 pt-safe', className)}>
         <div className="flex h-16 items-center gap-2 pl-5 pr-2">
           <h1 className="min-w-0 flex-1 truncate text-[20px] font-bold tracking-tight">{title}</h1>
           {actions}
@@ -33,12 +33,13 @@ export function TabHeader({ title, actions, children, className }) {
   }
 
   return (
-    <header className={cx('z-10 shrink-0 bg-bg/95 pt-safe backdrop-blur-md', className)}>
+    <header className={cx('glass-header z-10 shrink-0 pt-safe', className)}>
       <div className="flex h-16 items-center gap-2 pl-4 pr-2">
         <button
           type="button"
           onClick={() => setSwitcher(true)}
           aria-label={`Workspace: ${workspace?.name || 'none'}. Switch workspace`}
+          data-tour="workspace"
           className="pressable flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <WorkspaceTile workspace={workspace} size={36} />
@@ -54,6 +55,7 @@ export function TabHeader({ title, actions, children, className }) {
         <button
           type="button"
           aria-label="Profile and settings"
+          data-tour="profile"
           onClick={() => nav.push('settings')}
           className="pressable relative ml-1 rounded-full p-1"
         >

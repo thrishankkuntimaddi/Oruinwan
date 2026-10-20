@@ -153,7 +153,7 @@ export default function VideoNoteRecorder({ onRecorded, onCancel }) {
             style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 2, cursor: 'pointer', fontSize: 12,
                 border: primary ? 'none' : '1px solid var(--border-default)',
-                background: primary ? 'var(--accent)' : 'none', color: primary ? '#0c0c0c' : color,
+                background: primary ? 'var(--accent)' : 'none', color: primary ? 'var(--bg-base)' : color,
             }}>
             <Icon size={14} /> {title}
         </button>

@@ -52,6 +52,7 @@ router.get('/cache-stats', c.cacheStats);
 // Configuration
 router.get('/capabilities', c.capabilities);
 router.get('/settings', member, c.getSettings);
+router.get('/assistants', member, c.assistants);
 router.put('/settings', admin, c.updateSettings);
 router.post('/settings/test', admin, c.testProvider);
 router.get('/usage', member, c.usage);

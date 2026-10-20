@@ -47,7 +47,7 @@ Messages are end-to-end encrypted, so transcripts are **decrypted on the client*
 | `AI_PROVIDER` | `gemini` (`mock` under `NODE_ENV=test`) | Server-wide default provider |
 | `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL`, `GEMINI_FAST_MODEL` | `gemini-3.5-flash` | Gemini |
 | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `OPENAI_BASE_URL` | `gpt-4o-mini` | OpenAI (or any compatible gateway) |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_CHAT_MODEL` | `claude-sonnet-4-5` | Anthropic |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_CHAT_MODEL` | `claude-sonnet-5-5` | Anthropic |
 | `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL` | `http://localhost:11434/v1`, `llama3.1` | Ollama / LM Studio / vLLM |
 | `AI_MAX_OUTPUT_TOKENS`, `AI_TIMEOUT_MS`, `AI_MAX_TOOL_ROUNDS` | `2000`, `45000`, `4` | Generation limits |
 | `AI_RATE_LIMIT_PER_MIN` | `40` in production | Per-user limit on `/api/ai/*` |

@@ -91,16 +91,9 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             .map((w) => ({ ...w, members: w.members.filter((m) => m.status !== 'removed') }));
         await hydrate(workspaces, { 'members.user': USER_EMAIL, department: DEPT_NAME });
 
-        
-        const Message = require("../../modules/messages/message.model.js");
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
+        // No per-workspace message activity: messages are end-to-end encrypted and admins see
+        // structure (members, roles), never how much anyone talks.
         for (const workspace of workspaces) {
-            const messageCount = await Message.countDocuments({
-                workspace: workspace._id,
-                createdAt: { $gte: sevenDaysAgo }
-            });
-
             workspace.memberCount = workspace.members.length;
             workspace.owners = workspace.members
                 .filter(m => m.role === 'owner')
@@ -108,7 +101,6 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             workspace.managers = workspace.members
                 .filter(m => m.role === 'admin')
                 .map(m => m.user);
-            workspace.activity = messageCount > 100 ? 'high' : messageCount > 20 ? 'medium' : 'low';
             workspace.lastActive = workspace.updatedAt;
         }
 

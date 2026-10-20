@@ -1,19 +1,23 @@
 import React from 'react';
-import { Zap, MessageSquare, Briefcase, Moon } from 'lucide-react';
+import { Zap, ListTodo, Briefcase, Moon } from 'lucide-react';
 import { Section, KpiGrid, Kpi, Panel, Meter } from '../../components/company-dash/dashUi';
 
-/** Engagement KPIs from GET /api/owner-dashboard/activity-health. */
+/**
+ * Engagement KPIs from GET /api/owner-dashboard/activity-health.
+ * Built from sign-ins, tasks and workspace structure only: messages are end-to-end
+ * encrypted, so the owner console never counts them.
+ */
 const ActivityHealth = ({ data, loading }) => {
-    const m = data?.messages || {};
-    const weeklyAvg = m.last30days ? Math.round(m.last30days / 4.3) : 0;
-    const trend = m.last7days == null ? null
-        : m.last7days > weeklyAvg ? { text: 'above', tone: 'up' }
-            : m.last7days < weeklyAvg ? { text: 'below', tone: 'down' } : { text: 'level with', tone: undefined };
+    const t = data?.tasks || {};
+    const weeklyAvg = t.last30days ? Math.round(t.last30days / 4.3) : 0;
+    const trend = t.last7days == null ? null
+        : t.last7days > weeklyAvg ? { text: 'above', tone: 'up' }
+            : t.last7days < weeklyAvg ? { text: 'below', tone: 'down' } : { text: 'level with', tone: undefined };
     const score = data?.engagementScore;
-    const total = (data?.activeWorkspaces || 0) + (data?.dormantWorkspaces || 0);
+    const signIns = data?.signIns || {};
 
     return (
-        <Section title="Activity & health" lead="How much your workspaces are actually used">
+        <Section title="Activity & health" lead="Sign-ins, tasks and workspaces. Message content and volume stay private.">
             <KpiGrid>
                 <Panel>
                     <div className="cd-kpi-top" style={{ marginBottom: 6 }}>
@@ -25,17 +29,17 @@ const ActivityHealth = ({ data, loading }) => {
                     </div>
                     <Meter value={score || 0} label="Engagement score" tone={score >= 60 ? 'success' : score < 25 ? 'danger' : undefined} />
                     <div className="cd-kpi-hint" style={{ marginTop: 8 }}>
-                        {total ? `${data.activeWorkspaces} of ${total} workspaces had messages this week` : 'No workspaces yet'}
+                        {signIns.people ? `${signIns.last7days} of ${signIns.people} people signed in this week` : 'No people yet'}
                     </div>
                 </Panel>
                 <Kpi
-                    label="Messages · 7 days"
-                    icon={MessageSquare}
-                    value={m.last7days}
+                    label="Tasks · 7 days"
+                    icon={ListTodo}
+                    value={t.last7days}
                     loading={loading}
-                    delta={trend && m.last30days ? trend.text : null}
+                    delta={trend && t.last30days ? trend.text : null}
                     deltaTone={trend?.tone}
-                    hint={m.last30days ? `the weekly average (${weeklyAvg.toLocaleString()})` : 'no messages in the last 30 days'}
+                    hint={t.last30days ? `the weekly average (${weeklyAvg.toLocaleString()})` : 'no tasks in the last 30 days'}
                 />
                 <Kpi
                     label="Active workspaces"
@@ -43,15 +47,15 @@ const ActivityHealth = ({ data, loading }) => {
                     tone="success"
                     value={data?.activeWorkspaces}
                     loading={loading}
-                    hint="with messages this week"
+                    hint="with task activity this week"
                 />
                 <Kpi
-                    label="Dormant workspaces"
+                    label="Quiet workspaces"
                     icon={Moon}
                     tone="muted"
                     value={data?.dormantWorkspaces}
                     loading={loading}
-                    hint="no messages in 7 days"
+                    hint="no task activity in 7 days"
                 />
             </KpiGrid>
         </Section>

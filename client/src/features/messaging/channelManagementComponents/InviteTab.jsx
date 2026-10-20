@@ -133,7 +133,7 @@ function UserRow({ user, loading, onInvite, avatarColor }) {
                     border: '1px solid var(--border-accent)', cursor: loading ? 'not-allowed' : 'pointer',
                     color: 'var(--accent)', transition: '150ms ease', opacity: loading ? 0.5 : 1,
                 }}
-                onMouseEnter={e => { if (!loading) { e.currentTarget.style.backgroundColor = 'var(--accent)'; e.currentTarget.style.color = '#0c0c0c'; } }}
+                onMouseEnter={e => { if (!loading) { e.currentTarget.style.backgroundColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--bg-base)'; } }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--accent)'; }}
                 title="Add to Channel"
             >

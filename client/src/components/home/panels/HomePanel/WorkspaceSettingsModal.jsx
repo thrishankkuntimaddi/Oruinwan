@@ -3,6 +3,7 @@ import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 import api from '@services/api';
 import { X } from 'lucide-react';
+import AdminOverviewTab, { AdminAgentsTab } from '../../../workspace/settings/AdminOverviewTab';
 import { useNavigate } from 'react-router-dom';
 
 import InvitationsTab from '../../../workspace/settings/InvitationsTab';
@@ -18,15 +19,37 @@ import { useFlag } from '../../../../contexts/FeatureFlagsContext';
 import logger from '../../../../utils/logger';
 import { DEFAULT_WORKSPACE_COLOR } from '../../../../utils/workspaceIcons';
 
+// One line under each Workspace admin section's title: what you do there.
+const SECTION_LEADS = {
+    Overview: 'How this workspace is doing, and the things admins do most.',
+    General: 'Name, icon, colour and the rules people see when they join.',
+    Permissions: 'Who can invite people, create channels and find this workspace.',
+    Members: 'Everyone in this workspace: change roles, suspend or remove people.',
+    Invitations: 'Invites waiting to be accepted, and team links. Revoke any of them here.',
+    'Agents & apps': 'AI agents installed here, plus apps and workflows.',
+    Features: 'Turn workspace features on or off for everyone.',
+    Analytics: 'Activity in this workspace over time.',
+    Data: 'Export this workspace’s data.',
+    Billing: 'Plan and usage.',
+    Advanced: 'Leave or delete the workspace.',
+};
+
 const PERMISSION_KEYS = ['allowMemberChannelCreation', 'allowMemberInvite', 'requireAdminApproval', 'isDiscoverable'];
 const permissionsFrom = (ws) => Object.fromEntries(PERMISSION_KEYS.map(k => [k, !!ws?.settings?.[k]]));
 
-const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setShowDeleteConfirm }) => {
+/**
+ * Workspace settings. `variant="modal"` (default): the dialog from the workspace menu.
+ * `variant="page"`: the full Workspace Admin page (/workspace/:id/admin), with an Overview and
+ * Agents & apps, and the section in the URL (?section=Members).
+ */
+const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setShowDeleteConfirm, variant = 'modal', initialTab, onTabChange }) => {
+    const isPage = variant === 'page';
     const { activeWorkspace, refreshWorkspace } = useWorkspace();
     const { showToast } = useToast();
     const navigate = useNavigate();
     const [leaving, setLeaving] = useState(false);
-    const [activeSettingsTab, setActiveSettingsTab] = useState("General");
+    const [activeSettingsTab, setActiveSettingsTabState] = useState(initialTab || (isPage ? "Overview" : "General"));
+    const setActiveSettingsTab = (tab) => { setActiveSettingsTabState(tab); onTabChange?.(tab); };
 
     
     const [workspaceName, setWorkspaceName] = useState(activeWorkspace?.name || '');
@@ -59,11 +82,11 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const isAdmin = isOwner || activeWorkspace?.role === 'admin';
     const billingEnabled = useFlag('billing');
     useEffect(() => {
-        if (!showSettingsModal) return undefined;
+        if (!showSettingsModal || isPage) return undefined;
         const onKey = (e) => { if (e.key === 'Escape') setShowSettingsModal(false); };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [showSettingsModal, setShowSettingsModal]);
+    }, [showSettingsModal, setShowSettingsModal, isPage]);
 
     const fetchStats = useCallback(async () => {
         if (!activeWorkspace?.id) return;
@@ -157,20 +180,27 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     if (!showSettingsModal) return null;
 
     const tabs = isAdmin
-        ? ["General", "Permissions", "Members", "Invitations", "Features", "Analytics", "Data", ...(billingEnabled ? ["Billing"] : []), "Advanced"]
-        : ["General", "Members"];
+        ? [...(isPage ? ["Overview"] : []), "General", "Permissions", "Members", "Invitations", ...(isPage ? ["Agents & apps"] : []), "Features", "Analytics", "Data", ...(billingEnabled ? ["Billing"] : []), "Advanced"]
+        : [...(isPage ? ["Overview"] : []), "General", "Members"];
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
-            onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false); }}
+            className={isPage ? 'ws-admin-page' : undefined}
+            style={isPage
+                ? { height: '100%', display: 'flex', fontFamily: 'var(--font)', background: 'var(--bg-base)' }
+                : { position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
+            onClick={isPage ? undefined : (e => { if (e.target === e.currentTarget) setShowSettingsModal(false); })}
         >
-            <div role="dialog" aria-modal="true" aria-label="Workspace settings" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '860px', height: 'min(640px, calc(100vh - 32px))', display: 'flex', overflow: 'hidden', position: 'relative' }}>
+            <div role={isPage ? 'region' : 'dialog'} aria-modal={isPage ? undefined : 'true'} aria-label={isPage ? 'Workspace admin' : 'Workspace settings'}
+                className={isPage ? 'ws-admin-shell' : undefined}
+                style={isPage
+                    ? { flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }
+                    : { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '860px', height: 'min(640px, calc(100vh - 32px))', display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
                 {}
-                <div style={{ width: '184px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                    <div style={{ padding: '0 16px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-                        Settings
+                <div className={isPage ? 'ws-admin-nav' : undefined} style={{ width: isPage ? '220px' : '184px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                    <div className="ws-admin-nav-title" style={{ padding: '0 16px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                        {isPage ? `Admin · ${activeWorkspace?.name || ''}` : 'Settings'}
                     </div>
                     <nav style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '0 8px' }}>
                         {tabs.map(tab => (
@@ -197,14 +227,30 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 {}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {}
-                    <div style={{ padding: '18px 28px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                            {activeSettingsTab}
-                        </h2>
-                    </div>
+                    {isPage ? (
+                        <header className="gl-page-head" style={{ flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
+                            <div style={{ minWidth: 0 }}>
+                                <div className="gl-eyebrow">Workspace admin · {activeWorkspace?.name}</div>
+                                <h1 className="gl-page-title">{activeSettingsTab}</h1>
+                                {SECTION_LEADS[activeSettingsTab] && <p className="gl-page-lead">{SECTION_LEADS[activeSettingsTab]}</p>}
+                            </div>
+                        </header>
+                    ) : (
+                        <div style={{ padding: '18px 28px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                            <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                                {activeSettingsTab}
+                            </h2>
+                        </div>
+                    )}
 
                     {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                        {activeSettingsTab === "Overview" && (
+                            <AdminOverviewTab workspace={activeWorkspace} stats={stats} members={members} isAdmin={isAdmin} goTo={setActiveSettingsTab} />
+                        )}
+                        {activeSettingsTab === "Agents & apps" && (
+                            <AdminAgentsTab workspaceId={activeWorkspace?.id} />
+                        )}
                         {activeSettingsTab === "General" && (
                             <GeneralTab
                                 activeWorkspace={activeWorkspace} isAdmin={isAdmin}
@@ -257,7 +303,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 </div>
 
                 {}
-                <button
+                {!isPage && <button
                     onClick={() => setShowSettingsModal(false)}
                     aria-label="Close settings"
                     style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
@@ -265,7 +311,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <X size={16} />
-                </button>
+                </button>}
             </div>
         </div>
     );

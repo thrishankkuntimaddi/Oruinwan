@@ -2,18 +2,18 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
 const panelStyle = {
-    width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
+    width: '256px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+    boxShadow: 'var(--lg-shadow)', overflow: 'hidden',
     fontFamily: 'Inter, system-ui, sans-serif',
 };
 const headerStyle = {
     padding: '12px 16px', display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
-    background: 'rgba(255,255,255,0.02)',
+    justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)',
+    background: 'var(--bg-hover)',
 };
 
 const TIMELINE = [
-    { date: 'NOV 2025', color: '#b8956a', title: 'Oruinwan AI 2.0',  body: 'Smarter responses & context awareness.' },
+    { date: 'NOV 2025', color: 'var(--accent)', title: 'Oruinwan AI 2.0',  body: 'Smarter responses & context awareness.' },
     { date: 'OCT 2025', color: '#a78bfa', title: 'Dark Mode',        body: 'Pure dark surfaces across all views.' },
 ];
 
@@ -22,8 +22,8 @@ const HelpWhatsNewView = ({ onBack }) => (
         <div style={headerStyle}>
             <button onClick={onBack}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
                 <ChevronLeft size={13} /> Back
             </button>

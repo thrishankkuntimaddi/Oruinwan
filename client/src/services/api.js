@@ -57,6 +57,9 @@ const NO_REFRESH_AUTH_PATHS = [
     '/api/auth/logout',
     '/api/auth/register',
     '/api/auth/signup',
+    '/api/auth/google-signup',
+    '/api/auth/resend-verification',
+    '/api/auth/passkeys/login',
 ];
 
 // 401 bodies emitted by server/src/shared/middleware/auth.js (requireAuth).

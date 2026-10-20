@@ -1,16 +1,10 @@
 import { useState, useEffect, useId, useRef } from 'react';
+import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, Loader, Check } from 'lucide-react';
-
-const COUNTRIES = [
-    { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
-    { code: 'US', name: 'USA', dial_code: '+1',  length: 10, flag: '🇺🇸' },
-    { code: 'AE', name: 'UAE', dial_code: '+971',length: 9,  flag: '🇦🇪' },
-    { code: 'AU', name: 'AUS', dial_code: '+61', length: 9,  flag: '🇦🇺' },
-    { code: 'GB', name: 'UK',  dial_code: '+44', length: 10, flag: '🇬🇧' },
-    { code: 'FR', name: 'FRA', dial_code: '+33', length: 9,  flag: '🇫🇷' },
-    { code: 'CA', name: 'CAN', dial_code: '+1',  length: 10, flag: '🇨🇦' },
-];
+import { IS_APP } from '../../appMode/env';
+import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, latestDob } from './googleContinue';
+import CheckEmailPanel from './CheckEmailPanel';
 
 const PWD_RULES = [
     { key: 'length',  label: '8–16 characters',      test: p => p.length >= 8 && p.length <= 16 },
@@ -26,19 +20,44 @@ const StatusIcon = ({ s }) => {
     return null;
 };
 
-const SignupForm = ({ onSwitch }) => {
-    const [formData, setFormData] = useState({ username: '', email: '', phone: '', password: '', confirmPassword: '' });
+const SignupForm = ({ onSwitch, onGoogleSignup, onGoogleSignedIn }) => {
+    const [formData, setFormData] = useState({ username: '', email: '', dob: '', password: '', confirmPassword: '' });
     const [errors, setErrors] = useState({});
-    const [vs, setVs] = useState({ username: 'idle', email: 'idle', phone: 'idle' });
+    const [vs, setVs] = useState({ username: 'idle', email: 'idle' });
     const [showPwd, setShowPwd] = useState(false);
     const [showCfm, setShowCfm] = useState(false);
-    const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
     const uid = useId();
     const [step, setStep] = useState(1);
     const passwordRef = useRef(null);
     const usernameRef = useRef(null);
+    // Set once the account is created: the address the verification link went to.
+    const [sentTo, setSentTo] = useState(null);
+
+    const [providers, setProviders] = useState({});
+    useEffect(() => {
+        let live = true;
+        api.get('/api/auth/providers').then(r => { if (live) setProviders(r.data || {}); }).catch(() => {});
+        return () => { live = false; };
+    }, []);
+    const showGoogle = !IS_APP && googleAvailable(providers);
+
+    const googleLogin = useGoogleSignIn({
+        onSuccess: async (tokenResponse) => {
+            try {
+                const res = await api.post('/api/auth/google-login', { accessToken: tokenResponse.access_token });
+                if (res.data?.needsSignup) onGoogleSignup?.(res.data);
+                else onGoogleSignedIn?.(res.data);
+            } catch (err) {
+                const data = err.response?.data;
+                // An existing account with two-step verification finishes on the sign-in tab.
+                if (data?.requires2FA) { showToast('You already have an account. Sign in to continue.', 'info'); onSwitch(); return; }
+                showToast(data?.message || 'Google sign-in failed', 'error');
+            }
+        },
+        onError: () => showToast('Google sign-in failed', 'error'),
+    });
 
     
     useEffect(() => {
@@ -72,23 +91,6 @@ const SignupForm = ({ onSwitch }) => {
         return () => clearTimeout(t);
     }, [formData.email]);
 
-    
-    useEffect(() => {
-        const t = setTimeout(async () => {
-            const digits = formData.phone.replace(/\D/g, '');
-            if (digits.length === selectedCountry.length) {
-                setVs(p => ({ ...p, phone: 'checking' }));
-                try {
-                    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: formData.phone, phoneCode: selectedCountry.dial_code }) });
-                    const data = await res.json();
-                    if (data.exists) { setErrors(p => ({ ...p, phone: 'Phone already registered' })); setVs(p => ({ ...p, phone: 'taken' })); }
-                    else { setErrors(p => ({ ...p, phone: '' })); setVs(p => ({ ...p, phone: 'available' })); }
-                } catch { setVs(p => ({ ...p, phone: 'idle' })); }
-            } else { setVs(p => ({ ...p, phone: 'idle' })); }
-        }, 500);
-        return () => clearTimeout(t);
-    }, [formData.phone, selectedCountry]);
-
     const handleChange = e => {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
@@ -100,8 +102,8 @@ const SignupForm = ({ onSwitch }) => {
     const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
     const passwordsDontMatch = formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword;
 
-    const isFormValid = formData.username && formData.email && formData.phone && formData.password && formData.confirmPassword &&
-        vs.username === 'available' && vs.email === 'available' && vs.phone === 'available' &&
+    const isFormValid = formData.username && formData.email && formData.dob && formData.password && formData.confirmPassword &&
+        vs.username === 'available' && vs.email === 'available' &&
         passwordsMatch && allPwdMet && !Object.values(errors).some(e => e);
 
     const handleSubmit = async e => {
@@ -111,12 +113,11 @@ const SignupForm = ({ onSwitch }) => {
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/signup`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: formData.username, email: formData.email, phone: formData.phone, phoneCode: selectedCountry.dial_code, password: formData.password })
+                body: JSON.stringify({ username: formData.username, email: formData.email, dob: formData.dob, password: formData.password })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Signup failed');
-            showToast('Verification link sent to your email!', 'success');
-            onSwitch();
+            setSentTo(formData.email);
         } catch (err) {
             showToast(err.message, 'error');
         } finally {
@@ -127,9 +128,9 @@ const SignupForm = ({ onSwitch }) => {
     const fieldState = (key) => (errors[key] ? 'true' : undefined);
     const okState = (key) => (vs[key] === 'available' ? 'ok' : undefined);
 
-    // Step 1 is done once all three identifiers are confirmed available.
-    const detailsValid = ['username', 'email', 'phone'].every(k => formData[k] && vs[k] === 'available' && !errors[k]);
-    const detailsChecking = ['username', 'email', 'phone'].some(k => vs[k] === 'checking');
+    // Step 1 is done once username and email are confirmed available and a date of birth is set.
+    const detailsValid = ['username', 'email'].every(k => formData[k] && vs[k] === 'available' && !errors[k]) && Boolean(formData.dob);
+    const detailsChecking = ['username', 'email'].some(k => vs[k] === 'checking');
 
     const goTo = (n) => {
         setStep(n);
@@ -159,6 +160,10 @@ const SignupForm = ({ onSwitch }) => {
         </div>
     );
 
+    if (sentTo) {
+        return <CheckEmailPanel email={sentTo} reason="signup" onBack={onSwitch} />;
+    }
+
     return (
         <div>
             <StepBar />
@@ -185,9 +190,9 @@ const SignupForm = ({ onSwitch }) => {
                             </div>
 
                             <div className="orw-field">
-                                <label className="orw-label" htmlFor={`${uid}-email`}>Work email</label>
+                                <label className="orw-label" htmlFor={`${uid}-email`}>Email</label>
                                 <div className="orw-input-wrap">
-                                    <input id={`${uid}-email`} name="email" type="email" placeholder="you@company.com" autoComplete="email"
+                                    <input id={`${uid}-email`} name="email" type="email" placeholder="you@example.com" autoComplete="email"
                                         value={formData.email} onChange={handleChange} className="orw-input"
                                         aria-invalid={fieldState('email')} data-state={okState('email')}
                                         aria-describedby={errors.email ? `${uid}-email-err` : undefined} />
@@ -197,29 +202,23 @@ const SignupForm = ({ onSwitch }) => {
                             </div>
 
                             <div className="orw-field">
-                                <label className="orw-label" htmlFor={`${uid}-phone`}>Phone number</label>
-                                <div className="orw-phone">
-                                    <select className="orw-select" aria-label="Country code" value={selectedCountry.code}
-                                        onChange={e => setSelectedCountry(COUNTRIES.find(c => c.code === e.target.value) || COUNTRIES[0])}>
-                                        {COUNTRIES.map(c => (
-                                            <option key={c.code} value={c.code}>{c.flag} {c.dial_code}</option>
-                                        ))}
-                                    </select>
-                                    <div className="orw-input-wrap">
-                                        <input id={`${uid}-phone`} name="phone" inputMode="numeric" autoComplete="tel-national"
-                                            placeholder={`${selectedCountry.length}-digit number`}
-                                            value={formData.phone} onChange={handleChange} className="orw-input"
-                                            aria-invalid={fieldState('phone')} data-state={okState('phone')}
-                                            aria-describedby={errors.phone ? `${uid}-phone-err` : undefined} />
-                                        <span className="orw-input-wrap__status"><StatusIcon s={vs.phone} /></span>
-                                    </div>
-                                </div>
-                                {errors.phone && <p className="orw-error-text" id={`${uid}-phone-err`}>{errors.phone}</p>}
+                                <label className="orw-label" htmlFor={`${uid}-dob`}>Date of birth</label>
+                                <input id={`${uid}-dob`} name="dob" type="date" autoComplete="bday" className="orw-input"
+                                    value={formData.dob} onChange={handleChange} max={latestDob()} min="1900-01-01"
+                                    aria-describedby={`${uid}-dob-hint`} />
+                                <div className="orw-hint" id={`${uid}-dob-hint`}>You need to be at least 13. Only you can see this.</div>
                             </div>
 
                             <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={!detailsValid}>
                                 {detailsChecking ? 'Checking…' : <>Continue <ArrowRight size={15} /></>}
                             </button>
+
+                            {showGoogle && (
+                                <>
+                                    <div className="orw-auth__divider" style={{ margin: '6px 0' }}>Or</div>
+                                    <ContinueWithGoogle onClick={googleLogin} />
+                                </>
+                            )}
                         </div>
                     </div>
                 ) : (

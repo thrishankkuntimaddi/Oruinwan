@@ -26,23 +26,32 @@ const NOT_IN_APPS = [
   'ChttrixAI-animation.mp4', 'hover-animation.mp4', 'chttrix-logo.jpg',
   'icons/Oruinwan.png', 'sw.js',
 ];
-const pruneAppBundle = (outDir) => ({
-  name: 'oruinwan-prune-app-bundle',
-  apply: 'build',
-  closeBundle() {
-    for (const file of NOT_IN_APPS) rmSync(path.join(outDir, file), { force: true });
-  },
-});
+// Both post-build plugins use the resolved outDir, so `vite build --outDir …` works too.
+const pruneAppBundle = (defaultOutDir) => {
+  let outDir = defaultOutDir;
+  return {
+    name: 'oruinwan-prune-app-bundle',
+    apply: 'build',
+    configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
+    closeBundle() {
+      for (const file of NOT_IN_APPS) rmSync(path.join(outDir, file), { force: true });
+    },
+  };
+};
 
 // GitHub Pages serves 404.html for any path it doesn't have, so deep links (/docs, /privacy)
 // load the single-page site and its router takes over.
-const pagesFallback = (outDir) => ({
-  name: 'oruinwan-pages-fallback',
-  apply: 'build',
-  closeBundle() {
-    copyFileSync(path.join(outDir, 'index.html'), path.join(outDir, '404.html'));
-  },
-});
+const pagesFallback = (defaultOutDir) => {
+  let outDir = defaultOutDir;
+  return {
+    name: 'oruinwan-pages-fallback',
+    apply: 'build',
+    configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
+    closeBundle() {
+      copyFileSync(path.join(outDir, 'index.html'), path.join(outDir, '404.html'));
+    },
+  };
+};
 
 export default defineConfig(({ mode }) => {
   const app = mode === 'app';

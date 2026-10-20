@@ -124,10 +124,16 @@ async function createJiraIssue({ workspaceId, projectKey, summary, description, 
   if (!s) throw httpError(400, 'summary is required');
   let task = null;
   if (taskId) task = await require('./github/github.service').loadVisibleTask(workspaceId, taskId, user.id);
-  const integration = await requireConnected(workspaceId, 'jira');
-  const c = integration.config;
-  const client = jiraClient({ baseUrl: c.baseUrl, email: c.email, apiToken: cfg.readSecret(c, 'apiToken') });
-  const footer = user.name ? `\n\nCreated from Oruinwan by ${user.name}` : '';
+  // The person's own Jira login when they connected one (the issue is reported by them), else the workspace's.
+  const mine = await require('../connections/connections.service').personalFor(workspaceId, user.id, 'jira');
+  let client;
+  if (mine) {
+    client = jiraClient({ baseUrl: mine.config.baseUrl, email: mine.config.email, apiToken: mine.secret });
+  } else {
+    const c = (await requireConnected(workspaceId, 'jira')).config;
+    client = jiraClient({ baseUrl: c.baseUrl, email: c.email, apiToken: cfg.readSecret(c, 'apiToken') });
+  }
+  const footer = user.name && !mine ? `\n\nCreated from Oruinwan by ${user.name}` : '';
   const issue = await client.createIssue({
     projectKey: key,
     summary: s.slice(0, 255),

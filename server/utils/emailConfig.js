@@ -15,7 +15,7 @@ const FREEMAIL_DOMAINS = new Set([
 ]);
 
 /**
- * Accepts "addr@x.com", "Name <addr@x.com>" or "\"Name\" <addr@x.com>".
+ * Accepts "addr@example.com", "Name <addr@example.com>" or "\"Name\" <addr@example.com>".
  * Returns { name, email } or null when no address can be found.
  */
 function parseFrom(raw, fallbackName = DEFAULT_FROM_NAME) {
@@ -38,7 +38,7 @@ function resolveSender(env = process.env) {
     parseFrom(env.EMAIL_FROM, name) ||
     parseFrom(env.SMTP_USER, name) ||
     parseFrom(env.SMTP_FALLBACK_USER, name) ||
-    { name, email: 'no-reply@chttrix.local' }
+    { name, email: 'no-reply@oruinwan.com' }
   );
 }
 

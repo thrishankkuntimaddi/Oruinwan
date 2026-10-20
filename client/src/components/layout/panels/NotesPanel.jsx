@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import api from '@services/api';
 import { useNotes, noteContentToText } from "../../../contexts/NotesContext";
-import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
+import NoteTemplateModal, { templateToNote } from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
 import logger from '../../../utils/logger';
 import { formatDate as formatUserDate } from '../../../utils/userDateFormat';
 import { getUserPreferences } from '../../../hooks/useUserPreferences';
@@ -22,10 +22,10 @@ const NOTE_TYPES = [
     { id: "note", Icon: FileText, label: "Document" },
     { id: "documentation", Icon: BookOpen, label: "Documentation" },
     { id: "brainstorm", Icon: Lightbulb, label: "Brainstorm" },
-    { id: "meeting", Icon: Users, label: "Meeting Notes" },
+    { id: "meeting", Icon: Users, label: "Meeting notes" },
     { id: "sop", Icon: ClipboardList, label: "SOP" },
-    { id: "projectspec", Icon: FolderKanban, label: "Project Spec" },
-    { id: "techdesign", Icon: Cpu, label: "Tech Design" },
+    { id: "projectspec", Icon: FolderKanban, label: "Project spec" },
+    { id: "techdesign", Icon: Cpu, label: "Tech design" },
     { id: "announcement", Icon: Megaphone, label: "Announcement" },
 ];
 
@@ -266,13 +266,8 @@ const NotesPanel = ({ title }) => {
     
     const handleTemplateSelect = async (template) => {
         setShowTemplateModal(false);
-        
-        const TYPE_MAP = { blank: 'note', document: 'note' };
-        const noteType = TYPE_MAP[template.id] || template.id || 'note';
         // One request: the note is created with the template's blocks.
-        const stamp = Date.now().toString(36);
-        const blocks = (template.blocks || []).map((b, i) => ({ ...b, id: `${stamp}-${i}` }));
-        await addNote(template.title, noteType, { content: blocks.length ? JSON.stringify(blocks) : '' });
+        await addNote(...templateToNote(template));
     };
 
     
@@ -368,7 +363,7 @@ const NotesPanel = ({ title }) => {
             <div className="gl-tabs" role="tablist" aria-label="Notes source">
                 {[
                     { id: 'workspace', label: 'Workspace', count: activeNotes.length },
-                    { id: 'canvas', label: 'Channel Canvas', count: totalCanvas },
+                    { id: 'canvas', label: 'Canvases', count: totalCanvas },
                 ].map(tab => (
                     <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className="gl-tab" onClick={() => setActiveTab(tab.id)}>
                         {tab.label}<span className="gl-count">{tab.count}</span>
@@ -514,7 +509,7 @@ const NotesPanel = ({ title }) => {
                         ) : displayNotes.map(renderNoteRow)}
                     </PanelSection>
                 ) : (
-                    <PanelSection label="Channel Canvases">
+                    <PanelSection label="Channel canvases">
                         {canvasChannels.length === 0 ? (
                             <PanelEmpty icon={StickyNote} title="No canvas documents yet" text="Canvas tabs added to your channels show up here." />
                         ) : canvasChannels.map(ch => {
@@ -543,7 +538,7 @@ const NotesPanel = ({ title }) => {
                                                 onClick={() => navigate(`/workspace/${workspaceId}/channel/${ch._id}`, { state: { openTabId: tab._id } })}>
                                                 <span className="gl-x-emoji">{tab.emoji || '📄'}</span>
                                                 <span className="gl-x-item-main">
-                                                    <span className="gl-x-item-title" style={{ display: 'block' }}>{tab.name || 'Untitled Canvas'}</span>
+                                                    <span className="gl-x-item-title" style={{ display: 'block' }}>{tab.name || 'Untitled canvas'}</span>
                                                     {tab.lastEditedAt && <span className="gl-x-item-time" style={{ display: 'block' }}>{formatDate(tab.lastEditedAt)}</span>}
                                                 </span>
                                             </button>

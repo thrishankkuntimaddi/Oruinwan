@@ -22,7 +22,9 @@ const byProvider = {
   local_llm: { chat: localChat, fast: localFast },
   gemini: { chat: env.GEMINI_CHAT_MODEL || 'gemini-3.5-flash', fast: env.GEMINI_FAST_MODEL || 'gemini-3.5-flash' },
   openai: { chat: env.OPENAI_CHAT_MODEL || 'gpt-4o-mini', fast: env.OPENAI_FAST_MODEL || 'gpt-4o-mini' },
-  anthropic: { chat: env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-4-5', fast: env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001' },
+  anthropic: { chat: env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-5-5', fast: env.ANTHROPIC_FAST_MODEL || 'claude-haiku-5-5' },
+  // Grok (xAI): an OpenAI-compatible API.
+  xai: { chat: env.XAI_CHAT_MODEL || 'grok-4', fast: env.XAI_FAST_MODEL || 'grok-4' },
   mock: { chat: 'mock', fast: 'mock' },
 };
 
@@ -46,12 +48,14 @@ module.exports = {
     gemini: env.GEMINI_API_KEY || env.GOOGLE_AI_KEY || '',
     openai: env.OPENAI_API_KEY || '',
     anthropic: env.ANTHROPIC_API_KEY || '',
+    xai: env.XAI_API_KEY || '',
     local_llm: env.LOCAL_LLM_API_KEY || 'local',
   },
 
   endpoints: {
     openai: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     anthropic: env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1',
+    xai: env.XAI_BASE_URL || 'https://api.x.ai/v1',
     local_llm: env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
     embed: env.LOCAL_EMBED_BASE_URL || env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
   },

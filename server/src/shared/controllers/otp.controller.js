@@ -38,7 +38,7 @@ exports.sendOtp = async (req, res) => {
 
         return res.json({
             message: "OTP sent successfully",
-            ...(result.devMode ? { devNote: "OTP delivery is not configured in this environment" } : {})
+            ...(result.devMode ? { devNote: "Delivery failed or is not configured here. Development only: the code is in the server console and the dev mail outbox (utils/devMail.js)." } : {})
         });
     } catch (err) {
         return otpError(res, err, "SEND OTP ERROR");

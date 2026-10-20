@@ -1,0 +1,42 @@
+/* Workspace settings → General. Tokens only; the workspace colour is the owner's choice. */
+.wsg { display: flex; flex-direction: column; gap: 14px; font-family: var(--font); }
+.wsg-form { display: flex; flex-direction: column; gap: 16px; }
+.wsg-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; }
+.wsg-icon {
+    position: relative; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    color: var(--text-secondary); background: var(--bg-active); border: 1px solid var(--border-default); border-radius: 3px;
+    transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+.wsg-icon:hover { color: var(--text-primary); border-color: var(--border-accent); }
+.wsg-icon[aria-pressed='true'] { color: var(--accent); background: var(--gl-accent-soft); border-color: var(--gl-accent-line); }
+.wsg-tick {
+    position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--bg-base);
+}
+.wsg-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
+.wsg-color {
+    height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff;
+    border: none; border-radius: 3px; outline: 2px solid transparent; outline-offset: 2px; transition: transform 120ms ease;
+}
+.wsg-color:hover { transform: scale(1.05); }
+.wsg-color[aria-pressed='true'] { outline-color: var(--text-primary); }
+.wsg-preview { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 3px; }
+.wsg-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.wsg-tile {
+    width: 48px; height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; border-radius: 3px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -10px 18px -10px rgba(0, 0, 0, 0.35);
+}
+.wsg-tile--lg { width: 56px; height: 56px; }
+.wsg-name { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wsg-name--lg { font-size: 17px; letter-spacing: -0.01em; }
+.wsg-sub { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.wsg-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); }
+.wsg-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wsg-rows { margin: 0; }
+.wsg-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--border-subtle); font-size: 13px; }
+.wsg-row:first-child { border-top: none; }
+.wsg-row dt { color: var(--text-secondary); }
+.wsg-row dd { margin: 0; font-weight: 600; color: var(--text-primary); text-align: right; }
+.wsg-rules { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; color: var(--text-primary); }
+.wsg-leave { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.wsg-leave-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }

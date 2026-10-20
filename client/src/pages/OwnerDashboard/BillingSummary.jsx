@@ -28,7 +28,7 @@ const BillingSummary = ({ data, loading, seatLimit }) => {
                     {loading ? '…' : used == null ? '—' : `${used}${total ? ` / ${total}` : ''}`}
                 </div>
                 <Meter value={pct || 0} label="Seat usage" tone={pct >= 90 ? 'danger' : undefined} />
-                <div className="cd-kpi-hint" style={{ marginTop: 8 }}>{pct == null ? 'seat limit unknown' : `${pct}% of seats in use`}</div>
+                <div className="cd-kpi-hint" style={{ marginTop: 8 }}>{pct == null ? 'no seat limit set' : `${pct}% of seats in use`}</div>
             </Panel>
             <Kpi
                 label="Renews"

@@ -11,14 +11,20 @@ test.describe('sign in', () => {
     await expect(page).toHaveURL(/\/workspace\/[a-f0-9]{24}\/home/);
   });
 
-  test('the sign-in page offers only the sign-ins the server has set up', async ({ page }) => {
-    // The E2E server has a Google client id but no GitHub, LinkedIn or SMS keys.
+  test('the sign-in page offers Google and email only', async ({ page }) => {
+    // The E2E server has a Google client id but no SMS keys.
     const providers = page.waitForResponse((r) => r.url().includes('/api/auth/providers'));
     await page.goto('/login');
-    expect(await (await providers).json()).toEqual({ google: true, googleClientId: 'e2e-google-client-id', github: false, linkedin: false, sms: false });
+    expect(await (await providers).json()).toEqual({ google: true, googleClientId: 'e2e-google-client-id', sms: false });
     await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue with GitHub' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Continue with LinkedIn' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /GitHub|LinkedIn/ })).toHaveCount(0);
+  });
+
+  test('creating an account asks for a date of birth, not a phone number', async ({ page }) => {
+    await page.goto('/login?mode=signup');
+    await expect(page.locator('input[name="dob"]')).toBeVisible();
+    await expect(page.locator('input[name="phone"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
   });
 
   test('a wrong password is rejected with an error and no navigation', async ({ page }) => {

@@ -28,18 +28,18 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
+            style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
             onClick={e => { if (e.target === e.currentTarget) setShowNewDMModal(false); }}
         >
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '460px', maxHeight: '580px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div role="dialog" aria-modal="true" aria-label="New message" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: 'min(460px, calc(100vw - 32px))', maxHeight: 'min(580px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
                 {}
                 <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
-                        <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>New Message</h3>
+                        <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>New message</h3>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Start a direct conversation</p>
                     </div>
-                    <button onClick={() => setShowNewDMModal(false)}
+                    <button aria-label="Close" onClick={() => setShowNewDMModal(false)}
                         style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}

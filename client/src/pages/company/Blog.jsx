@@ -4,6 +4,7 @@ import { BookOpen, Sparkles, Shield, Users, Clock, ArrowRight } from 'lucide-rea
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { PageHero, Block, Grid, Card, CTABand } from '../../components/public/PublicKit';
 import BRAND from '../../shared/brand';
+import AppLink from '../landing/AppLink';
 
 const POSTS = [
     {
@@ -28,7 +29,7 @@ const POSTS = [
         id: 4, tag: 'Company', color: '#b59cff', icon: Users,
         title: `Why we built ${BRAND.name} instead of integrating with existing tools`,
         excerpt: 'The honest answer to the question we hear most: “Why not just build a Slack integration?” It has everything to do with context loss.',
-        author: 'Thrishank K.', date: 'Feb 28, 2026', readTime: '5 min',
+        author: 'Leadership Team', date: 'Feb 28, 2026', readTime: '5 min',
     },
 ];
 
@@ -116,9 +117,9 @@ export default function Blog() {
                 lead={`In the meantime, explore what ${BRAND.name} can do, or try it with your team.`}
                 actions={
                     <>
-                        <Link to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
+                        <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
                             Get started free <ArrowRight size={16} aria-hidden="true" />
-                        </Link>
+                        </AppLink>
                         <Link to="/features" className="orw-btn orw-btn--ghost orw-btn--lg">Explore features</Link>
                     </>
                 }

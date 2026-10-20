@@ -175,7 +175,7 @@ export default {
                     ['`GET /users`', '`users:read`', '(none)', '`{ users: [{ id, username, firstName, lastName, avatarUrl, role }], count }`'],
                     ['`GET /channels`', '`channels:read`', '(none)', '`{ channels: [{ _id, name, description, topic, isDefault, membersCount, createdAt }], count }` (public, not archived)'],
                 ] } },
-                { callout: 'note', title: 'No message text, by design', text: 'Messages are end-to-end encrypted, so `/messages` returns metadata only: ids, sender, type, reply and attachment counts, timestamps. Private channels, system messages and deleted messages are excluded.' },
+                { callout: 'note', title: 'No message text, by design', text: 'The public API never returns message text: messages are end-to-end encrypted, and `/messages` returns metadata only (ids, sender, type, reply and attachment counts, timestamps). Private channels, system messages and deleted messages are excluded.' },
                 { h: 'Create a task' },
                 { table: { caption: 'POST /tasks body', head: ['Field', 'Type', 'Notes'], rows: [
                     ['`title`', 'string', 'Required, up to 500 characters.'],
@@ -284,6 +284,7 @@ X-Chttrix-Delivery: 66f1…   (the webhook subscription id)
                     { label: 'Node (Express)', lang: 'js', code: VERIFY_NODE },
                     { label: 'Python (Flask)', lang: 'python', code: VERIFY_PY },
                 ] },
+                { callout: 'note', text: 'The `X-Chttrix-*` header names (and the `chx_` key prefix) predate the product’s current name. They are part of the wire format and stay as they are.' },
                 { h: 'Delivery and retries' },
                 { list: [
                     'Each delivery waits up to **8 seconds** for your response. Answer `2xx` quickly and do slow work afterwards.',

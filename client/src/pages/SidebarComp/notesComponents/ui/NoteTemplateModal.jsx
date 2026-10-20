@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import '../../../../components/company-dash/dash.css';
+import '../../../../styles/gloss.css';
 import { X, ArrowRight, FileText, Zap, Layers, ClipboardList, Lightbulb, Users, FolderKanban, Cpu, Megaphone, StickyNote } from 'lucide-react';
 
 export const TEMPLATES = [
@@ -6,7 +9,7 @@ export const TEMPLATES = [
     {
         id: 'blank', category: 'quick',
         TypeIcon: StickyNote,
-        label: 'Blank Note', tag: 'EMPTY',
+        label: 'Blank note', tag: 'EMPTY',
         desc: 'Start from a clean slate with no structure.',
         preview: ['No pre-filled blocks', 'Full freedom to shape', 'Start typing immediately'],
         blocks: [], title: 'Untitled Note',
@@ -16,7 +19,7 @@ export const TEMPLATES = [
     {
         id: 'projectspec', category: 'project',
         TypeIcon: FolderKanban,
-        label: 'Project Spec', tag: 'PLANNING',
+        label: 'Project spec', tag: 'PLANNING',
         desc: 'Goals, scope, timeline, and open questions.',
         preview: ['Goal & scope sections', 'Milestone table', 'Open questions callout'],
         title: 'Project Specification',
@@ -34,7 +37,7 @@ export const TEMPLATES = [
     {
         id: 'techdesign', category: 'project',
         TypeIcon: Cpu,
-        label: 'Tech Design', tag: 'ENGINEERING',
+        label: 'Tech design', tag: 'ENGINEERING',
         desc: 'Architecture decisions, API endpoints, and risk mitigations.',
         preview: ['Overview & architecture', 'API endpoint table', 'Risks callout'],
         title: 'Technical Design Document',
@@ -69,7 +72,7 @@ export const TEMPLATES = [
     {
         id: 'meeting', category: 'meeting',
         TypeIcon: Users,
-        label: 'Meeting Notes', tag: 'MEETING',
+        label: 'Meeting notes', tag: 'MEETING',
         desc: 'Date, attendees, agenda, and action items.',
         preview: ['Date / time / location table', 'Attendees checklist', 'Action items'],
         title: 'Meeting Notes',
@@ -133,144 +136,125 @@ export const TEMPLATES = [
 ];
 
 const CATEGORIES = [
-    { id: 'quick',   label: 'Quick Start',        Icon: Zap },
-    { id: 'project', label: 'Project Templates',  Icon: Layers },
-    { id: 'meeting', label: 'Meeting & Ops',       Icon: ClipboardList },
-    { id: 'docs',    label: 'Documents',           Icon: FileText },
+    { id: 'quick',   label: 'Quick start',     Icon: Zap },
+    { id: 'project', label: 'Projects',        Icon: Layers },
+    { id: 'meeting', label: 'Meetings & ops',  Icon: ClipboardList },
+    { id: 'docs',    label: 'Documents',       Icon: FileText },
 ];
 
+/** Note type stored for a template (blank and document are plain documents). */
+const TYPE_MAP = { blank: 'note', document: 'note' };
+
+/** What addNote needs to create a note from a template: [title, type, { content }]. */
+export function templateToNote(template) {
+    const noteType = TYPE_MAP[template.id] || template.id || 'note';
+    const stamp = Date.now().toString(36);
+    const blocks = (template.blocks || []).map((b, i) => ({ ...b, id: `${stamp}-${i}` }));
+    return [template.title, noteType, { content: blocks.length ? JSON.stringify(blocks) : '' }];
+}
+
+/** The templates suggested first on the notes home. */
+export const STARTER_TEMPLATE_IDS = ['meeting', 'projectspec', 'brainstorm', 'sop'];
+
+/** Templates shown under a category; "Quick start" also offers the most used ones. */
+const templatesIn = (category) => {
+    const own = TEMPLATES.filter(t => t.category === category);
+    if (category !== 'quick') return own;
+    return [...own, ...STARTER_TEMPLATE_IDS.map(id => TEMPLATES.find(t => t.id === id)).filter(Boolean)];
+};
+
+/** A template as a card: icon, name, one line, what it contains. */
+export function TemplateCard({ tmpl, onSelect, compact = false }) {
+    return (
+        <button type="button" className="gl-card gl-card--interactive nt-card" onClick={() => onSelect(tmpl)}>
+            <span className="nt-card-top">
+                <span className="gl-empty-mark" style={{ margin: 0 }}><tmpl.TypeIcon size={16} /></span>
+                <span style={{ minWidth: 0 }}>
+                    <strong className="nt-card-title">{tmpl.label}</strong>
+                    <span className="nt-card-desc">{tmpl.desc}</span>
+                </span>
+            </span>
+            {!compact && tmpl.preview?.length > 0 && (
+                <ul className="nt-card-list">
+                    {tmpl.preview.map((line) => <li key={line}>{line}</li>)}
+                </ul>
+            )}
+            <span className="nt-card-foot">
+                {tmpl.blocks.length ? `${tmpl.blocks.length} blocks` : 'Empty page'}
+                <span className="nt-card-use">Use template <ArrowRight size={12} /></span>
+            </span>
+        </button>
+    );
+}
+
+export const templateCardCss = `
+.nt-card { padding: 14px; text-align: left; display: flex; flex-direction: column; gap: 10px; font-family: var(--font); cursor: pointer; min-width: 0; }
+.nt-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.nt-card-title { display: block; font-size: 14px; color: var(--text-primary); }
+.nt-card-desc { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+.nt-card-list { margin: 0; padding: 0 0 0 16px; list-style: disc; font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.nt-card-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); }
+.nt-card-use { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--text-secondary); transition: color 150ms ease; }
+.nt-card:hover .nt-card-use, .nt-card:focus-visible .nt-card-use { color: var(--accent); }
+`;
+
+/** Pick a template for a new note. Two panes on desktop; tabs over one column on phones. */
 const NoteTemplateModal = ({ onSelect, onClose }) => {
     const [activeCategory, setActiveCategory] = useState('quick');
-    const [hovered, setHovered] = useState(null);
+    const visible = templatesIn(activeCategory);
 
-    const visible = TEMPLATES.filter(t => t.category === activeCategory);
-    const catInfo = CATEGORIES.find(c => c.id === activeCategory);
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
-    return (
-        <div
-            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)' }}
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-        >
-            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', maxHeight: 'calc(100vh - 32px)', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', boxShadow: 'var(--card-shadow)', fontFamily: 'var(--font)' }}>
-
-                {}
-                <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-                        <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>New Note</h2>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', margin: '3px 0 0 0' }}>Choose a template</p>
+    return createPortal(
+        <div className="cd-dialog-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className="cd-dialog nt-modal" data-size="lg" role="dialog" aria-modal="true" aria-labelledby="nt-modal-title">
+                <div className="cd-dialog-head">
+                    <div style={{ minWidth: 0 }}>
+                        <h2 id="nt-modal-title">New note</h2>
+                        <p>Start blank or from a template. You can change everything afterwards.</p>
                     </div>
-                    <nav style={{ flex: 1, padding: '6px', overflowY: 'auto' }}>
+                    <button type="button" className="gl-icon-btn" onClick={onClose} aria-label="Close" title="Close"><X size={16} /></button>
+                </div>
+                <div className="nt-modal-body">
+                    <nav className="nt-modal-nav" aria-label="Template categories">
                         {CATEGORIES.map(cat => {
-                            const Ic = cat.Icon;
-                            const isActive = activeCategory === cat.id;
-                            const count = TEMPLATES.filter(t => t.category === cat.id).length;
+                            const count = templatesIn(cat.id).length;
                             return (
-                                <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                                    style={{
-                                        width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                                        padding: '8px 10px', textAlign: 'left', fontSize: '12px',
-                                        fontWeight: isActive ? 700 : 500,
-                                        background: isActive ? 'var(--accent-dim)' : 'transparent',
-                                        color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                        border: '1px solid transparent', borderRadius: '2px',
-                                        cursor: 'pointer', transition: 'all 150ms ease',
-                                        fontFamily: 'var(--font)', marginBottom: '2px',
-                                    }}
-                                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-                                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-                                >
-                                    <Ic size={13} style={{ flexShrink: 0 }} />
-                                    <span style={{ flex: 1 }}>{cat.label}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}>{count}</span>
+                                <button key={cat.id} type="button"
+                                    className={`gl-item${activeCategory === cat.id ? ' is-active' : ''}`}
+                                    aria-pressed={activeCategory === cat.id}
+                                    onClick={() => setActiveCategory(cat.id)}>
+                                    <cat.Icon size={13} style={{ flexShrink: 0 }} />
+                                    <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{cat.label}</span>
+                                    <span className="gl-count">{count}</span>
                                 </button>
                             );
                         })}
                     </nav>
-                    <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-subtle)' }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
-                            {TEMPLATES.length} TEMPLATES · {CATEGORIES.length} CATEGORIES
-                        </p>
+                    <div className="nt-modal-grid">
+                        {visible.map(tmpl => <TemplateCard key={tmpl.id} tmpl={tmpl} onSelect={onSelect} />)}
                     </div>
                 </div>
-
-                {}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--bg-surface)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {catInfo?.Icon && <catInfo.Icon size={14} style={{ color: 'var(--text-muted)' }} />}
-                            <div>
-                                <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>{catInfo?.label}</h3>
-                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
-                                    {visible.length} TEMPLATE{visible.length !== 1 ? 'S' : ''} AVAILABLE
-                                </p>
-                            </div>
-                        </div>
-                        <button onClick={onClose}
-                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease', display: 'flex', alignItems: 'center' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
-                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                            <X size={15} />
-                        </button>
-                    </div>
-
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                            {visible.map(tmpl => {
-                                const isHov = hovered === tmpl.id;
-                                return (
-                                    <button key={tmpl.id} onClick={() => onSelect(tmpl)}
-                                        onMouseEnter={() => setHovered(tmpl.id)}
-                                        onMouseLeave={() => setHovered(null)}
-                                        style={{
-                                            textAlign: 'left', overflow: 'hidden',
-                                            border: `1px solid ${isHov ? 'var(--border-accent)' : 'var(--border-default)'}`, borderRadius: '2px', fontFamily: 'var(--font)',
-                                            background: 'transparent', cursor: 'pointer',
-                                            transition: 'all 150ms ease',
-                                                                                        boxShadow: 'none',
-                                        }}>
-                                        {}
-                                        <div style={{ padding: '14px 14px 12px', position: 'relative', overflow: 'hidden', background: isHov ? 'var(--bg-hover)' : 'var(--bg-active)', transition: 'background 150ms ease' }}>
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isHov ? 'var(--accent)' : 'var(--border-accent)', transition: 'background 150ms ease' }} />
-                                            <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>{tmpl.tag}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                                                        <tmpl.TypeIcon size={17} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                                                        <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0 }}>{tmpl.label}</h4>
-                                                    </div>
-                                                </div>
-                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tmpl.blocks.length}B</span>
-                                            </div>
-                                        </div>
-                                        {}
-                                        <div style={{ padding: '14px', background: 'var(--bg-base)' }}>
-                                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px', margin: '0 0 10px 0' }}>{tmpl.desc}</p>
-                                            <div style={{ marginBottom: '14px' }}>
-                                                {tmpl.preview.map((line, i) => (
-                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
-                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)' }}>—</span>
-                                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{line}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                                    {tmpl.blocks.length} BLOCKS
-                                                </span>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: isHov ? 'var(--accent)' : 'var(--text-muted)', transition: 'color 150ms ease' }}>
-                                                    USE TEMPLATE <ArrowRight size={11} style={{ transform: isHov ? 'translateX(2px)' : 'none', transition: 'transform 150ms ease' }} />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
             </div>
-        </div>
+            <style>{`${templateCardCss}
+                .nt-modal { max-width: 880px; height: min(620px, calc(100dvh - 32px)); }
+                .nt-modal-body { display: flex; min-height: 0; flex: 1; overflow: hidden; }
+                .nt-modal-nav { width: 196px; flex-shrink: 0; padding: 8px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border-subtle); }
+                .nt-modal-nav .gl-item { width: 100%; }
+                .nt-modal-grid { flex: 1; min-width: 0; overflow-y: auto; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-content: start; }
+                @media (max-width: 640px) {
+                    .nt-modal-body { flex-direction: column; }
+                    .nt-modal-nav { width: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+                    .nt-modal-nav .gl-item { width: auto; flex-shrink: 0; }
+                    .nt-modal-grid { grid-template-columns: 1fr; padding: 12px; }
+                }
+            `}</style>
+        </div>,
+        document.body,
     );
 };
 

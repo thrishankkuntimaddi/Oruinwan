@@ -258,6 +258,7 @@ const CentralContentView = ({
                     parentMessage={activeThread}
                     channelId={chat.id || chat._id}
                     conversationType={conversationType === 'dm' ? 'dm' : 'channel'}
+                    conversationName={chat.name || ''}
                     onClose={onThreadClose}
                     socket={rawSocket}
                     currentUserId={currentUserId}

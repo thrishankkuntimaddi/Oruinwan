@@ -26,6 +26,50 @@
     --gl-aurora: rgba(200, 162, 116, 0.1);
     --gl-aurora-cool: rgba(142, 166, 255, 0.06);
     --gl-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* ── Hybrid: Liquid glass + Monolith + Gloss ─────────────────────────────
+       Monolith = the solid base (page backgrounds, panels, lists): calm, near-square.
+       Liquid glass = floating and overlay layers only (top bar, icon rail, popovers,
+       menus, dialogs, toasts, palette, docks): translucent, frosted, edge-lit.
+       Gloss = the specular top light on primary buttons and active states. */
+
+    /* Shape: the base stays near-square; floating glass is softened a little. */
+    --gl-radius-sm: 3px;      /* rows, inputs, buttons, cards (monolith) */
+    --gl-radius-md: 7px;      /* popovers, menus, tooltips, toasts, chips on glass */
+    --gl-radius-lg: 10px;     /* dialogs, sheets, command palette, docks */
+    --gl-radius-pill: 999px;
+
+    /* Motion: calm, 150–220ms. */
+    --gl-dur-1: 150ms;
+    --gl-dur-2: 190ms;
+    --gl-dur-3: 220ms;
+    --gl-ease-press: cubic-bezier(0.3, 0.7, 0.4, 1);
+    --gl-lift: translateY(-1px);
+    --gl-focus: rgba(200, 162, 116, 0.75);
+    --gl-focus-ring: 0 0 0 3px var(--input-ring);
+
+    /* Liquid glass material. --lg-tint is the frosted body; --lg-sheen the refraction
+       highlight across the top; --lg-edge the lit rim; --lg-solid the no-blur fallback. */
+    --lg-blur: 22px;
+    --lg-sat: 170%;
+    --lg-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+    --lg-tint: rgba(24, 23, 21, 0.72);
+    --lg-tint-strong: rgba(20, 19, 18, 0.86);
+    --lg-solid: #171615;
+    --lg-chrome: rgba(17, 17, 16, 0.82);       /* top bar + icon rail (no blur needed) */
+    --lg-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.018) 42%, rgba(255, 255, 255, 0) 70%);
+    --lg-border: rgba(255, 255, 255, 0.09);
+    --lg-edge: inset 0 1px 0 rgba(255, 255, 255, 0.11), inset 0 0 0 1px rgba(255, 255, 255, 0.025), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    --lg-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -10px rgba(0, 0, 0, 0.6), 0 36px 80px -28px rgba(0, 0, 0, 0.65);
+    --lg-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px -10px rgba(0, 0, 0, 0.55);
+    --lg-scrim: rgba(5, 5, 4, 0.58);
+    --lg-scrim-filter: blur(4px) saturate(115%);
+    /* Warm ambient light that the chrome glass sits over. */
+    --gl-shell-bg: radial-gradient(900px 260px at 50% -140px, rgba(200, 162, 116, 0.07), transparent 70%), var(--bg-base);
+
+    /* Gloss on primary buttons / active fills. */
+    --gl-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0) 52%);
+    --gl-on-accent: #120e08;
 }
 
 html.light {
@@ -35,12 +79,118 @@ html.light {
     --gl-glass-strong: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
     --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.9);
     --gl-spec-strong: inset 0 1px 0 #ffffff;
-    --gl-drop: 0 24px 60px -28px rgba(40, 30, 15, 0.28);
-    --gl-accent-glow: 0 8px 22px -12px rgba(150, 110, 60, 0.55);
-    --gl-accent-soft: rgba(184, 149, 106, 0.12);
+    --gl-drop: 0 1px 2px rgba(60, 44, 20, 0.06), 0 14px 34px -14px rgba(60, 44, 20, 0.22);
+    --gl-accent-grad: linear-gradient(180deg, #dcbd92 0%, #c29d6d 55%, #ad8656 100%);
+    --gl-accent-glow: 0 6px 18px -10px rgba(140, 100, 50, 0.6);
+    --gl-accent-soft: rgba(176, 136, 86, 0.12);
+    --gl-accent-line: rgba(150, 112, 62, 0.34);
     --gl-grid: rgba(20, 16, 10, 0.035);
     --gl-aurora: rgba(200, 162, 116, 0.16);
     --gl-aurora-cool: rgba(120, 140, 220, 0.07);
+
+    --gl-focus: rgba(136, 101, 53, 0.7);
+    --lg-tint: rgba(255, 255, 255, 0.7);
+    --lg-tint-strong: rgba(255, 254, 252, 0.86);
+    --lg-solid: #fdfcfa;
+    --lg-chrome: rgba(255, 253, 250, 0.72);
+    --lg-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.35) 40%, rgba(255, 255, 255, 0) 72%);
+    --lg-border: rgba(80, 60, 30, 0.12);
+    --lg-edge: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(80, 60, 30, 0.05);
+    --lg-shadow: 0 1px 2px rgba(60, 44, 20, 0.07), 0 10px 28px -10px rgba(60, 44, 20, 0.18), 0 30px 70px -30px rgba(60, 44, 20, 0.24);
+    --lg-shadow-sm: 0 1px 2px rgba(60, 44, 20, 0.06), 0 6px 18px -8px rgba(60, 44, 20, 0.18);
+    --lg-scrim: rgba(52, 42, 28, 0.2);
+    --gl-shell-bg: radial-gradient(900px 300px at 50% -160px, rgba(214, 178, 128, 0.2), transparent 70%), var(--bg-base);
+    --gl-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 48%, rgba(255, 255, 255, 0) 52%);
+}
+
+/* ── Liquid glass material ──────────────────────────────────────────────────
+   .gl-liquid           frosted floating layer (popovers, menus, toasts, docks)
+   .gl-liquid--strong   denser, for dialogs and the command palette (long text)
+   .gl-liquid--chrome   app chrome (top bar, icon rail): glass look, no blur
+   Blur is only used on overlays, never on long scrolling lists. Without
+   backdrop-filter (old WebViews) every variant falls back to a solid surface. */
+.gl-liquid {
+    background-color: var(--lg-tint);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+}
+.gl-liquid--strong { background-color: var(--lg-tint-strong); }
+.gl-liquid--chrome {
+    background-color: var(--lg-chrome);
+    background-image: var(--lg-sheen);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gl-liquid, .gl-liquid--strong { background-color: var(--lg-solid); }
+}
+/* Overlay pieces every dialog can share (shared Modal, ConfirmationModal, page-kit Dialog). */
+.gl-scrim {
+    position: fixed;
+    inset: 0;
+    background: var(--lg-scrim);
+    -webkit-backdrop-filter: var(--lg-scrim-filter);
+    backdrop-filter: var(--lg-scrim-filter);
+    animation: gl-fade-in var(--gl-dur-2) ease;
+}
+.gl-dialog {
+    color: var(--text-primary);
+    font-family: var(--font);
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-radius: var(--gl-radius-lg);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+    overflow: hidden;
+    animation: gl-dialog-in var(--gl-dur-3) var(--gl-ease);
+}
+.gl-dialog-head { border-bottom: 1px solid var(--lg-border); }
+.gl-dialog-foot { border-top: 1px solid var(--lg-border); background: var(--bg-active); background: color-mix(in srgb, var(--bg-active) 55%, transparent); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gl-dialog { background-color: var(--lg-solid); }
+    .gl-scrim { background: var(--bg-overlay); }
+}
+
+/* Toasts (shared/components/ui/Toast.jsx). */
+.gl-toast {
+    position: relative;
+    overflow: hidden;
+    font-family: var(--font);
+    color: var(--text-primary);
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-radius: var(--gl-radius-md);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+    animation: gl-toast-in var(--gl-dur-3) var(--gl-ease);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gl-toast { background-color: var(--lg-solid); }
+}
+
+@keyframes gl-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gl-dialog-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.975); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes gl-toast-in {
+    from { opacity: 0; transform: translateX(16px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gl-scrim, .gl-dialog, .gl-toast { animation: none; }
+}
+
+/* Windows high-contrast / forced colours: drop the effects. */
+@media (forced-colors: active) {
+    .gl-liquid { background: Canvas; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
 /* ── Ambient light for large empty areas (welcome screens, page backdrops) ── */
@@ -107,14 +257,19 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     border-radius: var(--gl-radius);
     box-shadow: var(--gl-spec);
 }
-.gl-card--interactive { transition: border-color 180ms ease, transform 220ms var(--gl-ease), box-shadow 220ms ease; cursor: pointer; }
+/* Light: cards sit on the warm base with a soft, warm two-layer shadow instead of a grey line.
+   :where() keeps the specificity of a plain .gl-card so popovers/dialogs built on gl-card still win. */
+:where(html.light) .gl-card { box-shadow: var(--gl-spec), 0 1px 2px rgba(60, 44, 20, 0.05), 0 4px 14px -8px rgba(60, 44, 20, 0.1); }
+.gl-card--interactive { transition: border-color var(--gl-dur-2) ease, transform var(--gl-dur-3) var(--gl-ease), box-shadow var(--gl-dur-3) ease; cursor: pointer; }
 .gl-card--interactive:hover { border-color: var(--border-accent); transform: translateY(-2px); box-shadow: var(--gl-spec-strong), var(--gl-drop); }
-.gl-card--interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gl-card--interactive:active { transform: translateY(0); transition-duration: 90ms; }
+:where(html.light) .gl-card--interactive:hover { box-shadow: var(--gl-spec-strong), 0 2px 4px rgba(60, 44, 20, 0.05), 0 14px 32px -14px rgba(60, 44, 20, 0.24); }
+.gl-card--interactive:focus-visible { outline: 2px solid var(--gl-focus); outline-offset: 2px; }
 
 .gl-glass-bar {
-    background: var(--bg-base);
-    background-image: var(--gl-glass);
-    box-shadow: var(--gl-spec);
+    background-color: var(--lg-chrome);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-edge);
 }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
@@ -137,22 +292,24 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     border-radius: var(--gl-radius);
     box-shadow: var(--gl-spec);
     cursor: pointer;
-    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    transition: border-color var(--gl-dur-1) ease, background-color var(--gl-dur-1) ease, box-shadow var(--gl-dur-2) ease, transform var(--gl-dur-2) var(--gl-ease), filter var(--gl-dur-1) ease, outline-offset var(--gl-dur-1) ease;
 }
 .gl-btn:hover:not(:disabled) { border-color: var(--border-accent); }
-.gl-btn:active:not(:disabled) { transform: translateY(1px); }
-.gl-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gl-btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); transition-duration: 80ms; }
+.gl-btn:focus-visible { outline: 2px solid var(--gl-focus); outline-offset: 2px; }
 .gl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .gl-btn--sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .gl-btn--lg { height: 40px; padding: 0 18px; font-size: 13.5px; }
 .gl-btn--block { width: 100%; }
 .gl-btn--primary {
-    color: #120e08;
-    background: var(--gl-accent-grad);
+    color: var(--gl-on-accent);
+    background: var(--gl-gloss), var(--gl-accent-grad);
     border-color: rgba(255, 230, 190, 0.35);
-    box-shadow: var(--gl-spec-strong), var(--gl-accent-glow);
+    box-shadow: var(--gl-spec-strong), inset 0 -1px 0 rgba(90, 60, 20, 0.25), var(--gl-accent-glow);
+    text-shadow: 0 1px 0 rgba(255, 240, 215, 0.35);
 }
-.gl-btn--primary:hover:not(:disabled) { border-color: rgba(255, 236, 205, 0.6); filter: brightness(1.05); }
+.gl-btn--primary:hover:not(:disabled) { border-color: rgba(255, 236, 205, 0.6); filter: brightness(1.05) saturate(1.05); transform: var(--gl-lift); box-shadow: var(--gl-spec-strong), inset 0 -1px 0 rgba(90, 60, 20, 0.25), 0 10px 26px -10px rgba(200, 162, 116, 0.7); }
+html.light .gl-btn--primary { border-color: rgba(140, 100, 50, 0.35); }
 .gl-btn--ghost { background: transparent; background-image: none; border-color: transparent; box-shadow: none; color: var(--text-secondary); }
 .gl-btn--ghost:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); border-color: transparent; }
 
@@ -169,15 +326,17 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     border: 1px solid transparent;
     border-radius: var(--gl-radius);
     cursor: pointer;
-    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease, border-color var(--gl-dur-1) ease, transform var(--gl-dur-2) var(--gl-ease);
 }
 .gl-icon-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); }
+.gl-icon-btn:active:not(:disabled) { transform: scale(0.92); transition-duration: 80ms; }
 .gl-icon-btn[aria-pressed='true'], .gl-icon-btn[aria-expanded='true'], .gl-icon-btn.is-active {
     color: var(--accent);
     background: var(--gl-accent-soft);
     border-color: var(--gl-accent-line);
+    box-shadow: var(--gl-spec);
 }
-.gl-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-icon-btn:focus-visible { outline: 2px solid var(--gl-focus); outline-offset: 1px; }
 .gl-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
@@ -194,10 +353,11 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     border-radius: var(--gl-radius);
     outline: none;
     box-sizing: border-box;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    transition: border-color var(--gl-dur-1) ease, box-shadow var(--gl-dur-2) ease, background-color var(--gl-dur-1) ease;
 }
+.gl-input:hover:not(:focus):not(:disabled) { border-color: var(--border-accent); }
 .gl-input::placeholder { color: var(--text-secondary); opacity: 0.65; }
-.gl-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--input-ring); }
+.gl-input:focus { border-color: var(--accent); box-shadow: var(--gl-focus-ring); }
 .gl-search { position: relative; }
 .gl-search > svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; }
 .gl-search > .gl-input { padding-left: 30px; }
@@ -210,9 +370,12 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     background: var(--bg-active);
     border: 1px solid var(--border-default);
     border-radius: var(--gl-radius);
+    min-width: 0;
 }
 .gl-tab {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -229,16 +392,18 @@ html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 1
     border: none;
     border-radius: 2px;
     cursor: pointer;
-    transition: background 150ms ease, color 150ms ease;
+    transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease, box-shadow var(--gl-dur-2) ease;
 }
 .gl-tab:hover { color: var(--text-primary); }
 .gl-tab[aria-selected='true'], .gl-tab.is-active {
     color: var(--text-primary);
     background: var(--bg-surface);
     background-image: var(--gl-glass-strong);
-    box-shadow: var(--gl-spec), 0 1px 2px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--gl-spec-strong), 0 1px 2px rgba(0, 0, 0, 0.25);
 }
-.gl-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+html.light .gl-tab[aria-selected='true'], html.light .gl-tab.is-active { box-shadow: var(--gl-spec-strong), 0 1px 2px rgba(60, 44, 20, 0.1), 0 0 0 1px rgba(80, 60, 30, 0.06); }
+.gl-tab:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--gl-accent-line, var(--accent)); }
+.gl-tab .gl-count { flex-shrink: 0; }
 .gl-count {
     min-width: 18px;
     height: 16px;
@@ -376,9 +541,10 @@ button.gl-panel-title:focus-visible { outline: 2px solid var(--accent); outline-
     border: 1px solid transparent;
     border-radius: var(--gl-radius);
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease, border-color var(--gl-dur-1) ease;
 }
 .gl-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.gl-item:active { background: var(--bg-active); }
 .gl-item.is-active, .gl-item[aria-current='page'] {
     color: var(--text-primary);
     background: var(--bg-active);
@@ -395,6 +561,7 @@ button.gl-panel-title:focus-visible { outline: 2px solid var(--accent); outline-
     width: 2px;
     border-radius: 2px;
     background: var(--accent);
+    box-shadow: 0 0 8px var(--gl-accent-line);
 }
 .gl-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
@@ -445,6 +612,7 @@ button.gl-panel-title:focus-visible { outline: 2px solid var(--accent); outline-
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gl-card--interactive, .gl-btn { transition: none; }
-    .gl-card--interactive:hover { transform: none; }
+    .gl-card--interactive, .gl-btn, .gl-icon-btn, .gl-item, .gl-tab { transition: none; }
+    .gl-card--interactive:hover, .gl-btn:hover:not(:disabled), .gl-btn:active:not(:disabled),
+    .gl-icon-btn:active:not(:disabled) { transform: none; }
 }

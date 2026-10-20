@@ -1,191 +1,318 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Sparkles, Link2, Trash2, Eye, Edit3, Tag, Plus, X, ChevronRight, Loader2, BookOpen } from 'lucide-react';
+import {
+    Sparkles, Link2, Trash2, Tag, Plus, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Book, FileText,
+    Network, Check, Users, Workflow, GraduationCap,
+} from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useToast } from '../../contexts/ToastContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import {
+    DashPage, PageHead, Section, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip, Grid,
+    LoadingState, EmptyState, Dialog, Confirm, timeAgo,
+} from '../../components/ui/page';
+
+/** Other knowledge views (side panel, list) reload when a page is created, renamed or deleted. */
+const KNOWLEDGE_CHANGED = 'oruinwan:knowledge-changed';
+const announceChange = () => window.dispatchEvent(new Event(KNOWLEDGE_CHANGED));
+
+/** A page's own emoji, or a plain document mark when it still has the default one. */
+function PageMark({ icon, size = 15 }) {
+    if (icon && icon !== '📄') return <span aria-hidden="true" style={{ fontSize: size, lineHeight: 1 }}>{icon}</span>;
+    return <FileText size={size} style={{ color: 'var(--accent)' }} aria-hidden="true" />;
+}
+
+// Starter pages: each one is created with real headings so the team only fills in the blanks.
+const TEMPLATES = [
+    {
+        Icon: Users, title: 'Team handbook', text: 'Who does what, how to reach each other and the tools you use.',
+        content: '# Team handbook\n\n## Who we are\nOne paragraph on what this team does and why.\n\n## People and roles\n- Name: role, what to ask them about\n\n## How to reach us\n- Urgent: \n- Everything else: \n\n## Tools we use\n- ',
+        tags: ['handbook'],
+    },
+    {
+        Icon: Workflow, title: 'How we work', text: 'Your process for planning, reviews and shipping, in one place.',
+        content: '# How we work\n\n## Planning\nWhen we plan and who joins.\n\n## Doing the work\n- How tasks are picked up\n- Where updates go\n\n## Reviews\nWhat a good review looks like.\n\n## Shipping\n1. Checklist step\n2. Checklist step',
+        tags: ['process'],
+    },
+    {
+        Icon: GraduationCap, title: 'Onboarding guide', text: 'Everything a new teammate needs in their first week.',
+        content: '# Onboarding guide\n\n> Welcome! Start here on your first day.\n\n## Day one\n- Get access to: \n- Meet: \n\n## First week\n- Read: \n- Ship a small change\n\n## Who to ask\n- ',
+        tags: ['onboarding'],
+    },
+];
 
 function MarkdownPreview({ content }) {
     const html = content
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;margin:16px 0 4px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;margin:20px 0 8px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1 style="font-size:22px;font-weight:800;margin:24px 0 12px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h1>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700">$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em style="font-style:italic">$1</em>')
-        .replace(/`(.+?)`/g, '<code style="padding:1px 6px;background:rgba(255,255,255,0.08);font-family:monospace;font-size:12px;color:#b8956a">$1</code>')
-        .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid rgba(184,149,106,0.4);padding-left:12px;color:rgba(228,228,228,0.55);font-style:italic;margin:8px 0">$1</blockquote>')
-        .replace(/^- (.+)$/gm, '<li style="margin-left:16px;list-style:disc;color:rgba(228,228,228,0.8)">$1</li>')
-        .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal;color:rgba(228,228,228,0.8)">$2</li>')
-        .replace(/\n\n/g, '</p><p style="margin-bottom:12px;color:rgba(228,228,228,0.8);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.7">')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+        .replace(/^- (.+)$/gm, '<li class="kb-ul">$1</li>')
+        .replace(/^(\d+)\. (.+)$/gm, '<li class="kb-ol">$2</li>')
+        .replace(/\n\n/g, '</p><p>')
         .replace(/\n/g, '<br/>');
+    return <div className="kb-md" dangerouslySetInnerHTML={{ __html: `<p>${html}</p>` }} />;
+}
+
+/** One clickable page row inside a <Panel flush>. */
+function PageRow({ page, first, onOpen, meta }) {
     return (
-        <div
-            style={{ lineHeight: 1.7, fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px', color: 'var(--text-muted)' }}
-            dangerouslySetInnerHTML={{ __html: `<p style="margin-bottom:12px;color:rgba(228,228,228,0.8);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.7">${html}</p>` }}
-        />
+        <li style={{ borderTop: first ? 'none' : '1px solid var(--border-subtle)' }}>
+            <button type="button" className="kb-row" onClick={onOpen}>
+                <span className="gl-empty-mark" style={{ margin: 0 }}><PageMark icon={page.icon} size={16} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <strong className="kb-row-title">{page.title || 'Untitled page'}</strong>
+                        {(page.tags || []).slice(0, 3).map((t) => <Chip key={t}>#{t}</Chip>)}
+                    </span>
+                    {meta && <span className="kb-row-meta">{meta}</span>}
+                </span>
+                <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            </button>
+        </li>
     );
 }
 
-function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }) {
+function LinkPageModal({ currentPageId, onLink, onClose, allPages }) {
     const [search, setSearch] = useState('');
     const options = allPages.filter(p => p._id !== currentPageId && (!search || p.title.toLowerCase().includes(search.toLowerCase())));
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-            <div style={{ background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)', width: '100%', maxWidth: '360px', margin: '0 16px', overflow: 'hidden' }}>
-                <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Link a Page</h3>
-                </div>
-                <div style={{ padding: '14px 18px' }}>
-                    <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search pages..."
-                        style={{ width: '100%', padding: '8px 12px', fontSize: '12px', background: '#111', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark' }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.4)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
-                    />
-                    <div style={{ maxHeight: '210px', overflowY: 'auto' }}>
-                        {options.length === 0 && <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', fontFamily: 'monospace' }}>No pages found</p>}
-                        {options.map(p => (
-                            <button key={p._id} onClick={() => onLink(p._id)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', textAlign: 'left', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <span>{p.icon || '📄'}</span> {p.title}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button onClick={onClose}
-                        style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
-                    >Cancel</button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
-    const handbookPages = pages.filter(p => p.isHandbook);
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-                <h1 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>📘</span> Company Handbook
-                </h1>
-                <button
-                    onClick={onCreate}
-                    disabled={creating}
-                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '11px', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.6 : 1, fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease' }}
-                >
-                    {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                    New handbook page
-                </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-                {handbookPages.length === 0 ? (
-                    <div className="flex flex-col items-center py-16">
-                        <span className="text-5xl mb-4">📘</span>
-                        <p className="text-gray-400 text-sm mb-4 text-center max-w-xs">No handbook pages yet. Create the first page to start documenting your company processes.</p>
-                        <button onClick={onCreate} disabled={creating} style={{ padding: '7px 20px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.6 : 1, fontFamily: 'Inter,system-ui,sans-serif' }}>
-                            {creating ? 'Creating…' : 'Create first handbook page'}
-                        </button>
-                    </div>
+        <Dialog open title="Link a page" lead="The page you pick shows this one under “Linked from”." onClose={onClose}
+            footer={<Btn variant="ghost" onClick={onClose}>Cancel</Btn>}>
+            <SearchBox value={search} onChange={setSearch} placeholder="Find a page" label="Find a page" />
+            <div className="gl-card" style={{ marginTop: 10, maxHeight: 260, overflowY: 'auto', padding: 0 }}>
+                {options.length === 0 ? (
+                    <EmptyState icon={FileText} title={search ? 'No pages match' : 'No other pages yet'}
+                        text={search ? 'Try a different title.' : 'Create another page first, then link the two.'} />
                 ) : (
-                    <div className="space-y-2">
-                        {handbookPages.map(p => (
-                            <button
-                                key={p._id}
-                                onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${p._id}`)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
-                            >
-                                <span className="text-xl">{p.icon || '📄'}</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                                    {p.tags?.length > 0 && (
-                                        <p className="text-[10px] text-gray-400 mt-0.5">{p.tags.map(t => `#${t}`).join(' ')}</p>
-                                    )}
-                                </div>
-                                <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-400 shrink-0 transition-colors" />
-                            </button>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                        {options.map((p, i) => (
+                            <PageRow key={p._id} page={p} first={i === 0} onOpen={() => onLink(p._id)} />
                         ))}
-                    </div>
+                    </ul>
                 )}
             </div>
-        </div>
+        </Dialog>
     );
 }
 
-function EmptyKnowledge({ onCreate, loading }) {
+const pageMeta = (p, childCount) => [
+    p.updatedAt ? `Updated ${timeAgo(p.updatedAt)}` : null,
+    p.createdBy?.username ? `by ${p.createdBy.username}` : null,
+    childCount ? `${childCount} sub-page${childCount === 1 ? '' : 's'}` : null,
+].filter(Boolean).join(' · ');
+
+function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, creating, openPage, openGraph, openHandbook }) {
+    const [query, setQuery] = useState('');
+    const childCounts = useMemo(() => {
+        const m = {};
+        pages.forEach((p) => { if (p.parentId) m[String(p.parentId)] = (m[String(p.parentId)] || 0) + 1; });
+        return m;
+    }, [pages]);
+    const handbookCount = pages.filter(p => p.isHandbook).length;
+    const shown = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return [...pages]
+            .filter(p => !q || `${p.title} ${(p.tags || []).join(' ')}`.toLowerCase().includes(q))
+            .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    }, [pages, query]);
+    const hasAny = pages.length > 0;
+
     return (
-        <div className="flex flex-col items-center justify-center h-full py-20">
-            <BookOpen size={56} className="text-gray-200 dark:text-gray-700 mb-4" />
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Knowledge Base</h2>
-            <p className="text-sm text-gray-400 mb-6 text-center max-w-xs">Create pages, link ideas, and let AI summarize your team's knowledge.</p>
-            {loading ? (
-                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-                <button onClick={onCreate} style={{ padding: '8px 24px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }}>
-                    Create first page
-                </button>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow={wsName ? `${wsName} · Knowledge` : 'Knowledge'}
+                    title="Knowledge"
+                    icon={BookOpen}
+                    lead="Your team’s shared pages: how you work, what you decided and where things live."
+                    actions={(
+                        <>
+                            <Btn variant="ghost" icon={Network} onClick={openGraph}>Graph</Btn>
+                            {hasAny && <Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>New page</Btn>}
+                        </>
+                    )}
+                />
             )}
-        </div>
+        >
+            {loading && !hasAny ? (
+                <LoadingState label="Loading pages…" />
+            ) : !hasAny ? (
+                <>
+                    <Panel>
+                        <EmptyState
+                            icon={BookOpen}
+                            title="No pages yet"
+                            text="Write down how your team works once, so nobody has to ask twice. Pages can nest and link to each other."
+                            action={<Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>Write your first page</Btn>}
+                        />
+                    </Panel>
+                    <TemplateCards onPick={onCreateTemplate} creating={creating} />
+                </>
+            ) : (
+                <>
+                    <Toolbar>
+                        <SearchBox value={query} onChange={setQuery} placeholder="Find a page or #tag" label="Find a page" />
+                    </Toolbar>
+                    <Section title="All pages" lead="Most recently updated first.">
+                        <Panel flush>
+                            {shown.length === 0 ? (
+                                <EmptyState title="No pages match" text="Try a different title or tag." />
+                            ) : (
+                                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                    {shown.map((p, i) => (
+                                        <PageRow key={p._id} page={p} first={i === 0} onOpen={() => openPage(p._id)} meta={pageMeta(p, childCounts[String(p._id)])} />
+                                    ))}
+                                </ul>
+                            )}
+                        </Panel>
+                    </Section>
+                    <Section title="More places">
+                        <Grid min={240}>
+                            <button type="button" className="gl-card gl-card--interactive kb-card" onClick={openHandbook}>
+                                <span className="gl-empty-mark" style={{ marginBottom: 0 }}><Book size={16} /></span>
+                                <strong>Company handbook</strong>
+                                <span>{handbookCount ? `${handbookCount} page${handbookCount === 1 ? '' : 's'} on policies and processes.` : 'Policies and processes everyone should know.'}</span>
+                            </button>
+                            <button type="button" className="gl-card gl-card--interactive kb-card" onClick={openGraph}>
+                                <span className="gl-empty-mark" style={{ marginBottom: 0 }}><Network size={16} /></span>
+                                <strong>Knowledge graph</strong>
+                                <span>See how pages link to each other and spot the ones nothing points to.</span>
+                            </button>
+                        </Grid>
+                    </Section>
+                </>
+            )}
+            <KbStyles />
+        </DashPage>
+    );
+}
+
+function TemplateCards({ onPick, creating }) {
+    return (
+        <Section title="Start from a template" lead="Each one creates a page with the headings already in place.">
+            <Grid min={220}>
+                {TEMPLATES.map((t) => (
+                    <button key={t.title} type="button" className="gl-card gl-card--interactive kb-card" disabled={creating} onClick={() => onPick(t)}>
+                        <span className="gl-empty-mark" style={{ marginBottom: 0 }}><t.Icon size={16} /></span>
+                        <strong>{t.title}</strong>
+                        <span>{t.text}</span>
+                    </button>
+                ))}
+            </Grid>
+        </Section>
+    );
+}
+
+function HandbookView({ pages, loading, wsName, openPage, onCreate, creating }) {
+    const handbookPages = pages.filter(p => p.isHandbook);
+    return (
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow={wsName ? `${wsName} · Knowledge` : 'Knowledge'}
+                    title="Company handbook"
+                    icon={Book}
+                    lead="Policies, processes and answers everyone in the workspace should be able to find."
+                    actions={handbookPages.length > 0 && <Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>New handbook page</Btn>}
+                />
+            )}
+        >
+            {loading && !pages.length ? (
+                <LoadingState label="Loading the handbook…" />
+            ) : (
+                <Panel flush>
+                    {handbookPages.length === 0 ? (
+                        <EmptyState
+                            icon={Book}
+                            title="No handbook pages yet"
+                            text="Start with the questions new people ask most: time off, expenses, who to ask for what."
+                            action={<Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>Write the first handbook page</Btn>}
+                        />
+                    ) : (
+                        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                            {handbookPages.map((p, i) => (
+                                <PageRow key={p._id} page={p} first={i === 0} onOpen={() => openPage(p._id)} meta={pageMeta(p)} />
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
+            )}
+            <KbStyles />
+        </DashPage>
     );
 }
 
 const KnowledgePage = () => {
+    const isPhone = useIsMobile(); // phones already show the shell's Back button
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { pages, loading, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, generateSummary: summarizePage } = useKnowledge();
+    const { activeWorkspace } = useWorkspace();
+    const wsName = activeWorkspace?.name;
+    const { pages, loading, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, summarizePage } = useKnowledge();
 
     const [pageData, setPageData] = useState(null);
+    const [pageError, setPageError] = useState(false);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [tags, setTags] = useState([]);
     const [tagInput, setTagInput] = useState('');
     const [showTagInput, setShowTagInput] = useState(false);
-    const [viewMode, setViewMode] = useState('edit'); 
+    const [viewMode, setViewMode] = useState('edit');
     const [showLinkModal, setShowLinkModal] = useState(false);
     const [backlinks, setBacklinks] = useState([]);
     const [summary, setSummary] = useState('');
     const [summarizing, setSummarizing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [savedOnce, setSavedOnce] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const saveTimer = useRef(null);
 
     useEffect(() => {
-        if (workspaceId) listPages(workspaceId);
+        if (!workspaceId) return undefined;
+        listPages(workspaceId);
+        const reload = () => listPages(workspaceId);
+        window.addEventListener(KNOWLEDGE_CHANGED, reload);
+        return () => window.removeEventListener(KNOWLEDGE_CHANGED, reload);
     }, [workspaceId, listPages]);
 
     useEffect(() => {
-        if (!id) { setPageData(null); return; }
+        setPageError(false);
+        setSavedOnce(false);
+        if (!id || id === 'handbook') { setPageData(null); return; }
         getPage(id).then(p => {
             setPageData(p);
             setTitle(p.title || '');
             setContent(p.content || '');
             setTags(p.tags || []);
             setSummary(p.summary || '');
-        }).catch(() => showToast('Page not found', 'error'));
+        }).catch(() => { setPageError(true); showToast('Page not found', 'error'); });
     }, [id, getPage, showToast]);
 
     useEffect(() => {
-        if (id) {
+        if (id && id !== 'handbook') {
             getBacklinks(id).then(setBacklinks).catch(() => { });
         }
     }, [id, getBacklinks]);
 
-    
     const autoSave = useCallback((newTitle, newContent, newTags) => {
         if (!id) return;
         clearTimeout(saveTimer.current);
         saveTimer.current = setTimeout(async () => {
             setSaving(true);
-            await updatePage(id, { title: newTitle, content: newContent, tags: newTags }).catch(() => { });
+            const ok = await updatePage(id, { title: newTitle, content: newContent, tags: newTags }).then(() => true).catch(() => false);
             setSaving(false);
+            if (ok) { setSavedOnce(true); announceChange(); } else showToast('Could not save the page', 'error');
         }, 1200);
-    }, [id, updatePage]);
+    }, [id, updatePage, showToast]);
 
     const handleTitleChange = (e) => {
         setTitle(e.target.value);
@@ -214,19 +341,31 @@ const KnowledgePage = () => {
         autoSave(title, content, newTags);
     };
 
-    const handleCreate = async () => {
+    const create = async (data) => {
         setCreating(true);
         try {
-            const p = await createPage(workspaceId, { title: 'Untitled Page', content: '' });
+            const p = await createPage(workspaceId, data);
+            announceChange();
             navigate(`/workspace/${workspaceId}/knowledge/${p._id}`);
+        } catch {
+            showToast('Could not create the page', 'error');
         } finally { setCreating(false); }
     };
+    const handleCreate = () => create({ title: 'Untitled page', content: '' });
+    const handleCreateTemplate = (t) => create({ title: t.title, content: t.content, tags: t.tags });
+    const handleCreateHandbook = () => create({ title: 'Untitled handbook page', content: '', isHandbook: true });
 
     const handleDelete = async () => {
-        if (!window.confirm('Delete this page?')) return;
-        await deletePage(id);
-        showToast('Page deleted', 'success');
-        navigate(`/workspace/${workspaceId}/knowledge`);
+        setDeleting(true);
+        try {
+            await deletePage(id);
+            announceChange();
+            showToast('Page deleted', 'success');
+            setConfirmDelete(false);
+            navigate(`/workspace/${workspaceId}/knowledge`);
+        } catch {
+            showToast('Could not delete the page', 'error');
+        } finally { setDeleting(false); }
     };
 
     const handleSummarize = async () => {
@@ -234,8 +373,8 @@ const KnowledgePage = () => {
         try {
             const s = await summarizePage(id);
             setSummary(s);
-            showToast('Summary generated', 'success');
-        } catch { showToast('Summary failed', 'error'); }
+            showToast('Summary ready', 'success');
+        } catch { showToast('Could not write a summary', 'error'); }
         finally { setSummarizing(false); }
     };
 
@@ -243,120 +382,85 @@ const KnowledgePage = () => {
         try {
             await linkPages(id, toPageId, workspaceId);
             showToast('Pages linked', 'success');
-        } catch { showToast('Link failed', 'error'); }
+        } catch { showToast('Could not link the pages', 'error'); }
         setShowLinkModal(false);
     };
 
-    
-    
+    const openPage = (pid) => navigate(`/workspace/${workspaceId}/knowledge/${pid}`);
+    const backToList = () => navigate(`/workspace/${workspaceId}/knowledge`);
+
     if (id === 'handbook') {
-        const handleCreateHandbook = async () => {
-            setCreating(true);
-            try {
-                const p = await createPage(workspaceId, { title: 'Untitled Handbook Page', content: '', isHandbook: true });
-                navigate(`/workspace/${workspaceId}/knowledge/${p._id}`);
-            } finally { setCreating(false); }
-        };
+        return <HandbookView pages={pages} loading={loading} wsName={wsName} openPage={openPage} onCreate={handleCreateHandbook} creating={creating} />;
+    }
+
+    if (!id) {
         return (
-            <HandbookView
+            <KnowledgeHome
                 pages={pages}
-                workspaceId={workspaceId}
-                navigate={navigate}
-                onCreate={handleCreateHandbook}
+                loading={loading}
+                wsName={wsName}
                 creating={creating}
+                onCreate={handleCreate}
+                onCreateTemplate={handleCreateTemplate}
+                openPage={openPage}
+                openGraph={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
+                openHandbook={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
             />
         );
     }
 
-    if (!id && !loading) {
-        return <EmptyKnowledge onCreate={handleCreate} loading={creating} />;
-    }
-
-    if (!pageData && loading) {
+    if (pageError) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <DashPage>
+                <Panel>
+                    <EmptyState icon={FileText} title="Page not found" text="It may have been deleted, or the link is wrong."
+                        action={<Btn icon={ChevronLeft} onClick={backToList}>Back to knowledge</Btn>} />
+                </Panel>
+            </DashPage>
         );
     }
 
-    if (!pageData) return null;
+    if (!pageData) return <div style={{ height: '100%', background: 'var(--bg-base)' }}><LoadingState label="Opening page…" /></div>;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {}
-            <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl">{pageData.icon || '📄'}</span>
-                    <div className="flex items-center gap-1.5">
-                        {}
-                        <button
-                            onClick={() => setViewMode(v => v === 'edit' ? 'preview' : 'edit')}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, background: viewMode === 'preview' ? 'rgba(184,149,106,0.1)' : 'transparent', border: `1px solid ${viewMode === 'preview' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: viewMode === 'preview' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'all 150ms ease' }}
-                        >
-                            {viewMode === 'edit' ? <Eye size={13} /> : <Edit3 size={13} />}
-                            {viewMode === 'edit' ? 'Preview' : 'Edit'}
-                        </button>
-
-                        {}
-                        <button
-                            onClick={handleSummarize}
-                            disabled={summarizing}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 700, background: '#b8956a', border: 'none', color: '#0c0c0c', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', opacity: 1, transition: 'opacity 150ms ease' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                            {summarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                            AI Summary
-                        </button>
-
-                        {}
-                        <button
-                            onClick={() => setShowLinkModal(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }} onMouseEnter={e => e.currentTarget.style.color = '#b8956a'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
-                        >
-                            <Link2 size={13} /> Link page
-                        </button>
-                    </div>
+        <div className="kb-doc">
+            <div className="kb-bar">
+                <div className="kb-bar-group">
+                    {!isPhone && <IconBtn label="All pages" onClick={backToList}><ChevronLeft size={16} /></IconBtn>}
+                    <span className="kb-bar-mark"><PageMark icon={pageData.icon} size={15} /></span>
+                    <FilterTabs value={viewMode} onChange={setViewMode} label="Mode" options={[
+                        { value: 'edit', label: 'Write' },
+                        { value: 'preview', label: 'Preview' },
+                    ]} />
                 </div>
-
-                <div className="flex items-center gap-2">
-                    {saving && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                            <Loader2 size={11} className="animate-spin" /> Saving…
-                        </span>
-                    )}
-                    <button
-                        onClick={handleDelete}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    >
-                        <Trash2 size={15} />
-                    </button>
+                <div className="kb-bar-group">
+                    <span className="kb-save" aria-live="polite">
+                        {saving ? <><Loader2 size={11} className="cd-spin" /> Saving…</> : savedOnce ? <><Check size={11} /> Saved</> : null}
+                    </span>
+                    <Btn size="sm" variant="ghost" icon={Sparkles} loading={summarizing} onClick={handleSummarize}>
+                        {summary ? 'Refresh summary' : 'Summarize'}
+                    </Btn>
+                    <Btn size="sm" variant="ghost" icon={Link2} onClick={() => setShowLinkModal(true)}>Link page</Btn>
+                    <IconBtn label="Delete page" onClick={() => setConfirmDelete(true)}><Trash2 size={14} /></IconBtn>
                 </div>
             </div>
 
-            {}
-            <div className="flex-1 overflow-y-auto">
-                <div className="max-w-3xl mx-auto px-10 py-8">
-                    {}
+            <div className="kb-scroll">
+                <div className="kb-paper">
                     <input
                         type="text"
                         value={title}
                         onChange={handleTitleChange}
-                        placeholder="Untitled Page"
-                        style={{
-                            fontSize: '2.25rem', fontWeight: 800, color: 'var(--text-primary)',
-                            border: 'none', outline: 'none', padding: 0, marginBottom: '12px',
-                            width: '100%', background: 'transparent', fontFamily: 'Inter, system-ui, sans-serif',
-                            lineHeight: 1.15,
-                        }}
-                        className="placeholder-gray-700"
+                        placeholder="Untitled page"
+                        aria-label="Page title"
+                        className="kb-title"
                     />
 
-                    {}
-                    <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
+                    <div className="kb-tags">
                         {tags.map(tag => (
-                            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '1px 8px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.22)', color: '#b8956a', fontSize: '11px', fontWeight: 500, fontFamily: 'Inter,system-ui,sans-serif' }}>
+                            <span key={tag} className="kb-tag">
                                 #{tag}
-                                <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-red-500 transition-colors"><X size={10} /></button>
+                                <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove #${tag}`} title={`Remove #${tag}`}><X size={10} /></button>
                             </span>
                         ))}
                         {showTagInput ? (
@@ -366,93 +470,141 @@ const KnowledgePage = () => {
                                 onChange={e => setTagInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') addTag(); if (e.key === 'Escape') { setShowTagInput(false); setTagInput(''); } }}
                                 onBlur={addTag}
-                                placeholder="tag name…"
-                                style={{ padding: '3px 10px', border: '1px solid rgba(184,149,106,0.35)', background: 'rgba(184,149,106,0.08)', color: '#b8956a', fontSize: '11px', fontFamily: 'monospace', outline: 'none', width: '112px', colorScheme: 'dark' }}
-                                onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.6)'}
+                                placeholder="tag name"
+                                aria-label="New tag"
+                                className="gl-input kb-tag-input"
                             />
                         ) : (
-                            <button onClick={() => setShowTagInput(true)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
-                                onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
-                            >
-                                <Tag size={10} /><Plus size={9} /> tag
+                            <button type="button" className="kb-tag-add" onClick={() => setShowTagInput(true)}>
+                                <Tag size={11} /> Add tag
                             </button>
                         )}
                     </div>
 
-                    {}
                     {summary && (
-                        <div style={{ marginBottom: '24px', padding: '14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
-                                <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">AI Summary</span>
-                            </div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{summary}</p>
+                        <div className="kb-summary">
+                            <div className="kb-summary-head"><Sparkles size={13} /> AI summary</div>
+                            <p>{summary}</p>
                         </div>
                     )}
 
-                    {}
                     {viewMode === 'edit' ? (
-                        <textarea
-                            value={content}
-                            onChange={handleContentChange}
-                            placeholder="Start typing… Use Markdown: # Heading, **bold**, *italic*, - list item, > quote"
-                            className="w-full min-h-[400px] text-sm text-gray-800 dark:text-gray-200 bg-transparent border-none outline-none resize-none leading-relaxed placeholder-gray-300 dark:placeholder-gray-600"
-                        />
+                        <>
+                            <textarea
+                                value={content}
+                                onChange={handleContentChange}
+                                aria-label="Page content"
+                                placeholder="Start writing. Markdown works: # heading, **bold**, *italic*, - list, > quote"
+                                className="kb-editor"
+                            />
+                            <p className="kb-hint">
+                                Markdown: <code># Heading</code> <code>**bold**</code> <code>*italic*</code> <code>`code`</code> <code>&gt; quote</code> <code>- list</code>
+                            </p>
+                        </>
                     ) : (
-                        <div className="min-h-[400px]">
+                        <div style={{ minHeight: 320 }}>
                             {content ? <MarkdownPreview content={content} /> : (
-                                <p className="text-gray-300 dark:text-gray-600 text-sm">Nothing to preview yet.</p>
+                                <p className="kb-hint">Nothing to preview yet. Switch to Write to add content.</p>
                             )}
                         </div>
                     )}
 
-                    {}
-                    {viewMode === 'edit' && (
-                        <p className="text-xs text-gray-300 dark:text-gray-600 mt-4">
-                            Supports Markdown: <code className="font-mono"># H1</code> <code className="font-mono">**bold**</code> <code className="font-mono">*italic*</code> <code className="font-mono">`code`</code> <code className="font-mono">&gt; quote</code>
-                        </p>
-                    )}
-
-                    {}
-                    {backlinks.length > 0 && (
-                        <div className="mt-10 pt-6 border-t border-gray-100 dark:border-gray-800">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                <Link2 size={11} /> Linked from {backlinks.length} page{backlinks.length > 1 ? 's' : ''}
-                            </h3>
-                            <div className="space-y-2">
-                                {backlinks.map(bl => (
-                                    <button
-                                        key={bl._id}
-                                        onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${bl._id}`)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 150ms ease', marginBottom: '6px' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = '#161616'}
-                                    >
-                                        <span style={{ fontSize: '13px' }}>{bl.icon || '📄'}</span>
-                                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{bl.title}</span>
-                                        <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <div style={{ marginTop: 40 }}>
+                        <Section
+                            title={backlinks.length ? `Linked from ${backlinks.length} page${backlinks.length > 1 ? 's' : ''}` : 'Linked from'}
+                            action={<Btn size="sm" variant="ghost" icon={Link2} onClick={() => setShowLinkModal(true)}>Link page</Btn>}
+                        >
+                            <Panel flush>
+                                {backlinks.length === 0 ? (
+                                    <EmptyState icon={Link2} title="No links yet" text="Link a related page so readers can move between them." />
+                                ) : (
+                                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                        {backlinks.map((bl, i) => (
+                                            <PageRow key={bl._id} page={bl} first={i === 0} onOpen={() => openPage(bl._id)} />
+                                        ))}
+                                    </ul>
+                                )}
+                            </Panel>
+                        </Section>
+                    </div>
                 </div>
             </div>
 
-            {}
             {showLinkModal && (
                 <LinkPageModal
-                    workspaceId={workspaceId}
                     currentPageId={id}
                     allPages={pages}
                     onLink={handleLink}
                     onClose={() => setShowLinkModal(false)}
                 />
             )}
+            <Confirm
+                open={confirmDelete}
+                title={`Delete “${title || 'Untitled page'}”?`}
+                confirmLabel="Delete page"
+                tone="danger"
+                busy={deleting}
+                onConfirm={handleDelete}
+                onClose={() => setConfirmDelete(false)}
+            >
+                The page and its links are removed for everyone in the workspace.
+            </Confirm>
+            <KbStyles />
         </div>
     );
 };
+
+function KbStyles() {
+    return (
+        <style>{`
+        .kb-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px; background: none; border: 0; text-align: left; cursor: pointer; font-family: var(--font); color: inherit; }
+        .kb-row:hover, .kb-row:focus-visible { background: var(--bg-hover); }
+        .kb-row-title { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+        .kb-row-meta { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-secondary); }
+        .kb-card { padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 8px; font-family: var(--font); }
+        .kb-card strong { font-size: 14px; color: var(--text-primary); }
+        .kb-card > span:last-child { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+        .kb-doc { display: flex; flex-direction: column; height: 100%; background: var(--bg-base); font-family: var(--font); }
+        .kb-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 8px 24px; min-height: 52px; box-sizing: border-box; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+        .kb-bar-group { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .kb-bar-mark { display: inline-flex; align-items: center; justify-content: center; width: 24px; }
+        .kb-save { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); margin-right: 4px; }
+        .kb-scroll { flex: 1; overflow-y: auto; }
+        .kb-paper { max-width: 760px; margin: 0 auto; padding: 32px 40px 64px; }
+        .kb-title { font-size: 2.25rem; font-weight: 800; line-height: 1.15; color: var(--text-primary); border: 0; outline: none; padding: 0; margin-bottom: 12px; width: 100%; background: transparent; font-family: var(--font); }
+        .kb-title::placeholder { color: var(--text-muted); }
+        .kb-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 24px; min-height: 26px; }
+        .kb-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--gl-radius); }
+        .kb-tag button { display: flex; padding: 0; background: none; border: 0; color: var(--text-muted); cursor: pointer; }
+        .kb-tag button:hover { color: var(--state-danger); }
+        .kb-tag-input { width: 120px; height: 24px; padding: 2px 8px; font-size: 11px; }
+        .kb-tag-add { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 11px; color: var(--text-muted); background: none; border: 0; cursor: pointer; font-family: var(--font); }
+        .kb-tag-add:hover { color: var(--accent); }
+        .kb-summary { margin-bottom: 24px; padding: 14px 16px; background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--gl-radius); }
+        .kb-summary-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--accent); }
+        .kb-summary p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--text-primary); white-space: pre-wrap; }
+        .kb-editor { width: 100%; min-height: 360px; font-size: 14.5px; line-height: 1.75; color: var(--text-primary); background: transparent; border: 0; outline: none; resize: vertical; font-family: var(--font); padding: 0; }
+        .kb-editor::placeholder { color: var(--text-muted); }
+        .kb-hint { margin-top: 12px; font-size: 11.5px; color: var(--text-muted); line-height: 1.8; }
+        .kb-hint code { padding: 1px 5px; margin-right: 2px; background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); font-size: 11px; }
+        .kb-md { font-size: 14.5px; line-height: 1.75; color: var(--text-primary); }
+        .kb-md p { margin: 0 0 12px; }
+        .kb-md h1 { font-size: 22px; font-weight: 800; margin: 24px 0 12px; }
+        .kb-md h2 { font-size: 17px; font-weight: 700; margin: 20px 0 8px; }
+        .kb-md h3 { font-size: 14.5px; font-weight: 700; margin: 16px 0 4px; }
+        .kb-md strong { font-weight: 700; }
+        .kb-md code { padding: 1px 6px; background: var(--bg-hover); border: 1px solid var(--border-subtle); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--accent); }
+        .kb-md blockquote { border-left: 3px solid var(--gl-accent-line); padding-left: 12px; margin: 8px 0; color: var(--text-secondary); font-style: italic; }
+        .kb-md li { margin-left: 18px; color: var(--text-primary); }
+        .kb-md li.kb-ul { list-style: disc; }
+        .kb-md li.kb-ol { list-style: decimal; }
+        @media (max-width: 640px) {
+            .kb-bar { padding: 8px 12px; }
+            .kb-paper { padding: 20px 16px 48px; }
+            .kb-title { font-size: 1.75rem; }
+        }
+        `}</style>
+    );
+}
 
 export default KnowledgePage;

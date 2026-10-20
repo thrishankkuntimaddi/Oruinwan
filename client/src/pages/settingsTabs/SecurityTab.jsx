@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Eye, EyeOff, ShieldCheck, X } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, KeyRound, ShieldCheck, X } from 'lucide-react';
+import { startRegistration } from '@simplewebauthn/browser';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import useFreshUser from './account/useFreshUser';
 import {
-    Badge, Button, ErrorState, Field, IconButton, Input, LoadingState, Notice, PageIntro, Row, Section, errorMessage,
+    Badge, Button, ConfirmDialog, ErrorState, Field, IconButton, Input, LoadingState, Notice, PageIntro, Row, Section, errorMessage,
 } from './settingsUi';
 import './account/account.css';
 
@@ -346,6 +347,170 @@ function TwoFactorSection({ initialEnabled, onChange }) {
     );
 }
 
+/* ── Passkeys ───────────────────────────────────────────────────────────── */
+
+const passkeysSupported = () => typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
+
+/** A default name from this device, e.g. "Mac" or "iPhone"; editable before and after adding. */
+function deviceName() {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    if (/iPhone/i.test(ua)) return 'iPhone';
+    if (/iPad/i.test(ua)) return 'iPad';
+    if (/Android/i.test(ua)) return 'Android phone';
+    if (/Mac OS X|Macintosh/i.test(ua)) return 'Mac';
+    if (/Windows/i.test(ua)) return 'Windows PC';
+    if (/CrOS/i.test(ua)) return 'Chromebook';
+    if (/Linux/i.test(ua)) return 'Linux computer';
+    return 'Passkey';
+}
+
+const shortDate = (d) => (d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null);
+
+function PasskeysSection() {
+    const { showToast } = useToast();
+    const [passkeys, setPasskeys] = useState([]);
+    const [status, setStatus] = useState('loading'); // loading | ready | error
+    const [adding, setAdding] = useState(false);
+    const [editing, setEditing] = useState(null); // { id, name }
+    const [savingName, setSavingName] = useState(false);
+    const [removing, setRemoving] = useState(null); // passkey
+    const [removeBusy, setRemoveBusy] = useState(false);
+    const supported = passkeysSupported();
+
+    const load = useCallback(async () => {
+        setStatus('loading');
+        try {
+            const { data } = await api.get('/api/auth/passkeys');
+            setPasskeys(Array.isArray(data?.passkeys) ? data.passkeys : []);
+            setStatus('ready');
+        } catch {
+            setStatus('error');
+        }
+    }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    const add = async () => {
+        setAdding(true);
+        try {
+            const { data: optionsJSON } = await api.post('/api/auth/passkeys/register/options');
+            let response;
+            try {
+                response = await startRegistration({ optionsJSON });
+            } catch (err) {
+                if (err?.name === 'InvalidStateError') showToast('This device already has a passkey for your account.', 'info');
+                else if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') showToast(err?.message || "Your browser couldn't create a passkey", 'error');
+                return;
+            }
+            const { data } = await api.post('/api/auth/passkeys/register/verify', { response, name: deviceName() });
+            if (data?.passkey) setPasskeys((list) => [...list, data.passkey]);
+            showToast('Passkey added. You can use it next time you sign in.', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not add the passkey'), 'error');
+        } finally {
+            setAdding(false);
+        }
+    };
+
+    const saveName = async () => {
+        const name = editing?.name.trim();
+        if (!name) return;
+        setSavingName(true);
+        try {
+            const { data } = await api.patch(`/api/auth/passkeys/${encodeURIComponent(editing.id)}`, { name });
+            setPasskeys((list) => list.map((p) => (p.id === editing.id ? { ...p, ...(data?.passkey || { name }) } : p)));
+            setEditing(null);
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not rename the passkey'), 'error');
+        } finally {
+            setSavingName(false);
+        }
+    };
+
+    const confirmRemove = async () => {
+        if (!removing) return;
+        setRemoveBusy(true);
+        try {
+            await api.delete(`/api/auth/passkeys/${encodeURIComponent(removing.id)}`);
+            setPasskeys((list) => list.filter((p) => p.id !== removing.id));
+            setRemoving(null);
+            showToast('Passkey removed', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not remove the passkey'), 'error');
+        } finally {
+            setRemoveBusy(false);
+        }
+    };
+
+    return (
+        <Section
+            title="Passkeys"
+            description="Sign in with your fingerprint, face or screen lock instead of a password."
+            action={supported && status === 'ready'
+                ? <Button size="sm" variant="primary" icon={KeyRound} onClick={add} loading={adding}>Add a passkey</Button>
+                : null}
+        >
+            {status === 'loading' && <LoadingState inline label="Loading passkeys…" />}
+            {status === 'error' && <ErrorState message="Could not load your passkeys." onRetry={load} />}
+            {status === 'ready' && (
+                <>
+                    {!supported && (
+                        <div className="stg-acc-panel">
+                            <Notice>This browser can't create passkeys. Try a recent Chrome, Safari, Edge or Firefox.</Notice>
+                        </div>
+                    )}
+                    {passkeys.length === 0 && (
+                        <Row label="No passkeys yet" description="A passkey lives on this device or in your password manager. Nothing secret is sent to Oruinwan." />
+                    )}
+                    {passkeys.map((p) => (
+                        editing?.id === p.id ? (
+                            <div key={p.id} className="stg-acc-panel">
+                                <Field id={`passkey-name-${p.id}`} label="Passkey name">
+                                    <Input
+                                        id={`passkey-name-${p.id}`}
+                                        value={editing.name}
+                                        maxLength={64}
+                                        autoFocus
+                                        onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(null); }}
+                                    />
+                                </Field>
+                                <div className="stg-acc-inline">
+                                    <Button variant="primary" onClick={saveName} loading={savingName} disabled={!editing.name.trim()}>Save</Button>
+                                    <Button variant="ghost" onClick={() => setEditing(null)} disabled={savingName}>Cancel</Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <Row
+                                key={p.id}
+                                label={<>{p.name} {p.backedUp && <Badge>Synced</Badge>}</>}
+                                description={`Added ${shortDate(p.createdAt) || '—'} · ${p.lastUsedAt ? `Last used ${shortDate(p.lastUsedAt)}` : 'Not used yet'}`}
+                            >
+                                <div className="stg-acc-inline">
+                                    <Button size="sm" variant="ghost" onClick={() => setEditing({ id: p.id, name: p.name || '' })}>Rename</Button>
+                                    <Button size="sm" variant="danger-soft" onClick={() => setRemoving(p)}>Remove</Button>
+                                </div>
+                            </Row>
+                        )
+                    ))}
+                </>
+            )}
+            <ConfirmDialog
+                open={!!removing}
+                title="Remove this passkey?"
+                tone="danger"
+                confirmLabel="Remove"
+                loading={removeBusy}
+                onConfirm={confirmRemove}
+                onCancel={() => setRemoving(null)}
+            >
+                You won't be able to sign in with “{removing?.name}” any more. You can still sign in another way.
+                It may also stay in your password manager until you delete it there.
+            </ConfirmDialog>
+        </Section>
+    );
+}
+
 /* ── Tab ───────────────────────────────────────────────────────────────── */
 
 const SecurityTab = () => {
@@ -356,7 +521,7 @@ const SecurityTab = () => {
 
     return (
         <>
-            <PageIntro title="Password & security" description="Your password and two-factor sign-in." />
+            <PageIntro title="Password & security" description="Your password, passkeys and two-factor sign-in." />
             {loading ? (
                 <Section title="Password" pad><LoadingState inline /></Section>
             ) : (
@@ -367,6 +532,7 @@ const SecurityTab = () => {
                     onPasswordSet={() => setUser((prev) => (prev ? { ...prev, hasPassword: true } : prev))}
                 />
             )}
+            <PasskeysSection />
             <TwoFactorSection
                 initialEnabled={user?.twoFactorEnabled}
                 onChange={(on) => setUser((prev) => (prev ? { ...prev, twoFactorEnabled: on } : prev))}

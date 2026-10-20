@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     ArrowRight, Play, Check, CheckCircle2, User, Building2, Download, Globe, Monitor, Smartphone, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import LoadingScreen from '../../shared/components/ui/LoadingScreen';
 import BRAND from '../../shared/brand';
 import LandingNav from './LandingNav';
 import ProductMock from './ProductMock';
@@ -13,7 +12,8 @@ import AIConsole from './AIConsole';
 import FAQ from './FAQ';
 import LandingFooter from './LandingFooter';
 import { CAPABILITIES, FEATURES, SECURITY, STEPS } from './data';
-import { prefersReducedMotion, scrollToId, useRevealAll } from './hooks';
+import { scrollToId, useRevealAll } from './hooks';
+import AppLink from './AppLink';
 import './landing.css';
 
 // Release files keep the same names in every release (.github/workflows/apps.yml), so these
@@ -26,23 +26,6 @@ const DESKTOP_DOWNLOADS = [
     { label: 'Linux · AppImage', file: 'Oruinwan-Linux.AppImage' },
     { label: 'Linux · .deb', file: 'Oruinwan-Linux.deb' },
 ];
-
-const VISITED_KEY = 'oruinwan_visited';
-
-// Plays the boot animation once per browser; storage can throw in private mode.
-function useFirstVisit() {
-    const [first] = useState(() => {
-        if (prefersReducedMotion()) return false;
-        try {
-            if (localStorage.getItem(VISITED_KEY) || localStorage.getItem('chttrix_visited')) return false;
-            localStorage.setItem(VISITED_KEY, '1');
-            return true;
-        } catch {
-            return false;
-        }
-    });
-    return first;
-}
 
 const spotlight = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -63,8 +46,6 @@ const Landing = () => {
     const { hash } = useLocation();
     const { user } = useAuth();
     const rootRef = useRef(null);
-    const firstVisit = useFirstVisit();
-    const [booting, setBooting] = useState(firstVisit);
 
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
@@ -79,10 +60,10 @@ const Landing = () => {
 
     // Arriving from another page via /#section: wait for layout, then scroll there.
     useEffect(() => {
-        if (!hash || booting) return undefined;
+        if (!hash) return undefined;
         const t = setTimeout(() => scrollToId(decodeURIComponent(hash.slice(1))), 60);
         return () => clearTimeout(t);
-    }, [hash, booting]);
+    }, [hash]);
 
     useEffect(() => {
         if (user) navigate('/workspaces', { replace: true });
@@ -92,11 +73,8 @@ const Landing = () => {
 
     if (user) return null;
 
-    const signup = () => navigate('/login?mode=signup');
-
     return (
         <div className="orw" ref={rootRef} id="top">
-            {booting && <LoadingScreen onComplete={() => setBooting(false)} />}
             <a href="#main" className="orw-skip">Skip to content</a>
 
             <div className="orw-backdrop" aria-hidden="true">
@@ -112,25 +90,25 @@ const Landing = () => {
                 <section className="orw-hero" aria-labelledby="orw-hero-title">
                     <div className="orw-container orw-hero__grid">
                         <div>
-                            <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Early access · Free to start</span>
+                            <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Now available · Free to start</span>
                             <h1 className="orw-hero__title" id="orw-hero-title" data-reveal style={{ '--d': '80ms' }}>
                                 <span>One workspace.</span>
                                 <span className="orw-gloss-text">Every conversation.</span>
                             </h1>
                             <p className="orw-hero__sub" data-reveal style={{ '--d': '160ms' }}>
-                                <strong>{BRAND.name}</strong> brings channels, DMs, voice huddles, tasks, notes and <strong>{BRAND.ai}</strong> into
-                                one end-to-end encrypted workspace. Less tab-switching, no lost context, more work done.
+                                <strong>{BRAND.name}</strong> brings channels, DMs, threads, huddles, tasks, notes and AI agents into one
+                                encrypted workspace, on the web, desktop, tablet and phone.
                             </p>
                             <div className="orw-hero__ctas" data-reveal style={{ '--d': '240ms' }}>
-                                <button type="button" className="orw-btn orw-btn--primary orw-btn--lg" onClick={signup}>
+                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
                                     Start free <ArrowRight size={16} />
-                                </button>
+                                </AppLink>
                                 <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => scrollToId('platform')}>
                                     <Play size={14} /> See how it works
                                 </button>
                             </div>
                             <ul className="orw-hero__trust" data-reveal style={{ '--d': '320ms' }}>
-                                {['End-to-end encrypted', 'No credit card', 'Role-based access'].map(t => (
+                                {['End-to-end encrypted messages', 'Admins never see messages', 'Passkeys and 2FA'].map(t => (
                                     <li key={t}><CheckCircle2 size={14} aria-hidden="true" />{t}</li>
                                 ))}
                             </ul>
@@ -173,26 +151,26 @@ const Landing = () => {
                 </section>
 
                 {/* ── AI ───────────────────────────────────────────────── */}
-                <section id="ai" className="orw-section orw-section--slab" aria-label={BRAND.ai}>
+                <section id="ai" className="orw-section orw-section--slab" aria-label="Agents">
                     <div className="orw-container orw-ai">
                         <div data-reveal>
-                            <p className="orw-eyebrow">{BRAND.ai}</p>
-                            <h2 className="orw-h2">Your AI teammate.<br /><span className="orw-gloss-text">Always in context.</span></h2>
+                            <p className="orw-eyebrow">Agents</p>
+                            <h2 className="orw-h2">AI agents in your channels.<br /><span className="orw-gloss-text">Always in context.</span></h2>
                             <p className="orw-lead">
-                                {BRAND.ai} doesn’t just chat. It reads the threads, notes and tasks you already have access to,
-                                so its answers are about <em>your</em> work, and it shows you where they came from.
+                                Work with Claude, ChatGPT, Gemini or Grok right in your conversations. An admin can install an agent
+                                for the whole workspace, or you can connect one yourself with your own key.
                             </p>
                             <ul className="orw-ai__points">
                                 {[
-                                    'Summarise any channel or thread in seconds',
-                                    'Turn conversations into assigned tasks',
-                                    'Ask questions and get answers with sources',
+                                    'Mention an agent in a channel, or open a DM with it',
+                                    'Summarise threads and turn them into tasks',
+                                    'Answers work in encrypted conversations',
                                     'Draft, rewrite and translate messages',
                                 ].map(p => <li key={p}><span aria-hidden="true" />{p}</li>)}
                             </ul>
                             <div style={{ marginTop: 32 }}>
                                 <button type="button" className="orw-btn orw-btn--ghost" onClick={() => navigate('/docs')}>
-                                    Read the AI docs <ArrowRight size={14} />
+                                    Read the agents docs <ArrowRight size={14} />
                                 </button>
                             </div>
                         </div>
@@ -205,7 +183,7 @@ const Landing = () => {
                     <div className="orw-container">
                         <SectionHead center eyebrow="Security & trust"
                             title={<>Private by design.<br />Governed by you.</>}
-                            lead="Encryption happens on your device, and admins get the controls and audit trail a company needs." />
+                            lead="Messages are end-to-end encrypted and never shown to admins. Admins get the access controls and audit trail a company needs." />
                         <div className="orw-sec" data-reveal>
                             {SECURITY.map(({ icon: Icon, title, desc }) => (
                                 <div className="orw-sec__item" key={title}>
@@ -254,13 +232,13 @@ const Landing = () => {
                                 <p className="orw-plan__for">For freelancers, students, side projects and small groups.</p>
                                 <div className="orw-plan__price"><b>Free</b><span>no card required</span></div>
                                 <ul>
-                                    {['Channels, DMs, threads and huddles', 'Tasks, notes and updates', `${BRAND.ai} included`, 'End-to-end encrypted messaging'].map(f => (
+                                    {['Channels, DMs, threads and huddles', 'Tasks, notes and files', 'Agents and integrations', 'End-to-end encrypted messages'].map(f => (
                                         <li key={f}><Check size={15} aria-hidden="true" />{f}</li>
                                     ))}
                                 </ul>
-                                <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={signup}>
+                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block">
                                     Create free account <ArrowRight size={15} />
-                                </button>
+                                </AppLink>
                             </article>
 
                             <article className="orw-plan orw-plan--featured" data-reveal style={{ '--d': '100ms' }}>
@@ -272,17 +250,17 @@ const Landing = () => {
                                 <p className="orw-plan__for">For teams that need structure, oversight and scale.</p>
                                 <div className="orw-plan__price"><b>Early access</b><span>verified onboarding</span></div>
                                 <ul>
-                                    {['Everything in Personal, for your whole company', 'Admin, owner and manager dashboards', 'Departments, org chart and employee directory', 'Permission matrix, analytics and audit logs'].map(f => (
+                                    {['Everything in Personal, for your whole company', 'Company console for owners and admins', 'Departments, roles and employee directory', 'Permission matrix and audit logs'].map(f => (
                                         <li key={f}><Check size={15} aria-hidden="true" />{f}</li>
                                     ))}
                                 </ul>
-                                <button type="button" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" onClick={() => navigate('/register-company')}>
+                                <AppLink to="/register-company" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block">
                                     Register your company <ArrowRight size={15} />
-                                </button>
+                                </AppLink>
                             </article>
                         </div>
                         <p className="orw-plans__note" data-reveal>
-                            Already on {BRAND.name}? <button type="button" onClick={() => navigate('/login')}>Log in to your workspace</button>
+                            Already on {BRAND.name}? <AppLink to="/login">Log in to your workspace</AppLink>
                         </p>
                     </div>
                 </section>
@@ -298,15 +276,15 @@ const Landing = () => {
                                 <h3>Web app</h3>
                                 <p>Works in any modern browser, including Safari on iPad. Nothing to install, always up to date.</p>
                                 <div className="orw-dl__actions">
-                                    <button type="button" className="orw-btn orw-btn--primary orw-btn--block" onClick={() => navigate('/login')}>
+                                    <AppLink to="/login" className="orw-btn orw-btn--primary orw-btn--block">
                                         Open {BRAND.name} web <ArrowRight size={14} />
-                                    </button>
+                                    </AppLink>
                                 </div>
                             </div>
                             <div className="orw-dl__item">
                                 <div className="orw-dl__head"><span className="orw-dl__icon"><Monitor size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Available now</span></div>
                                 <h3>Desktop app</h3>
-                                <p>The full workspace in its own window, with native notifications and an unread badge.</p>
+                                <p>The full workspace in its own window, with split view, native notifications and an unread badge.</p>
                                 <div className="orw-dl__actions">
                                     {DESKTOP_DOWNLOADS.map((d) => (
                                         <a key={d.file} className={`orw-btn orw-btn--block ${d.primary ? 'orw-btn--primary' : 'orw-btn--ghost'}`} href={`${RELEASE_DOWNLOADS}${d.file}`}>
@@ -316,14 +294,14 @@ const Landing = () => {
                                 </div>
                             </div>
                             <div className="orw-dl__item">
-                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Android now</span></div>
-                                <h3>Mobile and tablet</h3>
-                                <p>A phone app built for one hand, and the full workspace on tablets. Updates itself.</p>
+                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Android and iOS</span></div>
+                                <h3>Phone and tablet</h3>
+                                <p>A phone app built for one hand, and the full workspace with split view on tablets.</p>
                                 <div className="orw-dl__actions">
                                     <a className="orw-btn orw-btn--primary orw-btn--block" href={`${RELEASE_DOWNLOADS}Oruinwan-Android.apk`}>
                                         <Download size={14} aria-hidden="true" /> Android phones and tablets
                                     </a>
-                                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--block" disabled>iPhone and iPad · coming soon</button>
+                                    <span className="orw-btn orw-btn--ghost orw-btn--block" aria-disabled="true">iPhone and iPad · via TestFlight</span>
                                 </div>
                             </div>
                         </div>
@@ -349,12 +327,12 @@ const Landing = () => {
                             <h2 className="orw-h2">Build your team’s HQ on <span className="orw-gloss-text">{BRAND.name}</span>.</h2>
                             <p className="orw-lead">Free to start. Set up in minutes. Bring everyone into one workspace.</p>
                             <div className="orw-final__ctas">
-                                <button type="button" className="orw-btn orw-btn--primary orw-btn--lg" onClick={signup}>
+                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
                                     Get started free <ArrowRight size={16} />
-                                </button>
-                                <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => navigate('/login')}>
+                                </AppLink>
+                                <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg">
                                     Log in
-                                </button>
+                                </AppLink>
                             </div>
                         </div>
                     </div>

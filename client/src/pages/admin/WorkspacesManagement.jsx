@@ -1,37 +1,28 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Plus, Users, Hash, Calendar, Briefcase, Rocket, Zap, Palette, Globe, Trophy, Target, Flame, Microscope, Shield, Lightbulb, Sparkles, ArrowUpRight, Archive,
+    Plus, Users, Hash, Calendar, Briefcase, Globe, ArrowUpRight, Archive,
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import CreateWorkspaceModal from '../workspaceSelectComponents/CreateWorkspaceModal';
 import WorkspaceMembersModal from './WorkspaceMembersModal';
+import { WorkspaceIcon } from '../../utils/workspaceIcons';
 import {
-    DashPage, PageHead, KpiGrid, Kpi, Toolbar, SearchBox, FilterTabs, Btn, Chip, Grid, LoadingState, ErrorState, EmptyState, useAsync, errorMessage, timeAgo,
+    DashPage, PageHead, KpiGrid, Kpi, Toolbar, SearchBox, FilterTabs, Btn, Chip, Grid, LoadingState, ErrorState, EmptyState, useAsync, timeAgo,
 } from '../../components/company-dash/dashUi';
 import './admin.css';
 
-const ICON_MAP = { rocket: Rocket, briefcase: Briefcase, zap: Zap, palette: Palette, globe: Globe, trophy: Trophy, target: Target, flame: Flame, microscope: Microscope, shield: Shield, lightbulb: Lightbulb, sparkles: Sparkles };
-const getIconComponent = (name) => ICON_MAP[name] || Globe;
-const DEFAULT_CREATE_DATA = { name: '', rules: '', icon: 'rocket', color: '#b8956a', invites: '' };
 const STATUS_TONE = { active: 'success', archived: 'warning', inactive: undefined };
 
 const WorkspacesManagement = () => {
     const { showToast } = useToast();
-    const { user } = useAuth();
     const navigate = useNavigate();
     const { canManageWorkspace } = usePermissions();
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState('all');
     const [modalOpen, setModalOpen] = useState(false);
-    const [createStep, setCreateStep] = useState(1);
-    const [createData, setCreateData] = useState(DEFAULT_CREATE_DATA);
-    const [nameError, setNameError] = useState('');
-    const [termsAccepted, setTermsAccepted] = useState(false);
-    const [creating, setCreating] = useState(false);
     const [membersWorkspace, setMembersWorkspace] = useState(null);
 
     const { data, loading, error, reload, setData } = useAsync(
@@ -57,30 +48,7 @@ const WorkspacesManagement = () => {
         channels: workspaces.reduce((s, w) => s + (w.channelCount || 0), 0),
     }), [workspaces]);
 
-    const resetCreate = () => { setCreateStep(1); setCreateData(DEFAULT_CREATE_DATA); setNameError(''); setTermsAccepted(false); };
-    const openCreate = () => { resetCreate(); setModalOpen(true); };
-    const closeCreate = () => { setModalOpen(false); setTimeout(resetCreate, 300); };
-
-    const handleSubmit = async (e) => {
-        e?.preventDefault?.();
-        if (creating) return;
-        if (!createData.name.trim()) { setNameError('Workspace name is required'); setCreateStep(1); return; }
-        setCreating(true);
-        try {
-            await api.post('/api/workspaces', {
-                name: createData.name.trim(), description: createData.rules?.trim() || '',
-                icon: createData.icon, color: createData.color, type: 'general',
-                settings: { isPrivate: false, allowMemberInvite: true },
-            });
-            showToast(`Workspace "${createData.name.trim()}" created`, 'success');
-            closeCreate();
-            reload();
-        } catch (err) {
-            showToast(errorMessage(err, 'Could not create the workspace'), 'error');
-        } finally {
-            setCreating(false);
-        }
-    };
+    const openCreate = () => setModalOpen(true);
 
     return (
         <DashPage
@@ -127,12 +95,11 @@ const WorkspacesManagement = () => {
             ) : (
                 <Grid cols="3">
                     {filtered.map((ws) => {
-                        const Icon = ICON_MAP[ws.icon] || null;
                         const st = ws.status || 'active';
                         return (
                             <article className="gl-card ad-card" key={ws._id}>
                                 <div className="ad-card-head">
-                                    <span className="ad-mark" aria-hidden="true">{Icon ? <Icon size={16} /> : (ws.icon && ws.icon.length <= 4 ? ws.icon : <Globe size={16} />)}</span>
+                                    <span className="ad-mark" aria-hidden="true"><WorkspaceIcon icon={ws.icon} size={16} /></span>
                                     <div style={{ minWidth: 0, flex: 1 }}>
                                         <h3 className="ad-card-title">{ws.name}</h3>
                                         <p className="ad-card-desc">{ws.description || (ws.department?.name ? `${ws.department.name} department` : 'Company workspace')}</p>
@@ -160,18 +127,10 @@ const WorkspacesManagement = () => {
 
             <CreateWorkspaceModal
                 isOpen={modalOpen}
-                onClose={closeCreate}
-                createStep={createStep}
-                setCreateStep={setCreateStep}
-                createData={createData}
-                setCreateData={setCreateData}
-                nameError={nameError}
-                setNameError={setNameError}
-                termsAccepted={termsAccepted}
-                setTermsAccepted={setTermsAccepted}
-                onSubmit={handleSubmit}
-                getIconComponent={getIconComponent}
-                user={user}
+                onClose={() => setModalOpen(false)}
+                onCreated={() => reload()}
+                onOpen={(workspaceId) => { setModalOpen(false); navigate(`/workspace/${workspaceId}/home`); }}
+                showToast={showToast}
             />
             {membersWorkspace && (
                 <WorkspaceMembersModal

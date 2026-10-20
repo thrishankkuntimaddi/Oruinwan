@@ -26,7 +26,7 @@ function Checkbox({ checked, onChange, label, sub }) {
                     cursor: 'pointer', transition: '150ms ease',
                 }}
             >
-                {checked && <span style={{ color: '#0c0c0c', fontSize: '10px', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                {checked && <span style={{ color: 'var(--bg-base)', fontSize: '10px', fontWeight: 900, lineHeight: 1 }}>✓</span>}
             </div>
             <div>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</div>
@@ -72,11 +72,11 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}
             onClick={handleClose}
         >
             <div
-                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
+                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--lg-shadow-sm)' }}
                 onClick={e => e.stopPropagation()}
             >
                 {}
@@ -87,7 +87,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                         </div>
                         <div>
                             <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Create Poll</h2>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>#{channelName}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>#{String(channelName || '').replace(/^#/, '')}</p>
                         </div>
                     </div>
                     <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
@@ -180,7 +180,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                         >Cancel</button>
                         <button type="submit"
                             disabled={!question.trim() || options.filter(o => o.trim()).length < 2}
-                            style={{ padding: '7px 20px', fontSize: '13px', fontWeight: 600, color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (!question.trim() || options.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
+                            style={{ padding: '7px 20px', fontSize: '13px', fontWeight: 600, color: 'var(--bg-base)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (!question.trim() || options.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
                             onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '0.85'; }}
                             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                         >Create Poll</button>

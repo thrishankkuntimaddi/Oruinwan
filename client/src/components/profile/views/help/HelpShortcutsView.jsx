@@ -2,19 +2,19 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
 const panelStyle = {
-    width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
+    width: '256px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+    boxShadow: 'var(--lg-shadow)', overflow: 'hidden',
     fontFamily: 'Inter, system-ui, sans-serif',
 };
 const headerStyle = {
     padding: '12px 16px', display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
-    background: 'rgba(255,255,255,0.02)',
+    justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)',
+    background: 'var(--bg-hover)',
 };
 const inp = {
     width: '100%', padding: '8px 12px', fontSize: '13px', background: 'var(--bg-hover)',
-    border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', outline: 'none',
-    boxSizing: 'border-box', fontFamily: 'Inter,system-ui,sans-serif', colorScheme: 'dark',
+    border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none',
+    boxSizing: 'border-box', fontFamily: 'Inter,system-ui,sans-serif',
     resize: 'vertical', lineHeight: 1.6,
 };
 
@@ -23,8 +23,8 @@ const HelpShortcutsView = ({ onBack }) => (
         <div style={headerStyle}>
             <button onClick={onBack}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
                 <ChevronLeft size={13} /> Back
             </button>
@@ -38,9 +38,9 @@ const HelpShortcutsView = ({ onBack }) => (
                 { label: 'Toggle AI',     keys: 'Cmd+J' },
                 { label: 'Close',         keys: 'Esc'   },
             ].map((item, i, arr) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.label}</span>
-                    <kbd style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{item.keys}</kbd>
+                    <kbd style={{ padding: '3px 8px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{item.keys}</kbd>
                 </div>
             ))}
         </div>

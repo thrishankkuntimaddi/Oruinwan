@@ -15,7 +15,6 @@ const sendEmail = require('../../../utils/sendEmail');
 
 const AuditLog = require('../../../models/AuditLog');
 const Channel = require("../channels/channel.model.js");
-const Message = require("../../modules/messages/message.model.js");
 const Tasks = require('../tasks/tasks.query');
 const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
@@ -664,17 +663,16 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
     const dbStats = await mongoose.connection.db.stats();
 
     
-    // Identity counts in one PostgreSQL query; content counts from MongoDB.
+    // Identity counts in one PostgreSQL query; content counts from MongoDB. Messages are
+    // deliberately not counted: they are end-to-end encrypted and not the platform's business.
     const [
       platform,
       totalChannels,
-      totalMessages,
       totalTasks,
       totalNotes
     ] = await Promise.all([
       org.platformStats(),
       Channel.countDocuments(),
-      Message.countDocuments(),
       Tasks.countDocuments(),
       Note.countDocuments()
     ]);
@@ -714,7 +712,6 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
         departments: platform.departments,
         workspaces: platform.workspaces,
         channels: totalChannels,
-        messages: totalMessages,
         tasks: totalTasks,
         notes: totalNotes
       },

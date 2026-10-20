@@ -249,7 +249,10 @@ exports.handleSetup = (req, res) => {
 
             let stepData = {};
             try {
-                stepData = req.body.data ? JSON.parse(req.body.data) : req.body;
+                // The setup page sends multipart form data with `data` as a JSON string; API clients
+                // may send JSON with `data` as an object. Both mean the same step data.
+                const raw = req.body.data;
+                stepData = raw && typeof raw === 'object' ? raw : raw ? JSON.parse(raw) : req.body;
             } catch (_) {
                 stepData = req.body;
             }

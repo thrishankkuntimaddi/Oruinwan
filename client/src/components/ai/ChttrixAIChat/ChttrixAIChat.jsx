@@ -13,7 +13,9 @@ import {
   MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square,
 } from "lucide-react";
 
-const WELCOME = () => ({ id: 1, sender: "ai", text: "Hi, I'm Oruinwan AI. Ask me anything about your workspace, or use a quick action below.", time: now() });
+const WELCOME = (name = "Oruinwan AI") => ({ id: 1, sender: "ai", text: `Hi, I'm ${name}. Ask me anything about your workspace, or use a quick action below.`, time: now() });
+
+const ASSISTANT_KEY = (ws) => `oruinwan.ai.assistant.${ws}`;
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -58,6 +60,29 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   }, [historyKey]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+
+  // Which assistant answers here: Oruinwan AI, or a model the workspace connected (Claude, ChatGPT…).
+  const [assistants, setAssistants] = useState([]);
+  const [assistant, setAssistant] = useState(() => {
+    try { return localStorage.getItem(ASSISTANT_KEY(workspaceId)) || 'default'; } catch { return 'default'; }
+  });
+  useEffect(() => {
+    if (!workspaceId) return undefined;
+    let live = true;
+    aiService.assistants(workspaceId).then((list) => {
+      if (!live) return;
+      setAssistants(list);
+      setAssistant((cur) => (list.some((a) => a.id === cur) ? cur : 'default'));
+    }).catch(() => live && setAssistants([]));
+    return () => { live = false; };
+  }, [workspaceId]);
+  const current = assistants.find((a) => a.id === assistant) || { id: 'default', name: 'Oruinwan AI' };
+  const chooseAssistant = (id) => {
+    setAssistant(id);
+    try { localStorage.setItem(ASSISTANT_KEY(workspaceId), id); } catch { /* not remembered */ }
+    const name = (assistants.find((a) => a.id === id) || {}).name || 'Oruinwan AI';
+    setMessages((m) => (m.length === 1 && m[0].id === 1 ? [WELCOME(name)] : m));
+  };
   const [showHistory, setShowHistory] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -144,7 +169,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
 
     try {
       const data = await aiService.chatStream({
-        message: text, history: history.slice(0, -1), workspaceId, context: aiCtx?.snapshot?.(), signal: controller.signal,
+        message: text, history: history.slice(0, -1), workspaceId, context: aiCtx?.snapshot?.(), signal: controller.signal, assistant,
         onToken: (_t, full) => { start(); patchMsg(aiId, { text: full, status: null }); },
         onTool: ({ name, status }) => {
           start();
@@ -260,7 +285,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const handleNewChat = () => {
     if (messages.length > 1)
       setChatHistory(p => [{ id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() }, ...p]);
-    setMessages([WELCOME()]); setChatTitle("Oruinwan AI"); setShowHistory(false);
+    setMessages([WELCOME(current.name)]); setChatTitle("Oruinwan AI"); setShowHistory(false);
     aiService.clearMemory(workspaceId).catch(() => {});
   };
 
@@ -291,7 +316,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
       className={!isSidebar ? 'border border-[var(--border-default)]' : ''}>
 
       {showInfoModal && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-overlay)' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '85%', maxWidth: '320px', padding: '20px', position: 'relative' }}>
             <button onClick={() => setShowInfoModal(false)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px', textAlign: 'center' }}>
@@ -353,7 +378,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
               ))}
             </div>
           </div>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowHistory(false)} />
+          <div style={{ flex: 1, background: 'var(--bg-overlay)' }} onClick={() => setShowHistory(false)} />
         </div>
       )}
 
@@ -364,9 +389,22 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
             <Sparkles size={14} style={{ color: 'var(--accent)' }} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chatTitle}</h3>
+            {assistants.length > 1 ? (
+              <select
+                value={assistant}
+                onChange={(e) => chooseAssistant(e.target.value)}
+                aria-label="Assistant"
+                title="Who answers: Oruinwan AI or a connected model"
+                data-testid="assistant-picker"
+                style={{ height: 24, maxWidth: 180, padding: '0 4px', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+              >
+                {assistants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            ) : (
+              <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chatTitle}</h3>
+            )}
             <span style={{ fontSize: '10px', color: contextLabel ? 'var(--accent)' : 'var(--text-muted)', display: 'block', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {contextLabel ? `Context: ${contextLabel}` : 'Oruinwan Intelligence · ⌘⇧A'}
+              {contextLabel ? `Context: ${contextLabel}` : assistants.length > 1 ? `${current.name}${current.model ? ` · ${current.model}` : ''}` : 'Oruinwan Intelligence · ⌘⇧A'}
             </span>
           </div>
         </div>
@@ -553,7 +591,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
           onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
           onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
           <textarea ref={textRef} rows={1} value={input} onChange={e => setInput(e.target.value)}
-            placeholder={contextLabel ? `Ask about ${contextLabel}…` : 'Message Oruinwan AI…'}
+            placeholder={contextLabel ? `Ask ${current.name} about ${contextLabel}…` : `Message ${current.name}…`}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', resize: 'none', padding: '1px 0', maxHeight: '112px', fontFamily: 'var(--font)' }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!busy) handleSend(); } }} />
           {streamingId !== null || (isTyping && abortRef.current) ? (

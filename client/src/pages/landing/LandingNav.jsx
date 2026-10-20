@@ -5,6 +5,7 @@ import BrandMark from '../../shared/components/ui/BrandMark';
 import BRAND from '../../shared/brand';
 import { NAV_LINKS } from './data';
 import { scrollToId, useActiveSection, useScrollState } from './hooks';
+import AppLink from './AppLink';
 
 const SECTION_IDS = NAV_LINKS.map(l => l.id);
 
@@ -64,10 +65,10 @@ const LandingNav = () => {
                     </nav>
 
                     <div className="orw-nav__actions">
-                        <button type="button" className="orw-btn orw-btn--text" onClick={() => navigate('/login')}>Log in</button>
-                        <button type="button" className="orw-btn orw-btn--primary" onClick={() => navigate('/login?mode=signup')}>
+                        <AppLink to="/login" className="orw-btn orw-btn--text">Log in</AppLink>
+                        <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary">
                             Get started <ArrowRight size={14} />
-                        </button>
+                        </AppLink>
                         <button type="button" className="orw-nav__burger" onClick={() => setOpen(o => !o)}
                             aria-expanded={open} aria-controls="orw-drawer" aria-label={open ? 'Close menu' : 'Open menu'}>
                             {open ? <X size={18} /> : <Menu size={18} />}
@@ -87,8 +88,8 @@ const LandingNav = () => {
                     Docs <ArrowRight size={16} />
                 </a>
                 <div className="orw-drawer__actions">
-                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => navigate('/login')}>Log in</button>
-                    <button type="button" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => navigate('/login?mode=signup')}>Get started</button>
+                    <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => setOpen(false)}>Log in</AppLink>
+                    <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => setOpen(false)}>Get started</AppLink>
                 </div>
             </div>
         </>

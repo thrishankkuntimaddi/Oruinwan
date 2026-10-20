@@ -140,7 +140,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
                 position: 'absolute', top: '3px',
                 left: isActive ? '20px' : '3px',
                 width: '14px', height: '14px',
-                backgroundColor: isActive ? '#0c0c0c' : 'var(--text-muted)',
+                backgroundColor: isActive ? 'var(--bg-base)' : 'var(--text-muted)',
                 borderRadius: '1px',
                 transition: 'left 150ms ease',
               }} />

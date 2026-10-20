@@ -20,6 +20,7 @@ import { useFlags } from '../config/flags.js';
 import { logEvent } from '../config/remote.js';
 import { useUnreadCounts } from '../data/hooks.js';
 import { setBadgeCount } from '../native/index.js';
+import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
 
 function Fallback() {
   return (
@@ -199,6 +200,7 @@ export function Shell() {
     return (
       <div className="flex h-full overflow-hidden bg-bg">
         <UnreadBadge />
+        <HuddleLayer />
         <Sidebar />
         <main className="relative min-w-0 flex-1">
           {TABS.filter((t) => visited.has(t)).map((t) => (
@@ -220,6 +222,7 @@ export function Shell() {
           </div>
         ))}
         <UnreadBadge />
+        <HuddleLayer />
       </div>
     );
   }
@@ -234,6 +237,7 @@ export function Shell() {
       ))}
       {stack.length === 0 && <TabBar />}
       <UnreadBadge />
+      <HuddleLayer />
     </div>
   );
 }

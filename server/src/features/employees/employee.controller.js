@@ -93,7 +93,26 @@ exports.acceptInvite = async (req, res) => {
 
         
         const invite = await invites.findByTokenHash(sha256(token));
-        if (!invite || invite.status !== "pending") {
+        if (!invite) {
+            // Links from the Onboard page / People "Invite" / setup wizard carry a token on the
+            // invited account itself (onboarding/invite.service). Both kinds of link open
+            // /accept-invite, so accept that kind here too.
+            const { acceptInvite: acceptAccountInvite } = require("../onboarding/invite.service");
+            const { userDocs } = require("../../identity/queries/auth");
+            try {
+                const out = await acceptAccountInvite(token, password);
+                const name = String(username).trim().slice(0, 80);
+                if (!out.alreadyActive && name) {
+                    const doc = await userDocs.findById(out.user._id || out.user.id);
+                    if (doc) { doc.username = name; await doc.save(); }
+                }
+                return res.json({ message: out.alreadyActive ? "Account already active. Sign in to continue." : "Invitation accepted. Sign in to continue." });
+            } catch (err) {
+                if (err.status === 400) return res.status(404).json({ message: "Invalid or expired invitation" });
+                throw err;
+            }
+        }
+        if (invite.status !== "pending") {
             return res.status(404).json({ message: "Invalid or expired invitation" });
         }
 
@@ -122,6 +141,22 @@ exports.acceptInvite = async (req, res) => {
             verified: true
         });
         if (invite.department) await org.addDepartmentMembers(invite.department, [newUser._id], 'member');
+
+        // Join the company's workspace (the one on the invite, else the company default) and its
+        // default channels, so the new person lands somewhere instead of an empty app.
+        try {
+            let workspaceId = invite.workspace || null;
+            if (!workspaceId && invite.company) {
+                const company = await org.companies.findOne({ _id: invite.company }, { admins: false });
+                workspaceId = company?.defaultWorkspace || null;
+            }
+            if (workspaceId) {
+                const { addUserToWorkspace } = require('../workspaces/addToWorkspace');
+                await addUserToWorkspace(workspaceId, newUser._id, { role: invite.role });
+            }
+        } catch (err) {
+            logger.error({ err }, 'ACCEPT INVITE: could not add the new member to the workspace');
+        }
 
         
         await invites.update(invite._id, { status: "accepted", used: true, usedBy: newUser._id, usedAt: new Date() });

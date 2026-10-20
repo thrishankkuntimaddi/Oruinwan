@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus } from 'lucide-react';
+import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus, Bot } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
-import { useChannels, useDms } from '../../data/hooks.js';
+import { useAgents, useChannels, useDms } from '../../data/hooks.js';
+import { api, useSession } from '../../data/session.js';
+import { toast } from '../../lib/bus.js';
 import { invalidate } from '../../data/query.js';
 import { Body, Screen } from '../../ui/Screen.jsx';
 import { IconButton } from '../../ui/Button.jsx';
@@ -88,6 +90,7 @@ export function ChatsScreen() {
   const [query, setQuery] = useState('');
   const { data: channels, loading: cLoading } = useChannels();
   const { data: dms, loading: dLoading } = useDms();
+  const { data: agents } = useAgents();
 
   const q = query.trim().toLowerCase();
   const joined = useMemo(
@@ -97,7 +100,18 @@ export function ChatsScreen() {
         .sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || '')),
     [channels, q],
   );
-  const people = useMemo(() => (dms || []).filter((d) => !q || d.user?.name?.toLowerCase().includes(q)), [dms, q]);
+  // Conversations with AI agents are listed under Agents, not with people.
+  const people = useMemo(() => (dms || []).filter((d) => !d.agentId && (!q || d.user?.name?.toLowerCase().includes(q))), [dms, q]);
+  const agentList = useMemo(() => (agents || []).filter((a) => !q || a.name.toLowerCase().includes(q)), [agents, q]);
+  const chatWithAgent = async (agent) => {
+    try {
+      const id = await api().openAgentDm(useSession.getState().workspaceId, agent.id);
+      invalidate('dms');
+      openConversation('dm', id);
+    } catch (err) {
+      toast(err.message || `Couldn't open ${agent.name}`, 'danger');
+    }
+  };
   const notJoined = (channels || []).filter((c) => !c.isMember).length;
 
   const unreadAll = useMemo(
@@ -195,6 +209,39 @@ export function ChatsScreen() {
                   </span>
                   <span className="text-[15px] font-medium">New message</span>
                 </button>
+              </>
+            )}
+            {showDms && agentList.length > 0 && (
+              <>
+                <GroupTitle>Agents</GroupTitle>
+                {agentList.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => chatWithAgent(a)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2"
+                    data-testid={`agent-${a.id}`}
+                  >
+                    <img src={a.icon} alt="" className="h-11 w-11 shrink-0 rounded-xl" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium">{a.name}</span>
+                      <span className="block truncate text-[13px] text-text-2">{a.tagline || a.maker}</span>
+                    </span>
+                  </button>
+                ))}
+                {!q && (
+                  <button
+                    type="button"
+                    onClick={() => nav.push('agents')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-accent-ink active:bg-surface-2"
+                    data-testid="agents-manage"
+                  >
+                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-dashed border-line-strong">
+                      <Icon as={Bot} size={18} />
+                    </span>
+                    <span className="text-[15px] font-medium">Connect an agent</span>
+                  </button>
+                )}
               </>
             )}
             {!joined.length && !people.length && !q && (

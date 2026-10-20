@@ -1,7 +1,6 @@
 'use strict';
 
 const org = require('../../identity/queries/org');
-const Message = require('../../modules/messages/message.model.js');
 const Tasks = require('../tasks/tasks.query');
 const Channel = require('../channels/channel.model.js');
 const logger = require('../../shared/utils/logger');
@@ -28,76 +27,21 @@ async function getCompanyAnalytics(companyId) {
     const departments = stats.departments;
 
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date();
-    monthAgo.setDate(monthAgo.getDate() - 30);
-
-    const [messagesToday, messagesWeek, messagesMonth] = await Promise.all([
-        Message.countDocuments({
-            companyId,
-            createdAt: { $gte: today }
-        }),
-        Message.countDocuments({
-            companyId,
-            createdAt: { $gte: weekAgo }
-        }),
-        Message.countDocuments({
-            companyId,
-            createdAt: { $gte: monthAgo }
-        })
-    ]);
-
-    
     const taskStats = {
         open: tasks[0],
         completed: tasks[1],
         overdue: tasks[2]
     };
 
-    
+    // Department activity is measured by structure (members, channels), never by messages:
+    // messages are end-to-end encrypted and an admin console must not count who says what.
     const departmentList = await org.departments.find({ company: companyId }, { members: false });
     const sizes = new Map((await org.departmentSizes(companyId)).map((d) => [String(d._id), d.members]));
-    const departmentStats = await Promise.all(
-        departmentList.map(async (dept) => {
-            const memberCount = sizes.get(String(dept._id)) || 0;
-            const deptChannels = await Channel.find({ company: companyId, department: dept._id }).select('_id').lean();
-
-            const channelIds = deptChannels.map(c => c._id);
-            const activityScore = channelIds.length
-                ? await Message.countDocuments({ channel: { $in: channelIds }, createdAt: { $gte: weekAgo } })
-                : 0;
-
-            return {
-                name: dept.name,
-                memberCount,
-                activityScore,           
-                totalMessages: channelIds.length
-                    ? await Message.countDocuments({ channel: { $in: channelIds } })
-                    : 0,
-            };
-        })
-    );
-
-    
-    const users = await org.users.find({ companyId }, { select: 'username email profilePicture' });
-
-    const userActivityCounts = await Promise.all(
-        users.map(async (u) => {
-            const messageCount = await Message.countDocuments({
-                sender: u._id,
-                companyId,
-                createdAt: { $gte: monthAgo },
-            });
-            return { ...u, activityCount: messageCount };
-        })
-    );
-
-    const topUsers = userActivityCounts
-        .sort((a, b) => b.activityCount - a.activityCount)
-        .slice(0, 10);
+    const departmentStats = await Promise.all(departmentList.map(async (dept) => ({
+        name: dept.name,
+        memberCount: sizes.get(String(dept._id)) || 0,
+        channelCount: await Channel.countDocuments({ company: companyId, department: dept._id }),
+    })));
 
     logger.debug({ companyId, totalUsers, activeUsers }, 'Company analytics computed');
 
@@ -108,15 +52,9 @@ async function getCompanyAnalytics(companyId) {
             activeUsers,
             totalWorkspaces: workspaces,
             totalDepartments: departments,
-            messagesCount: {
-                today: messagesToday,
-                week: messagesWeek,
-                month: messagesMonth,
-            },
             tasksStats: taskStats,
         },
         departmentStats,
-        topUsers,
         userGrowth: [],      
         activityData: [],    
     };

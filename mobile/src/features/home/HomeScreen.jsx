@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   AtSign, Bell, BookOpen, ChevronRight, FolderOpen, Hash, Megaphone, MessageCircle, Plug, Search, SquareCheckBig,
-  Sparkles, ArrowRight, Download, FlaskConical,
+  Sparkles, Download, Headphones,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -14,7 +14,7 @@ import { useFlags } from '../../config/flags.js';
 import { remoteSnapshot } from '../../config/remote.js';
 import { useUpdate } from '../../update/updater.js';
 import { Body, Screen } from '../../ui/Screen.jsx';
-import { IconButton, Button } from '../../ui/Button.jsx';
+import { IconButton } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Section } from '../../ui/List.jsx';
 import { Segmented } from '../../ui/Controls.jsx';
@@ -26,7 +26,9 @@ import { htmlToText } from '../../ui/sanitize.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { ActivityRow } from './ActivityRow.jsx';
 import { openChats } from '../chats/chatsUi.js';
-import { deviceNoun } from '../../native/index.js';
+import { PushPrompt } from '../push/PushPrompt.jsx';
+import { useHuddlesAvailable } from '../huddles/HuddlesScreen.jsx';
+import { useHuddle } from '../huddles/huddle.js';
 
 function StatTile({ value, label, tone, onClick, icon }) {
   return (
@@ -59,8 +61,9 @@ function QuickTile({ icon, label, detail, onClick }) {
 
 export function HomeScreen() {
   const user = useSession((s) => s.user);
-  const mode = useSession((s) => s.mode);
   const flags = useFlags((s) => s.flags);
+  const huddlesOn = useHuddlesAvailable();
+  const liveCount = useHuddle((s) => Object.keys(s.live).length);
   const unread = useUnreadCounts();
   const directory = useDirectory();
   const { data: notifications, loading: nLoading } = useNotifications();
@@ -105,7 +108,7 @@ export function HomeScreen() {
         title="Home"
         actions={
           <>
-            <IconButton icon={Search} label="Search" onClick={() => nav.push('search')} />
+            <IconButton icon={Search} label="Search" data-tour="search" onClick={() => nav.push('search')} />
             <IconButton
               icon={Bell}
               label={`Notifications${unread.notifications ? `, ${unread.notifications} unread` : ''}`}
@@ -116,20 +119,6 @@ export function HomeScreen() {
         }
       />
       <Body tab="home" onRefresh={refresh}>
-        {mode === 'demo' && (
-          <button
-            type="button"
-            onClick={() => useSession.getState().signOut()}
-            className="mx-4 mt-1 flex w-[calc(100%-2rem)] items-center gap-2.5 rounded-card border border-accent/30 bg-accent/10 px-3.5 py-2.5 text-left"
-          >
-            <Icon as={FlaskConical} size="sm" className="shrink-0 text-accent-ink" />
-            <span className="min-w-0 flex-1 text-[13px]">
-              <span className="font-medium">Demo workspace.</span> <span className="text-text-2">Sample data, stored only on this {deviceNoun}.</span>
-            </span>
-            <span className="shrink-0 text-[13px] font-medium text-accent-ink">Sign in</span>
-          </button>
-        )}
-
         <div className="px-4 pt-4 pb-1">
           <h2 className="text-[26px] font-bold leading-tight tracking-tight">
             {greeting()}
@@ -137,6 +126,8 @@ export function HomeScreen() {
           </h2>
           <p className="mt-1 text-sm text-text-2">{summary.length ? summary.join(' · ') : "You're all caught up."}</p>
         </div>
+
+        <PushPrompt className="mx-4 mt-3" />
 
         {announcement && (
           <div className="mx-4 mt-3 flex items-start gap-2.5 rounded-card border border-line bg-surface px-3.5 py-3 text-[13px]">
@@ -243,6 +234,7 @@ export function HomeScreen() {
             {flags.files && <QuickTile icon={FolderOpen} label="Files" detail="Shared in this workspace" onClick={() => nav.push('files')} />}
             {flags.knowledge && <QuickTile icon={BookOpen} label="Knowledge" detail="Pages and handbook" onClick={() => nav.push('knowledge')} />}
             {flags.integrations && <QuickTile icon={Plug} label="Integrations" detail="Apps and webhooks" onClick={() => nav.push('integrations')} />}
+            {huddlesOn && <QuickTile icon={Headphones} label="Huddles" detail={liveCount ? `${liveCount} live now` : 'Voice calls and meetings'} onClick={() => nav.push('huddles')} />}
             {flags.ai && <QuickTile icon={Sparkles} label="Ask AI" detail="Summaries and drafts" onClick={() => nav.setTab('ai')} />}
           </div>
         </Section>
@@ -275,15 +267,6 @@ export function HomeScreen() {
                 ))}
             </div>
           </Section>
-        )}
-
-        {mode === 'demo' && (
-          <div className="mx-4 mt-8 rounded-card border border-line-soft bg-surface p-4 text-center">
-            <p className="text-sm text-text-2">Ready to use your own workspace?</p>
-            <Button className="mt-3" size="sm" iconRight={ArrowRight} onClick={() => useSession.getState().signOut()}>
-              Sign in to your server
-            </Button>
-          </div>
         )}
       </Body>
     </Screen>

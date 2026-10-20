@@ -20,10 +20,9 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
 
     return (
         <div
+            className="gl-liquid gl-liquid--strong"
             style={{
-                width: '100%', backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)', borderRadius: '2px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 60,
+                width: '100%', borderRadius: 'var(--gl-radius-md)', zIndex: 60,
                 overflow: 'hidden', fontFamily: 'var(--font)',
             }}
             onMouseDown={e => e.preventDefault()}

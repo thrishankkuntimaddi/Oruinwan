@@ -7,7 +7,7 @@ exports.generateDomainVerificationToken = () => {
     const token = crypto.randomBytes(16).toString("hex");
 
     
-    const txtRecord = `chttrix-verification=${token}`;
+    const txtRecord = `oruinwan-verification=${token}`;
 
     return { token, txtRecord };
 };
@@ -15,7 +15,6 @@ exports.generateDomainVerificationToken = () => {
 exports.verifyDomainTXT = async (domain, expectedToken) => {
     try {
         logger.info(`🔍 Verifying domain: ${domain}`);
-        logger.info(`🔑 Expected token: ${expectedToken}`);
 
         
         const records = await dns.resolveTxt(domain);
@@ -27,7 +26,8 @@ exports.verifyDomainTXT = async (domain, expectedToken) => {
             const txtValue = Array.isArray(record) ? record.join("") : record;
             logger.info(`   - ${txtValue}`);
 
-            if (txtValue === `chttrix-verification=${expectedToken}`) {
+            // Old Chttrix-era records are still accepted.
+            if (txtValue === `oruinwan-verification=${expectedToken}` || txtValue === `chttrix-verification=${expectedToken}`) {
                 logger.info(`✅ Domain verified successfully!`);
                 return true;
             }

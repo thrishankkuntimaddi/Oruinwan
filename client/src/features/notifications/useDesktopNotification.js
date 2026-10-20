@@ -18,7 +18,7 @@ export function useDesktopNotification() {
     }, []);
 
     
-    const triggerDesktopNotification = useCallback((title, body, icon = '/favicon.ico', { silent = false } = {}) => {
+    const triggerDesktopNotification = useCallback((title, body, icon = '/icons/oruinwan-192.png', { silent = false } = {}) => {
         if (typeof Notification === 'undefined') return;
         if (Notification.permission !== 'granted') return;
         

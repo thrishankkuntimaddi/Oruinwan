@@ -1,0 +1,109 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Extra pieces for standalone auth-style screens (invites, verification,
+   registration, password set-up). Builds on public.css; every colour comes
+   from the kit's --o-* tokens. --o-bad / --o-warn name the alert tones the
+   kit already uses (.orw-auth__alert, .orw-callout--warn) so screens never
+   write a colour literal.
+   ────────────────────────────────────────────────────────────────────────── */
+.orw { --o-bad: #ff8f8f; --o-warn: #f5c46b; }
+
+/* Icon tile above a panel head */
+.orw-auth-mark { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 20px; border: 1px solid var(--o-line-2); background: var(--o-glass); box-shadow: var(--o-spec); color: var(--o-accent-hi); flex-shrink: 0; }
+.orw-auth-mark--good { color: var(--o-good); border-color: color-mix(in srgb, var(--o-good) 40%, transparent); background: color-mix(in srgb, var(--o-good) 8%, transparent); }
+.orw-auth-mark--bad { color: var(--o-bad); border-color: color-mix(in srgb, var(--o-bad) 40%, transparent); background: color-mix(in srgb, var(--o-bad) 8%, transparent); }
+.orw-auth-mark--warn { color: var(--o-warn); border-color: color-mix(in srgb, var(--o-warn) 40%, transparent); background: color-mix(in srgb, var(--o-warn) 8%, transparent); }
+.orw-auth-mark img { width: 100%; height: 100%; object-fit: cover; }
+
+.orw-auth__panel-head .orw-eyebrow { margin: 0 0 10px; font-size: 11px; line-height: 1.4; color: var(--o-accent); }
+.orw-auth__panel-head strong { color: var(--o-text); font-weight: 650; }
+
+/* Stack of actions under a status message */
+.orw-auth-actions { display: flex; flex-direction: column; gap: 12px; }
+.orw-auth-actions .orw-link { align-self: center; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Key facts (workspace size, your role …) */
+.orw-auth-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin-bottom: 22px; background: var(--o-line-2); border: 1px solid var(--o-line-2); }
+.orw-auth-facts > div { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--o-bg-2); }
+.orw-auth-facts dt { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--o-text-3); }
+.orw-auth-facts dt svg { color: var(--o-accent); }
+.orw-auth-facts dd { margin: 0; font-size: 16px; font-weight: 700; color: var(--o-text); text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "What happens next" numbered list */
+.orw-auth-next ol { counter-reset: n; display: flex; flex-direction: column; gap: 10px; }
+.orw-auth-next { display: flex; flex-direction: column; gap: 10px; margin: 0 0 24px; padding: 16px 18px; border: 1px solid var(--o-line-2); background: var(--o-glass); }
+.orw-auth-next__title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--o-text-2); margin-bottom: 2px; }
+.orw-auth-next li { counter-increment: n; position: relative; padding-left: 30px; font-size: 13.5px; line-height: 1.55; color: var(--o-text-2); }
+.orw-auth-next li::before { content: counter(n); position: absolute; left: 0; top: 0; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--o-accent-hi); border: 1px solid color-mix(in srgb, var(--o-accent) 40%, transparent); background: var(--o-accent-dim); }
+.orw-auth-next li strong { color: var(--o-text); }
+
+/* Auto-redirect progress */
+.orw-auth-progress { height: 2px; margin: 4px 0 18px; background: var(--o-line-2); overflow: hidden; }
+.orw-auth-progress span { display: block; height: 100%; transform-origin: 0 50%; background: linear-gradient(90deg, var(--o-accent-lo), var(--o-accent-hi)); animation: orwAuthProgress var(--dur, 3s) linear forwards; }
+@keyframes orwAuthProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Read-only value (email you are signing up with) */
+.orw-auth-value { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border: 1px dashed var(--o-line-3); font-size: 14px; color: var(--o-text-2); overflow: hidden; }
+.orw-auth-value svg { flex-shrink: 0; color: var(--o-text-3); }
+.orw-auth-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Choice tile (check box / skip option) */
+.orw-auth-choice { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--o-line-2); background: none; transition: border-color 160ms ease, background 160ms ease; }
+.orw-auth-choice:hover { border-color: var(--o-line-3); }
+.orw-auth-choice[aria-checked='true'] { border-color: color-mix(in srgb, var(--o-accent) 55%, transparent); background: var(--o-accent-dim); }
+.orw-auth-choice__box { width: 18px; height: 18px; margin-top: 1px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--o-line-3); color: var(--o-bg); }
+.orw-auth-choice[aria-checked='true'] .orw-auth-choice__box { background: var(--o-accent); border-color: var(--o-accent); }
+.orw-auth-choice b { display: block; font-size: 13.5px; font-weight: 650; color: var(--o-text); }
+.orw-auth-choice small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.5; color: var(--o-text-3); }
+
+/* Registration: five-step stepper + review */
+.orw-stepper--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.orw-reg-steps { display: flex; flex-direction: column; gap: 2px; margin-top: 36px; }
+.orw-reg-steps li { display: flex; align-items: center; gap: 14px; padding: 9px 0; font-size: 14px; color: var(--o-text-3); transition: color 200ms ease; }
+.orw-reg-steps li b { width: 30px; height: 30px; display: grid; place-items: center; flex-shrink: 0; font-size: 12px; border: 1px solid var(--o-line-2); color: var(--o-text-3); }
+.orw-reg-steps li small { display: block; font-size: 12px; color: var(--o-text-3); margin-top: 1px; }
+.orw-reg-steps li.is-current { color: var(--o-text); }
+.orw-reg-steps li.is-current b { color: var(--o-bg); border-color: transparent; background: linear-gradient(180deg, var(--o-accent-hi), var(--o-accent)); }
+.orw-reg-steps li.is-done { color: var(--o-text-2); }
+.orw-reg-steps li.is-done b { color: var(--o-good); border-color: color-mix(in srgb, var(--o-good) 45%, transparent); }
+
+.orw-review { display: flex; flex-direction: column; border: 1px solid var(--o-line-2); }
+.orw-review__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 14px 16px; background: none; border: 0; border-bottom: 1px solid var(--o-line-2); text-align: left; font: inherit; color: inherit; cursor: pointer; transition: background 160ms ease; }
+.orw-review__item:last-child { border-bottom: 0; }
+.orw-review__item:hover { background: rgba(255, 255, 255, 0.03); }
+.orw-review__item h3 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--o-text); }
+.orw-review__item h3 svg { color: var(--o-accent); }
+.orw-review__edit { font-size: 12px; font-weight: 600; color: var(--o-accent-hi); }
+.orw-review__item p { grid-column: 1 / -1; font-size: 13px; line-height: 1.6; color: var(--o-text-2); overflow-wrap: anywhere; }
+
+.orw-drop { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 20px; text-align: center; cursor: pointer; border: 1px dashed var(--o-line-3); background: var(--o-glass); transition: border-color 160ms ease, background 160ms ease; }
+.orw-drop:hover, .orw-drop:focus-within { border-color: color-mix(in srgb, var(--o-accent) 60%, transparent); }
+.orw-drop[data-state='ok'] { border-style: solid; border-color: color-mix(in srgb, var(--o-good) 45%, transparent); }
+.orw-drop[data-state='error'] { border-color: color-mix(in srgb, var(--o-bad) 55%, transparent); }
+.orw-drop b { font-size: 14px; color: var(--o-text); overflow-wrap: anywhere; }
+.orw-drop small { font-size: 12.5px; line-height: 1.5; color: var(--o-text-3); }
+.orw-drop .orw-auth-mark { margin-bottom: 4px; }
+
+.orw-inline { display: flex; gap: 8px; }
+.orw-inline > :first-child { flex: 1; min-width: 0; }
+.orw-inline .orw-btn { height: 46px; flex-shrink: 0; }
+.orw-btn--done { color: var(--o-good); border-color: color-mix(in srgb, var(--o-good) 40%, transparent); }
+
+.orw-select[aria-invalid='true'] { border-color: color-mix(in srgb, var(--o-bad) 60%, transparent); }
+.orw-error-line { display: flex; align-items: center; gap: 6px; }
+
+/* Full-height loading inside the public look */
+.orw-auth-loading { min-height: 100vh; display: grid; place-items: center; }
+.orw-auth-loading__inner { display: flex; flex-direction: column; align-items: center; gap: 14px; color: var(--o-text-2); font-size: 13px; }
+.orw-auth-loading__bar { position: relative; width: 80px; height: 2px; overflow: hidden; background: var(--o-accent-dim); }
+.orw-auth-loading__bar::after { content: ''; position: absolute; top: 0; left: -40px; width: 40px; height: 2px; background: var(--o-accent); animation: orwAuthSlide 1.2s ease-in-out infinite; }
+@keyframes orwAuthSlide { to { left: 100%; } }
+
+@media (max-width: 640px) {
+    .orw-auth-facts dd { font-size: 15px; }
+    .orw-inline--wrap { flex-wrap: wrap; }
+    .orw-inline--wrap > :first-child { flex-basis: 100%; }
+    .orw-inline--wrap .orw-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .orw-auth-progress span, .orw-auth-loading__bar::after { animation: none; transform: none; }
+}

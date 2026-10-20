@@ -3,6 +3,9 @@ import { Trash2, ChevronRight } from 'lucide-react';
 
 const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     const [open, setOpen] = useState(block.meta?.open ?? false);
+    // Focus the body only when the writer opens it, not when a note loads with it open
+    // (that would scroll the note away from its top).
+    const [openedByUser, setOpenedByUser] = useState(false);
 
     const title = block.meta?.title || '';
     const body = block.content || '';
@@ -13,6 +16,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     const toggle = () => {
         const next = !open;
         setOpen(next);
+        setOpenedByUser(next);
         onBlockChange(block.id, body, { ...block.meta, title, open: next });
     };
 
@@ -22,7 +26,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
             border: open ? '1px solid var(--border-default)' : '1px solid transparent',
                 transition: 'border 200ms ease, box-shadow 200ms ease',
                 overflow: 'hidden',
-                boxShadow: open ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: open ? 'var(--gl-spec)' : 'none',
             }}>
                 {}
                 <div
@@ -42,7 +46,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         value={title}
                         onChange={e => { e.stopPropagation(); setTitle(e.target.value); }}
                         onClick={e => e.stopPropagation()}
-                        placeholder="Section title..."
+                        placeholder="Section title"
                         style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font)' }}
                         className="placeholder:text-[var(--text-muted)]"
                     />
@@ -63,10 +67,10 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}
-                            placeholder="Add content..."
-                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'var(--font)' }}
+                            placeholder="Write what shows when this is open"
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'var(--font)' }}
                             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                            autoFocus
+                            autoFocus={openedByUser}
                         />
                     </div>
                 )}

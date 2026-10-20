@@ -113,7 +113,7 @@ const CompanyTab = ({ settings, setSettings }) => (
                 <Hint text="Contact support to change company name" />
             </Field>
             <Field label="Company Email">
-                <input type="email" value={settings.companyEmail} onChange={e => setSettings({ ...settings, companyEmail: e.target.value })} placeholder="contact@company.com" style={inputSt} />
+                <input type="email" value={settings.companyEmail} onChange={e => setSettings({ ...settings, companyEmail: e.target.value })} placeholder="contact@example.com" style={inputSt} />
             </Field>
             <Field label="Phone Number">
                 <input type="tel" value={settings.companyPhone} onChange={e => setSettings({ ...settings, companyPhone: e.target.value })} placeholder="+1 (555) 123-4567" style={inputSt} />
@@ -122,7 +122,7 @@ const CompanyTab = ({ settings, setSettings }) => (
                 <textarea value={settings.companyAddress} onChange={e => setSettings({ ...settings, companyAddress: e.target.value })} rows={3} placeholder="123 Main St, City, State, ZIP" style={{ ...inputSt, resize: 'none' }} />
             </Field>
             <Field label="Website">
-                <input type="url" value={settings.companyWebsite} onChange={e => setSettings({ ...settings, companyWebsite: e.target.value })} placeholder="https://www.company.com" style={inputSt} />
+                <input type="url" value={settings.companyWebsite} onChange={e => setSettings({ ...settings, companyWebsite: e.target.value })} placeholder="https://www.example.com" style={inputSt} />
             </Field>
             <Field label="Company Logo">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

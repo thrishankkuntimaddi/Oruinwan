@@ -1,10 +1,9 @@
 import React from 'react';
-import { Users, Hash, MessageSquare, Loader } from 'lucide-react';
+import { Users, Hash, Loader } from 'lucide-react';
 
 const STAT_ITEMS = [
     { key: 'memberCount',  label: 'Members',  sub: 'Total workspace members', Icon: Users },
     { key: 'channelCount', label: 'Channels', sub: 'Active channels',          Icon: Hash },
-    { key: 'messageCount', label: 'Messages', sub: 'Total messages sent',      Icon: MessageSquare },
 ];
 
 const BillingTab = ({ stats, loadingStats }) => (

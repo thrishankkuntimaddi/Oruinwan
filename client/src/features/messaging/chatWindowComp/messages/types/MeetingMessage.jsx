@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Calendar, Clock, Users, Video, ExternalLink } from 'lucide-react';
 
 export default function MeetingMessage({ meeting }) {
-    const { title, startTime, duration, meetingLink, participants = [] } = meeting || {};
+    const { title, startTime, duration, meetingLink, participants = [], scheduledMeetingId } = meeting || {};
+    const navigate = useNavigate();
+    const { workspaceId } = useParams();
 
     
     const formattedDate = useMemo(() => {
@@ -12,10 +15,11 @@ export default function MeetingMessage({ meeting }) {
             return {
                 date: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
                 time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-                isPast: d < new Date(),
+                // Over once its time slot has passed, not when it starts.
+                isPast: d.getTime() + (Number(duration) || 30) * 60000 < Date.now(),
             };
         } catch { return null; }
-    }, [startTime]);
+    }, [startTime, duration]);
 
     if (!title) return null;
 
@@ -102,7 +106,18 @@ export default function MeetingMessage({ meeting }) {
                 )}
             </div>
 
-            {}
+            {scheduledMeetingId && workspaceId && !formattedDate?.isPast && (
+                <div style={{ padding: '0 12px 8px', display: 'flex', gap: '6px' }}>
+                    <button type="button" className="gl-btn gl-btn--primary" data-testid="meeting-card-join"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/huddles?meeting=${scheduledMeetingId}`, { state: { meetingTitle: title } }); }}
+                        style={{ flex: 1, justifyContent: 'center' }}>
+                        <Video size={12} /> Join huddle
+                    </button>
+                    <button type="button" className="gl-btn" onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${scheduledMeetingId}`); }}>
+                        Details
+                    </button>
+                </div>
+            )}
             {meetingLink && (
                 <div style={{ padding: '0 12px 10px' }}>
                     <a
@@ -114,7 +129,7 @@ export default function MeetingMessage({ meeting }) {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                             width: '100%', padding: '7px 0',
                             backgroundColor: isJoinable ? 'var(--accent)' : 'var(--bg-hover)',
-                            color: isJoinable ? '#0c0c0c' : 'var(--text-muted)',
+                            color: isJoinable ? 'var(--bg-base)' : 'var(--text-muted)',
                             border: isJoinable ? 'none' : '1px solid var(--border-default)',
                             borderRadius: '2px',
                             fontSize: '12px', fontWeight: 600,

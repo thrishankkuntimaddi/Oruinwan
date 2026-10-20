@@ -331,6 +331,35 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     }
 }
 
+/**
+ * Live thread info for each message: replyCount and lastReplyAt counted from replies that
+ * still exist (deleted replies drop out), plus up to three recent repliers (threadParticipants).
+ */
+async function attachThreadInfo(messages) {
+    if (!messages.length) return messages;
+    const ids = messages.map(m => m._id);
+    const rows = await Message.aggregate([
+        { $match: { parentId: { $in: ids }, type: { $ne: 'system' }, isDeletedUniversally: { $ne: true }, isDeleted: { $ne: true } } },
+        { $sort: { createdAt: -1 } },
+        { $group: { _id: '$parentId', replyCount: { $sum: 1 }, lastReplyAt: { $first: '$createdAt' }, senders: { $push: '$sender' } } },
+    ]);
+    const byParent = new Map(rows.map(r => {
+        const recent = [];
+        for (const sid of r.senders || []) {
+            const key = String(sid);
+            if (!recent.includes(key)) recent.push(key);
+            if (recent.length === 3) break;
+        }
+        return [String(r._id), { replyCount: r.replyCount, lastReplyAt: r.lastReplyAt || null, threadParticipants: recent }];
+    }));
+    const out = messages.map(m => {
+        const info = byParent.get(String(m._id));
+        return info ? { ...m, ...info } : { ...m, replyCount: 0, threadParticipants: [] };
+    });
+    await hydrate(out, { threadParticipants: SENDER_MIN });
+    return out;
+}
+
 async function fetchMessages(query, options = {}) {
     const {
         limit = 50,
@@ -393,23 +422,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = combined.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
-        if (populateReplies) {
-            const messageIds = combined.map(m => m._id);
-            const counts = await Message.aggregate([
-                {
-                    $match: {
-                        parentId: { $in: messageIds },
-                        type: { $ne: 'system' }
-                    }
-                },
-                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
-            ]);
-            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
-            messagesWithCounts = messagesWithCounts.map(msgObj => ({
-                ...msgObj,
-                replyCount: countMap.get(msgObj._id.toString()) || 0
-            }));
-        }
+        if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
             messages: messagesWithCounts,
@@ -433,23 +446,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
-        if (populateReplies) {
-            const messageIds = messages.map(m => m._id);
-            const counts = await Message.aggregate([
-                {
-                    $match: {
-                        parentId: { $in: messageIds },
-                        type: { $ne: 'system' }
-                    }
-                },
-                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
-            ]);
-            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
-            messagesWithCounts = messagesWithCounts.map(msgObj => ({
-                ...msgObj,
-                replyCount: countMap.get(msgObj._id.toString()) || 0
-            }));
-        }
+        if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
             messages: messagesWithCounts,
@@ -484,23 +481,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
-        if (populateReplies) {
-            const messageIds = messages.map(m => m._id);
-            const counts = await Message.aggregate([
-                {
-                    $match: {
-                        parentId: { $in: messageIds },
-                        type: { $ne: 'system' }
-                    }
-                },
-                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
-            ]);
-            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
-            messagesWithCounts = messagesWithCounts.map(msgObj => ({
-                ...msgObj,
-                replyCount: countMap.get(msgObj._id.toString()) || 0
-            }));
-        }
+        if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
             messages: messagesWithCounts,
@@ -644,10 +625,13 @@ async function getUserDMSessions(userId, workspaceId) {
                 else lastMessageText = 'Message';
             }
 
+            // A DM with an AI agent (Oruinwan AI, Claude, ChatGPT…): the apps list these under Agents.
+            const agentEmail = /^assistant(?:-([a-z_]+))?@ai\.oruinwan\.internal$/.exec(String(otherUser?.email || ''));
             return {
                 id: session._id,
                 otherUser: otherUser || { username: 'Self' },
                 otherUserId: otherUser?._id || otherUser,
+                ...(agentEmail ? { isAgent: true, agentId: agentEmail[1] || 'default' } : {}),
                 lastMessage: lastMessageText,
                 // Encrypted text can only be read by the participants: hand the client
                 // the ciphertext so it can show a real preview.
@@ -695,6 +679,47 @@ async function getChannelUnreadCounts(userId, channels) {
     ]);
     for (const row of rows) counts.set(String(row._id), row.n);
     return counts;
+}
+
+/**
+ * Unread top-level messages per workspace for `userId`: the same counts the channel list
+ * (getChannelUnreadCounts, muted channels left out) and the DM list (getUserDMSessions) show,
+ * added up. Four queries for any number of workspaces. Returns a Map of workspaceId → count (only >0).
+ */
+async function getWorkspaceUnreadCounts(userId, workspaceIds) {
+    const totals = new Map();
+    const ids = (workspaceIds || []).map(String).filter(id => mongoose.isValidObjectId(id));
+    if (ids.length === 0) return totals;
+    const add = (ws, n) => { if (ws && n) totals.set(String(ws), (totals.get(String(ws)) || 0) + n); };
+    const me = new mongoose.Types.ObjectId(String(userId));
+
+    const channels = await _Channel.find({ workspace: { $in: ids }, 'members.user': userId, 'mutedBy.user': { $ne: userId } })
+        .select('_id workspace members.user members.joinedAt')
+        .lean();
+    const channelWorkspace = new Map(channels.map(c => [String(c._id), c.workspace]));
+    for (const [channelId, n] of await getChannelUnreadCounts(userId, channels)) add(channelWorkspace.get(channelId), n);
+
+    const sessions = await DMSession.find({ workspace: { $in: ids }, participants: userId, 'hiddenFor.user': { $ne: userId } })
+        .select('_id workspace')
+        .lean();
+    if (sessions.length) {
+        const dmWorkspace = new Map(sessions.map(d => [String(d._id), d.workspace]));
+        const rows = await Message.aggregate([
+            {
+                $match: {
+                    dm: { $in: sessions.map(d => d._id) },
+                    sender: { $ne: me },
+                    readBy: { $ne: me },
+                    parentId: null,
+                    type: { $ne: 'system' },
+                    isDeleted: { $ne: true },
+                },
+            },
+            { $group: { _id: '$dm', n: { $sum: 1 } } },
+        ]);
+        for (const row of rows) add(dmWorkspace.get(String(row._id)), row.n);
+    }
+    return totals;
 }
 
 function httpError(status, message) {
@@ -829,7 +854,7 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
 
 async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId = null) {
     const message = await Message.findById(messageId);
-    if (!message) throw new Error('Message not found');
+    if (!message) throw httpError(404, 'Message not found');
 
     const room = message.channel
         ? `channel:${message.channel}`
@@ -875,10 +900,14 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
         throw err;
     }
 
+    // Who deleted it, by name, so "Message deleted by …" reads right after a reload too.
+    let deleter = null;
+    try { deleter = await identity.users.findById(userId); } catch (_) { /* name is optional */ }
     message.isDeleted = true;
     message.isDeletedUniversally = true;
     message.deletedAt = new Date();
     message.deletedBy = userId;
+    message.deletedByName = deleter?.username || null;
     await message.save();
 
     // Ids only on the bus (content is end-to-end encrypted); a bus failure never fails the delete.
@@ -894,10 +923,23 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
             messageId,
             dm: message.dm || null,
             channel: message.channel || null,
+            // Set for thread replies, so an open thread panel can drop the reply.
+            parentId: message.parentId ? String(message.parentId) : null,
             deletedBy: userId,
-            deletedByName: message.sender?.username || null,
+            deletedByName: message.deletedByName,
             deletedAt: message.deletedAt
         });
+    }
+
+    // A deleted reply no longer counts: recount the thread and update the parent everywhere.
+    if (message.parentId) {
+        try {
+            const threads = require('../threads/threads.service');
+            const counters = await threads.recountThread(message.parentId);
+            threads.emitThreadCounters(io, { _id: message.parentId, channel: message.channel, dm: message.dm }, counters);
+        } catch (err) {
+            logger.warn('[deleteMessage] thread recount failed:', err.message);
+        }
     }
 
     return message;
@@ -1240,6 +1282,7 @@ module.exports = {
     findOrCreateDMSession,
     getUserDMSessions,
     getChannelUnreadCounts,
+    getWorkspaceUnreadCounts,
     editMessage,
     deleteMessage,
     addReaction,

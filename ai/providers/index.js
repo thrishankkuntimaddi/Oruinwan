@@ -7,7 +7,7 @@ const AnthropicProvider = require('./anthropic.provider');
 const MockProvider = require('./mock.provider');
 
 /**
- * Provider registry. Built-ins: gemini, openai, anthropic, local_llm (any
+ * Provider registry. Built-ins: gemini, openai, anthropic, xai (Grok), local_llm (any
  * OpenAI-compatible endpoint) and mock. Register more with
  * `registerProvider(name, (options) => providerInstance)`.
  */
@@ -16,6 +16,8 @@ const factories = new Map([
   ['openai', (options) => new OpenAIProvider({ ...options, name: 'openai' })],
   ['local_llm', (options) => new OpenAIProvider({ ...options, name: 'local_llm' })],
   ['anthropic', (options) => new AnthropicProvider(options)],
+  // Grok speaks the OpenAI API at api.x.ai.
+  ['xai', (options) => new OpenAIProvider({ ...options, name: 'xai', baseUrl: options.baseUrl || config.endpoints.xai, apiKey: options.apiKey ?? config.keys.xai })],
   ['claude', (options) => new AnthropicProvider(options)],
   ['mock', (options) => new MockProvider(options.handler)],
 ]);

@@ -83,7 +83,8 @@ export default function ContactsProvider({ children }) {
       const filteredChannels = channelsData.filter(ch => ch.isMember || ch.isDiscoverable);
 
       
-      const rawDMs = chatListRes.data.sessions || [];
+      // Conversations with AI agents are listed under Agents, not with people.
+      const rawDMs = (chatListRes.data.sessions || []).filter((s) => !s.isAgent);
 
       const dmsData = rawDMs.map(session => {
         

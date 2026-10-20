@@ -791,13 +791,34 @@ async function wouldCreateReportingLoop(employeeId, managerId) {
 }
 
 /** Active login sessions in a company since `since`, newest first, with the user's name and email. */
+/**
+ * Signed-in devices in a company: unexpired refresh tokens (one per signed-in browser or app,
+ * rotated on every refresh, so created_at is the last time that device was active).
+ * Device and IP only; nothing about what anyone did.
+ */
 async function companySessions(companyId, { since, limit = 50 } = {}) {
+    const { parseDeviceInfo } = require('../../../utils/deviceParser');
     const { rows } = await query(
-        `SELECT s.*, u.username, u.email FROM user_sessions s JOIN users u ON u.id = s.user_id
-         WHERE s.company_id = $1 AND s.is_active = true AND s.last_activity_at >= $2
-         ORDER BY s.last_activity_at DESC LIMIT $3`,
+        `SELECT r.token_hash, r.device_info, r.ip, r.started_at, r.created_at, u.id AS user_id, u.username, u.email
+           FROM user_refresh_tokens r JOIN users u ON u.id = r.user_id
+          WHERE u.company_id = $1 AND r.expires_at > now() AND r.created_at >= $2
+          ORDER BY r.created_at DESC LIMIT $3`,
         [str(companyId), since || new Date(0), limit]);
-    return rows.map((r) => ({ ...camelRow(r), userId: { _id: r.user_id, username: r.username, email: r.email } }));
+    return rows.map((r) => {
+        const d = parseDeviceInfo(r.device_info);
+        return {
+            _id: String(r.token_hash).slice(0, 24),
+            userId: { _id: r.user_id, username: r.username, email: r.email },
+            device: d.device || (d.deviceType && d.deviceType !== 'desktop' ? d.deviceType : 'Computer'),
+            browser: d.browser,
+            os: d.os,
+            ipAddress: r.ip,
+            location: null,
+            startedAt: r.started_at,
+            lastActivityAt: r.created_at,
+            isActive: true,
+        };
+    });
 }
 
 /** Expire a person's not-yet-accepted invites to a company (before a resend). */

@@ -29,6 +29,9 @@ android {
         versionCode appVersionCode
         versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // The web app's host, for invitation links (AndroidManifest.xml). Set ORUINWAN_WEB_HOST
+        // (environment) or oruinwanWebHost (gradle.properties) once the production domain is known.
+        manifestPlaceholders += [oruinwanWebHost: System.getenv('ORUINWAN_WEB_HOST') ?: (project.findProperty('oruinwanWebHost') ?: 'app.example.com')]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61

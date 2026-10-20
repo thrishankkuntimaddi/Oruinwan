@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
+import { Hand } from 'lucide-react';
 
 /** One participant's video, or their initial while their camera is off. */
-export default function VideoTile({ stream, name = '', isLocal = false, cameraOn = true }) {
+export default function VideoTile({ stream, name = '', isLocal = false, cameraOn = true, mirror = isLocal, handRaised = false }) {
     const ref = useRef(null);
     const hasVideo = cameraOn && !!stream && stream.getVideoTracks().length > 0;
 
@@ -18,13 +19,17 @@ export default function VideoTile({ stream, name = '', isLocal = false, cameraOn
                     autoPlay
                     playsInline
                     muted
-                    className="h-full w-full object-cover"
-                    style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', ...(mirror ? { transform: 'scaleX(-1)' } : {}) }}
                 />
             ) : (
                 <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600 }}>
                     {(name || '?').charAt(0).toUpperCase()}
                 </div>
+            )}
+            {handRaised && (
+                <span title="Hand raised" style={{ position: 'absolute', top: 4, right: 4, display: 'flex', padding: '2px', borderRadius: '2px', background: 'var(--accent)', color: 'var(--bg-base)' }}>
+                    <Hand size={11} />
+                </span>
             )}
             <span style={{ position: 'absolute', bottom: 4, left: 6, fontSize: '10px', color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '0 4px', borderRadius: '2px' }}>
                 {isLocal ? 'You' : name}

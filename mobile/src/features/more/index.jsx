@@ -1,13 +1,13 @@
 // Secondary screens reached from Home, the header and Settings.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Bell, BookOpen, CheckCheck, ChevronDown, ChevronRight, FileText, FileImage, FileSpreadsheet, File, FolderOpen, Hash, Plug, Search,
-  SquareCheckBig, Users, Webhook, KeyRound, Sparkles, ExternalLink, Shield, MessageCircle, Settings2,
+  Bell, CheckCheck, FileText, File, FolderOpen, Hash, Plug, Search,
+  SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import {
-  useChannels, useDirectory, useFiles, useIntegrations, useKnowledge, useMembers, useNotes, useNotifications, useTasks,
+  useChannels, useDirectory, useFiles, useIntegrations, useMembers, useNotes, useNotifications, useTasks,
 } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
@@ -18,17 +18,18 @@ import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { Markdown, plainPreview } from '../../ui/Markdown.jsx';
+import { plainPreview } from '../../ui/Markdown.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { htmlToText } from '../../ui/sanitize.js';
-import { openExternal } from '../../native/index.js';
-import { useFlag } from '../../config/flags.js';
+import { openExternal, shareLink } from '../../native/index.js';
+import { formatBytes, previewKind } from '../../lib/files.js';
+import { openFile } from '../media/media.js';
+import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { openConversation } from '../chats/chatsUi.js';
-import { askAiAbout } from '../ai/aiUi.js';
 import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
 import githubLogo from '../../assets/integrations/github.svg';
 import gitlabLogo from '../../assets/integrations/gitlab.svg';
@@ -239,116 +240,8 @@ export function SearchScreen() {
   );
 }
 
-// ---------------------------------------------------------------- Knowledge
-
-export function KnowledgeScreen() {
-  const { data, loading } = useKnowledge();
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState({});
-  const pages = data || [];
-  const roots = pages.filter((p) => !p.parentId);
-  const children = (id) => pages.filter((p) => p.parentId === id);
-  const q = query.trim().toLowerCase();
-  const matches = q ? pages.filter((p) => p.title.toLowerCase().includes(q) || p.excerpt?.toLowerCase().includes(q)) : null;
-
-  const PageRow = ({ page, depth = 0 }) => {
-    const kids = children(page.id);
-    return (
-      <>
-        <div className="flex items-center" style={{ paddingLeft: depth * 20 }}>
-          <button type="button" onClick={() => nav.push('page', { id: page.id })} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left active:bg-surface-2">
-            <span className="text-xl" aria-hidden>
-              {page.icon || '📄'}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px]">{page.title}</span>
-              {page.excerpt && <span className="block truncate text-[13px] text-text-2">{page.excerpt}</span>}
-            </span>
-          </button>
-          {kids.length > 0 && (
-            <IconButton
-              icon={open[page.id] ? ChevronDown : ChevronRight}
-              label={open[page.id] ? 'Collapse' : `Show ${kids.length} sub-pages`}
-              size="sm"
-              className="mr-2 text-text-2"
-              onClick={() => setOpen((o) => ({ ...o, [page.id]: !o[page.id] }))}
-            />
-          )}
-        </div>
-        {open[page.id] && kids.map((k) => <PageRow key={k.id} page={k} depth={depth + 1} />)}
-      </>
-    );
-  };
-
-  return (
-    <Screen>
-      <Header title="Knowledge">
-        <div className="px-4 pb-3">
-          <SearchField value={query} onChange={setQuery} placeholder="Find a page" />
-        </div>
-      </Header>
-      <Body onRefresh={() => invalidate('knowledge')}>
-        {loading ? (
-          <SkeletonRows avatar={false} />
-        ) : !pages.length ? (
-          <EmptyState icon={BookOpen} title="No pages yet" body="Your team's handbook and docs live here. Create pages in the web app." />
-        ) : (
-          <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
-            {(matches || roots).map((p) => (
-              <PageRow key={p.id} page={p} />
-            ))}
-            {matches && !matches.length && <p className="px-4 py-6 text-center text-sm text-text-2">No pages match.</p>}
-          </div>
-        )}
-      </Body>
-    </Screen>
-  );
-}
-
-export function PageScreen({ id }) {
-  const { data: page, loading } = useQuery(`page:${id}`, () => api().page(id));
-  const aiOn = useFlag('ai');
-  return (
-    <Screen>
-      <Header title={page?.title || ''} />
-      <Body>
-        {loading || !page ? (
-          <SkeletonRows count={4} avatar={false} />
-        ) : (
-          <article className="px-5">
-            <span className="text-4xl" aria-hidden>
-              {page.icon || '📄'}
-            </span>
-            <p className="mt-3 text-xs text-text-3">Updated {shortAgo(page.updatedAt)}</p>
-            <Markdown text={page.content || ''} className="mt-3" />
-            {aiOn && (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={Sparkles}
-                className="mt-6"
-                onClick={() => askAiAbout(`Summarize the knowledge page "${page.title}":\n\n${(page.content || '').slice(0, 3000)}`)}
-              >
-                Summarize with AI
-              </Button>
-            )}
-          </article>
-        )}
-      </Body>
-    </Screen>
-  );
-}
-
 // ---------------------------------------------------------------- Files
 
-const FILE_ICON = { image: FileImage, sheet: FileSpreadsheet, pdf: FileText, doc: FileText };
-
-function formatSize(bytes) {
-  if (!bytes && bytes !== 0) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function FilesScreen() {
   const { data, loading } = useFiles();
@@ -370,13 +263,13 @@ export function FilesScreen() {
             {files.map((f) => (
               <Row
                 key={f.id}
-                icon={FILE_ICON[f.kind] || File}
+                icon={FILE_ICONS[f.kind] || File}
                 tile="accent"
                 title={f.name}
-                subtitle={[formatSize(f.size), directory[f.owner]?.name, shortAgo(f.at)].filter(Boolean).join(' · ')}
+                subtitle={[formatBytes(f.size), directory[f.owner]?.name, shortAgo(f.at)].filter(Boolean).join(' · ')}
                 chevron={false}
-                trailing={f.url ? <Icon as={ExternalLink} size="sm" className="text-text-3" /> : null}
-                onClick={() => (f.url ? openExternal(f.url) : toast('Opening files in the app arrives in a later update. Use the web client for now.'))}
+                // Photos, videos, audio and PDFs open in the viewer; other files open with another app or download.
+                onClick={() => openFile(f, files.filter((x) => ['image', 'video'].includes(previewKind(x))))}
               />
             ))}
           </RowGroup>
@@ -480,6 +373,18 @@ export function IntegrationsScreen() {
 
 // ---------------------------------------------------------------- Workspace
 
+/** Shares a team invite link through the system share sheet. */
+async function invite(workspace) {
+  try {
+    const url = await api().teamInviteLink(workspace.id);
+    if (!url) return toast("Couldn't create an invite link", 'danger');
+    const result = await shareLink({ title: `Join ${workspace.name} on Oruinwan`, text: `Join ${workspace.name} on Oruinwan`, url });
+    if (result === 'copied') toast('Invite link copied');
+  } catch (err) {
+    toast(err.message || "Couldn't create an invite link", 'danger');
+  }
+}
+
 export function WorkspaceScreen() {
   const workspace = useWorkspace();
   const mode = useSession((s) => s.mode);
@@ -510,11 +415,14 @@ export function WorkspaceScreen() {
         </div>
         <Section title="This workspace">
           <RowGroup>
+            {mode === 'live' && isAdmin && (
+              <Row icon={UserPlus} title="Invite people" subtitle="Share a link to join this workspace" onClick={() => invite(workspace)} />
+            )}
             <Row icon={Bell} title="Notification settings" onClick={() => nav.push('settings.notifications')} />
             <Row icon={Plug} title="Integrations" onClick={() => nav.push('integrations')} />
             <Row icon={SquareCheckBig} title="Tasks" onClick={() => nav.setTab('tasks')} />
             {isAdmin && mode === 'live' && (
-              <Row icon={Shield} title="Admin console" subtitle="Members, permissions and audit logs" trailing={<Icon as={ExternalLink} size="sm" className="text-text-3" />} onClick={() => openExternal(`${server}/admin`)} />
+              <Row icon={Shield} title="Admin console" subtitle="Members, permissions and audit logs" trailing={<Icon as={ExternalLink} size="sm" className="text-text-3" />} onClick={() => openExternal(`${server}/workspace/${workspace.id}/admin`)} />
             )}
           </RowGroup>
         </Section>

@@ -10,7 +10,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
-      globals: { ...globals.browser, __APP_VERSION__: 'readonly', __BUILD_TIME__: 'readonly' },
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly', __BUILD_TIME__: 'readonly', __ANDROID_PUSH__: 'readonly' },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     plugins: { 'react-hooks': reactHooks, react },

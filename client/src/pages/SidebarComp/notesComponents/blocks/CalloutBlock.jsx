@@ -1,52 +1,22 @@
 import React from 'react';
 import { Trash2, Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 
-const CALLOUT_TYPES = {
-    info: {
-        label: 'Info',
-        icon: Info,
-        bar: '#3b82f6',
-        iconColor: '#60a5fa',
-        labelColor: '#60a5fa',
-        bg: 'rgba(59,130,246,0.06)',
-        border: 'rgba(59,130,246,0.2)',
-    },
-    warning: {
-        label: 'Warning',
-        icon: AlertTriangle,
-        bar: '#f59e0b',
-        iconColor: '#fbbf24',
-        labelColor: '#fbbf24',
-        bg: 'rgba(245,158,11,0.06)',
-        border: 'rgba(245,158,11,0.2)',
-    },
-    success: {
-        label: 'Success',
-        icon: CheckCircle,
-        bar: '#10b981',
-        iconColor: 'var(--state-success)',
-        labelColor: 'var(--state-success)',
-        bg: 'rgba(16,185,129,0.06)',
-        border: 'rgba(16,185,129,0.2)',
-    },
-    error: {
-        label: 'Error',
-        icon: XCircle,
-        bar: '#ef4444',
-        iconColor: 'var(--state-danger)',
-        labelColor: 'var(--state-danger)',
-        bg: 'rgba(239,68,68,0.06)',
-        border: 'rgba(239,68,68,0.2)',
-    },
-    tip: {
-        label: 'Tip',
-        icon: Lightbulb,
-        bar: '#8b5cf6',
-        iconColor: '#a78bfa',
-        labelColor: '#a78bfa',
-        bg: 'rgba(139,92,246,0.06)',
-        border: 'rgba(139,92,246,0.2)',
-    },
+// The callout colours a writer can pick: a small set built only from theme tokens, so they
+// read well in light and dark. Click the icon to cycle through them.
+const tone = (color) => ({
+    bar: color,
+    iconColor: color,
+    labelColor: color,
+    bg: `color-mix(in srgb, ${color} 7%, transparent)`,
+    border: `color-mix(in srgb, ${color} 28%, transparent)`,
+});
+
+export const CALLOUT_TYPES = {
+    info: { label: 'Info', icon: Info, ...tone('var(--text-secondary)') },
+    warning: { label: 'Warning', icon: AlertTriangle, ...tone('var(--color-warning)') },
+    success: { label: 'Success', icon: CheckCircle, ...tone('var(--state-success)') },
+    error: { label: 'Error', icon: XCircle, ...tone('var(--state-danger)') },
+    tip: { label: 'Tip', icon: Lightbulb, ...tone('var(--accent)') },
 };
 
 const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
@@ -72,6 +42,8 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                 {}
                 <button
+                    type="button"
+                    aria-label={`Callout type: ${style.label}. Click to change`}
                     onClick={cycleVariant}
                     style={{
                         marginTop: '2px', flexShrink: 0, width: '28px', height: '28px',
@@ -88,27 +60,24 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                 {}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'var(--font)' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'var(--font)' }}>
                         {style.label}
                     </div>
                     <textarea
                         value={block.content}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
-                        placeholder={`Add a ${style.label.toLowerCase()} note...`}
+                        rows={Math.max(1, (block.content || '').split('\n').length)}
+                        placeholder={`Write a ${style.label.toLowerCase()} note`}
                         style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: 'var(--text-primary)', minHeight: '1.6em', fontFamily: 'var(--font)' }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                 </div>
 
                 {}
-                <button
-                    onClick={() => onRemoveBlock(block.id)}
-                    style={{ alignSelf: 'flex-start', padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
-                    className="group-hover:!opacity-100"
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                >
-                    <Trash2 size={12} />
+                <button type="button" className="gl-icon-btn gl-x-danger group-hover:!opacity-100"
+                    style={{ alignSelf: 'flex-start', opacity: 0 }}
+                    onClick={() => onRemoveBlock(block.id)} aria-label="Remove callout" title="Remove callout">
+                    <Trash2 size={13} />
                 </button>
             </div>
         </div>

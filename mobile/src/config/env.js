@@ -4,7 +4,13 @@ const env = import.meta.env;
 export const APP_VERSION = __APP_VERSION__;
 export const BUILD_TIME = __BUILD_TIME__;
 
-export const DEFAULT_SERVER_URL = (env.VITE_DEFAULT_SERVER_URL || '').trim();
+/**
+ * The Oruinwan server this app talks to, fixed at build time: VITE_SERVER_URL (see .env.example).
+ * Until the production server exists, builds talk to a server on this computer.
+ */
+export const SERVER_URL = (env.VITE_SERVER_URL || env.VITE_DEFAULT_SERVER_URL || 'http://localhost:8080').trim().replace(/\/+$/, '');
+/** @deprecated kept for older imports; the same as SERVER_URL. */
+export const DEFAULT_SERVER_URL = SERVER_URL;
 
 export const REPO = 'thrishankkuntimaddi/Oruniwan';
 export const UPDATE_MANIFEST_URL =

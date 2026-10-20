@@ -6,8 +6,47 @@ const { hydrate } = require('../../identity/hydrate');
 const CREATOR = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
 
 const aiSummarizer = require('../ai/ai.summarizer.service');
+const mongoose = require('mongoose');
+
+const notFound = () => Object.assign(new Error('Page not found'), { statusCode: 404 });
+
+/** Only active members of a workspace read or change its pages. */
+async function assertMember(workspaceId, userId) {
+    if (!workspaceId || !mongoose.isValidObjectId(String(workspaceId))) {
+        throw Object.assign(new Error('Invalid workspaceId'), { statusCode: 400 });
+    }
+    const ws = await require('../../identity').workspaces.findById(workspaceId);
+    if (!ws || !ws.members.some(m => String(m.user) === String(userId) && m.status !== 'removed')) {
+        throw Object.assign(new Error('Not a member of this workspace'), { statusCode: 403 });
+    }
+}
+
+/** A page the user may see (a member of its workspace). Pages elsewhere answer "not found". */
+async function loadPage(pageId, userId, { lean = false } = {}) {
+    if (!mongoose.isValidObjectId(String(pageId))) throw notFound();
+    const q = KnowledgePage.findById(pageId);
+    const page = lean ? await q.lean() : await q;
+    if (!page || page.isDeleted) throw notFound();
+    try {
+        await assertMember(page.workspaceId, userId);
+    } catch (err) {
+        if (err.statusCode === 403) throw notFound();
+        throw err;
+    }
+    return page;
+}
+
+/** A parent page must be a live page in the same workspace. */
+async function assertParent(parentId, workspaceId) {
+    if (!parentId) return;
+    if (!mongoose.isValidObjectId(String(parentId))) throw Object.assign(new Error('Invalid parent page'), { statusCode: 400 });
+    const parent = await KnowledgePage.findOne({ _id: parentId, workspaceId, isDeleted: false }).select('_id').lean();
+    if (!parent) throw Object.assign(new Error('Invalid parent page'), { statusCode: 400 });
+}
 
 async function createPage(userId, workspaceId, data) {
+    await assertMember(workspaceId, userId);
+    await assertParent(data.parentId, workspaceId);
     const page = await KnowledgePage.create({
         workspaceId,
         createdBy: userId,
@@ -25,6 +64,7 @@ async function createPage(userId, workspaceId, data) {
 }
 
 async function getPages(userId, workspaceId, filters = {}) {
+    await assertMember(workspaceId, userId);
     const query = { workspaceId, isDeleted: false };
     if (filters.parentId !== undefined) {
         query.parentId = filters.parentId === 'root' ? null : filters.parentId;
@@ -41,15 +81,17 @@ async function getPages(userId, workspaceId, filters = {}) {
 }
 
 async function getPage(userId, pageId) {
-    const page = await KnowledgePage.findById(pageId).lean();
-    if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
+    const page = await loadPage(pageId, userId, { lean: true });
     await hydrate(page, { createdBy: CREATOR });
     return { page };
 }
 
 async function updatePage(userId, pageId, updates) {
-    const page = await KnowledgePage.findById(pageId);
-    if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
+    const page = await loadPage(pageId, userId);
+    if (updates.parentId) {
+        if (String(updates.parentId) === String(page._id)) throw Object.assign(new Error('A page cannot be its own parent'), { statusCode: 400 });
+        await assertParent(updates.parentId, page.workspaceId);
+    }
 
     
     if (updates.content !== undefined && updates.content !== page.content) {
@@ -67,8 +109,7 @@ async function updatePage(userId, pageId, updates) {
 }
 
 async function deletePage(userId, pageId) {
-    const page = await KnowledgePage.findById(pageId);
-    if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
+    const page = await loadPage(pageId, userId);
     page.isDeleted = true;
     await page.save();
     
@@ -80,6 +121,9 @@ async function linkPages(userId, fromPageId, toPageId, workspaceId) {
     if (fromPageId === toPageId) {
         throw Object.assign(new Error('Cannot link a page to itself'), { statusCode: 400 });
     }
+    const [from, to] = await Promise.all([loadPage(fromPageId, userId, { lean: true }), loadPage(toPageId, userId, { lean: true })]);
+    if (String(from.workspaceId) !== String(to.workspaceId)) throw notFound();
+    workspaceId = from.workspaceId;
     
     await PageLink.updateOne(
         { fromPageId, toPageId },
@@ -90,11 +134,13 @@ async function linkPages(userId, fromPageId, toPageId, workspaceId) {
 }
 
 async function unlinkPages(userId, fromPageId, toPageId) {
+    await loadPage(fromPageId, userId, { lean: true });
     await PageLink.deleteOne({ fromPageId, toPageId });
     return { message: 'Link removed' };
 }
 
 async function getBacklinks(userId, pageId) {
+    await loadPage(pageId, userId, { lean: true });
     const links = await PageLink.find({ toPageId: pageId })
         .populate({ path: 'fromPageId', select: 'title icon workspaceId' })
         .lean();
@@ -103,6 +149,7 @@ async function getBacklinks(userId, pageId) {
 }
 
 async function getGraph(userId, workspaceId) {
+    await assertMember(workspaceId, userId);
     const [pages, links] = await Promise.all([
         KnowledgePage.find({ workspaceId, isDeleted: false }).select('title icon').lean(),
         PageLink.find({ workspaceId }).lean(),
@@ -114,8 +161,7 @@ async function getGraph(userId, workspaceId) {
 }
 
 async function generateSummary(userId, pageId) {
-    const page = await KnowledgePage.findById(pageId);
-    if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
+    const page = await loadPage(pageId, userId);
 
     
     const { summary, cached, fallback } = await aiSummarizer.summarizeDocument(
@@ -133,6 +179,7 @@ async function generateSummary(userId, pageId) {
 }
 
 async function searchKnowledge(userId, workspaceId, query) {
+    await assertMember(workspaceId, userId);
     if (!query || query.trim().length === 0) return { results: [] };
 
     const pages = await KnowledgePage.find({
@@ -159,7 +206,8 @@ async function searchKnowledge(userId, workspaceId, query) {
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
-async function getCategories(workspaceId) {
+async function getCategories(workspaceId, userId) {
+    await assertMember(workspaceId, userId);
     const categories = await KnowledgeCategory.find({ workspaceId })
         .sort({ order: 1, name: 1 })
         .lean();
@@ -167,6 +215,7 @@ async function getCategories(workspaceId) {
 }
 
 async function createCategory(userId, workspaceId, data) {
+    await assertMember(workspaceId, userId);
     const count = await KnowledgeCategory.countDocuments({ workspaceId });
     const category = await KnowledgeCategory.create({
         workspaceId,

@@ -29,7 +29,7 @@ function scopeKey(scope) {
 }
 
 function publicParticipant(p) {
-  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, joinedAt: p.joinedAt };
+  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, handRaised: !!p.handRaised, joinedAt: p.joinedAt };
 }
 
 const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : new Date());
@@ -160,6 +160,25 @@ class HuddleRegistry {
     return p;
   }
 
+  setHand(huddleId, userId, raised) {
+    const p = this.participant(huddleId, userId);
+    if (p) {
+      p.handRaised = !!raised;
+      this._changed({ type: 'hand', huddleId, userId: p.userId, raised: p.handRaised });
+    }
+    return p;
+  }
+
+  /** The live huddle (with someone in it) of one channel or DM, other than `exceptId`. */
+  liveInScope(scope, exceptId = null) {
+    const key = scopeKey(scope);
+    if (!key || scope.workspaceId) return null;
+    for (const h of this.huddles.values()) {
+      if (h.scopeKey === key && h.huddleId !== exceptId && h.participants.size > 0) return h;
+    }
+    return null;
+  }
+
   /** Huddle ids in which this socket is the registered connection of some participant. */
   huddlesForSocket(socketId) {
     const ids = [];
@@ -281,6 +300,11 @@ class HuddleRegistry {
         case 'video': {
           const p = this.participant(op.huddleId, op.userId);
           if (p) p.videoEnabled = !!op.videoEnabled;
+          return !!p;
+        }
+        case 'hand': {
+          const p = this.participant(op.huddleId, op.userId);
+          if (p) p.handRaised = !!op.raised;
           return !!p;
         }
         default:

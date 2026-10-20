@@ -4,7 +4,7 @@ import { Icon } from './Icon.jsx';
 
 const VARIANTS = {
   primary: 'bg-gold text-on-accent active:brightness-95',
-  secondary: 'bg-surface-2 text-text border border-line active:bg-surface-3',
+  secondary: 'bg-surface-2 text-text border border-line shadow-[var(--spec)] active:bg-surface-3',
   ghost: 'text-text active:bg-surface-2',
   danger: 'bg-danger/12 text-danger border border-danger/25 active:bg-danger/20',
   'danger-solid': 'bg-danger text-white active:opacity-90',

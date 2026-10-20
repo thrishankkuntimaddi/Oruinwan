@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
-import { useChannels, useDirectory, useDms, useMembers } from '../../data/hooks.js';
+import { useAssistants, useChannels, useDirectory, useDms, useMembers } from '../../data/hooks.js';
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
@@ -17,12 +17,14 @@ import { EmptyState, SkeletonRows, Spinner } from '../../ui/Feedback.jsx';
 import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
 import { useConversation } from './useConversation.js';
-import { Composer, ComposerPlusSheet, MessageActions, MessageItem, MessageList } from './messages.jsx';
+import { useAiReplies } from './useAiReplies.js';
+import { AiLiveReply, Composer, ComposerPlusSheet, MessageActions, MessageItem, MessageList, useFilePickers } from './messages.jsx';
 import { ChannelTile, channelGlyph } from './ChatsScreen.jsx';
 import { openConversation } from './chatsUi.js';
 import { TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
+import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
 
@@ -104,13 +106,18 @@ export function ConversationScreen({ kind, id }) {
   const me = useSession((s) => s.user?.id);
   const workspace = useWorkspace();
   const directory = useDirectory();
-  const convo = useConversation(conv);
+  const label0 = kind === 'channel' ? `#${meta?.name || 'channel'}` : meta?.user?.name || 'Direct message';
+  const convo = useConversation(conv, { name: label0, agentId: meta?.agentId || null });
+  const aiReplies = useAiReplies(id);
+  const { data: assistants } = useAssistants();
   const [plus, setPlus] = useState(false);
   const [joining, setJoining] = useState(false);
   const aiOn = useFlag('ai');
 
-  const label = kind === 'channel' ? `#${meta?.name || 'channel'}` : meta?.user?.name || 'Direct message';
+  const label = label0;
+  const huddleScope = useMemo(() => (kind === 'channel' ? { channelId: id } : { dmId: id }), [kind, id]);
   const tools = useMessageTools({ conv, convo, me, label });
+  const pickers = useFilePickers(convo.sendFiles);
 
   const isAdmin = ['admin', 'owner'].includes(workspace?.role);
   const readOnly = kind === 'channel' && meta?.broadcast && !isAdmin;
@@ -128,7 +135,7 @@ export function ConversationScreen({ kind, id }) {
   const subtitle =
     kind === 'channel'
       ? [meta?.memberCount && `${meta.memberCount} members`, meta?.topic].filter(Boolean).join(' · ')
-      : PRESENCE_TEXT[meta?.user?.presence] || '';
+      : meta?.agentId ? 'AI agent · answers every message' : PRESENCE_TEXT[meta?.user?.presence] || '';
 
   const join = async () => {
     setJoining(true);
@@ -168,13 +175,17 @@ export function ConversationScreen({ kind, id }) {
         subtitle={subtitle}
         border
         actions={
-          kind === 'channel' ? (
-            <IconButton icon={Info} label="Channel details" onClick={() => nav.push('channelInfo', { id })} />
-          ) : (
-            <IconButton icon={UserRound} label="Profile" onClick={() => meta && nav.push('profile', { userId: meta.userId })} />
-          )
+          <>
+            {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
+            {kind === 'channel' ? (
+              <IconButton icon={Info} label="Channel details" onClick={() => nav.push('channelInfo', { id })} />
+            ) : (
+              <IconButton icon={UserRound} label="Profile" onClick={() => meta && nav.push('profile', { userId: meta.userId })} />
+            )}
+          </>
         }
       />
+      {!meta?.agentId && <HuddleBanner scope={huddleScope} title={label} />}
       <MessageList
         items={convo.items}
         directory={directory}
@@ -183,8 +194,10 @@ export function ConversationScreen({ kind, id }) {
         header={!convo.loading && !convo.hasMore ? intro : null}
         onReact={convo.react}
         onRetry={convo.retry}
+        onCancelUpload={convo.cancelUpload}
         onLongPress={tools.onLongPress}
         onOpenThread={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
+        footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
       />
       <E2eeBanner className="mb-2" />
       {notMember ? (
@@ -197,6 +210,8 @@ export function ConversationScreen({ kind, id }) {
       ) : (
         <Composer
           placeholder={`Message ${label}`}
+          aiMentions={aiOn}
+          assistants={assistants}
           disabled={readOnly}
           disabledReason="Only admins can post in this channel."
           initial={tools.editing?.text || ''}
@@ -212,9 +227,11 @@ export function ConversationScreen({ kind, id }) {
         />
       )}
       {tools.actions}
+      {pickers.inputs}
       <ComposerPlusSheet
         open={plus}
         onClose={() => setPlus(false)}
+        onPick={readOnly || notMember ? null : pickers.pick}
         onAskAi={aiOn ? () => askAiAbout(`Summarize the recent conversation in ${label} and list any action items for me.`) : null}
         onTask={tools.openTask}
       />
@@ -227,9 +244,14 @@ export function ThreadScreen({ kind, convId, messageId }) {
   const meta = useConversationMeta(kind, convId);
   const me = useSession((s) => s.user?.id);
   const directory = useDirectory();
-  const convo = useConversation(conv, { threadOf: messageId });
   const label = kind === 'channel' ? `#${meta?.name || ''}` : meta?.user?.name || '';
+  const convo = useConversation(conv, { threadOf: messageId, name: label });
+  const aiReplies = useAiReplies(convId, messageId);
+  const { data: assistants } = useAssistants();
+  const aiOn = useFlag('ai');
   const tools = useMessageTools({ conv, convo, me, label, threadOf: messageId });
+  const pickers = useFilePickers(convo.sendFiles);
+  const [attach, setAttach] = useState(false);
 
   const header = convo.parent ? (
     <div className="border-b border-line-soft pb-3">
@@ -260,11 +282,29 @@ export function ThreadScreen({ kind, convId, messageId }) {
         header={header}
         onReact={convo.react}
         onRetry={convo.retry}
+        onCancelUpload={convo.cancelUpload}
         onLongPress={tools.onLongPress}
         onOpenThread={() => {}}
+        footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
       />
-      <Composer placeholder="Reply in thread" onSend={convo.send} />
+      <Composer
+        placeholder="Reply in thread"
+        onPlus={() => setAttach(true)}
+        aiMentions={aiOn}
+        assistants={assistants}
+        initial={tools.editing?.text || ''}
+        editing={Boolean(tools.editing)}
+        onCancelEdit={() => tools.setEditing(null)}
+        onSend={(text) => {
+          if (tools.editing) {
+            convo.edit(tools.editing.id, text);
+            tools.setEditing(null);
+          } else convo.send(text);
+        }}
+      />
       {tools.actions}
+      {pickers.inputs}
+      <ComposerPlusSheet open={attach} onClose={() => setAttach(false)} onPick={pickers.pick} title="Add to reply" />
     </Screen>
   );
 }

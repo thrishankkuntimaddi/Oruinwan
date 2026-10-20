@@ -26,6 +26,13 @@
       "insetsHandling": "css",
       "initialViewportFitValueHint": "cover",
       "style": "DEFAULT"
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     }
   },
   "server": {

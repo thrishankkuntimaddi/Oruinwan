@@ -3,13 +3,13 @@ export default {
     id: 'huddles',
     title: 'Huddles & meetings',
     icon: 'Headphones',
-    blurb: 'Voice and video calls with screen sharing, shared notes and tasks while you talk, and an AI wrap-up afterwards.',
+    blurb: 'Audio and video calls with screen sharing and raise hand, scheduled meetings, shared notes and tasks while you talk, and an AI wrap-up afterwards.',
     pages: [
         {
             id: 'start',
             title: 'Start or join a huddle',
-            summary: 'Voice or video calls from any conversation or the Huddles page, with screen sharing.',
-            keywords: 'huddle call voice video start join screen share mute camera participants',
+            summary: 'Audio or video calls from any conversation or the Huddles page, with screen sharing and raise hand.',
+            keywords: 'huddle call voice audio video start join screen share mute camera participants raise hand lower hand phone',
             blocks: [
                 { h: 'Start one' },
                 { list: [
@@ -19,8 +19,10 @@ export default {
                 'If a huddle is already running in that conversation, the same buttons join it.',
                 { h: 'In the call' },
                 { list: [
-                    '**Mute** / unmute, camera on or off, and **share your screen**.',
+                    '**Mute** / unmute, camera on or off, and **Share screen**.',
+                    '**Raise hand** to ask for a turn without interrupting; choose **Lower hand** when you are done.',
                     'Huddles are peer-to-peer (WebRTC) and hold up to **6 people** by default (a server setting).',
+                    'On the phone apps, huddles are audio only. Video and screen sharing work on the web, the desktop apps and tablets.',
                 ] },
                 { h: 'The “in huddle” pill' },
                 'Move around the app while you talk: a small **In huddle** pill stays on screen whenever you are in a call that the page you are on is not showing. Use it to go back to the call, open the huddle workspace, mute, or leave.',
@@ -35,7 +37,7 @@ export default {
             blocks: [
                 'Open the huddle workspace from the call or the pill. It has four tabs:',
                 { table: { caption: 'Huddle workspace tabs', head: ['Tab', 'What it does'], rows: [
-                    ['Notes', 'Shared notes everyone in the call types into at the same time, plus **Action items** (“Bob: send the draft by Friday”). Each action item can become a task with one click. The notes are a normal note that stays in Notes after the call.'],
+                    ['Notes', 'Shared notes everyone in the call types into at the same time, plus **Action items** (“Design: send the draft by Friday”). Each action item can become a task with one click. The notes are a normal note that stays in Notes after the call.'],
                     ['Tasks', 'Tasks created in this huddle, linked to it, mentioned by key in the notes, or belonging to the channel. Link or unlink tasks here.'],
                     ['Chat', 'The conversation the huddle belongs to, so you can read and post without leaving the call.'],
                     ['Wrap-up', 'Build and post a summary when you are done. See [Huddle wrap-up](/docs/huddles/wrap-up).'],
@@ -61,12 +63,13 @@ export default {
         {
             id: 'meetings',
             title: 'Meetings and huddle history',
-            summary: 'Schedule meetings, and see what is live, scheduled and recent.',
+            summary: 'Schedule meetings, join them when they start, and see what is live, scheduled and recent.',
             keywords: 'meeting schedule scheduled history recent live calendar meet zoom',
             blocks: [
                 { list: [
                     'Open **Huddles** to see what is **Live now**, **Scheduled** and **Recent**. Select a live huddle to join it.',
                     'Choose **Schedule a meeting**, or type `/meet` in a conversation to schedule one and post it there.',
+                    'Every scheduled meeting has its own call; join it from the meeting when it is time. A meeting scheduled in a conversation meets there. It works like any other huddle, with audio, video, screen sharing and raise hand.',
                     'With Zoom connected, `/zoom [topic]` creates a Zoom meeting and posts the join link. See [Jira and Zoom](/docs/integrations/jira-zoom).',
                 ] },
             ],

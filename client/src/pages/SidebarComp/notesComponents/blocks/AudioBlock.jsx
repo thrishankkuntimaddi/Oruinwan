@@ -130,7 +130,7 @@ const AudioBlock = ({
                         {isRecording ? (
                             <>
                                 <p style={{ ...mediaStyles.emptyLabel, color: 'var(--state-danger)', fontWeight: 600 }}>Recording {formatTime(recordingSeconds)}</p>
-                                <button type="button" onClick={stopRecording} style={{ ...mediaStyles.primaryBtn, background: 'var(--state-danger)', color: '#fff' }}>
+                                <button type="button" onClick={stopRecording} className="gl-btn gl-btn--sm cd-btn-danger">
                                     <Square size={12} fill="currentColor" /> Stop recording
                                 </button>
                             </>
@@ -138,7 +138,7 @@ const AudioBlock = ({
                             <>
                                 <p style={mediaStyles.emptyLabel}>Add audio</p>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button type="button" onClick={startRecording} style={mediaStyles.primaryBtn}>
+                                    <button type="button" onClick={startRecording} className="gl-btn gl-btn--primary gl-btn--sm">
                                         <Mic size={13} /> Record audio
                                     </button>
                                     <UploadButton id={`audio-upload-${block.id}`} accept="audio/*" label="Upload audio" onFile={handleFile} secondary />

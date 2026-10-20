@@ -94,7 +94,7 @@ describe('GET /api/dashboard/analytics/*', () => {
 
 describe('GET /api/analytics/*', () => {
     it('insights resolve the company after requireAdmin replaced req.user (was 400)', async () => {
-        const res = await h.call(app(), 'GET', '/api/analytics/insights/team?period=30', ADMIN);
+        const res = await h.call(app(), 'GET', '/api/analytics/insights/productivity?period=30', ADMIN);
         expect(res.status).toBe(200);
         expect(res.body.companyId).toBe(C1);
     });

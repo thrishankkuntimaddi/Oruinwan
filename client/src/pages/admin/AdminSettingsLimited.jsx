@@ -5,7 +5,8 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { DashPage, PageHead, Grid, Panel, Btn, Chip, LoadingState } from '../../components/company-dash/dashUi';
 import './admin.css';
 
-const yes = (v) => (v === undefined || v === null ? '—' : v ? 'On' : 'Off');
+// Unset settings mean the product default, so show that instead of a dash.
+const yes = (v, unset = 'Off') => (v === undefined || v === null ? unset : v ? 'On' : 'Off');
 
 const CAN = [
     [true, 'Invite, onboard and import people (member, manager, guest)'],
@@ -48,19 +49,19 @@ const AdminSettingsLimited = () => {
                             <dt>Domain</dt><dd>{company?.domain ? <>{company.domain} {company.domainVerified ? <Chip tone="success">verified</Chip> : <Chip tone="warning">unverified</Chip>}</> : '—'}</dd>
                             <dt>Plan</dt><dd style={{ textTransform: 'capitalize' }}>{company?.plan || '—'}</dd>
                             <dt>Time zone</dt><dd>{s.timezone || '—'}</dd>
-                            <dt>Default role for invites</dt><dd style={{ textTransform: 'capitalize' }}>{company?.invitePolicy?.defaultRole || '—'}</dd>
+                            <dt>Default role for invites</dt><dd style={{ textTransform: 'capitalize' }}>{company?.invitePolicy?.defaultRole || 'member'}</dd>
                             <dt>Auto-join by domain</dt><dd>{yes(company?.autoJoinByDomain)}</dd>
                             <dt>Members can create workspaces</dt><dd>{yes(s.allowMemberWorkspaceCreation)}</dd>
-                            <dt>Limits</dt><dd>{s.maxUsers ? `${s.maxUsers} people · ${s.maxWorkspaces ?? '—'} workspaces` : '—'}</dd>
+                            <dt>Limits</dt><dd>{s.maxUsers ? `${s.maxUsers} people · ${s.maxWorkspaces ?? 'any number of'} workspaces` : 'No limits set'}</dd>
                         </dl>
                     )}
                 </Panel>
                 <Panel title="Security policy" icon={ShieldCheck}>
                     {loading && !company ? <LoadingState /> : (
                         <dl className="ad-kv" style={{ margin: 0 }}>
-                            <dt>Two-factor required</dt><dd>{yes(sec.mfaRequired)}</dd>
-                            <dt>Minimum password length</dt><dd>{sec.passwordMinLength ?? '—'}</dd>
-                            <dt>Session timeout</dt><dd>{sec.sessionTimeoutMinutes ? `${Math.round(sec.sessionTimeoutMinutes / 60)} h` : '—'}</dd>
+                            <dt>Two-factor required</dt><dd>{sec.mfaRequired ? 'Yes' : 'No (each person can turn it on)'}</dd>
+                            <dt>Minimum password length</dt><dd>{sec.passwordMinLength ?? 8}</dd>
+                            <dt>Session timeout</dt><dd>{sec.sessionTimeoutMinutes ? `${Math.round(sec.sessionTimeoutMinutes / 60)} h` : '7 days without use'}</dd>
                             <dt>Enforce SSO</dt><dd>{yes(sec.enforceSSO)}</dd>
                             <dt>SSO</dt><dd>{yes(company?.ssoEnabled)}</dd>
                         </dl>

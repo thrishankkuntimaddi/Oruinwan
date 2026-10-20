@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { X, Video, Calendar, Clock, Link, Users } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
+import { X, Video, Calendar, Clock, Link, Users, UserPlus, Check } from 'lucide-react';
+import api from '@services/api';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -26,7 +29,31 @@ function nextFullHour() {
     return { date: localDate(d), hour: pad(d.getHours()) };
 }
 
-export default function ScheduleMeetingModal({ onSchedule, onClose }) {
+/**
+ * Schedule a meeting. `conversationType` ('channel' | 'dm') places it in that conversation:
+ * its people are invited unless you pick some. Elsewhere, nobody picked = the whole workspace.
+ */
+export default function ScheduleMeetingModal({ onSchedule, onClose, conversationType = null }) {
+    const { workspaceId } = useParams();
+    const { user } = useAuth() || {};
+    const myId = String(user?.id || user?._id || user?.sub || '');
+    const [members, setMembers] = useState([]);
+    const [invited, setInvited] = useState([]);
+    const [memberQuery, setMemberQuery] = useState('');
+    useEffect(() => {
+        if (!workspaceId || conversationType === 'dm') return undefined;
+        let cancelled = false;
+        api.get(`/api/workspaces/${workspaceId}/members`)
+            .then(({ data }) => { if (!cancelled) setMembers((data?.members || []).filter(m => String(m._id) !== myId && (m.membershipStatus || 'active') === 'active')); })
+            .catch(() => { /* the picker just stays empty */ });
+        return () => { cancelled = true; };
+    }, [workspaceId, conversationType, myId]);
+    const shownMembers = useMemo(() => {
+        const q = memberQuery.trim().toLowerCase();
+        const list = q ? members.filter(m => `${m.username} ${m.profile?.name || ''} ${m.email || ''}`.toLowerCase().includes(q)) : members;
+        return list.slice(0, 30);
+    }, [members, memberQuery]);
+    const toggleInvite = (id) => setInvited(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
     const [defaults] = useState(nextFullHour);
     const [title,      setTitle]      = useState('');
     const [startDate,  setStartDate]  = useState(defaults.date);
@@ -59,7 +86,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose }) {
                 title: title.trim(), startTime: isoTime,
                 duration: Number(duration),
                 meetingLink: meetingLink.trim() || null,
-                participants: [],
+                participants: invited,
             });
             onClose();
         } catch (err) {
@@ -76,7 +103,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose }) {
             style={{
                 position: 'fixed', inset: 0, zIndex: 50,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)',
+                backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)',
                 fontFamily: FONT,
             }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -86,7 +113,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose }) {
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
                 borderRadius: '4px',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--lg-shadow-sm)',
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
             }}>
@@ -178,6 +205,34 @@ export default function ScheduleMeetingModal({ onSchedule, onClose }) {
                         />
                     </FormField>
 
+                    {conversationType !== 'dm' && members.length > 0 && (
+                        <FormField label="Invite" icon={<UserPlus size={11} />}>
+                            <p style={{ margin: '0 0 4px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
+                                {invited.length
+                                    ? `${invited.length} ${invited.length === 1 ? 'person' : 'people'} will get an invite.`
+                                    : conversationType === 'channel' ? 'Nobody picked: everyone in this channel gets an invite.' : 'Nobody picked: everyone in the workspace gets an invite.'}
+                            </p>
+                            {members.length > 8 && (
+                                <input type="search" value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="Find people…" style={{ ...inputStyle, marginBottom: '6px' }} />
+                            )}
+                            <div data-testid="meeting-invitees" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '96px', overflowY: 'auto' }}>
+                                {shownMembers.map(m => {
+                                    const on = invited.includes(String(m._id));
+                                    return (
+                                        <button key={m._id} type="button" onClick={() => toggleInvite(String(m._id))} aria-pressed={on}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', fontSize: '12px', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT,
+                                                background: on ? 'var(--accent)' : 'var(--bg-active)', color: on ? 'var(--bg-base)' : 'var(--text-secondary)',
+                                                border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`,
+                                            }}>
+                                            {on && <Check size={11} />}{m.profile?.name || m.username}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </FormField>
+                    )}
+
                     {}
                     {error && (
                         <p style={{ margin: 0, fontSize: '11px', color: 'var(--state-danger)', fontWeight: 500, fontFamily: FONT }}>
@@ -251,7 +306,7 @@ function SubmitBtn({ disabled, children }) {
             style={{
                 flex: 1, padding: '9px 0', fontSize: '13px', fontWeight: 600,
                 backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
-                color: disabled ? 'var(--text-muted)' : '#0c0c0c',
+                color: disabled ? 'var(--text-muted)' : 'var(--bg-base)',
                 border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
                 borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',
                 outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',

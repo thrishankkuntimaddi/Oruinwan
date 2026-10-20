@@ -271,7 +271,8 @@ const RegisterCompany = () => {
         }
 
         const pd = formData.password;
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/;
+        // Same rule as personal sign-up: 8-16 characters, upper and lower case, a number and any symbol.
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,16}$/;
 
         if (!pd) newErrors.password = "Password is required";
         else if (pd.includes(" ")) newErrors.password = "No spaces allowed";

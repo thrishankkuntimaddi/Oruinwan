@@ -38,7 +38,7 @@ export function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="absolute inset-x-0 bottom-0 z-20 border-t border-line-soft bg-bg pb-safe"
+      className="glass-bar absolute inset-x-0 bottom-0 z-20 border-t border-[var(--glass-border)] pb-safe"
     >
       <div className="mx-auto flex h-[60px] max-w-[520px] items-stretch">
         {items.map((it) => {
@@ -49,13 +49,14 @@ export function TabBar() {
                 key={it.id}
                 type="button"
                 aria-label="Oruinwan AI"
+                data-tour={it.id}
                 aria-current={active ? 'page' : undefined}
                 onClick={() => setTab(it.id)}
                 className="relative flex flex-1 flex-col items-center justify-end pb-1.5"
               >
                 <span
                   className={cx(
-                    'pressable absolute -top-4 grid h-[52px] w-[52px] place-items-center rounded-full ring-4 ring-bg',
+                    'pressable absolute -top-4 grid h-[52px] w-[52px] place-items-center rounded-full ring-4 ring-bg/70',
                     'bg-gold text-on-accent',
                     active && 'scale-105',
                   )}
@@ -72,11 +73,12 @@ export function TabBar() {
               type="button"
               aria-label={`${it.label}${it.badge ? `, ${it.badge} new` : it.dot ? ', new activity' : ''}`}
               aria-current={active ? 'page' : undefined}
+              data-tour={it.id}
               onClick={() => setTab(it.id)}
               className={cx('relative flex flex-1 flex-col items-center justify-center gap-1', active ? 'text-accent-ink' : 'text-text-2')}
             >
               <span
-                className={cx('absolute top-0 h-0.5 w-6 rounded-full bg-accent transition-opacity', active ? 'opacity-100' : 'opacity-0')}
+                className={cx('absolute top-0 h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)] transition-opacity duration-200', active ? 'opacity-100' : 'opacity-0')}
                 aria-hidden
               />
               <span className="relative">

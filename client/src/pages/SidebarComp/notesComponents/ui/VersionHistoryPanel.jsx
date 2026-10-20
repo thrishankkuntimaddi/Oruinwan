@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, RotateCcw, Clock } from 'lucide-react';
+import { RotateCcw, Clock, History } from 'lucide-react';
+import SidePanelHead from './SidePanelHead';
 
 const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore, onClose }) => {
   const formatTime = (ts) => {
@@ -19,95 +20,56 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
       if (Array.isArray(parsed))
         return parsed.filter(b => b.type === 'text' || b.type === 'heading')
           .map(b => b.content?.replace(/<[^>]*>/g, '')).filter(Boolean).join(' ').slice(0, 80) || 'No text content';
-    } catch { }
+    } catch { /* plain text */ }
     return (content || '').slice(0, 80) || 'No content';
   };
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'var(--bg-surface)', borderLeft: '1px solid rgba(255,255,255,0.07)',
-      width: '288px', flexShrink: 0,
-    }}>
-      {}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '28px', height: '28px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Clock size={13} style={{ color: 'var(--accent)' }} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font)', marginBottom: '1px' }}>Version History</h3>
-            <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{versions.length} saved versions</p>
-          </div>
-        </div>
-        <button onClick={onClose}
-          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <X size={14} />
-        </button>
-      </div>
+    <aside className="nt-side" aria-label="Version history">
+      <SidePanelHead icon={History} title="Version history" sub={versions.length ? `${versions.length} saved version${versions.length === 1 ? '' : 's'}` : 'Saved as you edit'} onClose={onClose} />
 
-      {}
-      <div style={{ padding: '8px 14px', background: 'var(--accent-dim)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '6px', height: '6px', background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />
-          <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--font)' }}>Current version</p>
-        </div>
-        <p style={{ fontSize: '11px', color: 'var(--border-accent)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginLeft: '14px' }}>
+      <div style={{ padding: '10px 16px', background: 'var(--gl-accent-soft)', borderBottom: '1px solid var(--gl-accent-line)' }}>
+        <p style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', fontWeight: 700, color: 'var(--accent)', margin: 0 }}>
+          <span className="cd-dot" data-tone="accent" /> Current version{currentTitle ? ` · ${currentTitle}` : ''}
+        </p>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {getPreview(currentContent) || 'No content yet'}
         </p>
       </div>
 
-      {}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
         {versions.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
-            <Clock size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>No saved versions yet</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Versions are saved automatically as you edit</p>
+          <div className="cd-state">
+            <span className="gl-empty-mark"><Clock size={18} /></span>
+            <p className="gl-empty-title">No earlier versions yet</p>
+            <p className="gl-empty-text">A version is saved when you add, move or remove blocks, so you can go back to it here.</p>
           </div>
         ) : (
-          [...versions].reverse().map((v, idx) => (
-            <div key={v._id || v.savedAt || idx}
-              style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 150ms ease' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {[...versions].reverse().map((v, idx) => (
+              <li key={v._id || v.savedAt || idx} className="nt-ver-row">
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                    <div style={{ width: '5px', height: '5px', background: 'var(--text-muted)', borderRadius: '50%', flexShrink: 0 }} />
-                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font)' }}>{v.title || 'Untitled'}</p>
-                  </div>
-                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', marginLeft: '11px', fontFamily: 'var(--font)' }}>{formatTime(v.savedAt || v.timestamp)}</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '11px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{v.title || 'Untitled'}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 4px' }}>{formatTime(v.savedAt || v.timestamp)}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
                     {getPreview(v.content)}
                   </p>
                 </div>
-                {onRestore && <button onClick={() => onRestore(v)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'all 150ms ease', opacity: 0, fontFamily: 'var(--font)' }}
-                  className="version-restore-btn"
-                  title="Restore this version"
-                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = '0'; }}
-                >
-                  <RotateCcw size={11} /> Restore
-                </button>}
-              </div>
-            </div>
-          ))
+                {onRestore && (
+                  <button type="button" className="gl-btn gl-btn--sm nt-ver-restore" onClick={() => onRestore(v)} title="Restore this version">
+                    <RotateCcw size={12} /> Restore
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
-      {}
-      <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'var(--font)' }}>
-          Last 50 auto-saves · Stored in database
-        </p>
-      </div>
-    </div>
+      <p style={{ padding: '10px 16px', borderTop: '1px solid var(--border-subtle)', fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
+        Keeps the last 50 versions. Restoring replaces the note for everyone.
+      </p>
+    </aside>
   );
 };
 

@@ -808,3 +808,13 @@ html.light .gl-wsp-card::after { background-image: linear-gradient(115deg, trans
     .gl-wsp-create:hover:not(:disabled) { transform: none; }
     .gl-wsp-skel__bar { animation: none; }
 }
+
+/* Create-workspace wizard, step 1: icon and colour pickers. Phones: 6 icons / 5 colours a row
+   (big touch targets). Tablets in portrait: one row each, so the squares stay a sensible size
+   and the preview fits. Wide windows: side by side (grid in CreateWorkspaceModal). */
+.gl-wsp-icon-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.gl-wsp-color-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 640px) and (max-width: 1023px) {
+    .gl-wsp-icon-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+    .gl-wsp-color-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+}

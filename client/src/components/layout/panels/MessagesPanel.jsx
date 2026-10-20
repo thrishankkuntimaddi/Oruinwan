@@ -14,6 +14,7 @@ import BroadcastModal from "../../../features/messaging/BroadcastModal";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from '@services/api';
 import logger from '../../../utils/logger';
+import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark';
 
 const MessagesPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -95,7 +96,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             if (!contactsRef.current.length) setIsLoading(true); // quiet refresh when a list is already shown
             try {
                 const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
-                const formatted = (res.data.sessions || []).map(session => {
+                const formatted = (res.data.sessions || []).filter(s => !s.isAgent).map(session => {
                     
                     const user = session.otherUser;
                     let initialStatus = "offline";
@@ -349,6 +350,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                     <span className="gl-shell-row-label">{item.name}</span>
                     <span className="gl-shell-row-sub">{item.lastMessage || 'No messages yet'}</span>
                 </span>
+
+                {!isBroadcast && <LiveHuddleMark dmId={item.id} />}
 
                 {unread > 0 && !isSelectionMode && (
                     <span className="gl-shell-unread" title={`${unread} unread`}>

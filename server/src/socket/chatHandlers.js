@@ -391,10 +391,16 @@ module.exports = function registerChatHandlers(io, socket) {
 
       // Thread parent must live in the same conversation.
       const parentId = rawParentId || replyTo || null;
+      let parentDoc = null;
       if (parentId) {
-        const parent = await Message.findById(parentId).select("channel dm").lean();
-        const sameConv = parent && (targetChannel ? sameId(parent.channel, targetChannel) : sameId(parent.dm, targetDM));
+        parentDoc = await Message.findById(parentId).select("channel dm parentId sender replyCount workspace").lean();
+        const sameConv = parentDoc && (targetChannel ? sameId(parentDoc.channel, targetChannel) : sameId(parentDoc.dm, targetDM));
         if (!sameConv) return fail("INVALID_PARENT", "Parent message not found in this conversation");
+        if (parentDoc.parentId) return fail("INVALID_PARENT", "Reply in the original thread instead");
+        if (workspace) {
+          const { isFeatureEnabled } = require("../shared/workspaceFeatures");
+          if (!(await isFeatureEnabled(workspace, "threads"))) return fail("FEATURE_DISABLED", "Threads are turned off in this workspace.");
+        }
       }
       if (quotedMessageId) {
         const quoted = await Message.findById(quotedMessageId).select("channel dm").lean();
@@ -423,11 +429,12 @@ module.exports = function registerChatHandlers(io, socket) {
         messageIv,
       });
 
+      let updatedParent = null;
       if (parentId) {
-        await Message.findByIdAndUpdate(parentId, {
+        updatedParent = await Message.findByIdAndUpdate(parentId, {
           $inc: { replyCount: 1 },
           $set: { lastReplyAt: new Date() },
-        });
+        }, { new: true, select: "replyCount lastReplyAt" }).lean();
       }
 
       const populated = saved && typeof saved.toObject === "function" ? saved.toObject() : saved;
@@ -437,13 +444,18 @@ module.exports = function registerChatHandlers(io, socket) {
         ? { parentId, reply: populated, clientTempId }
         : { message: populated, clientTempId };
 
-      if (targetDM) {
-        io.to(`dm:${targetDM}`).emit(eventName, payload);
-        (dmDoc.participants || []).forEach(participantId => {
-          io.to(`user_${participantId?._id ?? participantId}`).emit(eventName, payload);
-        });
-      } else {
-        io.to(`channel:${targetChannel}`).emit(eventName, payload);
+      // One emit to every room, so a socket in several of them gets the event once.
+      const rooms = targetDM
+        ? [`dm:${targetDM}`, ...(dmDoc.participants || []).map(p => `user_${p?._id ?? p}`)]
+        : [`channel:${targetChannel}`];
+      io.to(rooms).emit(eventName, payload);
+
+      if (parentId && updatedParent) {
+        const threads = require("../modules/threads/threads.service");
+        threads.emitThreadCounters(io, { _id: parentId, channel: targetChannel, dm: targetDM }, updatedParent);
+        const replier = await identity.users.findById(userId).catch(() => null);
+        threads.followAndNotify(io, { parent: parentDoc ? { ...parentDoc, _id: parentId } : { _id: parentId }, replierId: userId, senderUsername: replier?.username })
+          .catch(err => logger.warn("[send-message] thread follow/notify failed:", err.message));
       }
 
       socket.emit("message-sent", { message: populated, clientTempId });
@@ -630,7 +642,7 @@ module.exports = function registerChatHandlers(io, socket) {
   
   socket.on("delete-message", async ({ messageId, localOnly = false } = {}) => {
     try {
-      const ctx = await loadAuthorizedMessage(messageId, userId, "channel dm workspace sender hiddenFor");
+      const ctx = await loadAuthorizedMessage(messageId, userId, "channel dm workspace sender hiddenFor parentId");
       if (!ctx) {
         socket.emit("delete-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
         return;
@@ -673,10 +685,16 @@ module.exports = function registerChatHandlers(io, socket) {
         messageId,
         dm: message.dm || null,
         channel: message.channel || null,
+        parentId: message.parentId ? String(message.parentId) : null,
         deletedBy: userId,
         deletedByName: deleterName,
         isUniversal: true,
       });
+      if (message.parentId) {
+        const threads = require("../modules/threads/threads.service");
+        const counters = await threads.recountThread(message.parentId);
+        threads.emitThreadCounters(io, { _id: message.parentId, channel: message.channel, dm: message.dm }, counters);
+      }
     } catch (err) {
       logger.error("DELETE MESSAGE ERROR:", err);
       socket.emit("delete-error", { messageId, code: "SERVER_ERROR", error: "Failed to delete message" });

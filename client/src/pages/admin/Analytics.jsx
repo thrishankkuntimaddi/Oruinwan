@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Users, UserCheck, Briefcase, Building, MessageSquare, CheckCircle2, AlertTriangle, Activity, RefreshCw, UserPlus, BarChart3 } from 'lucide-react';
+import { Users, UserCheck, Briefcase, Building, ListTodo, CheckCircle2, AlertTriangle, Activity, RefreshCw, UserPlus, BarChart3 } from 'lucide-react';
 import api from '@services/api';
 import {
     DashPage, PageHead, Section, KpiGrid, Kpi, Grid, Panel, Meter, FilterTabs, Btn, Chip, EmptyState, ErrorState, LoadingState, useAsync,
@@ -8,9 +8,9 @@ import './admin.css';
 
 const RANGES = [{ value: '7d', label: '7 days' }, { value: '30d', label: '30 days' }, { value: '90d', label: '90 days' }];
 
-/** Last 7 calendar days with a zero for days without messages. */
+/** Last 7 calendar days of tasks created, with a zero for quiet days. */
 function lastWeek(daily) {
-    const byDate = Object.fromEntries((daily || []).map((d) => [d.date, d.messageCount || 0]));
+    const byDate = Object.fromEntries((daily || []).map((d) => [d.date, d.taskCount || 0]));
     return Array.from({ length: 7 }, (_, i) => {
         const d = new Date(Date.now() - (6 - i) * 864e5);
         const key = d.toISOString().slice(0, 10);
@@ -74,7 +74,7 @@ const Analytics = () => {
                 <PageHead
                     eyebrow="Overview"
                     title="Analytics"
-                    lead="How the company is growing and working — real counts from your workspaces."
+                    lead="How the company is growing and working. Messages are end-to-end encrypted, so they are never counted or shown here."
                     actions={(
                         <>
                             <FilterTabs value={range} onChange={setRange} options={RANGES} label="Time range" />
@@ -98,8 +98,8 @@ const Analytics = () => {
 
                     <Section title={`Activity · ${label}`}>
                         <KpiGrid min={170}>
-                            <Kpi loading={!ready} label="Engaged people" value={a?.engagement?.activeUsers} icon={Activity} hint={a ? `${a.engagement?.engagementScore ?? 0}% of people` : undefined} />
-                            <Kpi loading={!ready} label="Messages" value={a?.messages?.recent} icon={MessageSquare} tone="muted" hint={a ? `${a.messages?.channelMessages ?? 0} in channels · ${a.messages?.dmMessages ?? 0} DMs` : undefined} />
+                            <Kpi loading={!ready} label="Signed in" value={a?.engagement?.activeUsers} icon={Activity} hint={a ? `${a.engagement?.engagementScore ?? 0}% of people` : undefined} />
+                            <Kpi loading={!ready} label="Open tasks" value={a?.tasks?.open} icon={ListTodo} tone="muted" />
                             <Kpi loading={!ready} label="Tasks done" value={a?.tasks?.completed} icon={CheckCircle2} tone="success" hint={a ? `${a.tasks?.taskCompletionRate ?? 0}% of ${tasksTotal}` : undefined} />
                             <Kpi loading={!ready} label="Overdue tasks" value={a?.tasks?.overdue} icon={AlertTriangle} tone={a?.tasks?.overdue ? 'danger' : 'muted'} />
                             <Kpi loading={!ready} label="Updates posted" value={a?.updates?.recent} icon={BarChart3} tone="muted" />
@@ -107,17 +107,16 @@ const Analytics = () => {
                     </Section>
 
                     <Grid cols="2">
-                        <Panel title="Messages · last 7 days" icon={MessageSquare}>
+                        <Panel title="Tasks created · last 7 days" icon={ListTodo}>
                             {!ready ? <LoadingState /> : week.every((d) => !d.value)
-                                ? <EmptyState icon={MessageSquare} title="No messages this week" text="Daily message volume appears here once people start talking." />
-                                : <Bars rows={week} unit="messages" />}
+                                ? <EmptyState icon={ListTodo} title="No tasks this week" text="Tasks created each day appear here." />
+                                : <Bars rows={week} unit="tasks" />}
                         </Panel>
                         <Panel title="This week" icon={Activity}>
                             {!ready ? <LoadingState /> : (
                                 <dl className="ad-kv" style={{ margin: 0 }}>
-                                    <dt>Messages</dt><dd>{act?.messagesLast7Days ?? 0}</dd>
                                     <dt>Tasks created</dt><dd>{act?.tasksCreatedLast7Days ?? 0}</dd>
-                                    <dt>Active people</dt><dd>{act?.activeUsers ?? 0}</dd>
+                                    <dt>Signed in</dt><dd>{act?.activeUsers ?? 0}</dd>
                                     <dt>New invites</dt><dd>{act?.newInvites ?? 0}</dd>
                                     <dt>Updates posted</dt><dd>{act?.updatesPosted ?? 0}</dd>
                                 </dl>
@@ -131,11 +130,11 @@ const Analytics = () => {
                                 />
                             )}
                         </Panel>
-                        <Panel title={`Most active workspaces · ${label}`} icon={Briefcase} flush>
+                        <Panel title="Workspaces by members" icon={Briefcase} flush>
                             {!ready ? <LoadingState /> : (
                                 <RankList
-                                    empty="No workspace messages in this period"
-                                    rows={(a?.workspaces?.workspaceActivity || []).map((w) => ({ key: w.workspaceId || w.name, label: w.name, value: w.messageCount || 0 }))}
+                                    empty="No workspaces yet"
+                                    rows={(a?.workspaces?.workspaceSizes || []).map((w) => ({ key: w.workspaceId || w.name, label: w.name, value: w.memberCount || 0 }))}
                                 />
                             )}
                         </Panel>

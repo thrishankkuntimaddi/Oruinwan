@@ -25,7 +25,7 @@ export function PrimaryButton({ children, disabled, onClick, type = 'button' }) 
             style={{
                 padding: '7px 16px', fontSize: '13px', fontWeight: 600, fontFamily: FONT,
                 backgroundColor: disabled ? 'var(--bg-active)' : 'var(--accent)',
-                color: disabled ? 'var(--text-muted)' : '#0c0c0c',
+                color: disabled ? 'var(--text-muted)' : 'var(--bg-base)',
                 border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
                 borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer', outline: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -70,7 +70,7 @@ export default function ToolbarModalShell({ title, icon, onClose, children, foot
             onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
             style={{
                 position: 'fixed', inset: 0, zIndex: 1200, padding: '16px',
-                backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)',
+                backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT,
             }}
         >
@@ -83,7 +83,7 @@ export default function ToolbarModalShell({ title, icon, onClose, children, foot
                     width: '100%', maxWidth: `${width}px`, maxHeight: 'calc(100vh - 32px)',
                     display: 'flex', flexDirection: 'column',
                     backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                    borderRadius: '2px', boxShadow: '0 20px 60px rgba(0,0,0,0.55)', overflow: 'hidden',
+                    borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)', overflow: 'hidden',
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>

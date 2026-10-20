@@ -175,7 +175,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                     </div>
                     <div className="gl-card cd-panel" style={{ borderColor: 'color-mix(in srgb, var(--state-danger) 40%, transparent)' }}>
                         <h3 className="cd-panel-title" style={{ marginBottom: 6 }}>Delete department</h3>
-                        <p className="cd-hint" style={{ margin: '0 0 10px' }}>People stay in the company but lose this department. Type <strong>{department.name}</strong> to confirm.</p>
+                        <p className="cd-hint" style={{ margin: '0 0 10px' }}>People stay in the company but lose this department. Its workspace and channels are kept (archive them from Workspaces if you no longer need them). Type <strong>{department.name}</strong> to confirm.</p>
                         <div className="ad-row" style={{ alignItems: 'center' }}>
                             <input className="gl-input" aria-label="Department name to confirm" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
                             <Btn variant="danger" icon={Trash2} loading={saving} disabled={confirmName !== department.name} onClick={remove} style={{ flex: '0 0 auto' }}>Delete</Btn>

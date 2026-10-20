@@ -11,7 +11,7 @@ const FONT = 'Inter, system-ui, sans-serif';
 const toolBtn = (active) => ({
     display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600,
     borderRadius: '2px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
-    background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? '#0c0c0c' : 'var(--text-primary)',
+    background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? 'var(--bg-base)' : 'var(--text-primary)',
     border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
 });
 

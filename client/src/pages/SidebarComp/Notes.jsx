@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useNotes } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
-import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
+import { Confirm, Btn } from "../../components/ui/page";
 import api from '@services/api';
+import '../../styles/gloss-x-panels.css';
 import logger from '../../utils/logger';
 import { sanitizeHtml } from "../../utils/sanitizeHtml";
 import { getMediaUrl } from "../../utils/mediaUrl";
@@ -30,28 +31,17 @@ import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
 import { useAIContext } from "../../contexts/AIContext";
 import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
+import { noteTypeOf } from "./notesComponents/noteTypes";
 import { formatDayHeading, formatTime } from "../../utils/userDateFormat";
 import { getUserPreferences } from "../../hooks/useUserPreferences";
 
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
     Info, Clock, Tag, X, Plus, History, GripVertical, Users, Eye, Globe,
-    Star, Archive, FileText, Lightbulb, ClipboardList, FolderKanban, Cpu, Megaphone,
-    Loader2, AlertCircle, Lock,
+    Star, Archive, ArchiveRestore, Loader2, AlertCircle, Lock, ArrowLeft,
     Type, Heading1, Code2, CheckSquare, ChevronRight, Minus, Table2, Image as ImageIcon, Paperclip,
 } from "lucide-react";
 
-const NOTE_TYPE_CONFIG = {
-    note: { Icon: FileText, label: 'Document' },
-    documentation: { Icon: FileText, label: 'Document' },
-    brainstorm: { Icon: Lightbulb, label: 'Brainstorm' },
-    meeting: { Icon: Users, label: 'Meeting' },
-    sop: { Icon: ClipboardList, label: 'SOP' },
-    projectspec: { Icon: FolderKanban, label: 'Project Spec' },
-    techdesign: { Icon: Cpu, label: 'Tech Design' },
-    announcement: { Icon: Megaphone, label: 'Announcement' },
-};
-const DEFAULT_TYPE = NOTE_TYPE_CONFIG.note;
 const MEDIA_TYPES = new Set(['image', 'video', 'audio', 'file']);
 
 let blockSeq = 0;
@@ -74,9 +64,6 @@ function parseBlocks(content) {
     });
 }
 
-const iconBtn = { padding: '6px', background: 'transparent', border: 'none', borderRadius: '2px', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', display: 'flex', alignItems: 'center' };
-const hoverOn = (e, color = 'var(--text-primary)') => { e.currentTarget.style.color = color; e.currentTarget.style.background = 'var(--bg-hover)'; };
-const hoverOff = (e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; };
 
 function SaveIndicator({ status }) {
     if (!status) return null;
@@ -92,6 +79,44 @@ function SaveIndicator({ status }) {
         </span>
     );
 }
+
+const NOTE_CSS = `
+.nt-head { height: 52px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-base); flex-shrink: 0; z-index: 40; position: relative; }
+.nt-head-meta { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nt-head-hint { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-secondary); }
+.nt-head-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.nt-head-actions .gl-btn--primary { margin-left: 6px; }
+.nt-body { max-width: 760px; margin: 0 auto; padding: 40px 48px 56px; min-height: 100%; display: flex; flex-direction: column; }
+.nt-title { font-size: 2.5rem; font-weight: 800; color: var(--text-primary); border: none; outline: none; padding: 0; margin: 0 0 10px; width: 100%; background: transparent; font-family: var(--font); line-height: 1.15; letter-spacing: -0.02em; }
+.nt-ghost-link { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 11.5px; color: var(--text-secondary); background: transparent; border: none; cursor: pointer; font-family: var(--font); transition: color 150ms ease; }
+.nt-ghost-link:hover { color: var(--accent); }
+.nt-add { margin-top: 24px; padding-top: 12px; border-top: 1px dashed var(--border-subtle); display: flex; flex-direction: column; gap: 10px; }
+.nt-add-hint { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; font-size: 12.5px; color: var(--text-secondary); background: none; border: 0; cursor: text; font-family: var(--font); }
+.nt-add-hint:hover { color: var(--text-primary); }
+.nt-add-hint kbd { padding: 1px 6px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--gl-radius); font-size: 11px; font-family: var(--font); }
+.nt-quick { display: flex; flex-wrap: wrap; gap: 2px; margin-left: -8px; }
+.nt-side { display: flex; flex-direction: column; height: 100%; width: 300px; flex-shrink: 0; background: var(--bg-surface); background-image: var(--gl-glass); border-left: 1px solid var(--border-subtle); font-family: var(--font); }
+.nt-ver-row { display: flex; align-items: flex-start; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); }
+.nt-ver-row:hover { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .nt-ver-restore { opacity: 0; transition: opacity 150ms ease; }
+  .nt-ver-row:hover .nt-ver-restore, .nt-ver-row:focus-within .nt-ver-restore { opacity: 1; }
+}
+/* Touch screens have no hover: show the block tools that otherwise appear on hover. */
+@media (hover: none) {
+  .nt-body .group-hover\\:\\!opacity-100, .nt-body .group-hover\\:opacity-100 { opacity: 1 !important; }
+}
+@media (max-width: 900px) {
+  .nt-side { position: absolute; top: 52px; right: 0; bottom: 0; height: auto; z-index: 30; box-shadow: var(--gl-drop); }
+}
+@media (max-width: 640px) {
+  .nt-side { left: 0; width: auto; border-left: 0; }
+  .nt-head { padding: 0 8px 0 12px; gap: 8px; }
+  .nt-hide-phone { display: none !important; }
+  .nt-body { padding: 24px 16px 40px 28px; }
+  .nt-title { font-size: 1.85rem; }
+}
+`;
 
 const Notes = () => {
     const { workspaceId, id } = useParams();
@@ -491,28 +516,22 @@ ${blockHtml}
         showToast("AI result inserted", "success");
     };
 
-    if (!id) return <EmptyState loading={loading} />;
+    if (!id) return <EmptyState />;
     if (!note) {
         const fs = fetchState[id];
         if (loading || !fs || fs.status === 'loading') return <EmptyState loading />;
+        const notFound = fs.code === 404 || fs.code === 400;
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-base)', gap: '10px', fontFamily: 'var(--font)' }}>
-                <Lock size={28} style={{ color: 'var(--text-muted)' }} />
-                <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                    {fs.code === 404 || fs.code === 400 ? 'Note not found' : "You don't have access to this note"}
-                </h2>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, maxWidth: '300px', textAlign: 'center' }}>
-                    It may have been deleted, or its owner has not shared it with you.
-                </p>
-                <button onClick={() => navigate(`/workspace/${workspaceId}/notes`)}
-                    style={{ marginTop: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                    Back to notes
-                </button>
+            <div className="cd-state" style={{ height: '100%', background: 'var(--bg-base)' }}>
+                <span className="gl-empty-mark"><Lock size={18} /></span>
+                <p className="gl-empty-title">{notFound ? 'Note not found' : "You don't have access to this note"}</p>
+                <p className="gl-empty-text">It may have been deleted, or its owner hasn't shared it with you. Ask the owner to share it, or go back to your notes.</p>
+                <Btn icon={ArrowLeft} onClick={() => navigate(`/workspace/${workspaceId}/notes`)}>Back to notes</Btn>
             </div>
         );
     }
 
-    const typeConf = NOTE_TYPE_CONFIG[note.type] || DEFAULT_TYPE;
+    const typeConf = noteTypeOf(note.type);
     const versions = noteVersions?.[id] || [];
     const region = getUserPreferences().region;
     const formattedDate = note.updatedAt ? `${formatDayHeading(note.updatedAt, region)}, ${formatTime(note.updatedAt, region)}` : '';
@@ -560,15 +579,16 @@ ${blockHtml}
 
     const menuItems = [
         canEdit && { label: 'Duplicate', Icon: Copy, action: handleDuplicate },
-        { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
-        { label: 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); }, success: showShareTooltip },
+        { label: 'Download as PDF', Icon: Download, action: handleDownloadPDF },
+        { label: showShareTooltip ? 'Link copied' : 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); } },
+        { label: 'Note details', Icon: Info, action: () => { setShowInfoModal(true); setShowMenu(false); } },
     ].filter(Boolean);
 
     const QUICK_BLOCKS = [
         { type: 'text', label: 'Text', Icon: Type },
-        { type: 'heading', label: 'H1', Icon: Heading1, meta: { level: 1 } },
+        { type: 'heading', label: 'Heading', Icon: Heading1, meta: { level: 1 } },
         { type: 'code', label: 'Code', Icon: Code2 },
-        { type: 'checklist', label: 'Check', Icon: CheckSquare, content: () => JSON.stringify([{ id: Date.now(), text: '', done: false }]) },
+        { type: 'checklist', label: 'Checklist', Icon: CheckSquare, content: () => JSON.stringify([{ id: Date.now(), text: '', done: false }]) },
         { type: 'toggle', label: 'Toggle', Icon: ChevronRight },
         { type: 'callout', label: 'Callout', Icon: Info },
         { type: 'divider', label: 'Divider', Icon: Minus },
@@ -580,134 +600,88 @@ ${blockHtml}
     return (
         <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden', fontFamily: 'var(--font)' }}>
             <div className="flex flex-col flex-1 min-w-0">
-                {/* Header */}
-                <div style={{ height: '52px', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-base)', flexShrink: 0, zIndex: 10, position: 'relative' }}>
-                    <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
-                        <span data-testid="note-type-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', flexShrink: 0 }}>
+                {/* Header: what this note is on the left, what you can do with it on the right */}
+                <div className="nt-head">
+                    <div className="nt-head-meta">
+                        <span data-testid="note-type-pill" className="cd-chip" style={{ flexShrink: 0 }}>
                             <typeConf.Icon size={12} style={{ color: 'var(--accent)' }} />
                             {typeConf.label}
                         </span>
                         {note.isPublic && (
-                            <span title="Visible to everyone in this workspace" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                            <span className="nt-head-hint nt-hide-phone" title="Visible to everyone in this workspace">
                                 <Globe size={11} /> Workspace
                             </span>
                         )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', minWidth: 0 }}>
+                        <span className="nt-head-hint nt-hide-phone" style={{ minWidth: 0 }}>
                             <Clock size={11} style={{ flexShrink: 0 }} />
-                            <span className="hidden sm:block" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formattedDate}</span>
-                        </div>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formattedDate}</span>
+                        </span>
                         {canEdit && <SaveIndicator status={saveStatus?.[id]} />}
                     </div>
 
-                    <div className="flex items-center gap-1.5" style={{ flexShrink: 0 }}>
+                    <div className="nt-head-actions">
                         {canEdit && (
-                            <button
+                            <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" aria-pressed={showAI}
                                 onClick={() => { setShowAI(v => !v); setShowHistory(false); }}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: showAI ? 'var(--accent-dim)' : 'var(--accent)', border: showAI ? '1px solid var(--border-accent)' : '1px solid transparent', borderRadius: '2px', color: showAI ? 'var(--accent)' : '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
-                                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-                                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
-                            >
-                                <Sparkles size={13} /> AI
+                                style={showAI ? { color: 'var(--accent)', background: 'var(--gl-accent-soft)' } : undefined}
+                                title="Summarise, rewrite or extract tasks with AI">
+                                <Sparkles size={13} style={{ color: 'var(--accent)' }} /> <span className="nt-hide-phone">Ask </span>AI
                             </button>
                         )}
-
-                        {isOwner && (
-                            <>
-                                <div style={{ width: '1px', height: '16px', background: 'var(--border-default)', margin: '0 4px' }} />
-                                <button
-                                    onClick={() => setShowShareModal(true)}
-                                    data-testid="note-share-button"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
-                                    title="Share note"
-                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
-                                >
-                                    <Users size={13} /> Share
-                                </button>
-                            </>
-                        )}
-
-                        <button
+                        <button type="button" className="gl-icon-btn" aria-pressed={showHistory}
                             onClick={() => { setShowHistory(v => !v); setShowAI(false); }}
-                            style={{ ...iconBtn, background: showHistory ? 'var(--accent-dim)' : 'transparent', color: showHistory ? 'var(--accent)' : 'var(--text-muted)' }}
-                            title="Version history"
-                            onMouseEnter={e => { if (!showHistory) hoverOn(e); }}
-                            onMouseLeave={e => { if (!showHistory) hoverOff(e); }}
-                        >
-                            <History size={16} />
+                            title="Version history" aria-label="Version history">
+                            <History size={15} />
                         </button>
-
                         {isOwner && (
-                            <>
-                                <button
-                                    onClick={() => togglePin && togglePin(id)}
-                                    style={{ ...iconBtn, background: note.isPinned ? 'var(--accent-dim)' : 'transparent', color: note.isPinned ? 'var(--accent)' : 'var(--text-muted)' }}
-                                    title={note.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
-                                    onMouseEnter={e => { if (!note.isPinned) hoverOn(e, 'var(--accent)'); }}
-                                    onMouseLeave={e => { if (!note.isPinned) hoverOff(e); }}
-                                >
-                                    <Star size={16} className={note.isPinned ? 'fill-current' : ''} />
-                                </button>
-
-                                <button
-                                    onClick={() => toggleArchive && toggleArchive(id)}
-                                    style={iconBtn}
-                                    title={note.isArchived ? 'Restore note' : 'Archive note'}
-                                    onMouseEnter={e => hoverOn(e)}
-                                    onMouseLeave={hoverOff}
-                                >
-                                    <Archive size={16} />
-                                </button>
-
-                                <button onClick={() => setIsDeleteModalOpen(true)}
-                                    style={iconBtn}
-                                    title="Delete note"
-                                    data-testid="note-delete-button"
-                                    onMouseEnter={e => hoverOn(e, 'var(--state-danger)')}
-                                    onMouseLeave={hoverOff}
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </>
+                            <button type="button" className="gl-icon-btn" aria-pressed={note.isPinned}
+                                onClick={() => togglePin && togglePin(id)}
+                                title={note.isPinned ? 'Remove star' : 'Star this note'} aria-label={note.isPinned ? 'Remove star' : 'Star this note'}>
+                                <Star size={15} style={{ fill: note.isPinned ? 'currentColor' : 'none' }} />
+                            </button>
                         )}
 
                         <div className="relative" ref={menuRef}>
-                            <button onClick={() => setShowMenu(v => !v)}
-                                style={{ ...iconBtn, background: showMenu ? 'var(--bg-hover)' : 'transparent', color: showMenu ? 'var(--text-primary)' : 'var(--text-muted)' }}
-                                title="More"
-                                onMouseEnter={e => { if (!showMenu) hoverOn(e); }}
-                                onMouseLeave={e => { if (!showMenu) hoverOff(e); }}
-                            >
+                            <button type="button" className="gl-icon-btn" aria-expanded={showMenu} aria-haspopup="menu"
+                                onClick={() => setShowMenu(v => !v)} title="More" aria-label="More actions">
                                 <MoreHorizontal size={16} />
                             </button>
                             {showMenu && (
-                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', boxShadow: 'var(--card-shadow)', padding: '4px 0', zIndex: 20 }}>
-                                    {menuItems.map(({ label, Icon: Ic, action, success }) => (
-                                        <button key={label} onClick={action}
-                                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: success ? 'var(--state-success)' : 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'var(--font)', transition: 'background 150ms ease' }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                                        >
-                                            <Ic size={13} style={{ color: 'var(--text-muted)' }} /> {label}
+                                <div className="gl-x-menu" role="menu" style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '208px', zIndex: 20 }}>
+                                    {menuItems.map(({ label, Icon: Ic, action }) => (
+                                        <button key={label} type="button" role="menuitem" className="gl-x-menu-item" onClick={action}>
+                                            <Ic size={13} /> {label}
                                         </button>
                                     ))}
-                                    <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '3px 0' }} />
-                                    <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'var(--font)', transition: 'background 150ms ease' }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                                    >
-                                        <Info size={13} style={{ color: 'var(--text-muted)' }} /> Note Info
-                                    </button>
+                                    {isOwner && (
+                                        <>
+                                            <div className="gl-x-menu-sep" />
+                                            <button type="button" role="menuitem" className="gl-x-menu-item"
+                                                onClick={() => { setShowMenu(false); toggleArchive && toggleArchive(id); }}>
+                                                {note.isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+                                                {note.isArchived ? 'Restore from archive' : 'Archive'}
+                                            </button>
+                                            <button type="button" role="menuitem" className="gl-x-menu-item gl-x-menu-item--danger" data-testid="note-delete-button"
+                                                onClick={() => { setShowMenu(false); setIsDeleteModalOpen(true); }}>
+                                                <Trash2 size={13} /> Delete note
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
+
+                        {isOwner && (
+                            <Btn variant="primary" size="sm" icon={Users} onClick={() => setShowShareModal(true)} data-testid="note-share-button" title="Share note">
+                                Share
+                            </Btn>
+                        )}
                     </div>
                 </div>
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="max-w-3xl mx-auto px-12 py-10 min-h-full flex flex-col">
+                    <div className="nt-body">
                         {!canEdit && (
                             <div data-testid="note-readonly-banner" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', marginBottom: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 <Eye size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -723,23 +697,17 @@ ${blockHtml}
                                 onBlur={() => flushNote(id)}
                                 aria-label="Note title"
                                 data-testid="note-title-input"
-                                style={{
-                                    fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)',
-                                    border: 'none', outline: 'none', padding: 0, marginBottom: '10px',
-                                    width: '100%', background: 'transparent', fontFamily: 'var(--font)',
-                                    lineHeight: 1.15,
-                                }}
-                                className="placeholder:text-[var(--text-muted)]"
+                                className="nt-title placeholder:text-[var(--text-muted)]"
                                 placeholder="Untitled"
                             />
                         ) : (
-                            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 10px', lineHeight: 1.15, fontFamily: 'var(--font)' }}>{title || 'Untitled'}</h1>
+                            <h1 className="nt-title">{title || 'Untitled'}</h1>
                         )}
 
                         {/* Tags (owner only) */}
                         <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
                             {tags.map(tag => (
-                                <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', background: 'var(--accent-dim)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--accent)', fontSize: '11px', fontWeight: 600 }}>
+                                <span key={tag} className="cd-chip" data-tone="accent">
                                     #{tag}
                                     {isOwner && (
                                         <button onClick={() => removeTag(tag)} title={`Remove #${tag}`}
@@ -760,12 +728,8 @@ ${blockHtml}
                                     style={{ padding: '2px 8px', border: '1px solid var(--border-accent)', borderRadius: '2px', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '11px', fontFamily: 'var(--font)', outline: 'none', width: '110px' }}
                                 />
                             ) : (
-                                <button onClick={() => setShowTagInput(true)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'var(--font)' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                                >
-                                    <Tag size={11} /><Plus size={9} /> tag
+                                <button type="button" className="nt-ghost-link" onClick={() => setShowTagInput(true)}>
+                                    <Tag size={11} /> Add tag
                                 </button>
                             ))}
                         </div>
@@ -776,29 +740,18 @@ ${blockHtml}
                                     {blocks.map(block => renderBlock(block))}
                                 </div>
 
-                                <div
-                                    style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'var(--text-muted)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
-                                    onClick={() => addBlock('text', '')}
-                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                                >
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        Type <kbd style={{ padding: '1px 6px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '11px', fontFamily: 'var(--font)' }}>/</kbd> to insert a block, or click to add text
-                                    </span>
-                                </div>
-
-                                <div className="mt-4 flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity flex-wrap">
-                                    {QUICK_BLOCKS.map(({ type, label, Icon: Ic, meta, content }) => (
-                                        <button
-                                            key={`${type}-${label}`}
-                                            onClick={() => addBlock(type, content ? content() : '', meta || {})}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
-                                            onMouseEnter={e => hoverOn(e)}
-                                            onMouseLeave={hoverOff}
-                                        >
-                                            <Ic size={12} /> {label}
-                                        </button>
-                                    ))}
+                                <div className="nt-add">
+                                    <button type="button" className="nt-add-hint" onClick={() => addBlock('text', '')}>
+                                        <Plus size={13} /> Click to add text, or type <kbd>/</kbd> in a line for more blocks
+                                    </button>
+                                    <div className="nt-quick" role="group" aria-label="Add a block">
+                                        {QUICK_BLOCKS.map(({ type, label, Icon: Ic, meta, content }) => (
+                                            <button key={`${type}-${label}`} type="button" className="gl-btn gl-btn--ghost gl-btn--sm"
+                                                onClick={() => addBlock(type, content ? content() : '', meta || {})}>
+                                                <Ic size={12} /> {label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </>
                         ) : (
@@ -851,15 +804,17 @@ ${blockHtml}
                     onShare={handleShareModalSave}
                 />
             )}
-            <ConfirmationModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+            <Confirm
+                open={isDeleteModalOpen}
+                title={`Delete “${title || 'Untitled'}”?`}
+                confirmLabel="Delete note"
+                tone="danger"
                 onConfirm={handleDeleteConfirm}
-                title="Delete Note"
-                message="Are you sure you want to delete this note? This action cannot be undone."
-                confirmText="Delete Forever"
-                isDestructive={true}
-            />
+                onClose={() => setIsDeleteModalOpen(false)}
+            >
+                The note, its version history and its attachments are removed for everyone it's shared with. This can't be undone. To keep it out of the way instead, archive it.
+            </Confirm>
+            <style>{NOTE_CSS}</style>
         </div>
     );
 };

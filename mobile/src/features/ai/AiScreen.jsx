@@ -22,6 +22,8 @@ import { toast } from '../../lib/bus.js';
 import { BrandMark } from '../../app/BrandMark.jsx';
 import { finePointer } from '../../app/layout.js';
 import { useAiUi } from './aiUi.js';
+import { useAssistants } from '../../data/hooks.js';
+import { Chips } from '../../ui/Controls.jsx';
 import { openConversation } from '../chats/chatsUi.js';
 
 const SUGGESTIONS = [
@@ -125,7 +127,6 @@ function AssistantMessage({ m, onRetry }) {
 
 export function AiScreen() {
   const ws = useSession((s) => s.workspaceId);
-  const mode = useSession((s) => s.mode);
   const keyboardOpen = useKeyboard((s) => s.open);
   const [thread, setThread] = useState(() => ({ id: uid('ai'), messages: [] }));
   const [input, setInput] = useState('');
@@ -135,6 +136,20 @@ export function AiScreen() {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const pending = useAiUi((s) => s.pending);
+
+  // Who answers: Oruinwan AI, or a model the workspace connected. Remembered per workspace.
+  const { data: assistants } = useAssistants();
+  const [assistant, setAssistant] = useState(() => prefs.get(`ai.assistant.${ws}`) || 'default');
+  useEffect(() => {
+    setAssistant(prefs.get(`ai.assistant.${ws}`) || 'default');
+  }, [ws]);
+  const list = assistants?.length ? assistants : [{ id: 'default', name: 'Oruinwan AI' }];
+  const current = list.find((a) => a.id === assistant) || list[0];
+  const choose = (id) => {
+    setAssistant(id);
+    prefs.set(`ai.assistant.${ws}`, id);
+    tap('select');
+  };
 
   // New workspace → new conversation.
   useEffect(() => {
@@ -178,6 +193,7 @@ export function AiScreen() {
         .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.text))
         .map((m) => ({ role: m.role, content: m.role === 'user' ? m.content : m.text }));
       const result = await api().aiAsk(ws, history, {
+        assistant: current.id,
         signal: ctrl.signal,
         onToken: (partial) => patchLast((m) => ({ ...m, text: partial })),
         onTool: (label) => patchLast((m) => ({ ...m, tool: label })),
@@ -185,7 +201,7 @@ export function AiScreen() {
       patchLast((m) => ({ ...m, text: result.text || m.text, sources: result.sources, actions: result.actions, done: true }));
     } catch (err) {
       if (ctrl.signal.aborted) patchLast((m) => ({ ...m, done: true, text: m.text || '_Stopped._' }));
-      else patchLast((m) => ({ ...m, error: err.message || 'Oruinwan AI could not answer right now.', done: true }));
+      else patchLast((m) => ({ ...m, error: err.message || `${current.name} could not answer right now.`, done: true }));
     } finally {
       setBusy(false);
       abortRef.current = null;
@@ -217,7 +233,7 @@ export function AiScreen() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TabHeader
-        title="Oruinwan AI"
+        title={current.name}
         actions={
           <>
             <IconButton icon={History} label="Past conversations" onClick={() => setHistoryOpen(true)} />
@@ -232,6 +248,11 @@ export function AiScreen() {
           </>
         }
       />
+      {list.length > 1 && (
+        <div className="shrink-0 pb-2" data-testid="assistant-picker">
+          <Chips options={list.map((a) => ({ value: a.id, label: a.name }))} value={current.id} onChange={choose} />
+        </div>
+      )}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {empty ? (
           <div className="flex min-h-full flex-col justify-end px-4 pb-4">
@@ -241,7 +262,6 @@ export function AiScreen() {
               <p className="mt-1.5 max-w-xs text-sm text-text-2">
                 Ask about your channels, tasks and notes. I can summarise, draft and create tasks for you.
               </p>
-              {mode === 'demo' && <p className="mt-2 text-xs text-accent-ink">Demo: answers are simulated from the sample workspace.</p>}
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               {SUGGESTIONS.map((s) => (

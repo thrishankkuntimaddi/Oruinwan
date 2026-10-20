@@ -11,9 +11,9 @@ const CHECK_EVERY = 6 * 60 * 60 * 1000;
 const DISMISSED_KEY = 'oruinwan.update.dismissed';
 
 const button = (primary) => ({
-  border: primary ? 0 : '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600,
-  cursor: 'pointer', color: primary ? '#120e08' : '#e4e4e4',
-  background: primary ? 'linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%)' : 'transparent',
+  border: primary ? 0 : '1px solid var(--border-default, #222)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600,
+  cursor: 'pointer', color: primary ? 'var(--gl-on-accent, #120e08)' : 'var(--text-primary, #e4e4e4)',
+  background: primary ? 'var(--gl-accent-grad, linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%))' : 'transparent',
 });
 
 const parts = (v) => String(v || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
@@ -114,15 +114,15 @@ export default function UpdateNotice() {
       role="status"
       style={{
         position: 'fixed', right: 16, bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', zIndex: 9999, width: 320, maxWidth: 'calc(100vw - 32px)',
-        background: '#151517', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px',
-        boxShadow: '0 24px 60px -24px rgba(0,0,0,0.8)', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 13,
+        background: 'var(--lg-solid, #151517)', border: '1px solid var(--lg-border, rgba(255,255,255,0.08))', borderRadius: 14, padding: '14px 16px',
+        boxShadow: 'var(--lg-shadow, 0 24px 60px -24px rgba(0,0,0,0.8))', color: 'var(--text-primary, #e4e4e4)', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 13,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <Download size={16} style={{ color: '#c9a87c', marginTop: 2, flexShrink: 0 }} aria-hidden="true" />
+        <Download size={16} style={{ color: 'var(--accent, #c9a87c)', marginTop: 2, flexShrink: 0 }} aria-hidden="true" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>Oruinwan {manifest.version} is available</div>
-          <div style={{ color: '#8c8c8c', marginTop: 2 }}>
+          <div style={{ color: 'var(--text-secondary, #8c8c8c)', marginTop: 2 }}>
             {state && state !== 'working' ? state : platform === 'desktop' ? 'Install it over this version. Your data is kept.' : 'Updates keep your data.'}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
@@ -134,7 +134,7 @@ export default function UpdateNotice() {
             </button>
           </div>
         </div>
-        <button type="button" onClick={() => setHidden(true)} aria-label="Close" style={{ background: 'none', border: 0, color: '#8c8c8c', cursor: 'pointer', padding: 2 }}>
+        <button type="button" onClick={() => setHidden(true)} aria-label="Close" style={{ background: 'none', border: 0, color: 'var(--text-muted, #8c8c8c)', cursor: 'pointer', padding: 2 }}>
           <X size={14} aria-hidden="true" />
         </button>
       </div>

@@ -208,8 +208,11 @@ exports.sendMessage = async (req, res) => {
         });
 
         
+        // Live chat is one conversation per person (the platform console lists people, and
+        // /messages/me reads the caller's own), not one shared by everyone in the company.
         let ticket = await SupportTicket.findOne({
             companyId,
+            creatorId: req.user.sub,
             subject: 'Live Chat Support',
             status: { $in: ['open', 'in-progress'] }
         }).sort({ createdAt: -1 });

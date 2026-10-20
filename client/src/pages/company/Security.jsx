@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Lock, Key, Server, Cpu, FileText, Mail, ArrowRight } from 'lucide-react';
+import { Shield, Lock, Key, Server, Cpu, FileText, Mail, ArrowRight, EyeOff } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { PageHero, DocLayout, Callout } from '../../components/public/PublicKit';
 import BRAND from '../../shared/brand';
@@ -15,6 +15,8 @@ const SECTIONS = [
                 <p>Security isn’t a feature at {BRAND.name}; it’s a foundational commitment. Product decisions, architecture choices and vendor evaluations all start with the same question: how does this affect the people whose data we hold?</p>
                 <List items={[
                     'End-to-end encryption for messages in channels and direct messages',
+                    'Messages are never shown to admins, and there are no per-person activity metrics',
+                    'Email verification, passkeys and two-factor authentication',
                     'Role-based permissions that give each person only the access they need',
                     'Audit and compliance logs for administrative activity',
                     'Workspace-level controls over features, retention and data exports',
@@ -27,16 +29,15 @@ const SECTIONS = [
         id: 'encryption', icon: Lock, title: 'Encryption',
         content: (
             <>
-                <p>Messages in channels and DMs are encrypted on your device before they leave it, using a separate key for every conversation. Our servers relay and store ciphertext for that message content.</p>
+                <p>Messages in channels and DMs are end-to-end encrypted between devices, using a separate key for every conversation. They are encrypted in transit and stored encrypted at rest.</p>
                 <List items={[
                     'Per-conversation keys, shared with members through X25519 key agreement',
-                    'Message content encrypted with AES-256-GCM using the browser’s native Web Crypto API',
-                    'Your identity key is protected by your password and never leaves your control unencrypted',
-                    'A recovery file lets you restore your identity key on a new device if you forget your password',
-                    'Traffic between the apps and our servers travels over HTTPS',
+                    'Message content encrypted with AES-256-GCM using the platform’s native Web Crypto API',
+                    'Your identity key is protected by your password',
+                    'Traffic between the apps and the server travels over HTTPS',
                 ]} />
                 <Callout>
-                    <strong>Keep your recovery file safe.</strong> Because message keys are unlocked with your password on your device, we can’t read your messages, and we can’t recover them for you without it.
+                    <strong>Key escrow.</strong> The server also keeps an escrowed copy of each conversation key, protected by a server master key. It exists for two reasons: so AI agents can answer in encrypted conversations, and so you can recover access to your conversations after a password reset. Escrowed keys are never used to show messages to admins.
                 </Callout>
             </>
         ),
@@ -48,7 +49,7 @@ const SECTIONS = [
                 <p>{BRAND.name} runs on managed cloud platforms, with application data separated by workspace and access checked on every request.</p>
                 <List items={[
                     'Every API request is authenticated and authorised against the caller’s workspace and role',
-                    'Encrypted message content is stored as ciphertext',
+                    'Message content is stored encrypted; escrowed conversation keys are protected by a server master key',
                     'Administrative actions are written to an audit log that admins can review',
                 ]} />
             </>
@@ -63,20 +64,35 @@ const SECTIONS = [
                     'Four roles (owner, admin, manager and member) mapped to a permission matrix',
                     'Channel membership decides who receives a conversation’s encryption key',
                     'A complete audit trail of administrative actions',
-                    'Sign in with email and password, or with Google or GitHub',
+                    'Sign in with email and password, or with Google; email verification for new accounts',
+                    'Passkeys and two-factor authentication',
                 ]} />
             </>
         ),
     },
     {
-        id: 'ai', icon: Cpu, title: 'AI safety',
+        id: 'privacy', icon: EyeOff, title: 'Privacy from admins',
         content: (
             <>
-                <p>{BRAND.ai} is an optional layer on top of your workspace, and admins decide whether it’s available.</p>
+                <p>Admins run the workspace and the company console: people, workspaces, roles and permissions. They don’t get a window into conversations.</p>
                 <List items={[
-                    `${BRAND.ai} runs inside the workspace you’re signed in to`,
-                    'AI requests are processed by a third-party large-language-model provider',
-                    `Workspace admins can turn ${BRAND.ai} off at any time from workspace settings`,
+                    'Admins never see message content or message counts',
+                    'There are no per-person activity metrics',
+                    'Admin actions are recorded in the audit log',
+                ]} />
+            </>
+        ),
+    },
+    {
+        id: 'ai', icon: Cpu, title: 'AI agents',
+        content: (
+            <>
+                <p>Agents (Claude, ChatGPT, Gemini and Grok) are optional. A workspace admin can install one for the workspace, or a member can connect one personally with their own API key.</p>
+                <List items={[
+                    'An agent only answers in the conversations it’s added to or mentioned in',
+                    'To answer in an encrypted conversation, the server uses the escrowed conversation key',
+                    'Requests to an agent are processed by that agent’s provider',
+                    'Workspace admins can turn AI off from workspace settings',
                 ]} />
             </>
         ),
@@ -89,7 +105,7 @@ const SECTIONS = [
                 <List items={[
                     'Personal data export and account deletion',
                     'Workspace-wide data export for admins',
-                    'Configurable retention policies and legal holds',
+                    'Configurable retention policies',
                     'Audit and compliance logs available to workspace admins',
                 ]} />
                 <p>Read how we handle personal data in our <Link to="/privacy">Privacy Policy</Link>.</p>
@@ -119,7 +135,7 @@ export default function Security() {
                 eyebrow="Security"
                 icon={Shield}
                 title={<>Security <span className="orw-gloss-text">by design.</span></>}
-                lead={`${BRAND.name} was built with security in every layer, from on-device encryption to role-based access on the server.`}
+                lead={`${BRAND.name} was built with security in every layer, from end-to-end encrypted messages to role-based access on the server.`}
                 meta={<>
                     <span><Lock size={13} aria-hidden="true" />End-to-end encrypted messages</span>
                     <span><Key size={13} aria-hidden="true" />X25519 + AES-256-GCM</span>

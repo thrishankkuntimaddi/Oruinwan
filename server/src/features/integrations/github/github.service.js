@@ -1,8 +1,10 @@
 'use strict';
 
 /**
- * GitHub data for the code-review side panel, pickers and slash commands,
- * fetched with the workspace's token (never the viewer's).
+ * GitHub data for the code-review side panel, pickers and slash commands. Fetched with the
+ * person's own GitHub connection when they made one (Agents → GitHub → Connect for me), so what
+ * they do runs as them; otherwise with the workspace's token. A personal token is only ever used
+ * for its owner's requests.
  */
 
 const path = require('path');
@@ -38,9 +40,16 @@ async function requireIntegration(workspaceId, type, { needs } = {}) {
   return integration;
 }
 
-async function githubClientFor(workspaceId) {
+async function githubClientFor(workspaceId, userId = null) {
+  if (userId) {
+    const mine = await require('../../connections/connections.service').personalFor(workspaceId, userId, 'github');
+    if (mine) {
+      const integration = await Integration.findOne({ workspaceId, type: 'github' }).lean();
+      return { integration: integration || { config: {} }, gh: createClient(mine.secret), personal: true, account: mine.account };
+    }
+  }
   const integration = await requireIntegration(workspaceId, 'github', { needs: 'token' });
-  return { integration, gh: createClient(readSecret(integration.config, 'token')) };
+  return { integration, gh: createClient(readSecret(integration.config, 'token')), personal: false };
 }
 
 function parseRepoNumber(repo, number) {
@@ -84,13 +93,13 @@ function clearCache() {
   prCache.clear();
 }
 
-/** PR metadata + files from GitHub (cached ~60s per PR per workspace). */
-async function fetchPullBundle(workspaceId, repo, number) {
-  const key = `${workspaceId}:${repo.toLowerCase()}#${number}`;
+/** PR metadata + files from GitHub (cached ~60s per PR per workspace, or per person with their own token). */
+async function fetchPullBundle(workspaceId, repo, number, userId = null) {
+  const { gh, personal } = await githubClientFor(workspaceId, userId);
+  const key = `${workspaceId}:${personal ? `u:${userId}:` : ''}${repo.toLowerCase()}#${number}`;
   const cached = cacheGet(key);
   if (cached) return cached;
 
-  const { gh } = await githubClientFor(workspaceId);
   const pr = await gh.getPull(repo, number);
   const [files, checkRuns] = await Promise.all([
     gh.listPullFiles(repo, number),
@@ -173,7 +182,7 @@ async function linkedTasksFor(workspaceId, pr, userId) {
 
 async function getPullView({ workspaceId, repo, number, userId }) {
   ({ repo, number } = parseRepoNumber(repo, number));
-  const { pr, files, checks } = await fetchPullBundle(workspaceId, repo, number);
+  const { pr, files, checks } = await fetchPullBundle(workspaceId, repo, number, userId);
   return {
     pr: shapePr(pr, checks),
     files: shapeFiles(files),
@@ -182,12 +191,12 @@ async function getPullView({ workspaceId, repo, number, userId }) {
 }
 
 /** Whole file at a ref, as text (size-capped; binary refused). */
-async function getFileText({ workspaceId, repo, ref, path: filePath }) {
+async function getFileText({ workspaceId, repo, ref, path: filePath, userId = null }) {
   if (!isRepo(repo)) throw httpError(400, 'repo must be owner/name');
   const p = String(filePath || '').replace(/^\/+/, '');
   if (!p || p.length > 1000 || p.split('/').some(seg => seg === '..' || seg === '.')) throw httpError(400, 'Invalid path');
   if (ref !== undefined && ref !== null && ref !== '' && !/^[\w./-]{1,250}$/.test(String(ref))) throw httpError(400, 'Invalid ref');
-  const { gh } = await githubClientFor(workspaceId);
+  const { gh } = await githubClientFor(workspaceId, userId);
   let text;
   try {
     text = await gh.getRawFile(repo, p, ref || undefined);
@@ -213,8 +222,8 @@ async function candidateRepos(workspaceId, config) {
   return [...seen.values()].slice(0, 10);
 }
 
-async function listOpenPulls({ workspaceId, repo }) {
-  const { integration, gh } = await githubClientFor(workspaceId);
+async function listOpenPulls({ workspaceId, repo, userId = null }) {
+  const { integration, gh } = await githubClientFor(workspaceId, userId);
   let repos;
   if (repo) {
     if (!isRepo(repo)) throw httpError(400, 'repo must be owner/name');
@@ -249,17 +258,18 @@ async function listOpenPulls({ workspaceId, repo }) {
   return { prs: prs.slice(0, 50), repos, errors };
 }
 
-/** Create a GitHub issue; when taskId is given, link it to that task. */
+/** Create a GitHub issue (as the person, when they connected their own GitHub); when taskId is given, link it to that task. */
 async function createIssue({ workspaceId, repo, title, body, taskId, user, io }) {
   if (!isRepo(repo)) throw httpError(400, 'repo must be owner/name');
   const t = String(title || '').trim();
   if (!t) throw httpError(400, 'title is required');
   let task = null;
   if (taskId) task = await loadVisibleTask(workspaceId, taskId, user.id);
-  const { gh } = await githubClientFor(workspaceId);
-  const footer = user.name ? `\n\n---\n_Created from Oruinwan by ${user.name}_` : '';
+  const { gh, personal } = await githubClientFor(workspaceId, user.id);
+  // Opened by their own account, GitHub already shows who; the footer is for the shared token.
+  const footer = user.name && !personal ? `\n\n---\n_Created from Oruinwan by ${user.name}_` : '';
   const issue = await gh.createIssue(repo, { title: t.slice(0, 256), body: `${String(body || '').slice(0, 60_000)}${footer}` });
-  const result = { issue: { number: issue.number, url: issue.html_url, title: issue.title, repo } };
+  const result = { issue: { number: issue.number, url: issue.html_url, title: issue.title, repo }, as: personal ? 'you' : 'workspace' };
   if (task) {
     await require('../../tasks/tasks.service').applyExternalUpdate(String(task._id), {
       actorId: user.id,

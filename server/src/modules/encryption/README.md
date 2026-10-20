@@ -20,7 +20,7 @@ encryption/
 - ✅ **User Enrollment**: Encrypt workspace keys with user KEK
 - ✅ **Access Revocation**: Remove user access to workspaces
 - ✅ **Key Rotation**: Support for key versioning
-- ✅ **Zero-Knowledge**: Server never sees decrypted keys
+- ✅ **Key wrapping**: keys are stored wrapped; an escrowed copy is protected by the server master key (SERVER_KEK)
 - ✅ **PBKDF2**: Secure password-based key derivation
 
 ## API Endpoints
@@ -199,11 +199,10 @@ npm test src/modules/encryption/__tests__/
 
 ## Security Considerations
 
-1. **Zero-Knowledge**: Server never stores or sees:
-   - User passwords
-   - Decrypted KEKs
-   - Decrypted workspace keys
-   - Plaintext messages
+1. **Not zero-knowledge**: the server never stores passwords or plaintext messages, but it keeps an
+   escrowed copy of each conversation key wrapped with the server master key (SERVER_KEK). That copy
+   lets AI agents answer in encrypted conversations and lets people regain access after a password
+   reset. Protect SERVER_KEK like any other production secret.
 
 2. **Key Wrapping**: Workspace keys are encrypted with user KEKs
 

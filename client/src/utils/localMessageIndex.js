@@ -27,6 +27,8 @@ export function indexConversation({ id, type, name, workspaceId }, events = []) 
             text,
             sender: e.sender?.username ? { _id: e.sender._id, username: e.sender.username } : (e.payload?.sender || null),
             createdAt: e.createdAt || e.payload?.createdAt,
+            // Thread replies open their thread from search.
+            ...((e.parentId || e.payload?.parentId) && { threadParentId: String(e.parentId?._id || e.parentId || e.payload.parentId) }),
         });
     }
     if (conv.messages.size > MAX_PER_CONVERSATION) {

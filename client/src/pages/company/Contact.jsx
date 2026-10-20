@@ -103,7 +103,7 @@ export default function Contact() {
                                     </div>
                                     <div className="orw-field">
                                         <label className="orw-label" htmlFor="contact-email">Email</label>
-                                        <input id="contact-email" type="email" className="orw-input" value={form.email} onChange={set('email')} required autoComplete="email" placeholder="you@company.com" />
+                                        <input id="contact-email" type="email" className="orw-input" value={form.email} onChange={set('email')} required autoComplete="email" placeholder="you@example.com" />
                                     </div>
                                 </div>
                                 <div className="orw-field">

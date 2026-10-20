@@ -10,7 +10,7 @@ export const DEFAULT_FLAGS = {
   files: true,
   integrations: true,
   threads: true,
-  huddles: false,
+  huddles: true,
   // Shown in Settings → About when true; lets a build expose experimental screens.
   labs: false,
 };

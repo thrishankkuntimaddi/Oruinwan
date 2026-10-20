@@ -2,7 +2,8 @@ name: Deploy web app
 
 # The Oruinwan product website on GitHub Pages: the web client's landing, docs and legal pages
 # built with `vite --mode site`, with download links to the latest release. "Log in" and "Get
-# started" send visitors to their own team's server, which hosts the web app itself.
+# started" open the web app at VITE_WEB_APP_URL in a new tab (repository variable; unset, they
+# stay on the site and /login explains where to go).
 # Live at https://thrishankkuntimaddi.github.io/Oruniwan/
 # One-time setup (done 2026-10-12): Settings → Pages → Build and deployment → Source: GitHub Actions.
 on:
@@ -37,6 +38,7 @@ jobs:
         # Project pages live under /<repository>/.
         env:
           SITE_BASE: /${{ github.event.repository.name }}/
+          VITE_WEB_APP_URL: ${{ vars.VITE_WEB_APP_URL }}
         run: npx vite build --mode site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

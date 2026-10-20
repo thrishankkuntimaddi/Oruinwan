@@ -15,6 +15,9 @@ const { query, closePostgres } = require('../src/shared/postgres');
 const { runMigrations } = require('../src/shared/migrations');
 const identity = require('../src/identity');
 
+// Local development only. SEED_PASSWORD overrides the default.
+const SEED_PASSWORD = process.env.SEED_PASSWORD || 'Oruinwan#Dev2026';
+
 async function seedData() {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
     await runMigrations();
@@ -26,12 +29,12 @@ async function seedData() {
 
     console.log('🏢 Creating company...');
     const company = await identity.companies.create({
-        name: 'Oruinwan Technologies',
-        domain: 'oruinwan.com',
+        name: 'Example Corp',
+        domain: 'example.com',
         isActive: true,
         domainVerified: true,
         autoJoinByDomain: true,
-        allowedEmails: ['admin@oruinwan.com', 'employee@oruinwan.com'],
+        allowedEmails: ['alex.morgan@example.com', 'taylor.brooks@example.com'],
         settings: { allowSelfRegistration: true, requireEmailVerification: false, defaultUserRole: 'member' },
     });
     console.log(`✅ Company created: ${company.name} (${company._id})`);
@@ -42,10 +45,10 @@ async function seedData() {
     });
 
     console.log('👤 Creating users...');
-    const adminUser = await makeUser('Admin User', 'admin@oruinwan.com', 'admin123', 'owner', 'System Administrator');
+    const adminUser = await makeUser('Alex Morgan', 'alex.morgan@example.com', SEED_PASSWORD, 'owner', 'Operations Director');
     await identity.companies.addAdmin(company._id, adminUser._id, 'owner');
-    const employeeUser = await makeUser('John Employee', 'employee@oruinwan.com', 'employee123', 'member', 'Software Engineer');
-    const admin2User = await makeUser('Jane Admin', 'jane@oruinwan.com', 'admin456', 'admin', 'Team Lead');
+    const employeeUser = await makeUser('Taylor Brooks', 'taylor.brooks@example.com', SEED_PASSWORD, 'member', 'Software Engineer');
+    const admin2User = await makeUser('Jordan Lee', 'jordan.lee@example.com', SEED_PASSWORD, 'admin', 'Team Lead');
     await identity.companies.addAdmin(company._id, admin2User._id, 'admin');
 
     console.log('🏗️  Creating default workspace...');
@@ -69,9 +72,9 @@ async function seedData() {
     console.log('🎉 DATABASE SEEDED SUCCESSFULLY!');
     console.log('='.repeat(60));
     console.log('\n🔐 Login Credentials:');
-    console.log('   👑 OWNER     admin@oruinwan.com / admin123');
-    console.log('   🛡️  ADMIN     jane@oruinwan.com / admin456');
-    console.log('   👤 EMPLOYEE  employee@oruinwan.com / employee123');
+    console.log(`   👑 OWNER     alex.morgan@example.com / ${SEED_PASSWORD}`);
+    console.log(`   🛡️  ADMIN     jordan.lee@example.com / ${SEED_PASSWORD}`);
+    console.log(`   👤 EMPLOYEE  taylor.brooks@example.com / ${SEED_PASSWORD}`);
     console.log('='.repeat(60) + '\n');
 }
 

@@ -5,6 +5,7 @@ const { sendOTP } = require('../../../utils/sendOTP');
 const otpStore = require('./otpStore');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
+const { recordDevSms, consoleOnly } = require('../../../utils/devMail');
 
 const MAX_VERIFY_ATTEMPTS = 5;          // per issued code
 const SEND_WINDOW_MS = 15 * 60 * 1000;  // per-target send throttle window
@@ -64,6 +65,9 @@ async function sendOTPSMS(phone, otp) {
   if (!formattedPhone.startsWith('+')) {
     formattedPhone = `+91${formattedPhone}`; 
   }
+  // Development only: the code also goes to the dev outbox (console + file), and with
+  // DEV_MAIL=console no real text is sent at all.
+  if (recordDevSms(formattedPhone, `Your Oruinwan verification code is ${otp}`) && consoleOnly()) return;
   await sendOTP(formattedPhone, otp);
 }
 
@@ -87,6 +91,7 @@ async function sendOTPByType({ target, type, otp, options = {} }) {
     if (process.env.NODE_ENV === 'production') {
       return { success: false, devMode: false };
     }
+    // Development only: the code is already in the dev outbox (utils/devMail.js).
     return { success: true, devMode: true };
   }
 }

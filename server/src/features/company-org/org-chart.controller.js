@@ -63,6 +63,11 @@ exports.getOrgChart = async (req, res) => {
       head: dept.head,
       managers: dept.managers || [],
       memberCount: (dept.members || []).length,
+      // Everyone in the department (active or invited), so the chart shows people even
+      // before any team exists. Names, roles and avatars only.
+      people: allUsers
+        .filter(u => (u.departments || []).some(d => String(d?._id || d) === String(dept._id)))
+        .map(u => ({ id: u._id, username: u.username, email: u.email, profilePicture: u.profilePicture, companyRole: u.companyRole })),
       teams: (teamsByDept[dept._id.toString()] || []).map(team => ({
         id: team._id,
         name: team.name,

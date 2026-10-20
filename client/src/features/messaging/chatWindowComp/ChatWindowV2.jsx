@@ -712,17 +712,26 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 const replyParentId = reply.parentId || event.payload.parentId || reply.replyTo;
 
                 if (replyParentId) {
+                    // The replier moves to the front of the parent's avatars.
+                    const parentEvent = conversationRef.current?.events?.find(e => String(e.id) === String(replyParentId));
+                    const replier = reply.sender && typeof reply.sender === 'object' ? reply.sender : null;
+                    const prevPeople = parentEvent?.threadParticipants || parentEvent?.payload?.threadParticipants || [];
+                    const threadParticipants = replier
+                        ? [replier, ...prevPeople.filter(p => String(p?._id) !== String(replier._id))].slice(0, 3)
+                        : prevPeople;
                     setThreadCounts(prev => {
                         const newCount = (prev[replyParentId] || 0) + 1;
 
-                        
+
                         if (conversationRef.current) {
                             conversationRef.current.updateEvent(replyParentId, {
                                 replyCount: newCount,
                                 lastReplyAt: reply.createdAt || new Date().toISOString(),
+                                threadParticipants,
                                 payload: {
                                     replyCount: newCount,
-                                    lastReplyAt: reply.createdAt || new Date().toISOString()
+                                    lastReplyAt: reply.createdAt || new Date().toISOString(),
+                                    threadParticipants,
                                 }
                             });
                         }
@@ -1028,10 +1037,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             // (unless I'm now talking to a person).
             const followUp = conversationAI.isFollowUp(null) && !mentionsPerson(mentionText);
             if (conversationAI.isFollowUp(null) && mentionsPerson(mentionText)) conversationAI.endFollowUp(null);
-            if (mentionsAI(markdown) || followUp) {
+            // A DM with an agent (Claude, ChatGPT…): every message is for it, no mention needed.
+            const agentDm = chat?.isAgent && chat?.agentId;
+            if (agentDm || mentionsAI(markdown) || followUp) {
                 conversationAI.ask({
+                    assistant: agentDm ? chat.agentId : (followUp && !mentionsAI(markdown) ? conversationAI.followUpAssistantFor(null) : undefined),
                     prompt: markdown,
-                    triggerMessageId: result.message?._id || null,
+                    // In a chat with an agent the answer just follows; quoting each question is noise.
+                    triggerMessageId: agentDm ? null : (result.message?._id || null),
                     messages: [...decryptedTranscript(), { sender: user?.username || 'Me', text: markdown, isMe: true }],
                     conversationName: chat?.name,
                 });
@@ -1042,7 +1055,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actions, replyingTo, showToast, conversationAI, chat?.name, user?.username]);
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, user?.username]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1117,11 +1130,18 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
     
     const handleSendMeeting = useCallback(async (meetingData) => {
-        
+
         try {
+            // A real scheduled meeting (Up next, invites, its own huddle), then its card here.
+            const wsId = workspaceId || activeWorkspace?.id || activeWorkspace?._id;
+            const { data: created } = await api.post('/api/scheduled-meetings', {
+                ...meetingData,
+                workspaceId: wsId,
+                ...(conversationType === 'dm' ? { dmSessionId: conversationId } : { channelId: conversationId }),
+            });
             const messageData = {
                 type: 'meeting',
-                meeting: meetingData,
+                meeting: { ...meetingData, scheduledMeetingId: created?.meeting?._id || null },
                 text: null,
             };
             const result = await actions.sendMessage(messageData);
@@ -1131,10 +1151,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     id: msg._id,
                     _id: msg._id,
                     type: 'meeting',
-                    meeting: msg.meeting || meetingData,
+                    meeting: msg.meeting || messageData.meeting,
                     sender: msg.sender,
                     createdAt: msg.createdAt,
-                    payload: { meeting: msg.meeting || meetingData, sender: msg.sender },
+                    payload: { meeting: msg.meeting || messageData.meeting, sender: msg.sender },
                 };
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
             } else {
@@ -1142,11 +1162,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             }
         } catch (err) {
             logger.error('[ChatWindowV2] handleSendMeeting error:', err);
-            showToast('Failed to schedule meeting', 'error');
+            showToast(err?.response?.data?.message || 'Failed to schedule meeting', 'error');
         }
         setShowMeetingModal(false);
         setShowAttach(false);
-    }, [actions, conversation, currentUserId, showToast]);
+    }, [actions, conversation, currentUserId, showToast, workspaceId, activeWorkspace, conversationType, conversationId]);
 
     
     const handleCreatePoll = useCallback(async (pollData) => {
@@ -1267,15 +1287,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     // Home → Activity links a thread reply with { state: { openThreadId } }:
     // open that thread once this conversation is on screen (ThreadPanel loads
     // the parent and replies itself from the id).
-    const openThreadIdFromNav = location.state?.openThreadId || null;
+    // Notification links carry it as ?thread=<parentId>.
+    const openThreadIdFromNav = location.state?.openThreadId || new URLSearchParams(location.search).get('thread') || null;
     const appliedNavThread = useRef(null);
     useEffect(() => {
         if (!openThreadIdFromNav || !chat?.id || !features.threads) return;
-        const key = `${chat.id}:${openThreadIdFromNav}`;
+        // location.key: following the same link again re-opens the thread.
+        const key = `${chat.id}:${openThreadIdFromNav}:${location.key}`;
         if (appliedNavThread.current === key) return;
         appliedNavThread.current = key;
         handleThreadOpen({ _id: String(openThreadIdFromNav), id: String(openThreadIdFromNav), workspace: workspaceId || chat?.workspaceId || null });
-    }, [openThreadIdFromNav, chat?.id, chat?.workspaceId, workspaceId, features.threads, handleThreadOpen]);
+    }, [openThreadIdFromNav, location.key, chat?.id, chat?.workspaceId, workspaceId, features.threads, handleThreadOpen]);
 
     
     const handleThreadClose = useCallback(() => {
@@ -1674,7 +1696,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         onJump={(id) => jumpToLoadedMessage(id)}
                     />
                 ) : null}
-                aiFollowUp={conversationAI.isFollowUp(null) ? { onStop: () => conversationAI.endFollowUp(null) } : null}
+                aiFollowUp={!chat?.isAgent && conversationAI.isFollowUp(null) ? { onStop: () => conversationAI.endFollowUp(null) } : null}
                 
                 activeTab={activeTab}
                 tabs={tabs}
@@ -1876,7 +1898,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             {showMeetingModal && (
                 <ScheduleMeetingModal
                     conversationId={conversationId}
-                    conversationType={conversationType}
+                    conversationType={conversationType === 'dm' ? 'dm' : 'channel'}
                     onSchedule={handleSendMeeting}
                     onClose={() => setShowMeetingModal(false)}
                 />
@@ -1910,6 +1932,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     participants={huddle.participants}
                     muted={huddle.muted}
                     channelName={chat?.name || ''}
+                    isDM={chat?.type === 'dm'}
                     onToggleMute={huddle.toggleMute}
                     onLeave={huddle.leaveHuddle}
                     isVideo={huddle.isVideo}
@@ -1921,33 +1944,22 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             )}
             {}
             {features.huddles && (chat?.type === 'channel' || chat?.type === 'dm') && huddle.huddleAnnouncement && !huddle.active && (
-                <div data-testid="huddle-announcement" style={{
+                <div data-testid="huddle-announcement" className="gl-card" style={{
                     position: 'fixed', bottom: '16px', right: '16px', zIndex: 50,
                     display: 'flex', alignItems: 'center', gap: '12px',
-                    backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)',
-                    padding: '12px 16px', borderRadius: '2px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
-                    border: '1px solid var(--border-accent)',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    animation: 'fadeIn 200ms ease',
+                    padding: '10px 12px 10px 14px', borderLeft: '3px solid var(--state-success)',
+                    color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif',
+                    animation: 'fadeIn 200ms ease', maxWidth: 'calc(100vw - 32px)',
                 }}>
-                    <span style={{ color: '#34d399' }}>●</span>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--state-success)', flexShrink: 0 }} />
                     <div style={{ fontSize: '13px' }}>
                         <span style={{ fontWeight: 600 }}>{huddle.huddleAnnouncement.startedBy?.username || 'Someone'}</span>
-                        {' '}started a huddle
+                        {huddle.huddleAnnouncement.video ? ' started a video huddle' : ' started a huddle'}
                     </div>
-                    <button
+                    <button type="button" className="gl-btn gl-btn--primary" data-testid="huddle-announcement-join"
                         onClick={() => { const a = huddle.huddleAnnouncement; huddle.dismissAnnouncement(); huddle.joinHuddle(a.huddleId, { video: a.video }); }}
-                        style={{ fontSize: '12px', backgroundColor: '#16a34a', color: '#fff', padding: '4px 12px', borderRadius: '2px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#15803d'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#16a34a'}
                     >Join</button>
-                    <button
-                        onClick={huddle.dismissAnnouncement}
-                        style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                    >✕</button>
+                    <button type="button" className="gl-icon-btn" title="Dismiss" aria-label="Dismiss" onClick={huddle.dismissAnnouncement}>✕</button>
                 </div>
             )}
         </div>

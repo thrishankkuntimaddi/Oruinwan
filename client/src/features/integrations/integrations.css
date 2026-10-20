@@ -172,8 +172,8 @@ html.light {
 .oi-prlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ── Standalone drawer (outside a conversation) ────────────────────────── */
-.oi-drawer-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(0, 0, 0, 0.45); display: flex; justify-content: flex-end; }
-.oi-drawer { width: clamp(420px, 55vw, 900px); max-width: 100vw; height: 100%; display: flex; background: var(--bg-primary); box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35); }
+.oi-drawer-backdrop { position: fixed; inset: 0; z-index: 1200; background: var(--lg-scrim); display: flex; justify-content: flex-end; }
+.oi-drawer { width: clamp(420px, 55vw, 900px); max-width: 100vw; height: 100%; display: flex; background: var(--bg-primary); box-shadow: var(--lg-shadow); }
 .oi-drawer > * { flex: 1; min-width: 0; }
 .oi-panel-loading { padding: 24px; color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 640px) {

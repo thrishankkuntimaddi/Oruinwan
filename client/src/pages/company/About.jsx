@@ -7,16 +7,16 @@ import BRAND from '../../shared/brand';
 
 const VALUES = [
     { icon: Users, color: '#8ea6ff', title: 'People first', desc: 'Every product decision starts with one question: does this make the people using it better at what they do?' },
-    { icon: Sparkles, color: '#c8a274', title: 'AI with purpose', desc: `AI should augment human judgment, not replace it. ${BRAND.ai} is a tool, not a replacement.` },
+    { icon: Sparkles, color: '#c8a274', title: 'AI with purpose', desc: 'AI should augment human judgment, not replace it. Agents work alongside your team, in the conversations you choose.' },
     { icon: Globe, color: '#5cc995', title: 'Radical transparency', desc: 'We publish what we do, how we do it, and why. Internally and externally. No black boxes.' },
     { icon: Shield, color: '#b59cff', title: 'Security as default', desc: 'Privacy and security aren’t premium features. They’re the baseline every user deserves.' },
 ];
 
 const TEAM = [
-    { name: 'Thrishank K.', role: 'Founder & CEO', initial: 'TK' },
+    { name: 'Leadership', role: 'Company direction & strategy', initial: 'LD' },
     { name: 'Engineering', role: 'Platform & backend', initial: 'EN' },
     { name: 'Design', role: 'Product design', initial: 'DE' },
-    { name: 'AI Research', role: BRAND.ai, initial: 'AI' },
+    { name: 'AI', role: 'Agents and integrations', initial: 'AI' },
 ];
 
 export default function About() {
@@ -28,7 +28,7 @@ export default function About() {
                 eyebrow={`About ${BRAND.name}`}
                 icon={Building2}
                 title={<>We’re building the workspace <span className="orw-gloss-text">teams actually want to use.</span></>}
-                lead={`${BRAND.name} started with a simple frustration: great teams were losing hours every week switching between chat, tasks, docs and meetings. We built the platform we wished existed.`}
+                lead={`${BRAND.company} builds ${BRAND.name} for teams that were losing hours every week switching between chat, tasks, docs and meetings. We built the workspace we wished existed.`}
             />
 
             <Block>

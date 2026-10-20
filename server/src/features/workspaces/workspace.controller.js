@@ -51,7 +51,34 @@ function stripMethods(ws) {
   return out;
 }
 
-exports._internal = { pickSafeSettings, countActiveMembers };
+/**
+ * Turns "Website redesign!" into "website-redesign": the channel name for a project.
+ * Returns '' when nothing usable is left.
+ */
+function projectChannelName(project) {
+  return String(project || '')
+    .toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+    .slice(0, 60)
+    .replace(/[-_]+$/g, '');
+}
+
+/**
+ * Why an invite can't be used, as { status, message }, or null when it can.
+ * A team link (metadata.reusable) works for many people until it expires or is revoked.
+ */
+function inviteProblem(invite, now = new Date()) {
+  if (!invite) return { status: 404, message: "Invalid invitation link" };
+  if (invite.status === 'revoked' || invite.revokedAt) return { status: 400, message: "This invitation was cancelled. Ask for a new one." };
+  if (invite.used && !invite.metadata?.reusable) return { status: 400, message: "This invitation link has already been used" };
+  if (invite.expiresAt < now) return { status: 400, message: "This invitation link has expired" };
+  return null;
+}
+
+exports._internal = { pickSafeSettings, countActiveMembers, projectChannelName, inviteProblem };
 
 exports.createWorkspace = async (req, res) => {
   try {
@@ -62,7 +89,8 @@ exports.createWorkspace = async (req, res) => {
       icon,
       color,
       rules,
-      templateId
+      templateId,
+      project
     } = req.body;
     const userId = req.user?.sub;
 
@@ -146,32 +174,34 @@ exports.createWorkspace = async (req, res) => {
       }]
     });
 
-    const announcementsChannel = await Channel.create({
-      workspace: workspace._id,
-      company: resolvedCompanyId || null,
-      name: "announcements",
-      description: "Announcements and updates",
-      isPrivate: false,
-      isDefault: true,
-      createdBy: userId,
-      members: [{ user: userId, joinedAt: creationDate }],
-      systemEvents: [{
-        type: 'channel_created',
-        userId: userId,
-        timestamp: creationDate
-      }]
-    });
+    // #random, plus a channel for what the team is working on ("What's your project?").
+    const extraChannels = [{ name: 'random', description: 'Non-work banter and water-cooler talk' }];
+    const projectName = projectChannelName(project);
+    if (projectName && !['general', 'random'].includes(projectName)) {
+      extraChannels.push({ name: projectName, description: String(project).trim().slice(0, 250) });
+    }
+    const otherChannels = [];
+    for (const extra of extraChannels) {
+      otherChannels.push(await Channel.create({
+        workspace: workspace._id,
+        company: resolvedCompanyId || null,
+        name: extra.name,
+        description: extra.description,
+        isPrivate: false,
+        isDefault: true,
+        createdBy: userId,
+        members: [{ user: userId, joinedAt: creationDate }],
+        systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }]
+      }));
+    }
 
-    logger.info("📢 [PHASE 2] Default channels created: general, announcements");
+    logger.info({ channels: ['general', ...extraChannels.map(c => c.name)] }, "Default channels created");
 
     
     
     logger.info(`🔐 [PHASE 5] Generating conversation keys for default channels...`);
 
-    const channelsToBootstrap = [
-      { channel: generalChannel, name: 'general' },
-      { channel: announcementsChannel, name: 'announcements' }
-    ];
+    const channelsToBootstrap = [generalChannel, ...otherChannels].map(channel => ({ channel, name: channel.name }));
 
     for (const { channel, name } of channelsToBootstrap) {
       try {
@@ -194,7 +224,7 @@ exports.createWorkspace = async (req, res) => {
 
     
     workspace = await identity.workspaces.update(workspace._id, {
-      defaultChannels: [generalChannel._id, announcementsChannel._id],
+      defaultChannels: [generalChannel._id, ...otherChannels.map(c => c._id)],
     });
 
     let templateError = null;
@@ -225,7 +255,8 @@ exports.createWorkspace = async (req, res) => {
         type: workspace.type,
         icon: workspace.icon,
         color: workspace.color || "#2563eb",
-        defaultChannels: workspace.defaultChannels
+        defaultChannels: workspace.defaultChannels,
+        channels: [generalChannel, ...otherChannels].map(c => ({ id: c._id, name: c.name }))
       },
       ...(templateError ? { templateError } : {})
     });
@@ -246,6 +277,14 @@ exports.listMyWorkspaces = async (req, res) => {
     // Same shape the old user.workspaces array produced, from workspace_members.
     const memberships = await wsQueries.membershipsForUser(userId);
     const creators = await identity.users.findManyByIds(memberships.map(m => m.workspace.createdBy));
+    // Unread messages per workspace, for the workspace switcher's badges. A failure here
+    // must not hide the list, so it just leaves the counts at 0.
+    let unread = new Map();
+    try {
+      unread = (await messagesService.getWorkspaceUnreadCounts(userId, memberships.map(m => m.workspace._id))) || new Map();
+    } catch (err) {
+      logger.warn({ err }, 'workspace unread counts unavailable');
+    }
 
     const workspacesWithOwner = memberships.map(({ workspace, role, status }) => {
       const creator = creators.get(String(workspace.createdBy));
@@ -263,7 +302,8 @@ exports.listMyWorkspaces = async (req, res) => {
         memberCount: countActiveMembers(workspace.members),
         isPersonal: workspace.type === 'personal',
         ownerName: creator?.username || 'Unknown',
-        isOwner: String(workspace.createdBy) === String(userId)
+        isOwner: String(workspace.createdBy) === String(userId),
+        unreadCount: (unread instanceof Map && unread.get(String(workspace._id))) || 0
       };
     });
 
@@ -365,7 +405,7 @@ exports.deleteWorkspace = async (req, res) => {
 exports.inviteToWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId || req.params.id;
-    const { emails, inviteType = "link", role = "member", daysValid = 7 } = req.body;
+    const { emails, inviteType = "link", role = "member", daysValid = 7, reusable = false } = req.body;
     const inviterId = req.user?.sub;
 
     const workspace = await identity.workspaces.findById(workspaceId);
@@ -460,7 +500,9 @@ exports.inviteToWorkspace = async (req, res) => {
         role,
         invitedBy: inviterId,
         expiresAt,
-        inviteType: "link"
+        inviteType: "link",
+        // A team link: anyone with it can join until it expires or an admin revokes it.
+        ...(reusable === true ? { metadata: { reusable: true, uses: 0 } } : {})
       });
 
       const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
@@ -468,7 +510,8 @@ exports.inviteToWorkspace = async (req, res) => {
       return res.json({
         message: "Invite link generated",
         inviteLink,
-        expiresAt
+        expiresAt,
+        reusable: reusable === true
       });
     }
   } catch (err) {
@@ -487,17 +530,8 @@ exports.getInviteDetails = async (req, res) => {
     const invite = await inviteStore.findByTokenHash(tokenHash);
     if (invite) await hydrate(invite, { invitedBy: USER_MIN });
 
-    if (!invite) {
-      return res.status(404).json({ message: "Invalid invitation link" });
-    }
-
-    if (invite.used) {
-      return res.status(400).json({ message: "This invitation link has already been used" });
-    }
-
-    if (invite.expiresAt < new Date()) {
-      return res.status(400).json({ message: "This invitation link has expired" });
-    }
+    const problem = inviteProblem(invite);
+    if (problem) return res.status(problem.status).json({ message: problem.message });
 
     const workspace = await identity.workspaces.findById(invite.workspace);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
@@ -537,17 +571,8 @@ exports.joinWorkspace = async (req, res) => {
     const tokenHash = sha256(token);
     const invite = await inviteStore.findByTokenHash(tokenHash);
 
-    if (!invite) {
-      return res.status(404).json({ message: "Invalid invitation link" });
-    }
-
-    if (invite.used) {
-      return res.status(400).json({ message: "This invitation link has already been used" });
-    }
-
-    if (invite.expiresAt < new Date()) {
-      return res.status(400).json({ message: "This invitation link has expired" });
-    }
+    const problem = inviteProblem(invite);
+    if (problem) return res.status(problem.status).json({ message: problem.message });
 
     
     const workspace = await identity.workspaces.findById(invite.workspace);
@@ -637,7 +662,11 @@ exports.joinWorkspace = async (req, res) => {
     }
 
     
-    await inviteStore.update(invite._id, { used: true, usedBy: userId, usedAt: new Date(), status: 'accepted' });
+    if (invite.metadata?.reusable) {
+      await inviteStore.update(invite._id, { metadata: { ...invite.metadata, uses: (invite.metadata.uses || 0) + 1, lastUsedAt: new Date().toISOString() } });
+    } else {
+      await inviteStore.update(invite._id, { used: true, usedBy: userId, usedAt: new Date(), status: 'accepted' });
+    }
 
     
     const io = req.app.get("io");
@@ -1227,12 +1256,10 @@ exports.getWorkspaceStats = async (req, res) => {
     const channelCount = await Channel.countDocuments({ workspace: id });
 
     
-    const messageCount = await Message.countDocuments({ workspace: id });
-
+    // No message count: conversations are private.
     return res.json({
       memberCount: countActiveMembers(workspace.members),
       channelCount,
-      messageCount,
       createdAt: workspace.createdAt,
       creator: {
         username: workspace.createdBy?.username,
@@ -1461,9 +1488,9 @@ exports.getWorkspaceAnalytics = async (req, res) => {
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
     if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
 
-    const [channelCount, messageCount, taskCount, noteCount] = await Promise.all([
+    // No message counts: conversations are private, analytics cover setup and work only.
+    const [channelCount, taskCount, noteCount] = await Promise.all([
       Channel.countDocuments({ workspace: workspaceId }),
-      Message.countDocuments({ workspace: workspaceId }),
       Tasks.countDocuments({ workspace: workspaceId }),
       Note.countDocuments({ workspace: workspaceId })
     ]);
@@ -1484,10 +1511,9 @@ exports.getWorkspaceAnalytics = async (req, res) => {
 
     
     const activityScore = Math.min(100, Math.round(
-      (messageCount / 10) * 0.4 +
-      (taskCount / 5) * 0.3 +
-      (noteCount / 5) * 0.2 +
-      (channelCount * 3) * 0.1
+      (taskCount / 5) * 0.5 +
+      (noteCount / 5) * 0.3 +
+      (channelCount * 3) * 0.2
     ));
 
     return res.json({
@@ -1495,7 +1521,6 @@ exports.getWorkspaceAnalytics = async (req, res) => {
       summary: {
         memberCount: countActiveMembers(workspace.members),
         channelCount,
-        messageCount,
         taskCount,
         noteCount,
         activityScore

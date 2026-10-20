@@ -36,11 +36,19 @@ async function getScheduledMeetings(req, res) {
       return sendAccessError(res, err);
     }
 
-    const query = { workspaceId, startTime: { $gte: new Date() }, status: { $in: ['scheduled', 'live'] } };
-    const meetings = await ScheduledMeeting.find(query)
-      .sort({ startTime: 1 })
-      .limit(Math.min(Math.max(Number(limit) || 10, 1), 100))
-      .lean();
+    // Upcoming, in progress (started but not over yet) and live meetings.
+    const now = Date.now();
+    const query = {
+      workspaceId,
+      $or: [
+        { status: 'live' },
+        { status: 'scheduled', startTime: { $gte: new Date(now - 8 * 3600e3) } },
+      ],
+    };
+    const cap = Math.min(Math.max(Number(limit) || 10, 1), 100);
+    const meetings = (await ScheduledMeeting.find(query).sort({ startTime: 1 }).limit(cap + 20).lean())
+      .filter(m => m.status === 'live' || new Date(m.startTime).getTime() + (m.duration || 30) * 60e3 > now)
+      .slice(0, cap);
 
     await hydrate(meetings, { createdBy: CREATOR });
 
@@ -75,6 +83,25 @@ async function createScheduledMeeting(req, res) {
     // Only active members of this workspace can be invited.
     const participantIds = [...new Set((participants || []).map(String))].filter(id => isValidId(id) && memberSet.has(id));
 
+    // A meeting placed in a conversation: the organiser must be in it, and its people are invited.
+    let conversationMembers = null;
+    if (channelId || dmSessionId) {
+      const { checkConversationAccess } = require('../../modules/threads/threadAccess');
+      const conv = await checkConversationAccess(channelId ? { channel: channelId } : { dm: dmSessionId }, req.user.sub);
+      if (!conv.ok) return res.status(403).json({ message: 'You are not in that conversation' });
+      if (channelId) {
+        const Channel = require('../channels/channel.model');
+        const ch = await Channel.findById(channelId).select('members workspace').lean();
+        if (!ch || String(ch.workspace) !== String(workspaceId)) return res.status(400).json({ message: 'That channel is in another workspace' });
+        conversationMembers = (ch.members || []).map(m => String(m?.user?._id || m?.user || m));
+      } else {
+        const DMSession = require('../../../models/DMSession');
+        const dm = await DMSession.findById(dmSessionId).select('participants workspace').lean();
+        if (!dm || (dm.workspace && String(dm.workspace) !== String(workspaceId))) return res.status(400).json({ message: 'That conversation is in another workspace' });
+        conversationMembers = (dm.participants || []).map(String);
+      }
+    }
+
     const meeting = await ScheduledMeeting.create({
       companyId: ws.company || null,
       workspaceId,
@@ -94,12 +121,17 @@ async function createScheduledMeeting(req, res) {
     req.io.to(`workspace:${workspaceId}`).emit('schedule:created', { meeting: populated });
 
     try {
+      // Invites go to the people picked; otherwise to the conversation's people; otherwise the workspace.
+      const invited = participantIds.length ? participantIds
+        : conversationMembers ? conversationMembers.filter(id => memberSet.has(id))
+          : memberIds;
       const notifService = require('../../modules/notifications/notificationService');
       await notifService.scheduleCreated(req.io, {
-        recipientIds: memberIds.filter(id => id !== String(req.user.sub)),
+        recipientIds: invited.filter(id => id !== String(req.user.sub)),
         workspaceId,
         title: meeting.title,
         scheduledMeetingId: meeting._id,
+        startTime: meeting.startTime,
       });
     } catch (notifErr) {
       logger.error('Notification error on schedule create:', notifErr.message);

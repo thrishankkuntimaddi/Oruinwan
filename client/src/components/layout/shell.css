@@ -6,6 +6,9 @@
  */
 
 /* ── Layout root + column that holds the side panel ─────────────────────── */
+/* The chrome (top bar + icon rail) is liquid glass over a warm ambient light;
+   the side panel and the main area are solid monolith slabs. */
+.gl-shell { background: var(--gl-shell-bg) !important; }
 .gl-shell-panel-col {
     width: var(--ws-panel-w);
     flex-shrink: 0;
@@ -39,8 +42,10 @@
     padding: 0 8px;
     position: relative;
     z-index: 60;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--lg-border);
 }
+.gl-shell-topbar.gl-glass-bar { box-shadow: var(--lg-edge), 0 1px 0 rgba(0, 0, 0, 0.12); }
+html.light .gl-shell-topbar.gl-glass-bar { box-shadow: var(--lg-edge), 0 1px 3px rgba(60, 44, 20, 0.05); }
 .gl-shell-topbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; position: relative; }
 .gl-shell-topbar .gl-icon-btn { width: 30px; height: 30px; position: relative; }
 .gl-shell-back {
@@ -81,18 +86,28 @@
     pointer-events: none;
 }
 
-/* ── Popovers (notifications, workspace menus) ──────────────────────────── */
-.gl-shell-popover {
+/* ── Popovers (notifications, workspace menus) — liquid glass ──────────── */
+.gl-shell-popover,
+.gl-card.gl-shell-popover {
     position: absolute;
     z-index: 100;
     overflow: hidden;
     font-family: var(--font);
-    background-color: var(--bg-surface);
-    box-shadow: var(--gl-spec-strong), var(--gl-drop), 0 0 0 1px rgba(0, 0, 0, 0.04);
-    animation: gl-shell-pop 160ms var(--gl-ease);
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-radius: var(--gl-radius-md);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+    transform-origin: top right;
+    animation: gl-shell-pop var(--gl-dur-3) var(--gl-ease);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gl-shell-popover, .gl-card.gl-shell-popover { background-color: var(--lg-solid); }
 }
 @keyframes gl-shell-pop {
-    from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
     to   { opacity: 1; transform: none; }
 }
 .gl-shell-popover-head {
@@ -101,8 +116,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 12px;
-    border-bottom: 1px solid var(--border-subtle);
-    background-image: var(--gl-glass);
+    border-bottom: 1px solid var(--lg-border);
 }
 .gl-shell-popover-title { font-size: 12.5px; font-weight: 650; color: var(--text-primary); letter-spacing: -0.01em; }
 .gl-shell-popover-foot {
@@ -112,13 +126,13 @@
     gap: 8px;
     min-height: 34px;
     padding: 6px 12px;
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid var(--lg-border);
     box-sizing: border-box;
 }
 .gl-shell-scrim { position: fixed; inset: 0; z-index: 90; }
 
 .gl-shell-menu { padding: 4px; }
-.gl-shell-menu + .gl-shell-menu { border-top: 1px solid var(--border-subtle); }
+.gl-shell-menu + .gl-shell-menu { border-top: 1px solid var(--lg-border); }
 .gl-shell-menu-label {
     padding: 6px 8px 4px;
     font-size: 9.5px;
@@ -141,9 +155,9 @@
     color: var(--text-secondary);
     background: none;
     border: 1px solid transparent;
-    border-radius: var(--gl-radius);
+    border-radius: calc(var(--gl-radius-md) - 3px);
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease;
+    transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease;
 }
 .gl-shell-menu-item > svg { flex-shrink: 0; color: var(--text-secondary); opacity: 0.8; }
 .gl-shell-menu-item:hover:not(:disabled),
@@ -178,11 +192,12 @@
     position: relative;
     z-index: 50;
     font-family: var(--font);
-    background: var(--bg-base);
-    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.015) 100%);
-    border-right: 1px solid var(--border-subtle);
+    background-color: var(--lg-chrome);
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border-right: 1px solid var(--lg-border);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.025);
 }
-html.light .gl-shell-rail { background-image: linear-gradient(90deg, transparent 0%, rgba(20, 16, 10, 0.02) 100%); }
+html.light .gl-shell-rail { background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%); box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.7); }
 .gl-shell-rail-nav {
     flex: 1;
     display: flex;
@@ -214,16 +229,19 @@ html.light .gl-shell-rail { background-image: linear-gradient(90deg, transparent
     border: 1px solid transparent;
     border-radius: var(--gl-radius);
     cursor: pointer;
-    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease, border-color var(--gl-dur-1) ease, transform var(--gl-dur-2) var(--gl-ease);
 }
 .gl-shell-rail-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
-.gl-shell-rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-shell-rail-btn:active { transform: scale(0.93); transition-duration: 80ms; }
+.gl-shell-rail-btn:focus-visible { outline: 2px solid var(--gl-focus); outline-offset: 1px; }
 .gl-shell-rail-btn.is-active {
     color: var(--accent);
     background: var(--gl-accent-soft);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%);
     border-color: var(--gl-accent-line);
-    box-shadow: var(--gl-spec);
+    box-shadow: var(--gl-spec-strong), 0 4px 14px -8px var(--gl-accent-line);
 }
+html.light .gl-shell-rail-btn.is-active { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 70%); }
 .gl-shell-rail-btn.is-active::before {
     content: '';
     position: absolute;
@@ -249,15 +267,17 @@ html.light .gl-shell-rail { background-image: linear-gradient(90deg, transparent
     font-weight: 600;
     white-space: nowrap;
     color: var(--text-primary);
-    background-color: var(--bg-surface);
-    background-image: var(--gl-glass-strong);
-    border: 1px solid var(--border-default);
-    border-radius: var(--gl-radius);
-    box-shadow: var(--gl-spec), var(--gl-drop);
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-radius: var(--gl-radius-md);
+    box-shadow: var(--lg-edge), var(--lg-shadow-sm);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
     pointer-events: none;
     z-index: 120;
     opacity: 0;
-    transition: opacity 120ms ease, transform 160ms var(--gl-ease);
+    transition: opacity var(--gl-dur-1) ease, transform var(--gl-dur-2) var(--gl-ease);
 }
 .gl-shell-tip-host:hover > .gl-shell-tip,
 .gl-shell-tip-host:focus-within > .gl-shell-tip { opacity: 1; transform: translate(0, -50%); }
@@ -527,11 +547,26 @@ html.light .gl-shell-rail { background-image: linear-gradient(90deg, transparent
     align-items: center;
     justify-content: center;
     padding: 16px;
-    background: var(--bg-overlay, rgba(0, 0, 0, 0.65));
-    backdrop-filter: blur(4px);
+    background: var(--lg-scrim);
+    -webkit-backdrop-filter: var(--lg-scrim-filter);
+    backdrop-filter: var(--lg-scrim-filter);
     font-family: var(--font);
+    animation: gl-fade-in var(--gl-dur-2) ease;
 }
-.gl-shell-modal { width: 100%; max-width: 360px; overflow: hidden; box-shadow: var(--gl-spec-strong), var(--gl-drop); }
+.gl-shell-modal,
+.gl-card.gl-shell-modal {
+    width: 100%;
+    max-width: 360px;
+    overflow: hidden;
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-radius: var(--gl-radius-lg);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+    animation: gl-dialog-in var(--gl-dur-3) var(--gl-ease);
+}
 .gl-shell-field-label {
     display: block;
     margin-bottom: 5px;
@@ -682,6 +717,38 @@ html:not(.light) input[type='date'].gl-input { color-scheme: dark; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gl-shell-popover { animation: none; }
+    .gl-shell-popover, .gl-shell-modal, .gl-shell-modal-scrim { animation: none; }
+    .gl-shell-rail-btn:active { transform: none; }
     .gl-shell-live::before, .gl-shell-skel > i { animation: none; }
+}
+
+/* ── Split view header (features/split/SplitPane.jsx) — glass chrome ────── */
+.gl-shell-split-head {
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 6px 0 12px;
+    background-color: var(--lg-chrome);
+    background-image: var(--lg-sheen);
+    border-bottom: 1px solid var(--lg-border);
+    box-shadow: var(--lg-edge);
+}
+
+/* ── Phone-width bottom tab bar (MobileBottomNav.jsx) — liquid glass ────── */
+.gl-shell-tabbar {
+    background-color: var(--lg-chrome);
+    background-image: linear-gradient(0deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-top: 1px solid var(--lg-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 -8px 24px -12px rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+}
+html.light .gl-shell-tabbar {
+    background-image: linear-gradient(0deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.7) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -6px 20px -12px rgba(60, 44, 20, 0.2);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .gl-shell-tabbar { background-color: var(--lg-solid); }
 }

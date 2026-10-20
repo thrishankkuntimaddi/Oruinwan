@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import ContentEditable from 'react-contenteditable';
+import { Avatar, Btn, Dialog, Field } from '../../../../components/ui/page';
+import '../../messagingUi.css';
 import { Bold, Italic, Underline, Strikethrough, Heading1, Heading2, Heading3, Type, List, ListOrdered, Link, Code, Quote, Minus, AlignLeft, AlignCenter, AlignRight, Undo, Redo, WifiOff, Maximize2, Minimize2, Check, Loader2, Users } from 'lucide-react';
 
 function countWords(html) {
@@ -19,78 +21,41 @@ function timeAgo(date) {
 
 const EMOJIS = ['📄', '📝', '✍️', '📊', '🗒️', '💡', '🎨', '📐', '🔖', '⚡', '🚀', '🎯', '📌', '💬', '🔥', '✅', '📅', '🧩', '💎', '🌟', '📋', '🖊️', '🗂️', '🏷️', '💼', '🎪', '🌈', '⭐', '🔑', '🎁'];
 
+// Stored on the canvas (user-chosen data). The first one is the theme's gold, also the default.
+const DEFAULT_COVER = '#b8956a';
 const COVER_COLORS = [
-    { label: 'Indigo', value: '#6366F1' },
+    { label: 'Gold', value: DEFAULT_COVER },
     { label: 'Violet', value: '#8B5CF6' },
     { label: 'Pink', value: '#EC4899' },
-    { label: 'Rose', value: '#EF4444' },
+    { label: 'Red', value: '#EF4444' },
     { label: 'Amber', value: '#F59E0B' },
-    { label: 'Emerald', value: '#10B981' },
+    { label: 'Green', value: '#10B981' },
     { label: 'Cyan', value: '#06B6D4' },
     { label: 'Blue', value: '#3B82F6' },
     { label: 'Lime', value: '#84CC16' },
     { label: 'Orange', value: '#F97316' },
 ];
 
-function Avatar({ name = '?', src, size = 32, ring, status }) {
-    const initials = (name || '?').slice(0, 2).toUpperCase();
-    const hue = (name.charCodeAt(0) || 0) * 47 % 360;
-    return (
-        <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-            {src ? (
-                <img src={src} alt={name} className="rounded-full w-full h-full object-cover"
-                    style={ring ? { outline: `2px solid ${ring}`, outlineOffset: 1 } : {}} />
-            ) : (
-                <div className="rounded-full w-full h-full flex items-center justify-center text-white font-bold select-none"
-                    style={{
-                        fontSize: size * 0.38,
-                        background: `hsl(${hue},65%,52%)`,
-                        outline: ring ? `2px solid ${ring}` : 'none',
-                        outlineOffset: 1
-                    }}>
-                    {initials}
-                </div>
-            )}
-            {status && (
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white"
-                    style={{ background: status === 'editing' ? '#6366F1' : status === 'viewing' ? '#10B981' : '#9CA3AF' }} />
-            )}
-        </div>
-    );
+function useOutsideClose(onClose) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+    return ref;
 }
 
 function EmojiPicker({ onSelect, onClose }) {
-    const ref = useRef(null);
-    useEffect(() => {
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [onClose]);
+    const ref = useOutsideClose(onClose);
     return (
-        <div ref={ref}
-            style={{
-                position: 'absolute', top: 'calc(100% + 8px)', left: 0,
-                width: '240px', backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)', borderRadius: '2px',
-                zIndex: 50, padding: '12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            }}>
-            <p style={{
-                fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-                textTransform: 'uppercase', letterSpacing: '0.14em',
-                marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-            }}>Choose icon</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '4px' }}>
+        <div ref={ref} className="mx-pop cv-pop" role="dialog" aria-label="Choose an icon">
+            <span className="mx-label">Icon</span>
+            <div className="cv-emoji-grid">
                 {EMOJIS.map(e => (
-                    <button key={e} onClick={() => { onSelect(e); onClose(); }}
-                        style={{
-                            width: 32, height: 32, display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', fontSize: '16px',
-                            borderRadius: '2px', background: 'none', border: 'none',
-                            cursor: 'pointer', transition: 'background-color 150ms ease',
-                        }}
-                        onMouseEnter={e2 => e2.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                        onMouseLeave={e2 => e2.currentTarget.style.backgroundColor = 'transparent'}>
+                    <button key={e} type="button" onClick={() => { onSelect(e); onClose(); }} aria-label={`Use ${e}`}>
                         {e}
                     </button>
                 ))}
@@ -100,38 +65,22 @@ function EmojiPicker({ onSelect, onClose }) {
 }
 
 function CoverPicker({ current, onSelect, onClose }) {
-    const ref = useRef(null);
-    useEffect(() => {
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [onClose]);
+    const ref = useOutsideClose(onClose);
     return (
-        <div ref={ref}
-            style={{
-                position: 'absolute', top: 'calc(100% + 8px)', left: 0,
-                width: '200px', backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)', borderRadius: '2px',
-                zIndex: 50, padding: '12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            }}>
-            <p style={{
-                fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-                textTransform: 'uppercase', letterSpacing: '0.14em',
-                marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-            }}>Cover color</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+        <div ref={ref} className="mx-pop cv-pop" role="dialog" aria-label="Choose a cover colour" style={{ width: 196 }}>
+            <span className="mx-label">Cover colour</span>
+            <div className="cv-swatches">
                 {COVER_COLORS.map(c => (
-                    <button key={c.value} onClick={() => { onSelect(c.value); onClose(); }}
-                        style={{
-                            width: 28, height: 28, borderRadius: '2px',
-                            background: c.value, border: 'none', cursor: 'pointer',
-                            outline: current === c.value ? `2px solid ${c.value}` : '2px solid transparent',
-                            outlineOffset: 2, transition: 'transform 150ms ease',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                        title={c.label} />
+                    <button
+                        key={c.value}
+                        type="button"
+                        className="cv-swatch"
+                        style={{ background: c.value }}
+                        aria-pressed={current === c.value}
+                        aria-label={c.label}
+                        title={c.label}
+                        onClick={() => { onSelect(c.value); onClose(); }}
+                    />
                 ))}
             </div>
         </div>
@@ -139,24 +88,16 @@ function CoverPicker({ current, onSelect, onClose }) {
 }
 
 function TBtn({ icon: Icon, onClick, title, active }) {
-    const [hovered, setHovered] = React.useState(false);
     return (
-        <button onClick={onClick} title={title}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            style={{
-                padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                color: active ? 'var(--accent)' : (hovered ? 'var(--text-primary)' : 'var(--text-muted)'),
-                backgroundColor: active ? 'rgba(184,149,106,0.1)' : 'transparent',
-                transition: 'color 150ms ease, background-color 150ms ease',
-            }}>
+        <button type="button" className="cv-tbtn" onClick={onClick} title={title} aria-label={title} aria-pressed={active ? 'true' : undefined}
+            // Keep the selection in the editor while formatting.
+            onMouseDown={(e) => e.preventDefault()}>
             <Icon size={14} strokeWidth={2} />
         </button>
     );
 }
 
-function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId, coverColor, lastEditedUser, lastEdited }) {
+function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId, lastEditedUser, lastEdited }) {
     const members = useMemo(() => {
         if (!channelMembers?.length) return [];
         return channelMembers.map(m => {
@@ -168,170 +109,69 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
         });
     }, [channelMembers]);
 
-    const viewerIds = new Set(viewers.map(v => v.userId));
+    // You are looking at it, even before the server's viewer list arrives.
+    const viewerIds = new Set([...viewers.map(v => v.userId), currentUserId].filter(Boolean).map(String));
+    const viewingNow = members.filter(m => viewerIds.has(String(m.userId)));
+    const onlineRest = members.filter(m => !viewerIds.has(String(m.userId)) && onlineUserIds.has(m.userId));
+    const offlineRest = members.filter(m => !viewerIds.has(String(m.userId)) && !onlineUserIds.has(m.userId));
 
-    
-    const sorted = [...members].sort((a, b) => {
-        const aViewing = viewerIds.has(a.userId);
-        const bViewing = viewerIds.has(b.userId);
-        const aOnline = onlineUserIds.has(a.userId);
-        const bOnline = onlineUserIds.has(b.userId);
-        if (aViewing !== bViewing) return aViewing ? -1 : 1;
-        if (aOnline !== bOnline) return aOnline ? -1 : 1;
-        return 0;
-    });
-
-    const viewingNow = sorted.filter(m => viewerIds.has(m.userId));
-    const onlineRest = sorted.filter(m => !viewerIds.has(m.userId) && onlineUserIds.has(m.userId));
-    const offlineRest = sorted.filter(m => !viewerIds.has(m.userId) && !onlineUserIds.has(m.userId));
+    const group = (label, list, status, tone) => list.length > 0 && (
+        <div className="cv-side-group">
+            <span className="mx-label" data-tone={tone}>{label} · {list.length}</span>
+            {list.map(m => <MemberRow key={m.userId} member={m} status={status} isSelf={String(m.userId) === String(currentUserId)} />)}
+        </div>
+    );
 
     return (
-        <div style={{
-            display: 'flex', flexDirection: 'column', height: '100%',
-            backgroundColor: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)',
-            width: '200px', flexShrink: 0, overflowY: 'auto',
-        }}>
-            {}
-            <div style={{ padding: '16px 12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                    <Users size={12} style={{ color: 'var(--text-muted)' }} />
-                    <span style={{
-                        fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-                        textTransform: 'uppercase', letterSpacing: '0.14em',
-                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>Members</span>
-                </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-                    {members.length} in channel
-                </p>
+        <aside className="cv-side" aria-label="People in this channel">
+            <div className="cv-side-head">
+                <span className="mx-label"><Users size={12} aria-hidden="true" /> People</span>
+                <p>{members.length} in this channel</p>
             </div>
-
-            {}
-            {viewingNow.length > 0 && (
-                <div style={{ padding: '12px 12px 4px' }}>
-                    <p style={{
-                        fontSize: '9px', fontWeight: 700, color: 'var(--accent)',
-                        textTransform: 'uppercase', letterSpacing: '0.14em',
-                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>Viewing · {viewingNow.length}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        {viewingNow.map(m => (
-                            <MemberRow key={m.userId} member={m} status="viewing"
-                                isSelf={m.userId === currentUserId} accent={coverColor} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {}
-            {onlineRest.length > 0 && (
-                <div style={{ padding: '12px 12px 4px' }}>
-                    <p style={{
-                        fontSize: '9px', fontWeight: 700, color: 'var(--state-success)',
-                        textTransform: 'uppercase', letterSpacing: '0.14em',
-                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>Online · {onlineRest.length}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        {onlineRest.map(m => (
-                            <MemberRow key={m.userId} member={m} status="online"
-                                isSelf={m.userId === currentUserId} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {}
-            {offlineRest.length > 0 && (
-                <div style={{ padding: '12px 12px 12px' }}>
-                    <p style={{
-                        fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-                        textTransform: 'uppercase', letterSpacing: '0.14em',
-                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>Offline · {offlineRest.length}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        {offlineRest.map(m => (
-                            <MemberRow key={m.userId} member={m} status="offline"
-                                isSelf={m.userId === currentUserId} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {}
+            {group('Viewing', viewingNow, 'viewing', 'accent')}
+            {group('Online', onlineRest, 'online', 'success')}
+            {group('Offline', offlineRest, 'offline')}
             {lastEditedUser && (
-                <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', padding: '12px' }}>
-                    <p style={{
-                        fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400,
-                        marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>Last edited</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Avatar name={lastEditedUser.username || '?'} src={lastEditedUser.profilePicture} size={22} />
-                        <div>
-                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{lastEditedUser.username}</p>
-                            {lastEdited && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{timeAgo(lastEdited)}</p>}
+                <div className="cv-side-foot">
+                    <span className="mx-label">Last edited</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Avatar name={lastEditedUser.username || '?'} src={lastEditedUser.profilePicture} size="sm" />
+                        <div style={{ minWidth: 0 }}>
+                            <p className="cv-member-name">{lastEditedUser.username}</p>
+                            {lastEdited && <p className="cv-member-state">{timeAgo(lastEdited)}</p>}
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </aside>
     );
 }
 
-function MemberRow({ member, status, isSelf, accent }) {
-    const dotColor = status === 'viewing' ? (accent || 'var(--accent)')
-        : status === 'online' ? 'var(--state-success)'
-            : 'var(--bg-hover)';
+const STATUS_LABEL = { viewing: 'Viewing now', online: 'Online', offline: 'Offline' };
 
+function MemberRow({ member, status, isSelf }) {
     return (
-        <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '6px 8px', borderRadius: '2px',
-            backgroundColor: status === 'viewing' ? 'rgba(184,149,106,0.06)' : 'transparent',
-        }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-                <Avatar name={member.username} src={member.profilePic} size={24} />
-                <span style={{
-                    position: 'absolute', bottom: '-1px', right: '-1px',
-                    width: '8px', height: '8px', borderRadius: '50%',
-                    border: '1.5px solid var(--bg-surface)',
-                    backgroundColor: dotColor,
-                }} />
-            </div>
+        <div className="cv-member" data-status={status}>
+            <span className="cv-member-av">
+                <Avatar name={member.username} src={member.profilePic} size="sm" />
+                <span className="cv-member-dot" aria-hidden="true" />
+            </span>
             <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{
-                    fontSize: '12px', fontWeight: 400, color: 'var(--text-primary)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    margin: 0, lineHeight: 1.2,
-                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                }}>
-                    {member.username}{isSelf && <span style={{ color: 'var(--text-muted)' }}> (you)</span>}
-                </p>
-                <p style={{
-                    fontSize: '10px', color: dopColor(status, accent),
-                    margin: '1px 0 0', lineHeight: 1,
-                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                }}>
-                    {status === 'viewing' ? '● Viewing' : status === 'online' ? '● Online' : 'Offline'}
-                </p>
+                <p className="cv-member-name">{member.username}{isSelf && <em> (you)</em>}</p>
+                <p className="cv-member-state">{STATUS_LABEL[status]}</p>
             </div>
         </div>
     );
-}
-
-function dopColor(status, accent) {
-    if (status === 'viewing') return accent || 'var(--accent)';
-    if (status === 'online') return 'var(--state-success)';
-    return 'var(--text-muted)';
 }
 
 export default function CanvasTab({ tab, onSave, connected, socket, channelId, currentUserId, channelMembers = [] }) {
     const [content, setContent] = useState(tab.content || '');
     const [emoji, setEmoji] = useState(tab.emoji || '📄');
-    const [coverColor, setCoverColor] = useState(tab.coverColor || '#6366F1');
+    const [coverColor, setCoverColor] = useState(tab.coverColor || DEFAULT_COVER);
     const [saveStatus, setSaveStatus] = useState('saved');
     const [lastSaved, setLastSaved] = useState(tab.lastEditedAt || null);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [showSidebar, setShowSidebar] = useState(true);
+    const [showSidebar, setShowSidebar] = useState(() => typeof window === 'undefined' || window.innerWidth > 1100);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showCoverPicker, setShowCoverPicker] = useState(false);
 
@@ -341,7 +181,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
 
     const contentRef = useRef(tab.content || '');
     const emojiRef = useRef(tab.emoji || '📄');
-    const coverRef = useRef(tab.coverColor || '#6366F1');
+    const coverRef = useRef(tab.coverColor || DEFAULT_COVER);
     const saveTimeoutRef = useRef(null);
     const editorRef = useRef(null);
     const containerRef = useRef(null);
@@ -418,8 +258,8 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
             contentRef.current = tab.content || '';
             setEmoji(tab.emoji || '📄');
             emojiRef.current = tab.emoji || '📄';
-            setCoverColor(tab.coverColor || '#6366F1');
-            coverRef.current = tab.coverColor || '#6366F1';
+            setCoverColor(tab.coverColor || DEFAULT_COVER);
+            coverRef.current = tab.coverColor || DEFAULT_COVER;
             setLastSaved(tab.lastEditedAt || null);
         }
         isRemoteUpdate.current = false;
@@ -453,7 +293,31 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     const handleCoverChange = (c) => { setCoverColor(c); coverRef.current = c; triggerSave({ coverColor: c }); };
 
     const execFormat = (cmd, value = null) => { document.execCommand(cmd, false, value); editorRef.current?.focus(); };
-    const insertLink = () => { const url = prompt('Enter URL:'); if (url) execFormat('createLink', url); };
+    // Link dialog: remember the selection, since the dialog's input takes focus.
+    const savedRange = useRef(null);
+    const [linkOpen, setLinkOpen] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const insertLink = () => {
+        const sel = window.getSelection();
+        savedRange.current = sel && sel.rangeCount && editorRef.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+        setLinkUrl('');
+        setLinkOpen(true);
+    };
+    const applyLink = () => {
+        let url = linkUrl.trim();
+        if (!url) return;
+        if (!/^(https?:|mailto:)/i.test(url)) url = `https://${url}`;
+        setLinkOpen(false);
+        editorRef.current?.focus();
+        const sel = window.getSelection();
+        if (savedRange.current && sel) { sel.removeAllRanges(); sel.addRange(savedRange.current); }
+        if (!savedRange.current || savedRange.current.collapsed) {
+            const safe = url.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            document.execCommand('insertHTML', false, `<a href="${safe}">${safe}</a>`);
+        } else {
+            document.execCommand('createLink', false, url);
+        }
+    };
 
     useEffect(() => () => {
         if (saveTimeoutRef.current) {
@@ -476,18 +340,18 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
             { icon: Type, cmd: 'formatBlock', value: '<P>', title: 'Paragraph' },
         ],
         [
-            { icon: List, cmd: 'insertUnorderedList', title: 'Bullet List' },
-            { icon: ListOrdered, cmd: 'insertOrderedList', title: 'Numbered List' },
+            { icon: List, cmd: 'insertUnorderedList', title: 'Bulleted list' },
+            { icon: ListOrdered, cmd: 'insertOrderedList', title: 'Numbered list' },
         ],
         [
-            { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align Left' },
-            { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align Center' },
-            { icon: AlignRight, cmd: 'justifyRight', title: 'Align Right' },
+            { icon: AlignLeft, cmd: 'justifyLeft', title: 'Align left' },
+            { icon: AlignCenter, cmd: 'justifyCenter', title: 'Align centre' },
+            { icon: AlignRight, cmd: 'justifyRight', title: 'Align right' },
         ],
         [
-            { icon: Link, action: insertLink, title: 'Insert Link' },
-            { icon: Code, cmd: 'formatBlock', value: '<PRE>', title: 'Code Block' },
-            { icon: Quote, cmd: 'formatBlock', value: '<BLOCKQUOTE>', title: 'Blockquote' },
+            { icon: Link, action: insertLink, title: 'Link' },
+            { icon: Code, cmd: 'formatBlock', value: '<PRE>', title: 'Code block' },
+            { icon: Quote, cmd: 'formatBlock', value: '<BLOCKQUOTE>', title: 'Quote' },
             { icon: Minus, cmd: 'insertHorizontalRule', title: 'Divider' },
         ],
         [
@@ -496,202 +360,143 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         ],
     ];
 
-    const lastEditedUser = tab.lastEditedBy || null;
+    // lastEditedBy can be a bare id; find the person among the channel's members.
+    const lastEditedUser = useMemo(() => {
+        const by = tab.lastEditedBy;
+        if (!by) return null;
+        if (typeof by === 'object' && by.username) return by;
+        const id = String(typeof by === 'object' ? (by._id || by.id) : by);
+        const m = channelMembers.map(x => x.user || x).find(u => String(u?._id || u?.id) === id);
+        return m ? { username: m.username || m.name, profilePicture: m.profilePicture } : null;
+    }, [tab.lastEditedBy, channelMembers]);
 
     return (
-        <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
-
-            {}
-            <div style={{
-                flexShrink: 0, backgroundColor: 'var(--bg-surface)',
-                borderBottom: '1px solid var(--border-default)',
-                padding: '6px 12px', display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', gap: '8px', overflowX: 'auto',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px', flexShrink: 0 }}>
+        <div ref={containerRef} className="cv">
+            <div className="cv-bar">
+                <div className="cv-tools" role="toolbar" aria-label="Formatting">
                     {toolbarGroups.map((group, gi) => (
                         <React.Fragment key={gi}>
-                            {gi > 0 && <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-default)', margin: '0 4px', flexShrink: 0 }} />}
+                            {gi > 0 && <span className="cv-sep" aria-hidden="true" />}
                             {group.map((btn, bi) => (
                                 <TBtn key={bi} icon={btn.icon} title={btn.title}
                                     onClick={() => btn.action ? btn.action() : execFormat(btn.cmd, btn.value)} />
                             ))}
                         </React.Fragment>
                     ))}
-                    <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-default)', margin: '0 4px', flexShrink: 0 }} />
-                    <TBtn icon={isFullScreen ? Minimize2 : Maximize2} onClick={toggleFullScreen} title="Fullscreen" />
                 </div>
 
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <div className="cv-status">
                     {!connected && (
-                        <span style={{
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            fontSize: '11px', color: 'var(--accent)',
-                            padding: '2px 8px', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '2px',
-                        }}>
+                        <span className="cv-pill" data-tone="accent" title="Changes will sync when you are back online">
                             <WifiOff size={11} /> Offline
                         </span>
                     )}
                     {viewers.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <div style={{ display: 'flex' }}>
-                                {viewers.slice(0, 4).map(v => (
-                                    <Avatar key={v.userId} name={v.username} src={v.profilePicture} size={20}
-                                        ring={coverColor} />
-                                ))}
-                            </div>
-                            {viewers.length > 4 && (
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>+{viewers.length - 4}</span>
-                            )}
-                        </div>
+                        <span className="cv-stack" title={viewers.map(v => v.username).join(', ')} data-hide-sm="true">
+                            {viewers.slice(0, 4).map(v => (
+                                <Avatar key={v.userId} name={v.username} src={v.profilePicture} size="sm" />
+                            ))}
+                            {viewers.length > 4 && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>+{viewers.length - 4}</span>}
+                        </span>
                     )}
-                    <span style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        fontSize: '11px', fontWeight: 400, padding: '2px 8px',
-                        color: saveStatus === 'saving' ? 'var(--text-secondary)' : 'var(--state-success)',
-                        border: '1px solid var(--border-subtle)', borderRadius: '2px',
-                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    }}>
+                    <span className="cv-pill" data-tone={saveStatus === 'saving' ? undefined : 'success'} role="status">
                         {saveStatus === 'saving'
-                            ? <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />Saving…</>
+                            ? <><Loader2 size={11} className="mx-spin" />Saving…</>
                             : <><Check size={11} strokeWidth={3} />Saved</>}
                     </span>
-                    <button onClick={() => setShowSidebar(s => !s)}
-                        title={showSidebar ? 'Hide members' : 'Show members'}
-                        style={{
-                            padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            color: showSidebar ? 'var(--accent)' : 'var(--text-muted)',
-                            backgroundColor: showSidebar ? 'rgba(184,149,106,0.1)' : 'transparent',
-                            transition: 'color 150ms ease, background-color 150ms ease',
-                        }}
-                        onMouseEnter={e => { if (!showSidebar) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { if (!showSidebar) e.currentTarget.style.color = 'var(--text-muted)'; }}>
-                        <Users size={14} />
-                    </button>
+                    <TBtn icon={isFullScreen ? Minimize2 : Maximize2} onClick={toggleFullScreen} title={isFullScreen ? 'Exit full screen' : 'Full screen'} />
+                    <TBtn icon={Users} onClick={() => setShowSidebar(s => !s)} title={showSidebar ? 'Hide people' : 'Show people'} active={showSidebar} />
                 </div>
             </div>
 
-            {}
-            <div className="flex flex-1 min-h-0 overflow-hidden">
+            <div className="cv-body">
+                <div className="cv-scroll">
+                    <div className="cv-page">
+                        <div className="cv-cover" style={{ background: `linear-gradient(90deg, ${coverColor}, color-mix(in srgb, ${coverColor} 35%, transparent))` }} />
 
-                {}
-                <div className="flex-1 overflow-y-auto">
-                    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px' }}>
-                        {}
-                        <div style={{
-                            height: '3px', marginBottom: '24px',
-                            background: `linear-gradient(90deg, ${coverColor}, ${coverColor}60)`,
-                            transition: 'background 300ms ease',
-                        }} />
-
-                        {}
-                        <div style={{
-                            backgroundColor: 'var(--bg-surface)',
-                            border: '1px solid var(--border-default)',
-                            borderRadius: '2px', overflow: 'hidden', marginBottom: '32px',
-                        }}>
-
-                            {}
-                            <div style={{ padding: '32px 40px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', position: 'relative' }}>
+                        <article className="cv-doc">
+                            <div className="cv-doc-head">
+                                <div className="cv-doc-tools">
                                     <div style={{ position: 'relative' }}>
-                                        <button onClick={() => { setShowEmojiPicker(s => !s); setShowCoverPicker(false); }}
-                                            style={{
-                                                fontSize: '32px', lineHeight: 1, padding: '6px',
-                                                background: 'none', border: 'none', cursor: 'pointer',
-                                                borderRadius: '2px', transition: 'background-color 150ms ease',
-                                            }}
-                                            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            title="Change icon">
+                                        <button type="button" className="cv-emoji" title="Change icon" aria-label="Change icon"
+                                            onClick={() => { setShowEmojiPicker(s => !s); setShowCoverPicker(false); }}>
                                             {emoji}
                                         </button>
                                         {showEmojiPicker && <EmojiPicker onSelect={handleEmojiChange} onClose={() => setShowEmojiPicker(false)} />}
                                     </div>
                                     <div style={{ position: 'relative' }}>
-                                        <button onClick={() => { setShowCoverPicker(s => !s); setShowEmojiPicker(false); }}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)',
-                                                background: 'none', border: 'none', cursor: 'pointer',
-                                                padding: '4px 8px', borderRadius: '2px',
-                                                transition: 'color 150ms ease, background-color 150ms ease',
-                                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
-                                            <span style={{ width: 10, height: 10, borderRadius: '1px', display: 'inline-block', background: coverColor }} />
-                                            Cover
+                                        <button type="button" className="cv-chipbtn"
+                                            onClick={() => { setShowCoverPicker(s => !s); setShowEmojiPicker(false); }}>
+                                            <span className="cv-dot" style={{ background: coverColor }} aria-hidden="true" />
+                                            Cover colour
                                         </button>
                                         {showCoverPicker && <CoverPicker current={coverColor} onSelect={handleCoverChange} onClose={() => setShowCoverPicker(false)} />}
                                     </div>
                                 </div>
 
-                                <h1 style={{
-                                    fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)',
-                                    letterSpacing: '-0.015em', lineHeight: '1.2', marginBottom: '8px',
-                                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                                }}>{tab.name}</h1>
+                                <h1 className="cv-title">{tab.name}</h1>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    {wordCount > 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{wordCount} words · {readTime} read</span>}
-                                    {lastSaved && <>
-                                        <span style={{ color: 'var(--border-default)' }}>·</span>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Saved {timeAgo(lastSaved)}</span>
-                                    </>}
-                                    {viewers.length > 1 && (
-                                        <><span style={{ color: 'var(--border-default)' }}>·</span>
-                                            <span style={{ fontSize: '12px', color: coverColor, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{viewers.length} viewing</span></>
-                                    )}
+                                <div className="cv-meta">
+                                    <span>{wordCount > 0 ? `${wordCount} ${wordCount === 1 ? 'word' : 'words'} · ${readTime} read` : 'Empty'}</span>
+                                    {lastSaved && <><i aria-hidden="true">·</i><span>Saved {timeAgo(lastSaved)}</span></>}
+                                    {viewers.length > 1 && <><i aria-hidden="true">·</i><span style={{ color: 'var(--accent)' }}>{viewers.length} people here</span></>}
                                 </div>
                             </div>
 
-                            {}
-                            <div style={{ padding: '32px 40px', minHeight: '500px' }}>
+                            <div className="cv-editor-wrap">
                                 <ContentEditable
                                     innerRef={editorRef}
                                     html={content}
                                     onChange={handleChange}
-                                    className={`
-                                        prose prose-base max-w-none focus:outline-none
-                                        prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-gray-200
-                                        prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-8 first:prose-h1:mt-0
-                                        prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-7
-                                        prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-5
-                                        prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-3
-                                        prose-a:text-amber-500 prose-a:no-underline hover:prose-a:underline
-                                        prose-strong:text-gray-100 prose-strong:font-bold
-                                        prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-amber-400 prose-code:font-mono prose-code:text-sm
-                                        prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded prose-pre:font-mono
-                                        prose-blockquote:border-l-2 prose-blockquote:border-amber-600 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:my-4 prose-blockquote:not-italic prose-blockquote:text-gray-400
-                                        prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
-                                        prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
-                                        prose-li:text-gray-300 prose-li:my-1
-                                        prose-hr:border-gray-700 prose-hr:my-8
-                                        min-h-[400px]
-                                    `}
-                                    data-placeholder="Start writing…"
+                                    className="cv-prose"
+                                    data-placeholder="Start writing… use the toolbar for headings, lists and links."
+                                    aria-label={`${tab.name} canvas`}
+                                    role="textbox"
+                                    aria-multiline="true"
                                 />
                             </div>
-                        </div>
+                        </article>
                     </div>
                 </div>
 
-                {}
                 {showSidebar && (
                     <PresenceSidebar
                         viewers={viewers}
                         onlineUserIds={onlineUserIds}
                         channelMembers={channelMembers}
                         currentUserId={currentUserId}
-                        coverColor={coverColor}
                         lastEditedUser={lastEditedUser}
                         lastEdited={lastSaved}
                     />
                 )}
             </div>
+
+            <Dialog
+                open={linkOpen}
+                title="Add a link"
+                lead="Selected text becomes the link. With nothing selected, the address is inserted."
+                onClose={() => setLinkOpen(false)}
+                size="sm"
+                footer={(
+                    <>
+                        <Btn variant="ghost" onClick={() => setLinkOpen(false)}>Cancel</Btn>
+                        <Btn variant="primary" icon={Link} onClick={applyLink} disabled={!linkUrl.trim()}>Add link</Btn>
+                    </>
+                )}
+            >
+                <Field label="Address" htmlFor="cv-link-url">
+                    <input
+                        id="cv-link-url"
+                        className="gl-input"
+                        type="url"
+                        inputMode="url"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') applyLink(); }}
+                        placeholder="https://"
+                    />
+                </Field>
+            </Dialog>
         </div>
     );
 }

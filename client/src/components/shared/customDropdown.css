@@ -1,0 +1,29 @@
+/* Gloss-styled select with a custom list (tokens only, light + dark). */
+.sdd { position: relative; }
+.sdd-trigger {
+    width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    text-align: left; cursor: pointer; font-family: inherit;
+}
+.sdd-value { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.sdd-value svg { color: var(--text-muted); flex-shrink: 0; }
+.sdd-value[data-empty='true'] { color: var(--text-muted); }
+.sdd-chev { color: var(--text-muted); flex-shrink: 0; transition: transform 150ms ease; }
+.sdd-chev[data-open='true'] { transform: rotate(180deg); }
+.sdd-menu {
+    position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 4px);
+    max-height: 240px; overflow-y: auto; padding: 4px;
+    background: var(--bg-surface); border: 1px solid var(--border-accent); border-radius: var(--gl-radius, 3px);
+    box-shadow: var(--gl-spec), var(--gl-drop);
+    animation: sdd-in 140ms var(--gl-ease, ease);
+}
+@keyframes sdd-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.sdd-option {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 10px; text-align: left; font-size: 13px; font-family: inherit;
+    color: var(--text-primary); background: transparent; border: none; border-radius: 2px; cursor: pointer;
+}
+.sdd-option[data-active='true'] { background: var(--bg-hover); }
+.sdd-option[aria-selected='true'] { color: var(--accent); font-weight: 600; }
+.sdd-option svg { color: var(--accent); flex-shrink: 0; }
+.sdd-field { display: flex; flex-direction: column; gap: 6px; }
+.sdd-field > label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }

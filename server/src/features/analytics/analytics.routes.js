@@ -38,12 +38,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 
         let data;
         switch (type) {
-            case 'team-activity':
-                data = await analyticsService.getTeamActivity(companyId, period);
-                break;
-            case 'communication':
-                data = await analyticsService.getCommunicationPatterns(companyId, period);
-                break;
+            // No 'team-activity': per-person rankings aren't shown to admins.
             case 'productivity':
                 data = await analyticsService.getTaskAnalytics(companyId, period);
                 break;
@@ -55,14 +50,12 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
                 break;
             default:
                 
-                const [teamActivity, commPatterns, productivity, workload, engagement] = await Promise.all([
-                    analyticsService.getTeamActivity(companyId, period),
-                    analyticsService.getCommunicationPatterns(companyId, period),
+                const [productivity, workload, engagement] = await Promise.all([
                     analyticsService.getTaskAnalytics(companyId, period),
                     analyticsService.getWorkloadAnalysis(companyId, period),
                     analyticsService.getEngagementTrends(companyId, period)
                 ]);
-                data = { teamActivity, commPatterns, productivity, workload, engagement };
+                data = { productivity, workload, engagement };
         }
 
         res.json(data);
@@ -71,23 +64,11 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-router.get('/insights/team', requireAuth, requireAdmin, async (req, res) => {
-    try {
-        const companyId = await resolveCompanyId(req);
-        if (!companyId) return res.status(400).json({ message: 'No company' });
-        const period = Math.min(parseInt(req.query.period) || 30, 365);
-        res.json(await analyticsService.getTeamActivity(companyId, period));
-    } catch (err) { res.status(500).json({ message: err.message }); }
-});
+// No per-person activity rankings for admins (privacy: see docs → What admins can see).
+router.get('/insights/team', requireAuth, requireAdmin, (req, res) => res.status(410).json({ message: 'Per-person activity is not available to admins.' }));
 
-router.get('/insights/communication', requireAuth, requireAdmin, async (req, res) => {
-    try {
-        const companyId = await resolveCompanyId(req);
-        if (!companyId) return res.status(400).json({ message: 'No company' });
-        const period = Math.min(parseInt(req.query.period) || 30, 365);
-        res.json(await analyticsService.getCommunicationPatterns(companyId, period));
-    } catch (err) { res.status(500).json({ message: err.message }); }
-});
+// No /insights/communication: when and where people message is not shown to admins
+// (messages are end-to-end encrypted and private to their participants).
 
 router.get('/insights/productivity', requireAuth, requireAdmin, async (req, res) => {
     try {

@@ -201,7 +201,7 @@ const Settings = () => {
                 </nav>
 
                 <div className="stg-account">
-                    <UserAvatarImage userId={user?._id} name={user?.username} src={user?.profilePicture} size={30} initialStyle={{ background: 'var(--accent)', color: '#0c0c0c' }} />
+                    <UserAvatarImage userId={user?._id} name={user?.username} src={user?.profilePicture} size={30} initialStyle={{ background: 'var(--accent)', color: 'var(--bg-base)' }} />
                     <div className="stg-account-text">
                         <div className="stg-account-name">{user?.username}</div>
                         <div className="stg-account-mail">{user?.email}</div>

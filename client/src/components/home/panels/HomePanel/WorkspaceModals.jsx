@@ -3,7 +3,7 @@ import InvitePeopleModal from "../../../InvitePeopleModal";
 import { X } from 'lucide-react';
 
 const modalOverlay = {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+    position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
     zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: 'var(--font)',
 };

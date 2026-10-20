@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import api from '@services/api';
+import { Check, ListChecks } from 'lucide-react';
 import { useSocket } from '../../contexts/SocketContext';
+import './messagingUi.css';
 
-const API = import.meta.env.VITE_API_URL || '';
 
 export default function ChecklistMessage({ messageId, checklist: initialChecklist = [], disabled = false }) {
   const [items, setItems] = useState(initialChecklist);
@@ -48,60 +49,58 @@ export default function ChecklistMessage({ messageId, checklist: initialChecklis
   const doneCount = items.filter(i => i.checked).length;
   const progress  = items.length > 0 ? (doneCount / items.length) * 100 : 0;
 
+  const allDone = items.length > 0 && doneCount === items.length;
+
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 200, maxWidth: 360 }}>
-      {}
+    <div className="mx-check">
+      <div className="mx-check-head">
+        <ListChecks size={14} aria-hidden="true" />
+        <span className="mx-badge" data-tone={allDone ? 'success' : undefined}>{allDone ? 'Done' : 'Checklist'}</span>
+        {items.length > 0 && (
+          <span className="mx-check-count" data-done={allDone ? 'true' : undefined}>
+            {doneCount} of {items.length} done
+          </span>
+        )}
+      </div>
+
       {items.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: '#a0a5b0' }}>Checklist</span>
-            <span style={{ fontSize: 11, color: doneCount === items.length ? '#43b581' : '#a0a5b0' }}>
-              {doneCount}/{items.length}
-            </span>
-          </div>
-          <div style={{ height: 4, background: '#3a3d42', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${progress}%`, borderRadius: 2,
-              background: progress === 100 ? '#43b581' : '#5865f2',
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
+        <div
+          className="mx-check-bar"
+          data-done={allDone ? 'true' : undefined}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={items.length}
+          aria-valuenow={doneCount}
+          aria-label="Checklist progress"
+        >
+          <span style={{ width: `${progress}%` }} />
         </div>
       )}
 
-      {}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {items.map((item, idx) => (
-          <label
-            key={item._id || idx}
-            style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8, cursor: disabled ? 'default' : 'pointer',
-              padding: '4px 0', opacity: loading === idx ? 0.6 : 1,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={item.checked}
-              onChange={() => toggle(idx)}
-              disabled={disabled || loading === idx}
-              style={{ marginTop: 2, accentColor: '#5865f2', cursor: disabled ? 'default' : 'pointer' }}
-            />
-            <span style={{
-              fontSize: 13, color: item.checked ? '#6b7280' : '#d1d5db',
-              textDecoration: item.checked ? 'line-through' : 'none',
-              lineHeight: 1.4, flex: 1, wordBreak: 'break-word',
-              transition: 'color 0.2s, text-decoration 0.2s',
-            }}>
-              {item.text}
-            </span>
-          </label>
-        ))}
-      </div>
-
-      {items.length === 0 && (
-        <span style={{ fontSize: 13, color: '#6b7280', fontStyle: 'italic' }}>
-          Empty checklist
-        </span>
+      {items.length > 0 ? (
+        <div className="mx-check-list">
+          {items.map((item, idx) => (
+            <label
+              key={item._id || idx}
+              className="mx-check-item"
+              data-disabled={disabled ? 'true' : undefined}
+              data-busy={loading === idx ? 'true' : undefined}
+            >
+              <input
+                type="checkbox"
+                checked={!!item.checked}
+                onChange={() => toggle(idx)}
+                disabled={disabled || loading === idx}
+              />
+              <span className="mx-check-box" aria-hidden="true">
+                {item.checked && <Check size={11} strokeWidth={3} />}
+              </span>
+              <span className="mx-check-text">{item.text}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="mx-check-empty">This checklist has no items.</p>
       )}
     </div>
   );

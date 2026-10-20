@@ -2,7 +2,7 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown, Bookmark, Copy, CornerDownRight, Ellipsis, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip, SmilePlus,
+  ArrowDown, Bookmark, Camera, Copy, CornerDownRight, Ellipsis, ImageIcon, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip,
 } from 'lucide-react';
 import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
@@ -15,6 +15,8 @@ import { cx } from '../../ui/cx.js';
 import { tap } from '../../native/index.js';
 import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
+import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
+import { Attachments } from '../media/Attachments.jsx';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -55,7 +57,19 @@ export function useLongPress(callback, ms = 420) {
   };
 }
 
-function MessageBody({ m }) {
+function MessageBody({ m, onCancelUpload }) {
+  const files = m.state !== 'deleted' ? m.attachments || [] : [];
+  if (files.length) {
+    // Files aren't end-to-end encrypted (as on the web), so they show even before the keys
+    // unlock. A thread reply's caption is the file's name, which the card already shows.
+    const caption = m.state === 'ok' && m.text && m.text !== files[0]?.name ? m.text : '';
+    return (
+      <>
+        {caption && <Markdown text={caption} className="text-text" />}
+        <Attachments files={files} upload={m.upload} onCancel={m.upload && onCancelUpload ? () => onCancelUpload(m.id) : null} />
+      </>
+    );
+  }
   switch (m.state) {
     case 'locked':
       return (
@@ -132,7 +146,7 @@ function ThreadSummary({ m, directory, onOpen }) {
   );
 }
 
-export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, highlight, hideThread }) {
+export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, highlight, hideThread }) {
   const author = m.author || directory[m.authorId] || { name: 'Unknown' };
   const press = useLongPress(() => onLongPress(m));
   if (m.state === 'system') {
@@ -145,7 +159,7 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
         'group relative flex gap-3 px-4 transition-colors select-none hover:bg-surface-2/40',
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
         highlight && 'bg-accent/10',
-        m.pending && 'opacity-60',
+        m.pending && !m.upload && 'opacity-60',
       )}
     >
       <div className="w-9 shrink-0">
@@ -163,14 +177,14 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
             {m.pinned && <Icon as={Pin} size={12} className="shrink-0 text-accent-ink" aria-label="Pinned" />}
           </div>
         )}
-        <MessageBody m={m} />
+        <MessageBody m={m} onCancelUpload={onCancelUpload} />
         {m.edited && <span className="text-[11px] text-text-3">(edited)</span>}
         {m.failed && (
           <button type="button" onClick={() => onRetry(m)} className="mt-1 flex items-center gap-1.5 text-xs font-medium text-danger">
-            <Icon as={TriangleAlert} size={13} /> Not sent. Tap to retry.
+            <Icon as={TriangleAlert} size={13} /> {m.upload && m.error ? `Not sent: ${m.error.replace(/\.$/, '')}. Tap to retry.` : 'Not sent. Tap to retry.'}
           </button>
         )}
-        {m.pending && <span className="text-[11px] text-text-3">Sending…</span>}
+        {m.pending && !m.upload && <span className="text-[11px] text-text-3">Sending…</span>}
         <Reactions m={m} me={me} onReact={onReact} />
         {!hideThread && <ThreadSummary m={m} directory={directory} onOpen={() => onOpenThread(m)} />}
       </div>
@@ -190,10 +204,42 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
 }
 
 /** Day dividers + grouping of consecutive messages by the same author. */
-export function MessageList({ items, directory, me, onReact, onLongPress, onOpenThread, onRetry, header, loading, highlightId }) {
+/** Oruinwan AI answering right now: its words appear as they're written. */
+export function AiLiveReply({ reply }) {
+  return (
+    <div className="flex gap-3 px-4 pt-3" role="status" aria-live="polite" data-testid="ai-live-reply">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent-ink">
+        <Icon as={Sparkles} size={15} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold">
+          {reply.name || 'Oruinwan AI'} <span className="ml-1 text-[12px] font-normal text-text-3">{reply.error ? 'could not answer' : 'is answering…'}</span>
+        </p>
+        {reply.error ? (
+          <p className="text-[15px] text-danger">{reply.error}</p>
+        ) : reply.text ? (
+          <div className="text-[15px] leading-6">
+            <Markdown text={reply.text} />
+          </div>
+        ) : (
+          <p className="flex items-center gap-1 py-1.5 text-[14px] text-text-2" aria-label={reply.status || 'Thinking'}>
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="h-1.5 w-1.5 rounded-full bg-text-2" style={{ animation: `dot-pulse 1.2s ${i * 0.15}s infinite` }} />
+            ))}
+            <span className="ml-1.5">{reply.status}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function MessageList({ items, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, header, footer, loading, highlightId }) {
   const ref = useRef(null);
+  const content = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
-  const count = items.length;
+  const live = Array.isArray(footer) ? footer.length : footer ? 1 : 0;
+  const count = items.length + live;
   const first = useRef(true);
 
   useLayoutEffect(() => {
@@ -205,7 +251,8 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
     }
   }, [count]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep the newest message visible when the keyboard resizes the view.
+  // Keep the newest message visible when the keyboard resizes the view, or when content grows
+  // without new messages (a photo or file that finished sending, a reply streaming in).
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
@@ -213,6 +260,7 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
       if (atBottom) el.scrollTop = el.scrollHeight;
     });
     ro.observe(el);
+    if (content.current) ro.observe(content.current);
     return () => ro.disconnect();
   }, [atBottom]);
 
@@ -226,50 +274,53 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
         }}
         className="h-full overflow-y-auto overscroll-contain pb-3"
       >
-        {header}
-        {loading && (
-          <div className="grid place-items-center py-10 text-text-2">
-            <Spinner />
-          </div>
-        )}
-        {items.map((m, i) => {
-          const prev = items[i - 1];
-          const newDay = !prev || !isSameDay(prev.at, m.at);
-          const grouped =
-            !newDay &&
-            prev &&
-            prev.authorId === m.authorId &&
-            !prev.replyCount &&
-            prev.state !== 'system' &&
-            new Date(m.at) - new Date(prev.at) < GROUP_GAP;
-          return (
-            <Fragment key={m.id}>
-              {newDay && (
-                <div className="pointer-events-none sticky top-1.5 z-[1] flex justify-center py-1.5">
-                  <span className="rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm">{dayLabel(m.at)}</span>
-                </div>
-              )}
-              <MessageItem
-                m={m}
-                grouped={grouped}
-                directory={directory}
-                me={me}
-                onReact={onReact}
-                onLongPress={onLongPress}
-                onOpenThread={onOpenThread}
-                onRetry={onRetry}
-                highlight={m.id === highlightId}
-              />
-            </Fragment>
-          );
-        })}
+        <div ref={content}>
+          {header}
+          {loading && (
+            <div className="grid place-items-center py-10 text-text-2">
+              <Spinner />
+            </div>
+          )}
+          {items.map((m, i) => {
+            const prev = items[i - 1];
+            const newDay = !prev || !isSameDay(prev.at, m.at);
+            const grouped =
+              !newDay &&
+              prev &&
+              prev.authorId === m.authorId &&
+              !prev.replyCount &&
+              prev.state !== 'system' &&
+              new Date(m.at) - new Date(prev.at) < GROUP_GAP;
+            return (
+              <Fragment key={m.id}>
+                {newDay && (
+                  <div className="pointer-events-none sticky top-1.5 z-[1] flex justify-center py-1.5">
+                    <span className="rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm">{dayLabel(m.at)}</span>
+                  </div>
+                )}
+                <MessageItem
+                  m={m}
+                  grouped={grouped}
+                  directory={directory}
+                  me={me}
+                  onReact={onReact}
+                  onLongPress={onLongPress}
+                  onOpenThread={onOpenThread}
+                  onRetry={onRetry}
+                  onCancelUpload={onCancelUpload}
+                  highlight={m.id === highlightId}
+                />
+              </Fragment>
+            );
+          })}
+          {footer}
+        </div>
       </div>
       {!atBottom && (
         <button
           type="button"
           onClick={() => ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: 'smooth' })}
-          className="pressable absolute right-4 bottom-3 flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 text-[13px] font-medium"
-          style={{ boxShadow: 'var(--shadow-pop)' }}
+          className="glass pressable absolute right-4 bottom-3 flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium"
         >
           <Icon as={ArrowDown} size="sm" /> Latest
         </button>
@@ -357,9 +408,29 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
   );
 }
 
-export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, onCancelEdit }) {
+export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, onCancelEdit, aiMentions = false, assistants }) {
   const [text, setText] = useState(initial);
+  const [caret, setCaret] = useState(initial.length);
   const ref = useRef(null);
+  // Where the caret goes after the next render (set when @ai is completed), so typing continues after it.
+  const pendingCaret = useRef(null);
+  useLayoutEffect(() => {
+    if (pendingCaret.current == null || !ref.current) return;
+    ref.current.focus();
+    ref.current.setSelectionRange(pendingCaret.current, pendingCaret.current);
+    pendingCaret.current = null;
+  }, [text]);
+  // "@a…", "@cl…" being typed: offer the assistants it could be (Oruinwan AI, Claude…).
+  const aiAt = aiMentions && !editing ? assistantMentionAt(text, caret, assistants?.length ? assistants : [DEFAULT_ASSISTANT]) : null;
+  const completeAi = (a) => {
+    const tag = `@${a.mention} `;
+    const next = `${text.slice(0, aiAt.start)}${tag}${text.slice(aiAt.end)}`;
+    const pos = aiAt.start + tag.length;
+    pendingCaret.current = pos;
+    setText(next);
+    setCaret(pos);
+    tap('select');
+  };
 
   useEffect(() => {
     setText(initial);
@@ -386,6 +457,7 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
     if (!value) return;
     onSend(value);
     setText('');
+    setCaret(0);
     tap('light');
   };
   // With a physical keyboard, Enter sends and Shift+Enter starts a new line.
@@ -397,7 +469,26 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
   };
 
   return (
-    <div className="shrink-0 border-t border-line-soft bg-bg/95 backdrop-blur-md pb-safe">
+    <div className="glass-header shrink-0 border-t border-line-soft pb-safe">
+      {aiAt &&
+        aiAt.matches.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => completeAi(a)}
+            className="flex w-full items-center gap-3 border-b border-line-soft px-4 py-2.5 text-left active:bg-surface-2"
+            data-testid="ai-mention-suggestion"
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent-ink">
+              <Icon as={Sparkles} size={15} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium">{a.name}</span>
+              <span className="block text-[12px] text-text-2">@{a.mention} · answers here, for everyone in the conversation</span>
+            </span>
+          </button>
+        ))}
       {editing && (
         <div className="flex items-center justify-between px-4 pt-2 text-xs text-accent-ink">
           <span className="flex items-center gap-1.5">
@@ -425,7 +516,11 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
             rows={1}
             value={text}
             autoFocus={autoFocus}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setCaret(e.target.selectionStart ?? e.target.value.length);
+            }}
+            onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             enterKeyHint="enter"
@@ -450,15 +545,43 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
   );
 }
 
-export function ComposerPlusSheet({ open, onClose, onAskAi, onTask }) {
+/**
+ * Hidden file inputs for the composer. They work in the app's WebView on Android and iOS
+ * (the system offers the gallery, the camera and files) and in browsers. `pick(kind)` must be
+ * called straight from a tap, or the system won't open the picker.
+ */
+export function useFilePickers(onFiles) {
+  const media = useRef(null);
+  const camera = useRef(null);
+  const file = useRef(null);
+  const change = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length) onFiles(files);
+  };
+  const inputs = (
+    <>
+      <input ref={media} type="file" accept="image/*,video/*" multiple hidden onChange={change} data-testid="pick-media" />
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={change} data-testid="pick-camera" />
+      <input ref={file} type="file" multiple hidden onChange={change} data-testid="pick-file" />
+    </>
+  );
+  const pick = (kind) => ({ media, camera, file })[kind]?.current?.click();
+  return { inputs, pick };
+}
+
+export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, title = 'Add to message' }) {
+  // A computer has no camera to point: its file picker covers photos.
+  const camera = onPick && !finePointer();
   return (
-    <Sheet open={open} onClose={onClose} title="Add to message">
+    <Sheet open={open} onClose={onClose} title={title}>
       <div className="px-2 pb-3">
         {[
+          onPick && { icon: ImageIcon, label: 'Photo or video', hint: 'Choose from your gallery', run: () => onPick('media') },
+          camera && { icon: Camera, label: 'Take a photo', hint: 'Use the camera', run: () => onPick('camera') },
+          onPick && { icon: Paperclip, label: 'File', hint: 'Documents, PDFs and anything else up to 100 MB', run: () => onPick('file') },
           onAskAi && { icon: Sparkles, label: 'Ask Oruinwan AI', hint: 'Get a summary or a draft for this conversation', run: onAskAi },
           onTask && { icon: ListTodo, label: 'Create a task', hint: 'Track something from this conversation', run: onTask },
-          { icon: Paperclip, label: 'Photo or file', hint: 'Coming in a later update. Use the web app for now.', disabled: true },
-          { icon: SmilePlus, label: 'Poll', hint: 'Coming in a later update', disabled: true },
         ]
           .filter(Boolean)
           .map((a) => (
@@ -467,8 +590,9 @@ export function ComposerPlusSheet({ open, onClose, onAskAi, onTask }) {
               type="button"
               disabled={a.disabled}
               onClick={() => {
-                onClose();
+                // Run first: a file picker only opens from the tap itself.
                 a.run?.();
+                onClose();
               }}
               className="flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left active:bg-surface-2 disabled:opacity-45"
             >

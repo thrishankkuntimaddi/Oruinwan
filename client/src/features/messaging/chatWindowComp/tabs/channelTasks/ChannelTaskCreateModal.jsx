@@ -48,16 +48,16 @@ export default function ChannelTaskCreateModal({ channelName, members, defaultSt
     return (
         <div role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }} style={{
             position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'var(--bg-overlay, rgba(0,0,0,0.6))',
+            backgroundColor: 'var(--bg-overlay)',
         }}>
             <form role="dialog" aria-label="Create issue" onSubmit={submit} style={{
                 width: 480, maxWidth: 'calc(100vw - 32px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.35)', fontFamily: FONT, overflow: 'hidden',
+                boxShadow: 'var(--lg-shadow-sm)', fontFamily: FONT, overflow: 'hidden',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--bg-active)' }}>
                     <h3 style={{ margin: 0, flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                        Create issue{channelName ? <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> in #{channelName}</span> : null}
+                        Create issue{channelName ? <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> in #{String(channelName).replace(/^#/, '')}</span> : null}
                     </h3>
                     <IconButton title="Close" onClick={onClose}><X size={15} /></IconButton>
                 </div>

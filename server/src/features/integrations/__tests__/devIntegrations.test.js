@@ -18,6 +18,8 @@ jest.mock('../../../shared/middleware/auth', () => (req, res, next) => { req.use
 jest.mock('../../../shared/featureFlags', () => ({ requireFlag: () => (req, res, next) => next() }));
 jest.mock('../../ai/ai.access', () => ({ requireAIAccess: () => (req, res, next) => next() }));
 jest.mock('../webhook.trigger', () => ({ fire: jest.fn(), sendTest: jest.fn() }));
+// Nobody here has connected their own GitHub/Jira: the workspace connection is used (personal ones: connections.test.js).
+jest.mock('../../connections/connections.service', () => ({ personalFor: jest.fn(async () => null) }));
 jest.mock('../../ai/ai.provider.resolver', () => ({ resolveForWorkspace: jest.fn(async () => ({ enabled: true, provider: null, providerName: 'mock', model: null })) }));
 jest.mock('../../../../../ai/api/ai.gateway', () => ({ chat: jest.fn() }));
 jest.mock('../../ai/ai.conversation.service', () => ({ getAssistantUser: jest.fn(async () => ({ _id: '64b0000000000000000000a9', username: 'Oruinwan AI' })) }));

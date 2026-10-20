@@ -4,11 +4,11 @@ import ChatWindowV2 from "../../features/messaging/chatWindowComp/ChatWindowV2";
 import BroadcastChatWindow from "../../features/messaging/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 import api from '@services/api';
-import { MessageSquarePlus } from "lucide-react";
-import BrandMark from "../../shared/components/ui/BrandMark";
+
 import "../../components/layout/shell.css";
 import NewDMModal from "../../features/messaging/NewDMModal";
 import { useParams } from "react-router-dom";
+import { MessagesLanding } from './landing/Landings';
 import logger from '../../utils/logger';
 
 export default function Messages() {
@@ -330,24 +330,7 @@ export default function Messages() {
               workspaceId={workspaceId || selectedChat.workspaceId}
             />
           ) : (
-            <div className="gl-shell-welcome gl-ambient">
-              <div className="gl-shell-welcome-inner" style={{ maxWidth: '380px' }}>
-                <div className="gl-shell-brand-tile">
-                  <BrandMark size={44} title="" />
-                </div>
-                <span className="gl-eyebrow">Messages</span>
-                <h2 className="gl-display gl-shell-welcome-title" style={{ fontSize: '26px' }}>
-                  Direct <span className="gl-sheen">Messages</span>
-                </h2>
-                <p className="gl-shell-welcome-lead">
-                  Select a conversation from the sidebar or start a new private chat.
-                </p>
-                <button type="button" className="gl-btn gl-btn--primary gl-btn--lg" onClick={() => setShowCreateDM(true)}>
-                  <MessageSquarePlus size={15} />
-                  Start a new chat
-                </button>
-              </div>
-            </div>
+            <MessagesLanding onNewMessage={() => setShowCreateDM(true)} />
           )}
         </div>
       </div>

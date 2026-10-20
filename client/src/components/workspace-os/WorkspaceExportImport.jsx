@@ -1,7 +1,10 @@
 import React, { useState, useRef } from 'react';
 import api from '@services/api';
-import { Download, Upload, FileJson, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Download, Upload, FileJson, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { Btn, Grid } from '../ui/page';
+import '../../pages/toolkit/toolkit.css';
 
+/** Workspace settings → Data: download a structure bundle, or rebuild a workspace from one. */
 export default function WorkspaceExportImport({ workspaceId, workspaceName, onImported }) {
     const [exporting, setExporting] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -26,7 +29,7 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (err) {
-            setExportError(err.response?.data?.message || 'Export failed');
+            setExportError(err.response?.data?.message || 'Could not export the workspace');
         } finally {
             setExporting(false);
         }
@@ -35,7 +38,7 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
     const handleImportFile = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        e.target.value = ''; 
+        e.target.value = '';
 
         setImporting(true);
         setImportError(null);
@@ -46,83 +49,57 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
             const bundle = JSON.parse(text);
 
             const res = await api.post('/api/workspace-os/import', { bundle });
-            setImportSuccess(`"${res.data.workspace?.name}" imported successfully`);
+            setImportSuccess(`Created “${res.data.workspace?.name}” from the file`);
             if (onImported) onImported(res.data.workspace);
         } catch (err) {
             if (err instanceof SyntaxError) {
-                setImportError('Invalid JSON file — please upload a valid workspace export bundle');
+                setImportError('That file isn’t valid JSON. Choose a file exported from Oruinwan.');
             } else {
-                setImportError(err.response?.data?.message || 'Import failed');
+                setImportError(err.response?.data?.message || 'Could not import the file');
             }
         } finally {
             setImporting(false);
         }
     };
 
-    return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-                            <Download size={18} className="text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Export Workspace</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Download a JSON bundle of this workspace's structure, channels, and settings</p>
-                        </div>
-                    </div>
-                    {exportError && (
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-3">
-                            <AlertTriangle size={13} /> {exportError}
-                        </div>
-                    )}
-                    <button
-                        onClick={handleExport}
-                        disabled={exporting}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-colors"
-                    >
-                        {exporting ? <RefreshCw size={14} className="animate-spin" /> : <FileJson size={14} />}
-                        {exporting ? 'Exporting…' : 'Export as JSON'}
-                    </button>
-                </div>
-
-                {}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                            <Upload size={18} className="text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Import Workspace</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Reconstruct a workspace from a previously exported JSON bundle</p>
-                        </div>
-                    </div>
-                    {importError && (
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-3">
-                            <AlertTriangle size={13} /> {importError}
-                        </div>
-                    )}
-                    {importSuccess && (
-                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm mb-3">
-                            <CheckCircle2 size={13} /> {importSuccess}
-                        </div>
-                    )}
-                    <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
-                    <button
-                        onClick={() => fileRef.current?.click()}
-                        disabled={importing}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-colors"
-                    >
-                        {importing ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
-                        {importing ? 'Importing…' : 'Choose JSON File'}
-                    </button>
+    const card = (Icon, title, text, body) => (
+        <div className="gl-card tk-card">
+            <div className="tk-card-head">
+                <span className="tk-mark"><Icon size={17} /></span>
+                <div style={{ minWidth: 0 }}>
+                    <h3 className="tk-card-title">{title}</h3>
+                    <p className="tk-card-text" style={{ marginTop: 3 }}>{text}</p>
                 </div>
             </div>
+            {body}
+        </div>
+    );
 
-            <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-                Note: Exports include workspace structure and channel definitions only — not messages, files, or member data.
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Grid min={240}>
+                {card(Download, 'Export', `Download ${workspaceName ? `${workspaceName}’s` : 'this workspace’s'} structure, channels and settings as a JSON file.`, (
+                    <>
+                        {exportError && <div className="tk-notice" data-tone="danger" role="alert"><AlertTriangle size={14} />{exportError}</div>}
+                        <div className="tk-card-foot">
+                            <Btn icon={FileJson} loading={exporting} onClick={handleExport}>{exporting ? 'Exporting…' : 'Download JSON'}</Btn>
+                        </div>
+                    </>
+                ))}
+                {card(Upload, 'Import', 'Create a new workspace from a file you exported earlier.', (
+                    <>
+                        {importError && <div className="tk-notice" data-tone="danger" role="alert"><AlertTriangle size={14} />{importError}</div>}
+                        {importSuccess && <div className="tk-notice" data-tone="success" role="status"><CheckCircle2 size={14} />{importSuccess}</div>}
+                        <input ref={fileRef} type="file" accept=".json" hidden onChange={handleImportFile} />
+                        <div className="tk-card-foot">
+                            <Btn icon={Upload} loading={importing} onClick={() => fileRef.current?.click()}>{importing ? 'Importing…' : 'Choose a file'}</Btn>
+                        </div>
+                    </>
+                ))}
+            </Grid>
+            <p className="cd-hint" style={{ margin: 0, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                Exports hold the workspace structure and channel definitions only, not messages, files or members.
             </p>
         </div>
     );

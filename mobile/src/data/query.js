@@ -19,6 +19,8 @@ function write(key, patch) {
 
 const inflight = new Map();
 const fetchers = new Map();
+// Invalidated while a fetch was already running: its answer may predate the change, so fetch once more.
+const again = new Set();
 
 export function fetchQuery(key, fetcher) {
   if (fetcher) fetchers.set(key, fetcher);
@@ -39,7 +41,10 @@ export function fetchQuery(key, fetcher) {
         return read(key).data;
       },
     )
-    .finally(() => inflight.delete(key));
+    .finally(() => {
+      inflight.delete(key);
+      if (again.delete(key)) fetchQuery(key);
+    });
   inflight.set(key, p);
   return p;
 }
@@ -93,7 +98,8 @@ export function getQueryData(key) {
 export function invalidate(...prefixes) {
   for (const key of entries.keys()) {
     if (prefixes.some((p) => key.startsWith(p))) {
-      if (listeners.get(key)?.size) fetchQuery(key);
+      if (inflight.has(key)) again.add(key);
+      else if (listeners.get(key)?.size) fetchQuery(key);
       else write(key, { updatedAt: 0 });
     }
   }
@@ -102,6 +108,7 @@ export function invalidate(...prefixes) {
 export function clearQueries() {
   entries.clear();
   inflight.clear();
+  again.clear();
   fetchers.clear();
   for (const set of listeners.values()) set.forEach((fn) => fn());
 }

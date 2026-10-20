@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Workspace invitation links (https://<web host>/join-workspace?token=…) open the app.
+	     ORUINWAN_WEB_HOST is a build setting (project.pbxproj); the host must also serve
+	     /.well-known/apple-app-site-association listing this app. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:$(ORUINWAN_WEB_HOST)</string>
+	</array>
+</dict>
+</plist>

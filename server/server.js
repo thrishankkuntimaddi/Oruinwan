@@ -70,10 +70,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
-const passport = require("./config/passport");
 
 // One codebase, several process shapes (all | api | realtime | worker); see src/shared/processRole.js
 const processRole = require('./src/shared/processRole');
@@ -120,7 +118,6 @@ app.use(express.json({ limit: '50mb', verify: captureRawBody }));
 app.use(express.urlencoded({ limit: '50mb', extended: true, verify: captureRawBody }));
 app.use(cookieParser());
 app.use(helmet());
-app.use(passport.initialize());
 
 const isProduction = process.env.NODE_ENV === 'production';
 // FRONTEND_URL, CORS_EXTRA_ORIGINS, and localhost dev servers outside production
@@ -140,38 +137,10 @@ const { sanitizeInput } = require('./src/shared/middleware/validate');
 app.use(sanitizeInput);
 logger.info('🛡️ Input sanitization enabled');
 
-const limiter = rateLimit({
-  windowMs: 60 * 1000, 
-  max: isProduction ? 20 : 100, 
-  standardHeaders: true,
-  legacyHeaders: false,
-  
-  
-  skip: (req) => {
-    const p = req.path;
-    
-    return p === '/me' || p.startsWith('/users');
-  },
-  
-  handler: (req, res) => {
-    res.status(429).json({
-      message: "Too many requests, please try again later.",
-    });
-  },
-});
-app.use("/api/auth", limiter);
-
-const refreshLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: isProduction ? 60 : 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.path !== '/refresh', 
-  handler: (req, res) => {
-    res.status(429).json({ message: "Too many token refresh requests, please try again later." });
-  },
-});
-app.use("/api/auth", refreshLimiter);
+// Per-IP limits sized for a whole office behind one IP; guessing protection is per account
+// (src/features/auth/authRateLimits.js).
+const { authLimiter, credentialLimiter, refreshLimiter } = require('./src/features/auth/authRateLimits').createAuthLimiters();
+app.use("/api/auth", authLimiter, credentialLimiter, refreshLimiter);
 
 app.use('/api/health', require('./src/shared/routes/health.routes'));
 
@@ -184,6 +153,9 @@ if (!processRole.serves.http) {
   });
 }
 
+// Public icons (Oruinwan AI, agent avatars) are shown by the phone and desktop apps, which run on
+// another origin: let them load these images (everything else stays same-origin).
+app.use('/icons', (req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); });
 app.use(express.static(path.join(__dirname, "../dist")));
 
 const requireAuth = require("./src/shared/middleware/auth");
@@ -319,6 +291,9 @@ app.use("/api/support", require("./src/features/support/support.routes"));
 app.use("/api/managers", require("./src/features/managers/managers.routes"));
 app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
+// Agents & tools: install AI agents (Claude, ChatGPT…) and chat with them.
+app.use("/api/agents", require("./src/features/agents/agents.routes"));
+app.use("/api/connections", require("./src/features/connections/connections.routes"));
 
 
 app.use("/api/ai", requireAuth, require("./src/features/ai/assistant/ai-assistant.routes"));

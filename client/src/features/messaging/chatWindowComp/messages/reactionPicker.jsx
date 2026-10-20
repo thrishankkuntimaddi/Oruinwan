@@ -18,11 +18,9 @@ export default function ReactionPicker({ onSelect, onClose }) {
     return (
         <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
             {}
-            <div style={{
+            <div className="gl-liquid gl-liquid--strong" style={{
                 display: 'flex', alignItems: 'center', gap: '2px',
-                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
                 borderRadius: '99px', padding: '3px 6px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
             }}>
                 {QUICK_REACTIONS.map(emoji => (
                     <button
@@ -57,7 +55,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
 
             {}
             {showFull && (
-                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: '2px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: '2px', overflow: 'hidden', boxShadow: 'var(--lg-shadow-sm)' }}>
                     <EmojiPicker
                         onEmojiClick={data => { onSelect(data.emoji); onClose?.(); }}
                         height={360} width={300}

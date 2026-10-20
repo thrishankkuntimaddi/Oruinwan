@@ -170,7 +170,8 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     else if (item._type === 'message') {
       const parentId = parent.id || item.dmId || item.channelId;
       const isDm = parent.type ? parent.type === 'dm' : !!item.dmId;
-      if (parentId) navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}`);
+      const thread = item.threadParentId ? `?thread=${item.threadParentId}` : '';
+      if (parentId) navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}${thread}`);
       else goToAll(query);
     }
     else if (item._type === 'user') navigate(`${base}/dm/new/${id}`);

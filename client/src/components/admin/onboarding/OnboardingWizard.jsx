@@ -119,8 +119,8 @@ const OnboardingWizard = ({ open = true, onClose, onComplete }) => {
             {step === 0 && (
                 <>
                     <div className="ad-row">
-                        <Field label="First name *" htmlFor="ow-first"><input id="ow-first" className="gl-input" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="Jane" /></Field>
-                        <Field label="Last name" htmlFor="ow-last"><input id="ow-last" className="gl-input" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" /></Field>
+                        <Field label="First name *" htmlFor="ow-first"><input id="ow-first" className="gl-input" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="Alex" /></Field>
+                        <Field label="Last name" htmlFor="ow-last"><input id="ow-last" className="gl-input" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Morgan" /></Field>
                     </div>
                     <div className="ad-row">
                         <Field label="Job title *" htmlFor="ow-title">
@@ -136,7 +136,7 @@ const OnboardingWizard = ({ open = true, onClose, onComplete }) => {
                         <Field label="Custom title" htmlFor="ow-custom"><input id="ow-custom" className="gl-input" value={form.customJobTitle} onChange={(e) => set('customJobTitle', e.target.value)} /></Field>
                     )}
                     <Field label="Personal email (optional)" htmlFor="ow-personal" hint="Kept on the profile for recovery.">
-                        <input id="ow-personal" type="email" className="gl-input" value={form.personalEmail} onChange={(e) => set('personalEmail', e.target.value)} placeholder="jane@gmail.com" />
+                        <input id="ow-personal" type="email" className="gl-input" value={form.personalEmail} onChange={(e) => set('personalEmail', e.target.value)} placeholder="alex.morgan@example.com" />
                     </Field>
                 </>
             )}
@@ -152,7 +152,7 @@ const OnboardingWizard = ({ open = true, onClose, onComplete }) => {
                         </Field>
                     ) : (
                         <Field label="Work email *" htmlFor="ow-email" hint="The invite goes to this address; it becomes their sign-in.">
-                            <input id="ow-email" type="email" className="gl-input" value={form.workEmail} onChange={(e) => set('workEmail', e.target.value)} placeholder="jane@company.com" />
+                            <input id="ow-email" type="email" className="gl-input" value={form.workEmail} onChange={(e) => set('workEmail', e.target.value)} placeholder="alex.morgan@example.com" />
                         </Field>
                     )}
                     <Field label="Company role" hint={owner ? undefined : 'Only the owner can onboard admins.'}>

@@ -4,7 +4,7 @@ import ChatWindowV2 from "../../features/messaging/chatWindowComp/ChatWindowV2";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from '@services/api';
 import { useSocket } from "../../contexts/SocketContext";
-import EmptyState from "./states/EmptyState";
+import { ChannelsLanding, HomeLanding } from "./landing/Landings";
 import logger from '../../utils/logger';
 
 const Home = () => {
@@ -103,6 +103,8 @@ const Home = () => {
             let resolvedDMSessionId = null;
             let otherUserId = null;
             let isAlreadySessionId = false;
+            // A DM with an AI agent (Oruinwan AI, Claude…): its account isn't a workspace member.
+            let agentSession = null;
 
             
             try {
@@ -114,6 +116,7 @@ const Home = () => {
                 resolvedDMSessionId = existingSession.id;
                 otherUserId = existingSession.otherUserId;
                 isAlreadySessionId = true;
+                if (existingSession.isAgent) agentSession = existingSession;
               }
             } catch (err) {
               
@@ -149,7 +152,7 @@ const Home = () => {
             );
 
             
-            const userData = member?.user || member;
+            const userData = agentSession ? agentSession.otherUser : (member?.user || member);
             const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
             const memberPicture = userData?.profilePicture || userData?.avatar;
 
@@ -164,6 +167,7 @@ const Home = () => {
               id: resolvedDMSessionId,  
               userId: otherUserId,       
               name: memberName || "Unknown User",
+              ...(agentSession ? { agentId: agentSession.agentId, isAgent: true } : {}),
               image: memberPicture,
               status: status,
               type: "dm",
@@ -238,8 +242,8 @@ const Home = () => {
       {isLoading ? (
         <div className="skel-shimmer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-base, #0c0c0c)', padding: '16px', gap: '20px' }}>
           {}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gl-accent-soft)', flexShrink: 0 }} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ height: '10px', width: '120px', background: 'var(--bg-active)' }} />
               <div style={{ height: '8px', width: '70px', background: 'var(--bg-hover)' }} />
@@ -259,7 +263,7 @@ const Home = () => {
                 <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--bg-active)', flexShrink: 0, marginTop: '2px' }} />
                 <div style={{ flex: 1, maxWidth: '68%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
-                    <div style={{ height: '9px', width: `${b.aw}px`, background: 'rgba(255,255,255,0.1)' }} />
+                    <div style={{ height: '9px', width: `${b.aw}px`, background: 'var(--bg-active)' }} />
                     <div style={{ height: '7px', width: '40px', background: 'var(--bg-hover)' }} />
                   </div>
                   <div style={{ height: '14px', background: 'var(--bg-active)', width: b.l1 }} />
@@ -289,10 +293,8 @@ const Home = () => {
           onChatUpdate={setActiveChat}
         />
       ) : (
-        <EmptyState
-          onNavigateChannels={() => navigate(`/workspace/${workspaceId}/channels`)}
-          onNavigateDMs={() => navigate(`/workspace/${workspaceId}/messages`)}
-        />
+        // Nothing open: the section's landing page (Channels directory, or the workspace home).
+        location.pathname.endsWith('/channels') ? <ChannelsLanding /> : <HomeLanding />
       )}
     </div>
   );

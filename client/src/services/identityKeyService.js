@@ -7,7 +7,6 @@ import {
     checkCryptoSupport
 } from '../utils/cryptoIdentity';
 import logger from '../utils/logger';
-import { isDemoMode } from '../appMode/env';
 
 const DB_NAME = 'ChttrixE2EE';
 const DB_VERSION = 1;
@@ -163,12 +162,6 @@ class IdentityKeyService {
 
     
     async initializeIdentityKeys(userId, password = null) {
-        // The demo has no identity keys to unlock: its conversations use a key made on the device.
-        if (isDemoMode()) {
-            this.myUserId = userId;
-            return { status: 'READY', existed: true, algorithm: 'DEMO' };
-        }
-
         const support = checkCryptoSupport();
         if (!support.indexedDB) {
             throw new Error('IndexedDB not available - cannot use E2EE');
@@ -185,7 +178,11 @@ class IdentityKeyService {
                 logger.debug('✅ [PHASE 1] Found existing crypto state on server');
 
                 
-                const cachedIdentity = await loadCachedPrivateKey(userId, cryptoState.algorithm);
+                const cached = await loadCachedPrivateKey(userId, cryptoState.algorithm);
+                // A key cached before the encryption was set up again (after a password
+                // reset) no longer matches the account: ignore it and unlock afresh.
+                const cachedIdentity = cached && (!cached.publicKeyPEM || cached.publicKeyPEM === cryptoState.identityPublicKey) ? cached : null;
+                if (cached && !cachedIdentity) await deleteIdentityKeyPair(userId).catch(() => { });
                 if (cachedIdentity) {
                     logger.debug('✅ [PHASE 1] Using cached identity key (no password needed)');
 
@@ -284,102 +281,7 @@ class IdentityKeyService {
             } else {
                 
                 logger.debug('🆕 [PHASE 1] No crypto state found, generating new identity keys...');
-
-                
-                const keyPair = await generateIdentityKeyPair();
-                const privateKeyJWK = await exportPrivateKeyJWK(keyPair.privateKey);
-                const publicKeyPEM = await exportPublicKeyPEM(keyPair.publicKey, keyPair.algorithm);
-
-                
-                const { generateUMEK, deriveUMEKFromPassword, generateSalt, encryptIdentityPrivateKey, arrayBufferToBase64, exportKey } = await import('../utils/crypto.js');
-
-                let umek;
-                let umekProtectionType;
-                let umekEnvelope;
-                let umekEnvelopeIv = null;
-                let umekSalt = null;
-
-                if (password) {
-                    
-                    logger.debug('🔑 [PHASE 1] Deriving UMEK from password...');
-                    const salt = generateSalt();
-                    umek = await deriveUMEKFromPassword(password, salt);
-                    umekProtectionType = 'PASSWORD';
-                    umekSalt = arrayBufferToBase64(salt);
-
-                    // The password re-derives the UMEK on any device, so the server only gets a marker.
-                    umekEnvelope = 'password-derived';
-                } else {
-
-                    logger.debug('🔑 [PHASE 1] Generating random UMEK...');
-                    umek = await generateUMEK();
-                    umekProtectionType = 'SERVER_KEK';
-
-                    // Sent once over TLS; the server stores it sealed under its KEK.
-                    const umekBytes = await exportKey(umek);
-                    umekEnvelope = arrayBufferToBase64(umekBytes);
-                }
-
-                
-                logger.debug('🔒 [PHASE 1] Encrypting identity private key with UMEK...');
-                const { encryptedPrivateKey, iv } = await encryptIdentityPrivateKey(
-                    JSON.stringify(privateKeyJWK),
-                    umek
-                );
-
-                
-                logger.debug('📤 [PHASE 1] Uploading encrypted identity state to server...');
-                await this._uploadCryptoStateToServer({
-                    identityPublicKey: publicKeyPEM,
-                    encryptedIdentityPrivateKey: encryptedPrivateKey,
-                    identityPrivateKeyIv: iv,
-                    umekEnvelope,
-                    umekEnvelopeIv,
-                    umekSalt,
-                    umekProtectionType,
-                    algorithm: keyPair.algorithm,
-                    version: keyPair.version
-                });
-
-                
-                // Keep only a non-extractable handle to the private key in memory/IndexedDB.
-                this.myPrivateKey = await importPrivateKeyJWK(privateKeyJWK, keyPair.algorithm, false);
-                this.myPublicKey = keyPair.publicKey;
-                this.myAlgorithm = keyPair.algorithm;
-                this.myUserId = userId;
-
-                
-                this.publicKeysCache.set(userId, {
-                    publicKey: this.myPublicKey,
-                    algorithm: this.myAlgorithm
-                });
-
-                
-                try {
-                    await storeIdentityKeyPair(userId, {
-                        privateKey: this.myPrivateKey,
-                        publicKeyPEM,
-                        algorithm: keyPair.algorithm,
-                        version: keyPair.version
-                    });
-                    logger.debug('💾 [PHASE 1] Cached keys in IndexedDB');
-                } catch (err) {
-                    logger.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
-                }
-
-                
-                
-                try {
-                    logger.debug('📤 [PHASE 1] Uploading public key to identity service...');
-                    await this._uploadPublicKeyToIdentityService(publicKeyPEM, keyPair.algorithm, keyPair.version);
-                    logger.debug('✅ [PHASE 1] Public key uploaded to identity service');
-                } catch (err) {
-                    logger.error('❌ [PHASE 1] CRITICAL: Failed to upload public key to identity service:', err);
-                    throw new Error('Public key distribution failed - cannot proceed with E2EE');
-                }
-
-                logger.debug('✅ [PHASE 1] New identity keys created and uploaded');
-                return { status: 'READY', existed: false, algorithm: keyPair.algorithm };
+                return await this._createIdentity(userId, password);
             }
 
         } catch (error) {
@@ -388,6 +290,127 @@ class IdentityKeyService {
         }
     }
 
+
+    /**
+     * Makes a new identity key pair, protects it (with the password, or with the server KEK
+     * for accounts without one), uploads it and caches it on this device.
+     * serverExtras go to /identity/init as is, e.g. { allowOverwrite, currentPassword }.
+     */
+    async _createIdentity(userId, password, serverExtras = {}) {
+
+        
+        const keyPair = await generateIdentityKeyPair();
+        const privateKeyJWK = await exportPrivateKeyJWK(keyPair.privateKey);
+        const publicKeyPEM = await exportPublicKeyPEM(keyPair.publicKey, keyPair.algorithm);
+
+        
+        const { generateUMEK, deriveUMEKFromPassword, generateSalt, encryptIdentityPrivateKey, arrayBufferToBase64, exportKey } = await import('../utils/crypto.js');
+
+        let umek;
+        let umekProtectionType;
+        let umekEnvelope;
+        let umekEnvelopeIv = null;
+        let umekSalt = null;
+
+        if (password) {
+            
+            logger.debug('🔑 [PHASE 1] Deriving UMEK from password...');
+            const salt = generateSalt();
+            umek = await deriveUMEKFromPassword(password, salt);
+            umekProtectionType = 'PASSWORD';
+            umekSalt = arrayBufferToBase64(salt);
+
+            // The password re-derives the UMEK on any device, so the server only gets a marker.
+            umekEnvelope = 'password-derived';
+        } else {
+
+            logger.debug('🔑 [PHASE 1] Generating random UMEK...');
+            umek = await generateUMEK();
+            umekProtectionType = 'SERVER_KEK';
+
+            // Sent once over TLS; the server stores it sealed under its KEK.
+            const umekBytes = await exportKey(umek);
+            umekEnvelope = arrayBufferToBase64(umekBytes);
+        }
+
+        
+        logger.debug('🔒 [PHASE 1] Encrypting identity private key with UMEK...');
+        const { encryptedPrivateKey, iv } = await encryptIdentityPrivateKey(
+            JSON.stringify(privateKeyJWK),
+            umek
+        );
+
+        
+        logger.debug('📤 [PHASE 1] Uploading encrypted identity state to server...');
+        await this._uploadCryptoStateToServer({
+            ...serverExtras,
+            identityPublicKey: publicKeyPEM,
+            encryptedIdentityPrivateKey: encryptedPrivateKey,
+            identityPrivateKeyIv: iv,
+            umekEnvelope,
+            umekEnvelopeIv,
+            umekSalt,
+            umekProtectionType,
+            algorithm: keyPair.algorithm,
+            version: keyPair.version
+        });
+
+        
+        // Keep only a non-extractable handle to the private key in memory/IndexedDB.
+        this.myPrivateKey = await importPrivateKeyJWK(privateKeyJWK, keyPair.algorithm, false);
+        this.myPublicKey = keyPair.publicKey;
+        this.myAlgorithm = keyPair.algorithm;
+        this.myUserId = userId;
+
+        
+        this.publicKeysCache.set(userId, {
+            publicKey: this.myPublicKey,
+            algorithm: this.myAlgorithm
+        });
+
+        
+        try {
+            await storeIdentityKeyPair(userId, {
+                privateKey: this.myPrivateKey,
+                publicKeyPEM,
+                algorithm: keyPair.algorithm,
+                version: keyPair.version
+            });
+            logger.debug('💾 [PHASE 1] Cached keys in IndexedDB');
+        } catch (err) {
+            logger.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
+        }
+
+        
+        
+        try {
+            logger.debug('📤 [PHASE 1] Uploading public key to identity service...');
+            await this._uploadPublicKeyToIdentityService(publicKeyPEM, keyPair.algorithm, keyPair.version);
+            logger.debug('✅ [PHASE 1] Public key uploaded to identity service');
+        } catch (err) {
+            // When encryption is set up again, /identity/init has already published the key.
+            if (!serverExtras.allowOverwrite) {
+                logger.error('❌ [PHASE 1] CRITICAL: Failed to upload public key to identity service:', err);
+                throw new Error('Public key distribution failed - cannot proceed with E2EE');
+            }
+            logger.warn('⚠️ [PHASE 1] Public key re-upload failed after reset (server already has it):', err.message);
+        }
+
+        logger.debug('✅ [PHASE 1] New identity keys created and uploaded');
+        return { status: 'READY', existed: false, algorithm: keyPair.algorithm };
+    }
+
+    /**
+     * After a password reset the old identity key can't be opened (it was locked with the old
+     * password). This sets encryption up again, locked with the current password; the server
+     * checks that password and then gives this account access to its conversations again.
+     */
+    async resetIdentityKeys(userId, password) {
+        if (!password) throw new Error('Password required');
+        await deleteIdentityKeyPair(userId).catch(() => { });
+        this.publicKeysCache.delete(userId);
+        return this._createIdentity(userId, password, { allowOverwrite: true, currentPassword: password });
+    }
     
     async _fetchCryptoStateFromServer() {
         const { getDeviceId } = await import('../utils/deviceId.js');

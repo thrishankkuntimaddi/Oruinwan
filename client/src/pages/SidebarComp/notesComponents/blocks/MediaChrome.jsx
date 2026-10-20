@@ -42,9 +42,7 @@ export function UploadButton({ id, accept, label, onFile, secondary }) {
         <>
             <input type="file" accept={accept} id={id} className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onFile(f); }} />
-            <label htmlFor={id} style={secondary ? mediaStyles.secondaryBtn : mediaStyles.primaryBtn}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
+            <label htmlFor={id} className={secondary ? 'gl-btn gl-btn--sm' : 'gl-btn gl-btn--primary gl-btn--sm'}>
                 {label}
             </label>
         </>

@@ -366,11 +366,11 @@ const invites = {
         const { rows } = await query('SELECT * FROM invites WHERE token_hash = $1', [tokenHash]);
         return toInvite(rows[0]);
     },
-    /** An unused, unexpired invite for this token and email. */
+    /** An unused, unexpired, not revoked invite for this token and email. */
     async findUsable(tokenHash, email) {
         const { rows } = await query(
             `SELECT * FROM invites WHERE token_hash = $1 AND lower(email) = lower($2) AND COALESCE((meta->>'used')::boolean, false) = false
-             AND expires_at > now()`,
+             AND status <> 'revoked' AND expires_at > now()`,
             [tokenHash, String(email)]
         );
         return toInvite(rows[0]);

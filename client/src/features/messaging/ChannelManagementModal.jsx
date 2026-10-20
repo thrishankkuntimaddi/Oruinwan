@@ -346,8 +346,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
 
     return (
         <>
-            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}>
-                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '680px', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}>
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '680px', maxHeight: '85vh', overflow: 'hidden', boxShadow: 'var(--lg-shadow-sm)', display: 'flex', flexDirection: 'column' }}>
                     <ModalHeader
                         channel={channel}
                         members={members}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { GitBranch, RefreshCw, ChevronDown, ChevronRight, Building2, Users, UserX } from 'lucide-react';
 import api from '@services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import {
@@ -18,20 +19,41 @@ function Toggle({ open, disabled, onClick, label }) {
     );
 }
 
-/** A department with its head, managers and teams (and each team's members). */
+/** One person row in the tree. */
+function PersonRow({ person, note }) {
+    return (
+        <div className="wo-node" data-kind="person">
+            <span className="wo-node-toggle" aria-hidden="true" />
+            <Avatar user={person} size="sm" />
+            <div className="wo-node-main">
+                <div className="wo-node-title">{person.username || person.email}</div>
+                <div className="wo-node-sub">{note || person.email}</div>
+            </div>
+            {person.companyRole && <span className="wo-node-side cd-hide-sm"><RoleChip role={person.companyRole} /></span>}
+        </div>
+    );
+}
+
+/** A department with its head, teams, and the people who are not in a team yet. */
 function DeptNode({ dept }) {
-    const [open, setOpen] = useState(true);
     const teams = dept.teams || [];
+    const inTeam = new Set(teams.flatMap((t) => (t.members || []).map((m) => String(m.id))));
+    const headId = dept.head ? String(dept.head._id || dept.head.id || '') : '';
+    const people = (dept.people || [])
+        .filter((p) => !inTeam.has(String(p.id)))
+        .sort((a, b) => (String(b.id) === headId) - (String(a.id) === headId) || String(a.username).localeCompare(String(b.username)));
+    const [open, setOpen] = useState(true);
+    const hasChildren = teams.length > 0 || people.length > 0;
     return (
         <div>
             <div className="wo-node" data-kind="department">
-                <Toggle open={open} disabled={!teams.length} onClick={() => setOpen((o) => !o)} label={`${dept.name} teams`} />
+                <Toggle open={open} disabled={!hasChildren} onClick={() => setOpen((o) => !o)} label={`${dept.name} people and teams`} />
                 <Building2 size={15} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                 <div className="wo-node-main">
                     <div className="wo-node-title">{dept.name}</div>
                     <div className="wo-node-sub">
                         {dept.memberCount} member{dept.memberCount === 1 ? '' : 's'}
-                        {dept.head ? ` · Head: ${dept.head.username}` : ' · No head'}
+                        {dept.head ? ` · Head: ${dept.head.username}` : ' · No head yet'}
                         {teams.length ? ` · ${teams.length} team${teams.length === 1 ? '' : 's'}` : ''}
                     </div>
                 </div>
@@ -41,9 +63,12 @@ function DeptNode({ dept }) {
                     </span>
                 )}
             </div>
-            {open && teams.length > 0 && (
+            {open && hasChildren && (
                 <div className="wo-tree">
                     {teams.map((t) => <TeamNode key={t.id} team={t} />)}
+                    {people.map((p) => (
+                        <PersonRow key={p.id} person={p} note={String(p.id) === headId ? 'Department head' : teams.length ? 'Not in a team' : undefined} />
+                    ))}
                 </div>
             )}
         </div>
@@ -65,16 +90,7 @@ function TeamNode({ team }) {
             </div>
             {open && members.length > 0 && (
                 <div className="wo-tree">
-                    {members.map((m) => (
-                        <div key={m.id || m.username} className="wo-node" data-kind="person">
-                            <span className="wo-node-toggle" aria-hidden="true" />
-                            <Avatar user={m} size="sm" />
-                            <div className="wo-node-main">
-                                <div className="wo-node-title">{m.username}</div>
-                                <div className="wo-node-sub">{m.role}</div>
-                            </div>
-                        </div>
-                    ))}
+                    {members.map((m) => <PersonRow key={m.id || m.username} person={m} note={m.role === 'lead' ? 'Team lead' : 'Team member'} />)}
                 </div>
             )}
         </div>
@@ -128,6 +144,8 @@ const flattenPeople = (nodes) => nodes.flatMap((n) => [n, ...flattenPeople(n.rep
 export default function OrgChartPage() {
     const { user } = useAuth();
     const { showToast } = useToast();
+    const navigate = useNavigate();
+    const base = useLocation().pathname.startsWith('/owner') ? '/owner' : '/admin';
     const companyId = companyIdOf(user);
     const canEdit = isAdminUser(user);
     const [view, setView] = useState('departments');
@@ -143,7 +161,8 @@ export default function OrgChartPage() {
     const depts = useMemo(() => {
         const s = q.trim().toLowerCase();
         return (data?.departments || []).filter((d) => !s || d.name?.toLowerCase().includes(s)
-            || (d.teams || []).some((t) => t.name?.toLowerCase().includes(s)));
+            || (d.teams || []).some((t) => t.name?.toLowerCase().includes(s))
+            || (d.people || []).some((p) => p.username?.toLowerCase().includes(s) || p.email?.toLowerCase().includes(s)));
     }, [data, q]);
 
     const setManager = async (employeeId, managerId) => {
@@ -163,7 +182,7 @@ export default function OrgChartPage() {
         <DashPage
             head={(
                 <PageHead
-                    eyebrow="Collaboration"
+                    eyebrow="Organization"
                     title="Org chart"
                     lead={data ? `${data.company?.name} · ${data.totalEmployees} people · ${data.departments?.length || 0} departments` : 'How the company is organised.'}
                     actions={<Btn icon={RefreshCw} loading={loading} onClick={reload}>Refresh</Btn>}
@@ -191,7 +210,7 @@ export default function OrgChartPage() {
                             label="Org chart view"
                             options={[{ value: 'departments', label: 'Departments & teams' }, { value: 'reporting', label: 'Reporting lines' }]}
                         />
-                        {view === 'departments' && <SearchBox value={q} onChange={setQ} placeholder="Find a department or team…" />}
+                        {view === 'departments' && <SearchBox value={q} onChange={setQ} placeholder="Find a department, team or person…" />}
                     </Toolbar>
 
                     {view === 'departments' ? (
@@ -208,7 +227,8 @@ export default function OrgChartPage() {
                                     <EmptyState
                                         icon={Building2}
                                         title={(data.departments || []).length ? 'No matches' : 'No departments yet'}
-                                        text={(data.departments || []).length ? 'Nothing matches your search.' : 'Add departments from the Departments page.'}
+                                        text={(data.departments || []).length ? 'Nothing matches your search.' : 'Create departments to see your company structure here.'}
+                                        action={!(data.departments || []).length && canEdit && <Btn size="sm" icon={Building2} onClick={() => navigate(`${base}/departments`)}>Go to departments</Btn>}
                                     />
                                 ) : (
                                     <div className="wo-tree" style={{ marginLeft: 14, paddingLeft: 14, borderLeft: '1px dashed var(--border-accent)' }}>

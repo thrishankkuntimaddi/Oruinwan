@@ -1,5 +1,4 @@
 const org = require('../../identity/queries/org');
-const Message = require('../../modules/messages/message.model');
 const Tasks = require('../tasks/tasks.query');
 
 function since(range) {
@@ -10,6 +9,20 @@ function since(range) {
         case '30d':
         default: return new Date(now - 30 * 864e5);
     }
+}
+
+// Privacy: nothing here counts or reads messages. Messages are end-to-end encrypted and the
+// product promise is that only the participants read them, so the company console works
+// from non-message aggregates only: people, sign-ins, workspaces, departments, tasks, updates.
+
+/** One { start, end } bucket per calendar day (UTC) for the last `days` days, oldest first. */
+function dayBuckets(days) {
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+        out.push({ date, start: new Date(`${date}T00:00:00.000Z`), end: new Date(`${date}T23:59:59.999Z`) });
+    }
+    return out;
 }
 
 async function getCompanyAnalytics(companyId, timeRange = '30d') {
@@ -25,11 +38,6 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         totalWorkspaces,
         activeWorkspaces,
 
-        
-        totalMessages,
-        recentMessages,
-        channelMessages,
-        dmMessages,
 
         
         totalTasks,
@@ -38,7 +46,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         overdueTasks,
 
         
-        activeMessageSenders,
+        signedInUsers,
 
         
         newHires,
@@ -58,11 +66,6 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         org.workspaces.count({ company: companyId }),
         org.workspaces.count({ company: companyId, isActive: true, isArchived: false }),
 
-        
-        Message.countDocuments({ company: companyId, isDeleted: false }),
-        Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
-        Message.countDocuments({ company: companyId, isDeleted: false, channel: { $ne: null } }),
-        Message.countDocuments({ company: companyId, isDeleted: false, dm: { $ne: null } }),
 
         
         Tasks.countDocuments({ company: companyId }),
@@ -71,8 +74,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         Tasks.countDocuments({ company: companyId, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'completed', 'cancelled'] } }),
 
         
-        Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
-            .then(ids => ids.length),
+        org.users.count({ companyId, accountStatus: 'active', lastLoginAt: { $gte: from } }),
 
         
         org.users.count({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
@@ -88,12 +90,9 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         ? Math.round((completedTasks / totalTasks) * 100)
         : 0;
 
+    // Share of people who signed in during the period (a sign-in event, not message activity).
     const engagementScore = totalEmployees > 0
-        ? Math.round((activeMessageSenders / totalEmployees) * 100)
-        : 0;
-
-    const messageGrowthRate = totalMessages > 0
-        ? Math.round((recentMessages / totalMessages) * 100)
+        ? Math.round((signedInUsers / totalEmployees) * 100)
         : 0;
 
     
@@ -103,18 +102,11 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         .slice(0, 5);
 
     
-    const workspaceActivity = await Message.aggregate([
-        { $match: { company: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), isDeleted: false, createdAt: { $gte: from }, workspace: { $ne: null } } },
-        { $group: { _id: '$workspace', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 5 },
-    ]).then(async (rows) => {
-        // Workspace names come from PostgreSQL.
-        const names = new Map((await org.workspaces.find({ _id: { $in: rows.map((r) => String(r._id)) } }, { members: false }))
-            .map((w) => [String(w._id), w.name]));
-        return rows.map((r) => ({ workspaceId: r._id, name: names.get(String(r._id)) || 'Unknown', messageCount: r.count }));
-    });
-
+    // Largest workspaces by active members (structure, not usage).
+    const workspaceSizes = (await org.workspaces.find({ company: companyId }))
+        .map((w) => ({ workspaceId: w._id, name: w.name, memberCount: (w.members || []).filter((m) => m.status === 'active').length }))
+        .sort((x, y) => y.memberCount - x.memberCount)
+        .slice(0, 5);
     
     const roleDistribution = Object.entries(await org.roleDistribution(companyId))
         .map(([role, count]) => ({ role, count }))
@@ -142,15 +134,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         workspaces: {
             total: totalWorkspaces,
             active: activeWorkspaces,
-            workspaceActivity,
-        },
-
-        messages: {
-            total: totalMessages,
-            recent: recentMessages,
-            channelMessages,
-            dmMessages,
-            messageGrowthRate,
+            workspaceSizes,
         },
 
         tasks: {
@@ -162,7 +146,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         },
 
         engagement: {
-            activeUsers: activeMessageSenders,
+            activeUsers: signedInUsers,
             engagementScore,
         },
 
@@ -175,47 +159,27 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
 
 async function getActivityAnalytics(companyId) {
     const from = since('7d');
-    const mongoose = require('mongoose');
-    const cid = mongoose.Types.ObjectId.createFromHexString(companyId.toString());
+    const buckets = dayBuckets(7);
 
     const [
-        messageLast7Days,
         taskCreatedLast7Days,
         activeUsers,
         newInvites,
         updatesPosted,
+        perDay,
     ] = await Promise.all([
-        Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
         Tasks.countDocuments({ company: companyId, createdAt: { $gte: from } }),
-        
-        Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
-            .then(ids => ids.length),
+        org.users.count({ companyId, accountStatus: 'active', lastLoginAt: { $gte: from } }),
         org.users.count({ companyId, accountStatus: 'invited', createdAt: { $gte: from } }),
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
+        Tasks.countBuckets({ company: companyId }, 'createdAt', buckets).catch(() => buckets.map(() => 0)),
     ]);
 
-    
-    const dailyActivity = await Message.aggregate([
-        {
-            $match: {
-                company: cid,
-                isDeleted: false,
-                createdAt: { $gte: from },
-            },
-        },
-        {
-            $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                count: { $sum: 1 },
-            },
-        },
-        { $sort: { _id: 1 } },
-        { $project: { _id: 0, date: '$_id', messageCount: '$count' } },
-    ]);
+    // Tasks created per day, company-wide.
+    const dailyActivity = buckets.map((b, i) => ({ date: b.date, taskCount: perDay[i] || 0 }));
 
     return {
         period: { from, to: new Date() },
-        messagesLast7Days: messageLast7Days,
         tasksCreatedLast7Days: taskCreatedLast7Days,
         activeUsers,
         newInvites,

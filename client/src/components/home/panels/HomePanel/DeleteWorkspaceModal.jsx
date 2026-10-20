@@ -40,7 +40,7 @@ const DeleteWorkspaceModal = ({
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
+            style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
             onClick={e => { if (e.target === e.currentTarget && !deleting) setShowDeleteConfirm(false); }}
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '420px', position: 'relative', overflow: 'hidden' }}>

@@ -1,12 +1,10 @@
-const Message = require('../../modules/messages/message.model');
 const Channel = require('../channels/channel.model');
 const Tasks = require('../tasks/tasks.query');
-const ScheduledMeeting = require('../../models/ScheduledMeeting');
 const org = require('../../identity/queries/org');
-const mongoose = require('mongoose');
 
-// Company ids arrive as strings (PostgreSQL); aggregation $match does not cast them.
-const oid = (id) => (mongoose.Types.ObjectId.isValid(String(id)) ? new mongoose.Types.ObjectId(String(id)) : id);
+// Privacy: these company insights never count or read messages. Messages are end-to-end
+// encrypted and the product promise is that only the participants read them, so admins get
+// non-message aggregates only (people, sign-in activity, workspaces, channels, tasks).
 
 const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; 
@@ -71,7 +69,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
     totalUsers,
     activeUsers,
     prevActiveUsers,
-    totalMessages,
+    totalChannels,
     taskMetrics
   ] = await Promise.all([
     org.users.count({ companyId }),
@@ -90,11 +88,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
       ]
     }),
 
-    Message.countDocuments({
-      company: companyId,
-      type: { $ne: 'system' },
-      createdAt: { $gte: start }
-    }),
+    Channel.countDocuments({ company: companyId, isArchived: { $ne: true } }),
 
     Tasks.totals({ company: companyId, deleted: false, createdAt: { $gte: start } }).then((t) => [t])
   ]);
@@ -112,7 +106,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
       totalUsers,
       activeUsers,
       totalWorkspaces: wsIds.length,
-      totalMessages,
+      totalChannels,
       taskCompletionRate,
       userGrowth
     }
@@ -127,45 +121,20 @@ async function getUserActivityAnalytics(companyId, period = 30) {
   const cached = _cacheGet(cacheKey);
   if (cached) return cached;
 
-  const { start } = _dateRange(period);
   const buckets = _buildBuckets(period);
 
-  const [topContributors, trendRaw] = await Promise.all([
-    
-    Message.aggregate([
-      {
-        $match: {
-          company: oid(companyId),
-          type: { $ne: 'system' },
-          createdAt: { $gte: start }
-        }
-      },
-      { $group: { _id: '$sender', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]).then(async (rows) => {
-      // Sender names come from PostgreSQL.
-      const people = await require('../../identity').users.findManyByIds(rows.map((r) => r._id));
-      return rows.map((r) => {
-        const u = people.get(String(r._id));
-        return { _id: r._id, userId: r._id, messages: r.count, name: u?.username || 'Unknown', avatar: u?.profilePicture };
-      });
-    }),
-
-    
-    Promise.all(
-      buckets.map(async b => ({
-        name: b.label,
-        value: await org.users.count({
-          companyId,
-          lastActivityAt: { $gte: b.start, $lte: b.end }
-        })
-      }))
-    )
-  ]);
+  // People active per period bucket (a count, never who or how much they wrote).
+  const trendRaw = await Promise.all(
+    buckets.map(async b => ({
+      name: b.label,
+      value: await org.users.count({
+        companyId,
+        lastActivityAt: { $gte: b.start, $lte: b.end }
+      })
+    }))
+  );
 
   const result = {
-    topContributors,
     trendData: trendRaw
   };
 
@@ -183,34 +152,22 @@ async function getWorkspaceAnalytics(companyId, period = 30) {
 
   const workspaceStats = await Promise.all(
     workspaces.slice(0, 15).map(async ws => {
-      const [msgCount, taskCount] = await Promise.all([
-        Message.countDocuments({ workspace: ws._id, type: { $ne: 'system' }, createdAt: { $gte: start } }),
-        Tasks.countDocuments({ workspace: ws._id, deleted: false, createdAt: { $gte: start } })
+      const [taskCount, channelCount] = await Promise.all([
+        Tasks.countDocuments({ workspace: ws._id, deleted: false, createdAt: { $gte: start } }),
+        Channel.countDocuments({ workspace: ws._id, isArchived: { $ne: true } }),
       ]);
-
-      const activeSenders = await Message.distinct('sender', {
-        workspace: ws._id,
-        createdAt: { $gte: start }
-      });
-
-      const memberCount = ws.members?.length || 0;
-      const activeUsers = activeSenders.length;
-      const activeRate = memberCount > 0 ? Math.round((activeUsers / memberCount) * 100) : 0;
-
       return {
         _id: ws._id,
         name: ws.name,
-        memberCount,
-        activeUsers,
-        activeRate,
-        messageCount: msgCount,
+        memberCount: (ws.members || []).filter((m) => m.status !== 'removed').length,
+        channelCount,
         taskCount
       };
     })
   );
 
   const result = {
-    workspaces: workspaceStats.sort((a, b) => b.messageCount - a.messageCount)
+    workspaces: workspaceStats.sort((a, b) => b.memberCount - a.memberCount)
   };
 
   _cacheSet(cacheKey, result);
@@ -222,45 +179,13 @@ async function getChannelEngagementAnalytics(companyId, period = 30) {
   const cached = _cacheGet(cacheKey);
   if (cached) return cached;
 
-  const { start } = _dateRange(period);
-
-  const channelStats = await Message.aggregate([
-    {
-      $match: {
-        company: oid(companyId),
-        channel: { $ne: null },
-        type: { $ne: 'system' },
-        createdAt: { $gte: start }
-      }
-    },
-    {
-      $group: {
-        _id: '$channel',
-        messageCount: { $sum: 1 },
-        activeUsers: { $addToSet: '$sender' }
-      }
-    },
-    {
-      $lookup: {
-        from: 'channels',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'channel'
-      }
-    },
-    { $unwind: { path: '$channel', preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        channelId: '$_id',
-        name: { $ifNull: ['$channel.name', 'Unknown Channel'] },
-        messageCount: 1,
-        activeUsers: { $size: '$activeUsers' },
-        memberCount: { $size: { $ifNull: ['$channel.members', []] } }
-      }
-    },
-    { $sort: { messageCount: -1 } },
-    { $limit: 15 }
-  ]);
+  // Public channels by size. Private channels and every message stay out of it.
+  const channelStats = (await Channel.find({ company: companyId, isPrivate: { $ne: true }, isArchived: { $ne: true } })
+    .select('_id name members')
+    .lean())
+    .map((c) => ({ channelId: c._id, name: c.name, memberCount: (c.members || []).length }))
+    .sort((a, b) => b.memberCount - a.memberCount)
+    .slice(0, 15);
 
   const result = { channels: channelStats };
   _cacheSet(cacheKey, result);
@@ -315,52 +240,6 @@ async function getTaskAnalytics(companyId, period = 30) {
   return result;
 }
 
-async function getMessageVolumeAnalytics(companyId, period = 30) {
-  const cacheKey = `messages:${companyId}:${period}`;
-  const cached = _cacheGet(cacheKey);
-  if (cached) return cached;
-
-  const { start } = _dateRange(period);
-  const buckets = _buildBuckets(period);
-
-  const [totals, trendRaw] = await Promise.all([
-    Message.aggregate([
-      { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          byChannel: { $sum: { $cond: [{ $ne: ['$channel', null] }, 1, 0] } },
-          byDM: { $sum: { $cond: [{ $ne: ['$dm', null] }, 1, 0] } }
-        }
-      }
-    ]),
-
-    Promise.all(
-      buckets.map(async b => ({
-        name: b.label,
-        value: await Message.countDocuments({
-          company: companyId,
-          type: { $ne: 'system' },
-          createdAt: { $gte: b.start, $lte: b.end }
-        })
-      }))
-    )
-  ]);
-
-  const result = {
-    metrics: {
-      total: totals[0]?.total || 0,
-      byChannel: totals[0]?.byChannel || 0,
-      byDM: totals[0]?.byDM || 0
-    },
-    trendData: trendRaw
-  };
-
-  _cacheSet(cacheKey, result);
-  return result;
-}
-
 async function getEngagementTrends(companyId, period = 30) {
   const cacheKey = `engagement:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -391,20 +270,14 @@ async function getTeamActivity(companyId, period = 30) {
 
   const { start } = _dateRange(period);
 
-  const [msgByUser, taskByUser, users] = await Promise.all([
-    Message.aggregate([
-      { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
-      { $group: { _id: '$sender', messages: { $sum: 1 } } }
-    ]),
-
+  // Task work per person (assigned / completed). No message counts.
+  const [taskByUser, users] = await Promise.all([
     Tasks.groupCount({ company: companyId, deleted: false, createdAt: { $gte: start } }, 'assignee')
       .then((rows) => rows.map((r) => ({ _id: r._id, tasksAssigned: r.count, tasksCompleted: r.done }))),
 
     org.users.find({ companyId }, { select: '_id username profilePicture companyRole' })
   ]);
 
-  
-  const msgMap = Object.fromEntries(msgByUser.map(m => [m._id.toString(), m.messages]));
   const taskMap = Object.fromEntries(
     taskByUser.map(t => [t._id.toString(), { assigned: t.tasksAssigned, completed: t.tasksCompleted }])
   );
@@ -416,12 +289,11 @@ async function getTeamActivity(companyId, period = 30) {
       name: u.username,
       avatar: u.profilePicture,
       role: u.companyRole,
-      messages: msgMap[id] || 0,
       tasksAssigned: taskMap[id]?.assigned || 0,
       tasksCompleted: taskMap[id]?.completed || 0
     };
-  }).filter(u => u.messages > 0 || u.tasksAssigned > 0)
-    .sort((a, b) => (b.messages + b.tasksAssigned) - (a.messages + a.tasksAssigned));
+  }).filter(u => u.tasksAssigned > 0)
+    .sort((a, b) => (b.tasksCompleted - a.tasksCompleted) || (b.tasksAssigned - a.tasksAssigned));
 
   const result = { teamActivity };
   _cacheSet(cacheKey, result);
@@ -484,50 +356,13 @@ async function getWorkloadAnalysis(companyId, period = 30) {
   return result;
 }
 
-async function getCommunicationPatterns(companyId, period = 30) {
-  const cacheKey = `comms:${companyId}:${period}`;
-  const cached = _cacheGet(cacheKey);
-  if (cached) return cached;
-
-  const { start } = _dateRange(period);
-
-  
-  const hourDist = await Message.aggregate([
-    { $match: { company: oid(companyId), type: { $ne: 'system' }, createdAt: { $gte: start } } },
-    { $group: { _id: { $hour: '$createdAt' }, count: { $sum: 1 } } },
-    { $sort: { '_id': 1 } }
-  ]);
-
-  const hourlyPattern = Array.from({ length: 24 }, (_, h) => {
-    const found = hourDist.find(d => d._id === h);
-    return { hour: h, label: `${h}:00`, count: found?.count || 0 };
-  });
-
-  
-  const topChannels = await Message.aggregate([
-    { $match: { company: oid(companyId), channel: { $ne: null }, type: { $ne: 'system' }, createdAt: { $gte: start } } },
-    { $group: { _id: '$channel', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: 5 },
-    { $lookup: { from: 'channels', localField: '_id', foreignField: '_id', as: 'c' } },
-    { $unwind: { path: '$c', preserveNullAndEmptyArrays: true } },
-    { $project: { name: { $ifNull: ['$c.name', 'Unknown'] }, count: 1 } }
-  ]);
-
-  const result = { hourlyPattern, topChannels };
-  _cacheSet(cacheKey, result);
-  return result;
-}
-
 module.exports = {
   getAnalyticsSummary,
   getUserActivityAnalytics,
   getWorkspaceAnalytics,
   getChannelEngagementAnalytics,
   getTaskAnalytics,
-  getMessageVolumeAnalytics,
   getEngagementTrends,
   getTeamActivity,
-  getWorkloadAnalysis,
-  getCommunicationPatterns
+  getWorkloadAnalysis
 };

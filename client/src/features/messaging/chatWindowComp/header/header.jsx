@@ -150,7 +150,7 @@ export default function Header({
               src={chat.image}
               fallback={chat.name || chat.username}
               alt={chat.name || chat.username}
-              status={presenceState(chat)}
+              status={chat.isAgent ? undefined : presenceState(chat)}
               size="sm"
             />
           )}
@@ -172,7 +172,9 @@ export default function Header({
               fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
               lineHeight: 1.75,
             }}>
-              {chat.type === 'dm' ? (
+              {chat.isAgent ? (
+                'AI agent · answers every message'
+              ) : chat.type === 'dm' ? (
                 chat.customStatus || presenceLabel(chat)
               ) : (
                 chat.memberCount ? `${chat.memberCount} members` : chat.status
@@ -256,7 +258,7 @@ export default function Header({
               )}
 
               {}
-              {chat.type === "dm" && onStartHuddle && (
+              {chat.type === "dm" && !chat.isAgent && onStartHuddle && (
                 <>
                   <button
                     className="hdr-extra"
@@ -425,11 +427,10 @@ export default function Header({
                 </button>
 
                 {showMenu && (
-                  <div onClick={(e) => e.stopPropagation()} style={{
+                  <div onClick={(e) => e.stopPropagation()} className="gl-liquid gl-liquid--strong" style={{
                     position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                    width: '220px', backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-accent)', borderRadius: '2px',
-                    padding: '4px 0', zIndex: 50,
+                    width: '220px', borderRadius: 'var(--gl-radius-md)',
+                    padding: '4px', zIndex: 50,
                     animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
                   }}>
                     {chat.type === "channel" && (
@@ -488,12 +489,12 @@ export default function Header({
                         />
                       </>
                     )}
-                    <div style={{ height: '1px', backgroundColor: 'var(--border-default)', margin: '4px 0' }} />
+                    {(chat.type !== 'channel' || (!chat.isDefault && (onExitChannel || (isChannelAdmin && onDeleteChannel)))) && <div style={{ height: '1px', backgroundColor: 'var(--border-default)', margin: '4px 0' }} />}
 
                     {chat.type === 'channel' && !chat.isDefault && onExitChannel && (
                       <MenuButton
                         icon={<Trash2 size={14} />}
-                        label="Exit Channel"
+                        label="Leave channel"
                         onClick={() => { setShowMenu(false); onExitChannel(); }}
                         danger
                       />
@@ -502,7 +503,7 @@ export default function Header({
                     {chat.type === 'channel' && isChannelAdmin && onDeleteChannel && !chat.isDefault && (
                       <MenuButton
                         icon={<Trash2 size={14} />}
-                        label="Delete Channel Permanently"
+                        label="Delete channel"
                         onClick={() => { setShowMenu(false); onDeleteChannel(); }}
                         danger
                       />
@@ -511,7 +512,7 @@ export default function Header({
                     {chat.type !== 'channel' && (
                       <MenuButton
                         icon={<Trash2 size={14} />}
-                        label="Delete Chat"
+                        label="Delete chat"
                         onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
                         danger
                       />
@@ -572,7 +573,7 @@ function MenuButton({ icon, label, onClick, danger = false }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: '100%', textAlign: 'left', padding: '7px 12px',
+        width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '4px',
         display: 'flex', alignItems: 'center', gap: '10px',
         backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
         color: danger ? 'var(--state-danger)' : (hovered ? 'var(--text-primary)' : 'var(--text-secondary)'),

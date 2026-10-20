@@ -1,0 +1,61 @@
+/* First-run tour (FirstRunTour.jsx). Theme tokens only, so light and dark both follow the theme. */
+
+.tour-root { position: fixed; inset: 0; z-index: 2000; font-family: var(--font); }
+
+.tour-backdrop { position: fixed; inset: 0; background: transparent; }
+.tour-backdrop.is-dim { background: var(--bg-overlay); }
+
+/* The highlighted element shows through a hole in the dimmed page. */
+.tour-spot {
+    position: fixed;
+    border-radius: var(--gl-radius);
+    box-shadow: 0 0 0 200vmax var(--bg-overlay);
+    outline: 2px solid var(--accent);
+    outline-offset: 0;
+    pointer-events: none;
+    transition: top 260ms var(--gl-ease), left 260ms var(--gl-ease), width 260ms var(--gl-ease), height 260ms var(--gl-ease);
+}
+
+.tour-card {
+    position: fixed;
+    width: min(320px, calc(100vw - 32px));
+    padding: 16px 16px 12px;
+    box-shadow: var(--gl-spec-strong), var(--gl-drop);
+    border-color: var(--border-accent);
+    transition: top 260ms var(--gl-ease), left 260ms var(--gl-ease);
+}
+.tour-card:focus { outline: none; }
+
+.tour-count {
+    margin: 0 0 6px;
+    font-size: var(--text-label);
+    font-weight: 700;
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.tour-title {
+    margin: 0 0 4px;
+    font-size: var(--text-heading);
+    font-weight: 700;
+    letter-spacing: var(--ls-title);
+    color: var(--text-primary);
+}
+.tour-body {
+    margin: 0;
+    font-size: var(--text-body-sm);
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.tour-dots { display: flex; gap: 4px; margin: 12px 0 10px; }
+.tour-dots span { width: 14px; height: 2px; background: var(--border-accent); transition: background 200ms ease, width 200ms ease; }
+.tour-dots span.is-on { width: 22px; background: var(--accent); }
+
+.tour-actions { display: flex; align-items: center; gap: 6px; }
+.tour-actions .gl-btn--ghost { margin-left: -10px; }
+.tour-grow { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tour-spot, .tour-card, .tour-dots span { transition: none; }
+}

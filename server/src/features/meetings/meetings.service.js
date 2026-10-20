@@ -115,6 +115,30 @@ async function summarizeMeeting(meetingId, { companyId } = {}) {
     return summary;
 }
 
+/**
+ * A huddle ended: the scheduled meetings that were live in it are over. That is the
+ * meeting's own huddle ("meeting-<id>") and live meetings of the huddle's channel or DM.
+ */
+async function completeMeetingsForHuddle(huddle, io) {
+    if (!huddle) return [];
+    const or = [];
+    const hid = String(huddle.huddleId || '');
+    const meetingId = hid.startsWith('meeting-') ? hid.slice('meeting-'.length) : null;
+    if (meetingId && /^[a-f0-9]{24}$/i.test(meetingId)) or.push({ _id: meetingId });
+    if (huddle.channelId) or.push({ channelId: huddle.channelId });
+    if (huddle.dmId) or.push({ dmSessionId: huddle.dmId });
+    if (!or.length) return [];
+    const live = await ScheduledMeeting.find({ status: 'live', $or: or }).select('_id workspaceId title startTime duration').lean();
+    if (!live.length) return [];
+    await ScheduledMeeting.updateMany({ _id: { $in: live.map(m => m._id) } }, { $set: { status: 'completed' } });
+    if (io) {
+        for (const m of live) {
+            io.to(`workspace:${m.workspaceId}`).emit('schedule:updated', { meeting: { ...m, status: 'completed' } });
+        }
+    }
+    return live.map(m => String(m._id));
+}
+
 async function suggestTime({ participantIds, durationMinutes = 30 }) {
     const now = new Date();
     
@@ -172,6 +196,7 @@ module.exports = {
     updateSharedNotes,
     summarizeMeeting,
     suggestTime,
+    completeMeetingsForHuddle,
     addActionItem,
     updateActionItem,
 };

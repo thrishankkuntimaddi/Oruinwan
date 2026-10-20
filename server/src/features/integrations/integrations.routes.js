@@ -194,7 +194,12 @@ function devType(req, res, next) {
 // Members get a redacted view; admins also see the Jira webhook URL (token masked).
 router.get('/:type/config', integrationsFlag, devType, ...member, async (req, res) => {
   try {
-    res.json(await devService.getConfig({ workspaceId: req.query.workspaceId, type: req.params.type, req, isAdmin: isAdminReq(req) }));
+    const view = await devService.getConfig({ workspaceId: req.query.workspaceId, type: req.params.type, req, isAdmin: isAdminReq(req) });
+    // Whether the caller connected their own account (GitHub, Jira): actions they start then work even without a workspace connection.
+    if (['github', 'jira'].includes(req.params.type)) {
+      view.connectedForYou = Boolean(await require('../connections/connections.service').personalFor(req.query.workspaceId, req.user.sub, req.params.type, { ws: req.workspace }));
+    }
+    res.json(view);
   } catch (err) { sendError(res, err); }
 });
 
@@ -228,7 +233,7 @@ router.get('/github/pr', integrationsFlag, ...member, async (req, res) => {
 router.get('/github/file', integrationsFlag, ...member, async (req, res) => {
   try {
     const { workspaceId, repo, ref, path } = req.query;
-    const file = await ghService.getFileText({ workspaceId, repo, ref, path });
+    const file = await ghService.getFileText({ workspaceId, repo, ref, path, userId: req.user.sub });
     res.set('Content-Type', 'text/plain; charset=utf-8');
     res.set('X-File-Language', file.language);
     res.set('X-File-Truncated', String(file.truncated));
@@ -239,7 +244,7 @@ router.get('/github/file', integrationsFlag, ...member, async (req, res) => {
 
 router.get('/github/prs', integrationsFlag, ...member, async (req, res) => {
   try {
-    res.json(await ghService.listOpenPulls({ workspaceId: req.query.workspaceId, repo: req.query.repo || null }));
+    res.json(await ghService.listOpenPulls({ workspaceId: req.query.workspaceId, repo: req.query.repo || null, userId: req.user.sub }));
   } catch (err) { sendError(res, err); }
 });
 
@@ -440,6 +445,15 @@ router.post('/ai-providers/connect', aiAdmin, async (req, res) => {
     if (!workspaceId || !provider || (!apiKey && provider !== 'local_llm')) {
       return res.status(400).json({ message: 'workspaceId, provider, and apiKey required' });
     }
+    const PROVIDERS = ['openai', 'anthropic', 'gemini', 'xai', 'local_llm'];
+    if (!PROVIDERS.includes(provider)) {
+      return res.status(400).json({ message: `provider must be one of: ${PROVIDERS.join(', ')}` });
+    }
+    // Optional model id (e.g. claude-opus-5-5, gpt-5, grok-4); otherwise the provider's default.
+    if (config?.model !== undefined && config.model !== null && (typeof config.model !== 'string' || config.model.length > 80)) {
+      return res.status(400).json({ message: 'config.model must be a model id' });
+    }
+    if (typeof apiKey === 'string' && apiKey.length > 500) return res.status(400).json({ message: 'That API key is too long' });
     if (provider === 'local_llm') {
       if (!apiKey) apiKey = '';
       const baseUrl = config?.baseUrl;

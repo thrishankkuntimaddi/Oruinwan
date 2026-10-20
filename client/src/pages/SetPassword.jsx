@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, Shield, Key, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Check, ArrowRight } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import api from '@services/api';
+import AuthShell from '../components/public/AuthShell';
+import { AuthMark, AuthHead } from '../components/public/AuthParts';
 
 const RULES = [
     { key: 'len', label: '8+ characters',    test: p => p.length >= 8 },
@@ -12,15 +14,7 @@ const RULES = [
     { key: 'sym', label: 'Special character', test: p => /[^A-Za-z0-9]/.test(p) },
 ];
 
-const inputSt = (err) => ({
-    width: '100%', boxSizing: 'border-box',
-    background: 'var(--bg-input)',
-    border: `1px solid ${err ? 'var(--state-danger)' : 'var(--border-default)'}`,
-    color: 'var(--text-primary)', fontSize: '13px',
-    padding: '10px 38px 10px 38px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    transition: 'border-color 150ms ease',
-});
+const PROVIDER = { google: 'Google', github: 'GitHub', apple: 'Apple', microsoft: 'Microsoft' };
 
 const SetPassword = () => {
     const navigate = useNavigate();
@@ -31,8 +25,7 @@ const SetPassword = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [skipMode, setSkipMode] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -46,146 +39,95 @@ const SetPassword = () => {
     const matches = password.length > 0 && password === confirmPassword;
     const isValid = allMet && matches;
     const confirmError = confirmPassword.length > 0 && password !== confirmPassword;
+    const provider = PROVIDER[user?.authProvider] || user?.authProvider || 'another account';
 
-    const handleSetPassword = async () => {
-        if (!isValid) { showToast('Please meet all password requirements', 'error'); return; }
-        setLoading(true);
+    const handleSetPassword = async (e) => {
+        e?.preventDefault();
+        if (!isValid) { showToast('Meet every password requirement first', 'error'); return; }
+        setLoading('set');
         try {
             await api.post('/api/auth/oauth/set-password', { password });
-            showToast('Password set successfully!', 'success');
+            showToast('Password set. You can now sign in with your email too.', 'success');
             localStorage.removeItem('oauthPasswordSetupRequired');
             localStorage.removeItem('oauthProvider');
             setTimeout(() => navigate('/workspaces', { replace: true }), 500);
         } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to set password', 'error');
-        } finally { setLoading(false); }
+            showToast(error.response?.data?.message || 'We couldn’t set your password', 'error');
+        } finally { setLoading(null); }
     };
 
     const handleSkip = async () => {
-        setLoading(true);
+        setLoading('skip');
         try {
             await api.post('/api/auth/oauth/skip-password');
-            showToast('You can set a password later from settings', 'info');
+            showToast('You can set a password later in Settings', 'info');
             localStorage.removeItem('oauthPasswordSetupRequired');
             localStorage.removeItem('oauthProvider');
             setTimeout(() => navigate('/workspaces', { replace: true }), 500);
         } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to skip', 'error');
-        } finally { setLoading(false); }
+            showToast(error.response?.data?.message || 'We couldn’t skip this step', 'error');
+        } finally { setLoading(null); }
     };
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
-            {}
-            <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(155,142,207,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <AuthShell
+            title="Set a password"
+            aside={<>
+                <h1 className="orw-auth__title">One more key<br /><span className="orw-gloss-text">for your account.</span></h1>
+                <p className="orw-auth__lead">A password lets you sign in with your email on any device and unlocks your encrypted messages.</p>
+            </>}
+        >
+            <AuthMark icon={ShieldCheck} />
+            <AuthHead title="Add a password">
+                You signed in with <strong>{provider}</strong>. Add a password so you can also sign in with your email.
+            </AuthHead>
 
-            <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Oruinwan</span>
+            <form onSubmit={handleSetPassword} className="orw-form">
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="setpwd-new">Password</label>
+                    <div className="orw-input-wrap">
+                        <input id="setpwd-new" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                            placeholder="Create a password" autoComplete="new-password" autoFocus className="orw-input" aria-describedby="setpwd-rules" />
+                        <button type="button" className="orw-input-wrap__btn" onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>
+                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                    </div>
+                    <ul className="orw-pwd-rules" id="setpwd-rules" aria-label="Password requirements">
+                        {rules.map(r => (
+                            <li key={r.key} className={r.met ? 'is-met' : ''}>
+                                <span className="orw-pwd-rules__tick" aria-hidden="true">{r.met && <Check size={10} strokeWidth={3} />}</span>
+                                {r.label}<span className="orw-sr">{r.met ? ' (met)' : ' (not met)'}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
-                {}
-                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
-                    {}
-                    <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                        <Shield size={22} style={{ color: 'var(--accent)' }} />
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="setpwd-confirm">Confirm password</label>
+                    <div className="orw-input-wrap">
+                        <input id="setpwd-confirm" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                            placeholder="Repeat the password" autoComplete="new-password" className="orw-input"
+                            aria-invalid={confirmError ? 'true' : undefined} data-state={matches ? 'ok' : undefined} />
+                        <button type="button" className="orw-input-wrap__btn" onClick={() => setShowConfirm(!showConfirm)}
+                            aria-label={showConfirm ? 'Hide password' : 'Show password'} aria-pressed={showConfirm}>
+                            {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
                     </div>
-
-                    <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.02em' }}>Secure Your Account</h1>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
-                        You signed in with <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{user?.authProvider}</span>. Set a password to enable email login.
-                    </p>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a password"
-                                    style={inputSt(false)}
-                                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
-                                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        {}
-                        {password.length > 0 && (
-                            <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
-                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Requirements</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                                    {rules.map(r => (
-                                        <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: r.met ? 'var(--state-success)' : 'var(--text-muted)', fontWeight: r.met ? 600 : 400 }}>
-                                            {r.met ? <CheckCircle2 size={11} /> : <div style={{ width: '11px', height: '11px', borderRadius: '50%', border: '1px solid var(--border-accent)', flexShrink: 0 }} />}
-                                            {r.label}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm password"
-                                    style={inputSt(confirmError)}
-                                    onFocus={e => !confirmError && (e.target.style.borderColor = 'var(--border-accent)')}
-                                    onBlur={e => !confirmError && (e.target.style.borderColor = 'var(--border-default)')} />
-                                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
-                                    {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
-                                </button>
-                            </div>
-                            {confirmPassword.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', fontSize: '11px', fontWeight: 600, color: matches ? 'var(--state-success)' : 'var(--state-danger)' }}>
-                                    {matches ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
-                                    {matches ? 'Passwords match' : 'Passwords do not match'}
-                                </div>
-                            )}
-                        </div>
-
-                        {}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: skipMode ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)', border: `1px solid ${skipMode ? 'var(--border-accent)' : 'var(--border-subtle)'}`, cursor: 'pointer', transition: 'all 150ms ease' }}
-                            onClick={() => setSkipMode(!skipMode)}>
-                            <div style={{ width: '16px', height: '16px', border: `1px solid ${skipMode ? 'var(--accent)' : 'var(--border-default)'}`, background: skipMode ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
-                                {skipMode && <CheckCircle2 size={10} style={{ color: 'var(--bg-base)' }} />}
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>Skip for now</p>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Set a password later from account settings</p>
-                            </div>
-                        </div>
-
-                        {}
-                        {skipMode ? (
-                            <button onClick={handleSkip} disabled={loading}
-                                style={{ padding: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease' }}>
-                                {loading ? 'Skipping...' : 'Skip Setup →'}
-                            </button>
-                        ) : (
-                            <button onClick={handleSetPassword} disabled={!isValid || loading}
-                                style={{ padding: '10px', background: isValid ? 'var(--accent)' : 'var(--bg-active)', border: 'none', color: isValid ? 'var(--bg-base)' : 'var(--text-muted)', fontSize: '13px', fontWeight: 700, cursor: isValid && !loading ? 'pointer' : 'not-allowed', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                <Key size={14} />
-                                {loading ? 'Setting Password...' : 'Set Password'}
-                            </button>
-                        )}
-                    </div>
+                    {confirmError && <p className="orw-error-text">Passwords don’t match</p>}
                 </div>
 
-                <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '24px', opacity: 0.5 }}>
-                    © 2026 Oruinwan Inc.
-                </p>
-            </div>
-        </div>
+                <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={!isValid || !!loading} aria-busy={loading === 'set'}>
+                    {loading === 'set' ? 'Saving…' : <>Set password <ArrowRight size={15} /></>}
+                </button>
+            </form>
+
+            <p className="orw-auth__note">
+                Not now? <button type="button" className="orw-link" onClick={handleSkip} disabled={!!loading}>
+                    {loading === 'skip' ? 'Skipping…' : 'Skip and set it later in Settings'}
+                </button>
+            </p>
+        </AuthShell>
     );
 };
 

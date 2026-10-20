@@ -5,7 +5,7 @@ import logger from '../../../../utils/logger';
 
 const idOf = (v) => String(v?._id || v?.id || v || '');
 
-const label = { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', margin: '0 0 8px', fontFamily: 'var(--font)' };
+const label = { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 8px', fontFamily: 'var(--font)' };
 
 /**
  * Owner-only sharing settings: workspace visibility, the people the note is shared
@@ -77,7 +77,6 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
   };
 
   const sharedCount = selected.size;
-  const btnBase = { padding: '9px', fontSize: '13px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 150ms ease' };
 
   return (
     <div
@@ -85,13 +84,13 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div role="dialog" aria-modal="true" aria-label="Share note" data-testid="share-note-modal" style={{
-        background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px',
+        background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)',
         boxShadow: 'var(--card-shadow)', width: '440px', maxWidth: '100%', maxHeight: '85vh',
         display: 'flex', flexDirection: 'column', fontFamily: 'var(--font)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-            <div style={{ width: '32px', height: '32px', background: 'var(--accent-dim)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: '32px', height: '32px', background: 'var(--accent-dim)', borderRadius: 'var(--gl-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Users size={14} style={{ color: 'var(--accent)' }} />
             </div>
             <div style={{ minWidth: 0 }}>
@@ -100,7 +99,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
             </div>
           </div>
           <button onClick={onClose} aria-label="Close"
-            style={{ padding: '5px', background: 'transparent', border: 'none', borderRadius: '2px', color: 'var(--text-muted)', cursor: 'pointer' }}
+            style={{ padding: '5px', background: 'transparent', border: 'none', borderRadius: 'var(--gl-radius)', color: 'var(--text-muted)', cursor: 'pointer' }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
           ><X size={14} /></button>
@@ -117,12 +116,12 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
               const active = isPublic === value;
               return (
                 <button key={String(value)} onClick={() => setIsPublic(value)} aria-pressed={active}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: active ? 'var(--accent-dim)' : 'var(--bg-base)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: '2px', color: active ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)', transition: 'all 150ms ease' }}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: active ? 'var(--accent-dim)' : 'var(--bg-base)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: 'var(--gl-radius)', color: active ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)', transition: 'all 150ms ease' }}
                 >
                   <Ic size={14} style={{ flexShrink: 0 }} />
                   <span>
                     <span style={{ display: 'block', fontSize: '12px', fontWeight: 700, lineHeight: 1.3 }}>{title}</span>
-                    <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.3 }}>{sub}</span>
+                    <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>{sub}</span>
                   </span>
                 </button>
               );
@@ -139,7 +138,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
             <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input type="text" placeholder="Search members…" aria-label="Search members"
               value={search} onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '7px 12px 7px 30px', fontSize: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '7px 12px 7px 30px', fontSize: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
               onFocus={e => { e.target.style.borderColor = 'var(--border-accent)'; }}
               onBlur={e => { e.target.style.borderColor = 'var(--border-default)'; }}
             />
@@ -149,7 +148,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 10px', minHeight: '120px' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '8px' }}>
-              {[0, 1, 2].map(i => <div key={i} style={{ height: '36px', background: 'var(--bg-hover)', borderRadius: '2px' }} />)}
+              {[0, 1, 2].map(i => <div key={i} style={{ height: '36px', background: 'var(--bg-hover)', borderRadius: 'var(--gl-radius)' }} />)}
             </div>
           ) : loadError ? (
             <p style={{ fontSize: '12px', color: 'var(--state-danger)', padding: '16px 8px', margin: 0 }}>{loadError}</p>
@@ -168,7 +167,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
                 const isSelected = selected.has(uid);
                 return (
                   <button key={uid} onClick={() => toggle(uid)} aria-pressed={isSelected} data-testid={`share-member-${member.username || uid}`}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', textAlign: 'left', background: isSelected ? 'var(--accent-dim)' : 'transparent', border: '1px solid transparent', borderRadius: '2px', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'var(--font)' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', textAlign: 'left', background: isSelected ? 'var(--accent-dim)' : 'transparent', border: '1px solid transparent', borderRadius: 'var(--gl-radius)', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'var(--font)' }}
                     onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                   >
@@ -183,8 +182,8 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
                       <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                       {member.email && <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</span>}
                     </span>
-                    <span style={{ width: '16px', height: '16px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`, background: isSelected ? 'var(--accent)' : 'transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {isSelected && <Check size={10} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
+                    <span style={{ width: '16px', height: '16px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`, background: isSelected ? 'var(--accent)' : 'transparent', borderRadius: 'var(--gl-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {isSelected && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
                     </span>
                   </button>
                 );
@@ -204,7 +203,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
               const active = allowEditing === value;
               return (
                 <button key={title} role="radio" aria-checked={active} onClick={() => setAllowEditing(value)} data-testid={`share-permission-${title.toLowerCase()}`}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 10px', fontSize: '12px', fontWeight: 600, background: active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: '2px', color: active ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 10px', fontSize: '12px', fontWeight: 600, background: active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: 'var(--gl-radius)', color: active ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)' }}
                 >
                   <Ic size={12} /> {title}
                 </button>
@@ -219,15 +218,10 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
         </div>
 
         <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: '8px', flexShrink: 0 }}>
-          <button onClick={onClose}
-            style={{ ...btnBase, flex: 1, fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
-          >Cancel</button>
-          <button onClick={handleSave} disabled={saving} data-testid="share-note-save"
-            style={{ ...btnBase, flex: 1, fontWeight: 700, color: '#0c0c0c', background: 'var(--accent)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-          >
-            <UserPlus size={14} /> {saving ? 'Saving…' : 'Save'}
+          <button type="button" className="gl-btn gl-btn--ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>Cancel</button>
+          <button type="button" className="gl-btn gl-btn--primary" onClick={handleSave} disabled={saving} data-testid="share-note-save"
+            style={{ flex: 1, justifyContent: 'center' }}>
+            <UserPlus size={14} /> {saving ? 'Saving…' : 'Save sharing'}
           </button>
         </div>
       </div>

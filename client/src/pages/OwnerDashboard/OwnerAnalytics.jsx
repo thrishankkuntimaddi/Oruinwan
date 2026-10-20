@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Activity, Users, MessageSquare, Briefcase, TrendingUp, Building } from 'lucide-react';
+import { RefreshCw, Activity, Users, ListTodo, Briefcase, TrendingUp, Building } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getOwnerAnalytics } from '../../services/ownerDashboardService';
 import {
@@ -26,10 +26,10 @@ const OwnerAnalytics = () => {
 
     const s = data?.summary || {};
     const growth = data?.userGrowth || [];
-    const daily = data?.dailyMessages || [];
-    const workspaces = data?.workspaceActivity || [];
+    const daily = data?.dailyTasks || [];
+    const workspaces = data?.workspaceSizes || [];
     const depts = data?.departmentDistribution || [];
-    const maxWs = Math.max(1, ...workspaces.map((w) => w.activity || 0));
+    const maxWs = Math.max(1, ...workspaces.map((w) => w.members || 0));
     const maxDept = Math.max(1, ...depts.map((d) => d.value || 0));
     const rangeLabel = RANGES.find((r) => r.value === range)?.label;
 
@@ -40,7 +40,7 @@ const OwnerAnalytics = () => {
                     eyebrow="Owner console"
                     icon={Activity}
                     title="Activity health"
-                    lead="Growth, messaging and where the work happens"
+                    lead="Growth, sign-ins and where the work happens. Messages are end-to-end encrypted and never counted here."
                     actions={(
                         <>
                             <FilterTabs label="Time range" value={range} onChange={setRange} options={RANGES} />
@@ -54,14 +54,14 @@ const OwnerAnalytics = () => {
                 <>
                     <KpiGrid>
                         <Kpi label="New people" icon={Users} value={s.newUsers} loading={loading} hint={`joined in the last ${rangeLabel}`} />
-                        <Kpi label="Messages" icon={MessageSquare} value={s.totalMessages} loading={loading} hint={`sent in the last ${rangeLabel}`} />
+                        <Kpi label="Tasks created" icon={ListTodo} value={s.tasksCreated} loading={loading} hint={`in the last ${rangeLabel}`} />
                         <Kpi
                             label="Engagement"
                             icon={TrendingUp}
                             tone="success"
                             value={loading ? undefined : s.engagementRate == null ? null : `${s.engagementRate}%`}
                             loading={loading}
-                            hint="of people sent at least one message"
+                            hint="of active people signed in this period"
                         />
                         <Kpi
                             label="Active workspaces"
@@ -91,9 +91,9 @@ const OwnerAnalytics = () => {
                                 </div>
                             )}
                         </Panel>
-                        <Panel title={`Messages per day · ${range === '7d' ? '7' : '30'} days`} icon={MessageSquare}>
-                            {loading ? <div className="od-chart cd-skel" /> : !hasData(daily, 'messages') ? (
-                                <div className="od-chart-empty">No messages in this period</div>
+                        <Panel title={`Tasks created per day · ${range === '7d' ? '7' : '30'} days`} icon={ListTodo}>
+                            {loading ? <div className="od-chart cd-skel" /> : !hasData(daily, 'tasks') ? (
+                                <div className="od-chart-empty">No tasks created in this period</div>
                             ) : (
                                 <div className="od-chart">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -102,7 +102,7 @@ const OwnerAnalytics = () => {
                                             <XAxis dataKey={range === '7d' ? 'day' : 'date'} tick={AXIS} axisLine={false} tickLine={false} tickFormatter={(v) => (range === '7d' ? v : String(v).slice(5))} minTickGap={12} />
                                             <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
                                             <Tooltip {...tooltipProps} />
-                                            <Bar dataKey="messages" name="Messages" fill="var(--accent)" radius={[2, 2, 0, 0]} />
+                                            <Bar dataKey="tasks" name="Tasks" fill="var(--accent)" radius={[2, 2, 0, 0]} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -111,16 +111,16 @@ const OwnerAnalytics = () => {
                     </Grid>
 
                     <Grid cols="2">
-                        <Panel title="Busiest workspaces" icon={Briefcase}>
+                        <Panel title="Largest workspaces" icon={Briefcase}>
                             {loading ? <div className="cd-skel" style={{ height: 120 }} /> : workspaces.length === 0 ? (
-                                <div className="od-chart-empty" style={{ height: 120 }}>No workspace messages in this period</div>
+                                <div className="od-chart-empty" style={{ height: 120 }}>No workspaces yet</div>
                             ) : (
                                 <div className="od-bars">
                                     {workspaces.map((w) => (
                                         <div key={w.name} className="od-bar-row">
                                             <span title={w.name}>{w.name}</span>
-                                            <Meter value={(w.activity / maxWs) * 100} label={`${w.name} messages`} />
-                                            <span>{w.activity.toLocaleString()}</span>
+                                            <Meter value={(w.members / maxWs) * 100} label={`${w.name} members`} />
+                                            <span>{w.members.toLocaleString()}</span>
                                         </div>
                                     ))}
                                 </div>

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-    Activity, Users, MessageSquare, CheckSquare, TrendingUp, AlertTriangle, Coffee, BarChart2,
-    Zap, RefreshCw, Hash, Target, Layers, Clock,
+    Activity, Users, CheckSquare, TrendingUp, AlertTriangle, Coffee, BarChart2,
+    Zap, RefreshCw, Hash, Target, Layers, Briefcase, Lock,
 } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@services/api';
@@ -25,11 +25,8 @@ const ENDPOINTS = {
     workspaces: '/api/dashboard/analytics/workspaces',
     channels: '/api/dashboard/analytics/channels',
     tasks: '/api/dashboard/analytics/tasks',
-    messages: '/api/dashboard/analytics/messages',
     engagement: '/api/dashboard/analytics/engagement',
-    team: '/api/analytics/insights/team',
     workload: '/api/analytics/insights/workload',
-    communication: '/api/analytics/insights/communication',
 };
 
 const pct = (v) => (v == null ? null : `${v}%`);
@@ -56,7 +53,10 @@ function BarList({ rows, tone }) {
     );
 }
 
-/** Productivity insights for owners and admins: messaging, tasks, engagement, workload. */
+/**
+ * Productivity insights for owners and admins: people, tasks, engagement, workload.
+ * Messages are end-to-end encrypted, so nothing here counts or shows them.
+ */
 const InsightsDashboard = () => {
     const { pathname } = useLocation();
     const eyebrow = pathname.startsWith('/owner') ? 'Owner console' : 'Admin console';
@@ -82,17 +82,12 @@ const InsightsDashboard = () => {
     const s = data.summary?.summary || {};
     const eng = data.engagement || {};
     const tasks = data.tasks || {};
-    const msgs = data.messages || {};
-    const team = data.team?.teamActivity || [];
     const workload = data.workload || {};
-    const comm = data.communication || {};
     const channels = data.channels?.channels || [];
     const workspaces = data.workspaces?.workspaces || [];
-    const contributors = data.users?.topContributors || [];
+    const activeTrend = (data.users?.trendData || []).map((d, i) => ({ label: d.name || String(i + 1), value: d.value || 0 }));
     const allFailed = !loading && Object.keys(errors).length === Object.keys(ENDPOINTS).length;
-    const hourly = (comm.hourlyPattern || []).map((h, i) => ({ hour: h.hour ?? i, count: h.count || 0 }));
     const taskTrend = tasks.trendData || [];
-    const msgTrend = (msgs.trendData || []).map((d, i) => ({ label: d.name || d.date || d.label || String(i + 1), value: d.count ?? d.value ?? d.messages ?? 0 }));
 
     return (
         <DashPage
@@ -101,7 +96,7 @@ const InsightsDashboard = () => {
                     eyebrow={eyebrow}
                     icon={BarChart2}
                     title="Productivity insights"
-                    lead="Messaging, tasks, engagement and workload across your company"
+                    lead="People, tasks, engagement and workload across your company"
                     actions={(
                         <>
                             <FilterTabs label="Period" value={period} onChange={setPeriod} options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }]} />
@@ -118,7 +113,7 @@ const InsightsDashboard = () => {
                     <KpiGrid>
                         <Kpi label="People" icon={Users} value={errors.summary ? null : s.totalUsers} hint={s.userGrowth ? `${s.userGrowth > 0 ? '+' : ''}${s.userGrowth}% vs previous period` : 'in your company'} />
                         <Kpi label="Active people" icon={Activity} tone="success" value={errors.summary ? null : s.activeUsers} hint={`in the last ${period} days`} />
-                        <Kpi label="Messages" icon={MessageSquare} value={errors.summary ? null : s.totalMessages} hint={`sent in the last ${period} days`} />
+                        <Kpi label="Channels" icon={Hash} value={errors.summary ? null : s.totalChannels} hint="open across workspaces" />
                         <Kpi label="Task completion" icon={CheckSquare} value={errors.summary ? null : pct(s.taskCompletionRate ?? 0)} hint="of tasks in the period" />
                         <Kpi label="Daily active" icon={Zap} value={errors.engagement ? null : eng.dau} hint="people active today" />
                         <Kpi label="Weekly active" icon={TrendingUp} value={errors.engagement ? null : eng.wau} hint="people active this week" />
@@ -126,41 +121,20 @@ const InsightsDashboard = () => {
                         <Kpi label="Stickiness" icon={Target} value={errors.engagement ? null : pct(eng.dauWauRatio ?? 0)} hint="daily ÷ weekly active" />
                     </KpiGrid>
 
-                    <Grid cols="2">
-                        <Panel title="Most active people" icon={Activity}>
-                            <PanelBody error={errors.team} empty={!team.length} emptyText="No activity in this period">
-                                <div className="cd-list">
-                                    {team.slice(0, 8).map((u, i) => (
-                                        <div key={u.userId || i} className="cd-list-row" style={{ padding: '8px 0' }}>
-                                            <span className="cd-muted" style={{ width: 18, fontSize: 12 }}>{i + 1}</span>
-                                            <Avatar name={u.name} size="sm" />
-                                            <div className="cd-grow">
-                                                <div className="cd-cell-title">{u.name}</div>
-                                                <div className="cd-cell-sub">{u.messages} messages · {u.tasksAssigned} tasks</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </PanelBody>
-                        </Panel>
-                        <Panel title="When people talk" icon={Clock}>
-                            <PanelBody error={errors.communication} empty={!hourly.some((h) => h.count > 0)} emptyText="No messages in this period">
+                    <Grid cols="1">
+                        {/* No per-person rankings: insights stay company-wide (see docs → What admins can see). */}
+                        <Panel title="Active people over time" icon={Activity}>
+                            <PanelBody error={errors.users} empty={!activeTrend.some((d) => d.value > 0)} emptyText="No activity in this period">
                                 <div className="od-chart" style={{ height: 180 }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={hourly} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
-                                            <XAxis dataKey="hour" tick={AXIS} axisLine={false} tickLine={false} interval={5} tickFormatter={(h) => `${h}:00`} />
+                                        <AreaChart data={activeTrend} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
+                                            <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} minTickGap={12} />
                                             <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-                                            <Tooltip {...tooltipProps} labelFormatter={(h) => `${h}:00`} />
-                                            <Bar dataKey="count" name="Messages" fill="var(--accent)" radius={[2, 2, 0, 0]} />
-                                        </BarChart>
+                                            <Tooltip {...tooltipProps} />
+                                            <Area type="monotone" dataKey="value" name="Active people" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.15} strokeWidth={2} />
+                                        </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
-                                {(comm.topChannels || []).length > 0 && (
-                                    <div style={{ marginTop: 12 }}>
-                                        <div className="cd-kpi-label" style={{ marginBottom: 8 }}>Top channels</div>
-                                        <BarList rows={comm.topChannels.slice(0, 4).map((c, i) => ({ key: c.name || i, label: `#${c.name}`, value: c.count }))} />
-                                    </div>
-                                )}
                             </PanelBody>
                         </Panel>
                     </Grid>
@@ -222,45 +196,22 @@ const InsightsDashboard = () => {
                     </Grid>
 
                     <Grid cols="2">
-                        <Panel title="Channels by messages" icon={Hash}>
-                            <PanelBody error={errors.channels} empty={!channels.length} emptyText="No channel messages in this period">
-                                <BarList rows={channels.slice(0, 8).map((c) => ({ key: c.channelId, label: `#${c.name}`, sub: `${c.memberCount} members · ${c.activeUsers} active`, value: c.messageCount }))} />
+                        <Panel title="Channels by members" icon={Hash}>
+                            <PanelBody error={errors.channels} empty={!channels.length} emptyText="No public channels yet">
+                                <BarList rows={channels.slice(0, 8).map((c) => ({ key: c.channelId, label: `#${c.name}`, value: c.memberCount }))} />
                             </PanelBody>
                         </Panel>
-                        <Panel title="Message volume" icon={MessageSquare}>
-                            <PanelBody error={errors.messages} empty={false}>
-                                <div className="od-kv" style={{ marginBottom: 12 }}>
-                                    <div className="od-kv-row"><span>Total</span><span>{(msgs.metrics?.total ?? 0).toLocaleString()}</span></div>
-                                    <div className="od-kv-row"><span>In channels</span><span>{(msgs.metrics?.byChannel ?? 0).toLocaleString()}</span></div>
-                                    <div className="od-kv-row"><span>Direct messages</span><span>{(msgs.metrics?.byDM ?? 0).toLocaleString()}</span></div>
-                                </div>
-                                {msgTrend.some((d) => d.value > 0) ? (
-                                    <div className="od-chart" style={{ height: 150 }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={msgTrend} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
-                                                <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} minTickGap={12} />
-                                                <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-                                                <Tooltip {...tooltipProps} />
-                                                <Area type="monotone" dataKey="value" name="Messages" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.15} strokeWidth={2} />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                ) : null}
-                                {!errors.workspaces && workspaces.length > 0 && (
-                                    <div style={{ marginTop: 12 }}>
-                                        <div className="cd-kpi-label" style={{ marginBottom: 8 }}>Workspaces</div>
-                                        <BarList tone="success" rows={workspaces.slice(0, 5).map((w) => ({ key: w._id, label: w.name, sub: `${w.memberCount} members`, value: w.messageCount }))} />
-                                    </div>
-                                )}
+                        <Panel title="Workspaces" icon={Briefcase}>
+                            <PanelBody error={errors.workspaces} empty={!workspaces.length} emptyText="No workspaces yet">
+                                <BarList tone="success" rows={workspaces.slice(0, 6).map((w) => ({ key: w._id, label: w.name, sub: `${w.channelCount ?? 0} channels · ${w.taskCount ?? 0} tasks`, value: w.memberCount }))} />
                             </PanelBody>
                         </Panel>
                     </Grid>
 
-                    <Panel title="Top contributors" icon={TrendingUp}>
-                        <PanelBody error={errors.users} empty={!contributors.length} emptyText="No messages sent in this period">
-                            <BarList rows={contributors.slice(0, 10).map((u, i) => ({ key: u.userId || i, label: u.name, value: u.messages }))} />
-                        </PanelBody>
-                    </Panel>
+                    <div className="cd-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                        <Lock size={13} aria-hidden="true" />
+                        Messages are end-to-end encrypted and never shown to admins, and they are not counted here.
+                    </div>
                 </>
             )}
         </DashPage>

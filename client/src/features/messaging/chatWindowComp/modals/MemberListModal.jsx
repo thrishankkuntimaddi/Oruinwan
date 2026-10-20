@@ -67,7 +67,7 @@ export default function MemberListModal({
         <>
             {}
             <div
-                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 50 }}
+                style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)', zIndex: 50 }}
                 onClick={onClose}
             />
 
@@ -80,7 +80,7 @@ export default function MemberListModal({
                         backgroundColor: 'var(--bg-surface)',
                         border: '1px solid var(--border-accent)',
                         borderRadius: '4px',
-                        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                        boxShadow: 'var(--lg-shadow-sm)',
                         overflow: 'hidden',
                         pointerEvents: 'auto',
                         animation: 'fadeIn 180ms ease',
@@ -207,7 +207,7 @@ function MemberRow({ user, userId, isCurrentUser, roleBadge, isOnline, joinedAt,
                             width: '40px', height: '40px', borderRadius: '2px',
                             backgroundColor: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <span style={{ color: '#0c0c0c', fontWeight: 700, fontSize: '15px' }}>
+                            <span style={{ color: 'var(--bg-base)', fontWeight: 700, fontSize: '15px' }}>
                                 {(user.username || '?').charAt(0).toUpperCase()}
                             </span>
                         </div>

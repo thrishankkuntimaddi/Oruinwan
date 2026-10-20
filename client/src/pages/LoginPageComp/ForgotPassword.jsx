@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
 import logger from '../../utils/logger';
 import AuthShell from '../../components/public/AuthShell';
+import { AuthMark } from '../../components/public/AuthParts';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
@@ -44,10 +45,10 @@ export default function ForgotPassword() {
         >
             {sent ? (
                 <div role="status">
-                    <span className="orw-card__icon" style={{ '--c': '#8fe0b8' }}><CheckCircle2 size={19} aria-hidden="true" /></span>
+                    <AuthMark icon={CheckCircle2} tone="good" />
                     <div className="orw-auth__panel-head">
                         <h2>Check your inbox</h2>
-                        <p>If an account exists for <strong style={{ color: 'var(--o-text)' }}>{email}</strong>, a reset link is on its way. It expires soon, so use it shortly.</p>
+                        <p>If an account exists for <strong style={{ color: 'var(--o-text)' }}>{email}</strong>, a reset link is on its way. It expires soon, so open it shortly.</p>
                     </div>
                     <div className="orw-form">
                         <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={() => setSent(false)}>
@@ -60,7 +61,7 @@ export default function ForgotPassword() {
                 </div>
             ) : (
                 <>
-                    <span className="orw-card__icon"><KeyRound size={19} aria-hidden="true" /></span>
+                    <AuthMark icon={KeyRound} />
                     <div className="orw-auth__panel-head">
                         <h2>Forgot your password?</h2>
                         <p>Enter the email you use for your account and we’ll send you a reset link.</p>
@@ -71,7 +72,7 @@ export default function ForgotPassword() {
                         )}
                         <div className="orw-field">
                             <label className="orw-label" htmlFor="forgot-email">Email</label>
-                            <input id="forgot-email" type="email" name="email" placeholder="name@company.com" autoComplete="email" required
+                            <input id="forgot-email" type="email" name="email" placeholder="name@example.com" autoComplete="email" required
                                 value={email} onChange={e => setEmail(e.target.value)} className="orw-input" />
                         </div>
                         <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={loading || !email} aria-busy={loading}>

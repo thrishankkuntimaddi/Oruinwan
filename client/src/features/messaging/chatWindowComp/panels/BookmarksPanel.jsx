@@ -128,7 +128,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
         <>
             {}
             <div
-                style={{ position: 'fixed', inset: 0, zIndex: 40, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)' }}
+                style={{ position: 'fixed', inset: 0, zIndex: 40, backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(1px)' }}
                 onClick={onClose}
             />
 
@@ -137,7 +137,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                 position: 'fixed', right: 0, top: 0, height: '100%', width: '320px',
                 zIndex: 50, backgroundColor: 'var(--bg-surface)',
                 borderLeft: '1px solid var(--border-accent)',
-                boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+                boxShadow: 'var(--lg-shadow-sm)',
                 display: 'flex', flexDirection: 'column',
                 fontFamily: FONT,
                 animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
@@ -248,7 +248,7 @@ function BookmarkCard({ msg, onJumpToMessage, onRemove }) {
                         backgroundColor: 'var(--accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#0c0c0c' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--bg-base)' }}>
                             {(msg.sender?.username || "U")[0].toUpperCase()}
                         </span>
                     </div>

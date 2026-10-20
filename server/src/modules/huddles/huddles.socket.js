@@ -4,6 +4,13 @@ const { registry: defaultRegistry } = require('./huddleRegistry');
 /** Session history (MongoDB); required lazily so tests can inject a fake. */
 const defaultHistory = () => require('./huddleHistory.service').recorder;
 const defaultNotesOp = (args) => require('./huddleHistory.service').applyNotesOp(args);
+/** Scheduled meetings held in a huddle are completed when it ends (only with a live database). */
+const defaultMeetings = {
+    huddleEnded(huddle, io) {
+        if (require('mongoose').connection.readyState !== 1) return Promise.resolve([]);
+        return require('../../features/meetings/meetings.service').completeMeetingsForHuddle(huddle, io);
+    },
+};
 
 function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy }) {
     if (!workspaceId) return;
@@ -122,7 +129,7 @@ function huddleError(socket, huddleId, code, message) {
     socket.emit('huddle:error', { huddleId, code, message });
 }
 
-function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp } = {}) {
+function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000 } = {}) {
     const uid = () => String(socket.user.id);
 
     const announceEnded = (huddle, reason) => {
@@ -133,6 +140,9 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         if (room) io.to(room).emit('huddle:ended', payload);
         history.ended(huddle.huddleId);
         publishHuddle('huddle.ended', huddle, { huddleId: huddle.huddleId, reason });
+        Promise.resolve()
+            .then(() => meetings.huddleEnded(huddle, io))
+            .catch(err => logger.warn('[huddle] could not complete its meetings:', err.message));
     };
 
     /** Remove this user from a huddle; ends the huddle when nobody is left. */
@@ -155,6 +165,12 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const check = await verify(socket, { channelId, dmId, workspaceId });
             if (!check.ok) return huddleError(socket, huddleId, 'FORBIDDEN', check.message);
 
+            // One live huddle per channel or DM: starting another joins the one already running.
+            const running = registry.liveInScope(registryScope(check.scope), huddleId);
+            if (running) {
+                return socket.emit('huddle:existing', { requestedId: huddleId, huddleId: running.huddleId, video: !!running.video });
+            }
+
             const username = await displayName(socket);
             const startedBy = { _id: uid(), username };
             const existed = !!registry.get(huddleId);
@@ -163,6 +179,12 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             if (!existed) {
                 history.started(registry.summary(huddle));
                 publishHuddle('huddle.started', huddle, { huddleId, channelId: huddle.channelId, dmId: huddle.dmId, startedBy: uid(), video: !!huddle.video });
+                // A huddle nobody joins (the starter's tab closed first) must not stay "live".
+                const timer = setTimeout(() => {
+                    const h = registry.get(huddleId);
+                    if (h && h.participants.size === 0 && registry.end(huddleId)) announceEnded(h, 'empty');
+                }, emptyTimeoutMs);
+                if (timer.unref) timer.unref();
             }
 
             const scope = registryScope(check.scope);
@@ -271,15 +293,25 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled });
     });
 
-    // Active huddles this socket can see in a workspace, so a fresh page load shows live huddles.
+    // Active huddles this socket can see in a workspace, so a fresh page load shows live huddles:
+    // workspace huddles, and channel and DM huddles of conversations this socket is in.
     socket.on('huddle:list', (data = {}, ack) => {
         if (typeof ack !== 'function') return;
         const workspaceId = data.workspaceId ? String(data.workspaceId) : null;
         if (!workspaceId || !socket.rooms.has(`workspace:${workspaceId}`)) return ack({ huddles: [] });
-        const huddles = registry.list(h =>
-            h.workspaceId === workspaceId && (!h.channelId || socket.rooms.has(`channel:${h.channelId}`)) && !h.dmId
-        );
+        const huddles = registry.list(h => h.workspaceId === workspaceId && (
+            h.channelId ? socket.rooms.has(`channel:${h.channelId}`)
+                : h.dmId ? socket.rooms.has(`dm:${h.dmId}`)
+                    : true
+        ));
         ack({ huddles });
+    });
+
+    // Raise or lower a hand; everyone in the call sees it.
+    socket.on('huddle:hand', (data = {}) => {
+        const { huddleId, raised } = data;
+        if (!huddleId || !registry.setHand(huddleId, uid(), raised)) return;
+        io.to(`huddle:${huddleId}`).emit('huddle:hand_changed', { huddleId, userId: uid(), raised: !!raised });
     });
 
     // The live huddle in one channel/DM, so a conversation opened after the huddle

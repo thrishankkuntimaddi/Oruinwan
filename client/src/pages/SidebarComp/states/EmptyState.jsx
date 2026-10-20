@@ -1,9 +1,10 @@
 import { Hash, Users, ArrowRight } from 'lucide-react';
 import BrandMark from '../../../shared/components/ui/BrandMark';
 import '../../../components/layout/shell.css';
+import GettingStarted from './GettingStarted';
 
 /** Workspace home with nothing open: welcome + shortcuts to Channels and Messages. */
-function EmptyState({ onNavigateChannels, onNavigateDMs }) {
+function EmptyState({ onNavigateChannels, onNavigateDMs, workspaceId }) {
     const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
     return (
         <div className="gl-shell-welcome gl-ambient">
@@ -40,6 +41,8 @@ function EmptyState({ onNavigateChannels, onNavigateDMs }) {
                 <p className="gl-shell-kbd-hint">
                     Press <kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> to search everything
                 </p>
+
+                {workspaceId && <GettingStarted workspaceId={workspaceId} />}
             </div>
         </div>
     );

@@ -14,7 +14,7 @@ const bcrypt = require('bcryptjs');
 const { closePostgres } = require('../src/shared/postgres');
 const { users } = require('../src/identity');
 
-const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || 'chttrix-admin@chttrix.com';
+const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || 'platform-admin@oruinwan.com';
 const CHTTRIX_ADMIN_PASSWORD = process.env.CHTTRIX_ADMIN_PASS || crypto.randomBytes(12).toString('base64url');
 const CHTTRIX_ADMIN_USERNAME = 'Oruinwan Admin';
 

@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const identity = require('../../identity');
 const org = require('../../identity/queries/org');
 const { hydrate } = require('../../identity/hydrate');
-const Message = require("../../modules/messages/message.model.js");
 const Tasks = require('../tasks/tasks.query');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireManager } = require('../../shared/middleware/permissionMiddleware');
@@ -43,15 +42,10 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
             : [];
         await hydrate(workspaces, { 'members.user': USER_CARD });
 
-        
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         for (const workspace of workspaces) {
             const live = { workspace: workspace._id, deleted: { $ne: true } };
-            const [messageCount, taskCount, activeTaskCount, completedTaskCount] = await Promise.all([
-                Message.countDocuments({
-                    workspace: workspace._id,
-                    createdAt: { $gte: sevenDaysAgo }
-                }),
+            // Tasks only: message volume is not shown to managers (messages are private).
+            const [taskCount, activeTaskCount, completedTaskCount] = await Promise.all([
                 Tasks.countDocuments(live),
                 Tasks.countDocuments({ ...live, status: { $in: ['todo', 'in_progress', 'review', 'blocked'] } }),
                 Tasks.countDocuments({ ...live, status: 'done' })
@@ -60,7 +54,6 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
             workspace.memberCount = workspace.members.length;
             workspace.status = workspace.isArchived ? 'archived' : 'active';
             workspace.activity = {
-                messages: messageCount,
                 tasksTotal: taskCount,
                 tasksActive: activeTaskCount,
                 tasksCompleted: completedTaskCount
@@ -207,8 +200,7 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const memberIds = await org.users.ids(inDept);
 
-        const [messagesThisWeek, tasksCompletedThisWeek, openTasks, overdueTasks] = await Promise.all([
-            Message.countDocuments({ sender: { $in: memberIds }, createdAt: { $gte: sevenDaysAgo } }),
+        const [tasksCompletedThisWeek, openTasks, overdueTasks] = await Promise.all([
             Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: 'done', deleted: { $ne: true }, updatedAt: { $gte: sevenDaysAgo } }),
             Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } }),
             Tasks.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true }, dueDate: { $lt: new Date() } }),
@@ -216,7 +208,7 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
 
         res.json({
             team: { total: totalMembers, active: activeMembers, pending: pendingMembers, managers },
-            activity: { messagesThisWeek, tasksThisWeek: tasksCompletedThisWeek, openTasks, overdueTasks },
+            activity: { tasksThisWeek: tasksCompletedThisWeek, openTasks, overdueTasks },
             department: { _id: dept._id, name: dept.name, description: dept.description, head: dept.head, createdAt: dept.createdAt }
         });
     } catch (error) {

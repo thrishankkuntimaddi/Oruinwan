@@ -36,8 +36,8 @@ export default function ManagerProjects() {
     const totals = (data || []).reduce((a, w) => ({
         total: a.total + (w.activity?.tasksTotal || 0),
         active: a.active + (w.activity?.tasksActive || 0),
-        msgs: a.msgs + (w.activity?.messages || 0),
-    }), { total: 0, active: 0, msgs: 0 });
+        done: a.done + (w.activity?.tasksCompleted || 0),
+    }), { total: 0, active: 0, done: 0 });
 
     const columns = [
         {
@@ -65,7 +65,7 @@ export default function ManagerProjects() {
                 );
             },
         },
-        { key: 'msgs', label: 'Msgs / 7d', className: 'cd-num cd-hide-sm', render: (ws) => ws.activity?.messages ?? 0 },
+        { key: 'done', label: 'Done', className: 'cd-num cd-hide-sm', render: (ws) => ws.activity?.tasksCompleted ?? 0 },
         {
             key: 'open-btn', label: '', render: (ws) => (
                 <IconBtn label={`Open ${ws.name}`} onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${ws._id}/home`); }}>
@@ -103,7 +103,7 @@ export default function ManagerProjects() {
                         <Kpi label="Workspaces" value={data.length} icon={Globe} />
                         <Kpi label="Tasks" value={totals.total} icon={FolderKanban} hint="All tasks in these workspaces" />
                         <Kpi label="Open" value={totals.active} hint="To do, in progress or review" />
-                        <Kpi label="Messages / 7d" value={totals.msgs} />
+                        <Kpi label="Done" value={totals.done} hint="Completed tasks" />
                     </KpiGrid>
                     <Toolbar>
                         <FilterTabs

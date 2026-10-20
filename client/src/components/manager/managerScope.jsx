@@ -32,7 +32,7 @@ export function DepartmentGate({ scope, children }) {
             <EmptyState
                 icon={Briefcase}
                 title="No department yet"
-                text="You don't manage a department yet. Ask a company admin to make you the manager of a department in Departments."
+                text="You don't manage a department yet. Ask a company admin to open the department in Departments and choose “Make head” next to your name."
             />
         );
     }

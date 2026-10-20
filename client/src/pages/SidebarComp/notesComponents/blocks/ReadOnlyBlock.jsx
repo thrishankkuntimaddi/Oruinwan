@@ -5,6 +5,7 @@ import ImageBlock from './ImageBlock';
 import VideoBlock from './VideoBlock';
 import AudioBlock from './AudioBlock';
 import FileBlock from './FileBlock';
+import { CALLOUT_TYPES } from './CalloutBlock';
 
 const HEADING_SIZES = { 1: '2.25rem', 2: '1.75rem', 3: '1.375rem', 4: '1.125rem' };
 const parse = (s, fallback) => { try { return JSON.parse(s); } catch { return fallback; } };
@@ -26,14 +27,20 @@ const ReadOnlyBlock = ({ block, mediaProps }) => {
         }
         case 'code':
             return (
-                <pre style={{ margin: '0 0 16px', padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', overflowX: 'auto', fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace" }}>
+                <pre style={{ margin: '0 0 16px', padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)', fontSize: '13px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', overflowX: 'auto', fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace" }}>
                     <code>{block.content}</code>
                 </pre>
             );
-        case 'callout':
-            return block.content ? (
-                <div style={{ ...text, margin: '0 0 12px', padding: '12px 16px', background: 'var(--accent-dim)', borderLeft: '3px solid var(--accent)', borderRadius: '2px', fontSize: '14px', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{block.content}</div>
-            ) : null;
+        case 'callout': {
+            if (!block.content) return null;
+            const c = CALLOUT_TYPES[block.meta?.variant] || CALLOUT_TYPES.info;
+            return (
+                <div style={{ ...text, display: 'flex', gap: '10px', margin: '0 0 12px', padding: '12px 16px', background: c.bg, border: `1px solid ${c.border}`, borderLeft: `3px solid ${c.bar}`, borderRadius: 'var(--gl-radius)', fontSize: '14px', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                    <c.icon size={15} style={{ color: c.iconColor, flexShrink: 0, marginTop: '3px' }} aria-label={c.label} />
+                    <span>{block.content}</span>
+                </div>
+            );
+        }
         case 'checklist': {
             const items = parse(block.content, []);
             return (
@@ -49,7 +56,7 @@ const ReadOnlyBlock = ({ block, mediaProps }) => {
         }
         case 'toggle':
             return (
-                <details open={!!block.meta?.open} style={{ margin: '0 0 8px', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                <details open={!!block.meta?.open} style={{ margin: '0 0 8px', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)' }}>
                     <summary style={{ ...text, padding: '10px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>{block.meta?.title || 'Toggle'}</summary>
                     <div style={{ ...text, padding: '10px 16px 14px', borderTop: '1px solid var(--border-subtle)', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{block.content}</div>
                 </details>

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, StickyNote } from 'lucide-react';
+import { Btn, EmptyState, LoadingState } from '../ui/page';
+import './brainstorm.css';
 import api from '@services/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { useToast } from '../../contexts/ToastContext';
 
+// Paper colours for the notes themselves (stored on each note, chosen by the user).
 const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];
-const FONT = 'Inter, system-ui, sans-serif';
+const NOTE_NAMES = ['Yellow', 'Green', 'Blue', 'Pink', 'Lilac', 'Coral', 'Mint'];
 
 /**
  * Sticky notes for a meeting. Notes are stored on the server and the server
@@ -84,6 +87,7 @@ const BrainstormBoard = ({ meetingId, liveReady = false }) => {
 
     
     const onMouseDown = (e, itemId, origX, origY) => {
+        if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
         dragging.current = { itemId, startX: e.clientX, startY: e.clientY, origX, origY };
     };
@@ -119,93 +123,76 @@ const BrainstormBoard = ({ meetingId, liveReady = false }) => {
     }, [meetingId, showToast]);
 
     useEffect(() => {
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('pointermove', onMouseMove);
+        window.addEventListener('pointerup', onMouseUp);
         return () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
+            window.removeEventListener('pointermove', onMouseMove);
+            window.removeEventListener('pointerup', onMouseUp);
         };
     }, [onMouseMove, onMouseUp]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', fontFamily: FONT }}>
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {liveReady
-                    ? 'Notes are saved and appear live for everyone who has this meeting open.'
-                    : 'Notes are saved; live updates start once you are connected to the meeting.'}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="bs">
+            <div className="bs-add">
                 <input
+                    className="gl-input"
                     value={newText}
                     onChange={e => setNewText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                    placeholder="New sticky note…"
-                    style={{ flex: 1, minWidth: '160px', padding: '8px 10px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', outline: 'none', fontFamily: FONT }}
+                    placeholder="Write an idea and press Enter"
+                    aria-label="New sticky note"
+                    maxLength={280}
                 />
-                <div style={{ display: 'flex', gap: '4px' }}>
-                    {NOTE_COLORS.map(c => (
+                <div className="bs-colors" role="group" aria-label="Note colour">
+                    {NOTE_COLORS.map((c, i) => (
                         <button
                             key={c}
-                            title="Note colour"
-                            aria-label={`Note colour ${c}`}
+                            type="button"
+                            className="bs-color"
+                            title={NOTE_NAMES[i]}
+                            aria-label={NOTE_NAMES[i]}
+                            aria-pressed={newColor === c}
                             onClick={() => setNewColor(c)}
-                            style={{ width: 22, height: 22, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: newColor === c ? '2px solid var(--text-primary)' : '1px solid var(--border-accent)' }}
+                            style={{ backgroundColor: c }}
                         />
                     ))}
                 </div>
-                <button
-                    onClick={handleAdd}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontSize: '13px', fontWeight: 600, background: 'var(--accent)', color: '#0c0c0c', border: '1px solid var(--accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}
-                >
-                    <Plus size={14} /> Add note
-                </button>
+                <Btn variant="primary" icon={Plus} onClick={handleAdd} disabled={!newText.trim()}>Add note</Btn>
             </div>
+            <p className="bs-hint">
+                {liveReady
+                    ? 'Drag notes to arrange them. Everyone with this meeting open sees changes live.'
+                    : 'Notes are saved. Live updates start once you are connected to the meeting.'}
+            </p>
 
-            <div
-                ref={boardRef}
-                style={{ flex: 1, position: 'relative', minHeight: '400px', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}
-            >
-                {loading && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        Loading board…
-                    </div>
-                )}
+            <div ref={boardRef} className="bs-board">
+                {loading && <div className="bs-state"><LoadingState label="Loading the board…" /></div>}
                 {!loading && items.length === 0 && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                        <p style={{ fontSize: '13px' }}>The board is empty</p>
-                        <p style={{ fontSize: '12px' }}>Add sticky notes above to get started</p>
+                    <div className="bs-state">
+                        <EmptyState icon={StickyNote} title="No notes yet" text="Add ideas above, then drag them into groups as the discussion goes." />
                     </div>
                 )}
                 {items.map(item => (
                     <div
                         key={item._id}
-                        className="group"
+                        className="bs-note"
                         style={{
-                            position: 'absolute',
                             left: item.position?.x || 50,
                             top: item.position?.y || 50,
-                            backgroundColor: item.color || '#FBBF24',
-                            cursor: 'grab',
-                            minWidth: 120,
-                            maxWidth: 200,
-                            padding: '10px 22px 10px 10px',
-                            borderRadius: '2px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-                            userSelect: 'none' }}
-                        onMouseDown={(e) => onMouseDown(e, item._id, item.position?.x || 50, item.position?.y || 50)}
+                            backgroundColor: item.color || NOTE_COLORS[0],
+                        }}
+                        onPointerDown={(e) => onMouseDown(e, item._id, item.position?.x || 50, item.position?.y || 50)}
                     >
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#1a1916', wordBreak: 'break-word', lineHeight: 1.4 }}>
-                            {item.text}
-                        </p>
+                        <p>{item.text}</p>
                         <button
-                            onMouseDown={(e) => e.stopPropagation()}
+                            type="button"
+                            className="bs-del"
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }}
                             title="Delete note"
                             aria-label="Delete note"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ position: 'absolute', top: 4, right: 4, display: 'flex', padding: '2px', borderRadius: '2px', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer' }}
                         >
-                            <X size={10} style={{ color: '#1a1916' }} />
+                            <X size={11} />
                         </button>
                     </div>
                 ))}

@@ -1,41 +1,35 @@
 import React from 'react';
 
-const STEP_TITLES = {
-    1: 'Start Your Organization',
-    2: 'Administrator Profile',
-    3: 'Secure Account',
-    4: 'Verification',
-    5: 'Review & Launch',
+export const STEPS = [
+    { title: 'Your company', short: 'Name and web domain', lead: 'Tell us which company you’re registering. The domain must match your work email.' },
+    { title: 'About you', short: 'Contact details', lead: 'You’ll be the first admin. We use these details to reach you about the review.' },
+    { title: 'Your sign-in', short: 'Work email and password', lead: 'This is how you’ll sign in. The password also unlocks your encrypted messages.' },
+    { title: 'Proof of company', short: 'One document', lead: 'Upload one document that shows the company is real. Only our review team sees it.' },
+    { title: 'Review and submit', short: 'Check everything', lead: 'Check your details. Select a section to change it before you submit.' },
+];
+
+/** Five-segment progress bar + the current step's head. */
+const ProgressHeader = ({ currentStep }) => {
+    const step = STEPS[currentStep - 1] || STEPS[0];
+    return (
+        <>
+            <ol className="orw-stepper orw-stepper--5" aria-label={`Step ${currentStep} of ${STEPS.length}`}>
+                {STEPS.map((s, i) => {
+                    const n = i + 1;
+                    return (
+                        <li key={s.title} className={`orw-stepper__item${n < currentStep ? ' is-done' : n === currentStep ? ' is-current' : ''}`}>
+                            <span className="orw-stepper__bar" />
+                        </li>
+                    );
+                })}
+            </ol>
+            <div className="orw-auth__panel-head">
+                <p className="orw-eyebrow">Step {currentStep} of {STEPS.length}</p>
+                <h2>{step.title}</h2>
+                <p>{step.lead}</p>
+            </div>
+        </>
+    );
 };
-
-const ProgressHeader = ({ currentStep, theme }) => (
-    <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, background: 'rgba(0,0,0,0.15)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '10px' }}>
-                    <span style={{ width: '5px', height: '5px', background: '#b8956a', display: 'inline-block' }} />
-                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>
-                        Step {currentStep} of 5
-                    </span>
-                </div>
-                <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                    {STEP_TITLES[currentStep] || ''}
-                </h1>
-            </div>
-
-            {}
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                {[1, 2, 3, 4, 5].map(step => (
-                    <div key={step} style={{
-                        height: '4px',
-                        width: currentStep >= step ? '28px' : '8px',
-                        background: currentStep >= step ? '#b8956a' : 'rgba(255,255,255,0.08)',
-                        transition: 'all 400ms cubic-bezier(0.4,0,0.2,1)',
-                    }} />
-                ))}
-            </div>
-        </div>
-    </div>
-);
 
 export default ProgressHeader;

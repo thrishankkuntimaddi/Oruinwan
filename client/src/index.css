@@ -26,7 +26,7 @@
   /* Text */
   --text-primary:   #e4e4e4;
   --text-secondary: #7a7a7a;
-  --text-muted:     #404040;
+  --text-muted:     #555555;
 
   /* Accent — warm amber */
   --accent:       #b8956a;
@@ -102,62 +102,62 @@
 /* ── Light Mode Token Overrides ───────────────────────────────── */
 html.light {
   /* Backgrounds — warm white shell */
-  --bg-base:    #f5f4f2;
+  --bg-base:    #f6f3ee;
   --bg-surface: #ffffff;
-  --bg-hover:   #eeece9;
-  --bg-active:  #e8e5e0;
-  --bg-input:   #faf9f7;
+  --bg-hover:   #efebe4;
+  --bg-active:  #e8e2d8;
+  --bg-input:   #fbf9f6;
 
   /* Semantic aliases */
-  --bg-primary:   #f5f4f2;
+  --bg-primary:   #f6f3ee;
   --bg-secondary: #ffffff;
-  --bg-tertiary:  #e8e5e0;
+  --bg-tertiary:  #e8e2d8;
 
   /* Borders */
-  --border-subtle:  #e8e5e0;
-  --border-default: #dedad4;
-  --border-accent:  #c9c4bc;
-  --border-color:   #dedad4;
-  --border-hover:   #c9c4bc;
+  --border-subtle:  #e9e4dc;
+  --border-default: #ddd6cb;
+  --border-accent:  #c6bdaf;
+  --border-color:   #ddd6cb;
+  --border-hover:   #c6bdaf;
 
   /* Text */
   --text-primary:   #1a1916;
-  --text-secondary: #5c5852;
-  --text-muted:     #9c9790;
+  --text-secondary: #57524b;
+  --text-muted:     #736d64;  /* AA on the warm base */
 
-  /* Accent — amber unchanged (brand constant) */
-  --accent:       #b8956a;
-  --accent-dim:   rgba(184,149,106,0.14);
-  --accent-hover: #a07a52;
+  /* Accent — the same gold, deepened so it reads as text on light (4.8:1) */
+  --accent:       #876434;
+  --accent-dim:   rgba(135,100,52,0.12);
+  --accent-hover: #6c4f27;
 
   /* States */
   --state-danger:  #c94040;
   --state-success: #3a8f6a;
 
   /* Brand (legacy) */
-  --color-primary:       #b8956a;
-  --color-primary-hover: #a07a52;
+  --color-primary:       #876434;
+  --color-primary-hover: #6c4f27;
   --color-primary-light: rgba(184,149,106,0.12);
   --color-success: #3a8f6a;
   --color-warning: #a07a52;
   --color-danger:  #c94040;
 
   /* Component specifics */
-  --input-bg:          #faf9f7;
-  --input-border:      #dedad4;
+  --input-bg:          #fbf9f6;
+  --input-border:      #ddd6cb;
   --input-text:        #1a1916;
-  --input-placeholder: #9c9790;
-  --input-ring:        rgba(184,149,106,0.3);
+  --input-placeholder: #8a8379;
+  --input-ring:        rgba(150,112,62,0.26);
   --card-bg:    #ffffff;
-  --card-border: #dedad4;
-  --card-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --card-border: #ddd6cb;
+  --card-shadow: 0 1px 2px rgba(60,44,20,0.06), 0 6px 20px -8px rgba(60,44,20,0.14);
 
   /* Highlights */
   --highlight-bg-strong: rgba(184,149,106,0.12);
   --highlight-bg-weak:   rgba(184,149,106,0.06);
 
   /* Overlay */
-  --bg-overlay: rgba(0,0,0,0.4);
+  --bg-overlay: rgba(48,38,24,0.32);
 }
 
 html {
@@ -190,25 +190,19 @@ html.oruinwan-native {
   --oru-inset-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --oru-inset-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 }
-/* The demo bar (src/appMode/demo/DemoBar.jsx) sits above the app, which moves down to make room. */
-html.oruinwan-demo { --oru-demo-bar: 30px; }
-html.oruinwan-native #root,
-html.oruinwan-demo #root {
+html.oruinwan-native #root {
   box-sizing: border-box;
   padding:
-    calc(var(--oru-inset-top, 0px) + var(--oru-demo-bar, 0px))
+    var(--oru-inset-top, 0px)
     var(--oru-inset-right, 0px)
     var(--oru-inset-bottom, 0px)
     var(--oru-inset-left, 0px);
 }
-html.oruinwan-native #root .h-screen,
-html.oruinwan-demo #root .h-screen { height: 100%; }
-html.oruinwan-native #root .min-h-screen,
-html.oruinwan-demo #root .min-h-screen { min-height: 100%; }
+html.oruinwan-native #root .h-screen { height: 100%; }
+html.oruinwan-native #root .min-h-screen { min-height: 100%; }
 /* The workspace shell is pinned to the window (MainLayout), so it gets the same insets. */
-html.oruinwan-native .gl-shell,
-html.oruinwan-demo .gl-shell {
-  top: calc(var(--oru-inset-top, 0px) + var(--oru-demo-bar, 0px)) !important;
+html.oruinwan-native .gl-shell {
+  top: var(--oru-inset-top, 0px) !important;
   right: var(--oru-inset-right, 0px) !important;
   bottom: var(--oru-inset-bottom, 0px) !important;
   left: var(--oru-inset-left, 0px) !important;
@@ -262,7 +256,7 @@ html.public-scroll [id] {
 
 /* Light Mode Scrollbar */
 html.light ::-webkit-scrollbar-thumb {
-  background: #c9c4bc;
+  background: #cdc5b8;
 }
 
 html.light ::-webkit-scrollbar-thumb:hover {
@@ -646,3 +640,9 @@ html.light .bg-black\/40 { background-color: rgba(0,0,0,0.3) !important; }
 
 /* Code block textarea — always dark bg, so placeholder must always be light */
 .note-code-textarea::placeholder { color: rgba(255,255,255,0.2) !important; }
+
+/* Messages use the full width on narrow screens (phones, the split pane on small tablets). */
+@media (max-width: 767px) {
+  :root { --msg-max: 100%; }
+  .msg-main.pr-24 { padding-right: 64px; }
+}

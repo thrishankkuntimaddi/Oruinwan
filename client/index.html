@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Oruinwan" />
-  <meta name="description" content="Oruinwan: team chat, huddles, tasks, notes and AI in one end-to-end encrypted workspace." />
+  <meta name="description" content="Oruinwan: team chat, huddles, tasks, notes and AI agents in one encrypted workspace." />
   <link rel="apple-touch-icon" href="/icons/oruinwan-192.png" />
   <link rel="manifest" href="/manifest.json" />
   <!-- Monolith Flow — Inter Font -->
@@ -19,10 +19,63 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <title>Oruinwan</title>
+  <!-- Loading screen. Static so it paints before the bundle arrives; React replaces it on mount,
+       and LoadingScreen.jsx renders the same markup while the app loads data. -->
+  <style>
+    .orw-boot {
+      --boot-bg: #0c0c0c; --boot-text: #ecebe8; --boot-muted: rgba(236,235,232,0.55);
+      --boot-track: rgba(184,149,106,0.16); --boot-gold: #b8956a; --boot-gold-hi: #e2c9a2;
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      background: var(--boot-bg); color: var(--boot-text);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    @media (prefers-color-scheme: light) {
+      html:not(.dark) .orw-boot {
+        --boot-bg: #f5f4f2; --boot-text: #1a1917; --boot-muted: rgba(26,25,23,0.55);
+        --boot-track: rgba(160,122,82,0.18); --boot-gold: #a07a52; --boot-gold-hi: #c9a87c;
+      }
+    }
+    html.light .orw-boot {
+      --boot-bg: #f5f4f2; --boot-text: #1a1917; --boot-muted: rgba(26,25,23,0.55);
+      --boot-track: rgba(160,122,82,0.18); --boot-gold: #a07a52; --boot-gold-hi: #c9a87c;
+    }
+    .orw-boot__brand { display: flex; align-items: center; gap: 12px; }
+    .orw-boot__logo { width: 44px; height: 44px; display: block; object-fit: contain; border-radius: 11px; }
+    .orw-boot__word { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+    .orw-boot__bar {
+      position: relative; width: 148px; height: 2px; border-radius: 2px; overflow: hidden;
+      background: var(--boot-track);
+    }
+    .orw-boot__bar::after {
+      content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 2px;
+      background: linear-gradient(90deg, transparent, var(--boot-gold), var(--boot-gold-hi), transparent);
+      animation: orw-boot-slide 1.25s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .orw-boot__sr {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    @keyframes orw-boot-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+    @keyframes orw-boot-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .orw-boot__bar::after { animation: orw-boot-pulse 2s ease-in-out infinite; width: 100%; background: var(--boot-gold); }
+    }
+    html[data-reduce-motion="true"] .orw-boot__bar::after { animation: orw-boot-pulse 2s ease-in-out infinite; width: 100%; background: var(--boot-gold); }
+  </style>
 </head>
 
 <body style="background:#0c0c0c;margin:0">
-  <div id="root"></div>
+  <div id="root">
+    <div class="orw-boot" role="status" aria-live="polite">
+      <div class="orw-boot__brand">
+        <img class="orw-boot__logo" src="/icons/oruinwan-128.png" width="44" height="44" alt="" />
+        <span class="orw-boot__word">Oruinwan</span>
+      </div>
+      <div class="orw-boot__bar" aria-hidden="true"></div>
+      <span class="orw-boot__sr">Loading Oruinwan</span>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 

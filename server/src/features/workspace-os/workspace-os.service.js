@@ -6,7 +6,6 @@ const identity = require('../../identity');
 const wsQueries = require('../../identity/queries/workspaces');
 const { hydrate } = require('../../identity/hydrate');
 const Channel = require('../channels/channel.model');
-const Message = require('../../modules/messages/message.model');
 const Tasks = require('../tasks/tasks.query');
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
 const { invalidateWorkspaceFeatures } = require('../../shared/workspaceFeatures');
@@ -264,71 +263,56 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
     return imported;
 };
 
-exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range = 30 }) {
-    const since = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
+/**
+ * Workspace health for admins. Deliberately says nothing about messaging: no message counts,
+ * no "who posted", nothing per person. Conversations are private (end-to-end encrypted), and
+ * admins see how the workspace is set up and how work moves, not how much people talk.
+ */
+exports.getWorkspaceAnalytics = async function ({ workspaceId, range = 30 }) {
+    const DAY = 24 * 60 * 60 * 1000;
+    const days = Math.min(Math.max(Number(range) || 30, 1), 365);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const buckets = Array.from({ length: days }, (_, i) => {
+        const start = new Date(end.getTime() - (days - i) * DAY + 1);
+        return { start, end: new Date(start.getTime() + DAY - 1) };
+    });
+    const wsOid = new mongoose.Types.ObjectId(workspaceId);
+    const WorkspaceFile = require('../files/WorkspaceFile');
+    const KnowledgePage = require('../knowledge/KnowledgePage');
+    const Note = require('../../../models/Note');
+    const scope = { workspace: workspaceId };
 
-    const [
-        totalMessages,
-        totalTasks,
-        memberCount,
-        channelCount,
-        dailyMessages,
-        activeAuthorsSince7d,
-        taskStats
-    ] = await Promise.all([
-        Message.countDocuments({ workspace: workspaceId }),
-        Tasks.countDocuments({ workspace: workspaceId }),
+    const [memberCount, channelCount, taskStats, openTasks, fileCount, docCount, noteCount, created, completed] = await Promise.all([
         wsQueries.countMembers(workspaceId, { status: null }),
         Channel.countDocuments({ workspace: workspaceId }),
-        
-        Message.aggregate([
-            { $match: { workspace: new mongoose.Types.ObjectId(workspaceId), createdAt: { $gte: since } } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]),
-        
-        Message.distinct('author', {
-            workspace: new mongoose.Types.ObjectId(workspaceId),
-            createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-        }).then(ids => ids.length),
-        
-        Tasks.totals({ workspace: workspaceId }).then((t) => [t])
+        Tasks.totals(scope),
+        Tasks.countDocuments({ ...scope, status: { $nin: ['done', 'cancelled'] } }),
+        WorkspaceFile.countDocuments({ workspaceId: wsOid, isDeleted: { $ne: true } }),
+        KnowledgePage.countDocuments({ workspaceId: wsOid, isDeleted: { $ne: true } }),
+        Note.countDocuments({ workspace: wsOid, isArchived: { $ne: true } }),
+        Tasks.countBuckets(scope, 'createdAt', buckets),
+        Tasks.countBuckets(scope, 'completedAt', buckets),
     ]);
 
-    const taskCompletionRate = taskStats[0]?.total > 0
-        ? Math.round((taskStats[0].completed / taskStats[0].total) * 100)
-        : 0;
-
-    
-    identity.workspaces.update(workspaceId, {
-        analyticsCache: {
-            $merge: true,
-            totalMessages,
-            totalTasks,
-            activeMembers7d: activeAuthorsSince7d,
-            lastComputedAt: new Date(),
-        },
-    }).catch(err => logger.warn('[WorkspaceOS] Cache update failed:', err.message));
+    const taskCompletionRate = taskStats?.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0;
+    const day = (d) => d.toISOString().slice(0, 10);
 
     return {
         summary: {
-            totalMessages,
-            totalTasks,
             memberCount,
             channelCount,
-            activeMembers7d: activeAuthorsSince7d,
-            taskCompletionRate
+            totalTasks: taskStats?.total || 0,
+            openTasks,
+            taskCompletionRate,
+            fileCount,
+            docCount: docCount + noteCount,
         },
         charts: {
-            dailyMessages, 
+            dailyTasks: buckets.map((b, i) => ({ date: day(b.start), created: created[i] || 0, completed: completed[i] || 0 })),
         },
-        range,
-        computedAt: new Date().toISOString()
+        range: days,
+        computedAt: new Date().toISOString(),
     };
 };
 

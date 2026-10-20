@@ -16,15 +16,19 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissa
     return (
         <div
             onClick={dismissable ? onClose : undefined}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}
+            className="gl-scrim"
+            style={{ zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'var(--font)' }}
         >
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={typeof title === 'string' ? title : undefined}
                 onClick={e => e.stopPropagation()}
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: WIDTHS[size] || WIDTHS.md, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'slideUp 220ms cubic-bezier(0.16,1,0.3,1)' }}
+                className="gl-dialog"
+                style={{ width: '100%', maxWidth: WIDTHS[size] || WIDTHS.md, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
             >
-                {}
                 {title && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                    <div className="gl-dialog-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', flexShrink: 0 }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{title}</h3>
                         {dismissable && (
                             <CloseBtn onClick={onClose} />
@@ -32,14 +36,12 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissa
                     </div>
                 )}
 
-                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '18px' }} className="custom-scrollbar">
                     {children}
                 </div>
 
-                {}
                 {footer && (
-                    <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', flexShrink: 0 }}>
+                    <div className="gl-dialog-foot" style={{ padding: '12px 18px', flexShrink: 0 }}>
                         {footer}
                     </div>
                 )}
@@ -48,14 +50,10 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissa
     );
 };
 
-const CloseBtn = ({ onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ background: hov ? 'var(--bg-hover)' : 'none', border: 'none', color: hov ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
-            <X size={15} />
-        </button>
-    );
-};
+const CloseBtn = ({ onClick }) => (
+    <button type="button" onClick={onClick} className="gl-icon-btn" aria-label="Close">
+        <X size={15} />
+    </button>
+);
 
 export default Modal;

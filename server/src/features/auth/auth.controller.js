@@ -19,6 +19,8 @@ const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
+const { checkDob, checkUsername } = require('./signupRules');
+const otpStore = require('../../shared/services/otpStore');
 const { setRefreshTokenCookie, clearRefreshTokenCookie, isNativeClient, getRefreshTokenFromRequest } = require('../../../utils/cookieHelper');
 const { sha256 } = require('../../../utils/hashUtils');
 const { handleError } = require('../../../utils/responseHelpers');
@@ -57,17 +59,97 @@ function generateRefreshToken(user) {
   );
 }
 
+/**
+ * A new account joins these workspaces (an invite, or its company's default workspace) and their
+ * default channels. Shared by password and Google sign-up.
+ */
+async function joinWorkspacesOnSignup(user, workspacesToJoin, companyId) {
+  const Channel = require("../channels/channel.model.js");
+  for (const workspaceId of workspacesToJoin) {
+    const workspace = await identity.workspaces.findById(workspaceId);
+
+    if (workspace && !workspace.isMember(user._id)) {
+      await identity.workspaces.addMember(workspace._id, user._id, { role: 'member' });
+
+      require('../../shared/events/bus').publish('member.joined', { userId: String(user._id), role: 'member', source: 'registration' },
+        { workspaceId: workspace._id, companyId: workspace.company || companyId, actorId: user._id }).catch(() => {});
+
+      
+      user.workspaces.push({
+        workspace: workspaceId,
+        role: "member"
+      });
+
+      
+      const defaultChannels = await Channel.find({
+        workspace: workspaceId,
+        isDefault: true
+      });
+
+      for (const channel of defaultChannels) {
+        
+        const isAlreadyMember = channel.members.some(m => {
+          const memberId = m.user ? m.user.toString() : m.toString();
+          return memberId === user._id.toString();
+        });
+
+        if (!isAlreadyMember) {
+          
+          channel.members = channel.members.map(m => {
+            if (m.user) return m;
+            return {
+              user: m,
+              joinedAt: channel.createdAt || new Date()
+            };
+          });
+
+          channel.members.push({
+            user: user._id,
+            joinedAt: new Date()
+          });
+          await channel.save();
+
+        }
+      }
+
+    }
+  }
+}
+
+/**
+ * The company a new email belongs to, if any: listed on a company's allow-list, or on a domain the
+ * company verified with auto-join turned on. Returns { companyId, companyRole, workspacesToJoin } or null.
+ */
+async function companyForNewEmail(emailLower) {
+  const byList = await companyByAllowedEmail(emailLower);
+  const domain = (emailLower.match(/@(.+)$/) || [])[1];
+  const company = byList || (domain ? await companyForAutoJoin(domain) : null);
+  if (!company) return null;
+  return {
+    companyId: company._id,
+    companyRole: company.invitePolicy?.defaultRole || "member",
+    workspacesToJoin: company.defaultWorkspace ? [company.defaultWorkspace] : [],
+  };
+}
+
 exports.signup = async (req, res) => {
   logger.debug('signup invoked');
   try {
-    const { username, email, password, phone, phoneCode, inviteToken } = req.body;
+    const { email, password, phone, phoneCode, inviteToken } = req.body;
 
-    if (!username || !email || !password)
+    if (!req.body.username || !email || !password)
       return res.status(400).json({ message: "Missing required fields" });
+
+    const nameCheck = checkUsername(req.body.username);
+    if (nameCheck.error) return res.status(400).json({ message: nameCheck.error });
+    const { username } = nameCheck;
 
     // The sign-up forms check this too, but the API is the only place it can't be skipped.
     if (!isStrongPassword(password))
       return res.status(400).json({ message: PASSWORD_RULE });
+
+    const dobCheck = checkDob(req.body.dob);
+    if (dobCheck.error) return res.status(400).json({ message: dobCheck.error });
 
     if (await emailTaken(email))
       return res.status(409).json({ message: "Email already in use" });
@@ -100,7 +182,6 @@ exports.signup = async (req, res) => {
     
 
     const emailLower = email.toLowerCase();
-    const Channel = require("../channels/channel.model.js");
 
     
     const extractDomain = (email) => {
@@ -183,6 +264,7 @@ exports.signup = async (req, res) => {
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
       verified: false, 
+      profile: { dob: dobCheck.dob },
       departments: assignedDepartment ? [assignedDepartment] : [],
       reportsTo: assignedManager
     });
@@ -238,56 +320,7 @@ exports.signup = async (req, res) => {
 
     // An invite to a personal (company-less) workspace joins it too; it was consumed above.
     if (workspacesToJoin.length > 0) {
-      for (const workspaceId of workspacesToJoin) {
-        const workspace = await identity.workspaces.findById(workspaceId);
-
-        if (workspace && !workspace.isMember(user._id)) {
-          await identity.workspaces.addMember(workspace._id, user._id, { role: 'member' });
-
-          require('../../shared/events/bus').publish('member.joined', { userId: String(user._id), role: 'member', source: 'registration' },
-            { workspaceId: workspace._id, companyId: workspace.company || companyId, actorId: user._id }).catch(() => {});
-
-          
-          user.workspaces.push({
-            workspace: workspaceId,
-            role: "member"
-          });
-
-          
-          const defaultChannels = await Channel.find({
-            workspace: workspaceId,
-            isDefault: true
-          });
-
-          for (const channel of defaultChannels) {
-            
-            const isAlreadyMember = channel.members.some(m => {
-              const memberId = m.user ? m.user.toString() : m.toString();
-              return memberId === user._id.toString();
-            });
-
-            if (!isAlreadyMember) {
-              
-              channel.members = channel.members.map(m => {
-                if (m.user) return m;
-                return {
-                  user: m,
-                  joinedAt: channel.createdAt || new Date()
-                };
-              });
-
-              channel.members.push({
-                user: user._id,
-                joinedAt: new Date()
-              });
-              await channel.save();
-
-            }
-          }
-
-        }
-      }
-
+      await joinWorkspacesOnSignup(user, workspacesToJoin, companyId);
       await saveWithRetry(user);
     }
 
@@ -416,7 +449,13 @@ exports.login = async (req, res) => {
     }
 
     
-    const match = await bcrypt.compare(password, user.passwordHash);
+    // Accounts made with Google/GitHub may have no password yet: answer like a wrong
+    // password (no hint that the account exists) instead of failing inside bcrypt.
+    if (!user.passwordHash) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const match = await bcrypt.compare(String(password), user.passwordHash);
     if (!match) {
       
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
@@ -495,7 +534,7 @@ exports.login = async (req, res) => {
     }
 
     if (!user.verified)
-      return res.status(403).json({ message: "Please verify your email first" });
+      return res.status(403).json({ message: "Please verify your email first", emailNotVerified: true, email: user.email });
 
     if (user.accountStatus === 'suspended') {
       return res.status(403).json({ message: "Account Suspended." });
@@ -848,7 +887,8 @@ exports.forgotPassword = async (req, res) => {
 
     if (!user) {
 
-      return res.json({ message: "If that email exists, reset link sent" });
+      // Same answer as for a real account, so the form can't be used to find accounts.
+      return res.json({ message: "Reset link sent if account exists" });
     }
 
     const raw = crypto.randomBytes(32).toString("hex");
@@ -946,8 +986,18 @@ function serializePreferences(prefs) {
     privacy: privacyWithDefaults(p.privacy),
     region: regionWithDefaults(p.region),
     notifications,
+    gettingStarted: {
+      done: Array.isArray(p.gettingStarted?.done) ? p.gettingStarted.done.filter((k) => GETTING_STARTED_STEPS.includes(k)) : [],
+      hidden: p.gettingStarted?.hidden === true,
+    },
+    // The first-run tour (client/src/components/tour, mobile/src/features/tour): shown once per
+    // account, on whichever device opens a workspace first. Skip and Finish both set done.
+    tour: { done: p.tour?.done === true },
   };
 }
+
+// The getting-started checklist on the workspace home (client/src/pages/SidebarComp/states/GettingStarted.jsx).
+const GETTING_STARTED_STEPS = ['invite', 'message', 'profile', 'ai', 'note', 'apps'];
 
 exports.computeHasPassword = computeHasPassword;
 exports.serializePreferences = serializePreferences;
@@ -1174,19 +1224,9 @@ exports.updateMe = async (req, res) => {
       if (body.dob === '' || body.dob === null) {
         user.profile.dob = undefined;
       } else {
-        const dob = new Date(body.dob);
-        const today = new Date();
-        if (isNaN(dob.getTime())) {
-          return res.status(400).json({ message: "Invalid date of birth" });
-        }
-        const age = today.getFullYear() - dob.getFullYear();
-        if (dob > today) {
-          return res.status(400).json({ message: "Date of birth cannot be in the future" });
-        }
-        if (age < 13) {
-          return res.status(400).json({ message: "You must be at least 13 years old" });
-        }
-        user.profile.dob = dob;
+        const dobCheck = checkDob(body.dob);
+        if (dobCheck.error) return res.status(400).json({ message: dobCheck.error });
+        user.profile.dob = dobCheck.dob;
       }
     }
 
@@ -1228,6 +1268,30 @@ exports.updateMe = async (req, res) => {
           return res.status(400).json({ message: `appearance.textSize must be one of: ${TEXT_SIZES.join(', ')}` });
         }
         user.set('preferences.appearance.textSize', textSize);
+      }
+      const gs = body.preferences.gettingStarted;
+      if (gs !== undefined) {
+        if (!gs || typeof gs !== 'object') return res.status(400).json({ message: "gettingStarted must be an object" });
+        const current = user.preferences.gettingStarted || {};
+        const next = { done: Array.isArray(current.done) ? current.done : [], hidden: current.hidden === true };
+        if (gs.done !== undefined) {
+          if (!Array.isArray(gs.done) || gs.done.some((k) => !GETTING_STARTED_STEPS.includes(k))) {
+            return res.status(400).json({ message: `gettingStarted.done may only list: ${GETTING_STARTED_STEPS.join(', ')}` });
+          }
+          next.done = [...new Set(gs.done)];
+        }
+        if (gs.hidden !== undefined) {
+          if (typeof gs.hidden !== 'boolean') return res.status(400).json({ message: "gettingStarted.hidden must be a boolean" });
+          next.hidden = gs.hidden;
+        }
+        user.set('preferences.gettingStarted', next);
+      }
+      const tour = body.preferences.tour;
+      if (tour !== undefined) {
+        if (!tour || typeof tour !== 'object' || typeof tour.done !== 'boolean') {
+          return res.status(400).json({ message: "tour.done must be a boolean" });
+        }
+        user.set('preferences.tour', { done: tour.done, at: new Date().toISOString() });
       }
     }
 
@@ -1372,7 +1436,7 @@ exports.setPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Only for accounts without a password (Google / GitHub / LinkedIn / SSO sign-ups).
+    // Only for accounts without a password (Google / SSO sign-ups).
     if (computeHasPassword(user)) {
       return res.status(400).json({
         message: "Your account already has a password. Use change password instead.",
@@ -1473,43 +1537,23 @@ exports.googleLogin = async (req, res) => {
     }
     const { email, name, picture, googleId } = identityFromGoogle;
 
-    let user = await userDocs.findByEmail(email);
+    const user = await userDocs.findByEmail(email);
 
-    
-    let isNewUser = false;
-    let needsPasswordSetup = false;
-
-    
+    // No account yet: don't create one silently. Hand back a short-lived sign-up ticket so the
+    // app can say "you're creating a new account" and ask for the details every account needs.
     if (!user) {
-      isNewUser = true;
-      needsPasswordSetup = true;
-
-      const randomPassword = crypto.randomBytes(16).toString("hex");
-      const randomHash = await bcrypt.hash(randomPassword, 12);
-
-      user = await userDocs.create({
-        username: name,
-        email,
-        verified: true,
-        googleId,
-        profilePicture: picture,
-        googleAccount: true,
-        authProvider: "google", 
-        passwordHash: randomHash, 
-      });
-    } else {
-
-
-      if (user.googleAccount && !user.passwordHash) {
-        needsPasswordSetup = true;
-      }
-
-      // Same gates as password login: Google must not bypass suspension, deactivation or 2FA.
-      const stop = await signInGates(user, req.body.otp);
-      if (stop) return res.status(stop.status).json(stop.body);
+      const signupToken = crypto.randomBytes(32).toString('base64url');
+      await otpStore.set(googleSignupKey(signupToken), { email, name, picture, googleId }, GOOGLE_SIGNUP_TTL_MS);
+      return res.json({ needsSignup: true, signupToken, email, name: name || '', picture: picture || null });
     }
 
-    return issueSignInSession(req, res, user, { message: "Google login success", isNewUser, needsPasswordSetup });
+    const needsPasswordSetup = Boolean(user.googleAccount && !user.passwordHash);
+
+    // Same gates as password login: Google must not bypass suspension, deactivation or 2FA.
+    const stop = await signInGates(user, req.body.otp);
+    if (stop) return res.status(stop.status).json(stop.body);
+
+    return issueSignInSession(req, res, user, { message: "Google login success", isNewUser: false, needsPasswordSetup });
 
   } catch (_err) {
     logger.error("GOOGLE LOGIN ERROR:", _err);
@@ -1519,12 +1563,112 @@ exports.googleLogin = async (req, res) => {
 
 exports.googleAuth = exports.googleLogin;
 
+const GOOGLE_SIGNUP_TTL_MS = 15 * 60 * 1000;
+function googleSignupKey(token) {
+  return `google-signup:${sha256(String(token))}`;
+}
+
+/**
+ * Finishes "Continue with Google" for someone without an account: they confirmed they want a
+ * new account and gave a username and date of birth. Google already verified the email.
+ */
+exports.googleSignup = async (req, res) => {
+  try {
+    const { signupToken } = req.body || {};
+    if (typeof signupToken !== 'string' || signupToken.length < 20 || signupToken.length > 200) {
+      return res.status(400).json({ message: "This sign-up has expired. Continue with Google again." });
+    }
+    const ticket = await otpStore.get(googleSignupKey(signupToken));
+    if (!ticket) {
+      return res.status(400).json({ message: "This sign-up has expired. Continue with Google again." });
+    }
+
+    const nameCheck = checkUsername(req.body.username ?? ticket.name);
+    if (nameCheck.error) return res.status(400).json({ message: nameCheck.error });
+    const dobCheck = checkDob(req.body.dob);
+    if (dobCheck.error) return res.status(400).json({ message: dobCheck.error });
+
+    if (await emailTaken(ticket.email)) {
+      await otpStore.delete(googleSignupKey(signupToken));
+      return res.status(409).json({ message: "An account with this email already exists. Continue with Google to sign in." });
+    }
+    if (await identity.users.findByUsername(nameCheck.username)) {
+      return res.status(409).json({ message: "Username already in use" });
+    }
+
+    await otpStore.delete(googleSignupKey(signupToken));
+
+    // Same company auto-join as password sign-up: allow-listed email or verified company domain.
+    const company = await companyForNewEmail(String(ticket.email).toLowerCase());
+
+    const randomHash = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
+    const user = await userDocs.create({
+      ...(company ? { userType: "company", companyId: company.companyId, companyRole: company.companyRole } : {}),
+      username: nameCheck.username,
+      email: ticket.email,
+      verified: true,
+      googleId: ticket.googleId,
+      profilePicture: ticket.picture,
+      googleAccount: true,
+      authProvider: "google",
+      passwordHash: randomHash,
+      profile: { dob: dobCheck.dob },
+    });
+    if (company?.workspacesToJoin.length) {
+      await joinWorkspacesOnSignup(user, company.workspacesToJoin, company.companyId);
+      await saveWithRetry(user);
+    }
+
+    return issueSignInSession(req, res, user, { message: "Welcome to Oruinwan", isNewUser: true, needsPasswordSetup: true });
+  } catch (_err) {
+    logger.error("GOOGLE SIGNUP ERROR:", _err);
+    return res.status(500).json({ message: "Sign-up failed" });
+  }
+};
+
+/**
+ * Sends a fresh verification link to an account that signed up but never verified.
+ * Always answers the same way, so it can't be used to learn which emails have accounts.
+ */
+exports.resendSignupVerification = async (req, res) => {
+  const generic = { message: "If that account still needs verifying, we've sent a new link." };
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || email.length > 254) return res.status(400).json({ message: "Enter your email address" });
+
+    const user = await userDocs.findByEmail(email);
+    if (!user || user.verified) return res.json(generic);
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.verificationTokenHash = sha256(rawToken);
+    user.verificationTokenExpires = Date.now() + 86400000;
+    await saveWithRetry(user);
+
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+    try {
+      const tpl = verifyEmailTemplate(user.username, verifyUrl);
+      await sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (emailErr) {
+      if (process.env.NODE_ENV === 'production') {
+        logger.error({ err: emailErr.message }, 'Verification email could not be resent');
+      } else {
+        logger.warn({ err: emailErr.message }, 'Verification email could not be resent (development)');
+        logger.info({ email: user.email, verifyUrl }, 'EMAIL VERIFICATION LINK');
+      }
+    }
+    return res.json(generic);
+  } catch (_err) {
+    logger.error("RESEND VERIFICATION ERROR:", _err);
+    return res.json(generic);
+  }
+};
+
 /**
  * The checks every sign-in that doesn't use a password makes once it knows who the person is:
  * lockout, suspension, deactivation and two-factor. Returns null when sign-in may continue,
  * or { status, body } for the response that stops it (body.requires2FA asks for a code).
  */
-async function signInGates(user, otpInput) {
+async function signInGates(user, otpInput, { skipTotp = false } = {}) {
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
     return { status: 429, body: { message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).` } };
@@ -1545,7 +1689,8 @@ async function signInGates(user, otpInput) {
     }
     return { status: 403, body: { message: "Account is deactivated", requiresReactivation: true, email: user.email } };
   }
-  if (user.twoFactorEnabled) {
+  // skipTotp: the sign-in already proved two factors (a passkey with user verification).
+  if (user.twoFactorEnabled && !skipTotp) {
     const otp = String(otpInput || '').replace(/\s+/g, '');
     if (!otp) {
       return { status: 401, body: { requires2FA: true, message: "Enter the 6-digit code from your authenticator app." } };
@@ -1598,40 +1743,6 @@ async function issueSignInSession(req, res, user, { message, isNewUser, needsPas
     },
   });
 }
-
-/**
- * Finishes a redirect-based sign-in (GitHub, LinkedIn): swaps the one-time code from the
- * callback for a session, after the same checks as every other sign-in. A code that needs a
- * two-factor code stays valid (for its two minutes) so the app can resend it with `otp`.
- */
-exports.oauthExchange = async (req, res) => {
-  try {
-    const { peekHandoff, consumeHandoff } = require('./oauthHandoff');
-    const { code, otp } = req.body || {};
-    const handoff = await peekHandoff(code);
-    if (!handoff) {
-      return res.status(400).json({ message: "This sign-in link has expired. Sign in again." });
-    }
-    const user = await userDocs.findById(handoff.userId);
-    if (!user) {
-      await consumeHandoff(code);
-      return res.status(400).json({ message: "This sign-in link has expired. Sign in again." });
-    }
-
-    const stop = await signInGates(user, otp);
-    if (stop) {
-      if (!stop.body.requires2FA) await consumeHandoff(code);
-      return res.status(stop.status).json(stop.body);
-    }
-
-    await consumeHandoff(code);
-    const needsPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
-    return issueSignInSession(req, res, user, { message: "Sign-in complete", isNewUser: false, needsPasswordSetup });
-  } catch (err) {
-    logger.error("OAUTH EXCHANGE ERROR:", err);
-    return res.status(500).json({ message: "Sign-in failed" });
-  }
-};
 
 // A rotated refresh token lives on for a 30s grace period; hide those so one device
 // does not show up twice.
@@ -1817,9 +1928,8 @@ exports.addEmail = async (req, res) => {
 
     
     
-    logger.info("\n" + "=".repeat(80));
-    logger.info(`📧 VERIFICATION CODE: ${code}`);
-    logger.info("=".repeat(80) + "\n");
+    // The code is never logged here: in development the dev mail outbox (utils/devMail.js)
+    // shows it; in production it only goes to the inbox.
 
     try {
       const template = emailVerificationTemplate(user.username, code);
@@ -1939,9 +2049,8 @@ exports.resendVerification = async (req, res) => {
     await saveWithRetry(user);
 
     
-    logger.info("\n" + "=".repeat(80));
-    logger.info(`📧 VERIFICATION CODE: ${code}`);
-    logger.info("=".repeat(80) + "\n");
+    // The code is never logged here: in development the dev mail outbox (utils/devMail.js)
+    // shows it; in production it only goes to the inbox.
 
     
     try {
@@ -2182,125 +2291,6 @@ exports.getUsersList = async (req, res) => {
   }
 };
 
-exports.githubCallback = async (req, res) => {
-  
-  const token = exports.generateToken(req.user);
-
-  
-  const requiresPasswordSetup = req.user.authProvider !== 'local' && !req.user.passwordSetAt && !req.user.passwordSkipped;
-  const params = new URLSearchParams({
-    access: token,
-    requiresPasswordSetup: requiresPasswordSetup.toString()
-  });
-
-  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#${params.toString()}`);
-};
-
-exports.linkedinInitiate = (req, res) => {
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: process.env.LINKEDIN_CLIENT_ID,
-    redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
-    scope: "openid profile email",
-    state: Math.random().toString(36).substring(7), 
-  });
-
-  res.redirect(
-    `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
-  );
-};
-
-exports.linkedinCallback = async (req, res) => {
-  try {
-    const { code, error, error_description } = req.query;
-
-    if (error) {
-      logger.error('LinkedIn OAuth error:', error, error_description);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
-    }
-
-    
-    const tokenRes = await axios.post(
-      "https://www.linkedin.com/oauth/v2/accessToken",
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
-        client_id: process.env.LINKEDIN_CLIENT_ID,
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET,
-      }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    const accessToken = tokenRes.data.access_token;
-
-    
-    const userInfoRes = await axios.get(
-      "https://api.linkedin.com/v2/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    const linkedinUser = userInfoRes.data;
-    logger.info('LinkedIn user profile:', linkedinUser);
-
-    
-    let user = await userDocs.findByProvider('linkedin', linkedinUser.sub);
-
-    if (!user && linkedinUser.email) {
-      
-      user = await userDocs.findByEmail(linkedinUser.email);
-      if (user) {
-        // Only link to an existing account when that account's email is verified,
-        // it is not already linked elsewhere, and LinkedIn vouches for the email.
-        // Otherwise an attacker could take over an account by registering its email.
-        if (!user.verified || user.linkedinId || linkedinUser.email_verified === false) {
-          return res.redirect(`${process.env.FRONTEND_URL}/login?error=account_exists`);
-        }
-        user.linkedinId = linkedinUser.sub;
-        if (linkedinUser.picture) user.profilePicture = linkedinUser.picture;
-        await user.save();
-      }
-    }
-
-    if (!user) {
-      
-      user = await userDocs.create({
-        linkedinId: linkedinUser.sub,
-        username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
-        email: linkedinUser.email,
-        profilePicture: linkedinUser.picture,
-        authProvider: "linkedin",
-        passwordHash: "oauth-linkedin-" + linkedinUser.sub,
-        verified: true,
-        passwordSetAt: null,  
-        passwordLoginEnabled: false  
-      });
-    }
-
-    const token = exports.generateToken(user);
-
-    
-    const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
-    const params = new URLSearchParams({
-      access: token,
-      requiresPasswordSetup: requiresPasswordSetup.toString()
-    });
-
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#${params.toString()}`);
-  } catch (_err) {
-    logger.error({ err: _err.response?.data || _err.message }, 'LinkedIn OAuth callback error');
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
-  }
-};
-
 exports.deactivateAccount = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -2432,3 +2422,7 @@ exports.verifyReactivationOTP = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+// Shared with passkey sign-in (passkeys.js).
+exports.signInGates = signInGates;
+exports.issueSignInSession = issueSignInSession;

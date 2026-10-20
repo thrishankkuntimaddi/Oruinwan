@@ -25,11 +25,6 @@ export const getTaskAnalytics = async (period = 30) => {
     return response.data;
 };
 
-export const getMessageVolumeAnalytics = async (period = 30) => {
-    const response = await api.get(`/api/dashboard/analytics/messages?period=${period}`);
-    return response.data;
-};
-
 export const getEngagementTrends = async (period = 30) => {
     const response = await api.get(`/api/dashboard/analytics/engagement?period=${period}`);
     return response.data;
@@ -37,13 +32,12 @@ export const getEngagementTrends = async (period = 30) => {
 
 export const exportAnalytics = async (format = 'csv', period = 30) => {
     
-    const [summary, users, workspaces, channels, tasks, messages] = await Promise.all([
+    const [summary, users, workspaces, channels, tasks] = await Promise.all([
         getAnalyticsSummary(period),
         getUserActivityAnalytics(period),
         getWorkspaceAnalytics(),
         getChannelEngagementAnalytics(),
-        getTaskAnalytics(period),
-        getMessageVolumeAnalytics(period)
+        getTaskAnalytics(period)
     ]);
 
     const data = {
@@ -52,7 +46,6 @@ export const exportAnalytics = async (format = 'csv', period = 30) => {
         workspaces,
         channels,
         tasks,
-        messages,
         exportedAt: new Date().toISOString(),
         period
     };
@@ -85,18 +78,9 @@ export const getCompanyAnalytics = async (companyId, timeRange = '30d') => {
     return response.data;
 };
 
-export const getTeamActivity = async (period = 30) => {
-    const response = await api.get(`/api/analytics/insights/team?period=${period}`);
-    return response.data;
-};
 
 export const getWorkloadAnalysis = async (period = 30) => {
     const response = await api.get(`/api/analytics/insights/workload?period=${period}`);
-    return response.data;
-};
-
-export const getCommunicationPatterns = async (period = 30) => {
-    const response = await api.get(`/api/analytics/insights/communication?period=${period}`);
     return response.data;
 };
 

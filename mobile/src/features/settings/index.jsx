@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
-  ExternalLink, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText,
+  ExternalLink, Compass, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -15,7 +15,8 @@ import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
 import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
 import { prefs } from '../../native/storage.js';
-import { deviceNoun, isAndroid, isDesktop, isIOS, isWeb, openExternal, platformLabel } from '../../native/index.js';
+import { deviceNoun, isAndroid, isDesktop, isIOS, isWeb, onAppState, openExternal, platformLabel } from '../../native/index.js';
+import { usePushState } from '../push/usePushState.js';
 import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button } from '../../ui/Button.jsx';
@@ -32,6 +33,7 @@ import { BrandMark } from '../../app/BrandMark.jsx';
 import { UpdateButton, UpdateDetails, UpdateProgress } from '../update/UpdatePanel.jsx';
 import { UnlockSheet } from '../chats/E2eeBanner.jsx';
 import { useE2ee } from '../../data/e2ee.js';
+import { startTour } from '../tour/tourState.js';
 
 const STATUS = [
   { value: 'active', label: 'Active', color: 'bg-success' },
@@ -51,8 +53,6 @@ const External = <Icon as={ExternalLink} size="sm" className="text-text-3" />;
 
 export function SettingsScreen() {
   const user = useSession((s) => s.user);
-  const mode = useSession((s) => s.mode);
-  const server = useSession((s) => s.server);
   const workspace = useWorkspace();
   const update = useUpdate((s) => s.status);
   const current = useUpdate((s) => s.currentVersion);
@@ -134,7 +134,6 @@ export function SettingsScreen() {
               }
               onClick={() => nav.push('settings.updates')}
             />
-            <Row icon={Server} tile="accent" title="Server" value={mode === 'demo' ? 'Demo' : server.replace(/^https?:\/\//, '')} onClick={() => nav.push('settings.server')} />
             <Row icon={Database} tile="accent" title="Data & storage" onClick={() => nav.push('settings.data')} />
             {labs && <Row icon={FlaskConical} tile="accent" title="Labs" subtitle="Feature flags on this device" onClick={() => nav.push('settings.updates')} />}
           </RowGroup>
@@ -142,6 +141,7 @@ export function SettingsScreen() {
 
         <Section title="Support">
           <RowGroup>
+            <Row icon={Compass} tile="accent" title="Take the tour again" subtitle="A quick look around the app" onClick={startTour} />
             <Row icon={Info} tile="accent" title="About Oruinwan" onClick={() => nav.push('settings.about')} />
             <Row icon={Bug} tile="accent" title="Report a problem" trailing={External} onClick={() => openExternal(`https://github.com/${REPO}/issues/new`)} />
           </RowGroup>
@@ -149,7 +149,7 @@ export function SettingsScreen() {
 
         <Section>
           <RowGroup>
-            <Row icon={LogOut} danger title={mode === 'demo' ? 'Leave the demo' : 'Sign out'} chevron={false} onClick={() => setSignOut(true)} />
+            <Row icon={LogOut} danger title="Sign out" chevron={false} onClick={() => setSignOut(true)} />
           </RowGroup>
         </Section>
         <p className="mt-6 text-center text-xs text-text-3">
@@ -166,13 +166,9 @@ export function SettingsScreen() {
       <Dialog
         open={signOut}
         onClose={() => setSignOut(false)}
-        title={mode === 'demo' ? 'Leave the demo?' : 'Sign out?'}
-        body={
-          mode === 'demo'
-            ? `Your demo changes stay on this ${deviceNoun} in case you come back.`
-            : `Messages you can read now will need your password again to unlock on this ${deviceNoun}.`
-        }
-        confirmLabel={mode === 'demo' ? 'Leave' : 'Sign out'}
+        title="Sign out?"
+        body={`Messages you can read now will need your password again to unlock on this ${deviceNoun}.`}
+        confirmLabel="Sign out"
         danger
         onConfirm={() => {
           setSignOut(false);
@@ -242,10 +238,8 @@ const E2EE_TEXT = {
 
 export function SecuritySettings() {
   const web = useWebLink();
-  const mode = useSession((s) => s.mode);
   const { data, loading } = useQuery('security', () => api().securityStatus());
-  const live = useE2ee((s) => s.status);
-  const status = mode === 'live' ? live : data?.e2ee;
+  const status = useE2ee((s) => s.status);
   const e2ee = E2EE_TEXT[status] || E2EE_TEXT.error;
   const [unlock, setUnlock] = useState(false);
   return (
@@ -264,7 +258,7 @@ export function SecuritySettings() {
                   title="Encryption keys"
                   subtitle={<span className={e2ee.tone}>{e2ee.label}</span>}
                   trailing={
-                    mode === 'live' && (status === 'password_required' || status === 'error') ? (
+                    status === 'password_required' || status === 'error' ? (
                       <Button size="sm" onClick={() => setUnlock(true)}>
                         Unlock
                       </Button>
@@ -379,6 +373,55 @@ const NOTIF_ROWS = [
   { key: 'email', title: 'Email notifications', subtitle: 'A digest when you have been away' },
 ];
 
+const PUSH_TEXT = {
+  loading: ['Checking…', null],
+  on: ['On', 'Messages, mentions and replies arrive even when the app is closed.'],
+  prompt: ['Off', 'Turn them on to know when someone messages or mentions you.'],
+  denied: ['Off in system settings', `Allow notifications for Oruinwan in your ${isIOS ? 'iPhone' : 'phone'}'s Settings → Notifications, then come back.`],
+  'no-server': ['Not set up on this server', 'Your server admin can turn on push notifications. Until then, activity shows in badges and the Notifications list.'],
+  unavailable: ['Not available here', 'Push notifications work in the Android and iPhone apps. Activity shows in badges and the Notifications list.'],
+};
+
+/** Push notifications on this phone: their state, and a way to turn them on. */
+function ThisDevicePush() {
+  const { state, turnOn, refresh } = usePushState();
+  const [busy, setBusy] = useState(false);
+  // Back from the system Settings app: show the new state.
+  useEffect(() => {
+    let off = () => {};
+    onAppState((active) => active && refresh()).then((f) => (off = f));
+    return () => off();
+  }, [refresh]);
+  const [label, help] = PUSH_TEXT[state] || PUSH_TEXT.unavailable;
+  return (
+    <Section title={`This ${deviceNoun}`}>
+      <RowGroup footer={help}>
+        <Row
+          icon={state === 'on' ? BellRing : BellOff}
+          tile="accent"
+          title="Push notifications"
+          subtitle={label}
+          trailing={
+            state === 'prompt' ? (
+              <Button
+                size="sm"
+                loading={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  await turnOn();
+                  setBusy(false);
+                }}
+              >
+                Turn on
+              </Button>
+            ) : null
+          }
+        />
+      </RowGroup>
+    </Section>
+  );
+}
+
 export function NotificationSettings() {
   const ws = useSession((s) => s.workspaceId);
   const workspace = useWorkspace();
@@ -396,13 +439,7 @@ export function NotificationSettings() {
     <Screen>
       <Header title="Notifications" subtitle={workspace?.name} />
       <Body>
-        <div className="mx-4 mt-1 flex gap-3 rounded-card border border-accent/30 bg-accent/10 p-3.5 text-[13px]">
-          <Icon as={Info} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
-          <span className="text-text-2">
-            <span className="font-medium text-text">Push notifications on Android are coming in the next update.</span> For now, new activity shows in the
-            app's badges and Notifications list. These settings already apply to your other devices.
-          </span>
-        </div>
+        <ThisDevicePush />
         {loading ? (
           <SkeletonRows count={5} avatar={false} />
         ) : (
@@ -425,7 +462,7 @@ export function NotificationSettings() {
 }
 
 function ThemeCard({ value, label, icon, selected, onSelect }) {
-  const swatch = value === 'light' ? ['#f5f4f2', '#ffffff', '#1a1916'] : value === 'dark' ? ['#0c0c0c', '#161616', '#e4e4e4'] : ['#0c0c0c', '#f5f4f2', '#b8956a'];
+  const swatch = value === 'light' ? ['#f6f3ee', '#ffffff', '#1a1916'] : value === 'dark' ? ['#0c0c0c', '#161616', '#e4e4e4'] : ['#0c0c0c', '#f6f3ee', '#b8956a'];
   return (
     <button
       type="button"
@@ -679,41 +716,24 @@ export function ServerSettings() {
     <Screen>
       <Header title="Server" />
       <Body>
-        {mode === 'demo' ? (
-          <>
-            <Section title="Connection">
-              <RowGroup footer={`The demo runs entirely on this ${deviceNoun}. Nothing is sent to a server.`}>
-                <Row icon={FlaskConical} tile="accent" title="Demo workspace" subtitle="Sample data on this device" chevron={false} />
-              </RowGroup>
-            </Section>
-            <div className="mt-4 px-4">
-              <Button block onClick={() => useSession.getState().signOut()}>
-                Sign in to your server
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <Section title="Connection">
-              <RowGroup>
-                <Row icon={Globe} tile="accent" title="Address" subtitle={server} chevron={false} multiline />
-                <Row
-                  icon={probe?.state === 'ok' ? CircleCheck : Server}
-                  tile={probe?.state === 'ok' ? 'success' : probe ? 'danger' : 'neutral'}
-                  title="Status"
-                  subtitle={!probe ? 'Checking…' : probe.state === 'ok' ? `Healthy${probe.insecure ? ' · not HTTPS' : ''}` : probe.message}
-                  chevron={false}
-                />
-                <Row icon={ExternalLink} title="Open the web app" onClick={() => openExternal(server)} trailing={External} />
-              </RowGroup>
-            </Section>
-            <Section>
-              <RowGroup>
-                <Row icon={LogOut} danger title="Sign out and switch server" chevron={false} onClick={() => setConfirm(true)} />
-              </RowGroup>
-            </Section>
-          </>
-        )}
+        <Section title="Connection">
+          <RowGroup>
+            <Row icon={Globe} tile="accent" title="Address" subtitle={server} chevron={false} multiline />
+            <Row
+              icon={probe?.state === 'ok' ? CircleCheck : Server}
+              tile={probe?.state === 'ok' ? 'success' : probe ? 'danger' : 'neutral'}
+              title="Status"
+              subtitle={!probe ? 'Checking…' : probe.state === 'ok' ? `Healthy${probe.insecure ? ' · not HTTPS' : ''}` : probe.message}
+              chevron={false}
+            />
+            <Row icon={ExternalLink} title="Open the web app" onClick={() => openExternal(server)} trailing={External} />
+          </RowGroup>
+        </Section>
+        <Section>
+          <RowGroup>
+            <Row icon={LogOut} danger title="Sign out and switch server" chevron={false} onClick={() => setConfirm(true)} />
+          </RowGroup>
+        </Section>
       </Body>
       <Dialog
         open={confirm}
@@ -732,22 +752,40 @@ export function ServerSettings() {
 }
 
 export function DataSettings() {
-  const mode = useSession((s) => s.mode);
   const web = useWebLink();
-  const [confirm, setConfirm] = useState(null); // 'cache' | 'device' | 'demo'
+  const [confirm, setConfirm] = useState(null); // 'cache' | 'device' | 'account'
   const [busy, setBusy] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [mismatch, setMismatch] = useState(false);
+  const ask = (kind) => {
+    setTyped('');
+    setMismatch(false);
+    setConfirm(kind);
+  };
   const run = async () => {
+    if (confirm === 'account' && typed.trim().toUpperCase() !== 'DELETE') {
+      setMismatch(true);
+      return;
+    }
     setBusy(true);
     try {
+      if (confirm === 'account') {
+        // Erase the account on the server, then sign out and wipe everything stored here.
+        try {
+          await api().deleteAccount();
+        } catch (err) {
+          toast(err.message || 'Your account could not be deleted. Try again.', 'danger');
+          return;
+        }
+        setConfirm(null);
+        await useSession.getState().signOut({ wipe: true });
+        toast('Your account was deleted.', 'success');
+        return;
+      }
       if (confirm === 'cache') {
         clearQueries();
         invalidate('');
         toast('Cached data cleared. It reloads as you use the app.');
-      } else if (confirm === 'demo') {
-        await api().resetDemo();
-        clearQueries();
-        await useSession.getState().loadWorkspaces();
-        toast('Demo data reset', 'success');
       } else if (confirm === 'device') {
         // Sign out first so nothing syncs back, then wipe everything this app stored.
         await useSession.getState().signOut({ wipe: true });
@@ -759,11 +797,15 @@ export function DataSettings() {
   };
   const copy = {
     cache: { title: 'Clear cached data?', body: 'Lists and messages are fetched again from the server. You stay signed in.', label: 'Clear cache' },
-    demo: { title: 'Reset the demo?', body: 'All changes you made in the demo are replaced with the original sample data.', label: 'Reset demo' },
     device: {
       title: 'Clear this device?',
       body: `Signs you out and removes everything Oruinwan stored on this ${deviceNoun}: settings, cached messages and AI conversations. Your account and server data are not touched.`,
       label: 'Clear device',
+    },
+    account: {
+      title: 'Delete your account?',
+      body: 'This permanently deletes your account and personal data on this server: your profile, private notes, AI memory and encryption keys. Messages you sent stay in their conversations, shown from a deleted user. This cannot be undone.',
+      label: 'Delete account',
     },
   }[confirm || 'cache'];
   return (
@@ -772,19 +814,35 @@ export function DataSettings() {
       <Body>
         <Section title={`On this ${deviceNoun}`}>
           <RowGroup>
-            <Row icon={RefreshCw} title="Clear cached data" subtitle="Keeps you signed in" chevron={false} onClick={() => setConfirm('cache')} />
-            {mode === 'demo' && <Row icon={FlaskConical} title="Reset demo data" subtitle="Back to the original sample workspace" chevron={false} onClick={() => setConfirm('demo')} />}
-            <Row icon={Trash2} danger title="Clear this device" subtitle="Sign out and remove all local data" chevron={false} onClick={() => setConfirm('device')} />
+            <Row icon={RefreshCw} title="Clear cached data" subtitle="Keeps you signed in" chevron={false} onClick={() => ask('cache')} />
+            <Row icon={Trash2} danger title="Clear this device" subtitle="Sign out and remove all local data" chevron={false} onClick={() => ask('device')} />
           </RowGroup>
         </Section>
         <Section title="Your account">
-          <RowGroup footer={web() ? 'These open the web app, where you can confirm with your password.' : 'Available when you are signed in to your own server.'}>
+          <RowGroup footer="Downloading your data opens the web app.">
             <Row icon={Download} title="Download your data" trailing={External} disabled={!web()} onClick={web('/settings?tab=data')} />
-            <Row icon={Trash2} danger title="Delete account" trailing={External} disabled={!web()} onClick={web('/settings?tab=data')} />
+            <Row icon={Trash2} danger title="Delete account" subtitle="Permanently erase your account" chevron={false} onClick={() => ask('account')} />
           </RowGroup>
         </Section>
       </Body>
-      <Dialog open={Boolean(confirm)} onClose={() => setConfirm(null)} title={copy.title} body={copy.body} confirmLabel={copy.label} danger={confirm !== 'cache'} busy={busy} onConfirm={run} />
+      <Dialog open={Boolean(confirm)} onClose={() => setConfirm(null)} title={copy.title} body={copy.body} confirmLabel={copy.label} danger={confirm !== 'cache'} busy={busy} onConfirm={run}>
+        {confirm === 'account' && (
+          <Field
+            className="mt-4"
+            label="Type DELETE to confirm"
+            value={typed}
+            onChange={(e) => {
+              setTyped(e.target.value);
+              setMismatch(false);
+            }}
+            error={mismatch ? 'Type DELETE to delete your account.' : null}
+            autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        )}
+      </Dialog>
     </Screen>
   );
 }

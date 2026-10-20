@@ -1,4 +1,4 @@
-import { CircleDashed, Circle, CircleDot, CircleCheck, CircleX, CirclePause, Eye, MessageSquare, ListChecks } from 'lucide-react';
+import { CircleDashed, Circle, CircleDot, CircleCheck, CircleX, CirclePause, Eye, ListChecks } from 'lucide-react';
 import { nav, useIsOpen } from '../../app/nav.js';
 import { STATUS_META, PRIORITY_META } from '../../data/constants.js';
 import { dueLabel } from '../../lib/time.js';
@@ -48,12 +48,6 @@ export function TaskRow({ task, directory = {}, compact = false, onClick }) {
             <span className="inline-flex items-center gap-1">
               <Icon as={ListChecks} size={12} />
               {task.subtasks.done}/{task.subtasks.total}
-            </span>
-          )}
-          {!compact && task.comments > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <Icon as={MessageSquare} size={12} />
-              {task.comments}
             </span>
           )}
         </span>

@@ -93,7 +93,7 @@ function ActionBtn({ label, onClick, disabled, variant = 'default', icon }) {
         },
         accent: {
             bg: hovered ? 'var(--accent-hover)' : 'var(--accent)',
-            color: '#0c0c0c',
+            color: 'var(--bg-base)',
             border: 'transparent',
         },
     };
@@ -346,7 +346,7 @@ export default function SettingsTab({
                                     position: 'absolute', top: '3px',
                                     left: channel.isPublic ? '20px' : '3px',
                                     width: '14px', height: '14px',
-                                    backgroundColor: channel.isPublic ? '#0c0c0c' : 'var(--text-muted)',
+                                    backgroundColor: channel.isPublic ? 'var(--bg-base)' : 'var(--text-muted)',
                                     borderRadius: '1px',
                                     transition: 'left 150ms ease',
                                 }} />

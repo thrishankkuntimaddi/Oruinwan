@@ -137,7 +137,7 @@
 .dp-btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0c0c0c;
+  color: var(--bg-base);
   font-weight: 700;
 }
 .dp-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }

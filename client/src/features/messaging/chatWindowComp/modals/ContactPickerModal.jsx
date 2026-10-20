@@ -59,7 +59,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
         <div
             style={{
                 position: 'fixed', inset: 0,
-                backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
+                backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 zIndex: 50, padding: '16px', fontFamily: FONT,
             }}
@@ -72,7 +72,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                     backgroundColor: 'var(--bg-surface)',
                     border: '1px solid var(--border-accent)',
                     borderRadius: '4px',
-                    boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                    boxShadow: 'var(--lg-shadow-sm)',
                     overflow: 'hidden',
                     animation: 'fadeIn 180ms ease',
                 }}
@@ -167,7 +167,7 @@ function MemberBtn({ name, email, avatar, onClick }) {
                     backgroundColor: 'var(--accent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#0c0c0c' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--bg-base)' }}>
                         {name.charAt(0).toUpperCase()}
                     </span>
                 </div>

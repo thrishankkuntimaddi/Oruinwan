@@ -10,12 +10,12 @@ import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { DashPage, PageHead, Section, Grid, Btn, ErrorState, useAsync } from '../../components/company-dash/dashUi';
 
 const LINKS = [
-    { title: 'Analytics', text: 'Growth, messages and department mix over time', to: '/owner/analytics', icon: BarChart2 },
+    { title: 'Analytics', text: 'Growth, sign-ins and department mix over time', to: '/owner/analytics', icon: BarChart2 },
     { title: 'Security & risk', text: 'Sessions, security events and settings', to: '/owner/security', icon: Lock },
     { title: 'Admins', text: 'Who can manage your company', to: '/owner/admins', icon: ShieldCheck },
     { title: 'People', text: 'Roles, departments and account status', to: '/owner/users', icon: Users },
     { title: 'Audit logs', text: 'Every administrative change, searchable', to: '/owner/audit-logs', icon: ClipboardList },
-    { title: 'Billing & plan', text: 'Plan, seats and invoices', to: '/owner/billing', icon: CreditCard, flag: 'billing' },
+    { title: 'Billing & plan', text: 'Plan and seats (online billing coming soon)', to: '/owner/billing', icon: CreditCard, flag: 'billing' },
 ];
 
 /** Owner console home: real company metrics only. */
@@ -57,7 +57,7 @@ const OwnerDashboard = () => {
                     <SecurityRisk data={security.data} loading={security.loading} error={security.error} onOpen={() => navigate('/owner/security')} />
                     <Section title="Go deeper" lead="Detailed views and management">
                         <Grid cols="3">
-                            {LINKS.filter((l) => !l.flag || (l.flag === 'billing' && billingEnabled)).map((l) => (
+                            {LINKS.map((l) => ({ ...l, text: l.flag === 'billing' && billingEnabled ? 'Plan, seats and invoices' : l.text })).map((l) => (
                                 <button
                                     key={l.to}
                                     type="button"

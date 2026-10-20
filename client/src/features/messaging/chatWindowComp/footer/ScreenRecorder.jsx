@@ -127,7 +127,7 @@ export default function ScreenRecorder({ onRecorded, disabled = false }) {
                     <Trash2 size={14} />
                 </button>
                 <button onClick={send} title="Send screen recording" aria-label="Send screen recording"
-                    style={{ padding: '5px 10px', background: 'var(--accent)', border: 'none', color: '#0c0c0c', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
+                    style={{ padding: '5px 10px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                 >
                     <Send size={13} />
                 </button>
@@ -150,7 +150,7 @@ export default function ScreenRecorder({ onRecorded, disabled = false }) {
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                color: state === "recording" ? '#f87171' : 'var(--text-muted)',
+                color: state === "recording" ? 'var(--state-danger)' : 'var(--text-muted)',
                 transition: 'color 150ms ease',
                 opacity: disabled ? 0.4 : 1,
             }}

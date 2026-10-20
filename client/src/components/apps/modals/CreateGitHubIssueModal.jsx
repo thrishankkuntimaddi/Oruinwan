@@ -1,153 +1,90 @@
-import React, { useState } from "react";
-import { X, Loader2, CheckCircle2, GitBranch } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { GitPullRequest } from "lucide-react";
+import { Dialog, Btn, Field } from "../../ui/page";
+import { useToast } from "../../../contexts/ToastContext";
+import { createGithubIssue, isConnected } from "../../../features/integrations/integrationsApi";
+import "../../../pages/toolkit/toolkit.css";
 
-const MOCK_REPOS = [
-  "oruinwan/frontend",
-  "oruinwan/backend",
-  "oruinwan/mobile",
-  "oruinwan/design-system",
-  "oruinwan/infra",
-];
-
-const MOCK_LABELS = ["bug", "enhancement", "feature", "documentation", "question", "help wanted"];
-
+/**
+ * Create a real GitHub issue through the workspace's GitHub integration, then put a link to it
+ * in the message box. Repositories routed in Settings → Integrations are offered as suggestions.
+ */
 export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
+  const { workspaceId } = useParams();
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
-  const [repo, setRepo] = useState(MOCK_REPOS[0]);
-  const [label, setLabel] = useState("bug");
+  const [repo, setRepo] = useState("");
   const [description, setDescription] = useState("");
+  const [repos, setRepos] = useState([]);
+  const [connected, setConnected] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [issueNumber] = useState(() => Math.floor(Math.random() * 900) + 100);
+  const [error, setError] = useState("");
 
-  const handleCreate = () => {
-    if (!title.trim()) return;
+  useEffect(() => {
+    if (!workspaceId) { setConnected(false); return undefined; }
+    let alive = true;
+    isConnected('github', workspaceId)
+      .then(({ connected: c, config }) => {
+        if (!alive) return;
+        setConnected(c);
+        const list = [...new Set((config?.routes || []).map((r) => r.repo).filter((r) => r && r !== '*'))];
+        setRepos(list);
+        if (list.length) setRepo((cur) => cur || list[0]);
+      })
+      .catch(() => alive && setConnected(false));
+    return () => { alive = false; };
+  }, [workspaceId]);
+
+  const valid = title.trim() && /^[\w.-]+\/[\w.-]+$/.test(repo.trim());
+
+  const handleCreate = async () => {
+    if (!valid) return;
     setLoading(true);
-    setTimeout(() => {
+    setError("");
+    try {
+      const res = await createGithubIssue({ workspaceId, repo: repo.trim(), title: title.trim(), body: description });
+      const issue = res?.issue || res || {};
+      const num = issue.number ? `#${issue.number}` : '';
+      const link = issue.url || issue.html_url;
+      onInsertText?.(`GitHub issue ${link ? `[${repo.trim()}${num}](${link})` : `${repo.trim()}${num}`}: **${issue.title || title.trim()}**`);
+      showToast(`Issue ${repo.trim()}${num} created`, 'success');
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Could not create the GitHub issue.');
+    } finally {
       setLoading(false);
-      setDone(true);
-      onInsertText?.(
-        `📌 **GitHub Issue #${issueNumber}** created in \`${repo}\`\n> **${title.trim()}** · \`${label}\``
-      );
-      setTimeout(() => onClose(), 1800);
-    }, 1500);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[120] backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-
-        {}
-        <div className="flex items-center gap-3 p-5 border-b border-gray-100 dark:border-gray-800">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-lg flex-shrink-0">
-            🐙
-          </div>
-          <div className="flex-1">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Create GitHub Issue</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Mock — no real issue will be created</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        {}
-        <div className="p-5 space-y-4">
-          {done ? (
-            <div className="flex flex-col items-center gap-3 py-4 animate-fade-in">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
-                <CheckCircle2 size={28} className="text-emerald-500" />
-              </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Issue #{issueNumber} created!
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Link added to your message.</p>
-            </div>
-          ) : (
-            <>
-              {}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                  Repository
-                </label>
-                <select
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                >
-                  {MOCK_REPOS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-
-              {}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                  Issue Title <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Fix login redirect bug"
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              {}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                  Label
-                </label>
-                <select
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                >
-                  {MOCK_LABELS.map((l) => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
-
-              {}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                  Description <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the issue…"
-                  rows={3}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        {}
-        {!done && (
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleCreate}
-              disabled={loading || !title.trim()}
-              className="flex-1 py-2.5 text-sm font-semibold text-white bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <GitBranch size={14} />}
-              {loading ? "Creating…" : "Create Issue"}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+    <Dialog
+      open
+      title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><span className="tk-mark" data-size="sm"><GitPullRequest size={15} /></span>New GitHub issue</span>}
+      lead="Creates the issue on GitHub and adds a link to your message."
+      onClose={onClose}
+      busy={loading}
+      footer={(
+        <>
+          <Btn variant="ghost" onClick={onClose} disabled={loading}>Cancel</Btn>
+          <Btn variant="primary" onClick={handleCreate} loading={loading} disabled={!valid || connected === false}>Create issue</Btn>
+        </>
+      )}
+    >
+      {connected === false && (
+        <div className="tk-notice">GitHub isn’t connected to this workspace. An admin can connect it in Settings → Integrations.</div>
+      )}
+      {error && <div className="tk-notice" data-tone="danger" role="alert">{error}</div>}
+      <Field label="Repository" hint={repos.length ? 'Routed repositories are suggested; any owner/name works.' : 'owner/name, for example acme/web'} htmlFor="gh-repo">
+        <input id="gh-repo" className="gl-input" list="gh-repo-options" value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="owner/name" />
+        <datalist id="gh-repo-options">{repos.map((r) => <option key={r} value={r} />)}</datalist>
+      </Field>
+      <Field label="Title" htmlFor="gh-title">
+        <input id="gh-title" className="gl-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Login button does nothing on Safari" />
+      </Field>
+      <Field label="Description" hint="Optional" htmlFor="gh-body">
+        <textarea id="gh-body" className="gl-input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Steps, context, links" />
+      </Field>
+    </Dialog>
   );
 }

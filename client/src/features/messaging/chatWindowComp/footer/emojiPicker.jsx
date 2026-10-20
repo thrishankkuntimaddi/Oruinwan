@@ -12,16 +12,14 @@ export default function EmojiPicker({ onPick }) {
   return (
     <div
       onClick={e => e.stopPropagation()}
+      className="gl-liquid gl-liquid--strong"
       style={{
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-accent)',
-        borderRadius: '2px',
+        borderRadius: 'var(--gl-radius-md)',
         width: '280px',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 50,
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         fontFamily: 'var(--font)',
       }}
     >

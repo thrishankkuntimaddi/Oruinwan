@@ -8,6 +8,8 @@ import TurndownService from "turndown";
 import ReplyPreview from "../messages/replyPreview";
 import MentionAutocomplete from "./MentionAutocomplete";
 import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete";
+import { useAssistants } from "../../../../hooks/useAssistants";
+import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
 import { parseSlashCommand } from "../../../../components/chat/slash/slashCommands";
 import { useFeatureFlags } from "../../../../contexts/FeatureFlagsContext";
@@ -96,6 +98,8 @@ export default function FooterInput({
   const editableRef = useRef(null);
   const [hasText, setHasText] = useState(false);
 
+  const { activeWorkspace: mentionWorkspace } = useWorkspace() || {};
+  const connectedAssistants = useAssistants(mentionWorkspace?.id || mentionWorkspace?._id || null);
   const {
     showSuggestions,
     suggestions,
@@ -105,7 +109,7 @@ export default function FooterInput({
     selectSuggestion,
     extractMentionText,
     closeSuggestions,
-  } = useMentionAutocomplete(members, { includeBroadcast: conversationType === 'channel' });
+  } = useMentionAutocomplete(members, { includeBroadcast: conversationType === 'channel', assistants: connectedAssistants });
 
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
@@ -733,7 +737,7 @@ export default function FooterInput({
               onClick={applyLink}
               style={{
                 padding: '4px 8px', backgroundColor: 'var(--accent)',
-                color: '#0c0c0c', border: 'none', borderRadius: '2px',
+                color: 'var(--bg-base)', border: 'none', borderRadius: '2px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center',
                 transition: 'background-color 150ms ease',
               }}
@@ -854,7 +858,7 @@ export default function FooterInput({
                 width: '32px', height: '32px',
                 borderRadius: '2px',
                 backgroundColor: (!hasText || blocked || disabled) ? 'var(--bg-active)' : 'var(--accent)',
-                color: (!hasText || blocked || disabled) ? 'var(--text-muted)' : '#0c0c0c',
+                color: (!hasText || blocked || disabled) ? 'var(--text-muted)' : 'var(--bg-base)',
                 border: 'none', cursor: (!hasText || blocked || disabled) ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background-color 150ms ease',

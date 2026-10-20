@@ -131,6 +131,7 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
                 notificationId: String(notif._id),
                 ...(meta.channelId && { channelId: String(meta.channelId) }),
                 ...(meta.dmSessionId && { dmSessionId: String(meta.dmSessionId) }),
+                ...(meta.parentMessageId && { parentMessageId: String(meta.parentMessageId) }),
             }).catch(() => {});
         }
 
@@ -325,14 +326,16 @@ async function huddleStarted(io, { recipientIds, workspaceId, channelId, dmSessi
     });
 }
 
-async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId }) {
+async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId, startTime }) {
+    const when = startTime ? new Date(startTime) : null;
     return createMany(io, recipientIds, {
         workspaceId,
         type: 'schedule_created',
-        title: 'Meeting Scheduled',
+        title: 'You are invited to a meeting',
+        // The time is in meta: each app shows it in the reader's own time zone.
         body: title,
-        link: `/huddles`,
-        meta: { scheduledMeetingId, meetingTitle: title },
+        link: scheduledMeetingId ? `/meetings/${scheduledMeetingId}` : '/huddles?tab=scheduled',
+        meta: { scheduledMeetingId, meetingTitle: title, startTime: when ? when.toISOString() : null },
     });
 }
 
@@ -343,7 +346,8 @@ async function threadReply(io, { followerIds, senderUsername, workspaceId, chann
         type: 'thread_reply',
         title: `${senderUsername} replied to a thread`,
         body: channelName ? `in #${channelName}` : 'View thread',
-        link: channelId ? `/channel/${channelId}` : (dmSessionId ? `/dm/${dmSessionId}` : null),
+        // ?thread= opens the thread panel on arrival.
+        link: channelId ? `/channel/${channelId}?thread=${parentMessageId}` : (dmSessionId ? `/dm/${dmSessionId}?thread=${parentMessageId}` : null),
         meta: { senderUsername, channelId, dmSessionId, channelName, parentMessageId },
     });
 }

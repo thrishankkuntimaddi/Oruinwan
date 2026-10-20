@@ -77,7 +77,7 @@ const ContactAdmin = () => {
 
     useEffect(() => {
         if (!socket || tab !== 'chat') return undefined;
-        const onMessage = (message) => setMessages((prev) => (prev.some((m) => m._id === message._id) ? prev : [...prev, message]));
+        const onMessage = (message) => setMessages((prev) => addOnce(prev, message));
         socket.on('platform-message', onMessage);
         return () => { socket.off('platform-message', onMessage); };
     }, [socket, tab]);
@@ -109,7 +109,7 @@ const ContactAdmin = () => {
         setSending(true);
         try {
             const response = await api.post('/api/platform/support/messages', { companyId, content });
-            setMessages((prev) => [...prev, response.data.message]);
+            setMessages((prev) => addOnce(prev, response.data.message));
             setDraft('');
         } catch (err) {
             showToast(errorMessage(err, 'Failed to send message'), 'error');
@@ -334,5 +334,9 @@ const ContactAdmin = () => {
         </DashPage>
     );
 };
+
+// Live updates can arrive before (or after) the send response: keep one copy per message.
+const msgId = (m) => String(m?._id || m?.id || '');
+const addOnce = (list, message) => (!message || list.some((m) => msgId(m) && msgId(m) === msgId(message)) ? list : [...list, message]);
 
 export default ContactAdmin;

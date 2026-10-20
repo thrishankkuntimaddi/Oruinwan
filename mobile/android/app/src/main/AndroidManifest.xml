@@ -19,6 +19,26 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Workspace invitation links open the join screen (src/lib/invite.js). The web host comes
+                 from ORUINWAN_WEB_HOST at build time (app/build.gradle). Verified App Links also need
+                 https://<host>/.well-known/assetlinks.json; without it Android asks which app to use. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${oruinwanWebHost}" />
+                <data android:pathPrefix="/join-workspace" />
+                <data android:pathPrefix="/join/" />
+                <data android:pathPrefix="/invite/" />
+            </intent-filter>
+            <!-- oruinwan://join/<token> and oruinwan://join-workspace?token=… -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="oruinwan" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -33,7 +53,16 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: needed to show push notifications (asked at runtime). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- In-app updates hand the downloaded APK to the system installer; the user confirms each install. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Huddles, voice and video messages (the web client on tablets): the WebView asks for these at runtime
+         when a call starts. Phones without a camera can still install the app. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

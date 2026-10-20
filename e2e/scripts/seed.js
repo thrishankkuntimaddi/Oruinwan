@@ -48,6 +48,8 @@ async function seed(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUrl) {
       accountStatus: 'active',
       companyRole: 'member',
       authProvider: 'local',
+      // Seeded people have already seen the first-run tour (it would cover the page).
+      preferences: { tour: { done: true } },
     });
     const alice = await makeUser(E2E.users.alice);
     const bob = await makeUser(E2E.users.bob);

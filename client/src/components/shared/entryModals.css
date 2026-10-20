@@ -1,0 +1,60 @@
+/* Pieces for the in-app entry dialogs (code check, encryption unlock, invite people).
+   Built on the page kit (gl-* / cd-*); theme tokens only, so light and dark both work. */
+
+.em-otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.em-otp .gl-input { height: 52px; padding: 0; text-align: center; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.em-otp .gl-input[data-filled='true'] { border-color: var(--gl-accent-line); background: var(--gl-accent-soft); }
+.em-otp .gl-input[aria-invalid='true'] { border-color: var(--state-danger); }
+
+.em-timer { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.em-timer .cd-meter { flex: 1; height: 4px; }
+
+.em-alert { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; border: 1px solid var(--border-default); border-radius: var(--gl-radius); background: var(--bg-hover); color: var(--text-secondary); }
+.em-alert svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+.em-alert strong { color: var(--text-primary); font-weight: 600; }
+.em-alert[data-tone='danger'] { color: var(--state-danger); border-color: color-mix(in srgb, var(--state-danger) 35%, transparent); background: color-mix(in srgb, var(--state-danger) 8%, transparent); }
+.em-alert[data-tone='danger'] svg { color: var(--state-danger); }
+.em-alert[data-tone='warning'] svg { color: var(--color-warning); }
+
+.em-done { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 8px 8px; text-align: center; }
+.em-done .gl-empty-mark { color: var(--state-success); }
+.em-done p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+.em-done h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-primary); }
+
+.em-pass { position: relative; }
+.em-pass .gl-input { width: 100%; padding-right: 40px; }
+.em-pass button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+
+.em-mark { width: 36px; height: 36px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--gl-accent-line); background: var(--gl-accent-soft); color: var(--accent); border-radius: var(--gl-radius); }
+.em-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+/* Invite people */
+.em-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.em-role { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; text-align: left; font: inherit; color: var(--text-primary); cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--gl-radius); transition: border-color 150ms ease, background 150ms ease; }
+.em-role:hover { border-color: var(--border-accent); }
+.em-role[aria-checked='true'] { border-color: var(--accent); background: var(--gl-accent-soft); }
+.em-role b { font-size: 13px; font-weight: 650; }
+.em-role[aria-checked='true'] b { color: var(--accent); }
+.em-role small { font-size: 11.5px; color: var(--text-secondary); }
+
+.em-link { display: flex; gap: 8px; }
+.em-link .gl-input { flex: 1; min-width: 0; font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 12px; color: var(--text-secondary); }
+
+.em-list { display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); max-height: 200px; overflow-y: auto; }
+.em-list-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); }
+.em-list-row:last-child { border-bottom: 0; }
+.em-list-row > div { min-width: 0; flex: 1; }
+.em-list-row p { margin: 0; font-size: 12.5px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.em-list-row small { font-size: 11px; color: var(--text-secondary); }
+.em-list-row .gl-icon-btn { opacity: 0.6; }
+.em-list-row:hover .gl-icon-btn, .em-list-row .gl-icon-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .em-list-row .gl-icon-btn { opacity: 1; } }
+
+.em-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+
+@media (max-width: 480px) {
+    .em-otp { gap: 6px; }
+    .em-otp .gl-input { height: 46px; font-size: 18px; }
+    .em-link { flex-wrap: wrap; }
+    .em-link .gl-btn { flex: 1; justify-content: center; }
+}

@@ -5,29 +5,25 @@ const TYPES = {
     success: {
         icon: CheckCircle2,
         accent: 'var(--state-success)',
-        bg: 'rgba(90,186,138,0.08)',
-        border: 'rgba(90,186,138,0.3)',
+        bg: 'color-mix(in srgb, var(--state-success) 8%, transparent)',
         label: 'Success',
     },
     error: {
         icon: XCircle,
         accent: 'var(--state-danger)',
-        bg: 'rgba(224,82,82,0.08)',
-        border: 'rgba(224,82,82,0.3)',
+        bg: 'color-mix(in srgb, var(--state-danger) 8%, transparent)',
         label: 'Error',
     },
     warning: {
         icon: AlertTriangle,
         accent: 'var(--accent)',
-        bg: 'rgba(184,149,106,0.08)',
-        border: 'rgba(184,149,106,0.3)',
+        bg: 'var(--gl-accent-soft)',
         label: 'Warning',
     },
     info: {
         icon: Info,
-        accent: '#9b8ecf',
-        bg: 'rgba(155,142,207,0.08)',
-        border: 'rgba(155,142,207,0.3)',
+        accent: 'var(--text-secondary)',
+        bg: 'transparent',
         label: 'Info',
     },
 };
@@ -37,18 +33,17 @@ const CompactToast = ({ title, message, avatar, onClick, dismiss, exiting }) => 
     <div
         role={onClick ? 'button' : undefined}
         onClick={onClick}
+        className="gl-toast"
         style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             maxWidth: '300px', padding: '6px 8px 6px 6px',
-            background: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-            borderRadius: '2px', boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
-            fontFamily: 'Inter, system-ui, sans-serif', cursor: onClick ? 'pointer' : 'default',
+            cursor: onClick ? 'pointer' : 'default',
             transform: exiting ? 'translateX(320px)' : 'translateX(0)',
             opacity: exiting ? 0 : 1,
             transition: 'transform 200ms cubic-bezier(0.4,0,0.2,1), opacity 160ms ease',
         }}
     >
-        <div style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: 'rgba(184,149,106,0.18)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: 'var(--gl-accent-soft)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
             {avatar ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (title || '?').charAt(0).toUpperCase()}
         </div>
         <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'baseline', gap: '6px', fontSize: '12px', lineHeight: 1.4 }}>
@@ -106,26 +101,21 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000, title, ava
     }
 
     return (
-        <div style={{
-            position: 'relative',
+        <div className="gl-toast" role={type === 'error' ? 'alert' : 'status'} style={{
             width: '320px',
-            background: 'var(--bg-surface)',
-            border: `1px solid ${cfg.border}`,
-            borderLeft: `3px solid ${cfg.accent}`,
-            overflow: 'hidden',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            maxWidth: 'calc(100vw - 32px)',
             transform: exiting ? 'translateX(340px)' : 'translateX(0)',
             opacity: exiting ? 0 : 1,
             transition: 'transform 250ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease',
         }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', background: cfg.bg }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px 12px 16px', background: cfg.bg }}>
+                <span aria-hidden="true" style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3, borderRadius: '0 2px 2px 0', background: cfg.accent }} />
                 <Icon size={16} style={{ color: cfg.accent, flexShrink: 0, marginTop: '1px' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: cfg.accent, marginBottom: '2px' }}>
                         {cfg.label}
                     </p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: '1.5', wordBreak: 'break-word' }}>
                         {message}
                     </p>
                 </div>
@@ -136,7 +126,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000, title, ava
                 </button>
             </div>
             {}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, height: '2px', width: '100%', background: 'var(--bg-active)' }}>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, height: '2px', width: '100%', background: 'var(--lg-border)' }}>
                 <div style={{ height: '100%', background: cfg.accent, width: `${progress}%`, transition: 'width 16ms linear' }} />
             </div>
         </div>

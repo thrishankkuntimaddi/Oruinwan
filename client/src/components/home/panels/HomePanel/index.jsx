@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, X, Calendar, Clock, ExternalLink, Loader, ChevronDown, Settings2, SquarePen } from 'lucide-react';
+import { Trash2, X, Calendar, Clock, ExternalLink, Loader, ChevronDown, Settings2, SquarePen, Plus } from 'lucide-react';
 import WorkspacePanel from "../../../layout/WorkspacePanel";
 import '../../../layout/shell.css';
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
@@ -20,6 +20,7 @@ import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 import logger from '../../../../utils/logger';
 import ActivitySection from "../../../../features/activity/ActivitySection";
+import { openAgentDm, useAgents } from "../../../../features/agents/useAgents";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
@@ -85,6 +86,7 @@ const HomePanel = ({ title }) => {
         favorites: true,
         channels: true,
         dms: true,
+        agents: true,
         schedules: true,
     });
 
@@ -101,6 +103,18 @@ const HomePanel = ({ title }) => {
             setWorkspaceName(title);
         }
     }, [title]);
+
+    // Installed agents (Oruinwan AI, Claude…): open a chat with one.
+    const { agents } = useAgents(activeWorkspace?.id);
+    const installedAgents = agents.filter((a) => a.installed);
+    const chatWithAgent = async (agent) => {
+        try {
+            const dmId = await openAgentDm(activeWorkspace?.id, agent.id);
+            navigate(`/workspace/${activeWorkspace?.id}/home/dm/${dmId}`);
+        } catch (err) {
+            showToast(err.response?.data?.message || `Couldn't open ${agent.name}`, 'error');
+        }
+    };
 
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const [showRenameModal, setShowRenameModal] = useState(false);
@@ -465,6 +479,29 @@ const HomePanel = ({ title }) => {
                 dms.length > 0
                     ? dms.map(item => <ListItem key={item.id} item={item} {...listProps} />)
                     : favorites.every(f => f.type !== 'dm') && <div className="gl-shell-hint">No direct messages yet</div>
+            )}
+
+            <SectionHeader
+                label="Agents"
+                isOpen={expanded.agents}
+                onClick={() => toggle("agents")}
+                onAdd={() => navigate(`/workspace/${activeWorkspace?.id}/agents?tab=directory`)}
+            />
+            {expanded.agents && (
+                <>
+                    {installedAgents.map((a) => (
+                        <button key={a.id} type="button" className="gl-item gl-shell-row" onClick={() => chatWithAgent(a)} data-testid={`sidebar-agent-${a.id}`}>
+                            <img src={a.icon} alt="" width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                            <span className="gl-shell-row-text"><span className="gl-shell-row-label">{a.name}</span></span>
+                        </button>
+                    ))}
+                    {installedAgents.length <= 1 && (
+                        <button type="button" className="gl-item gl-shell-row" onClick={() => navigate(`/workspace/${activeWorkspace?.id}/agents?tab=directory`)}>
+                            <span className="gl-shell-glyph" aria-hidden="true"><Plus size={12} /></span>
+                            <span className="gl-shell-row-text"><span className="gl-shell-row-label" style={{ color: 'var(--text-secondary)' }}>Add Claude, ChatGPT…</span></span>
+                        </button>
+                    )}
+                </>
             )}
 
             <SectionHeader

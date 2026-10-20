@@ -8,15 +8,15 @@ export default {
         {
             id: 'channels',
             title: 'Channels',
-            summary: 'Topic rooms for a team or project. Public, private, and the two default channels.',
-            keywords: 'channel channels public private default general announcements create join discoverable members tabs canvas',
+            summary: 'Topic rooms for a team or project. Public, private, and the default channels.',
+            keywords: 'channel channels public private default general random announcements create join discoverable members tabs canvas',
             blocks: [
                 'A **channel** is a shared room for a topic, team or project. Everything said there stays in one searchable place, with threads to keep side discussions tidy.',
                 { h: 'Channel types' },
                 { table: { caption: 'Channel types', head: ['Type', 'Who can see and join it'], rows: [
                     ['Public', 'Anyone in the workspace can join. Tick **Discoverable** so people can find it in the channel list.'],
                     ['Private', 'Only people who are added can see it, its messages and its members.'],
-                    ['Default', 'Every new workspace starts with `#general` and `#announcements`. They are public and everyone is in them.'],
+                    ['Default', 'A workspace made with the create-workspace wizard starts with `#general`, `#random` and a channel for the project you named. Company and department workspaces start with `#general` and `#announcements`. Default channels are public and everyone is in them.'],
                     ['Announcement-only', 'An admin setting on any channel: only admins post, everyone reads.'],
                 ] } },
                 { h: 'Create a channel' },
@@ -55,12 +55,13 @@ export default {
             id: 'threads',
             title: 'Threads',
             summary: 'Reply under a message to keep side conversations out of the main chat.',
-            keywords: 'thread threads reply replies side conversation resolve summarize summary',
+            keywords: 'thread threads reply replies side conversation resolve summarize summary split view beside',
             blocks: [
                 { steps: [
                     'Hover a message and choose **Reply in thread** (it says **Open thread** once there are replies).',
                     'The thread opens beside the conversation. Reply there; the parent message shows the reply count.',
                 ] },
+                'On a desktop or tablet, choose **Open in split view** in the thread header to keep the thread open beside the main view while you move around. See [Split view](/docs/messaging/split-view).',
                 { figure: 'chat-ai', caption: 'A message with a thread, then @Oruinwan answering in the channel.' },
                 { h: 'Find and finish threads' },
                 { list: [
@@ -69,6 +70,27 @@ export default {
                     '**Summarize thread** (in the message’s **More** menu, or the sparkle button in the thread header) asks Oruinwan AI for a recap of the replies.',
                 ] },
                 { callout: 'tip', text: 'You can `@Oruinwan` inside a thread too: the answer is posted as a reply in that thread.' },
+            ],
+        },
+        {
+            id: 'split-view',
+            title: 'Split view',
+            summary: 'On a desktop or tablet, open a second conversation, a thread or another page beside the main one.',
+            keywords: 'split view side by side beside two conversations pane second window thread desktop tablet ipad ctrl backslash',
+            blocks: [
+                'Split view puts a second page next to the one you are working in, so you can follow a thread while you read a channel, or keep your tasks open next to a DM. It is available on desktops and on tablets in landscape (screens at least 1,024 pixels wide).',
+                { h: 'Open something beside' },
+                { steps: [
+                    'Choose the **Split view** button in the top bar, or press [[Mod+\\]].',
+                    'Pick what to open: a channel, a direct message, a note, or a page such as **Tasks**, **Files**, **Knowledge**, **Oruinwan AI**, **Agents** or **Workflows**. Type to filter and press [[Enter]].',
+                    'Drag the pane’s left edge to resize it. Links inside the pane change the pane, not the main view.',
+                ] },
+                { h: 'Threads in split view' },
+                'In an open thread, choose **Open in split view** to move the thread into the pane. It stays open while you switch channels in the main view.',
+                { list: [
+                    'Close the pane with the same button or [[Mod+\\]].',
+                    'The pane is remembered while the window or tab stays open. Switching to another workspace closes it.',
+                ] },
             ],
         },
         {
@@ -272,7 +294,7 @@ export default {
             keywords: 'search find cmd k ctrl k messages files people tasks notes knowledge filter',
             blocks: [
                 'Press [[Mod+K]] anywhere in a workspace, or click the search bar. Results are grouped into **Channels**, **People**, **Messages**, **Tasks**, **Files**, **Notes** and **Knowledge**. Press [[Enter]] for the full results page, where you can filter by type.',
-                { callout: 'note', title: 'How message search works', text: 'Messages are end-to-end encrypted, so the server cannot search their text. Oruinwan searches the messages of conversations you have opened in this session, right in your browser (kept in memory only, never saved). Open a conversation first if an older message does not show up.' },
+                { callout: 'note', title: 'How message search works', text: 'Messages are end-to-end encrypted and Oruinwan does not index their text on the server. Instead, Oruinwan searches the messages of conversations you have opened in this session, right on your device (kept in memory only, never saved). Open a conversation first if an older message does not show up.' },
             ],
         },
         {

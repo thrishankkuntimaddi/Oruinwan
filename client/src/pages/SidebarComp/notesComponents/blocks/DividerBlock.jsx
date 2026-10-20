@@ -51,7 +51,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     onClick={() => onRemoveBlock(block.id)}
                     style={{ position: 'absolute', right: 0, top: '-4px', padding: '6px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                     className="group-hover:!opacity-100"
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; e.currentTarget.style.background = 'color-mix(in srgb, var(--state-danger) 10%, transparent)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Trash2 size={12} />
@@ -65,7 +65,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         type="text"
                         value={label}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
-                        placeholder="Add section label..."
+                        placeholder="Section label (optional)"
                         style={{ fontSize: '10px', textAlign: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', width: '160px', fontFamily: 'var(--font)' }}
                     />
                 </div>

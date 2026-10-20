@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { aiErrorMessage } from '../services/aiService';
 
-/** A message addressed to the assistant: @ai, @oruinwan, @oruinwan-ai, @OruinwanAI (mirrors the server). */
-export const AI_MENTION_RE = /(^|[\s(])@(ai|oruinwan(?:[-_ ]?ai)?)\b/i;
+/** A message addressed to an assistant: @ai, @oruinwan, @claude, @chatgpt, @gpt, @gemini, @grok (mirrors the server). */
+export const AI_MENTION_RE = /(^|[\s(])@(oruinwan(?:[-_ ]?ai)?|ai|claude|chatgpt|gpt|gemini|grok|local)\b/i;
 export const mentionsAI = (text) => AI_MENTION_RE.test(String(text || ''));
 
 /** Whether the message @mentions a person (anything other than the assistant). */
 export const mentionsPerson = (mentionText) => String(mentionText || '')
     .split(/\s+/).filter((t) => t.startsWith('@'))
-    .some((t) => !/^@(ai|oruinwan(?:[-_]?ai)?)$/i.test(t.replace(/[^@\w-]/g, '')));
+    .some((t) => !/^@(ai|oruinwan(?:[-_]?ai)?|claude|chatgpt|gpt|gemini|grok|local)$/i.test(t.replace(/[^@\w-]/g, '')));
 
 const AI_NAME = 'Oruinwan AI';
 const FOLLOW_UP_MS = 10 * 60 * 1000;
@@ -35,6 +35,8 @@ export default function useConversationAI({ socket, conversationId, conversation
     // Follow-up sessions: after the AI answers you in a view ('main' or a thread's
     // parent id), your next message there goes to the AI without a mention.
     const [followUps, setFollowUps] = useState({}); // viewKey -> expiresAt
+    // Which assistant answered last in each view, so a follow-up continues with it (Claude stays Claude).
+    const followUpAssistant = useRef({}); // viewKey -> assistant id
     const repliesRef = useRef(replies);
     repliesRef.current = replies;
 
@@ -82,7 +84,7 @@ export default function useConversationAI({ socket, conversationId, conversation
             if (!e || String(e.conversationId) !== String(conversationId)) return;
             const id = e.replyId;
             setReplies((prev) => {
-                const cur = prev[id] || { replyId: id, parentId: e.parentId || null, requestedBy: e.requestedBy || null, text: '', status: 'Thinking…', error: null };
+                const cur = prev[id] || { replyId: id, parentId: e.parentId || null, requestedBy: e.requestedBy || null, assistant: e.assistant || 'default', assistantName: e.assistantName || null, text: '', status: 'Thinking…', error: null };
                 switch (e.phase) {
                     case 'start': return { ...prev, [id]: cur };
                     case 'delta': return { ...prev, [id]: { ...cur, text: e.text || cur.text, status: null } };
@@ -98,6 +100,7 @@ export default function useConversationAI({ socket, conversationId, conversation
                 const requestedBy = r?.requestedBy || e.requestedBy;
                 if (String(requestedBy) === String(currentUserId)) {
                     const key = (r?.parentId || e.parentId) ? String(r?.parentId || e.parentId) : 'main';
+                    followUpAssistant.current[key] = r?.assistant || e.assistant || 'default';
                     setFollowUps((f) => ({ ...f, [key]: Date.now() + FOLLOW_UP_MS }));
                 }
                 drop(id);
@@ -111,13 +114,13 @@ export default function useConversationAI({ socket, conversationId, conversation
         };
     }, [socket, conversationId, currentUserId]);
 
-    const ask = useCallback(async ({ prompt, triggerMessageId, parentId = null, messages = [], conversationName }) => {
+    const ask = useCallback(async ({ prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant }) => {
         if (!conversationId || !prompt) return null;
         endFollowUp(parentId); // re-armed when this answer finishes
         try {
             const { data } = await api.post('/api/ai/reply', {
                 workspaceId, conversationId, conversationType, parentId, triggerMessageId, conversationName,
-                prompt, messages: messages.slice(-40),
+                prompt, messages: messages.slice(-40), ...(assistant && assistant !== 'default' ? { assistant } : {}),
             });
             return data?.replyId || null;
         } catch (err) {
@@ -132,6 +135,8 @@ export default function useConversationAI({ socket, conversationId, conversation
         ask,
         isFollowUp,
         endFollowUp,
+        /** The assistant a follow-up in this view continues with (null: decided by the message's @mention). */
+        followUpAssistantFor: (parentId = null) => followUpAssistant.current[parentId ? String(parentId) : 'main'] || null,
         mainReplies: list.filter((r) => !r.parentId),
         repliesFor: (parentId) => list.filter((r) => String(r.parentId) === String(parentId)),
     };

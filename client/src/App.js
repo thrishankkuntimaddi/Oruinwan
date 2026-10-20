@@ -21,6 +21,9 @@ import MessagesPanel from "./components/layout/panels/MessagesPanel";
 import NotesPanel from "./components/layout/panels/NotesPanel";
 import FilesPanel from "./components/layout/panels/FilesPanel";
 import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
+import AgentsPanel from "./components/layout/panels/AgentsPanel";
+import AgentsPage from "./pages/agents/AgentsPage";
+import WorkspaceAdminPage from "./pages/workspace-admin/WorkspaceAdminPage";
 
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./features/huddles/HuddleContext";
@@ -41,6 +44,7 @@ import { FeatureFlagsProvider, FeatureRoute } from "./contexts/FeatureFlagsConte
 import AutomationsPage from "./pages/workspace/AutomationsPage";
 import AutomationBuilderPage from "./pages/workspace/AutomationBuilderPage";
 import TemplateMarketplacePage from "./pages/workspace/TemplateMarketplacePage";
+import ThreadPage from "./pages/thread/ThreadPage";
 import DeveloperPortalPage from "./pages/developer/DeveloperPortalPage";
 import FileLibrary from "./pages/SidebarComp/FileLibrary";
 import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
@@ -58,7 +62,6 @@ import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
 
 import VerifyEmail from "./pages/VerifyEmail";
-import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import SetPassword from "./pages/SetPassword";
 import SetupPassword from "./pages/SetupPassword";
 import ReactivationFlow from "./pages/ReactivationFlow";
@@ -524,12 +527,42 @@ function App() {
 
                            {}
                            <Route
-                             path="/workspace/:workspaceId/apps"
+                             path="/workspace/:workspaceId/admin"
                              element={
                                <RequireAuth>
                                  <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
+                                       <WorkspaceAdminPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceScope>
+                               </RequireAuth>
+                             }
+                           />
+
+                           <Route
+                             path="/workspace/:workspaceId/agents"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceScope>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<AgentsPanel />}>
+                                       <AgentsPage />
+                                     </MainLayout>
+                                   </RequireWorkspace>
+                                 </WorkspaceScope>
+                               </RequireAuth>
+                             }
+                           />
+
+                           <Route
+                             path="/workspace/:workspaceId/apps"
+                             element={
+                               <RequireAuth>
+                                 <WorkspaceScope>
+                                   <RequireWorkspace>
+                                     <MainLayout sidePanel={<AgentsPanel />}>
                                        <AppsPage />
                                      </MainLayout>
                                    </RequireWorkspace>
@@ -546,7 +579,7 @@ function App() {
                                 <RequireAuth>
                                   <WorkspaceScope>
                                     <RequireWorkspace>
-                                      <MainLayout>
+                                      <MainLayout sidePanel={<AgentsPanel />}>
                                         <TemplateMarketplacePage />
                                       </MainLayout>
                                     </RequireWorkspace>
@@ -561,7 +594,7 @@ function App() {
                                <RequireAuth>
                                  <WorkspaceScope>
                                    <RequireWorkspace>
-                                     <MainLayout>
+                                     <MainLayout sidePanel={<AgentsPanel />}>
                                        <AutomationsPage />
                                      </MainLayout>
                                    </RequireWorkspace>
@@ -575,7 +608,7 @@ function App() {
                                <RequireAuth>
                                  <WorkspaceScope>
                                    <RequireWorkspace>
-                                     <MainLayout>
+                                     <MainLayout sidePanel={<AgentsPanel />}>
                                        <AutomationBuilderPage />
                                      </MainLayout>
                                    </RequireWorkspace>
@@ -589,7 +622,7 @@ function App() {
                                <RequireAuth>
                                  <WorkspaceScope>
                                    <RequireWorkspace>
-                                     <MainLayout>
+                                     <MainLayout sidePanel={<AgentsPanel />}>
                                        <AutomationBuilderPage />
                                      </MainLayout>
                                    </RequireWorkspace>
@@ -618,12 +651,26 @@ function App() {
 
                             {}
                             <Route
-                              path="/workspace/:workspaceId/developer"
+                              path="/workspace/:workspaceId/thread/:type/:conversationId/:messageId"
                               element={
                                 <RequireAuth>
                                   <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout>
+                                        <ThreadPage />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </WorkspaceScope>
+                                </RequireAuth>
+                              }
+                            />
+                            <Route
+                              path="/workspace/:workspaceId/developer"
+                              element={
+                                <RequireAuth>
+                                  <WorkspaceScope>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<AgentsPanel />}>
                                         <DeveloperPortalWrapper />
                                       </MainLayout>
                                     </RequireWorkspace>
@@ -738,7 +785,6 @@ function App() {
                           <Route path="/forgot-password" element={IS_SITE ? <OpenWebApp /> : <ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />
-                          <Route path="/oauth-success" element={<OAuthSuccess />} />
                           <Route path="/reactivate" element={<ReactivationFlow />} />
                           <Route path="/accept-invite" element={<AcceptInvite />} />
                           <Route
@@ -797,7 +843,7 @@ function App() {
                             <Route path="/owner/dashboard" element={<OwnerDashboard />} />
                             <Route path="/owner/analytics" element={<OwnerAnalytics />} />
                             <Route path="/owner/insights" element={<InsightsDashboard />} />
-                            <Route path="/owner/billing" element={<FeatureRoute flag="billing" redirectTo="/owner/dashboard"><OwnerBilling /></FeatureRoute>} />
+                            <Route path="/owner/billing" element={<OwnerBilling />} />
                             <Route path="/owner/security" element={<OwnerSecurity />} />
 
                             <Route path="/owner/admins" element={<AdminsManagement />} />
@@ -942,11 +988,11 @@ function App() {
 }
 
 function GlobalPasswordUnlockModal() {
-  const { requiresPassword, unlockEncryption } = useAuth();
+  const { requiresPassword, unlockEncryption, resetEncryptionKeys } = useAuth();
 
   if (!requiresPassword) return null;
 
-  return <PasswordUnlockModal onSubmit={unlockEncryption} />;
+  return <PasswordUnlockModal onSubmit={unlockEncryption} onResetKeys={resetEncryptionKeys} />;
 }
 
 function HuddleRouteWrapper() {

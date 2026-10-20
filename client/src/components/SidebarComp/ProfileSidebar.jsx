@@ -363,6 +363,7 @@ const ProfileMenu = ({ onClose }) => {
           <HelpMenuView
             onBack={() => setView("menu")}
             onNavigate={setView}
+            onClose={onClose}
           />
         )}
         {view === "help_academy" && <HelpAcademyView onBack={() => setView("help")} />}

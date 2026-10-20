@@ -155,10 +155,10 @@ export default function VoiceMessage({ msg }) {
                 }}
             >
                 {loading && !playing
-                    ? <Loader2 size={14} style={{ color: '#0c0c0c', animation: 'spin 1s linear infinite' }} />
+                    ? <Loader2 size={14} style={{ color: 'var(--bg-base)', animation: 'spin 1s linear infinite' }} />
                     : playing
-                        ? <Pause size={14} style={{ color: '#0c0c0c' }} />
-                        : <Play size={14} style={{ color: '#0c0c0c', marginLeft: '2px' }} />}
+                        ? <Pause size={14} style={{ color: 'var(--bg-base)' }} />
+                        : <Play size={14} style={{ color: 'var(--bg-base)', marginLeft: '2px' }} />}
             </button>
 
             <div style={{ flex: 1, minWidth: 0 }}>

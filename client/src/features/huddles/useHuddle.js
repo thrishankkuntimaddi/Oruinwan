@@ -40,7 +40,8 @@ const HUDDLE_ERROR_MESSAGES = {
 };
 
 /**
- * One huddle connection (WebRTC mesh, audio only).
+ * One huddle connection (WebRTC mesh). Voice huddles can add a camera or a shared
+ * screen mid-call; the new video track is negotiated with a fresh offer.
  *
  * Several instances can share one socket (the workspace HuddleProvider and each
  * chat window), so every handler ignores events for huddles this instance is not
@@ -65,6 +66,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
     const [peerStates, setPeerStates] = useState({});
     // Where the current call lives: { channelId, dmId, workspaceId } (null when not in a call).
     const [callScope, setCallScope] = useState(null);
+    const [handRaised, setHandRaised] = useState(false);
 
     const myUserId = String(currentUser?.id || currentUser?._id || currentUser?.sub || '');
     const myName = currentUser?.username || currentUser?.name || 'You';
@@ -164,6 +166,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         setRemoteStreams({});
         setPeerStates({});
         setCallScope(null);
+        setHandRaised(false);
     }, []);
 
     const flushCandidates = async (entry) => {
@@ -176,8 +179,13 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
     const sendOffer = useCallback(async (userId, { iceRestart = false } = {}) => {
         const entry = peersRef.current[userId];
         if (!entry || !socket) return;
-        const offer = await entry.pc.createOffer(iceRestart ? { iceRestart: true } : undefined);
-        await entry.pc.setLocalDescription(offer);
+        entry.makingOffer = true;
+        try {
+            const offer = await entry.pc.createOffer(iceRestart ? { iceRestart: true } : undefined);
+            await entry.pc.setLocalDescription(offer);
+        } finally {
+            entry.makingOffer = false;
+        }
         socket.emit('huddle:offer', { huddleId: huddleIdRef.current, targetUserId: userId, offer: entry.pc.localDescription });
     }, [socket]);
 
@@ -186,7 +194,8 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         if (existing) return existing;
 
         const pc = new RTCPeerConnection(iceConfigRef.current);
-        const entry = { pc, pending: earlyCandidatesRef.current[targetUserId] || [], isOfferer };
+        // The newcomer is the "polite" side: when both ask to renegotiate at once, it yields.
+        const entry = { pc, pending: earlyCandidatesRef.current[targetUserId] || [], isOfferer, polite: !isOfferer, makingOffer: false };
         delete earlyCandidatesRef.current[targetUserId];
         peersRef.current[targetUserId] = entry;
 
@@ -217,8 +226,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             }
             audio.srcObject = remoteStream;
             audio.play?.().catch(() => { /* autoplay blocked until the next user gesture */ });
-            // Audio plays through the hidden <audio>; the overlay renders video tracks.
-            setRemoteStreams(prev => (prev[targetUserId] === remoteStream ? prev : { ...prev, [targetUserId]: remoteStream }));
+            // Audio plays through the hidden <audio>; the overlay renders video tracks. A camera or
+            // screen added mid-call arrives as a new track on the same stream, so always re-render.
+            setRemoteStreams(prev => ({ ...prev, [targetUserId]: remoteStream }));
         };
 
         // The side that made the original offer drives recovery with an ICE restart.
@@ -299,10 +309,21 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 sent = true;
                 clearTimeout(timer);
                 socket.off('huddle:started', onOwnStart);
-                if (huddleIdRef.current === id) socket.emit('huddle:join', joinPayload);
+                socket.off('huddle:existing', onExisting);
+                const current = huddleIdRef.current;
+                if (current === id || current === joinPayload.huddleId) socket.emit('huddle:join', joinPayload);
             };
             const onOwnStart = (payload) => { if (payload?.huddleId === id) sendJoin(); };
+            // Someone else's huddle is already live in this conversation: join that one instead.
+            const onExisting = (payload) => {
+                if (payload?.requestedId !== id || huddleIdRef.current !== id) return;
+                huddleIdRef.current = payload.huddleId;
+                joinPayload.huddleId = payload.huddleId;
+                setHuddleId(payload.huddleId);
+                sendJoin();
+            };
             socket.on('huddle:started', onOwnStart);
+            socket.on('huddle:existing', onExisting);
             timer = setTimeout(sendJoin, 1500);
             socket.emit('huddle:start', { ...payloadScope, huddleId: id, video: !!video });
         } else {
@@ -322,16 +343,51 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
     // Joining a video huddle turns the camera on too (the announcement says which kind it is).
     const joinHuddle = useCallback((id, opts = {}) => enter(id, { start: false, video: !!opts?.video, scope: opts?.scope || null }), [enter]);
 
-    const toggleCamera = useCallback(() => {
+    /**
+     * Send a video track to every peer: swap it into an existing video sender, or add it
+     * and renegotiate (a voice huddle that turns a camera or a screen on).
+     */
+    const sendVideoTrack = useCallback(async (track) => {
+        const stream = localStreamRef.current;
+        await Promise.all(Object.entries(peersRef.current).map(async ([userId, entry]) => {
+            const sender = entry.pc.getSenders().find(s => s.track?.kind === 'video')
+                || entry.pc.getTransceivers?.().find(t => t.receiver?.track?.kind === 'video' && t.sender && !t.sender.track && t.direction !== 'recvonly')?.sender;
+            if (sender) {
+                await sender.replaceTrack(track).catch(err => logger.warn('[useHuddle] replaceTrack failed:', err?.message));
+                return;
+            }
+            if (!track) return;
+            entry.pc.addTrack(track, stream || new MediaStream([track]));
+            await sendOffer(userId).catch(err => logger.warn('[useHuddle] renegotiation failed:', err?.message));
+        }));
+    }, [sendOffer]);
+
+    const toggleCamera = useCallback(async () => {
         const id = huddleIdRef.current;
-        const tracks = localStreamRef.current?.getVideoTracks() || [];
-        if (!id || !socket || tracks.length === 0) return;
+        if (!id || !socket || !localStreamRef.current) return;
+        let tracks = localStreamRef.current.getVideoTracks();
         const next = !cameraOn;
+        if (next && tracks.length === 0) {
+            // A voice huddle: open the camera now and add it to the call.
+            let cam;
+            try {
+                cam = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 } } });
+            } catch (err) {
+                showToast?.(err?.name === 'NotAllowedError' ? 'Camera access is blocked. Allow it in the browser, then try again.' : 'No camera is available.', 'error');
+                return;
+            }
+            const track = cam.getVideoTracks()[0];
+            if (!track || huddleIdRef.current !== id) { cam.getTracks().forEach(t => t.stop()); return; }
+            localStreamRef.current.addTrack(track);
+            tracks = [track];
+            // While sharing the screen, peers keep seeing the screen; the camera waits.
+            if (!screenStreamRef.current) await sendVideoTrack(track);
+        }
         tracks.forEach(t => { t.enabled = next; });
         setCameraOn(next);
-        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: next } : p));
-        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: next });
-    }, [cameraOn, socket]);
+        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: next || !!screenStreamRef.current } : p));
+        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: next || !!screenStreamRef.current });
+    }, [cameraOn, socket, sendVideoTrack, showToast]);
 
     const stopScreenShare = useCallback(() => {
         const screen = screenStreamRef.current;
@@ -339,25 +395,19 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         screenStreamRef.current = null;
         screen.getTracks().forEach(t => { t.onended = null; t.stop(); });
         setScreenStream(null);
+        // Back to the camera (or no video at all in a voice huddle).
         const camera = localStreamRef.current?.getVideoTracks()[0] || null;
-        Object.values(peersRef.current).forEach(({ pc }) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-            sender?.replaceTrack(camera).catch(err => logger.warn('[useHuddle] replaceTrack failed:', err?.message));
-        });
+        sendVideoTrack(camera).catch(() => {});
         const id = huddleIdRef.current;
-        const on = cameraOnRef.current;
+        const on = cameraOnRef.current && !!camera;
         setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: on } : p));
         if (id && socket) socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: on });
-    }, [socket]);
+    }, [socket, sendVideoTrack]);
 
-    /**
-     * Send the screen instead of the camera (replaceTrack, no renegotiation), so it
-     * needs a video huddle with a camera track. Resolves false when that is missing.
-     */
+    /** Share the screen in place of the camera (voice huddles add it as a new video track). */
     const startScreenShare = useCallback(async () => {
         const id = huddleIdRef.current;
         if (!id || !socket || screenStreamRef.current) return false;
-        if (!localStreamRef.current?.getVideoTracks().length) return false;
         if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('Screen sharing is not supported in this browser.');
         const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
         const track = display.getVideoTracks()[0];
@@ -368,15 +418,21 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         screenStreamRef.current = display;
         // The browser's own "Stop sharing" button ends the track.
         track.onended = () => stopScreenShare();
-        await Promise.all(Object.values(peersRef.current).map(({ pc }) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-            return sender ? sender.replaceTrack(track).catch(err => logger.warn('[useHuddle] replaceTrack failed:', err?.message)) : null;
-        }));
+        await sendVideoTrack(track);
         setScreenStream(display);
         setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: true } : p));
         socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: true });
         return true;
-    }, [socket, stopScreenShare]);
+    }, [socket, stopScreenShare, sendVideoTrack]);
+
+    const toggleHand = useCallback(() => {
+        const id = huddleIdRef.current;
+        if (!id || !socket) return;
+        const next = !handRaised;
+        setHandRaised(next);
+        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, handRaised: next } : p));
+        socket.emit('huddle:hand', { huddleId: id, raised: next });
+    }, [handRaised, socket]);
 
     const leaveHuddle = useCallback(() => {
         // Also cancels a start/join that is still waiting for the microphone.
@@ -412,8 +468,13 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         const onRoster = ({ huddleId: hid, participants: others = [] }) => {
             if (!isMine(hid)) return;
             others.filter(p => String(p.userId) !== myUserId).forEach(p => upsertParticipant({
-                userId: String(p.userId), username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled,
+                userId: String(p.userId), username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, handRaised: !!p.handRaised,
             }));
+        };
+
+        const onHandChanged = ({ huddleId: hid, userId, raised }) => {
+            if (!isMine(hid) || String(userId) === myUserId) return;
+            setParticipants(prev => prev.map(p => p.userId === String(userId) ? { ...p, handRaised: !!raised } : p));
         };
 
         const onVideoChanged = ({ huddleId: hid, userId, videoEnabled }) => {
@@ -438,6 +499,10 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             if (!isMine(hid)) return;
             try {
                 const entry = getOrCreatePeer(String(fromUserId), false);
+                // Both sides renegotiating at once: the impolite side keeps its own offer.
+                const collision = entry.makingOffer || entry.pc.signalingState !== 'stable';
+                if (collision && !entry.polite) return;
+                if (collision) await entry.pc.setLocalDescription({ type: 'rollback' });
                 await entry.pc.setRemoteDescription(offer);
                 await flushCandidates(entry);
                 const answer = await entry.pc.createAnswer();
@@ -530,6 +595,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         socket.on('huddle:started', onStarted);
         socket.on('huddle:error', onError);
         socket.on('huddle:video_changed', onVideoChanged);
+        socket.on('huddle:hand_changed', onHandChanged);
         socket.on('connect', onReconnect);
 
         return () => {
@@ -544,6 +610,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             socket.off('huddle:started', onStarted);
             socket.off('huddle:error', onError);
             socket.off('huddle:video_changed', onVideoChanged);
+            socket.off('huddle:hand_changed', onHandChanged);
             socket.off('connect', onReconnect);
         };
     }, [socket, myUserId, muted, cameraOn, matchesScope, getOrCreatePeer, sendOffer, cleanupPeer, cleanupPeers, cleanupAll, resetState, showToast]);
@@ -601,6 +668,8 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         stopScreenShare,
         peerStates,
         callScope,
+        handRaised,
+        toggleHand,
         dismissAnnouncement: () => setHuddleAnnouncement(null),
     };
 }

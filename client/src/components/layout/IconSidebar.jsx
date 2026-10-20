@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Puzzle, ChevronDown, Plus, ArrowRight } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 import { WorkspaceIcon } from "../../utils/workspaceIcons";
 import "./shell.css";
@@ -51,6 +51,7 @@ const IconSidebar = ({ onProfileClick }) => {
         if (itemPath === "/home") return path.includes(`/workspace/${workspaceId}/home`);
         if (itemPath === "/channels") return path.includes(`/workspace/${workspaceId}/channels`) || path.includes(`/workspace/${workspaceId}/channel/`);
         if (itemPath === "/messages") return (path.includes(`/workspace/${workspaceId}/messages`) || path.includes(`/workspace/${workspaceId}/dm/`)) && !path.includes("/home/");
+        if (itemPath === "/agents") return ["/agents", "/apps", "/automations"].some((p) => path.startsWith(`/workspace/${workspaceId}${p}`));
         const fullPath = `/workspace/${workspaceId}${itemPath}`;
         return path === fullPath || path.startsWith(fullPath + "/");
     };
@@ -64,8 +65,11 @@ const IconSidebar = ({ onProfileClick }) => {
         ...(features.tasks ? [{ icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" }] : []),
         ...(features.notes ? [{ icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" }] : []),
         ...(features.huddles ? [{ icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" }] : []),
-        { icon: <Puzzle size={19} strokeWidth={2} />, path: "/apps", label: "Apps" },
+        // Agents & tools: AI agents (Claude, ChatGPT…), workflows and apps.
+        { icon: <Bot size={19} strokeWidth={2} />, path: "/agents", label: "Agents & tools", also: ["/apps", "/automations"] },
         ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates" }] : []),
+        // Workspace Admin: this workspace's owner and admins (company consoles stay below).
+        ...(["owner", "admin"].includes(activeWorkspace?.role) || activeWorkspace?.isOwner ? [{ icon: <Settings2 size={19} strokeWidth={2} />, path: "/admin", label: "Workspace admin" }] : []),
         // Company console: owners (and co-owners) land on the owner console, admins on the admin one.
         ...(isCompanyOwner(user) ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/owner/dashboard", label: "Owner console", absolute: true }]
             : user?.companyRole === 'admin' ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/admin/dashboard", label: "Admin console", absolute: true }] : []),
@@ -83,6 +87,7 @@ const IconSidebar = ({ onProfileClick }) => {
                 <button
                     type="button"
                     className="gl-shell-ws-btn"
+                    data-tour="workspace"
                     onClick={() => setShowWorkspaceMenu(s => !s)}
                     title={activeWorkspace?.name || 'Switch Workspace'}
                     aria-label={`Workspace: ${activeWorkspace?.name || 'none'}. Switch workspace`}
@@ -159,6 +164,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                 title={item.label}
                                 aria-label={item.label}
                                 aria-current={active ? 'page' : undefined}
+                                data-tour={item.path.slice(1)}
                             >
                                 {item.icon}
                                 {badge(count)}
@@ -187,6 +193,7 @@ const IconSidebar = ({ onProfileClick }) => {
                 <button
                     type="button"
                     className="gl-shell-avatar-btn"
+                    data-tour="profile"
                     onClick={onProfileClick}
                     title={user?.username || 'Profile'}
                     aria-label={`Profile menu${user?.username ? ` (${user.username})` : ''}`}

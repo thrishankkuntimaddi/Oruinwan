@@ -124,7 +124,7 @@ function AssigneeEditor({ members, initial, onCancel, onSave }) {
                             <UserAvatar user={{ id, username: m.username, profilePicture: m.profilePicture }} size={20} />
                             <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.username || m.email}</span>
                             <span style={{ width: '14px', height: '14px', borderRadius: '2px', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-accent)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {on && <Check size={10} strokeWidth={3} style={{ color: '#0c0c0c' }} />}
+                                {on && <Check size={10} strokeWidth={3} style={{ color: 'var(--bg-base)' }} />}
                             </span>
                         </button>
                     );

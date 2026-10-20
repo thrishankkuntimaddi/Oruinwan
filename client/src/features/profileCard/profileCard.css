@@ -75,7 +75,7 @@
 
 /* Phones: a bottom sheet over a dimmed page. */
 @media (max-width: 639px) {
-    .pc-backdrop { display: block; position: fixed; inset: 0; z-index: 1199; background: rgba(0, 0, 0, 0.45); animation: pc-fade 140ms ease-out; }
+    .pc-backdrop { display: block; position: fixed; inset: 0; z-index: 1199; background: var(--lg-scrim); animation: pc-fade 140ms ease-out; }
     .pc-pop.pc-sheet {
         left: 0 !important; right: 0; top: auto !important; bottom: 0;
         width: 100%; max-width: none; max-height: 85vh; overflow-y: auto;

@@ -50,6 +50,8 @@ export const aiService = {
 
     capabilities: async () => (await api.get('/api/ai/capabilities')).data,
     getSettings: async (workspaceId) => (await api.get('/api/ai/settings', { params: { workspaceId } })).data,
+    /** Oruinwan AI plus each outside model connected in this workspace: [{ id, name, mention, maker, model }]. */
+    assistants: async (workspaceId) => (await api.get('/api/ai/assistants', { params: { workspaceId } })).data.assistants || [],
     updateSettings: async (workspaceId, patch) => (await api.put('/api/ai/settings', { workspaceId, ...patch })).data,
     testProvider: (workspaceId) => post('/api/ai/settings/test', { workspaceId }, 'testProvider'),
     usage: async (workspaceId, days = 30) => (await api.get('/api/ai/usage', { params: { workspaceId, days } })).data,
@@ -89,8 +91,8 @@ async function openStream(path, body, signal, retried = false) {
  * as it is generated and `onTool({ name, status })` while tools run.
  * Resolves with `{ text, actionsExecuted }`; pass an AbortSignal to stop.
  */
-export async function chatStream({ message, history = [], workspaceId = null, context, onToken, onTool, signal }) {
-    const res = await openStream('/api/ai/chat/stream', { message, history, workspaceId, context }, signal);
+export async function chatStream({ message, history = [], workspaceId = null, context, onToken, onTool, signal, assistant }) {
+    const res = await openStream('/api/ai/chat/stream', { message, history, workspaceId, context, ...(assistant && assistant !== 'default' ? { assistant } : {}) }, signal);
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';

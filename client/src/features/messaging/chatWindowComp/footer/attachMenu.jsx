@@ -86,10 +86,10 @@ export default function AttachMenu({
         <>
             <div
                 onClick={e => e.stopPropagation()}
+                className="gl-liquid gl-liquid--strong"
                 style={{
-                    backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                    borderRadius: '2px', padding: '10px', zIndex: 50, width: '220px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)', fontFamily: 'var(--font)',
+                    borderRadius: 'var(--gl-radius-md)', padding: '10px', zIndex: 50, width: '220px',
+                    fontFamily: 'var(--font)',
                 }}
             >
                 <input ref={photoInputRef} data-testid="attach-photo-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePick} />

@@ -1,5 +1,7 @@
 const logger = require('../../../utils/logger');
-const { cryptoState: cryptoStateRepo } = require('../../identity');
+const bcrypt = require('bcryptjs');
+const identity = require('../../identity');
+const { cryptoState: cryptoStateRepo } = identity;
 const { PASSWORD_DERIVED, decodeUmek, isUnsealedUmek, sealUmek, openUmek, wrapForDevice } = require('./umekEnvelope');
 
 // The crypto state lives in PostgreSQL (user_crypto_state, next to the user row).
@@ -31,7 +33,8 @@ exports.initIdentityCryptoState = async (req, res) => {
             umekProtectionType,
             algorithm,
             version,
-            allowOverwrite 
+            allowOverwrite,
+            currentPassword
         } = req.body;
 
         
@@ -83,6 +86,18 @@ exports.initIdentityCryptoState = async (req, res) => {
                 });
             }
 
+            // Replacing the keys (after a password reset) needs the account password, checked
+            // here: a stolen session token alone must not be able to swap someone's keys.
+            const account = await identity.users.findById(userId, { withSecrets: true });
+            const passwordOk = Boolean(account?.passwordHash) && typeof currentPassword === 'string' && currentPassword.length > 0
+                && await bcrypt.compare(currentPassword, account.passwordHash);
+            if (!passwordOk) {
+                return res.status(401).json({ message: 'Enter your current account password to set up encryption again.' });
+            }
+            if (umekProtectionType !== 'PASSWORD') {
+                return res.status(400).json({ message: 'Encryption can only be set up again with a password.' });
+            }
+
             logger.info(`⚠️ Overwriting crypto state for user ${userId} (explicit recovery/rotation)`);
 
             
@@ -101,6 +116,19 @@ exports.initIdentityCryptoState = async (req, res) => {
             await cryptoState.save();
 
             logger.info(`✅ Updated crypto state for user ${userId} (version ${cryptoState.version})`);
+
+            // Conversation keys wrapped for the old identity key can't be opened any more. Drop
+            // them and wrap each conversation key again for the new public key (the server holds
+            // them under its KEK), so the person gets their channels and DMs back.
+            try {
+                const { identityKeys, conversationKeys } = require('../../identity/keys.repo');
+                await identityKeys.upsert(userId, { publicKey: identityPublicKey, algorithm: cryptoState.algorithm, version: cryptoState.version });
+                const dropped = await conversationKeys.removeAllMemberKeysForUser(userId);
+                const repaired = await require('../../modules/conversations/conversationKeys.service').repairUserConversationAccess(userId);
+                logger.info({ userId, dropped, repaired: repaired?.repaired, dms: repaired?.dms }, 'Encryption set up again after password reset');
+            } catch (err) {
+                logger.error({ err: err.message, userId }, 'Re-granting conversation keys after key reset failed');
+            }
         } else {
             
             cryptoState = await UserCryptoState.create({

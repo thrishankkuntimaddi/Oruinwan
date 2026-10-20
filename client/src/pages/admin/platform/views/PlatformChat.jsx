@@ -14,6 +14,8 @@ const formatTime = (date) => new Date(date).toLocaleString([], { month: 'short',
 /** Live support chat between platform staff and company owners/admins. */
 const PlatformChat = () => {
     const { userId } = useParams();
+    const openUserRef = useRef(userId);
+    openUserRef.current = userId;
     const navigate = useNavigate();
     const { socket } = useSocket() || {};
     const [users, setUsers] = useState(null);
@@ -59,8 +61,12 @@ const PlatformChat = () => {
     useEffect(() => {
         if (!socket) return undefined;
         const onMessage = (message) => {
-            setMessages((prev) => (prev.some((m) => m._id === message._id) ? prev : [...prev, message]));
-            scrollToBottom();
+            // Every company message reaches every platform admin: show it only in its own conversation.
+            const from = String(message?.sender?._id || message?.sender || '');
+            if (from && from === String(openUserRef.current || '')) {
+                setMessages((prev) => addOnce(prev, message));
+                scrollToBottom();
+            }
             fetchUsers();
         };
         socket.on('platform-message', onMessage);
@@ -75,7 +81,7 @@ const PlatformChat = () => {
         setSendError('');
         try {
             const res = await api.post(`/api/admin/dm/user/${selected._id}`, { message: text });
-            setMessages((prev) => [...prev, res.data]);
+            setMessages((prev) => addOnce(prev, res.data));
             setInput('');
             scrollToBottom();
             fetchUsers();
@@ -178,5 +184,8 @@ const PlatformChat = () => {
         </div>
     );
 };
+
+const msgId = (m) => String(m?._id || m?.id || '');
+const addOnce = (list, message) => (!message || list.some((m) => msgId(m) && msgId(m) === msgId(message)) ? list : [...list, message]);
 
 export default PlatformChat;

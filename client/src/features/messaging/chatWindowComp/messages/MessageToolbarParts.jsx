@@ -29,7 +29,7 @@ function MenuItem({ label, icon, onClick, accent = false, danger = false }) {
             type="button"
             role="menuitem"
             onClick={onClick}
-            style={{ width: '100%', textAlign: 'left', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease', whiteSpace: 'nowrap' }}
+            style={{ width: '100%', textAlign: 'left', padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', borderRadius: '4px', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
@@ -73,12 +73,12 @@ export function MessageMoreMenu({ anchor, groups, onClose }) {
         <div
             ref={ref}
             role="menu"
+            className="gl-liquid gl-liquid--strong"
             style={{
                 position: 'fixed', zIndex: 999, minWidth: '210px',
                 maxHeight: 'calc(100vh - 16px)', overflowY: 'auto',
-                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                borderRadius: '2px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                paddingTop: '4px', paddingBottom: '4px', fontSize: '13px',
+                borderRadius: 'var(--gl-radius-md)',
+                padding: '4px', fontSize: '13px',
                 ...pos,
             }}
         >
@@ -157,7 +157,7 @@ export function TranslationBlock({ state, onClear, onRetry }) {
     // Auto-translation of a message already in the target language: nothing to show.
     if (isSameLanguage(state.detectedLang, state.language)) return null;
     return (
-        <div style={{ marginTop: '6px', maxWidth: '60%' }}>
+        <div style={{ marginTop: '6px', maxWidth: 'var(--msg-max, 60%)' }}>
             <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {state.translatedText}
             </div>
@@ -203,7 +203,7 @@ export function InlineMessageEditor({ initialText, onSave, onCancel }) {
                 rows={Math.min(6, (text.match(/\n/g) || []).length + 2)}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button type="button" onClick={save} disabled={saving || !text.trim()} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: '#0c0c0c', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: saving ? 'wait' : 'pointer', fontFamily: 'var(--font)', outline: 'none', opacity: saving || !text.trim() ? 0.6 : 1 }}>
+                <button type="button" onClick={save} disabled={saving || !text.trim()} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: saving ? 'wait' : 'pointer', fontFamily: 'var(--font)', outline: 'none', opacity: saving || !text.trim() ? 0.6 : 1 }}>
                     {saving ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={11} />} Save
                 </button>
                 <button type="button" onClick={onCancel} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>

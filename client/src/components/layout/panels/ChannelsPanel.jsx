@@ -11,6 +11,7 @@ import { useSocket } from "../../../contexts/SocketContext";
 import { useNotifications } from "../../../features/notifications/NotificationsContext";
 import CreateChannelModal from "../../../features/messaging/CreateChannelModal";
 import logger from '../../../utils/logger';
+import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark';
 
 const ChannelsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -23,6 +24,12 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+    // "Create channel" on the Channels page opens this panel's dialog.
+    useEffect(() => {
+        const open = () => setShowCreateChannelModal(true);
+        window.addEventListener('oruinwan:create-channel', open);
+        return () => window.removeEventListener('oruinwan:create-channel', open);
+    }, []);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     
@@ -340,6 +347,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         <UserPlus size={10} strokeWidth={2.5} />
                     </span>
                 )}
+
+                <LiveHuddleMark channelId={item.id} />
 
                 {unread > 0 && !isSelectionMode && (
                     <span

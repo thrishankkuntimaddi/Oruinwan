@@ -101,7 +101,7 @@ export default function AdminSidebar({ onNavigate }) {
                     <div style={{
                         position: 'absolute', bottom: '100%', left: '8px', right: '8px',
                         background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-                        zIndex: 50, overflow: 'hidden', boxShadow: '0 -4px 16px rgba(0,0,0,0.3)',
+                        zIndex: 50, overflow: 'hidden', boxShadow: 'var(--lg-shadow-sm)',
                         marginBottom: '4px',
                     }}>
                         <button onClick={() => { setShowMenu(false); navigate('/admin/profile'); }}

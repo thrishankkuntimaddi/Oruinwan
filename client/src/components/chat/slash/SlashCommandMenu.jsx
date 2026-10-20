@@ -33,11 +33,9 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
 
   if (!filtered.length) {
     return (
-      <div style={{
-        width: '100%', backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-accent)', borderRadius: '2px',
+      <div className="gl-liquid gl-liquid--strong" style={{
+        width: '100%', borderRadius: 'var(--gl-radius-md)',
         padding: '20px', textAlign: 'center',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       }}>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
           No commands match <code style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{query}</code>
@@ -55,10 +53,10 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
   return (
     <div
       onMouseDown={(e) => e.preventDefault()}
+      className="gl-liquid gl-liquid--strong"
       style={{
-        width: '100%', backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-accent)', borderRadius: '2px',
-        overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        width: '100%', borderRadius: 'var(--gl-radius-md)',
+        overflow: 'hidden',
       }}
     >
       {}

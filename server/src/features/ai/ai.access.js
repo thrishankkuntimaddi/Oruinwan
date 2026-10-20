@@ -67,7 +67,16 @@ function requireAIAccess({ optional = false, adminOnly = false } = {}) {
             }
 
             req.aiWorkspace = { id: String(ws._id), name: ws.name, role: me.role, isAdmin, settings: aiSettings };
-            req.aiContext = await resolver.contextFor(ws._id);
+            // Which assistant answers: the one the person picked (AI panel), else the workspace default.
+            // Their own connection to that assistant comes first (personal keys answer only for them).
+            const assistant = typeof req.body?.assistant === 'string' ? req.body.assistant
+                : typeof req.query?.assistant === 'string' ? req.query.assistant : null;
+            try {
+                req.aiContext = await resolver.contextFor(ws._id, assistant, req.user.sub);
+            } catch (err) {
+                if (err.code === 'AI_ASSISTANT_NOT_CONNECTED') return res.status(400).json({ message: err.message, code: err.code });
+                throw err;
+            }
             return next();
         } catch (err) {
             return next(err);

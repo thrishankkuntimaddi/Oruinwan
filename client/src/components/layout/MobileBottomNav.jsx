@@ -47,12 +47,10 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                     to   { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
-            <div style={{
+            <nav aria-label="Main" className="gl-shell-tabbar" style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 80,
                 height: `calc(56px + env(safe-area-inset-bottom))`,
                 paddingBottom: 'env(safe-area-inset-bottom)',
-                background: 'var(--bg-base)',
-                borderTop: '1px solid var(--border-subtle)',
                 display: 'flex', alignItems: 'stretch',
                 animation: 'mobileTabIn 200ms ease',
             }}>
@@ -61,12 +59,14 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                     return (
                         <button
                             key={tab.id}
+                            type="button"
+                            aria-current={active ? 'page' : undefined}
                             onClick={() => handleTab(tab)}
                             style={{
                                 flex: 1, display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', justifyContent: 'center', gap: '4px',
                                 background: 'none', border: 'none', cursor: 'pointer',
-                                color: active ? 'var(--accent)' : 'var(--text-muted)',
+                                color: active ? 'var(--accent)' : 'var(--text-secondary)',
                                 transition: 'color 150ms ease',
                                 fontFamily: 'var(--font)', position: 'relative',
                                 WebkitTapHighlightColor: 'transparent',
@@ -78,6 +78,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                                 transform: 'translateX(-50%)',
                                 width: active ? '24px' : 0, height: '2px',
                                 background: 'var(--accent)',
+                                boxShadow: '0 0 10px var(--gl-accent-line)',
                                 borderRadius: '0 0 2px 2px',
                                 transition: 'width 200ms ease',
                             }} />
@@ -91,7 +92,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                         </button>
                     );
                 })}
-            </div>
+            </nav>
         </>
     );
 };

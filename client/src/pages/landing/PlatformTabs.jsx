@@ -7,13 +7,13 @@ const ROTATE_MS = 7000;
 
 const ThreadVisual = () => (
     <div className="orw-v-thread">
-        <div className="orw-v-row"><b>#launch</b> Maya: Release branch is cut. QA by 3pm.</div>
-        <div className="orw-v-row orw-v-row--indent"><MessageSquareReply size={13} style={{ color: 'var(--o-cool)' }} /> <b>Arjun</b> Dry-run passed on staging ✅</div>
-        <div className="orw-v-row orw-v-row--indent"><MessageSquareReply size={13} style={{ color: 'var(--o-cool)' }} /> <b>Lena</b> Copy review pending on pricing</div>
-        <div className="orw-v-row"><b>#design</b> Sam reacted 🔥 to “Onboarding v3”</div>
+        <div className="orw-v-row"><b>#launch</b> Release branch is cut. QA by 3pm.</div>
+        <div className="orw-v-row orw-v-row--indent"><MessageSquareReply size={13} style={{ color: 'var(--o-cool)' }} /> <b>Engineering</b> Dry-run passed on staging ✅</div>
+        <div className="orw-v-row orw-v-row--indent"><MessageSquareReply size={13} style={{ color: 'var(--o-cool)' }} /> <b>Design</b> Copy review pending on pricing</div>
+        <div className="orw-v-row"><b>#design</b> 3 reactions on “Onboarding v3”</div>
         <div className="orw-v-huddle">
             <Headphones size={16} style={{ color: '#8fe0b8' }} />
-            <span><b style={{ color: 'var(--o-text)' }}>Huddle in #launch</b><br /><span style={{ color: 'var(--o-text-3)' }}>Maya, Arjun +1</span></span>
+            <span><b style={{ color: 'var(--o-text)' }}>Huddle in #launch</b><br /><span style={{ color: 'var(--o-text-3)' }}>3 people · screen sharing</span></span>
             <span className="orw-v-wave">{[0, 1, 2, 3, 4, 5].map(i => <i key={i} style={{ animationDelay: `${i * 0.1}s` }} />)}</span>
         </div>
     </div>
@@ -21,9 +21,9 @@ const ThreadVisual = () => (
 
 const KanbanVisual = () => {
     const cols = [
-        { t: 'To do', cards: [{ x: 'Pricing page copy', who: 'lena', w: '10%' }, { x: 'Launch post draft', who: 'sam', w: '0%' }] },
-        { t: 'In progress', cards: [{ x: 'Rollback runbook', who: 'arjun', w: '55%' }, { x: 'Onboarding v3 specs', who: 'lena', w: '70%' }] },
-        { t: 'Done', cards: [{ x: 'Cut release branch', who: 'maya', w: '100%' }] },
+        { t: 'To do', cards: [{ x: 'Pricing page copy', who: 'design', w: '10%' }, { x: 'Launch post draft', who: 'qa', w: '0%' }] },
+        { t: 'In progress', cards: [{ x: 'Rollback runbook', who: 'eng', w: '55%' }, { x: 'Onboarding v3 specs', who: 'design', w: '70%' }] },
+        { t: 'Done', cards: [{ x: 'Cut release branch', who: 'pm', w: '100%' }] },
     ];
     return (
         <div className="orw-v-kanban">
@@ -82,7 +82,7 @@ const MatrixVisual = () => {
                 </tbody>
             </table>
             <div className="orw-v-log" aria-hidden="true">
-                <div><b>09:12</b> admin.role.updated · Lena → Manager</div>
+                <div><b>09:12</b> admin.role.updated · member → manager</div>
                 <div><b>09:14</b> channel.private.created · #finance</div>
             </div>
         </>

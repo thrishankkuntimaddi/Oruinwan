@@ -13,19 +13,20 @@
   gap: 7px;
   padding: 0 10px;
   height: 30px;
-  background-color: var(--bg-input);
-  background-image: var(--gl-glass);
-  border: 1px solid var(--border-default);
-  border-radius: var(--gl-radius, 3px);
-  box-shadow: var(--gl-spec);
-  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+  background-color: color-mix(in srgb, var(--bg-input) 70%, transparent);
+  background-image: var(--lg-sheen);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--gl-radius-md, 7px);
+  box-shadow: var(--lg-edge);
+  transition: border-color var(--gl-dur-1, 150ms) ease, background-color var(--gl-dur-1, 150ms) ease, box-shadow var(--gl-dur-2, 190ms) ease;
   cursor: text;
 }
-.sib-bar:hover { border-color: var(--border-accent); }
+.sib-bar:hover { border-color: var(--border-accent); background-color: var(--bg-input); }
 .sib-bar--active,
 .sib-bar:focus-within {
   border-color: var(--accent);
-  box-shadow: var(--gl-spec), 0 0 0 3px var(--input-ring);
+  background-color: var(--bg-input);
+  box-shadow: var(--lg-edge), var(--gl-focus-ring, 0 0 0 3px var(--input-ring));
 }
 
 .sib-bar-icon { color: var(--text-secondary); flex-shrink: 0; }
@@ -76,16 +77,21 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0; right: 0;
-  background-color: var(--bg-surface);
-  background-image: var(--gl-glass);
-  border: 1px solid var(--border-default);
-  border-radius: var(--gl-radius, 3px);
-  box-shadow: var(--gl-spec-strong), var(--gl-drop);
+  background-color: var(--lg-tint-strong);
+  background-image: var(--lg-sheen);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--gl-radius-lg, 10px);
+  box-shadow: var(--lg-edge), var(--lg-shadow);
+  -webkit-backdrop-filter: var(--lg-filter);
+  backdrop-filter: var(--lg-filter);
   z-index: 9999;
   overflow: hidden;
-  animation: sib-pop 160ms var(--gl-ease, ease);
+  animation: sib-pop var(--gl-dur-3, 220ms) var(--gl-ease, ease);
 }
-@keyframes sib-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sib-dropdown { background-color: var(--lg-solid); }
+}
+@keyframes sib-pop { from { opacity: 0; transform: translateY(-6px) scale(0.985); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sib-dropdown { animation: none; } }
 
 /* Section header */

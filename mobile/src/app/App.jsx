@@ -5,17 +5,29 @@ import { Shell } from './Shell.jsx';
 import { BrandMark } from './BrandMark.jsx';
 import { ToastHost } from '../ui/Feedback.jsx';
 import { AuthFlow, ProtectAccount } from '../features/auth/AuthFlow.jsx';
+import { WorkspacePicker } from '../features/workspace/WorkspacePicker.jsx';
+import { CreateWorkspaceFlow } from '../features/workspace/CreateWorkspaceFlow.jsx';
 import { UpdateGate } from '../features/update/UpdateGate.jsx';
-import { hideSplash, onAppState, onBackButton, openExternal } from '../native/index.js';
+import { hideSplash, onAppState, onAppUrl, onBackButton, openExternal } from '../native/index.js';
+import { JoinWorkspaceFlow } from '../features/workspace/JoinWorkspace.jsx';
 import { checkForUpdate } from '../update/updater.js';
 import { refreshRemoteConfig, logEvent } from '../config/remote.js';
 import { on } from '../lib/bus.js';
 import { watchKeyboard } from '../native/keyboard.js';
+import { onPushTap } from '../native/push.js';
+import { openPush } from '../features/home/openTarget.js';
+import { MediaHost } from '../features/media/MediaHost.jsx';
+import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 
+/** While the app restores the session: the mark lands, then breathes until it's ready. */
 function Splash() {
   return (
-    <div className="grid h-full place-items-center bg-bg">
-      <BrandMark size={88} glow />
+    <div className="grid h-full place-items-center bg-bg" aria-busy="true" aria-label="Opening Oruinwan">
+      <div className="intro-mark">
+        <div className="intro-breathe" style={{ animationDelay: '700ms' }}>
+          <BrandMark size={88} glow />
+        </div>
+      </div>
     </div>
   );
 }
@@ -23,6 +35,9 @@ function Splash() {
 export function App() {
   const status = useSession((s) => s.status);
   const needsPassword = useSession((s) => s.needsPassword);
+  const pickingWorkspace = useSession((s) => s.pickingWorkspace);
+  const creatingWorkspace = useSession((s) => s.creatingWorkspace);
+  const joinToken = useSession((s) => s.joinToken);
 
   useEffect(() => {
     watchKeyboard();
@@ -59,6 +74,24 @@ export function App() {
   }, []);
 
   useEffect(() => on('session:ended', () => useNav.getState().resetAll()), []);
+
+  // Invitation links: opened on the phone (App Links / Universal Links / oruinwan://), or, in a
+  // browser, this page opened as /join-workspace?token=…
+  useEffect(() => {
+    const here = window.location;
+    if (/\/(join-workspace|join|invite)\b/.test(here.pathname) && useSession.getState().openInvite(here.href)) {
+      window.history.replaceState(null, '', '/');
+    }
+    let off = () => {};
+    onAppUrl((url) => useSession.getState().openInvite(url)).then((f) => (off = f));
+    return () => off();
+  }, []);
+
+  // Tapping a push notification opens its conversation (once the session has loaded).
+  useEffect(() => {
+    if (status !== 'signed-in') return undefined;
+    return onPushTap(openPush);
+  }, [status]);
 
   // Escape: close the top sheet or dialog, leave a text field, then go back a screen.
   useEffect(() => {
@@ -98,7 +131,10 @@ export function App() {
 
   return (
     <>
-      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : <Shell />) : <AuthFlow />}
+      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
+      {status === 'signed-in' && <MediaHost />}
+      {/* The first-run tour, once the workspace itself is on screen (not over sign-in flows). */}
+      {status === 'signed-in' && !needsPassword && !joinToken && !creatingWorkspace && !pickingWorkspace && <PhoneTour />}
       <ToastHost />
       <UpdateGate />
     </>

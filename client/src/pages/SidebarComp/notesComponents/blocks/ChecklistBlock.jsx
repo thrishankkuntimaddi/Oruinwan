@@ -74,16 +74,16 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             <button
                                 onClick={() => toggleItem(item.id)}
                                 style={{
-                                    flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid #34d399' : '2px solid var(--border-accent)',
-                                    background: item.done ? 'var(--state-success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid var(--accent)' : '2px solid var(--border-accent)',
+                                    background: item.done ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', transition: 'all 150ms ease',
                                 }}
-                                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--state-success)'; }}
+                                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--accent)'; }}
                                 onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                             >
                                 {item.done && (
                                     <svg width="8" height="6" viewBox="0 0 10 8" fill="none">
-                                        <path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M1 4L3.5 6.5L9 1" stroke="var(--bg-base)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 )}
                             </button>
@@ -93,7 +93,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                 value={item.text}
                                 onChange={e => updateText(item.id, e.target.value)}
                                 onKeyDown={e => handleKeyDown(e, item.id, idx)}
-                                placeholder="To-do item..."
+                                placeholder="To-do"
                                 style={{
                                     flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px',
                                     color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',

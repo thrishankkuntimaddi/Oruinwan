@@ -7,6 +7,8 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Keyboard } from '@capacitor/keyboard';
 import { Network } from '@capacitor/network';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { Share } from '@capacitor/share';
+import { Clipboard } from '@capacitor/clipboard';
 
 // Plugin imports are static on purpose: a Capacitor plugin proxy must never be the value a
 // promise resolves with (e.g. import().then(m => m.App)), because promise resolution probes
@@ -45,12 +47,12 @@ const AppWindow = registerPlugin('AppWindow');
 /** Match the status/navigation bar icons to the current theme. */
 export async function applySystemBars(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'dark' ? '#0c0c0c' : '#f5f4f2';
+  if (meta) meta.content = theme === 'dark' ? '#0c0c0c' : '#f6f3ee';
   if (!isNative) return false;
   try {
     await SystemBars.setStyle({ style: theme === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light });
     // setStyle resets the window background, so paint ours afterwards (see AppWindowPlugin.java).
-    await AppWindow.setBackgroundColor({ color: theme === 'dark' ? '#0c0c0c' : '#f5f4f2' });
+    await AppWindow.setBackgroundColor({ color: theme === 'dark' ? '#0c0c0c' : '#f6f3ee' });
     return true;
   } catch {
     return false;
@@ -160,4 +162,55 @@ export async function nativeAppInfo() {
   } catch {
     return { version: __APP_VERSION__, build: null };
   }
+}
+
+/**
+ * Shares a link through the system share sheet (Messages, WhatsApp, Mail…). Returns 'shared',
+ * 'copied' (no share sheet: copied to the clipboard instead) or 'cancelled'.
+ */
+export async function shareLink({ title, text, url }) {
+  try {
+    if (isNative) {
+      if ((await Share.canShare()).value) {
+        await Share.share({ title, text, url, dialogTitle: title });
+        return 'shared';
+      }
+    } else if (typeof navigator !== 'undefined' && navigator.share) {
+      await navigator.share({ title, text, url });
+      return 'shared';
+    }
+  } catch (err) {
+    if (/cancel|abort/i.test(String(err?.message || err?.name))) return 'cancelled';
+  }
+  return (await copyText(url)) ? 'copied' : 'cancelled';
+}
+
+/** Copies text to the clipboard. Returns true when it worked. */
+export async function copyText(text) {
+  try {
+    if (isNative) {
+      await Clipboard.write({ string: text });
+      return true;
+    }
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Links that open the app: the invitation domain (Android App Links, iOS Universal Links) and
+ * oruinwan:// links. Calls fn(url) for the link the app was opened with, then for each later one.
+ */
+export async function onAppUrl(fn) {
+  if (!isNative) return () => {};
+  try {
+    const launch = await App.getLaunchUrl();
+    if (launch?.url) fn(launch.url);
+  } catch {
+    /* opened from the launcher */
+  }
+  const sub = await App.addListener('appUrlOpen', ({ url }) => url && fn(url));
+  return () => sub.remove();
 }

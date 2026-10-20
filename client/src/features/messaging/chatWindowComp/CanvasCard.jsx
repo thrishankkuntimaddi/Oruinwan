@@ -26,7 +26,7 @@ function ContextMenu({ onRename, onShare, onDelete, onClose }) {
             width: '168px', backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-accent)', borderRadius: '2px',
             zIndex: 70, overflow: 'hidden', padding: '4px 0',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--lg-shadow-sm)',
         }}>
             <CtxBtn icon={<Share2 size={13} />} label="Copy link" onClick={(e) => { e.stopPropagation(); onShare(); onClose(); }} />
             <CtxBtn icon={<Edit2 size={13} />} label="Rename" onClick={(e) => { e.stopPropagation(); onRename(); onClose(); }} />

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 
-export function useMentionAutocomplete(members = [], { includeBroadcast = false } = {}) {
+export function useMentionAutocomplete(members = [], { includeBroadcast = false, assistants = [] } = {}) {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -54,6 +54,11 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false 
         const assistant = ('oruinwan'.startsWith(query) || 'ai'.startsWith(query)) && query !== 'oruinwan'
             ? [{ _id: '@oruinwan', username: 'Oruinwan', isBroadcast: true, isAssistant: true, profilePicture: '/icons/oruinwan-128.png', name: 'Ask Oruinwan AI to answer here' }]
             : [];
+        // Models the workspace connected: @claude, @chatgpt, @gemini, @grok.
+        for (const a of assistants) {
+            if (a.id === 'default' || !a.mention || !a.mention.startsWith(query) || a.mention === query) continue;
+            assistant.push({ _id: `@${a.mention}`, username: a.mention, isBroadcast: true, isAssistant: true, profilePicture: `/icons/ai/${a.id}.svg`, name: `Ask ${a.name} to answer here` });
+        }
 
         // Names starting with the query first, then names containing it.
         const lower = (m) => (m.username || '').toLowerCase();
@@ -68,7 +73,7 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false 
         } else {
             setShowSuggestions(false);
         }
-    }, [members, includeBroadcast]);
+    }, [members, includeBroadcast, assistants]);
 
     
     const handleMentionKeyDown = useCallback((e) => {

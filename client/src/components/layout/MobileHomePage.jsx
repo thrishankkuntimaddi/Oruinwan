@@ -3,13 +3,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Hash, MessageSquare, FolderOpen, BookOpen, Newspaper, Video,
-    Puzzle, Shield, Briefcase, ChevronRight, LogOut,
+    Bot, Settings2, Shield, Briefcase, ChevronRight, LogOut,
     Settings, User, FileText, Globe, ChevronDown, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import ActivitySection from '../../features/activity/ActivitySection';
+import GettingStarted from '../../pages/SidebarComp/states/GettingStarted';
 
 const STATUS_MAP = {
     active:  { label: 'Active',    dot: '#34d399' },
@@ -40,7 +41,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
     const MORE_ROWS = [
         { Icon: Newspaper, label: 'Updates',          path: '/updates',                show: user?.userType === 'company' },
         { Icon: Video,     label: 'Huddles',          path: '/huddles',                show: true },
-        { Icon: Puzzle,    label: 'Apps',             path: '/apps',                   show: true },
+        { Icon: Bot,       label: 'Agents & tools',   path: '/agents',                 show: true },
+        { Icon: Settings2, label: 'Workspace admin',  path: '/admin',                  show: ['owner', 'admin'].includes(activeWorkspace?.role) || !!activeWorkspace?.isOwner },
         { Icon: FileText,  label: 'Notes',            path: '/notes',                  show: true },
         { Icon: Shield,    label: 'Owner Console',    abs: '/owner/dashboard',         show: isCompanyOwner(user) },
         { Icon: Shield,    label: 'Admin Console',    abs: '/admin/dashboard',         show: !isCompanyOwner(user) && user?.companyRole === 'admin' },
@@ -60,6 +62,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
         }} className="custom-scrollbar">
 
             <ActivitySection variant="mobile" />
+
+            {workspaceId && <GettingStarted workspaceId={workspaceId} compact />}
 
             {}
             <div style={{
@@ -264,8 +268,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     onTouchStart={e => e.currentTarget.style.background = 'rgba(248,113,113,0.06)'}
                     onTouchEnd={e => e.currentTarget.style.background = 'none'}
                 >
-                    <LogOut size={17} style={{ color: '#f87171', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: '#f87171', textAlign: 'left' }}>Sign Out</span>
+                    <LogOut size={17} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--state-danger)', textAlign: 'left' }}>Sign Out</span>
                 </button>
             </div>
         </div>

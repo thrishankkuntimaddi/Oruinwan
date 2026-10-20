@@ -3,13 +3,16 @@ import { AlertCircle } from 'lucide-react';
 import AIMarkdown from './AIMarkdown';
 import BRAND from '../../shared/brand';
 
-/** Oruinwan AI answering live in a conversation (before the final message is stored). */
-const AILiveReply = ({ reply }) => (
-    <div className="ai-live" role="status" aria-live="polite" aria-label={`${BRAND.ai} is replying`}>
-        <img src="/icons/oruinwan-128.png" alt="" className="ai-live__avatar" />
+/** An assistant (Oruinwan AI, Claude, ChatGPT…) answering live in a conversation (before the final message is stored). */
+const AILiveReply = ({ reply }) => {
+    const other = reply.assistant && reply.assistant !== 'default';
+    const name = (other && reply.assistantName) || BRAND.ai;
+    return (
+    <div className="ai-live" role="status" aria-live="polite" aria-label={`${name} is replying`}>
+        <img src={other ? `/icons/ai/${reply.assistant}.svg` : '/icons/oruinwan-128.png'} alt="" className="ai-live__avatar" />
         <div className="ai-live__body">
             <div className="ai-live__meta">
-                <strong>{BRAND.ai}</strong>
+                <strong>{name}</strong>
                 <span className="ai-live__badge">AI</span>
                 {!reply.error && <span className="ai-live__state">{reply.text ? 'typing' : 'thinking'}</span>}
             </div>
@@ -24,7 +27,8 @@ const AILiveReply = ({ reply }) => (
             )}
         </div>
     </div>
-);
+    );
+};
 
 /** All live AI replies for a view (main conversation or one thread). */
 export const AILiveReplies = ({ replies = [] }) => (

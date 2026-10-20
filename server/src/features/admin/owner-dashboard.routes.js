@@ -2,11 +2,10 @@ const logger = require('../../../utils/logger');
 const { replicaRead } = require('../../shared/db');
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
 const identity = require('../../identity');
 const org = require('../../identity/queries/org');
 const { hydrate } = require('../../identity/hydrate');
-const Message = require("../../modules/messages/message.model.js");
+const Tasks = require('../tasks/tasks.query');
 // Invoices live in PostgreSQL (migration 0007_billing_analytics).
 const { invoices: invoiceRepo } = require('../billing/billing.repository');
 const AuditLog = require('../../../models/AuditLog');
@@ -90,37 +89,38 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+        // Usage is measured with non-message aggregates only: who signed in (a sign-in security
+        // event), task activity and workspace structure. Messages are end-to-end encrypted and
+        // the owner console never counts them, per person or in total.
+        const live = { company: companyId, deleted: { $ne: true } };
         const [
-            messagesLast7Days,
-            messagesLast30Days,
+            peopleTotal,
+            signedInLast7Days,
+            tasksLast7Days,
+            tasksLast30Days,
             totalWorkspaces,
-            activeWorkspaces
+            activeWorkspaceRows,
         ] = await Promise.all([
-            Message.countDocuments({
-                company: companyId,
-                createdAt: { $gte: sevenDaysAgo }
-            }),
-            Message.countDocuments({
-                company: companyId,
-                createdAt: { $gte: thirtyDaysAgo }
-            }),
+            org.users.count({ companyId, accountStatus: 'active' }),
+            org.users.count({ companyId, accountStatus: 'active', lastLoginAt: { $gte: sevenDaysAgo } }),
+            Tasks.countDocuments({ ...live, createdAt: { $gte: sevenDaysAgo } }),
+            Tasks.countDocuments({ ...live, createdAt: { $gte: thirtyDaysAgo } }),
             org.workspaces.count({ company: companyId }),
-            Message.distinct('workspace', {
-                company: companyId,
-                createdAt: { $gte: sevenDaysAgo }
-            }).then(workspaces => workspaces.length)
+            Tasks.groupCount({ ...live, updatedAt: { $gte: sevenDaysAgo } }, 'workspace').catch(() => []),
         ]);
 
-        const dormantWorkspaces = totalWorkspaces - activeWorkspaces;
-        const engagementScore = totalWorkspaces > 0
-            ? Math.round((activeWorkspaces / totalWorkspaces) * 100)
+        const activeWorkspaces = Math.min(totalWorkspaces, activeWorkspaceRows.filter((r) => r._id).length);
+        const dormantWorkspaces = Math.max(0, totalWorkspaces - activeWorkspaces);
+        const engagementScore = peopleTotal > 0
+            ? Math.round((signedInLast7Days / peopleTotal) * 100)
             : 0;
 
         res.json({
-            messages: {
-                last7days: messagesLast7Days,
-                last30days: messagesLast30Days,
-                trend: messagesLast7Days > messagesLast30Days / 4 ? 'up' : 'down'
+            signIns: { last7days: signedInLast7Days, people: peopleTotal },
+            tasks: {
+                last7days: tasksLast7Days,
+                last30days: tasksLast30Days,
+                trend: tasksLast7Days > tasksLast30Days / 4 ? 'up' : 'down'
             },
             activeWorkspaces,
             dormantWorkspaces,
@@ -132,7 +132,9 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-router.get('/billing-summary', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
+// Plan and seat usage are real company data, so they are shown even while online billing
+// (payments, invoices: the `billing` flag) is not available yet.
+router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await identity.users.findById(userId);
@@ -384,34 +386,32 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
 
         const timeRange = req.query.timeRange || '30d';
         const from = sinceDate(timeRange);
-        const cid = mongoose.Types.ObjectId.createFromHexString(companyId.toString());
 
-        const msgDays = timeRange === '7d' ? 7 : 30;
-        const msgFrom = new Date(Date.now() - msgDays * 864e5);
-        const msgLabels = buildDateLabels(msgDays);
+        const dayCount = timeRange === '7d' ? 7 : 30;
+        const dayLabels = buildDateLabels(dayCount);
+        const live = { company: companyId, deleted: { $ne: true } };
 
+        // No message counts anywhere on this page: messages are end-to-end encrypted and an
+        // owner must not see how much anyone (or the company) talks. Engagement is the share
+        // of people who signed in during the period.
         const [
             totalUsers,
             activeUsers,
             newUsers,
             totalWorkspaces,
             activeWorkspaces,
-            recentMessages,
+            tasksCreated,
+            signedIn,
         ] = await Promise.all([
             org.users.count({ companyId, accountStatus: { $ne: 'removed' } }),
             org.users.count({ companyId, accountStatus: 'active' }),
             org.users.count({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
             org.workspaces.count({ company: companyId }),
             org.workspaces.count({ company: companyId, isActive: true, isArchived: false }),
-            Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
+            Tasks.countDocuments({ ...live, createdAt: { $gte: from } }),
+            org.users.count({ companyId, accountStatus: 'active', lastLoginAt: { $gte: from } }),
         ]);
-
-        const activeSenderIds = await Message.distinct('sender', {
-            company: companyId, isDeleted: false, createdAt: { $gte: from }
-        });
-        const engagementRate = totalUsers > 0
-            ? Math.round((activeSenderIds.length / totalUsers) * 100)
-            : 0;
+        const engagementRate = activeUsers > 0 ? Math.round((signedIn / activeUsers) * 100) : 0;
 
         
         const numWeeks = timeRange === '7d' ? 1 : timeRange === '90d' ? 13 : 4;
@@ -428,32 +428,23 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             return { date: label, users, active };
         }));
 
-        
-        const rawMsgAgg = await Message.aggregate([
-            { $match: { company: cid, isDeleted: false, createdAt: { $gte: msgFrom } } },
-            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, messages: { $sum: 1 } } },
-            { $sort: { _id: 1 } },
-        ]);
-        const msgMap = Object.fromEntries(rawMsgAgg.map(r => [r._id, r.messages]));
-        const dailyMessages = msgLabels.map(date => ({
+        // Tasks created per day, company-wide.
+        const dayBuckets = dayLabels.map((date) => ({
+            start: new Date(`${date}T00:00:00.000Z`),
+            end: new Date(`${date}T23:59:59.999Z`),
+        }));
+        const perDay = await Tasks.countBuckets(live, 'createdAt', dayBuckets).catch(() => dayBuckets.map(() => 0));
+        const dailyTasks = dayLabels.map((date, i) => ({
             day: new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' }),
             date,
-            messages: msgMap[date] || 0,
+            tasks: perDay[i] || 0,
         }));
 
-        
-        const workspaceActivity = await Message.aggregate([
-            { $match: { company: cid, isDeleted: false, createdAt: { $gte: from }, workspace: { $ne: null } } },
-            { $group: { _id: '$workspace', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 },
-        ]).then(async (rows) => {
-            // Workspace names come from PostgreSQL.
-            const names = new Map((await org.workspaces.find({ _id: { $in: rows.map((r) => String(r._id)) } }, { members: false }))
-                .map((w) => [String(w._id), w.name]));
-            return rows.map((r) => ({ name: names.get(String(r._id)) || 'Unknown', activity: r.count }));
-        });
-
+        // Largest workspaces by members (structure, not usage).
+        const workspaceSizes = (await org.workspaces.find({ company: companyId }))
+            .map((w) => ({ name: w.name, members: (w.members || []).filter((m) => m.status === 'active').length }))
+            .sort((a, b) => b.members - a.members)
+            .slice(0, 5);
         
         // Members per department in one grouped query.
         const departmentDistribution = (await org.departmentSizes(companyId))
@@ -463,10 +454,10 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
 
         res.json({
             timeRange,
-            summary: { newUsers, totalMessages: recentMessages, engagementRate, activeWorkspaces, totalWorkspaces, totalUsers, activeUsers },
+            summary: { newUsers, tasksCreated, signedIn, engagementRate, activeWorkspaces, totalWorkspaces, totalUsers, activeUsers },
             userGrowth,
-            dailyMessages,
-            workspaceActivity,
+            dailyTasks,
+            workspaceSizes,
             departmentDistribution,
         });
     } catch (error) {

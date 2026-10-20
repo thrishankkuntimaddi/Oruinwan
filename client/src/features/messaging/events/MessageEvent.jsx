@@ -177,7 +177,7 @@ function MessageEvent({
         reactions: event.reactions || event.payload?.reactions || [],
         isPinned: event.isPinned || event.payload?.isPinned || false,
         replyCount: event.replyCount || event.payload?.replyCount || 0,
-        replyAvatars: event.replyAvatars || event.payload?.replyAvatars || [],
+        threadParticipants: event.threadParticipants || event.payload?.threadParticipants || [],
         lastReplyAt: event.lastReplyAt || event.payload?.lastReplyAt,
         parentId: event.parentId || event.payload?.parentId,
         senderName: event.sender?.username || event.payload?.sender?.username || 'Unknown',

@@ -25,7 +25,7 @@ const inputStyle = {
 const ConfirmModal = ({ title, body, confirmLabel, confirmDanger, onCancel, onConfirm, loading, confirmWord, confirmText, setConfirmText }) => (
     <div style={{
         position: 'fixed', inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: 'var(--bg-overlay)',
         backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 50, padding: 16,

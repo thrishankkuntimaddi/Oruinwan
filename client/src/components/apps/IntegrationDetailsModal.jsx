@@ -1,149 +1,67 @@
-import React, { useState } from "react";
-import { X, CheckCircle2, Loader2, Shield, Zap, ChevronRight } from "lucide-react";
+import React from "react";
+import { BookOpen, Check, ListChecks, Settings2 } from "lucide-react";
+import { Dialog, Btn } from "../ui/page";
+import { IntegrationStatus } from "./IntegrationCard";
+import "../../pages/toolkit/toolkit.css";
 
-export default function IntegrationDetailsModal({ integration, connected, onClose, onStatusChange }) {
-  const [isConnected, setIsConnected] = useState(connected);
-  const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+const listStyle = { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 };
+const itemStyle = { display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)' };
 
+/**
+ * Details for one real integration: what it does, what you need, and where to set it up.
+ * Setup itself (tokens, routes, webhook secrets) lives in Settings → Integrations.
+ */
+export default function IntegrationDetailsModal({ integration, status, canManage, onClose, onSetup }) {
   if (!integration) return null;
-
-  const handleConnect = () => {
-    setLoading(true);
-    setShowSuccess(false);
-    setTimeout(() => {
-      setLoading(false);
-      const next = !isConnected;
-      setIsConnected(next);
-      setShowSuccess(true);
-      onStatusChange?.(integration.id, next);
-      setTimeout(() => setShowSuccess(false), 3000);
-    }, 2000);
-  };
+  const { Icon } = integration;
+  const connected = status === 'connected';
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-      onClick={e => e.target === e.currentTarget && onClose()}
+    <Dialog
+      open
+      onClose={onClose}
+      title={(
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <span className="tk-mark" data-size="sm"><Icon size={15} /></span>
+          {integration.name}
+        </span>
+      )}
+      lead={<span style={{ display: 'inline-flex', marginTop: 4 }}><IntegrationStatus status={status} /></span>}
+      footer={(
+        <>
+          <a className="gl-btn gl-btn--ghost" href={integration.docs} target="_blank" rel="noopener noreferrer" style={{ marginRight: 'auto', textDecoration: 'none' }}>
+            <BookOpen size={13} />Setup guide
+          </a>
+          <Btn variant="ghost" onClick={onClose}>Close</Btn>
+          <Btn variant="primary" icon={Settings2} onClick={onSetup}>
+            {connected ? 'Manage in settings' : canManage === false ? 'View in settings' : 'Set up in settings'}
+          </Btn>
+        </>
+      )}
     >
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: '2px', boxShadow: 'var(--card-shadow)', fontFamily: 'var(--font)' }}>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, color: 'var(--text-secondary)' }}>{integration.description}</p>
 
-        {}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', border: '1px solid var(--border-accent)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-            {integration.emoji}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{integration.name}</h2>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              {integration.categoryLabel} · Preview
-            </span>
-          </div>
-
-          {}
-          {isConnected ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: 'var(--state-success)', background: 'color-mix(in srgb, var(--state-success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 30%, transparent)', borderRadius: '2px', padding: '3px 10px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--state-success)' }} />
-              Connected
-            </span>
-          ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '3px 10px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--border-accent)' }} />
-              Not Connected
-            </span>
-          )}
-
-          <button
-            onClick={onClose}
-            style={{ padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 150ms ease', flexShrink: 0 }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {}
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
-            {integration.description}
-          </p>
-
-          {}
-          {showSuccess && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'color-mix(in srgb, var(--state-success) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 25%, transparent)', borderRadius: '2px', padding: '10px 14px' }}>
-              <CheckCircle2 size={16} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
-              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--state-success)' }}>
-                {isConnected ? `${integration.name} connected successfully!` : `${integration.name} has been disconnected.`}
-              </span>
-            </div>
-          )}
-
-          {}
-          <div>
-            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Zap size={11} /> What you can do
-            </h3>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {integration.useCases.map((useCase, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  <ChevronRight size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '2px' }} />
-                  {useCase}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {}
-          <div>
-            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Shield size={11} /> Permissions required
-            </h3>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {integration.permissions.map((perm, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--border-accent)', flexShrink: 0 }} />
-                  {perm}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
-          <span style={{ marginRight: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>Preview only — no account is linked.</span>
-          <button
-            onClick={onClose}
-            style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConnect}
-            disabled={loading}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', fontSize: '13px', fontWeight: 700,
-              background: loading ? 'var(--bg-active)' : isConnected ? 'color-mix(in srgb, var(--state-danger) 8%, transparent)' : 'var(--accent)',
-              border: isConnected ? '1px solid color-mix(in srgb, var(--state-danger) 35%, transparent)' : 'none', borderRadius: '2px',
-              color: loading ? 'var(--text-muted)' : isConnected ? 'var(--state-danger)' : '#0c0c0c',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'all 150ms ease',
-              fontFamily: 'var(--font)',
-            }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1'; }}
-          >
-            {loading && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
-            {loading ? (isConnected ? "Disconnecting…" : "Connecting…") : isConnected ? "Disconnect" : `Connect ${integration.name}`}
-          </button>
-        </div>
+      <div>
+        <div className="cd-label" style={{ marginBottom: 8 }}>What it does</div>
+        <ul style={listStyle}>
+          {integration.useCases.map((u) => (
+            <li key={u} style={itemStyle}><Check size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 3 }} />{u}</li>
+          ))}
+        </ul>
       </div>
-    </div>
+
+      <div>
+        <div className="cd-label" style={{ marginBottom: 8 }}>What you need</div>
+        <ul style={listStyle}>
+          {integration.needs.map((n) => (
+            <li key={n} style={itemStyle}><ListChecks size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 3 }} />{n}</li>
+          ))}
+        </ul>
+      </div>
+
+      {canManage === false && (
+        <p className="cd-hint" style={{ margin: 0 }}>Only workspace owners and admins can connect or change integrations.</p>
+      )}
+    </Dialog>
   );
 }

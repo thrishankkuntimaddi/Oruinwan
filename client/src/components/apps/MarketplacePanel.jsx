@@ -1,25 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Search, Puzzle, CheckCircle2, Star, StarHalf, Download, ShoppingBag,
-  RefreshCw, ChevronRight, MessageSquare, X, Trash2, AlertTriangle, Lock
+  Puzzle, CheckCircle2, Star, StarHalf, Download, ShoppingBag, ChevronLeft, ChevronRight, MessageSquare, Trash2, Lock,
 } from "lucide-react";
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
-import { PanelEmpty } from '../layout/WorkspacePanel';
-import '../../styles/gloss.css';
-import '../../styles/gloss-x-panels.css';
-
-const FONT = 'var(--font)';
-
-const errorMessage = (err, fallback) => err?.response?.data?.message || err?.response?.data?.error || fallback;
+import {
+  Toolbar, SearchBox, FilterTabs, Grid, Panel, Btn, IconBtn, Chip, Dialog, Field, Confirm, EmptyState, ErrorState, errorMessage,
+} from '../ui/page';
+import { SAMPLE_APP_NAMES } from './realIntegrations';
+import '../../pages/toolkit/toolkit.css';
 
 const MARKETPLACE_CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "productivity", label: "Productivity" },
-  { id: "communication", label: "Communication" },
-  { id: "developer", label: "Developer" },
-  { id: "automation", label: "Automation" },
-  { id: "analytics", label: "Analytics" },
+  { value: "all", label: "All" },
+  { value: "productivity", label: "Productivity" },
+  { value: "communication", label: "Communication" },
+  { value: "developer", label: "Developer" },
+  { value: "automation", label: "Automation" },
+  { value: "analytics", label: "Analytics" },
 ];
 
 function StarRating({ rating, size = 12 }) {
@@ -27,19 +24,17 @@ function StarRating({ rating, size = 12 }) {
   const half = rating - full >= 0.5;
   const empty = 5 - full - (half ? 1 : 0);
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-      {Array.from({ length: full }).map((_, i) => (
-        <Star key={`f${i}`} size={size} style={{ color: 'var(--accent)', fill: 'var(--accent)' }} />
-      ))}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }} aria-label={`${rating.toFixed(1)} out of 5`}>
+      {Array.from({ length: full }).map((_, i) => <Star key={`f${i}`} size={size} style={{ color: 'var(--accent)', fill: 'var(--accent)' }} />)}
       {half && <StarHalf size={size} style={{ color: 'var(--accent)', fill: 'var(--accent)' }} />}
-      {Array.from({ length: empty }).map((_, i) => (
-        <Star key={`e${i}`} size={size} style={{ color: 'var(--border-accent)' }} />
-      ))}
+      {Array.from({ length: empty }).map((_, i) => <Star key={`e${i}`} size={size} style={{ color: 'var(--border-default)' }} />)}
     </span>
   );
 }
 
-function ReviewModal({ app, onClose, onSubmitted }) {
+const RATING_WORDS = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
+
+function ReviewDialog({ app, onClose, onSubmitted }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
@@ -47,7 +42,7 @@ function ReviewModal({ app, onClose, onSubmitted }) {
   const [error, setError] = useState("");
 
   const submit = async () => {
-    if (!rating) return setError("Please select a rating");
+    if (!rating) return setError("Pick a rating first");
     setSubmitting(true);
     setError("");
     try {
@@ -55,116 +50,85 @@ function ReviewModal({ app, onClose, onSubmitted }) {
       onSubmitted?.();
       onClose();
     } catch (err) {
-      setError(errorMessage(err, "Failed to submit review"));
+      setError(errorMessage(err, "Could not send your review"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-label={`Review ${app.name}`} className="gl-card" style={{ width: '100%', maxWidth: '440px', fontFamily: FONT, boxShadow: 'var(--gl-spec-strong), var(--gl-drop)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div>
-            <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>Review {app.name}</h3>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Share your experience with the team</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="gl-icon-btn">
-            <X size={16} />
-          </button>
+    <Dialog
+      open
+      size="sm"
+      title={`Review ${app.name}`}
+      lead="Tell your team what it’s like to use."
+      onClose={onClose}
+      busy={submitting}
+      footer={(
+        <>
+          <Btn variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} loading={submitting} disabled={!rating}>Send review</Btn>
+        </>
+      )}
+    >
+      <Field label="Rating" error={error || undefined}>
+        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} onMouseLeave={() => setHover(0)}>
+          {[1, 2, 3, 4, 5].map(n => (
+            <button key={n} type="button" aria-label={`${n} star${n > 1 ? 's' : ''}`} aria-pressed={rating === n}
+              onMouseEnter={() => setHover(n)} onClick={() => setRating(n)}
+              style={{ padding: 3, background: 'none', border: 0, cursor: 'pointer', lineHeight: 0 }}>
+              <Star size={22} style={{ color: (hover || rating) >= n ? 'var(--accent)' : 'var(--border-default)', fill: (hover || rating) >= n ? 'var(--accent)' : 'none' }} />
+            </button>
+          ))}
+          {(hover || rating) > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>{RATING_WORDS[hover || rating]}</span>}
         </div>
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Rating</label>
-            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <button key={n} aria-label={`${n} star${n > 1 ? 's' : ''}`} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} onClick={() => setRating(n)} style={{ padding: '2px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <Star size={22} style={{ color: (hover || rating) >= n ? 'var(--accent)' : 'var(--border-accent)', fill: (hover || rating) >= n ? 'var(--accent)' : 'none' }} />
-                </button>
-              ))}
-              {rating > 0 && <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>{["", "Poor", "Fair", "Good", "Great", "Excellent"][rating]}</span>}
-            </div>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Comment <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} placeholder="What did you like or dislike?"
-              style={{ width: '100%', padding: '8px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: FONT }}
-              onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
-            />
-          </div>
-          {error && <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0 }}>{error}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', padding: '0 20px 16px' }}>
-          <button type="button" onClick={onClose} className="gl-btn" style={{ flex: 1 }}>Cancel</button>
-          <button type="button" onClick={submit} disabled={submitting || !rating} className="gl-btn gl-btn--primary" style={{ flex: 1 }}>
-            {submitting ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />Submitting…</> : "Submit Review"}
-          </button>
-        </div>
-      </div>
-    </div>
+      </Field>
+      <Field label="Comment" hint="Optional" htmlFor="review-comment">
+        <textarea id="review-comment" className="gl-input" value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} placeholder="What worked, what didn’t?" />
+      </Field>
+    </Dialog>
   );
 }
 
 function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onReview }) {
   const installed = !!app.installed;
-
   return (
-    <div data-testid="marketplace-app-card" className="gl-card gl-x-hovercard" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
-          {app.iconUrl ? (
-            <img src={app.iconUrl} alt="" className="gl-x-app-icon" />
-          ) : (
-            <div className="gl-x-app-icon">
-              <Puzzle size={18} />
-            </div>
-          )}
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <h3 style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{app.name}</h3>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>{app.developer} · v{app.version}</p>
-          </div>
-          {installed && (
-            <span className="gl-x-badge gl-x-badge--ok">
-              <CheckCircle2 size={10} />Installed
-            </span>
-          )}
+    <div data-testid="marketplace-app-card" className="gl-card tk-card">
+      <div className="tk-card-head">
+        {app.iconUrl
+          ? <img src={app.iconUrl} alt="" className="tk-mark" style={{ objectFit: 'cover', padding: 0 }} />
+          : <span className="tk-mark"><Puzzle size={18} /></span>}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 className="tk-card-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.name}</h3>
+          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '3px 0 0' }}>{app.developer} · v{app.version}</p>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 12px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.description}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', marginTop: 'auto' }}>
-          <StarRating rating={app.avgRating || 0} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {app.avgRating > 0 ? <>{app.avgRating.toFixed(1)} ({app.reviewCount})</> : "No reviews yet"}
+        {installed
+          ? <Chip tone="success"><CheckCircle2 size={11} />Installed</Chip>
+          : SAMPLE_APP_NAMES.has(app.name) && <Chip title="An example listing: installing it doesn’t connect anything">Sample</Chip>}
+      </div>
+      <p className="tk-card-text" style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.description}</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--text-muted)' }}>
+        <StarRating rating={app.avgRating || 0} />
+        <span>{app.avgRating > 0 ? <>{app.avgRating.toFixed(1)} ({app.reviewCount})</> : "No reviews yet"}</span>
+        {app.installCount > 0 && (
+          <span title="Workspaces using this app" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <Download size={11} />{app.installCount}
           </span>
-          {app.installCount > 0 && <span title="Workspaces using this app" style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}><Download size={10} />{app.installCount}</span>}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {canManage ? (
-            installed ? (
-              <button type="button" onClick={() => onUninstall(app)} disabled={busy} className="gl-btn gl-btn--sm gl-x-danger" style={{ flex: 1 }}>
-                {busy ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />Removing…</> : <><Trash2 size={11} />Uninstall</>}
-              </button>
-            ) : (
-              <button type="button" onClick={() => onInstall(app)} disabled={busy} className="gl-btn gl-btn--sm gl-btn--primary" style={{ flex: 1 }}>
-                {busy ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />Installing…</> : <><Download size={11} />Install</>}
-              </button>
-            )
-          ) : (
-            <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
-              {installed ? 'Installed in this workspace' : 'Not installed'}
-            </span>
-          )}
-          <button type="button" onClick={() => onReview(app)} className="gl-btn gl-btn--sm" style={{ padding: '0 9px' }}
-            title="Write a review" aria-label={`Review ${app.name}`}>
-            <MessageSquare size={12} />
-          </button>
-        </div>
+        )}
+      </div>
+      <div className="tk-card-foot">
+        {canManage ? (
+          installed
+            ? <Btn size="sm" variant="ghost" icon={Trash2} loading={busy} onClick={() => onUninstall(app)}>{busy ? 'Removing…' : 'Uninstall'}</Btn>
+            : <Btn size="sm" variant="primary" icon={Download} loading={busy} onClick={() => onInstall(app)}>{busy ? 'Installing…' : 'Install'}</Btn>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{installed ? 'Installed in this workspace' : 'Not installed'}</span>
+        )}
+        <IconBtn label={`Review ${app.name}`} onClick={() => onReview(app)}><MessageSquare size={14} /></IconBtn>
       </div>
     </div>
   );
 }
-
 
 /**
  * The workspace app marketplace: search, categories, install state per workspace and
@@ -181,6 +145,7 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [reviewApp, setReviewApp] = useState(null);
+  const [confirmRemove, setConfirmRemove] = useState(null);
   const [busy, setBusy] = useState({});
 
   const fetchApps = useCallback(async () => {
@@ -223,80 +188,75 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
       const status = err?.response?.status;
       if (action === 'install' && status === 409) setInstalled(app._id, true);
       else if (action === 'uninstall' && status === 404) setInstalled(app._id, false);
-      showToast(errorMessage(err, `Failed to ${action} ${app.name}`), 'error');
+      showToast(errorMessage(err, `Could not ${action} ${app.name}`), 'error');
     } finally {
       setBusy(b => ({ ...b, [app._id]: false }));
     }
   };
 
+  const filtering = search.trim() || category !== 'all';
+  const installedCount = apps.filter(a => a.installed).length;
+  const hasSamples = apps.some(a => SAMPLE_APP_NAMES.has(a.name));
+
   return (
-    <div style={{ fontFamily: FONT }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {reviewApp && (
-        <ReviewModal app={reviewApp} onClose={() => setReviewApp(null)}
-          onSubmitted={() => { showToast("Review submitted", "success"); fetchApps(); }} />
+        <ReviewDialog app={reviewApp} onClose={() => setReviewApp(null)}
+          onSubmitted={() => { showToast("Thanks, your review is posted", "success"); fetchApps(); }} />
       )}
 
-      <div className="gl-search" style={{ marginBottom: '12px' }}>
-        <Search size={14} />
-        <input type="text" className="gl-input" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search marketplace…" aria-label="Search marketplace"
-          style={{ height: '38px', fontSize: '13px' }} />
-      </div>
-      <div className="gl-x-chips gl-x-chips--wrap" style={{ marginBottom: '20px' }}>
-        {MARKETPLACE_CATEGORIES.map(cat => (
-          <button key={cat.id} type="button" className={`gl-x-chip gl-x-chip--lg${category === cat.id ? ' is-active' : ''}`} aria-pressed={category === cat.id}
-            onClick={() => { setCategory(cat.id); setPage(1); }}>{cat.label}</button>
-        ))}
-      </div>
+      <Toolbar>
+        <SearchBox value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search apps" label="Search marketplace" />
+        <FilterTabs value={category} onChange={v => { setCategory(v); setPage(1); }} options={MARKETPLACE_CATEGORIES} label="Category" />
+      </Toolbar>
 
       {canManage === false && (
-        <div className="gl-card gl-x-note" style={{ alignItems: 'center', marginBottom: '16px' }}>
-          <Lock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          Only workspace owners and admins can install or uninstall apps.
-        </div>
+        <div className="tk-notice"><Lock size={14} />Only workspace owners and admins can install or uninstall apps.</div>
       )}
 
       {loading ? (
-        <div className="gl-x-grid">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="gl-x-skeleton" />
-          ))}
-        </div>
+        <Grid min={260}>
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="cd-skel" style={{ height: 170 }} />)}
+        </Grid>
       ) : error ? (
-        <div role="alert" style={{ textAlign: 'center', padding: '48px 0' }}>
-          <AlertTriangle size={24} style={{ color: 'var(--state-danger)', marginBottom: '12px' }} />
-          <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>Couldn’t load apps</p>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 14px' }}>{error}</p>
-          <button type="button" onClick={fetchApps} className="gl-btn">
-            <RefreshCw size={12} />Retry
-          </button>
-        </div>
+        <Panel><ErrorState title="Couldn’t load apps" message={error} onRetry={fetchApps} /></Panel>
       ) : apps.length === 0 ? (
-        <PanelEmpty icon={ShoppingBag} title="No apps found"
-          text={search.trim() || category !== 'all' ? 'Try a different search or category' : 'No apps have been published yet'} />
+        <Panel>
+          <EmptyState icon={ShoppingBag} title={filtering ? 'No apps match' : 'No apps published yet'}
+            text={filtering ? 'Try a different name or category.' : 'Apps that developers publish for Oruinwan show up here, ready to install.'} />
+        </Panel>
       ) : (
         <>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            {apps.length} app{apps.length !== 1 ? "s" : ""} · {apps.filter(a => a.installed).length} installed
+          <p className="cd-hint" style={{ margin: 0 }}>
+            {apps.length} app{apps.length !== 1 ? "s" : ""}{installedCount ? ` · ${installedCount} installed here` : ''}
+            {hasSamples && ' · Listings marked Sample are examples and don’t connect to anything.'}
           </p>
-          <div className="gl-x-grid" style={{ marginBottom: '24px' }}>
+          <Grid min={260}>
             {apps.map(app => (
               <MarketplaceAppCard key={app._id} app={app} canManage={canManage && !!workspaceId} busy={!!busy[app._id]}
-                onInstall={a => runAction(a, 'install')} onUninstall={a => runAction(a, 'uninstall')} onReview={setReviewApp} />
+                onInstall={a => runAction(a, 'install')} onUninstall={setConfirmRemove} onReview={setReviewApp} />
             ))}
-          </div>
+          </Grid>
           {totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <button type="button" className="gl-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                Previous
-              </button>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Page {page} of {totalPages}</span>
-              <button type="button" className="gl-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-                Next <ChevronRight size={14} />
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Btn variant="ghost" icon={ChevronLeft} onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Btn>
+              <span className="cd-hint">Page {page} of {totalPages}</span>
+              <Btn variant="ghost" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next <ChevronRight size={13} /></Btn>
             </div>
           )}
         </>
       )}
+
+      <Confirm
+        open={Boolean(confirmRemove)}
+        title={`Uninstall ${confirmRemove?.name}?`}
+        confirmLabel="Uninstall"
+        tone="danger"
+        onConfirm={() => { const a = confirmRemove; setConfirmRemove(null); runAction(a, 'uninstall'); }}
+        onClose={() => setConfirmRemove(null)}
+      >
+        It’s removed from this workspace for everyone. You can install it again at any time.
+      </Confirm>
     </div>
   );
 }

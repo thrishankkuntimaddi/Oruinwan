@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, RefreshCw, Receipt, Mail, LifeBuoy, Wallet } from 'lucide-react';
+import { CreditCard, RefreshCw, Receipt, Mail, LifeBuoy, Wallet, Clock } from 'lucide-react';
 import api from '@services/api';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { getBillingSummary } from '../../services/ownerDashboardService';
 import BillingSummary, { money } from './BillingSummary';
 import {
@@ -14,15 +15,20 @@ import './owner.css';
 const STATUS_TONE = { paid: 'success', pending: 'warning', failed: 'danger', refunded: undefined, cancelled: undefined };
 const DAY = 864e5;
 
-/** Owner billing (behind the `billing` feature flag): plan, seats, invoices — nothing invented. */
+/**
+ * Owner billing: plan and seats are always shown (real company data). Payments, invoices and
+ * plan changes need a payment provider, which only exists behind the `billing` flag; without it
+ * the page says plainly that online billing is coming soon.
+ */
 const OwnerBilling = () => {
     const navigate = useNavigate();
     const { company } = useCompany();
+    const billingLive = useFlag('billing');
     const [openInvoice, setOpenInvoice] = useState(null);
 
     const summary = useAsync(() => getBillingSummary(), []);
-    const invoices = useAsync(() => api.get('/api/owner-dashboard/invoices', { params: { limit: 50 } }).then((r) => r.data.invoices || []), []);
-    const payment = useAsync(() => api.get('/api/owner-dashboard/payment-methods').then((r) => r.data.paymentMethod || null), []);
+    const invoices = useAsync(() => api.get('/api/owner-dashboard/invoices', { params: { limit: 50 } }).then((r) => r.data.invoices || []), [], { enabled: billingLive });
+    const payment = useAsync(() => api.get('/api/owner-dashboard/payment-methods').then((r) => r.data.paymentMethod || null), [], { enabled: billingLive });
 
     const spend = useMemo(() => {
         const list = (invoices.data || []).filter((i) => i.status === 'paid');
@@ -36,7 +42,7 @@ const OwnerBilling = () => {
         };
     }, [invoices.data]);
 
-    const refresh = () => { summary.reload(); invoices.reload(); payment.reload(); };
+    const refresh = () => { summary.reload(); if (billingLive) { invoices.reload(); payment.reload(); } };
     const contact = summary.data?.billingContact || {};
 
     return (
@@ -46,10 +52,10 @@ const OwnerBilling = () => {
                     eyebrow="Owner console"
                     icon={CreditCard}
                     title="Billing & plan"
-                    lead="Subscription, seats and invoices for your company"
+                    lead={billingLive ? 'Subscription, seats and invoices for your company' : 'Your plan and seat usage. Online payments are coming soon.'}
                     actions={(
                         <>
-                            <Btn icon={LifeBuoy} onClick={() => navigate('/contact-admin')}>Change plan</Btn>
+                            {billingLive && <Btn icon={LifeBuoy} onClick={() => navigate('/contact-admin')}>Change plan</Btn>}
                             <Btn icon={RefreshCw} onClick={refresh}>Refresh</Btn>
                         </>
                     )}
@@ -58,6 +64,21 @@ const OwnerBilling = () => {
         >
             {summary.error ? <ErrorState message={summary.error} onRetry={summary.reload} />
                 : <BillingSummary data={summary.data} loading={summary.loading} seatLimit={company?.settings?.maxUsers} />}
+
+            {!billingLive && (
+                <Section title="Payments and invoices">
+                    <Panel>
+                        <EmptyState
+                            icon={Clock}
+                            title="Online billing is coming soon"
+                            text="Oruinwan does not take payments yet, so there are no invoices or saved cards. Your plan and seats above are accurate. To change your plan or seat limit, contact support."
+                            action={<Btn size="sm" icon={LifeBuoy} onClick={() => navigate('/contact-admin')}>Contact support</Btn>}
+                        />
+                    </Panel>
+                </Section>
+            )}
+
+            {billingLive && (<>
 
             <Section title="Spending" lead="Totals of paid invoices">
                 <KpiGrid>
@@ -102,6 +123,7 @@ const OwnerBilling = () => {
                     </div>
                 </Panel>
             </Grid>
+            </>)}
 
             <Dialog
                 open={!!openInvoice}

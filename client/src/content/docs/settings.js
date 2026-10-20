@@ -14,13 +14,13 @@ export default {
                 'Open **Settings** from your profile menu. Each tab can be opened directly with `/settings?tab=<id>`, which is handy for bookmarks and help links.',
                 { table: { caption: 'Settings tabs', head: ['Tab', 'Link', 'What is in it'], rows: [
                     ['Profile', '`?tab=profile`', 'Photo, name, bio, phone, email addresses.'],
-                    ['Password & security', '`?tab=security`', 'Change password, two-factor sign-in.'],
+                    ['Password & security', '`?tab=security`', 'Change password, passkeys, two-factor sign-in.'],
                     ['Devices', '`?tab=sessions`', 'Where you are signed in; sign out of devices.'],
                     ['Notifications', '`?tab=notifications`', 'Desktop alerts, sound, mentions-only, email.'],
                     ['Appearance', '`?tab=appearance`', 'Theme, text size, reduce motion.'],
                     ['Language & region', '`?tab=region`', 'Time zone, date and time format, auto-translate.'],
                     ['Privacy', '`?tab=privacy`', 'Read receipts, typing indicator, discoverability, blocked people.'],
-                    ['Oruinwan AI', '`?tab=ai`', 'Memory, AI features and engine for the workspace.'],
+                    ['Oruinwan AI', '`?tab=ai`', 'Memory, AI features, engine and assistants for the workspace.'],
                     ['Integrations', '`?tab=integrations`', 'Outgoing webhooks, GitHub, Jira, Zoom, links to Apps and the Developer portal.'],
                     ['Your data', '`?tab=data`', 'Download your data, message retention, deactivate or delete.'],
                 ] } },
@@ -39,9 +39,9 @@ export default {
         },
         {
             id: 'password-security',
-            title: 'Password and two-factor sign-in',
-            summary: 'Change your password and turn on an authenticator app for a 6-digit code at sign-in.',
-            keywords: '2fa two-factor two factor authenticator totp otp code password change reset security',
+            title: 'Password, passkeys and two-factor sign-in',
+            summary: 'Change your password, sign in with a passkey, and turn on an authenticator app for a 6-digit code at sign-in.',
+            keywords: '2fa two-factor two factor authenticator totp otp code password change reset security passkey passkeys webauthn fingerprint face id touch id windows hello',
             blocks: [
                 { h: 'Change or reset your password' },
                 { list: [
@@ -57,6 +57,15 @@ export default {
                 ] },
                 'From then on, after your password Oruinwan asks for the 6-digit code (**Two-step verification**).',
                 { callout: 'note', text: 'Oruinwan supports authenticator apps only; codes are not sent by SMS. 2FA secrets are stored encrypted on the server.' },
+                { h: 'Sign in with a passkey' },
+                'A passkey lets you sign in with your fingerprint, face or screen lock (Touch ID, Face ID, Windows Hello, an Android screen lock or a security key) instead of typing a password. The passkey stays on your device or in your password manager; Oruinwan only keeps its public half.',
+                { steps: [
+                    'Go to **Settings → Password & security**.',
+                    'Under **Passkeys** choose **Add a passkey** and confirm with your fingerprint, face or screen lock.',
+                    'Next time, choose **Sign in with a passkey** on the sign-in page. You don’t need to type your email.',
+                ] },
+                'Each passkey is listed with when it was added and last used. **Rename** it to tell devices apart, or **Remove** one you no longer use (also delete it from that device’s password manager).',
+                { callout: 'note', text: 'A passkey already proves two things (your device and your fingerprint, face or PIN), so signing in with one doesn’t ask for your authenticator code. Like Google sign-in, it doesn’t unlock encrypted messages by itself: if your account has a password, Oruinwan asks for it when those need unlocking. Passkeys work in the web app in recent browsers; the desktop and tablet apps use your password.' },
             ],
         },
         {
@@ -116,6 +125,7 @@ export default {
                     '**Status** of the engine, and for admins **Check connection**.',
                     '**Features** (admins): AI features and Smart replies on or off for everyone.',
                     '**Engine** (admins): the model in use, or your own OpenAI-compatible server. See [How the AI runs](/docs/ai/how-it-runs).',
+                    '**Assistants** (admins): connect Claude, ChatGPT, Gemini or Grok for the workspace. See [Agents](/docs/ai/other-providers).',
                     '**Usage** for the last 30 days.',
                 ] },
                 { h: 'Integrations' },

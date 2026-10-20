@@ -354,7 +354,7 @@ const ProfileQuickSettings = ({ onClose }) => {
     );
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', fontFamily: 'var(--font)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', fontFamily: 'var(--font)' }}>
             <div style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>

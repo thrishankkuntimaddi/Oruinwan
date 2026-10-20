@@ -4,7 +4,7 @@ import PublicPageShell from '../../components/layout/PublicPageShell';
 import { PageHero, Block, Split, Grid, Card, Callout, CTABand } from '../../components/public/PublicKit';
 import BRAND from '../../shared/brand';
 
-const PARTNER_EMAIL = 'chttrixchat@gmail.com';
+const PARTNER_EMAIL = 'partners@oruinwan.com';
 
 const TYPES = [
     {

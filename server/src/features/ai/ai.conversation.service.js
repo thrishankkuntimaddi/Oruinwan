@@ -44,19 +44,22 @@ const IN_CONVERSATION_PROMPT = [
   'Do not repeat the question. Do not address people as "the user".',
 ].join(' ');
 
-/** Matches a message addressed to the assistant: @ai, @oruinwan, @oruinwan-ai, @OruinwanAI. */
-const MENTION_RE = /(^|[\s(])@(ai|oruinwan(?:[-_ ]?ai)?)\b/i;
+/** Matches a message addressed to an assistant: @ai, @oruinwan, @claude, @chatgpt, @gemini, @grok… */
+const { MENTION_RE, describe } = require('./assistants');
 
-let assistantPromise = null;
+const assistantPromises = new Map(); // assistant id -> Promise<user>
 
 /** The system account that authors AI messages (created on first use; it has no password and cannot sign in). */
-function getAssistantUser() {
-  if (!assistantPromise) {
-    assistantPromise = upsertSystemUser({
-      email: ASSISTANT_EMAIL, username: ASSISTANT_NAME, roles: [ASSISTANT_ROLE], profilePicture: '/icons/oruinwan-128.png',
-    }).catch((err) => { assistantPromise = null; throw err; });
+function getAssistantUser(assistant = 'default') {
+  const id = describe(assistant) && assistant !== 'default' ? assistant : 'default';
+  if (!assistantPromises.has(id)) {
+    const fields = id === 'default'
+      ? { email: ASSISTANT_EMAIL, username: ASSISTANT_NAME, profilePicture: '/icons/oruinwan-128.png' }
+      // Claude, ChatGPT, Gemini, Grok…: their own account, so answers show who wrote them.
+      : { email: `assistant-${id}@ai.oruinwan.internal`, username: describe(id).name, profilePicture: `/icons/ai/${id}.svg` };
+    assistantPromises.set(id, upsertSystemUser({ ...fields, roles: [ASSISTANT_ROLE] }).catch((err) => { assistantPromises.delete(id); throw err; }));
   }
-  return assistantPromise;
+  return assistantPromises.get(id);
 }
 
 const active = new Map(); // conversationKey -> count
@@ -98,20 +101,21 @@ async function startReply(input, ctx) {
 
   const key = `${conversationType}:${conversationId}`;
   if ((active.get(key) || 0) >= MAX_ACTIVE_PER_CONVERSATION) {
-    throw Object.assign(new Error('Oruinwan AI is already answering here. Try again in a moment.'), { status: 429, code: 'AI_BUSY' });
+    throw Object.assign(new Error('An assistant is already answering here. Try again in a moment.'), { status: 429, code: 'AI_BUSY' });
   }
   active.set(key, (active.get(key) || 0) + 1);
 
   const replyId = crypto.randomUUID();
   const room = `${isDm ? 'dm' : 'channel'}:${conversationId}`;
-  const emit = (data) => ctx.io?.to(room).emit('ai:reply', { replyId, conversationId: String(conversationId), conversationType, parentId: parentId ? String(parentId) : null, ...data });
+  const assistantName = (ctx.assistant && ctx.assistant !== 'default' && describe(ctx.assistant)?.name) || ASSISTANT_NAME;
+  const emit = (data) => ctx.io?.to(room).emit('ai:reply', { replyId, conversationId: String(conversationId), conversationType, parentId: parentId ? String(parentId) : null, assistant: ctx.assistant || 'default', assistantName, ...data });
 
   emit({ phase: 'start', requestedBy: String(ctx.userId) });
   const runCtx = { ...ctx, workspaceId: ctx.workspaceId || (convo.workspace && String(convo.workspace)), company: convo.company };
   run({ ...input, prompt, parent, isDm, replyId, emit, conversationName: input.conversationName || convo.name }, runCtx)
     .catch((err) => {
       logger.error({ err }, '[AI] in-conversation reply failed');
-      emit({ phase: 'error', message: friendlyError(err) });
+      emit({ phase: 'error', message: friendlyError(err, ctx.assistant, ctx.aiContext?.keySource) });
     })
     .finally(() => {
       const n = (active.get(key) || 1) - 1;
@@ -165,7 +169,7 @@ async function run({ conversationType, conversationId, parent, triggerMessageId,
   if (pending) clearTimeout(pending);
 
   const answer = String(result.text || text || '').trim() || "I couldn't come up with an answer to that.";
-  const assistant = await getAssistantUser();
+  const assistant = await getAssistantUser(ctx.assistant);
   const enc = await encryptForConversation(String(conversationId), isDm ? 'dm' : 'channel', answer);
 
   const saved = parent
@@ -221,10 +225,13 @@ function badRequest(message) {
   return Object.assign(new Error(message), { status: 400 });
 }
 
-function friendlyError(err) {
+function friendlyError(err, assistant, keySource) {
+  const name = (assistant && assistant !== 'default' && describe(assistant)?.name) || ASSISTANT_NAME;
+  const rejected = require('./assistants').keyRejectedMessage(err, assistant, keySource);
+  if (rejected) return rejected;
   if (err?.code === 'AI_ENGINE_UNAVAILABLE') return 'The Oruinwan AI engine is offline right now.';
-  if (err?.code === 'CONVERSATION_KEY_MISSING' || /key/i.test(err?.message || '')) return "Oruinwan AI couldn't encrypt its reply for this conversation.";
-  return "Oruinwan AI couldn't answer that. Please try again.";
+  if (err?.code === 'CONVERSATION_KEY_MISSING' || /conversation key|encrypt/i.test(err?.message || '')) return `${name} couldn't encrypt its reply for this conversation.`;
+  return `${name} couldn't answer that. Please try again.`;
 }
 
 module.exports = { startReply, getAssistantUser, stripMention, MENTION_RE, ASSISTANT_ROLE, ASSISTANT_EMAIL };

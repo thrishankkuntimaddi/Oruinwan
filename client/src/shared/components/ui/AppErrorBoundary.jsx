@@ -1,6 +1,8 @@
 import React from 'react';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, RotateCcw } from 'lucide-react';
 import logger from '../../../utils/logger';
+import '../../../styles/gloss.css';
+import '../../../components/company-dash/dash.css';
 
 class AppErrorBoundary extends React.Component {
     constructor(props) {
@@ -14,7 +16,6 @@ class AppErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, info) {
-        
         if (import.meta.env.DEV) {
             const label = this.props.label || 'Unknown';
             logger.error(`[AppErrorBoundary][${label}] Caught render error:`, error, info.componentStack);
@@ -28,39 +29,40 @@ class AppErrorBoundary extends React.Component {
     render() {
         if (!this.state.hasError) return this.props.children;
 
-        const label = this.props.label || 'This panel';
-        const isDev  = import.meta.env.DEV;
+        const whole = this.props.label === 'App';
+        const isDev = import.meta.env.DEV;
 
         return (
-            <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-8 text-center bg-gray-50 dark:bg-gray-900">
-                <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                    <AlertTriangle size={26} className="text-red-500 dark:text-red-400" />
-                </div>
-                <h3 className="text-base font-bold text-gray-800 dark:text-white mb-1">
-                    {label} encountered an error
-                </h3>
-                <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs mb-5">
-                    Something went wrong rendering this section. Your other panels are unaffected.
+            <div
+                className="cd-state"
+                data-tone="danger"
+                role="alert"
+                style={{ height: '100%', minHeight: whole ? '100vh' : 200, background: 'var(--bg-base)', color: 'var(--text-secondary)' }}
+            >
+                <span className="gl-empty-mark"><AlertTriangle size={18} /></span>
+                <p className="gl-empty-title">{whole ? 'Something went wrong' : `${this.props.label || 'This section'} couldn’t load`}</p>
+                <p className="gl-empty-text">
+                    {whole
+                        ? 'Oruinwan hit an unexpected problem. Your messages and work are safe. Try again, or reload the page.'
+                        : 'Something went wrong showing this part of the page. The rest of the app still works.'}
                 </p>
 
                 {isDev && this.state.error && (
-                    <pre className="mb-4 text-left text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg p-3 max-w-sm overflow-x-auto">
+                    <pre style={{
+                        maxWidth: 'min(480px, 100%)', overflowX: 'auto', margin: '4px 0', padding: '10px 12px', textAlign: 'left',
+                        fontSize: 12, color: 'var(--state-danger)', background: 'var(--bg-hover)',
+                        border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)',
+                    }}>
                         {this.state.error.message}
                     </pre>
                 )}
 
-                <div className="flex gap-3">
-                    <button
-                        onClick={this.reset}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                        <RefreshCw size={14} /> Try Again
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
+                    <button type="button" className="gl-btn gl-btn--primary" onClick={this.reset}>
+                        <RotateCcw size={13} /> Try again
                     </button>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                        Reload Page
+                    <button type="button" className="gl-btn gl-btn--ghost" onClick={() => window.location.reload()}>
+                        <RefreshCw size={13} /> Reload page
                     </button>
                 </div>
             </div>

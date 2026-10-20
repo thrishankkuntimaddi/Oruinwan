@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, PanelRight } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, PanelRight, Phone, Video } from 'lucide-react';
+import { playChime } from '../../notifications/osNotifier';
 import { useHuddleContext, callTitle } from '../HuddleContext';
 import HuddleWorkspacePanel from '../workspace/HuddleWorkspacePanel';
 import { formatDuration } from '../workspace/wrapUp';
@@ -32,6 +33,23 @@ export default function HuddleDock() {
         return () => clearInterval(t);
     }, [ctx.active]);
 
+    // A DM call ringing for me (the DM page itself shows its own "Join" bar).
+    const ring = ctx.incomingCall;
+    const ringHere = ring && location.pathname.includes(`/dm/${ring.dmId}`);
+    useEffect(() => {
+        if (!ring || ringHere) return undefined;
+        playChime();
+        const t = setInterval(playChime, 3000);
+        return () => clearInterval(t);
+    }, [ring, ringHere]);
+    const answer = () => {
+        const r = ctx.incomingCall;
+        if (!r) return;
+        ctx.dismissIncomingCall();
+        navigate(`/workspace/${r.workspaceId || ctx.workspaceId}/dm/${r.dmId}`);
+        ctx.joinHuddle({ id: r.huddleId, dmId: r.dmId, video: r.video }, { quiet: true }).catch(() => {});
+    };
+
     const call = ctx.selectedHuddle || ctx.panelCall;
     const shownByPage = ctx.huddleId && ctx.inlineUIs[ctx.huddleId] > 0;
     const showPill = ctx.active && !shownByPage;
@@ -61,6 +79,19 @@ export default function HuddleDock() {
                     <button type="button" className="gl-icon-btn hw-pill-leave" onClick={ctx.leaveHuddle} title="Leave huddle" aria-label="Leave huddle">
                         <PhoneOff size={13} />
                     </button>
+                </div>
+            )}
+            {ring && !ringHere && (
+                <div className="hw-ring" data-testid="huddle-ring" role="alertdialog" aria-label="Incoming call">
+                    <span className="hw-ring-icon">{ring.video ? <Video size={16} /> : <Phone size={16} />}</span>
+                    <div className="hw-ring-text">
+                        <p className="hw-ring-title">{ring.startedBy?.username || 'Someone'} is calling</p>
+                        <p className="hw-ring-sub">{ring.video ? 'Video call' : 'Voice call'} · direct message</p>
+                    </div>
+                    <div className="hw-ring-actions">
+                        <button type="button" className="gl-btn" onClick={ctx.dismissIncomingCall}>Decline</button>
+                        <button type="button" className="gl-btn gl-btn--primary" data-testid="huddle-ring-join" onClick={answer}>Join</button>
+                    </div>
                 </div>
             )}
             {ctx.workspaceOpen && ctx.panelCall && <HuddleWorkspacePanel />}

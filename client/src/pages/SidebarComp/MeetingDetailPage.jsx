@@ -23,7 +23,7 @@ const ui = {
     },
     primary: (disabled) => ({
         display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px', fontWeight: 600,
-        background: 'var(--accent)', color: '#0c0c0c', border: '1px solid var(--accent)', borderRadius: '2px',
+        background: 'var(--accent)', color: 'var(--bg-base)', border: '1px solid var(--accent)', borderRadius: '2px',
         cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, fontFamily: FONT, whiteSpace: 'nowrap',
     }),
     secondary: {
@@ -441,13 +441,8 @@ const MeetingDetailPage = () => {
     } = useMeeting(meetingId, workspaceId);
 
     // Join = go to the meeting's call: its conversation, or its huddle on the Huddles page.
+    // The Huddles page opens the call: in the meeting's conversation when it has one.
     const handleJoin = () => {
-        const path = meetingConversationPath(workspaceId, meeting);
-        if (path) {
-            showToast('Start or join the huddle from the conversation header.', 'info');
-            navigate(path);
-            return;
-        }
         setJoining(true);
         navigate(`/workspace/${workspaceId}/huddles?meeting=${meetingId}`, { state: { meetingTitle: meeting.title } });
     };

@@ -26,7 +26,7 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
                 justifyContent: 'center',
                 marginBottom: '2rem',
                 border: '1px solid var(--border-accent)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                boxShadow: 'var(--lg-shadow-sm)',
             }}>
                 <Lock size={36} style={{ color: 'var(--accent)' }} />
             </div>
@@ -65,7 +65,7 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
                         flex: 1,
                         padding: '9px 0',
                         backgroundColor: isJoining ? 'var(--bg-active)' : 'var(--accent)',
-                        color: isJoining ? 'var(--text-muted)' : '#0c0c0c',
+                        color: isJoining ? 'var(--text-muted)' : 'var(--bg-base)',
                         border: 'none',
                         borderRadius: '2px',
                         fontSize: '13px',

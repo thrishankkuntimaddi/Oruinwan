@@ -59,7 +59,7 @@ const VideoBlock = ({
         <div className="group relative mb-4">
             <div style={mediaStyles.frame}>
                 {block.content ? (
-                    <div style={{ background: '#000' }}>
+                    <div style={{ background: 'var(--bg-base)' }}>
                         {embed ? (
                             <iframe
                                 style={{ width: '100%', aspectRatio: '16 / 9', border: 0, display: 'block' }}

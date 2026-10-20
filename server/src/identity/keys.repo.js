@@ -140,6 +140,11 @@ const conversationKeys = {
     async remove(conversationId, conversationType) {
         await query('DELETE FROM conversation_keys WHERE conversation_id = $1 AND conversation_type = $2', [str(conversationId), conversationType]);
     },
+    /** Drops every conversation key wrapped for this user (used when their identity key is replaced). */
+    async removeAllMemberKeysForUser(userId) {
+        const { rowCount } = await query('DELETE FROM conversation_key_members WHERE user_id = $1', [str(userId)]);
+        return rowCount || 0;
+    },
 };
 
 module.exports = { identityKeys, cryptoState, conversationKeys, toConversationKey };

@@ -9,6 +9,8 @@
 const DEV_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:5174',   // phone app (mobile/), vite dev
+  'http://localhost:4174',   // phone app, vite preview
   'http://localhost:8081',   // Expo web
   'http://localhost:19006',  // Expo web (classic)
   'http://localhost:19000',  // Expo DevTools

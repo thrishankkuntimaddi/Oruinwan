@@ -31,7 +31,7 @@ const logger = pino(
       res: pino.stdSerializers.res,
     },
     
-    base: isDev ? undefined : { service: 'chttrix-server', env: process.env.NODE_ENV },
+    base: isDev ? undefined : { service: 'oruinwan-server', env: process.env.NODE_ENV },
   },
   destination
 );

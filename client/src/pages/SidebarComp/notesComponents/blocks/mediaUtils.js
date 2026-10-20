@@ -95,13 +95,11 @@ export function formatBytes(bytes) {
 
 /** Shared token styles for media blocks. */
 export const mediaStyles = {
-    frame: { width: '100%', maxWidth: '672px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', position: 'relative', overflow: 'hidden' },
+    frame: { width: '100%', maxWidth: '672px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)', position: 'relative', overflow: 'hidden' },
     empty: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 24px', gap: '12px' },
     emptyLabel: { fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', margin: 0 },
-    primaryBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 16px', background: 'var(--accent)', color: '#0c0c0c', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)' },
-    secondaryBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 16px', background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)' },
-    input: { width: '100%', padding: '7px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' },
-    iconBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer' },
-    progressTrack: { width: '192px', height: '4px', background: 'var(--bg-active)', borderRadius: '2px', overflow: 'hidden' },
+    input: { width: '100%', padding: '7px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' },
+    iconBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: 'var(--gl-radius)', cursor: 'pointer' },
+    progressTrack: { width: '192px', height: '4px', background: 'var(--bg-active)', borderRadius: 'var(--gl-radius)', overflow: 'hidden' },
     error: { fontSize: '12px', color: 'var(--state-danger)', padding: '16px', margin: 0 },
 };

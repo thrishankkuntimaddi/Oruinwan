@@ -19,9 +19,9 @@ export default function ConfirmationModal({
     if (!isOpen) return null;
 
     const VARIANTS = {
-        danger:  { icon: AlertTriangle, color: 'var(--state-danger)',  bg: 'rgba(224,82,82,0.08)',   border: 'rgba(224,82,82,0.25)',   btnBg: 'var(--state-danger)',  btnColor: '#fff' },
-        warning: { icon: AlertCircle,   color: 'var(--accent)',         bg: 'rgba(184,149,106,0.08)', border: 'rgba(184,149,106,0.25)', btnBg: 'var(--accent)',        btnColor: 'var(--bg-base)' },
-        info:    { icon: Info,          color: '#9b8ecf',               bg: 'rgba(155,142,207,0.08)', border: 'rgba(155,142,207,0.25)', btnBg: '#9b8ecf',              btnColor: '#fff' },
+        danger:  { icon: AlertTriangle, color: 'var(--state-danger)', bg: 'color-mix(in srgb, var(--state-danger) 8%, transparent)', btn: 'gl-btn gl-x-danger-solid' },
+        warning: { icon: AlertCircle,   color: 'var(--accent)',       bg: 'var(--gl-accent-soft)', btn: 'gl-btn gl-btn--primary' },
+        info:    { icon: Info,          color: 'var(--accent)',       bg: 'var(--gl-accent-soft)', btn: 'gl-btn gl-btn--primary' },
     };
     const cfg = VARIANTS[variant] || VARIANTS.danger;
     const Icon = cfg.icon;
@@ -31,58 +31,38 @@ export default function ConfirmationModal({
     return (
         <div
             onClick={onClose}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}
+            className="gl-scrim"
+            style={{ zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'var(--font)' }}
         >
             <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-label={typeof title === 'string' ? title : undefined}
                 onClick={e => e.stopPropagation()}
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '440px', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'slideUp 220ms cubic-bezier(0.16,1,0.3,1)' }}
+                className="gl-dialog"
+                style={{ width: '100%', maxWidth: '440px' }}
             >
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', background: cfg.bg }}>
+                <div className="gl-dialog-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: cfg.bg }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Icon size={15} style={{ color: cfg.color, flexShrink: 0 }} />
                         <span style={{ fontSize: '13px', fontWeight: 700, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             {title}
                         </span>
                     </div>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', lineHeight: 1, transition: 'color 150ms ease' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                    <button type="button" onClick={onClose} className="gl-icon-btn" aria-label="Close">
                         <X size={14} />
                     </button>
                 </div>
 
-                {}
                 <div style={{ padding: '20px 18px' }}>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.65' }}>{message}</p>
                 </div>
 
-                {}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
-                    <CancelBtn onClick={onClose} label={cancelText} />
-                    <ConfirmBtn onClick={handleConfirm} label={confirmText} bg={cfg.btnBg} color={cfg.btnColor} />
+                <div className="gl-dialog-foot" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 18px' }}>
+                    <button type="button" className="gl-btn" onClick={onClose}>{cancelText}</button>
+                    <button type="button" className={cfg.btn} onClick={handleConfirm}>{confirmText}</button>
                 </div>
             </div>
         </div>
     );
 }
-
-const CancelBtn = ({ onClick, label }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '7px 16px', background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 150ms ease' }}>
-            {label}
-        </button>
-    );
-};
-
-const ConfirmBtn = ({ onClick, label, bg, color }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '7px 16px', background: bg, border: 'none', color, fontSize: '12px', fontWeight: 700, cursor: 'pointer', opacity: hov ? 0.88 : 1, transition: 'opacity 150ms ease' }}>
-            {label}
-        </button>
-    );
-};

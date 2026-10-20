@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, MessageSquare, FileText, NotebookPen, CheckSquare, CalendarClock, Loader2, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
+import { Chip } from '../ui/page';
+import './aiPalette.css';
 
-const TYPE_ICONS = { message: '💬', knowledge: '📄', note: '📝', task: '✅', meeting: '📅', default: '🔍' };
+const TYPE_ICONS = { message: MessageSquare, knowledge: FileText, note: NotebookPen, task: CheckSquare, meeting: CalendarClock };
 const TYPE_LABELS = { message: 'Message', knowledge: 'Page', note: 'Note', task: 'Task', meeting: 'Meeting' };
+const TYPE_TONE = { knowledge: 'success', meeting: 'accent' };
+const SUGGESTIONS = ['meeting notes', 'design review', 'Q2 roadmap', 'onboarding'];
 
 async function apiSearch(query, workspaceId) {
     const { data } = await api.post('/api/ai/search', { query, workspaceId });
@@ -17,14 +22,10 @@ export default function AISearchBar({ workspaceId, onClose }) {
     const inputRef              = useRef(null);
     const debounceRef           = useRef(null);
 
-    
     useEffect(() => { inputRef.current?.focus(); }, []);
 
-    
     useEffect(() => {
-        const handler = (e) => {
-            if (e.key === 'Escape') onClose?.();
-        };
+        const handler = (e) => { if (e.key === 'Escape') onClose?.(); };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [onClose]);
@@ -35,7 +36,7 @@ export default function AISearchBar({ workspaceId, onClose }) {
         try {
             const data = await apiSearch(q.trim(), workspaceId);
             setResults(data.results || []);
-        } catch (e) { setError('Search unavailable'); setResults([]); }
+        } catch { setError('Search is unavailable right now. Try again in a moment.'); setResults([]); }
         finally { setLoading(false); }
     }, [workspaceId]);
 
@@ -46,123 +47,57 @@ export default function AISearchBar({ workspaceId, onClose }) {
         debounceRef.current = setTimeout(() => runSearch(q), 400);
     };
 
-    const overlayStyle = {
-        position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        paddingTop: '12vh',
-        fontFamily: 'Inter, system-ui, sans-serif',
-    };
-
-    const boxStyle = {
-        width: '100%', maxWidth: 600,
-        background: 'var(--bg-secondary, #1e1b35)',
-        border: '1px solid rgba(139,92,246,0.35)',
-        borderRadius: 14, boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
-        overflow: 'hidden',
-    };
-
     return (
-        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && onClose?.()}>
-            <div style={boxStyle}>
-                {}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '14px 16px',
-                    borderBottom: results.length || loading || error ? '1px solid rgba(139,92,246,0.15)' : 'none',
-                }}>
-                    <span style={{ fontSize: 20, opacity: 0.7 }}>🔍</span>
+        <div className="aip-backdrop" onClick={(e) => e.target === e.currentTarget && onClose?.()}>
+            <div className="aip" role="dialog" aria-modal="true" aria-label="Search with AI">
+                <div className="aip-bar">
+                    <span className="aip-mark" aria-hidden="true"><Search size={15} /></span>
                     <input
                         ref={inputRef}
-                        type="text"
+                        className="aip-input"
+                        type="search"
                         value={query}
                         onChange={handleChange}
-                        placeholder="Search messages, knowledge, meetings…"
-                        style={{
-                            flex: 1, background: 'none', border: 'none', outline: 'none',
-                            color: '#f1f5f9', fontSize: 16, fontFamily: 'inherit',
-                        }}
+                        placeholder="Search messages, pages and meetings"
+                        aria-label="Search"
                     />
-                    {loading && (
-                        <div style={{
-                            width: 16, height: 16,
-                            border: '2px solid rgba(139,92,246,0.3)', borderTopColor: '#8b5cf6',
-                            borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0,
-                        }} />
-                    )}
-                    <kbd style={{
-                        padding: '2px 6px', background: 'var(--bg-active)',
-                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4,
-                        fontSize: 11, color: '#64748b',
-                    }}>ESC</kbd>
+                    {loading && <Loader2 size={16} className="cd-spin" style={{ color: 'var(--accent)' }} />}
+                    <kbd className="aip-kbd">Esc</kbd>
                 </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-                {}
-                {error && (
-                    <div style={{ padding: '12px 16px', fontSize: 13, color: '#f87171' }}>
-                        ⚠️ {error}
-                    </div>
-                )}
+                {error && <div className="aip-error" role="alert"><AlertTriangle size={14} /> {error}</div>}
                 {!loading && !error && results.length === 0 && query.length >= 2 && (
-                    <div style={{ padding: '20px 16px', textAlign: 'center', color: '#475569', fontSize: 14 }}>
-                        No results found for "{query}"
-                    </div>
+                    <div className="aip-empty">Nothing found for “{query}”. Try fewer or different words.</div>
                 )}
                 {results.length > 0 && (
-                    <ul style={{ listStyle: 'none', padding: '8px 0', margin: 0, maxHeight: 400, overflowY: 'auto' }}>
-                        {results.map((r, i) => (
-                            <li key={r.id || i} style={{
-                                display: 'flex', alignItems: 'flex-start', gap: 10,
-                                padding: '10px 16px', cursor: 'pointer',
-                                transition: 'background 0.1s',
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.1)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>
-                                    {TYPE_ICONS[r.type] || TYPE_ICONS.default}
-                                </span>
-                                <div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 2 }}>
-                                        {r.title}
+                    <ul className="aip-results">
+                        {results.map((r, i) => {
+                            const Icon = TYPE_ICONS[r.type] || Search;
+                            return (
+                                <li key={r.id || i}>
+                                    <div className="aip-row aip-result" role="button" tabIndex={0}>
+                                        <span className="aip-result-icon" aria-hidden="true"><Icon size={14} /></span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div className="aip-result-title">{r.title}</div>
+                                            <div className="aip-result-snip">
+                                                {r.snippet?.substring(0, 120)}{r.snippet?.length > 120 ? '…' : ''}
+                                            </div>
+                                            <div style={{ marginTop: 4 }}><Chip tone={TYPE_TONE[r.type]}>{TYPE_LABELS[r.type] || r.type}</Chip></div>
+                                        </div>
+                                        {r.score > 0 && <span className="aip-result-score" title="Match">{Math.round(r.score * 100)}%</span>}
                                     </div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4, }}>
-                                        {r.snippet?.substring(0, 120)}{r.snippet?.length > 120 ? '…' : ''}
-                                    </div>
-                                    <span style={{
-                                        display: 'inline-block', marginTop: 4,
-                                        fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
-                                        color: r.type === 'knowledge' ? '#34d399' : r.type === 'meeting' ? '#60a5fa' : '#a78bfa',
-                                        background: r.type === 'knowledge' ? 'rgba(52,211,153,0.12)' : r.type === 'meeting' ? 'rgba(96,165,250,0.12)' : 'rgba(167,139,250,0.12)',
-                                        padding: '2px 6px', borderRadius: 4,
-                                    }}>
-                                        {TYPE_LABELS[r.type] || r.type}
-                                    </span>
-                                </div>
-                                {r.score > 0 && (
-                                    <div style={{ marginLeft: 'auto', fontSize: 11, color: '#475569', flexShrink: 0 }}>
-                                        {Math.round(r.score * 100)}%
-                                    </div>
-                                )}
-                            </li>
-                        ))}
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
 
-                {}
                 {!query && (
-                    <div style={{ padding: '16px 16px', color: '#475569', fontSize: 13 }}>
-                        <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#64748b' }}>Search across your workspace</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {['meeting notes', 'design review', 'Q2 roadmap', 'onboarding'].map(s => (
-                                <button key={s} onClick={() => { setQuery(s); runSearch(s); }} style={{
-                                    background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)',
-                                    borderRadius: 12, padding: '3px 10px', fontSize: 12, color: '#a78bfa',
-                                    cursor: 'pointer', fontFamily: 'inherit',
-                                }}>
-                                    {s}
-                                </button>
+                    <div className="aip-section">
+                        <span className="aip-cap">Search across your workspace</span>
+                        <div className="aip-chips">
+                            {SUGGESTIONS.map(s => (
+                                <button key={s} type="button" className="aip-chip" onClick={() => { setQuery(s); runSearch(s); }}>{s}</button>
                             ))}
                         </div>
                     </div>

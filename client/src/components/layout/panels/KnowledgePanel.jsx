@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { BookOpen, Plus, ChevronRight, ChevronDown, Network, Search, Book } from 'lucide-react';
+import { BookOpen, Plus, ChevronRight, ChevronDown, Network, Search, Book, FileText } from 'lucide-react';
 import { useKnowledge } from '../../../hooks/useKnowledge';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
 import '../../../styles/gloss-x-panels.css';
+
+// Same event KnowledgePage sends when pages are created, renamed or deleted.
+const KNOWLEDGE_CHANGED = 'oruinwan:knowledge-changed';
+
+/** A page's own emoji, or a plain document mark for the default one. */
+const PageMark = ({ icon }) => (icon && icon !== '📄'
+    ? <span className="gl-x-emoji">{icon}</span>
+    : <FileText size={13} className="gl-x-item-icon" style={{ flexShrink: 0 }} aria-hidden="true" />);
 
 function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, activePath }) {
     const children = allPages.filter(p => p.parentId === page._id || p.parentId?.toString?.() === page._id?.toString?.());
@@ -24,8 +32,8 @@ function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, acti
                         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     </span>
                 ) : <span className="gl-x-caret" />}
-                <span className="gl-x-emoji">{page.icon || '📄'}</span>
-                <span className="gl-x-item-title">{page.title}</span>
+                <PageMark icon={page.icon} />
+                <span className="gl-x-item-title">{page.title || 'Untitled page'}</span>
             </button>
             {open && children.map(child => (
                 <PageTreeItem
@@ -51,15 +59,22 @@ const KnowledgePanel = ({ title }) => {
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        if (workspaceId) listPages(workspaceId);
+        if (!workspaceId) return undefined;
+        listPages(workspaceId);
+        const reload = () => listPages(workspaceId);
+        window.addEventListener(KNOWLEDGE_CHANGED, reload);
+        return () => window.removeEventListener(KNOWLEDGE_CHANGED, reload);
     }, [workspaceId, listPages]);
 
     const handleCreatePage = async () => {
         if (creating) return;
         setCreating(true);
         try {
-            const page = await createPage(workspaceId, { title: 'Untitled Page', content: '' });
+            const page = await createPage(workspaceId, { title: 'Untitled page', content: '' });
+            window.dispatchEvent(new Event(KNOWLEDGE_CHANGED));
             navigate(`/workspace/${workspaceId}/knowledge/${page._id}`);
+        } catch {
+            // The page shows nothing new; the button can be tried again.
         } finally {
             setCreating(false);
         }
@@ -80,7 +95,7 @@ const KnowledgePanel = ({ title }) => {
             actions={(
                 <>
                     <button type="button" className={`gl-icon-btn${onGraph ? ' is-active' : ''}`} onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
-                        title="Knowledge Graph" aria-label="Knowledge Graph">
+                        title="Knowledge graph" aria-label="Knowledge graph">
                         <Network size={14} />
                     </button>
                     <button type="button" className="gl-icon-btn" onClick={handleCreatePage} disabled={creating} title="New page" aria-label="New page">
@@ -91,7 +106,7 @@ const KnowledgePanel = ({ title }) => {
             tools={(
                 <div className="gl-search">
                     <Search size={12} />
-                    <input className="gl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find page…" aria-label="Find page" />
+                    <input className="gl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a page…" aria-label="Find a page" />
                 </div>
             )}
             footer={(
@@ -103,7 +118,7 @@ const KnowledgePanel = ({ title }) => {
             <button type="button" className={`gl-item${onHandbook ? ' is-active' : ''}`} aria-current={onHandbook ? 'page' : undefined}
                 onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}>
                 <Book size={13} className="gl-x-accent" style={{ flexShrink: 0 }} />
-                <span className="gl-x-item-title">Company Handbook</span>
+                <span className="gl-x-item-title">Company handbook</span>
             </button>
 
             <PanelSection label={search ? 'Results' : 'Pages'}>
@@ -112,10 +127,10 @@ const KnowledgePanel = ({ title }) => {
                     <PanelEmpty
                         icon={BookOpen}
                         title={search ? 'No matching pages' : 'No pages yet'}
-                        text={search ? 'Try a different title.' : 'Write down how your team works — pages can nest.'}
+                        text={search ? 'Try a different title.' : 'Write down how your team works. Pages can nest inside each other.'}
                         action={!search && (
                             <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={handleCreatePage} disabled={creating}>
-                                <Plus size={12} /> Create first page
+                                <Plus size={12} /> Write your first page
                             </button>
                         )}
                     />
@@ -124,8 +139,8 @@ const KnowledgePanel = ({ title }) => {
                     ? filtered.map(page => (
                         <button key={page._id} type="button" className={`gl-item${id === page._id ? ' is-active' : ''}`}
                             onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${page._id}`)}>
-                            <span className="gl-x-emoji">{page.icon || '📄'}</span>
-                            <span className="gl-x-item-title">{page.title}</span>
+                            <PageMark icon={page.icon} />
+                            <span className="gl-x-item-title">{page.title || 'Untitled page'}</span>
                         </button>
                     ))
                     : filtered.map(page => (

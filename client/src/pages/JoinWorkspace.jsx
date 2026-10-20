@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import * as Icons from "lucide-react";
 import api from '@services/api';
 import logger from '../utils/logger';
+import AuthShell from '../components/public/AuthShell';
+import { AuthMark, AuthHead, AuthStatus, AuthLoading } from '../components/public/AuthParts';
+
+const { AlertCircle, ArrowRight, Users, Shield, Rocket, Hash, UserRound } = Icons;
+
+const workspaceIcon = (iconName) => {
+    if (!iconName) return Rocket;
+    return Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)] || Hash;
+};
 
 const JoinWorkspace = () => {
     const navigate = useNavigate();
@@ -18,7 +27,7 @@ const JoinWorkspace = () => {
 
     useEffect(() => {
         if (!token) {
-            setError("Invalid invitation link");
+            setError("This invitation link is incomplete. Open it again from the email or message you received.");
             setLoading(false);
             return;
         }
@@ -29,7 +38,7 @@ const JoinWorkspace = () => {
                 setWorkspaceDetails(response.data);
                 setLoading(false);
             } catch (err) {
-                setError(err.response?.data?.message || err.message || "Failed to fetch invitation details");
+                setError(err.response?.data?.message || err.message || "We couldn’t load this invitation.");
                 setLoading(false);
             }
         };
@@ -37,10 +46,14 @@ const JoinWorkspace = () => {
         fetchDetails();
     }, [token]);
 
+    const goToSignIn = (signup) => {
+        localStorage.setItem('pendingInvite', token);
+        navigate(signup ? '/login?mode=signup' : '/login');
+    };
+
     const handleJoin = async () => {
         if (!user) {
-            localStorage.setItem('pendingInvite', token);
-            navigate('/login');
+            goToSignIn(false);
             return;
         }
 
@@ -59,314 +72,91 @@ const JoinWorkspace = () => {
             });
         } catch (err) {
             logger.error('Join workspace error:', err);
-            setError(err.response?.data?.message || err.message || "Failed to join workspace");
+            setError(err.response?.data?.message || err.message || "We couldn’t add you to this workspace.");
             setJoining(false);
         }
     };
 
-    const renderWorkspaceIcon = (iconName) => {
-        if (!iconName) return <Icons.Rocket size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
-        const IconComponent = Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)];
-        if (IconComponent) {
-            return <IconComponent size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
-        }
-        return <Icons.Hash size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
-    };
-
-    const styles = {
-        root: {
-            minHeight: '100vh',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--bg-base, #0c0c0c)',
-            fontFamily: 'var(--font, Inter, system-ui, sans-serif)',
-            position: 'relative',
-            color: 'var(--text-primary, #e4e4e4)',
-            padding: '24px',
-            boxSizing: 'border-box',
-            overflow: 'hidden'
-        },
-        bgGlow: {
-            position: 'absolute',
-            top: '30%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '500px',
-            height: '500px',
-            background: 'radial-gradient(circle, var(--accent-dim, rgba(184,149,106,0.07)) 0%, transparent 70%)',
-            pointerEvents: 'none',
-            zIndex: 0
-        },
-        topBrand: {
-            position: 'absolute',
-            top: '24px',
-            left: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            cursor: 'pointer',
-            zIndex: 10
-        },
-        card: {
-            position: 'relative',
-            zIndex: 1,
-            width: '100%',
-            maxWidth: '440px',
-            background: 'var(--bg-surface, #111111)',
-            border: '1px solid var(--border-default, #222222)',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
-            padding: '36px 32px',
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center'
-        },
-        iconBox: {
-            width: '52px',
-            height: '52px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--accent-dim, rgba(184,149,106,0.12))',
-            border: '1px solid rgba(184,149,106,0.3)',
-            marginBottom: '20px',
-            flexShrink: 0
-        },
-        title: {
-            fontSize: '22px',
-            fontWeight: 700,
-            color: 'var(--text-primary, #e4e4e4)',
-            letterSpacing: '-0.02em',
-            margin: '0 0 8px 0'
-        },
-        accentText: {
-            color: 'var(--accent, #b8956a)'
-        },
-        inviterBadge: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '4px 12px',
-            background: 'var(--bg-input, #141414)',
-            border: '1px solid var(--border-subtle, #191919)',
-            fontSize: '12px',
-            color: 'var(--text-secondary, #7a7a7a)',
-            marginBottom: '16px'
-        },
-        description: {
-            fontSize: '13px',
-            color: 'var(--text-secondary, #7a7a7a)',
-            lineHeight: 1.6,
-            margin: '0 0 24px 0',
-            maxWidth: '360px'
-        },
-        statsGrid: {
-            width: '100%',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px',
-            marginBottom: '28px'
-        },
-        statBox: {
-            background: 'var(--bg-input, #141414)',
-            border: '1px solid var(--border-subtle, #191919)',
-            padding: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '4px'
-        },
-        statValue: {
-            fontSize: '18px',
-            fontWeight: 700,
-            color: 'var(--text-primary, #e4e4e4)'
-        },
-        statLabel: {
-            fontSize: '10px',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            color: 'var(--text-secondary, #7a7a7a)',
-            textTransform: 'uppercase'
-        },
-        primaryBtn: {
-            width: '100%',
-            padding: '12px 16px',
-            background: 'var(--accent, #b8956a)',
-            color: '#0c0c0c',
-            border: 'none',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 150ms ease',
-            fontFamily: 'inherit'
-        },
-        secondaryBtn: {
-            width: '100%',
-            padding: '10px 16px',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-secondary, #7a7a7a)',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'color 150ms ease',
-            marginTop: '8px',
-            fontFamily: 'inherit'
-        },
-        footerText: {
-            marginTop: '24px',
-            fontSize: '11px',
-            color: 'var(--text-secondary, #7a7a7a)',
-            letterSpacing: '0.05em'
-        }
-    };
-
-    if (loading) {
-        return (
-            <div style={styles.root}>
-                <div style={styles.bgGlow} />
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 1 }}>
-                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '32px', height: '32px', opacity: 0.5 }} />
-                    <div style={{ height: '2px', width: '80px', background: 'var(--accent-dim, rgba(184,149,106,0.2))', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: 'var(--accent, #b8956a)', animation: 'slideBar 1.2s ease-in-out infinite' }} />
-                    </div>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary, #7a7a7a)', margin: 0 }}>Verifying invitation...</p>
-                </div>
-                <style>{`@keyframes slideBar { from{left:-40px} to{left:100%} }`}</style>
-            </div>
-        );
-    }
+    if (loading) return <AuthLoading title="Join workspace" label="Checking your invitation…" />;
 
     if (error) {
         return (
-            <div style={styles.root}>
-                <div style={styles.bgGlow} />
-                <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
-                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Oruinwan</span>
-                </div>
-
-                <div style={{ ...styles.card, border: '1px solid rgba(224,82,82,0.3)' }}>
-                    <div style={{ ...styles.iconBox, background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)' }}>
-                        <Icons.AlertCircle size={22} style={{ color: 'var(--state-danger, #e05252)' }} />
-                    </div>
-                    <h1 style={styles.title}>Invitation Error</h1>
-                    <p style={{ ...styles.description, color: 'var(--text-secondary)', marginBottom: '24px' }}>{error}</p>
-                    <button
-                        onClick={() => navigate('/workspaces')}
-                        style={styles.primaryBtn}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover, #c9a87c)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent, #b8956a)'}
-                    >
-                        Go to Workspaces
-                    </button>
-                </div>
-            </div>
+            <AuthShell title="Invitation">
+                <AuthStatus
+                    icon={AlertCircle}
+                    tone="bad"
+                    title="This invitation can’t be used"
+                    lead={error}
+                    actions={<>
+                        <p className="orw-hint">Invitation links can expire or be used up. Ask the person who invited you to send a new one.</p>
+                        <button type="button" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block"
+                            onClick={() => navigate(user ? '/workspaces' : '/login')}>
+                            {user ? 'Go to your workspaces' : 'Sign in'} <ArrowRight size={15} />
+                        </button>
+                        <Link to="/" className="orw-link">Back to home</Link>
+                    </>}
+                />
+            </AuthShell>
         );
     }
 
     if (!workspaceDetails) return null;
 
+    const name = workspaceDetails.workspaceName;
+    const role = workspaceDetails.role || 'member';
+    const WsIcon = workspaceIcon(workspaceDetails.workspaceIcon);
+
     return (
-        <div style={styles.root}>
-            <div style={styles.bgGlow} />
+        <AuthShell
+            title={`Join ${name}`}
+            aside={<>
+                <h1 className="orw-auth__title">You’re invited to<br /><span className="orw-gloss-text">{name}.</span></h1>
+                <p className="orw-auth__lead">Join to see its channels, message the team and pick up where everyone else is.</p>
+            </>}
+        >
+            <AuthMark icon={WsIcon} />
+            <AuthHead eyebrow="Workspace invitation" title={`Join ${name}`}>
+                <strong>{workspaceDetails.invitedBy}</strong> invited you to join as {role === 'admin' ? 'an' : 'a'} {role}.
+            </AuthHead>
 
-            <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
-                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px' }} />
-                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Oruinwan</span>
-            </div>
+            {workspaceDetails.workspaceDescription && (
+                <p className="orw-callout" style={{ marginTop: 0 }}>{workspaceDetails.workspaceDescription}</p>
+            )}
 
-            <div style={styles.card}>
-                <div style={styles.iconBox}>
-                    {renderWorkspaceIcon(workspaceDetails.workspaceIcon)}
+            <dl className="orw-auth-facts">
+                <div>
+                    <dt><Users size={12} aria-hidden="true" /> Members</dt>
+                    <dd>{workspaceDetails.memberCount ?? '—'}</dd>
                 </div>
-
-                <h1 style={styles.title}>
-                    Join <span style={styles.accentText}>{workspaceDetails.workspaceName}</span>
-                </h1>
-
-                <div style={styles.inviterBadge}>
-                    <span>Invited by</span>
-                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{workspaceDetails.invitedBy}</strong>
+                <div>
+                    <dt><Shield size={12} aria-hidden="true" /> Your role</dt>
+                    <dd>{role}</dd>
                 </div>
+            </dl>
 
-                {workspaceDetails.workspaceDescription && (
-                    <p style={styles.description}>
-                        {workspaceDetails.workspaceDescription}
+            <div className="orw-auth-actions">
+                <button type="button" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block"
+                    onClick={handleJoin} disabled={joining} aria-busy={joining}>
+                    {joining ? 'Joining…' : <>{user ? `Join ${name}` : 'Sign in to join'} <ArrowRight size={15} /></>}
+                </button>
+                {user ? (
+                    <p className="orw-hint" style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <UserRound size={12} aria-hidden="true" /> Joining as {user.email || user.username}
                     </p>
-                )}
-
-                <div style={styles.statsGrid}>
-                    <div style={styles.statBox}>
-                        <Icons.Users size={16} style={{ color: 'var(--accent, #b8956a)', marginBottom: '2px' }} />
-                        <span style={styles.statValue}>{workspaceDetails.memberCount}</span>
-                        <span style={styles.statLabel}>Members</span>
-                    </div>
-                    <div style={styles.statBox}>
-                        <Icons.Shield size={16} style={{ color: 'var(--accent, #b8956a)', marginBottom: '2px' }} />
-                        <span style={{ ...styles.statValue, textTransform: 'capitalize' }}>{workspaceDetails.role}</span>
-                        <span style={styles.statLabel}>Your Role</span>
-                    </div>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                    <button
-                        onClick={handleJoin}
-                        disabled={joining}
-                        style={{
-                            ...styles.primaryBtn,
-                            opacity: joining ? 0.7 : 1,
-                            cursor: joining ? 'not-allowed' : 'pointer'
-                        }}
-                        onMouseEnter={e => { if (!joining) e.currentTarget.style.background = 'var(--accent-hover, #c9a87c)'; }}
-                        onMouseLeave={e => { if (!joining) e.currentTarget.style.background = 'var(--accent, #b8956a)'; }}
-                    >
-                        {joining ? (
-                            <>
-                                <Icons.Loader size={16} className="animate-spin" />
-                                Joining...
-                            </>
-                        ) : (
-                            <>
-                                {user ? 'Join Workspace' : 'Sign In & Join'}
-                                <Icons.ArrowRight size={15} />
-                            </>
-                        )}
+                ) : (
+                    <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={() => goToSignIn(true)}>
+                        New here? Create an account
                     </button>
-
-                    <button
-                        onClick={() => navigate('/workspaces')}
-                        disabled={joining}
-                        style={styles.secondaryBtn}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-                    >
-                        No thanks, maybe later
-                    </button>
-                </div>
-
-                {!user && (
-                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '20px', margin: '20px 0 0 0' }}>
-                        Secure Invite System • Sign in or create an account to proceed
-                    </p>
                 )}
             </div>
 
-            <div style={styles.footerText}>
-                © 2026 Oruinwan Inc.
-            </div>
-        </div>
+            <p className="orw-auth__note">
+                <button type="button" className="orw-link" onClick={() => navigate(user ? '/workspaces' : '/')} disabled={joining}>
+                    Not now
+                </button>
+            </p>
+        </AuthShell>
     );
 };
 
 export default JoinWorkspace;
-
-

@@ -41,22 +41,23 @@ const TYPE_LABEL = {
     knowledge: 'Knowledge',
 };
 
+// Theme tokens only: urgency reads as danger → warning → muted, progress as success / accent.
 const PRIORITY_COLOR = {
-    highest: '#ef4444',
-    high:    '#f97316',
-    medium:  '#eab308',
-    low:     '#22c55e',
-    lowest:  '#94a3b8',
+    highest: 'var(--state-danger)',
+    high:    'var(--state-danger)',
+    medium:  'var(--state-warning, var(--color-warning))',
+    low:     'var(--text-secondary)',
+    lowest:  'var(--text-muted)',
 };
 
 const STATUS_COLOR = {
-    done:       '#22c55e',
-    in_progress:'#3b82f6',
-    review:     '#a855f7',
-    blocked:    '#ef4444',
-    todo:       '#64748b',
-    backlog:    '#94a3b8',
-    cancelled:  '#94a3b8',
+    done:       'var(--state-success)',
+    in_progress:'var(--accent)',
+    review:     'var(--accent)',
+    blocked:    'var(--state-danger)',
+    todo:       'var(--text-muted)',
+    backlog:    'var(--text-muted)',
+    cancelled:  'var(--text-muted)',
 };
 
 function formatDate(dateStr) {
@@ -101,7 +102,8 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                 const parentId = parent.id || result.dmId || result.channelId;
                 if (!parentId) break;
                 const isDm = parent.type ? parent.type === 'dm' : !!result.dmId;
-                navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}`);
+                const thread = result.threadParentId ? `?thread=${result.threadParentId}` : '';
+                navigate(`${base}/${isDm ? 'dm' : 'channel'}/${parentId}${thread}`);
                 break;
             }
             // People: open (or start) the direct message with them.
@@ -174,8 +176,8 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                         )}
                         {type === 'task' && (
                             <span className="search-result-sub">
-                                <span className="search-result-status-dot" style={{ background: STATUS_COLOR[result.status] || '#94a3b8' }} />
-                                {result.status?.replace('_', ' ')}
+                                <span className="search-result-status-dot" style={{ background: STATUS_COLOR[result.status] || 'var(--text-muted)' }} />
+                                {(result.status || '').replace(/_/g, ' ')}
                                 {result.priority && (
                                     <span className="search-result-priority" style={{ color: PRIORITY_COLOR[result.priority] }}>
                                         · {result.priority}

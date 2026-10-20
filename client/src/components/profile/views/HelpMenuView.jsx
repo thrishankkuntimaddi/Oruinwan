@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ChevronLeft, BookOpen, Keyboard, Bug, Sparkles, LifeBuoy, Inbox, Search, ExternalLink,
+    ChevronLeft, BookOpen, Keyboard, Bug, Sparkles, LifeBuoy, Inbox, Search, ExternalLink, Compass,
 } from 'lucide-react';
 import { searchArticles } from '../../../content/helpArticles';
 import { openHelp, useHelpEntryPoint } from '../../help/helpStore';
+import { startTour } from '../../tour/tourState';
+import '../profileMenu.css';
 
 // Each item opens the shared Help panel (components/help) at the matching view.
 const ITEMS = [
@@ -16,46 +18,23 @@ const ITEMS = [
     { key: 'requests',  label: 'Your requests',      Icon: Inbox,     open: { view: 'requests' } },
 ];
 
-const rowStyle = {
-    width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-    padding: '9px 12px', fontSize: '13px', fontWeight: 500,
-    color: 'var(--text-secondary)', background: 'transparent',
-    border: 'none', cursor: 'pointer', textAlign: 'left',
-    fontFamily: 'var(--font, Inter, system-ui, sans-serif)', transition: 'all 150ms ease',
-};
-
-const hoverOn = (e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; };
-const hoverOff = (e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; };
-
 /**
  * Help & Support in the profile menu: a quick article search plus shortcuts
  * into the Help panel. `onNavigate` is kept for ProfileSidebar's API but is no
  * longer used — the old placeholder views were replaced by the Help panel.
  */
-const HelpMenuView = ({ onBack }) => {
+const HelpMenuView = ({ onBack, onClose }) => {
     const navigate = useNavigate();
     useHelpEntryPoint(navigate);
     const [query, setQuery] = useState('');
     const results = useMemo(() => (query.trim() ? searchArticles(query).slice(0, 5) : []), [query]);
 
     return (
-        <div
-            className="gl-card"
-            style={{
-                width: '280px', background: 'var(--bg-surface)',
-                boxShadow: 'var(--gl-spec), 0 24px 80px rgba(0,0,0,0.5)',
-                overflow: 'hidden', fontFamily: 'var(--font, Inter, system-ui, sans-serif)',
-            }}
-        >
-            <div style={{
-                padding: '10px 12px', display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)',
-            }}>
-                <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={onBack} style={{ paddingLeft: 4 }}>
-                    <ChevronLeft size={13} aria-hidden="true" /> Back
-                </button>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Help &amp; Support</span>
-                <div style={{ width: '52px' }} />
+        <div className="pm" role="dialog" aria-label="Help and support">
+            <div className="pm-head">
+                <button type="button" className="pm-back" onClick={onBack}><ChevronLeft size={14} aria-hidden="true" /> Back</button>
+                <h2>Help and support</h2>
+                <span />
             </div>
 
             <form role="search" onSubmit={(e) => { e.preventDefault(); openHelp({ query }); }} style={{ padding: '10px 12px 4px' }}>
@@ -77,11 +56,10 @@ const HelpMenuView = ({ onBack }) => {
                 {query.trim() ? (
                     <>
                         {results.map((a) => (
-                            <button key={a.id} type="button" style={{ ...rowStyle, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}
-                                onMouseEnter={hoverOn} onMouseLeave={hoverOff}
+                            <button key={a.id} type="button" className="pm-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}
                                 onClick={() => openHelp({ view: 'article', articleId: a.id })}>
-                                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{a.title}</span>
-                                <span style={{ fontSize: 11.5, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.summary}</span>
+                                <span style={{ fontWeight: 600 }}>{a.title}</span>
+                                <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.summary}</span>
                             </button>
                         ))}
                         {!results.length && (
@@ -91,19 +69,24 @@ const HelpMenuView = ({ onBack }) => {
                         )}
                     </>
                 ) : (
-                    ITEMS.map(({ key, label, Icon, open }) => (
-                        <button key={key} type="button" style={rowStyle}
-                            onMouseEnter={hoverOn} onMouseLeave={hoverOff}
-                            onClick={() => openHelp(open)}>
-                            <Icon size={15} aria-hidden="true" style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                            {label}
+                    <>
+                        {ITEMS.map(({ key, label, Icon, open }) => (
+                            <button key={key} type="button" className="pm-item" onClick={() => openHelp(open)}>
+                                <Icon size={15} aria-hidden="true" />
+                                {label}
+                            </button>
+                        ))}
+                        {/* The first-run tour of the workspace (components/tour). */}
+                        <button type="button" className="pm-item" onClick={() => { onClose?.(); startTour(); }}>
+                            <Compass size={15} aria-hidden="true" />
+                            Take the tour again
                         </button>
-                    ))
+                    </>
                 )}
-                <a href="/help" target="_blank" rel="noopener noreferrer" style={{ ...rowStyle, textDecoration: 'none', borderTop: '1px solid var(--border-subtle)', marginTop: 4 }}
-                    onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
-                    <ExternalLink size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
-                    Open full help center
+                <div className="pm-rule" aria-hidden="true" />
+                <a href="/help" target="_blank" rel="noopener noreferrer" className="pm-item" style={{ textDecoration: 'none' }}>
+                    <ExternalLink size={15} aria-hidden="true" />
+                    Open the help centre
                 </a>
             </div>
         </div>

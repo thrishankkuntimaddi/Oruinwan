@@ -4,6 +4,7 @@ import { MessagesSquare, Headphones, Sparkles, Lock } from 'lucide-react';
 import BrandMark from '../../shared/components/ui/BrandMark';
 import BRAND from '../../shared/brand';
 import { OrwRoot, usePublicPage } from './PublicKit';
+import './authLight.css';
 
 const POINTS = [
     { icon: MessagesSquare, text: 'Channels, DMs and threads' },
@@ -26,7 +27,7 @@ const Logo = () => (
 const AuthShell = ({ title, aside, children }) => {
     usePublicPage(title);
     return (
-        <OrwRoot>
+        <OrwRoot className="orw--auth">
             <div className="orw-auth">
                 <aside className="orw-auth__aside">
                     <Logo />

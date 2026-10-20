@@ -110,12 +110,12 @@ export function BlockedReasonDialog({ taskTitle, onConfirm, onCancel }) {
     return (
         <div role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={{
             position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'var(--bg-overlay, rgba(0,0,0,0.6))',
+            backgroundColor: 'var(--bg-overlay)',
         }}>
             <form role="dialog" aria-label="Block task" onSubmit={submit} style={{
                 width: 380, maxWidth: 'calc(100vw - 32px)', backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)', borderRadius: '2px', fontFamily: FONT,
-                boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+                boxShadow: 'var(--lg-shadow-sm)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
                     <AlertTriangle size={14} style={{ color: 'var(--state-danger)' }} />
@@ -148,7 +148,7 @@ export function BlockedReasonDialog({ taskTitle, onConfirm, onCancel }) {
 export const primaryBtn = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-    color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer',
+    color: 'var(--bg-base)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer',
 };
 
 export const secondaryBtn = {

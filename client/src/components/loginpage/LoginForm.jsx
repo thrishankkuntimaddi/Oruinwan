@@ -2,37 +2,14 @@ import { useState, useEffect, useContext, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useGoogleLogin } from '@react-oauth/google';
 import api from '@services/api';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { IS_APP, IS_SITE } from '../../appMode/env';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { IS_APP } from '../../appMode/env';
+import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, finishGoogleSession } from './googleContinue';
+import CheckEmailPanel from './CheckEmailPanel';
 
-// Apps and the product website render no GoogleOAuthProvider (main.jsx) and never load
-// Google's script.
-const useGoogleSignIn = IS_APP || IS_SITE ? () => () => {} : useGoogleLogin;
-
-const GoogleIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-    </svg>
-);
-
-const GitHubIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-1.455-3.795-1.455-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.86 2.805 1.32 3.495 1.005.105-.78.42-1.32.765-1.62-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.28-1.56 3.285-1.245 3.285-1.245.675 1.65.255 2.88.135 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-);
-
-const LinkedInIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="#0a8fd6" aria-hidden="true">
-        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-    </svg>
-);
-
-const LoginForm = ({ initialEmail = '' }) => {
+const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     const [formData, setFormData] = useState({ email: initialEmail, password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -40,6 +17,8 @@ const LoginForm = ({ initialEmail = '' }) => {
     const [twoFactor, setTwoFactor] = useState(null);
     const [otp, setOtp] = useState('');
     const [otpError, setOtpError] = useState('');
+    // Set when the password was right but the email was never verified.
+    const [unverifiedEmail, setUnverifiedEmail] = useState(null);
     const { login, setUser } = useContext(AuthContext);
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -86,6 +65,10 @@ const LoginForm = ({ initialEmail = '' }) => {
                 navigate(`/reactivate?email=${encodeURIComponent(formData.email)}`);
                 return;
             }
+            if (err.response?.data?.emailNotVerified) {
+                setUnverifiedEmail(err.response.data.email || formData.email);
+                return;
+            }
             if (err.response?.data?.requires2FA) {
                 setTwoFactor({ via: 'password' });
                 setOtpError(err.response.data.invalidCode ? err.response.data.message : '');
@@ -98,25 +81,12 @@ const LoginForm = ({ initialEmail = '' }) => {
         }
     };
 
-    const finishGoogle = (data) => {
-        localStorage.setItem('accessToken', data.accessToken);
-        setUser(data.user);
-        showToast('Google login successful!', 'success');
-        if (data.requiresPasswordSetup || data.isFirstLogin) {
-            localStorage.setItem('oauthPasswordSetupRequired', 'true');
-            localStorage.setItem('oauthProvider', 'google');
-            navigate('/set-password'); return;
-        }
-        const isPlatformAdmin = data.user?.roles?.includes('chttrix_admin');
-        if (isPlatformAdmin) navigate('/platform-admin');
-        else if (data.user?.companyRole === 'owner') navigate('/owner/dashboard');
-        else navigate('/workspaces');
-    };
-
     const signInWithGoogle = async (googleToken, code) => {
         try {
             const res = await api.post('/api/auth/google-login', { accessToken: googleToken, ...(code ? { otp: code } : {}) });
-            finishGoogle(res.data);
+            if (res.data?.needsSignup) { onGoogleSignup?.(res.data); return; }
+            showToast('Signed in with Google', 'success');
+            finishGoogleSession(res.data, { setUser, navigate });
         } catch (err) {
             const data = err.response?.data;
             if (data?.requires2FA) {
@@ -150,18 +120,51 @@ const LoginForm = ({ initialEmail = '' }) => {
         await handleSubmit(e);
     };
 
+    // Passkey sign-in: the browser shows its own fingerprint / face / screen-lock prompt.
+    // The server skips the authenticator-app code for passkeys (they are already two factors).
+    const [passkeyBusy, setPasskeyBusy] = useState(false);
+    const signInWithPasskey = async () => {
+        setPasskeyBusy(true);
+        try {
+            const email = formData.email.trim();
+            const { data: optionsJSON } = await api.post('/api/auth/passkeys/login/options', email ? { email } : {});
+            let response;
+            try {
+                response = await startAuthentication({ optionsJSON });
+            } catch (err) {
+                // Closing the browser's prompt is not an error worth a red toast.
+                if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') {
+                    showToast(err?.message || "Your browser couldn't use a passkey", 'error');
+                }
+                return;
+            }
+            const res = await api.post('/api/auth/passkeys/login/verify', { response });
+            showToast('Signed in with a passkey', 'success');
+            finishGoogleSession(res.data, { setUser, navigate });
+        } catch (err) {
+            const data = err.response?.data;
+            if (data?.requiresReactivation) {
+                showToast('Account deactivated. Check your email for reactivation code.', 'info');
+                navigate(`/reactivate?email=${encodeURIComponent(data.email || '')}`);
+                return;
+            }
+            showToast(data?.message || err.message || 'Passkey sign-in failed', 'error');
+        } finally {
+            setPasskeyBusy(false);
+        }
+    };
+
     const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
 
-    const socials = [
-        // Google also needs the build's client id (VITE_GOOGLE_CLIENT_ID) to load its script.
-        ...(import.meta.env.VITE_GOOGLE_CLIENT_ID && providers.google ? [{ icon: <GoogleIcon />, label: 'Google', onClick: googleLogin }] : []),
-        // These sign-ins return to the server's own web page, so the desktop and tablet apps
-        // (src/appMode) offer email and password only.
-        ...(IS_APP ? [] : [
-            ...(providers.github ? [{ icon: <GitHubIcon />, label: 'GitHub', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github?return=${encodeURIComponent(window.location.origin)}`; } }] : []),
-            ...(providers.linkedin ? [{ icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => { window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin?return=${encodeURIComponent(window.location.origin)}`; } }] : []),
-        ]),
-    ];
+    // Google sign-in returns to the server's own web page, so the desktop and tablet apps
+    // (src/appMode) offer email and password only.
+    const showGoogle = !IS_APP && googleAvailable(providers);
+    // Passkeys are bound to the web origin, so the desktop and tablet apps leave them out too.
+    const showPasskey = !IS_APP && typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
+
+    if (unverifiedEmail) {
+        return <CheckEmailPanel email={unverifiedEmail} reason="unverified" onBack={() => setUnverifiedEmail(null)} />;
+    }
 
     if (twoFactor) {
         return (
@@ -185,7 +188,7 @@ const LoginForm = ({ initialEmail = '' }) => {
                     <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={otp.length !== 6 || loading} aria-busy={loading}>
                         {loading ? 'Verifying…' : <><ShieldCheck size={15} /> Verify and sign in</>}
                     </button>
-                    <button type="button" className="orw-link" onClick={leaveTwoFactor} style={{ alignSelf: 'center' }}>
+                    <button type="button" className="orw-link" onClick={leaveTwoFactor} style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         <ArrowLeft size={13} /> Use a different account
                     </button>
                 </form>
@@ -203,7 +206,7 @@ const LoginForm = ({ initialEmail = '' }) => {
             <form onSubmit={handleSubmit} className="orw-form">
                 <div className="orw-field">
                     <label className="orw-label" htmlFor={`${uid}-email`}>Email</label>
-                    <input id={`${uid}-email`} name="email" type="email" placeholder="you@company.com" required
+                    <input id={`${uid}-email`} name="email" type="email" placeholder="you@example.com" required
                         value={formData.email} onChange={handleChange} autoComplete="email"
                         className="orw-input" />
                 </div>
@@ -231,21 +234,15 @@ const LoginForm = ({ initialEmail = '' }) => {
                 </button>
             </form>
 
-            {socials.length > 0 && (
-                <>
-                    <div className="orw-auth__divider">Or continue with</div>
-
-                    <div className="orw-auth__social">
-                        {socials.map(btn => (
-                            <button key={btn.label} type="button" className="orw-btn orw-btn--ghost" onClick={btn.onClick}
-                                aria-label={`Continue with ${btn.label}`} title={`Continue with ${btn.label}`}>
-                                {btn.icon}
-                            </button>
-                        ))}
-                    </div>
-                </>
+            {(showGoogle || showPasskey) && <div className="orw-auth__divider">Or</div>}
+            {showGoogle && <ContinueWithGoogle onClick={googleLogin} />}
+            {showPasskey && (
+                <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={signInWithPasskey}
+                    disabled={passkeyBusy} aria-busy={passkeyBusy} data-testid="sign-in-with-passkey"
+                    style={showGoogle ? { marginTop: 10 } : undefined}>
+                    <KeyRound size={15} /> {passkeyBusy ? 'Waiting for your passkey…' : 'Sign in with a passkey'}
+                </button>
             )}
-
         </div>
     );
 };

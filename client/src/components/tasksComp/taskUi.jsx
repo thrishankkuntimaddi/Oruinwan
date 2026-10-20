@@ -120,7 +120,7 @@ export function TaskDialog({ title, subtitle, icon, onClose, children, footer, w
         <div className="tasks-ui" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
             style={{ position: 'fixed', inset: 0, zIndex, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', fontFamily: FONT }}
             onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-            <div style={{ width: '100%', maxWidth: width, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: '0 24px 64px rgba(0,0,0,0.45)' }}>
+            <div style={{ width: '100%', maxWidth: width, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--border-default)' }}>
                     {icon && (
                         <span style={{ width: '32px', height: '32px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: tint(accent, 15), border: `1px solid ${tint(accent, 35)}`, color: accent, flexShrink: 0 }}>{icon}</span>

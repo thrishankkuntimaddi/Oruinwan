@@ -40,6 +40,14 @@ export function rememberAvatar(user) {
   }
 }
 
+/** Drop a user's remembered picture (after they remove or replace their photo). */
+export function forgetAvatar(user) {
+  if (!user) return;
+  for (const key of [idKey(userId(user)), nameKey(user.username)]) {
+    if (key) knownPictures.delete(key);
+  }
+}
+
 /** Remember every user in a list (members, participants...). */
 export function rememberAvatars(users) {
   (users || []).forEach((u) => rememberAvatar(u?.user && typeof u.user === 'object' ? u.user : u));

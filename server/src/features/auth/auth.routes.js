@@ -1,7 +1,6 @@
 const logger = require('../../../utils/logger');
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
 
 const {
   signup,
@@ -214,180 +213,20 @@ router.get("/users", requireAuth, async (req, res) => {
 
 router.post("/google-login", googleLogin);
 router.post("/google", googleAuth);  
+router.post("/google-signup", require("./auth.controller").googleSignup);
+router.post("/resend-verification", require("./auth.controller").resendSignupVerification);
 
-const passport = require("../../../config/passport");
-const { userDocs } = require("../../identity/queries/auth");
-// GitHub and LinkedIn callbacks redirect with a one-time code, never a session token; the app
-// swaps it at POST /oauth/exchange after the usual checks (see oauthHandoff.js).
-const { rememberReturn, redirectWithHandoff, returnOrigin, RETURN_COOKIE } = require("./oauthHandoff");
+// Passkeys (WebAuthn): sign-in without a password, managed under Settings → Security.
+router.use("/passkeys", require("./passkeys"));
 
-router.post("/oauth/exchange", require("./auth.controller").oauthExchange);
-
-/** Where a failed redirect sign-in sends the browser: the app that started it. */
-const failedSignIn = (req, res, error) => {
-  const back = returnOrigin(req.cookies?.[RETURN_COOKIE]);
-  res.clearCookie(RETURN_COOKIE);
-  res.redirect(`${back}/login?error=${encodeURIComponent(error)}`);
-};
-
-// GitHub sign-in is optional (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET).
-const requireGithubConfigured = (req, res, next) => {
-  if (passport.githubConfigured) return next();
-  return res.status(503).json({ message: "GitHub sign-in is not configured on this server" });
-};
-
-// LinkedIn sign-in is optional too (LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET).
-const linkedinConfigured = () => Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET);
-const requireLinkedinConfigured = (req, res, next) => {
-  if (linkedinConfigured()) return next();
-  return res.status(503).json({ message: "LinkedIn sign-in is not configured on this server" });
-};
-
-// Which sign-in buttons the login page offers: only the providers this server has keys for.
-// `sms` says whether phone numbers can be verified by text message (Twilio).
+// Sign-in methods: Google and email + password. The login page shows only what this server offers.
 router.get("/providers", (req, res) => {
   res.json({
     google: Boolean(process.env.GOOGLE_CLIENT_ID),
     // Public by design (it is in every page that shows Google's sign-in); the phone app reads it here.
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
-    github: Boolean(passport.githubConfigured),
-    linkedin: linkedinConfigured(),
     sms: require('../../shared/services/otpProof').smsConfigured(),
   });
-});
-
-router.get(
-  "/github",
-  requireGithubConfigured,
-  rememberReturn,
-  passport.authenticate("github", { scope: ["user:email"] })
-);
-
-router.get("/github/callback", requireGithubConfigured, (req, res, next) => {
-  passport.authenticate("github", { session: false }, (err, user) => {
-    if (err || !user) return failedSignIn(req, res, 'github_failed');
-    return redirectWithHandoff(req, res, user, 'github').catch(next);
-  })(req, res, next);
-});
-
-router.get("/linkedin", requireLinkedinConfigured, rememberReturn, (req, res) => {
-  
-  
-  const { randomBytes } = require('crypto');
-  const state = randomBytes(16).toString('hex');
-
-  
-  
-  res.cookie('linkedin_oauth_state', state, {
-    httpOnly: true,
-    sameSite: 'Lax',
-    maxAge: 5 * 60 * 1000,           
-    secure: process.env.NODE_ENV === 'production'
-  });
-
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: process.env.LINKEDIN_CLIENT_ID,
-    redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
-    scope: "openid profile email",
-    state,
-  });
-
-  res.redirect(
-    `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`
-  );
-});
-
-router.get("/linkedin/callback", requireLinkedinConfigured, async (req, res) => {
-  try {
-    const { code, state, error, error_description } = req.query;
-
-    if (error) {
-      logger.error('LinkedIn OAuth error:', error, error_description);
-      return failedSignIn(req, res, 'linkedin_failed');
-    }
-
-    
-    
-    
-    const storedState = req.cookies?.linkedin_oauth_state;
-    if (!state || !storedState || state !== storedState) {
-      logger.error('LinkedIn OAuth: state mismatch — potential CSRF attack');
-      res.clearCookie('linkedin_oauth_state');
-      return failedSignIn(req, res, 'oauth_state_mismatch');
-    }
-    
-    res.clearCookie('linkedin_oauth_state');
-
-    
-    const tokenRes = await axios.post(
-      "https://www.linkedin.com/oauth/v2/accessToken",
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
-        client_id: process.env.LINKEDIN_CLIENT_ID,
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET,
-      }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    const accessToken = tokenRes.data.access_token;
-
-    
-    const userInfoRes = await axios.get(
-      "https://api.linkedin.com/v2/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    const linkedinUser = userInfoRes.data;
-    logger.info('LinkedIn user profile:', linkedinUser);
-
-    
-    let user = await userDocs.findByProvider('linkedin', linkedinUser.sub);
-
-    if (!user && linkedinUser.email) {
-      
-      user = await userDocs.findByEmail(linkedinUser.email);
-      if (user) {
-        // Only link to an existing account when that account's email is verified,
-        // it is not already linked elsewhere, and LinkedIn vouches for the email.
-        // Otherwise an attacker could take over an account by registering its email.
-        if (!user.verified || user.linkedinId || linkedinUser.email_verified === false) {
-          return failedSignIn(req, res, 'account_exists');
-        }
-        user.linkedinId = linkedinUser.sub;
-        if (linkedinUser.picture) user.profilePicture = linkedinUser.picture;
-        await user.save();
-      }
-    }
-
-    if (!user) {
-      
-      user = await userDocs.create({
-        linkedinId: linkedinUser.sub,
-        username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
-        email: linkedinUser.email,
-        profilePicture: linkedinUser.picture,
-        authProvider: "linkedin",
-        passwordHash: "oauth-linkedin-" + linkedinUser.sub,
-        verified: true
-      });
-    }
-
-    await redirectWithHandoff(req, res, user, 'linkedin');
-  } catch (err) {
-    logger.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
-    failedSignIn(req, res, 'linkedin_failed');
-  }
 });
 
 module.exports = router;

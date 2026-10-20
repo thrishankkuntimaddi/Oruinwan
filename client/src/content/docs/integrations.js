@@ -1,26 +1,40 @@
-// Integrations & apps: GitHub, Jira, Zoom, outgoing webhooks, marketplace.
+// Integrations & apps: GitHub, Jira, Zoom, webhooks, workflows, personal connections, marketplace.
 export default {
     id: 'integrations',
     title: 'Integrations & apps',
     icon: 'Plug',
-    blurb: 'Connect GitHub, Jira and Zoom, send events to your own services with webhooks, and install apps.',
+    blurb: 'Connect GitHub, Jira and Zoom for the workspace or just for yourself, automate work with workflows and webhooks, and install apps.',
     pages: [
         {
             id: 'overview',
             title: 'Integrations overview',
             summary: 'What you can connect, where to set it up, and who is allowed to.',
-            keywords: 'integrations overview apps connect settings admin github jira zoom webhooks marketplace',
+            keywords: 'integrations overview apps connect settings admin github jira zoom webhooks incoming outgoing workflows automations marketplace personal connection my own',
             blocks: [
                 { table: { caption: 'Integrations', head: ['Integration', 'What it does', 'Set up in'], rows: [
                     ['GitHub', 'PR, review, push and check cards in channels; task linking and status sync; AI PR review; `/github`, `/review`.', 'Settings → Integrations'],
                     ['Jira Cloud', 'Issue cards in channels, tasks from new issues, status sync, `/jira`.', 'Settings → Integrations'],
                     ['Zoom', '`/zoom` creates a meeting and posts the join link.', 'Settings → Integrations'],
+                    ['Incoming webhooks', 'Other tools call in through a webhook URL Oruinwan gives you (GitHub, Jira and more); a workflow can start when a webhook arrives.', 'Settings → Integrations, Workflows'],
                     ['Outgoing webhooks', 'POST signed JSON to your URL when tasks change, messages are sent and more.', 'Settings → Integrations, or the Developer portal'],
-                    ['Apps marketplace', 'Browse, install and review apps for the workspace.', 'Apps (sidebar)'],
+                    ['Workflows', 'Rules that run on their own: when something happens, do something. See [Workflows](/docs/integrations/workflows).', 'Agents & tools → Workflows'],
+                    ['Apps marketplace', 'Browse, install and review apps for the workspace.', 'Agents & tools → Apps'],
                     ['Public API and SDK', 'Read and create workspace data from your own code.', 'Developer portal. See [Developer platform](/docs/developers/overview).'],
                 ] } },
                 { h: 'Who can connect things' },
-                'Only workspace **owners and admins** can connect or disconnect integrations, change their settings, rotate secrets and manage webhooks. Everyone in the workspace benefits: members see the cards, can open code reviews and use `/github issue`, `/jira` and `/zoom`.',
+                'Only workspace **owners and admins** can connect or disconnect workspace integrations, change their settings, rotate secrets and manage webhooks. Everyone in the workspace benefits: members see the cards, can open code reviews and use `/github issue`, `/jira` and `/zoom`.',
+                { h: 'Personal GitHub and Jira connections' },
+                'Members can also connect their **own** GitHub or Jira account, so what they do from chat (for example `/github issue` or `/jira`) runs as them:',
+                { steps: [
+                    'Open **Agents & tools**, find **GitHub** or **Jira** under **Tools**, and choose to connect it just for you.',
+                    '**GitHub**: choose **Authorize with GitHub**, or paste a personal access token. **Jira**: enter your **Jira site**, your **Atlassian email** and an API token from your Atlassian account, then **Check and connect**.',
+                    'Choose **Disconnect** any time.',
+                ] },
+                { list: [
+                    'A personal connection belongs to you in one workspace. Its token is stored encrypted on the server and only your own requests use it; nobody else, including admins, can see or use it.',
+                    'Admins decide whether members may connect their own agents and tools (**Workspace admin → Agents & apps**).',
+                    'Connecting GitHub here is not a way to sign in to Oruinwan. Sign in with your email and password or Google.',
+                ] },
                 { callout: 'note', text: 'GitHub, Jira and Zoom are behind a server release flag. On your own server, enable them with `FEATURES_ENABLED=integrations`. Outgoing webhooks and the public API are always available.' },
                 { figure: 'github-flow', caption: 'GitHub sends signed events; Oruinwan verifies them and routes them to channels, tasks and the AI.' },
             ],
@@ -116,13 +130,38 @@ export default {
             ],
         },
         {
+            id: 'workflows',
+            title: 'Workflows',
+            summary: 'Rules that run on their own: when something happens, check a condition, then act.',
+            keywords: 'workflow workflows automation automations rule trigger action schedule recurring when then template incoming webhook received',
+            blocks: [
+                'A **workflow** is a rule for the workspace: **when** something happens, **if** it matches, **then** do something. Workspace owners and admins create them in **Agents & tools → Workflows**.',
+                { steps: [
+                    'Choose **New workflow**, or start from a template.',
+                    '**When**: pick a trigger.',
+                    '**If** (optional): add conditions, such as a field that equals, does not equal or contains a value.',
+                    '**Then**: add one or more actions, and save. The workflow starts running.',
+                ] },
+                { table: { caption: 'Triggers, conditions and actions', head: ['Step', 'Choices'], rows: [
+                    ['When', 'Task created, Task completed, Message sent, Meeting ended, File uploaded, PR merged (GitHub), Webhook received (another tool calls in), On a schedule (every 15 minutes up to every 24 hours).'],
+                    ['If', 'A field equals, does not equal or contains a value.'],
+                    ['Then', 'Send a message, Create a task, Assign a task, Send a notification, Call a webhook, Post to Slack, Start a CI pipeline.'],
+                ] } },
+                { list: [
+                    'Each workflow shows whether it is **Running**, **Paused**, or whether its **Last run failed**. Pause it or delete it from the same page.',
+                    'Ideas to start with: a weekly stand-up reminder in a channel, turning alerts from another tool into a message or a task, and announcing merged pull requests.',
+                ] },
+                { callout: 'tip', text: 'To send events to your own service instead, use [outgoing webhooks](/docs/integrations/webhooks).' },
+            ],
+        },
+        {
             id: 'marketplace',
             title: 'Apps marketplace',
             summary: 'Browse apps by category, install them in a workspace, and leave reviews.',
             keywords: 'apps marketplace install uninstall review rating app market catalogue',
             blocks: [
                 { steps: [
-                    'Open **Apps** in the icon sidebar (or the Developer portal’s **App Market** tab).',
+                    'Open **Agents & tools → Apps** (or the Developer portal’s **App Market** tab).',
                     'Browse by category (productivity, communication, developer, automation, analytics) or search.',
                     'Open an app to read its description, rating and reviews, then **Install** it for the workspace (owners and admins).',
                 ] },

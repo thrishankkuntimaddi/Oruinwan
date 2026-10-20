@@ -78,8 +78,7 @@ export function ToastHost() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="animate-pop-in flex max-w-sm items-center gap-2.5 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-sm"
-          style={{ boxShadow: 'var(--shadow-pop)' }}
+          className="glass animate-pop-in flex max-w-sm items-center gap-2.5 rounded-2xl border px-4 py-3 text-sm"
         >
           <Icon as={TONE_ICON[t.tone] || Info} size="sm" className={TONE_CLASS[t.tone] || TONE_CLASS.neutral} />
           <span>{t.message}</span>

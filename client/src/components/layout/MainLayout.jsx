@@ -11,7 +11,11 @@ import MobileBottomNav from "./MobileBottomNav";
 import MobileHomePage from "./MobileHomePage";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import HelpButton from "../help/HelpButton";
-import { Bot, X, Loader2, Bell, Check, Trash2, ChevronLeft, AlertCircle, RefreshCcw } from "lucide-react";
+import { Bot, X, Loader2, Bell, Check, Trash2, ChevronLeft, AlertCircle, RefreshCcw, Columns2 } from "lucide-react";
+import SplitPane from "../../features/split/SplitPane";
+import SplitPicker from "../../features/split/SplitPicker";
+import { split, useSplit } from "../../features/split/splitStore";
+import FirstRunTour from "../tour/FirstRunTour";
 import "./shell.css";
 
 const WorkspaceNotificationPanel = () => {
@@ -194,6 +198,18 @@ const readPanelW = () => {
     }
 };
 
+/** Split view needs room for two pages side by side: desktop windows and landscape tablets. */
+const SPLIT_MIN_WIDTH = 1024;
+function useCanSplit() {
+    const [ok, setOk] = useState(() => window.innerWidth >= SPLIT_MIN_WIDTH);
+    useEffect(() => {
+        const onResize = () => setOk(window.innerWidth >= SPLIT_MIN_WIDTH);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+    return ok;
+}
+
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
@@ -216,6 +232,8 @@ const MainLayout = ({ children, sidePanel }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const isMobile = useIsMobile(768);
+    const canSplit = useCanSplit() && !isMobile;
+    const { pane } = useSplit();
 
 
     const workspaceId = activeWorkspace?.id || activeWorkspace?._id;
@@ -225,7 +243,16 @@ const MainLayout = ({ children, sidePanel }) => {
         currentPath.includes('/dm/') ||
         currentPath.includes('/thread/') ||
         currentPath.includes('/task/') ||
-        currentPath.includes('/note/')
+        currentPath.includes('/note/') ||
+        currentPath.includes('/notes/') ||
+        currentPath.includes('/knowledge/') ||
+        currentPath.includes('/files/') ||
+        // Pages that are their own navigation on phones (no side panel first).
+        currentPath.includes('/agents') ||
+        currentPath.includes('/apps') ||
+        currentPath.includes('/automations') ||
+        currentPath.includes('/templates') ||
+        currentPath.includes('/developer')
     );
 
 
@@ -275,6 +302,12 @@ const MainLayout = ({ children, sidePanel }) => {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyA') {
                 e.preventDefault();
                 setShowAI(prev => !prev);
+            }
+            // Ctrl/⌘ + \ : open something beside (or close the split view).
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'Backslash' && window.innerWidth >= SPLIT_MIN_WIDTH) {
+                e.preventDefault();
+                if (split.get().pane) split.close();
+                else split.openPicker();
             }
         };
         window.addEventListener('keydown', fn);
@@ -393,7 +426,7 @@ const MainLayout = ({ children, sidePanel }) => {
                 )}
 
                 {/* Search */}
-                <div style={{ flex: 1, minWidth: 0, maxWidth: '560px', margin: '0 auto', position: 'relative', zIndex: 70 }}>
+                <div data-tour="search" style={{ flex: 1, minWidth: 0, maxWidth: '560px', margin: '0 auto', position: 'relative', zIndex: 70 }}>
                     <SearchInlineBar workspaceId={activeWorkspace?.id || activeWorkspace?._id} />
                 </div>
 
@@ -402,6 +435,20 @@ const MainLayout = ({ children, sidePanel }) => {
                     <WorkspaceNotificationPanel />
 
                     <HelpButton className="gl-icon-btn" size={17} />
+
+                    {canSplit && workspaceId && (
+                        <button
+                            type="button"
+                            className="gl-icon-btn"
+                            onClick={() => (pane ? split.close() : split.openPicker())}
+                            aria-pressed={Boolean(pane)}
+                            title={pane ? 'Close split view (Ctrl+\\)' : 'Open beside: split view (Ctrl+\\)'}
+                            aria-label={pane ? 'Close split view' : 'Split view'}
+                            data-testid="split-toggle"
+                        >
+                            <Columns2 size={17} strokeWidth={2} />
+                        </button>
+                    )}
 
                     {!isMobile && (
                         <button
@@ -462,9 +509,11 @@ const MainLayout = ({ children, sidePanel }) => {
                         minWidth: 0, background: 'var(--bg-base)', position: 'relative', width: '100%',
                     }}
                 >
-                    <div style={{ flex: 1, overflow: 'hidden', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'clip', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
                         {children}
                     </div>
+
+                    {canSplit && workspaceId && <SplitPane workspaceId={workspaceId} />}
 
                     {showAI && (
                         <>
@@ -495,6 +544,10 @@ const MainLayout = ({ children, sidePanel }) => {
             </div>
 
             {showProfile && <ProfileMenu onClose={() => setShowProfile(false)} />}
+
+            {canSplit && workspaceId && <SplitPicker workspaceId={workspaceId} />}
+
+            <FirstRunTour workspaceId={workspaceId} />
 
             {isMobile && (
                 <MobileBottomNav

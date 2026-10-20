@@ -28,6 +28,16 @@ export function useDirectory() {
     return map;
   }, [data, me]);
 }
+/** Agents installed in this workspace: Oruinwan AI, Claude, ChatGPT… */
+export function useAgents() {
+  const ws = useWs();
+  return useQuery(ws && `agents:${ws}`, () => api().agents?.(ws) ?? []);
+}
+/** Oruinwan AI plus the models this workspace connected (Claude, ChatGPT, Gemini, Grok). */
+export function useAssistants() {
+  const ws = useWs();
+  return useQuery(ws && `assistants:${ws}`, () => api().assistants?.(ws) ?? []);
+}
 export function useTasks() {
   const ws = useWs();
   return useQuery(ws && `tasks:${ws}`, () => api().tasks(ws));

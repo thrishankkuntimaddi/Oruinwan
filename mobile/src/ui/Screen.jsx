@@ -17,7 +17,7 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
   const { split, depth } = usePane();
   const showBack = back && !(split && depth === 0 && !onBack);
   return (
-    <header className={cx('shrink-0 bg-bg/95 pt-safe backdrop-blur-md z-10', border && 'border-b border-line-soft')}>
+    <header className={cx('glass-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">
         {leading ||
           (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || pop} /> : <span className="w-2" />)}

@@ -136,7 +136,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
     <div className="tasks-ui" role="dialog" aria-modal="true" aria-label={isEditing ? 'Edit task' : 'Create task'}
       style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', fontFamily: FONT }}
       onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
-      <div style={{ width: '100%', maxWidth: 820, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: '0 24px 64px rgba(0,0,0,0.45)' }}>
+      <div style={{ width: '100%', maxWidth: 820, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
           <span style={{ width: '34px', height: '34px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 35)}`, flexShrink: 0 }}>
@@ -215,7 +215,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                           <UserAvatar user={m} size={24} />
                           <span style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{m.username}{m.id === currentUserId ? ' (you)' : ''}</span>
                           <span style={{ width: '15px', height: '15px', borderRadius: '2px', border: `1px solid ${sel ? 'var(--accent)' : 'var(--border-accent)'}`, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {sel && <Check size={10} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
+                            {sel && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
                           </span>
                         </button>
                       );

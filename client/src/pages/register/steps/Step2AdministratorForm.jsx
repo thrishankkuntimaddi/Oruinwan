@@ -1,45 +1,15 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, Briefcase, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
-import CustomDropdown from '../../../components/shared/CustomDropdown';
+import React from 'react';
+import { CheckCircle2 } from 'lucide-react';
+import { StatusIcon, FieldError } from './fieldBits';
 
-const inp = (hasError, isSuccess) => ({
-    width: '100%', boxSizing: 'border-box',
-    padding: '10px 12px 10px 40px',
-    background: 'var(--bg-input)',
-    border: `1px solid ${hasError ? '#e05252' : isSuccess ? '#5aba8a' : 'rgba(255,255,255,0.08)'}`,
-    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    transition: 'border-color 150ms ease',
-});
-
-const Label = ({ children }) => (
-    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-        {children}
-    </label>
-);
-
-const ErrMsg = ({ msg }) => msg
-    ? <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <AlertCircle size={11} />{msg}
-      </p>
-    : null;
-
-const VerifyBtn = ({ status, onClick }) => {
+const VerifyBtn = ({ status, onClick, label }) => {
     const verified = status === 'verified';
     return (
         <button type="button" onClick={onClick} disabled={verified}
-        style={{
-                padding: '10px 16px', flexShrink: 0,
-                background: verified ? 'rgba(90,186,138,0.1)' : '#b8956a',
-                color: verified ? '#5aba8a' : '#0c0c0c',
-                fontSize: '12px', fontWeight: 700, cursor: verified ? 'default' : 'pointer',
-                fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '5px',
-                transition: 'opacity 150ms ease', whiteSpace: 'nowrap',
-                border: verified ? '1px solid rgba(90,186,138,0.25)' : 'none',
-            }}
-            onMouseEnter={e => !verified && (e.currentTarget.style.opacity = '0.88')}
-            onMouseLeave={e => !verified && (e.currentTarget.style.opacity = '1')}>
-            {verified ? <><CheckCircle2 size={12} />Verified</> : 'Verify'}
+            className={`orw-btn orw-btn--ghost${verified ? ' orw-btn--done' : ''}`}
+            aria-label={verified ? `${label} verified` : `Verify ${label.toLowerCase()}`}
+            style={verified ? { opacity: 1 } : undefined}>
+            {verified ? <><CheckCircle2 size={14} /> Verified</> : 'Verify'}
         </button>
     );
 };
@@ -47,106 +17,73 @@ const VerifyBtn = ({ status, onClick }) => {
 const Step2AdministratorForm = ({
     formData, onChange, onRoleChange, errors,
     validationStatus, verificationStatus,
-    onVerify, ROLES, PHONE_CODES, theme,
+    onVerify, ROLES, PHONE_CODES,
     phoneNeedsVerify = true,
 }) => {
-    const [focused, setFocused] = useState(null);
-
     const emailSuccess = validationStatus.personalEmail === 'available' && verificationStatus.personalEmail === 'verified';
     const phoneSuccess = validationStatus.phone === 'available' && (!phoneNeedsVerify || verificationStatus.phone === 'verified');
+    const emailBad = !!errors.personalEmail || validationStatus.personalEmail === 'taken';
+    const phoneBad = !!errors.phone || validationStatus.phone === 'taken';
 
     return (
-        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '32px' }}>
-                We need a point of contact for this account.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {}
-                    <div>
-                        <Label>Your Full Name</Label>
-                        <div style={{ position: 'relative' }}>
-                            <User size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                            <input name="adminName" value={formData.adminName} onChange={onChange} placeholder="John Doe"
-                                onFocus={() => setFocused('adminName')} onBlur={() => setFocused(null)}
-                                style={{ ...inp(!!errors.adminName), borderColor: errors.adminName ? '#e05252' : focused === 'adminName' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
-                        </div>
-                        <ErrMsg msg={errors.adminName} />
-                    </div>
-
-                    {}
-                    <div>
-                        <Label>Role</Label>
-                        <div style={{ position: 'relative' }}>
-                            <Briefcase size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
-                            <select value={formData.role} onChange={e => onRoleChange(e.target.value)}
-                                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 36px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', appearance: 'none' }}>
-                                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                            <ChevronDown size={12} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                        </div>
-                    </div>
+        <div className="orw-form">
+            <div className="orw-form__row">
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reg-admin-name">Your full name</label>
+                    <input id="reg-admin-name" name="adminName" className="orw-input" value={formData.adminName} onChange={onChange}
+                        placeholder="Alex Morgan" autoComplete="name" autoFocus aria-invalid={errors.adminName ? 'true' : undefined} />
+                    <FieldError msg={errors.adminName} />
                 </div>
 
-                {}
-                {formData.role === 'Other' && (
-                    <div>
-                        <Label>Specify Role</Label>
-                        <input name="roleOther" value={formData.roleOther} onChange={onChange} placeholder="e.g. CTO"
-                            onFocus={() => setFocused('roleOther')} onBlur={() => setFocused(null)}
-                            style={{ ...inp(!!errors.roleOther), width: '100%', boxSizing: 'border-box', paddingLeft: '12px', borderColor: errors.roleOther ? '#e05252' : focused === 'roleOther' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
-                        <ErrMsg msg={errors.roleOther} />
-                    </div>
-                )}
-
-                <div style={{ height: '1px', background: 'var(--bg-hover)' }} />
-
-                {}
-                <div>
-                    <Label>
-                        Personal Email <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(For account recovery)</span>
-                    </Label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <Mail size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                            <input name="personalEmail" type="email" value={formData.personalEmail} onChange={onChange} placeholder="john@gmail.com"
-                                onFocus={() => setFocused('personalEmail')} onBlur={() => setFocused(null)}
-                                style={{ ...inp(!!errors.personalEmail || validationStatus.personalEmail === 'taken', emailSuccess), width: '100%', boxSizing: 'border-box', borderColor: errors.personalEmail || validationStatus.personalEmail === 'taken' ? '#e05252' : emailSuccess ? '#5aba8a' : focused === 'personalEmail' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
-                        </div>
-                        <VerifyBtn status={verificationStatus.personalEmail} onClick={() => onVerify('personalEmail')} />
-                    </div>
-                    <ErrMsg msg={errors.personalEmail} />
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reg-role">Your role</label>
+                    <select id="reg-role" className="orw-select" value={formData.role} onChange={e => onRoleChange(e.target.value)}>
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
                 </div>
+            </div>
 
-                {}
-                <div>
-                    <Label>Phone Number</Label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {}
-                        <div style={{ position: 'relative', width: '120px', flexShrink: 0 }}>
-                            <select name="phoneCode" value={formData.phoneCode} onChange={onChange}
-                                style={{ width: '100%', padding: '10px 28px 10px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', appearance: 'none' }}>
-                                {PHONE_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-                            </select>
-                            <ChevronDown size={11} style={{ position: 'absolute', right: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                        </div>
-
-                        {}
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <Phone size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                            <input name="phone" value={formData.phone} onChange={onChange} placeholder="000-000-0000"
-                                onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)}
-                                style={{ ...inp(!!errors.phone || validationStatus.phone === 'taken', phoneSuccess), width: '100%', boxSizing: 'border-box', borderColor: errors.phone || validationStatus.phone === 'taken' ? '#e05252' : phoneSuccess ? '#5aba8a' : focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
-                        </div>
-                        {phoneNeedsVerify && <VerifyBtn status={verificationStatus.phone} onClick={() => onVerify('phone')} />}
-                    </div>
-                    <ErrMsg msg={errors.phone} />
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
-                        Select country code. E.g. India (+91) requires 10 digits.
-                    </p>
+            {formData.role === 'Other' && (
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reg-role-other">What is your role?</label>
+                    <input id="reg-role-other" name="roleOther" className="orw-input" value={formData.roleOther} onChange={onChange}
+                        placeholder="e.g. CTO" aria-invalid={errors.roleOther ? 'true' : undefined} />
+                    <FieldError msg={errors.roleOther} />
                 </div>
+            )}
+
+            <div className="orw-field">
+                <label className="orw-label" htmlFor="reg-personal-email">Personal email</label>
+                <div className="orw-inline">
+                    <div className="orw-input-wrap">
+                        <input id="reg-personal-email" name="personalEmail" type="email" className="orw-input" value={formData.personalEmail} onChange={onChange}
+                            placeholder="alex.morgan@example.com" autoComplete="email"
+                            aria-invalid={emailBad ? 'true' : undefined} data-state={emailSuccess ? 'ok' : undefined} />
+                        <span className="orw-input-wrap__status"><StatusIcon s={validationStatus.personalEmail === 'checking' ? 'checking' : undefined} /></span>
+                    </div>
+                    <VerifyBtn label="Email" status={verificationStatus.personalEmail} onClick={() => onVerify('personalEmail')} />
+                </div>
+                {errors.personalEmail
+                    ? <FieldError msg={errors.personalEmail} />
+                    : <p className="orw-hint">For account recovery. We’ll send a 6-digit code to confirm it.</p>}
+            </div>
+
+            <div className="orw-field">
+                <label className="orw-label" htmlFor="reg-phone">Phone number</label>
+                <div className="orw-inline orw-inline--wrap">
+                    <div className="orw-phone">
+                        <select name="phoneCode" className="orw-select" value={formData.phoneCode} onChange={onChange} aria-label="Country code">
+                            {PHONE_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                        </select>
+                        <input id="reg-phone" name="phone" type="tel" className="orw-input" value={formData.phone} onChange={onChange}
+                            placeholder="000 000 0000" autoComplete="tel-national" inputMode="tel"
+                            aria-invalid={phoneBad ? 'true' : undefined} data-state={phoneSuccess ? 'ok' : undefined} />
+                    </div>
+                    {phoneNeedsVerify && <VerifyBtn label="Phone" status={verificationStatus.phone} onClick={() => onVerify('phone')} />}
+                </div>
+                {errors.phone
+                    ? <FieldError msg={errors.phone} />
+                    : <p className="orw-hint">Pick your country code first. India (+91) and the US (+1) use 10 digits.</p>}
             </div>
         </div>
     );

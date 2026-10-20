@@ -8,9 +8,9 @@ const T = {
   base:        'var(--bg-base)',
   surface:     'var(--bg-hover)',
   border:      'var(--border-default)',
-  accent:      '#b8956a',
+  accent:      'var(--accent)',
   accentBg:    'var(--accent-dim)',
-  accentBorder:'rgba(184,149,106,0.3)',
+  accentBorder:'var(--gl-accent-line)',
   text:        'var(--text-primary)',
   muted:       'var(--text-muted)',
   font:        'Inter, system-ui, sans-serif',
@@ -84,7 +84,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
     ];
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', padding: '16px' }}>
             <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '100%', maxWidth: '900px', height: '82vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
                 {}
@@ -194,7 +194,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                                 <div style={{ width: '14px', height: '14px', border: `1.5px solid ${isSelected ? T.accent : T.border}`, background: isSelected ? T.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
                                                     {isSelected && (
                                                         <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-                                                            <path d="M2 6l3 3 5-5" stroke="#0c0c0c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            <path d="M2 6l3 3 5-5" stroke="var(--bg-base)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                         </svg>
                                                     )}
                                                 </div>
@@ -263,7 +263,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                 <button
                                     onClick={handleSend}
                                     disabled={!message.trim() || selectedItems.length === 0}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: '#000', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--bg-base)', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
                                 >
                                     <Send size={13} />
                                     Send Broadcast

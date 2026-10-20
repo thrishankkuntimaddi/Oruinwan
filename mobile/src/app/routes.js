@@ -8,6 +8,7 @@ const tasks = () => import('../features/tasks/index.js');
 const notes = () => import('../features/notes/index.js');
 const settings = () => import('../features/settings/index.jsx');
 const more = () => import('../features/more/index.jsx');
+const knowledge = () => import('../features/knowledge/screens.jsx');
 
 export const TAB_ROOTS = {
   chats: pick(chats, 'ChatsScreen'),
@@ -25,12 +26,14 @@ export const ROUTES = {
   profile: pick(chats, 'ProfileScreen'),
   task: pick(tasks, 'TaskScreen'),
   note: pick(notes, 'NoteScreen'),
-  knowledge: pick(more, 'KnowledgeScreen'),
-  page: pick(more, 'PageScreen'),
+  knowledge: pick(knowledge, 'KnowledgeScreen'),
+  page: pick(knowledge, 'PageScreen'),
   files: pick(more, 'FilesScreen'),
   notifications: pick(more, 'NotificationsScreen'),
   search: pick(more, 'SearchScreen'),
   integrations: pick(more, 'IntegrationsScreen'),
+  agents: pick(() => import('../features/agents/AgentsScreen.jsx'), 'AgentsScreen'),
+  huddles: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
   workspace: pick(more, 'WorkspaceScreen'),
   settings: pick(settings, 'SettingsScreen'),
   'settings.profile': pick(settings, 'ProfileSettings'),

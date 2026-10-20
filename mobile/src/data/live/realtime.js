@@ -12,14 +12,29 @@ let retryDelay = 2000;
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
 function messageEvent(payload) {
-  const m = payload?.message || payload;
+  // new-message carries { message }, thread-reply carries { parentId, reply }.
+  const m = payload?.message || payload?.reply || payload;
   const keys = ['channels', 'dms', 'workspaces'];
   const channelId = idOf(m?.channel) || payload?.channelId;
   const dmId = idOf(m?.dm) || payload?.dmSessionId;
   if (channelId) keys.push(`messages:${channelId}`);
   if (dmId) keys.push(`messages:${dmId}`);
-  if (m?.parentId) keys.push(`thread:${idOf(m.parentId)}`, channelId ? `messages:${channelId}` : `messages:${dmId}`);
+  const parentId = idOf(m?.parentId) || payload?.parentId;
+  if (parentId) keys.push(`thread:${parentId}`);
   emit('data:changed', keys);
+}
+
+/** An edit, delete or reaction: refresh the conversation, and the thread when it is a reply. */
+function changeEvent(p) {
+  const msg = p?.message || p;
+  const channelId = p?.channelId || idOf(p?.channel) || idOf(msg?.channel);
+  const dmId = p?.dmSessionId || p?.dmId || idOf(p?.dm) || idOf(msg?.dm);
+  const parentId = p?.parentId || idOf(msg?.parentId);
+  const keys = [channelId && `messages:${channelId}`, dmId && `messages:${dmId}`, parentId && `thread:${parentId}`].filter(Boolean);
+  // A thread's own parent changed (edited or deleted): its thread view shows it too.
+  const id = p?.messageId || idOf(msg);
+  if (id) keys.push(`thread:${id}`);
+  emit('data:changed', keys.length ? keys : ['messages']);
 }
 
 export function connectRealtime(base) {
@@ -40,6 +55,10 @@ export function connectRealtime(base) {
     if (workspaceId) socket.emit('join-workspace', { workspaceId });
   });
   socket.on('disconnect', () => emit('realtime', { connected: false }));
+  // Huddle signalling and live/ended announcements go to the huddle client (features/huddles).
+  socket.onAny((event, payload) => {
+    if (event.startsWith('huddle:')) emit('huddle', { event, payload });
+  });
   socket.on('connect_error', (err) => {
     // The server rejected the handshake (usually an expired access token). Socket.IO does not
     // retry those by itself, so refresh and reconnect with backoff until it works.
@@ -48,12 +67,10 @@ export function connectRealtime(base) {
 
   socket.on('new-message', messageEvent);
   socket.on('thread-reply', messageEvent);
-  for (const ev of ['message:edited', 'message:deleted', 'message-deleted', 'message:reaction_added', 'message:reaction_removed', 'reaction-added', 'reaction-removed', 'message-pinned', 'message-unpinned']) {
-    socket.on(ev, (p) => {
-      const channelId = p?.channelId || idOf(p?.message?.channel);
-      const dmId = p?.dmSessionId || idOf(p?.message?.dm);
-      emit('data:changed', [channelId && `messages:${channelId}`, dmId && `messages:${dmId}`].filter(Boolean).concat(channelId || dmId ? [] : ['messages']));
-    });
+  // Oruinwan AI answering in a conversation, streamed to everyone in it.
+  socket.on('ai:reply', (p) => emit('ai:reply', p));
+  for (const ev of ['message:edited', 'message:deleted', 'message-deleted', 'message:reaction_added', 'message:reaction_removed', 'reaction-added', 'reaction-removed', 'message-pinned', 'message-unpinned', 'message-updated']) {
+    socket.on(ev, changeEvent);
   }
   socket.on('new-dm-session', () => emit('data:changed', ['dms']));
   for (const ev of ['channel-created', 'channel-updated', 'channel-deleted', 'channel-member-added']) socket.on(ev, () => emit('data:changed', ['channels']));
@@ -96,6 +113,20 @@ export function joinWorkspace(id) {
 export function socketEmit(event, payload) {
   if (socket?.connected) socket.emit(event, payload);
 }
+
+/** An emit the server answers with an acknowledgement (null when offline or after a timeout). */
+export function socketRequest(event, payload, timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve(null);
+    const t = setTimeout(() => resolve(null), timeoutMs);
+    socket.emit(event, payload, (res) => {
+      clearTimeout(t);
+      resolve(res ?? null);
+    });
+  });
+}
+
+export const realtimeConnected = () => Boolean(socket?.connected);
 
 export function setActive(active) {
   socketEmit(active ? 'user:active' : 'user:idle', {});

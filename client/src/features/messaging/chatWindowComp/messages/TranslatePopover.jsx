@@ -31,12 +31,10 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
     const popover = (
         <div
             ref={ref}
+            className="gl-liquid gl-liquid--strong"
             style={{
                 position: 'fixed', zIndex: 9999, width: '200px',
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)',
-                borderRadius: '2px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                borderRadius: 'var(--gl-radius-md)',
                 overflow: 'hidden',
                 animation: 'wsFadeIn 120ms ease',
                 ...pos,

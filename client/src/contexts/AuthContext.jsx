@@ -496,6 +496,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // After a password reset the old encryption key can't be opened. Set encryption up again
+  // with the current password (the server checks it) and get conversation access back.
+  const resetEncryptionKeys = async (password) => {
+    const userId = user?._id || user?.id || user?.sub;
+    if (!userId) throw new Error('No user logged in');
+    const identityKeyService = (await import('../services/identityKeyService')).default;
+    const result = await identityKeyService.resetIdentityKeys(userId, password);
+    if (result?.status === 'READY') {
+      setRequiresPassword(false);
+      setEncryptionReady(true);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -506,6 +519,7 @@ export const AuthProvider = ({ children }) => {
         encryptionReady, 
         requiresPassword, 
         unlockEncryption, 
+        resetEncryptionKeys,
         login,
         logout,
         loadUser,

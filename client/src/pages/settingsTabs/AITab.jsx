@@ -3,6 +3,7 @@ import { Activity, ChevronRight, Layers, RefreshCcw, ShieldCheck, Sparkles } fro
 import { aiService, aiErrorMessage } from '../../services/aiService';
 import { useToast } from '../../contexts/ToastContext';
 import AIMemorySection from './AIMemorySection';
+import AIAssistantsSection from './AIAssistantsSection';
 import {
     Badge, Button, EmptyState, ErrorState, Field, IconButton, Input, LoadingState, Notice, PageIntro, Row, Section, SwitchRow,
 } from './settingsUi';
@@ -234,6 +235,10 @@ export default function AITab({ workspaceId, workspaceName, workspacePicker }) {
                         onChange={(v) => patch('smartReplies', { smartReplies: v }, v ? 'Smart replies on' : 'Smart replies off')}
                     />
                 </Section>
+            )}
+
+            {settings && canManage && (
+                <AIAssistantsSection workspaceId={workspaceId} connected={settings.connected || []} onChanged={load} />
             )}
 
             {settings && canManage && (

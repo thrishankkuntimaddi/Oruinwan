@@ -145,7 +145,9 @@ const MessageSchema = new mongoose.Schema({
     startTime: Date,
     duration: Number,   
     meetingLink: String,
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // The ScheduledMeeting behind this card (its Join opens the meeting's huddle).
+    scheduledMeetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScheduledMeeting', default: null }
   },
 
   

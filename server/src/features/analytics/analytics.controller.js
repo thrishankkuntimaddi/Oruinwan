@@ -1,8 +1,9 @@
 const logger = require('../../../utils/logger');
 const org = require('../../identity/queries/org');
-const Message = require("../../modules/messages/message.model.js");
-const Channel = require("../channels/channel.model.js");
-const _DMSession = require('../../../models/DMSession');
+const Tasks = require('../tasks/tasks.query');
+
+// Privacy: no message counts, senders or content. Messages are end-to-end encrypted and only
+// their participants read them; company analytics use people, workspaces and tasks only.
 
 exports.getCompanyAnalytics = async (req, res) => {
     try {
@@ -60,124 +61,42 @@ exports.getCompanyAnalytics = async (req, res) => {
         
 
         
+        // Tasks created and completed per day over the last week, company-wide.
         const collaborationData = [];
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
+        const live = { company: companyId, deleted: { $ne: true } };
         for (let i = 6; i >= 0; i--) {
             const dayEnd = new Date();
             dayEnd.setDate(dayEnd.getDate() - i);
             dayEnd.setHours(23, 59, 59, 999);
-
             const dayStart = new Date(dayEnd);
             dayStart.setHours(0, 0, 0, 0);
-
-            
-            const messageCount = await Message.countDocuments({
-                workspace: { $in: workspaces.map(w => w._id) },
-                createdAt: { $gte: dayStart, $lte: dayEnd }
-            });
-
-            
-            
-            const tasksCount = Math.floor(messageCount / 15); 
-
-            collaborationData.push({
-                name: dayNames[dayEnd.getDay()],
-                messages: messageCount,
-                tasks: tasksCount
-            });
+            const [created, completed] = await Promise.all([
+                Tasks.countDocuments({ ...live, createdAt: { $gte: dayStart, $lte: dayEnd } }),
+                Tasks.countDocuments({ ...live, completedAt: { $gte: dayStart, $lte: dayEnd } }),
+            ]);
+            collaborationData.push({ name: dayNames[dayEnd.getDay()], tasks: created, completed });
         }
 
-        
-        
-        
-
+        // Workspace health from structure and tasks: members, open and finished tasks.
         const workspaceHealth = await Promise.all(
             workspaces.slice(0, 10).map(async (ws) => {
-                const members = ws.members || [];
-                const memberCount = members.length;
-
-                
-                const recentMessages = await Message.countDocuments({
-                    workspace: ws._id,
-                    createdAt: { $gte: startDate }
-                });
-
-                
-                const activeMemberIds = await Message.distinct('author', {
-                    workspace: ws._id,
-                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-                });
-
-                const activeRate = memberCount > 0 ? Math.round((activeMemberIds.length / memberCount) * 100) : 0;
-
-                
-                const lastMessage = await Message.findOne({
-                    workspace: ws._id
-                }).sort({ createdAt: -1 }).lean();
-
-                const lastActive = lastMessage ? formatLastActivity(lastMessage.createdAt) : 'No activity';
-
-                
-                const completion = Math.min(Math.round((recentMessages / memberCount) * 10), 100);
-
-                
-                let status = 'Inactive';
-                if (activeRate > 70 && completion > 60) status = 'Healthy';
-                else if (activeRate > 40 || completion > 40) status = 'At Risk';
-
+                const memberCount = (ws.members || []).length;
+                const wsLive = { workspace: ws._id, deleted: { $ne: true } };
+                const [total, done] = await Promise.all([
+                    Tasks.countDocuments({ ...wsLive, createdAt: { $gte: startDate } }),
+                    Tasks.countDocuments({ ...wsLive, status: 'done', createdAt: { $gte: startDate } }),
+                ]);
+                const completion = total > 0 ? Math.round((done / total) * 100) : 0;
                 return {
                     name: ws.name,
                     members: memberCount,
-                    activeRate,
-                    lastActive,
+                    tasks: total,
                     completion,
-                    status
+                    lastActive: ws.updatedAt ? formatLastActivity(ws.updatedAt) : 'No activity',
                 };
             })
         );
-
-        
-        
-        
-
-        
-        const updateChannels = await Channel.find({
-            company: companyId,
-            $or: [
-                { name: { $regex: /announcement|update|news/i } }
-            ]
-        }).lean();
-
-        const updatesPosted = await Message.countDocuments({
-            channel: { $in: updateChannels.map(c => c._id) },
-            createdAt: { $gte: startDate }
-        });
-
-        
-        const priorityUpdates = await Message.countDocuments({
-            channel: { $in: updateChannels.map(c => c._id) },
-            createdAt: { $gte: startDate },
-            content: { $regex: /@(here|channel|everyone)/i }
-        });
-
-        
-        
-        const avgReactions = 4.2;
-
-        
-        
-        
-
-        
-        
-        const twoFAEnabled = false; 
-        const ssoStatus = 'Not Configured';
-        const loginAnomalies = 0;
-
-        
-        
-        
 
         return res.json({
             growth: {
@@ -190,16 +109,6 @@ exports.getCompanyAnalytics = async (req, res) => {
                 data: collaborationData
             },
             workspaceHealth,
-            culture: {
-                updatesPosted,
-                priorityUpdates,
-                avgReactions
-            },
-            security: {
-                twoFAEnabled,
-                ssoStatus,
-                loginAnomalies
-            }
         });
 
     } catch (err) {

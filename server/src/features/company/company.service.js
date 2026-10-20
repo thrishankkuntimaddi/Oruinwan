@@ -1,10 +1,7 @@
-const logger = require('../../../utils/logger');
 const identity = require('../../identity');
 const org = require('../../identity/queries/org');
 const { hydrate } = require('../../identity/hydrate');
 const { logAction } = require('../../../utils/historyLogger');
-const bcrypt = require('bcryptjs');
-const sendEmail = require('../../../utils/sendEmail');
 const XLSX = require('xlsx');
 const { uploadToGCS } = require('../../modules/uploads/upload.service');
 
@@ -285,7 +282,8 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
 
             let results = { created: 0, skipped: 0, errors: [] };
             if (employees.length > 0) {
-                results = await bulkInviteEmployees(companyId, company.domain, employees);
+                const requester = await org.users.findOne({ _id: userId });
+                results = await bulkInviteEmployees(companyId, company.domain, employees, requester?.companyRole || 'admin', userId);
             }
 
             await org.updateCompany(companyId, { setupStep: 4 });
@@ -295,11 +293,10 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
         case 4: {
             
             await org.updateCompany(companyId, { isSetupComplete: true, setupStep: 4 });
-            // (The Mongo-era 'companyStatus' flag never existed on the user schema; nothing to set.)
-            void userId;
+            const launcher = await org.users.findOne({ _id: userId });
             return {
                 message: 'Setup complete! Workspace launched.',
-                redirectTo: '/admin/analytics',
+                redirectTo: launcher?.companyRole === 'owner' ? '/owner/dashboard' : '/admin/dashboard',
                 nextStep: null
             };
         }
@@ -309,135 +306,54 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
     }
 }
 
-async function bulkInviteEmployees(companyId, companyDomain, employees) {
+/**
+ * Setup-wizard invites (typed in, or from the spreadsheet). Each person goes through the
+ * standard invite flow (onboarding.service onboardIndividual): an account in the "invited"
+ * state, an emailed one-time invite link, their real name as display name, department
+ * membership, and the role ceiling of the person running setup. No password is ever emailed.
+ */
+async function bulkInviteEmployees(companyId, companyDomain, employees, requesterRole = 'owner', invitedBy = null) {
+    const { onboardIndividual } = require('../onboarding/onboarding.service');
     const results = { created: 0, skipped: 0, errors: [] };
 
-    const company = await org.companies.findOne({ _id: companyId });
     const departments = await org.departments.find({ company: companyId, isActive: true }, { members: false });
-
     const deptMap = {};
-    departments.forEach(d => {
-        deptMap[d.name.toLowerCase()] = d._id;
-    });
+    departments.forEach(d => { deptMap[d.name.toLowerCase()] = String(d._id); });
+    // Everyone invited at setup joins the company-wide workspace, so they land somewhere.
+    const company = await org.companies.findOne({ _id: companyId }, { admins: false });
+    const defaultWs = company?.defaultWorkspace ? String(company.defaultWorkspace._id || company.defaultWorkspace) : null;
 
     for (const emp of employees) {
+        const email = String(emp.companyEmail || emp.email || '').trim().toLowerCase();
+        const label = emp.name || email || 'Unnamed row';
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            results.errors.push({ name: label, error: 'No valid email' });
+            continue;
+        }
+        const fullName = String(emp.name || '').trim() || email.split('@')[0];
+        const [firstName, ...rest] = fullName.split(/\s+/);
+        const deptId = deptMap[String(emp.department || '').toLowerCase()];
+        const role = ['admin', 'manager', 'member', 'guest'].includes(emp.role) ? emp.role : 'member';
         try {
-            
-            
-            const companyEmailVal = emp.companyEmail || emp.email || '';
-            const loginEmail = (emp.personalEmail || companyEmailVal).toLowerCase();
-            const credentialEmail = emp.personalEmail || companyEmailVal; 
-
-            if (!companyEmailVal && !loginEmail) {
-                results.errors.push({ name: emp.name, error: 'No email provided' });
-                continue;
-            }
-
-            
-            const existingUser = await org.users.findOne({
-                $or: [
-                    { companyEmail: companyEmailVal },
-                    { email: loginEmail },
-                    { email: companyEmailVal }
-                ]
-            });
-            if (existingUser) {
-                results.skipped++;
-                continue;
-            }
-
-            
-            const tempPassword = generateTempPassword();
-            const hashedPw = await bcrypt.hash(tempPassword, 10);
-
-            
-            const deptId = deptMap[emp.department?.toLowerCase()] || null;
-
-            
-            const validRoles = ['owner', 'admin', 'manager', 'member', 'guest'];
-            const companyRole = validRoles.includes(emp.role) ? emp.role : 'member';
-
-            
-            const namePart = (emp.name || companyEmailVal.split('@')[0])
-                .toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-            const username = `${namePart}_${Math.random().toString(36).slice(2, 6)}`;
-
-            
-            
-            
-            const newUser = await identity.users.create({
-                username,
-                email: loginEmail,
-                companyEmail: companyEmailVal,
-                phone: emp.phone || undefined,
+            await onboardIndividual({
+                companyId,
+                requesterRole,
+                invitedBy,
+                email,
+                personalEmail: emp.personalEmail || '',
+                firstName,
+                lastName: rest.join(' '),
+                companyRole: role,
+                departmentIds: deptId ? [deptId] : [],
+                additionalWorkspaceIds: defaultWs ? [defaultWs] : [],
                 jobTitle: emp.jobTitle || undefined,
-                passwordHash: hashedPw,
-                userType: 'company',
-                companyId: String(companyId),
-                companyRole,
-                verified: true,
-                accountStatus: 'active',
             });
-            if (deptId) await org.addDepartmentMembers(deptId, [newUser._id], 'member');
-
-            
-            await sendWelcomeEmail({
-                to: credentialEmail,
-                name: emp.name || username,
-                companyName: company.name,
-                companyEmail: companyEmailVal,  
-                loginEmail,
-                tempPassword
-            });
-
             results.created++;
         } catch (err) {
-            results.errors.push({ name: emp.name, error: err.message });
+            if (err.status === 409) results.skipped++;
+            else results.errors.push({ name: label, error: err.message });
         }
     }
 
     return results;
-}
-
-function generateTempPassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
-    let pw = '';
-    for (let i = 0; i < 12; i++) pw += chars[Math.floor(Math.random() * chars.length)];
-    return pw;
-}
-
-async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmail, tempPassword }) {
-    try {
-        await sendEmail({
-            to,
-            subject: `You're invited to join ${companyName} on Oruinwan`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #f8fafc;">
-                    <div style="background: white; border-radius: 16px; padding: 40px; border: 1px solid #e2e8f0;">
-                        <h1 style="color: #1e293b; font-size: 24px; margin-bottom: 8px;">Welcome to ${companyName}! 🎉</h1>
-                        <p style="color: #64748b; margin-bottom: 24px;">Hi ${name}, your account has been set up on Oruinwan.</p>
-
-                        <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                            <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase;">Your Login Details</p>
-                            ${companyEmail ? `<p style="margin: 4px 0; color: #1e293b;"><strong>Work Email:</strong> ${companyEmail}</p>` : ''}
-                            <p style="margin: 4px 0; color: #1e293b;"><strong>Login Email:</strong> ${loginEmail || to}</p>
-                            <p style="margin: 4px 0; color: #1e293b;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 16px; font-weight: bold; letter-spacing: 0.1em;">${tempPassword}</code></p>
-                        </div>
-
-                        <p style="color: #64748b; font-size: 14px;">⚠️ Please change your password immediately after your first login.</p>
-
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
-                           style="display: inline-block; margin-top: 20px; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                            Login to Oruinwan →
-                        </a>
-
-                        <p style="margin-top: 32px; font-size: 12px; color: #94a3b8;">This invitation was sent by ${companyName}. If you believe this was a mistake, please ignore this email.</p>
-                    </div>
-                </div>
-            `
-        });
-    } catch (err) {
-        logger.error('[WELCOME EMAIL] Failed to send to', to, ':', err.message);
-        
-    }
 }

@@ -1,8 +1,9 @@
 'use strict';
 
-const Message  = require('../../../modules/messages/message.model');
-const logger   = require('../../../../utils/logger');
-
+/**
+ * Workspace insights: how work is moving. Built from tasks only. Conversations are private
+ * (end-to-end encrypted), so nothing here counts, ranks or compares people's messages.
+ */
 const Tasks = require('../../tasks/tasks.query');
 
 function daysAgo(n) {
@@ -11,159 +12,50 @@ function daysAgo(n) {
     return d;
 }
 
+const OPEN = { $nin: ['done', 'completed', 'cancelled'] };
+const DONE = { $in: ['done', 'completed'] };
+
 async function getProductivityInsights(workspaceId, days = 7) {
     const since = daysAgo(days);
-
-    const [messageCount, taskStats, activeUserIds] = await Promise.all([
-        
-        Message.countDocuments({
-            workspace:  workspaceId,
-            createdAt:  { $gte: since },
-            isDeleted:  { $ne: true },
-            type:       { $in: ['message', 'checklist'] },
-        }),
-
-        
-        // Tasks reference their workspace as `workspace` (the old `workspaceId` filter matched nothing).
-        Promise.all([
-            Tasks.countDocuments({ workspace: workspaceId, createdAt: { $gte: since } }).catch(() => 0),
-            Tasks.countDocuments({ workspace: workspaceId, status: { $in: ['done', 'completed'] }, updatedAt: { $gte: since } }).catch(() => 0),
-        ]),
-
-        
-        Message.distinct('sender', {
-            workspace:  workspaceId,
-            createdAt:  { $gte: since },
-            isDeleted:  { $ne: true },
-        }),
+    const [tasksCreated, tasksCompleted] = await Promise.all([
+        Tasks.countDocuments({ workspace: workspaceId, createdAt: { $gte: since } }).catch(() => 0),
+        Tasks.countDocuments({ workspace: workspaceId, status: DONE, updatedAt: { $gte: since } }).catch(() => 0),
     ]);
-
-    const [tasksCreated, tasksCompleted] = Array.isArray(taskStats) ? taskStats : [0, 0];
-
     return {
-        period:         `Last ${days} days`,
-        messageCount,
-        activeUsers:    activeUserIds.length,
+        period: `Last ${days} days`,
         tasksCreated,
         tasksCompleted,
         completionRate: tasksCreated > 0 ? Math.round((tasksCompleted / tasksCreated) * 100) : 0,
     };
 }
 
-async function getCollaborationInsights(workspaceId, days = 7) {
-    const since = daysAgo(days);
-    const mongoose = require('mongoose');
-
-    
-    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
-        return { period: `Last ${days} days`, topChannels: [], activeThreads: 0, totalReplies: 0 };
-    }
-
-    const channelActivity = await Message.aggregate([
-        {
-            $match: {
-                workspace:  mongoose.Types.ObjectId.createFromHexString(workspaceId),
-                channel:    { $ne: null },
-                createdAt:  { $gte: since },
-                isDeleted:  { $ne: true },
-            },
-        },
-        { $group: { _id: '$channel', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-    ]);
-
-    const threadCount = await Message.countDocuments({
-        workspace:  workspaceId,
-        parentId:   { $ne: null },
-        createdAt:  { $gte: since },
-    });
-
-    return {
-        period:          `Last ${days} days`,
-        topChannels:     channelActivity.map(c => ({ channelId: c._id, messageCount: c.count })),
-        activeThreads:   Math.floor(threadCount / 3), 
-        totalReplies:    threadCount,
-    };
-}
-
-async function getEngagementInsights(workspaceId, days = 7) {
-    const since = daysAgo(days);
-    const mongoose = require('mongoose');
-
-    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
-        return { period: `Last ${days} days`, topContributors: [] };
-    }
-
-    const perUser = await Message.aggregate([
-        {
-            $match: {
-                workspace:  mongoose.Types.ObjectId.createFromHexString(workspaceId),
-                createdAt:  { $gte: since },
-                isDeleted:  { $ne: true },
-                type:       { $in: ['message', 'checklist'] },
-            },
-        },
-        { $group: { _id: '$sender', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-    ]);
-
-    return {
-        period:      `Last ${days} days`,
-        topContributors: perUser.map((u, i) => ({
-            rank:     i + 1,
-            userId:   u._id,
-            messages: u.count,
-        })),
-    };
-}
-
 async function detectAnomalies(workspaceId) {
-    const now   = daysAgo(0);
+    const now = new Date();
     const week1 = daysAgo(7);
     const week2 = daysAgo(14);
 
-    const [recentCount, priorCount] = await Promise.all([
-        Message.countDocuments({ workspace: workspaceId, createdAt: { $gte: week1, $lte: now },  isDeleted: { $ne: true } }),
-        Message.countDocuments({ workspace: workspaceId, createdAt: { $gte: week2, $lt: week1 }, isDeleted: { $ne: true } }),
+    const [overdue, open, doneRecent, donePrior] = await Promise.all([
+        Tasks.countDocuments({ workspace: workspaceId, status: OPEN, dueDate: { $lt: now } }).catch(() => 0),
+        Tasks.countDocuments({ workspace: workspaceId, status: OPEN }).catch(() => 0),
+        Tasks.countDocuments({ workspace: workspaceId, status: DONE, updatedAt: { $gte: week1 } }).catch(() => 0),
+        Tasks.countDocuments({ workspace: workspaceId, status: DONE, updatedAt: { $gte: week2, $lt: week1 } }).catch(() => 0),
     ]);
 
     const anomalies = [];
-    if (priorCount > 0) {
-        const change = ((recentCount - priorCount) / priorCount) * 100;
-        if (change < -50) {
-            anomalies.push({
-                type:    'activity_drop',
-                message: `Message activity dropped by ${Math.abs(Math.round(change))}% vs last week`,
-                severity:'high',
-                data:    { recentCount, priorCount, changePercent: Math.round(change) },
-            });
-        } else if (change < -25) {
-            anomalies.push({
-                type:    'activity_decline',
-                message: `Message activity declined by ${Math.abs(Math.round(change))}% vs last week`,
-                severity:'medium',
-                data:    { recentCount, priorCount, changePercent: Math.round(change) },
-            });
-        }
+    if (open > 0 && overdue / open >= 0.5 && overdue >= 3) {
+        anomalies.push({ type: 'overdue_tasks', severity: 'high', message: `${overdue} of ${open} open tasks are past their due date`, data: { overdue, open } });
+    } else if (overdue >= 3) {
+        anomalies.push({ type: 'overdue_tasks', severity: 'medium', message: `${overdue} open tasks are past their due date`, data: { overdue, open } });
     }
-
-    if (recentCount === 0) {
-        anomalies.push({
-            type:    'inactive_workspace',
-            message: 'No messages in the last 7 days — workspace appears inactive',
-            severity:'high',
-            data:    { recentCount },
-        });
+    if (donePrior >= 4 && doneRecent < donePrior / 2) {
+        const change = Math.round(((doneRecent - donePrior) / donePrior) * 100);
+        anomalies.push({ type: 'completion_drop', severity: 'medium', message: `Tasks finished this week fell by ${Math.abs(change)}% compared with last week`, data: { doneRecent, donePrior, changePercent: change } });
     }
 
     return {
         anomalies,
-        summary: anomalies.length === 0 ? 'No anomalies detected — workspace activity looks healthy 🟢' : `${anomalies.length} anomaly(s) detected`,
-        recentCount,
-        priorCount,
+        summary: anomalies.length === 0 ? 'Nothing unusual: work is moving as expected' : `${anomalies.length} thing${anomalies.length === 1 ? '' : 's'} to look at`,
     };
 }
 
-module.exports = { getProductivityInsights, getCollaborationInsights, getEngagementInsights, detectAnomalies };
+module.exports = { getProductivityInsights, detectAnomalies };

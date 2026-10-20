@@ -1,51 +1,36 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building2, Users, ChevronDown, ChevronRight, RefreshCw, Crown, Briefcase } from 'lucide-react';
+import { Building2, Users, ChevronDown, ChevronRight, RefreshCw, Crown, Briefcase, Network } from 'lucide-react';
+import { Avatar, Btn, Chip, KpiGrid, Kpi, Panel, EmptyState, ErrorState, LoadingState } from '../../components/ui/page';
+import '../toolkit/toolkit.css';
 
-const Avatar = ({ name, src, size = 8 }) => {
-    const initials = (name || '?').slice(0, 2).toUpperCase();
-    const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-sky-500', 'bg-violet-500', 'bg-orange-500', 'bg-pink-500'];
-    const color = colors[initials.charCodeAt(0) % colors.length];
-    return src ? (
-        <img src={src} alt={name} className={`w-${size} h-${size} rounded-full object-cover ring-2 ring-white dark:ring-slate-800`} />
-    ) : (
-        <div className={`w-${size} h-${size} rounded-full ${color} flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-slate-800`}>
-            {initials}
-        </div>
-    );
-};
+const toggleStyle = { display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', background: 'none', border: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'var(--font)', color: 'inherit' };
+const branchStyle = { marginLeft: 18, paddingLeft: 16, borderLeft: '1px solid var(--gl-accent-line)', display: 'flex', flexDirection: 'column', gap: 8 };
 
 const MemberPill = ({ member }) => (
-    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs">
-        <Avatar name={member.username} src={member.profilePicture} size={5} />
-        <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[80px]">
-            {member.username}
-        </span>
-        {member.role === 'lead' && <Crown size={10} className="text-amber-500 flex-shrink-0" />}
-    </div>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px 3px 3px', fontSize: 12, color: 'var(--text-primary)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--gl-radius)' }}>
+        <Avatar name={member.username} src={member.profilePicture} size="sm" />
+        <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.username}</span>
+        {member.role === 'lead' && <Crown size={11} style={{ color: 'var(--accent)' }} aria-label="Lead" />}
+    </span>
 );
 
 const TeamCard = ({ team }) => {
     const [expanded, setExpanded] = useState(false);
+    const Chevron = expanded ? ChevronDown : ChevronRight;
     return (
-        <div className="bg-white dark:bg-slate-700/40 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
-            <button
-                onClick={() => setExpanded(e => !e)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
-            >
-                <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-sm">
-                    {team.icon || '👥'}
-                </div>
-                <div className="flex-1 text-left">
-                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">{team.name}</div>
-                    <div className="text-xs text-slate-500">{team.memberCount} members</div>
-                </div>
-                {expanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+        <div className="gl-card" style={{ overflow: 'hidden' }}>
+            <button type="button" onClick={() => setExpanded(e => !e)} style={toggleStyle} aria-expanded={expanded}>
+                <span className="tk-mark" data-size="sm" data-muted="true"><Users size={14} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 650, color: 'var(--text-primary)' }}>{team.name}</span>
+                    <span className="cd-hint">{team.memberCount} member{team.memberCount === 1 ? '' : 's'}</span>
+                </span>
+                <Chevron size={14} style={{ color: 'var(--text-muted)' }} />
             </button>
-
             {expanded && team.members?.length > 0 && (
-                <div className="px-4 pb-3 flex flex-wrap gap-2">
+                <div style={{ padding: '0 14px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {team.members.map(m => m.id && <MemberPill key={m.id} member={m} />)}
                 </div>
             )}
@@ -53,53 +38,33 @@ const TeamCard = ({ team }) => {
     );
 };
 
-const DepartmentNode = ({ dept, isRoot = false }) => {
+const DepartmentNode = ({ dept }) => {
     const [expanded, setExpanded] = useState(true);
     const hasTeams = dept.teams?.length > 0;
+    const Chevron = expanded ? ChevronDown : ChevronRight;
 
     return (
-        <div className={`relative ${isRoot ? '' : 'ml-6 pl-4 border-l-2 border-slate-200 dark:border-slate-700'}`}>
-            {}
-            <div className={`mb-3 rounded-2xl border overflow-hidden ${
-                isRoot
-                    ? 'border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/40'
-                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-            }`}>
-                <button
-                    onClick={() => setExpanded(e => !e)}
-                    className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/60 dark:hover:bg-white/5 transition-colors"
-                >
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                        <Building2 size={20} className="text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div className="flex-1 text-left">
-                        <div className="font-bold text-slate-900 dark:text-slate-100">{dept.name}</div>
-                        <div className="text-xs text-slate-500 flex gap-3 mt-0.5">
-                            <span>{dept.memberCount} members</span>
-                            {dept.head && <span className="flex items-center gap-1"><Crown size={10} className="text-amber-500" /> {dept.head.username}</span>}
-                        </div>
-                    </div>
-                    <div className="text-slate-400">
-                        {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="gl-card" style={{ overflow: 'hidden' }}>
+                <button type="button" onClick={() => setExpanded(e => !e)} style={{ ...toggleStyle, padding: '14px 16px' }} aria-expanded={expanded}>
+                    <span className="tk-mark"><Building2 size={17} /></span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{dept.name}</span>
+                        <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 2, fontSize: 12, color: 'var(--text-secondary)' }}>
+                            <span>{dept.memberCount} member{dept.memberCount === 1 ? '' : 's'}</span>
+                            {dept.head && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Crown size={11} style={{ color: 'var(--accent)' }} />{dept.head.username}</span>}
+                        </span>
+                    </span>
+                    <Chevron size={16} style={{ color: 'var(--text-muted)' }} />
                 </button>
-
-                {}
                 {expanded && dept.managers?.length > 0 && (
-                    <div className="px-5 pb-4 flex flex-wrap gap-2">
-                        {dept.managers.map(mgr => (
-                            <div key={mgr._id} className="flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg px-2.5 py-1.5">
-                                <Briefcase size={10} />
-                                {mgr.username}
-                            </div>
-                        ))}
+                    <div style={{ padding: '0 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {dept.managers.map(mgr => <Chip key={mgr._id} tone="accent"><Briefcase size={11} />{mgr.username}</Chip>)}
                     </div>
                 )}
             </div>
-
-            {}
             {expanded && hasTeams && (
-                <div className="ml-6 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-2 mb-3">
+                <div style={branchStyle}>
                     {dept.teams.map(team => <TeamCard key={team.id} team={team} />)}
                 </div>
             )}
@@ -107,10 +72,11 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
     );
 };
 
+/** Company org chart: departments, their heads and managers, and the teams inside them. */
 export default function OrgChartPage({ companyId }) {
     const { user } = useAuth();
     const rawCompanyId = companyId || user?.companyId;
-    
+
     const resolvedCompanyId = typeof rawCompanyId === 'object' && rawCompanyId !== null
         ? (rawCompanyId._id || rawCompanyId.id || String(rawCompanyId))
         : rawCompanyId;
@@ -127,7 +93,7 @@ export default function OrgChartPage({ companyId }) {
             const res = await api.get(`/api/companies/${resolvedCompanyId}/org-chart`);
             setData(res.data);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load org chart');
+            setError(err.response?.data?.message || 'Could not load the org chart');
         } finally {
             setLoading(false);
         }
@@ -135,66 +101,41 @@ export default function OrgChartPage({ companyId }) {
 
     useEffect(() => { load(); }, [load]);
 
-    if (loading) return (
-        <div className="flex items-center justify-center h-64 text-slate-400">
-            <RefreshCw size={24} className="animate-spin mr-3" /> Loading org chart…
-        </div>
-    );
-
-    if (error) return (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6 text-red-600 dark:text-red-400">
-            {error}
-        </div>
-    );
+    if (loading && !data) return <LoadingState label="Loading org chart…" />;
+    if (error) return <ErrorState message={error} onRetry={load} />;
 
     return (
-        <div className="space-y-6">
-            {}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Building2 size={22} className="text-indigo-500" />
-                        Organization Chart
-                    </h2>
-                    {data && (
-                        <p className="text-sm text-slate-500 mt-1">
-                            {data.company?.name} · {data.totalEmployees} employees
-                            {data.unassignedCount > 0 && ` · ${data.unassignedCount} unassigned`}
-                        </p>
-                    )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                    {data?.company?.logo
+                        ? <img src={data.company.logo} alt="" className="tk-mark" style={{ width: 44, height: 44, objectFit: 'contain', padding: 4 }} />
+                        : <span className="tk-mark" style={{ width: 44, height: 44 }}><Network size={20} /></span>}
+                    <div style={{ minWidth: 0 }}>
+                        <h2 className="cd-section-title" style={{ fontSize: 16 }}>{data?.company?.name || 'Organisation'}</h2>
+                        <p className="cd-section-lead">Who works where: departments, their leads and the teams inside them.</p>
+                    </div>
                 </div>
-                <button onClick={load} className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
-                    <RefreshCw size={14} /> Refresh
-                </button>
+                <Btn variant="ghost" icon={RefreshCw} loading={loading} onClick={load}>Refresh</Btn>
             </div>
 
-            {}
-            {data?.company && (
-                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 text-white flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
-                        {data.company.logo
-                            ? <img src={data.company.logo} alt="" className="w-full h-full rounded-2xl object-contain" />
-                            : '🏢'
-                        }
-                    </div>
-                    <div>
-                        <div className="text-xl font-black">{data.company.name}</div>
-                        <div className="text-indigo-200 text-sm">{data.totalEmployees} total employees across {data.departments?.length} departments</div>
-                    </div>
-                </div>
+            {data && (
+                <KpiGrid min={150}>
+                    <Kpi label="People" value={data.totalEmployees} icon={Users} />
+                    <Kpi label="Departments" value={data.departments?.length ?? 0} icon={Building2} />
+                    <Kpi label="Not in a department" value={data.unassignedCount ?? 0} icon={Users} tone={data.unassignedCount ? undefined : 'muted'} />
+                </KpiGrid>
             )}
 
-            {}
-            <div className="space-y-3">
-                {data?.departments?.length > 0 ? (
-                    data.departments.map(dept => <DepartmentNode key={dept.id} dept={dept} />)
-                ) : (
-                    <div className="text-center py-16 text-slate-400">
-                        <Users size={48} className="mx-auto mb-3 opacity-30" />
-                        <p>No departments found. Create departments to build your org structure.</p>
-                    </div>
-                )}
-            </div>
+            {data?.departments?.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {data.departments.map(dept => <DepartmentNode key={dept.id} dept={dept} />)}
+                </div>
+            ) : (
+                <Panel>
+                    <EmptyState icon={Building2} title="No departments yet" text="Create departments to see your organisation take shape here." />
+                </Panel>
+            )}
         </div>
     );
 }

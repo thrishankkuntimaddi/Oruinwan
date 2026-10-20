@@ -11,7 +11,7 @@ const T = {
   base:    'var(--bg-base)',
   surface: 'var(--bg-hover)',
   border:  'var(--border-default)',
-  accent:  '#b8956a',
+  accent:  'var(--accent)',
   accentBg:'var(--accent-dim)',
   text:    'var(--text-primary)',
   muted:   'var(--text-muted)',
@@ -66,7 +66,7 @@ export default function NewDMModal({ onClose, onStart }) {
   }, [accessToken, user, workspaceId, debouncedQuery]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '480px', maxHeight: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {}
@@ -96,7 +96,7 @@ export default function NewDMModal({ onClose, onStart }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ width: '100%', paddingLeft: '30px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', background: T.surface, border: `1px solid ${T.border}`, color: T.text, fontSize: '13px', outline: 'none', fontFamily: T.font, boxSizing: 'border-box', transition: 'border-color 150ms ease' }}
-              onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.4)'}
+              onFocus={e => e.currentTarget.style.borderColor = 'var(--gl-accent-line)'}
               onBlur={e => e.currentTarget.style.borderColor = T.border}
             />
           </div>
@@ -112,7 +112,7 @@ export default function NewDMModal({ onClose, onStart }) {
           )}
 
           {error && (
-            <div style={{ textAlign: 'center', color: '#f87171', padding: '32px 16px', fontSize: '13px', fontFamily: T.font }}>{error}</div>
+            <div style={{ textAlign: 'center', color: 'var(--state-danger)', padding: '32px 16px', fontSize: '13px', fontFamily: T.font }}>{error}</div>
           )}
 
           {!loading && !error && users.length === 0 && (
@@ -173,7 +173,7 @@ export default function NewDMModal({ onClose, onStart }) {
                   {}
                   <button
                     onClick={(e) => { e.stopPropagation(); onStart(u); }}
-                    style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
+                    style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: 'var(--bg-base)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
                     className="dm-msg-btn"
                     onMouseEnter={e => e.currentTarget.style.opacity = '1'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '0'}

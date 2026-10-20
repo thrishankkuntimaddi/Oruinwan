@@ -98,7 +98,7 @@ async function getCategories(req, res) {
     try {
         const { workspaceId } = req.query;
         if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
-        const result = await knowledgeService.getCategories(workspaceId);
+        const result = await knowledgeService.getCategories(workspaceId, req.user.sub);
         return res.json(result);
     } catch (err) { return handleError(res, err); }
 }

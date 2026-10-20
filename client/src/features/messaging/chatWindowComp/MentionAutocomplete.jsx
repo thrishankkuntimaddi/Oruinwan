@@ -60,15 +60,13 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
 
   return (
     <div
+      className="gl-liquid gl-liquid--strong"
       style={{
         position: 'absolute',
         bottom: '100%',
         left: 0,
         width: 260,
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-accent)',
-        borderRadius: '2px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        borderRadius: 'var(--gl-radius-md)',
         overflow: 'hidden',
         zIndex: 1000,
         fontFamily: 'var(--font)',

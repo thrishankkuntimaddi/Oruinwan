@@ -4,7 +4,7 @@ const { parseFrom, resolveSender, diagnoseEmailConfig } = require('../../utils/e
 
 describe('parseFrom', () => {
   test('bare address uses the fallback name', () => {
-    expect(parseFrom('noreply@chttrix.com')).toEqual({ name: 'Oruinwan', email: 'noreply@chttrix.com' });
+    expect(parseFrom('noreply@oruinwan.com')).toEqual({ name: 'Oruinwan', email: 'noreply@oruinwan.com' });
   });
   test('"Name <addr>" form (the production template format)', () => {
     expect(parseFrom('Oruinwan <noreply@yourdomain.com>')).toEqual({ name: 'Oruinwan', email: 'noreply@yourdomain.com' });
@@ -35,7 +35,7 @@ describe('resolveSender', () => {
 describe('diagnoseEmailConfig', () => {
   const good = {
     BREVO_API_KEY: 'xkeysib-abc',
-    EMAIL_FROM: 'noreply@chttrix.com',
+    EMAIL_FROM: 'noreply@oruinwan.com',
   };
   const levels = (env) => diagnoseEmailConfig(env).map((i) => i.level);
   const text = (env) => diagnoseEmailConfig(env).map((i) => i.message).join('\n');
@@ -76,13 +76,13 @@ describe('sendEmail sender wiring', () => {
   afterEach(() => { process.env = { ...saved }; jest.resetModules(); });
 
   test('Brevo payload uses the parsed "Name <addr>" sender', async () => {
-    process.env = { ...saved, BREVO_API_KEY: 'xkeysib-test', EMAIL_FROM: 'Oruinwan Team <noreply@chttrix.com>' };
+    process.env = { ...saved, BREVO_API_KEY: 'xkeysib-test', EMAIL_FROM: 'Oruinwan Team <noreply@oruinwan.com>' };
     delete process.env.SMTP_HOST; delete process.env.SMTP_FALLBACK_HOST;
     jest.doMock('axios', () => ({ post: jest.fn().mockResolvedValue({ data: { messageId: 'm1' } }) }));
     const axios = require('axios');
     const sendEmail = require('../../utils/sendEmail');
     const out = await sendEmail({ to: 'x@y.com', subject: 's', text: 't' });
     expect(out).toEqual({ provider: 'brevo', id: 'm1' });
-    expect(axios.post.mock.calls[0][1].sender).toEqual({ name: 'Oruinwan Team', email: 'noreply@chttrix.com' });
+    expect(axios.post.mock.calls[0][1].sender).toEqual({ name: 'Oruinwan Team', email: 'noreply@oruinwan.com' });
   });
 });

@@ -73,6 +73,9 @@ function sendError(res, err, label) {
   }
   if (err?.status === 429) return res.status(429).json({ message: 'The AI provider is rate limiting requests. Try again shortly.', code: 'AI_PROVIDER_RATE_LIMITED' });
   if (/required|unknown action|is required/i.test(err?.message || '')) return res.status(400).json({ message: err.message });
+  // A connected model refused the workspace's API key (wrong, revoked or out of credit).
+  const rejected = require('./assistants').keyRejectedMessage(err, res.req?.aiContext?.assistant, res.req?.aiContext?.keySource);
+  if (rejected) return res.status(502).json({ message: rejected, code: 'AI_PROVIDER_KEY_REJECTED' });
   logger.error({ err }, `[AI] ${label} failed`);
   return res.status(502).json({ message: 'AI request failed', code: 'AI_FAILED', ...(isProduction ? {} : { detail: err?.message }) });
 }
@@ -174,7 +177,7 @@ exports.chatStream = async (req, res) => {
   } catch (err) {
     if (err?.code !== 'AI_ABORTED' && !abort.signal.aborted) {
       logger.error({ err }, '[AI] chat stream failed');
-      send('error', streamError(err));
+      send('error', streamError(err, req.aiContext?.assistant, req.aiContext?.keySource));
     }
   } finally {
     clearInterval(ping);
@@ -188,7 +191,9 @@ function sourcesOf(knowledge) {
 }
 
 /** Map an AI failure to the `{ message, code }` shape used by the stream's error event. */
-function streamError(err) {
+function streamError(err, assistant, keySource) {
+  const rejected = require('./assistants').keyRejectedMessage(err, assistant, keySource);
+  if (rejected) return { message: rejected, code: 'AI_PROVIDER_KEY_REJECTED' };
   if (err?.code === 'AI_ENGINE_UNAVAILABLE') return { message: 'The Oruinwan AI engine is offline right now. Please try again in a moment.', code: err.code };
   if (err?.code === 'AI_NOT_CONFIGURED') return { message: 'AI is not configured for this workspace yet.', code: err.code };
   if (err?.status === 429) return { message: 'The AI is busy. Try again shortly.', code: 'AI_PROVIDER_RATE_LIMITED' };
@@ -203,6 +208,18 @@ function streamError(err) {
 exports.reply = async (req, res) => {
   try {
     const b = req.body || {};
+    // @claude, @chatgpt, … in the message picks that assistant (when the request didn't name one).
+    const { assistantForMention } = require('./assistants');
+    const assistant = (typeof b.assistant === 'string' && b.assistant) || assistantForMention(b.prompt) || 'default';
+    let aiContext = req.aiContext || {};
+    if (assistant !== 'default' && !b.assistant && req.aiWorkspace?.id) {
+      try {
+        aiContext = await resolver.contextFor(req.aiWorkspace.id, assistant, req.user.sub);
+      } catch (err) {
+        if (err.code === 'AI_ASSISTANT_NOT_CONNECTED') return res.status(400).json({ message: err.message, code: err.code });
+        throw err;
+      }
+    }
     const { replyId } = await conversationAI.startReply({
       conversationType: b.conversationType === 'dm' ? 'dm' : b.conversationType === 'channel' ? 'channel' : null,
       conversationId: str(b.conversationId, 64),
@@ -217,9 +234,10 @@ exports.reply = async (req, res) => {
       workspaceName: req.aiWorkspace?.name,
       io: req.app?.get('io') || null,
       req,
-      aiContext: req.aiContext || {},
+      aiContext,
+      assistant,
     });
-    return res.status(202).json({ replyId });
+    return res.status(202).json({ replyId, assistant });
   } catch (err) {
     if (err?.status && err.status < 500) return res.status(err.status).json({ message: err.message, ...(err.code && { code: err.code }) });
     return sendError(res, err, 'reply');
@@ -456,6 +474,21 @@ async function settingsView(workspaceId) {
     connected,
   };
 }
+
+/** The assistants people can pick in this workspace: Oruinwan AI plus each connected model. */
+exports.assistants = async (req, res) => {
+  try {
+    const r = await resolver.resolveForWorkspace(req.aiWorkspace.id);
+    const list = await require('./assistants').listAssistants(req.aiWorkspace.id, {
+      defaultProvider: r.providerName,
+      defaultModel: r.model || modelsFor(r.providerName).chat,
+      userId: req.user.sub,
+    });
+    return res.json({ assistants: req.aiWorkspace.settings?.enabled === false ? [] : list });
+  } catch (err) {
+    return sendError(res, err, 'assistants');
+  }
+};
 
 exports.getSettings = async (req, res) => {
   try {

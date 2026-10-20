@@ -71,7 +71,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     return (
         <div style={{
             position: 'fixed', inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
+            backgroundColor: 'var(--bg-overlay)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 100, fontFamily: FONT,
@@ -83,7 +83,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                 width: '100%', maxWidth: '440px',
                 maxHeight: '80vh', overflow: 'hidden',
                 display: 'flex', flexDirection: 'column',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--lg-shadow-sm)',
             }}>
                 {}
                 <div style={{
@@ -172,7 +172,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                                                 marginLeft: '12px', flexShrink: 0,
                                                 padding: '5px 14px',
                                                 backgroundColor: joiningId === channel._id ? 'var(--bg-active)' : 'var(--accent)',
-                                                color: joiningId === channel._id ? 'var(--text-muted)' : '#0c0c0c',
+                                                color: joiningId === channel._id ? 'var(--text-muted)' : 'var(--bg-base)',
                                                 border: 'none', borderRadius: '2px', outline: 'none',
                                                 fontSize: '12px', fontWeight: 600, cursor: joiningId !== null ? 'not-allowed' : 'pointer',
                                                 fontFamily: FONT, transition: '150ms ease',

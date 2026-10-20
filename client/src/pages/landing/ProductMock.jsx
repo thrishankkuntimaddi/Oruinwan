@@ -105,7 +105,7 @@ const ProductMock = () => {
             <div className="orw-mock orw-glass" role="group" aria-label={`${BRAND.name} app preview`}>
                 <div className="orw-mock__bar">
                     <span className="orw-mock__lights" aria-hidden="true"><i /><i /><i /></span>
-                    <span className="orw-mock__url">app.oruinwan.com</span>
+                    <span className="orw-mock__url">Oruinwan · Northwind</span>
                     <span style={{ width: 39 }} aria-hidden="true" />
                 </div>
 
@@ -122,7 +122,7 @@ const ProductMock = () => {
                         <div className="orw-mock__label">Direct messages</div>
                         {dms.map(c => <ChannelButton key={c.id} c={c} active={c.id === activeId} onSelect={select} />)}
                         <span className="orw-mock__item" style={{ cursor: 'default' }} aria-hidden="true">
-                            <Avatar person={PEOPLE.lena} size={18} className="orw-mock__avatar" /> Lena Ortiz
+                            <Avatar person={PEOPLE.design} size={18} className="orw-mock__avatar" /> Design lead
                         </span>
                     </aside>
 

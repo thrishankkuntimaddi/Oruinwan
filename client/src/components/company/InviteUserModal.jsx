@@ -3,17 +3,22 @@ import { Send } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompany } from '../../contexts/CompanyContext';
 import { isOwnerUser } from '../company-dash/dashNav';
 import { Dialog, Btn, Field, errorMessage } from '../company-dash/dashUi';
 
 /**
- * Invite one person by email (POST /api/companies/:id/invite).
- * Only owners/co-owners may invite an admin; owner is never offered.
+ * Invite one person (POST /api/company/onboarding/individual): the same flow as the Onboard
+ * page, so the person shows up as pending in People, Onboard and the dashboard, and the invite
+ * can be re-sent from there. Only owners/co-owners may invite an admin; owner is never offered.
  */
 const InviteUserModal = ({ isOpen, onClose, companyId, departments = [], onInvited }) => {
     const { showToast } = useToast();
     const { user } = useAuth();
+    const { company } = useCompany() || {};
+    const companyWs = company?.defaultWorkspace?._id || company?.defaultWorkspace || null;
     const owner = isOwnerUser(user);
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('member');
     const [departmentId, setDepartmentId] = useState('');
@@ -22,7 +27,7 @@ const InviteUserModal = ({ isOpen, onClose, companyId, departments = [], onInvit
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (isOpen) { setEmail(''); setRole('member'); setDepartmentId(''); setJobTitle(''); setError(null); }
+        if (isOpen) { setName(''); setEmail(''); setRole('member'); setDepartmentId(''); setJobTitle(''); setError(null); }
     }, [isOpen]);
 
     const submit = async (e) => {
@@ -31,23 +36,28 @@ const InviteUserModal = ({ isOpen, onClose, companyId, departments = [], onInvit
         setBusy(true);
         setError(null);
         try {
-            await api.post(`/api/companies/${companyId}/invite`, {
+            const [firstName, ...rest] = name.trim().split(/\s+/);
+            await api.post('/api/company/onboarding/individual', {
                 email: email.trim(),
-                role,
-                departmentId: departmentId || null,
+                firstName,
+                lastName: rest.join(' '),
+                companyRole: role,
+                departmentIds: departmentId ? [departmentId] : [],
+                // They join the company-wide workspace, like everyone invited at setup.
+                additionalWorkspaceIds: companyWs ? [String(companyWs)] : [],
                 jobTitle: jobTitle.trim() || undefined,
             });
             showToast(`Invitation sent to ${email.trim()}`, 'success');
             onInvited?.();
             onClose();
         } catch (err) {
-            setError(errorMessage(err, 'Could not send the invitation'));
+            setError(err?.response?.data?.errors?.[0]?.message || errorMessage(err, 'Could not send the invitation'));
         } finally {
             setBusy(false);
         }
     };
 
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const valid = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
     return (
         <Dialog
@@ -64,8 +74,11 @@ const InviteUserModal = ({ isOpen, onClose, companyId, departments = [], onInvit
             )}
         >
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Field label="Full name" htmlFor="ad-invite-name">
+                    <input id="ad-invite-name" className="gl-input" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Marcus Lee" autoComplete="off" />
+                </Field>
                 <Field label="Work email" htmlFor="ad-invite-email" error={error}>
-                    <input id="ad-invite-email" className="gl-input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" autoComplete="off" />
+                    <input id="ad-invite-email" className="gl-input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="off" />
                 </Field>
                 <div className="ad-row">
                     <Field label="Role" htmlFor="ad-invite-role" hint={owner ? undefined : 'Only the owner can invite admins.'}>

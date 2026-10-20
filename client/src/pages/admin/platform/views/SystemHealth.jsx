@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import api from '@services/api';
 import {
     Cpu, MemoryStick, Database, Clock, RefreshCcw, CheckCircle2, AlertTriangle, Info,
-    Users, Building2, Layers, Globe, Hash, MessageSquare, CheckSquare, FileText,
+    Users, Building2, Layers, Globe, Hash, CheckSquare, FileText,
 } from 'lucide-react';
 import {
     DashPage, PageHead, Section, Panel, KpiGrid, Kpi, Grid, Meter, Btn, ErrorState, LoadingState, useAsync,
@@ -88,7 +88,6 @@ const SystemHealth = () => {
                             <Kpi label="Departments" icon={Layers} value={e.departments} />
                             <Kpi label="Workspaces" icon={Globe} value={e.workspaces} />
                             <Kpi label="Channels" icon={Hash} value={e.channels} />
-                            <Kpi label="Messages" icon={MessageSquare} value={e.messages} />
                             <Kpi label="Tasks" icon={CheckSquare} value={e.tasks} />
                             <Kpi label="Notes" icon={FileText} value={e.notes} />
                         </KpiGrid>

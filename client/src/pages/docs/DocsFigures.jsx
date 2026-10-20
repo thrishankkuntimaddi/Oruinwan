@@ -246,10 +246,10 @@ const FLOWS = {
     ],
     e2ee: [
         { nodes: [{ icon: Laptop, title: 'Your device', sub: 'encrypts with the conversation key' }] },
-        { link: 'ciphertext only' },
+        { link: 'encrypted in transit' },
         { nodes: [
             { icon: Server, title: 'Oruinwan servers', sub: 'store encrypted text' },
-            { icon: KeyRound, title: 'Wrapped key copy', sub: 'lets new members join', dashed: true },
+            { icon: KeyRound, title: 'Escrowed key copy', sub: 'server master key · agents and recovery', dashed: true },
         ] },
         { link: 'ciphertext' },
         { nodes: [{ icon: Lock, title: 'Teammate’s device', sub: 'decrypts locally' }] },

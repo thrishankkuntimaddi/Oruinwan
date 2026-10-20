@@ -25,7 +25,7 @@ test.describe('tasks', () => {
     await page.locator('input[type="date"]').first().fill(isoDate(3));
 
     const created = page.waitForResponse((r) => r.url().includes('/api/v2/tasks') && r.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Create Task' }).click();
+    await page.getByRole('button', { name: 'Create Task', exact: true }).click();
     expect((await created).status()).toBeLessThan(300);
 
     await expect(page.getByText(title).first()).toBeVisible();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MicOff } from 'lucide-react';
+import { MicOff, Hand } from 'lucide-react';
 
 function getInitials(name = '') {
     return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -19,6 +19,11 @@ export default function HuddleParticipants({ participants = [] }) {
                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
                                 {getInitials(p.username || label)}
                             </div>
+                            {p.handRaised && (
+                                <div title="Hand raised" style={{ position: 'absolute', top: '-4px', right: '-4px', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--accent)', border: '1px solid var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Hand size={8} style={{ color: 'var(--bg-base)' }} />
+                                </div>
+                            )}
                             {muted && (
                                 <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--state-danger)', border: '1px solid var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <MicOff size={8} style={{ color: '#fff' }} />

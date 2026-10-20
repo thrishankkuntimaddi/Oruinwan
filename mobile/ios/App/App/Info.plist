@@ -22,6 +22,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.oruinwan.app.invite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>oruinwan</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -52,9 +63,13 @@
 		<string>arm64</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Oruinwan uses the camera for video in huddles and for photos you choose to share.</string>
+	<string>Oruinwan uses the camera so you can take photos to share and turn on video in huddles.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Oruinwan uses the microphone for voice in huddles and for voice messages.</string>
+	<string>Oruinwan uses the microphone so you can talk in huddles and record voice messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Oruinwan opens your photo library so you can choose photos and videos to share in conversations.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Oruinwan saves photos and videos you choose to download to your photo library.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -1,19 +1,10 @@
 // The web client running inside an app: the desktop app (desktop/, Electron) or a tablet in
 // the Android/iOS app (mobile/). Only `vite build --mode app` sets IS_APP; every other build
-// drops this code. The server is the user's choice, stored on the device.
+// drops this code. The server is fixed at build time (VITE_SERVER_URL, else VITE_BACKEND_URL).
 
 export const IS_APP = import.meta.env.MODE === 'app';
 /** The product website on GitHub Pages (`vite build --mode site`): no server behind it. */
 export const IS_SITE = import.meta.env.MODE === 'site';
-
-const SERVER_KEY = 'oruinwan.server';
-
-/** The demo's reserved address (.invalid never resolves): requests to it are answered on the
- * device by src/appMode/demo/backend.js. */
-export const DEMO_SERVER = 'https://demo.oruinwan.invalid';
-
-/** True while the desktop or tablet app is running the demo workspace. */
-export const isDemoMode = () => IS_APP && getServer() === DEMO_SERVER;
 
 /** 'desktop' | 'android' | 'ios': sent as x-client-platform, which puts the server in token mode. */
 export function appPlatform() {
@@ -26,20 +17,25 @@ export function appPlatform() {
   return 'desktop';
 }
 
+/** The Oruinwan server this build talks to. Until the production server exists, a local one. */
+export const BUILT_IN_SERVER = normalizeServer(import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080');
+
+/** The server this app talks to (the built-in one). */
 export function getServer() {
-  try {
-    return localStorage.getItem(SERVER_KEY) || '';
-  } catch {
-    return '';
-  }
+  return BUILT_IN_SERVER;
 }
 
-export function setServer(url) {
+/**
+ * Earlier app versions had an on-device demo workspace, remembered as this server address with a
+ * made-up session. Anyone still in it starts again at sign-in, with nothing from the demo kept.
+ */
+export function forgetOldDemo() {
   try {
-    if (url) localStorage.setItem(SERVER_KEY, url);
-    else localStorage.removeItem(SERVER_KEY);
+    if (localStorage.getItem('oruinwan.server') !== 'https://demo.oruinwan.invalid') return;
+    localStorage.clear();
+    sessionStorage.clear();
   } catch {
-    /* storage blocked: the app asks again next time */
+    /* storage blocked: nothing was saved */
   }
 }
 

@@ -25,7 +25,8 @@ router.get("/analytics/channels", requireAuth, requireCompanyAdmin, dashboardCon
 
 router.get("/analytics/tasks", requireAuth, requireCompanyAdmin, dashboardController.getTaskAnalytics);
 
-router.get("/analytics/messages", requireAuth, requireCompanyAdmin, dashboardController.getMessageVolumeAnalytics);
+// No /analytics/messages: message volume is not shown to admins (messages are end-to-end
+// encrypted and private to their participants).
 
 router.get("/analytics/engagement", requireAuth, requireCompanyAdmin, dashboardController.getEngagementTrends);
 

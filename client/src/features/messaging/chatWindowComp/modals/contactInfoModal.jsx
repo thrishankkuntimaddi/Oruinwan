@@ -78,7 +78,7 @@ export default function ContactInfoModal({ chat, onClose }) {
         }}>
             {}
             <div
-                style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
+                style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(3px)' }}
                 onClick={onClose}
             />
 
@@ -89,7 +89,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
                 borderRadius: '4px',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--lg-shadow-sm)',
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
             }}>
@@ -127,7 +127,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             border: '2px solid var(--border-accent)',
                                         }}>
-                                            <span style={{ color: '#0c0c0c', fontWeight: 700, fontSize: '18px' }}>
+                                            <span style={{ color: 'var(--bg-base)', fontWeight: 700, fontSize: '18px' }}>
                                                 {displayName.charAt(0).toUpperCase()}
                                             </span>
                                         </div>

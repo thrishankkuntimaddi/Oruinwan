@@ -1,61 +1,32 @@
 import React from "react";
-import { CheckCircle2, ZapOff } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Chip, Dot } from "../ui/page";
+import "../../pages/toolkit/toolkit.css";
 
-const T = {
-  accent: 'var(--accent)',
-  accentBg: 'var(--accent-dim)',
-  text: 'var(--text-primary)',
-  muted: 'var(--text-muted)',
-  font: 'var(--font)',
-};
+/** Status chip for an integration: connected / needs attention / not set up. */
+export function IntegrationStatus({ status }) {
+  if (status === 'connected') return <Chip tone="success"><Dot tone="success" />Connected</Chip>;
+  if (status === 'error') return <Chip tone="danger">Needs attention</Chip>;
+  if (status === 'loading') return <Chip>Checking…</Chip>;
+  return <Chip>Not set up</Chip>;
+}
 
-export default function IntegrationCard({ integration, connected, onCardClick }) {
+/** A real integration (GitHub, Jira, Zoom, webhooks). The whole card opens its details. */
+export default function IntegrationCard({ integration, status, onCardClick }) {
+  const { Icon } = integration;
   return (
-    <button
-      type="button"
-      onClick={onCardClick}
-      className="gl-card gl-card--interactive"
-      style={{
-        position: 'relative', display: 'flex', flexDirection: 'column',
-        padding: '18px', textAlign: 'left', width: '100%', fontFamily: T.font,
-      }}
-    >
-      {}
-      {connected && (
-        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: 'var(--state-success)', background: 'color-mix(in srgb, var(--state-success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 25%, transparent)', borderRadius: '2px', padding: '2px 7px' }}>
-          <CheckCircle2 size={10} /> Connected
-        </span>
-      )}
-      {!connected && (
-        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '2px 7px' }}>
-          <ZapOff size={10} /> Not Connected
-        </span>
-      )}
-
-      {}
-      <div className="gl-x-app-icon" style={{ width: '44px', height: '44px', fontSize: '22px', marginBottom: '14px' }}>
-        {integration.emoji}
+    <button type="button" onClick={onCardClick} className="gl-card gl-card--interactive tk-card" style={{ textAlign: 'left', fontFamily: 'var(--font)', color: 'inherit', width: '100%' }}>
+      <div className="tk-card-head">
+        <span className="tk-mark"><Icon size={18} /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 className="tk-card-title">{integration.name}</h3>
+          <div style={{ marginTop: 4 }}><IntegrationStatus status={status} /></div>
+        </div>
       </div>
-
-      {}
-      <h3 style={{ fontSize: '13px', fontWeight: 700, color: T.text, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '60px' }}>
-        {integration.name}
-      </h3>
-
-      {}
-      <span style={{ fontSize: '10px', color: T.muted, marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-        {integration.categoryLabel}
-      </span>
-
-      {}
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {integration.description}
-      </p>
-
-      {}
-      <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? 'var(--state-success)' : T.accent }}>
-          {connected ? 'Manage →' : 'Connect →'}
+      <p className="tk-card-text">{integration.summary}</p>
+      <div className="tk-card-foot">
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {status === 'connected' ? 'Manage' : 'How it works'} <ArrowRight size={13} />
         </span>
       </div>
     </button>

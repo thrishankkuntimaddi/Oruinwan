@@ -48,7 +48,7 @@ async function waitForComposerReady(scope) {
 async function openDm(page, otherUsername) {
   await page.locator('[title="Add Direct Messages"]').first().click();
   await page.getByPlaceholder('Search by name or email…').fill(otherUsername);
-  await page.getByText(otherUsername, { exact: true }).last().click();
+  await page.getByRole('dialog', { name: 'New message' }).getByText(otherUsername, { exact: true }).last().click();
   await page.waitForURL(/\/dm\/[a-f0-9]{24}/, { timeout: 30_000 });
 }
 

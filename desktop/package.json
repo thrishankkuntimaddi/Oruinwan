@@ -6,7 +6,7 @@
   "desktopName": "oruinwan.desktop",
   "private": true,
   "homepage": "https://github.com/thrishankkuntimaddi/Oruniwan",
-  "author": "Oruinwan",
+  "author": "Oruinwan Inc.",
   "license": "MIT",
   "scripts": {
     "start": "cross-env ELECTRON_IS_DEV=1 electron .",
@@ -25,7 +25,7 @@
   "build": {
     "appId": "com.oruinwan.desktop",
     "productName": "Oruinwan",
-    "copyright": "Copyright © 2026 Oruinwan",
+    "copyright": "Copyright © 2026 Oruinwan Inc.",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -73,7 +73,7 @@
       "icon": "assets/icon.png",
       "category": "Network",
       "executableName": "oruinwan",
-      "maintainer": "Oruinwan <https://github.com/thrishankkuntimaddi/Oruniwan>",
+      "maintainer": "Oruinwan Inc. <support@oruinwan.com>",
       "target": [
         "AppImage",
         "deb"

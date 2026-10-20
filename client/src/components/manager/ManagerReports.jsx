@@ -7,8 +7,8 @@ import {
 import { useDepartment, DepartmentGate, pct } from './managerScope';
 
 const PRIORITIES = ['highest', 'high', 'medium', 'low', 'lowest'];
-const VISIBLE = ['Your department and its members', 'Tasks created by or assigned to the team', 'Workspaces you are a member of', 'Team activity counts (messages, tasks)'];
-const HIDDEN = ['Other departments', 'Billing and plan', 'Company security settings', 'Audit and compliance logs'];
+const VISIBLE = ['Your department and its members', 'Tasks created by or assigned to the team', 'Workspaces you are a member of', 'Team task counts'];
+const HIDDEN = ["Anyone's messages (end-to-end encrypted)", 'Other departments', 'Billing and plan', 'Company security settings', 'Audit and compliance logs'];
 
 function toCsv(rows) {
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -141,7 +141,7 @@ export default function ManagerReports() {
                                         <dt>Members</dt><dd>{metrics.data?.team?.total ?? '—'}</dd>
                                         <dt>Active</dt><dd>{metrics.data?.team?.active ?? '—'}</dd>
                                         <dt>Pending</dt><dd>{metrics.data?.team?.pending ?? '—'}</dd>
-                                        <dt>Messages / 7d</dt><dd>{metrics.data?.activity?.messagesThisWeek ?? '—'}</dd>
+                                        <dt>Managers</dt><dd>{metrics.data?.team?.managers ?? '—'}</dd>
                                     </dl>
                                 )}
                             </Panel>

@@ -33,7 +33,7 @@
   --c-line-strong: 56 56 56;
   --c-text: 228 228 228;
   --c-text-2: 140 140 140;
-  --c-text-3: 98 98 98;
+  --c-text-3: 112 112 112;
   --c-accent: 184 149 106;
   --c-accent-strong: 201 168 124;
   --c-accent-ink: 201 168 124;
@@ -45,38 +45,70 @@
   --c-overlay: 0 0 0;
   --accent-grad: linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%);
   --accent-glow: 0 8px 24px -10px rgb(200 162 116 / 0.55);
+  /* Gloss: the specular highlight laid over gold fills (bg-gold) and active states. */
+  --accent-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0.1) 38%, rgb(255 255 255 / 0) 62%);
+  --accent-rim: inset 0 1px 0 rgb(255 255 255 / 0.4), inset 0 -1px 0 rgb(60 40 10 / 0.25);
   --glass: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.012));
   --spec: inset 0 1px 0 rgb(255 255 255 / 0.07);
   --shadow-sheet: 0 -8px 32px rgb(0 0 0 / 0.5);
   --shadow-pop: 0 24px 60px -24px rgb(0 0 0 / 0.75);
+  /* Liquid glass, for floating surfaces only (tab bar, sheets, dialogs, toasts, popovers).
+     Screens, list rows and cards stay solid (Monolith). See the glass utilities below. */
+  --glass-tint: rgb(24 24 24 / 0.6);
+  --glass-tint-strong: rgb(22 22 22 / 0.8);
+  --glass-tint-bar: rgb(14 14 14 / 0.68);
+  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.075) 0%, rgb(255 255 255 / 0.02) 38%, rgb(255 255 255 / 0) 70%);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.025);
+  --glass-border: rgb(255 255 255 / 0.085);
+  --glass-shadow: 0 2px 6px rgb(0 0 0 / 0.3), 0 18px 44px -14px rgb(0 0 0 / 0.7);
+  --glass-shadow-up: 0 -10px 30px -12px rgb(0 0 0 / 0.55);
+  --glass-solid: rgb(20 20 20);
+  --glass-solid-bar: rgb(14 14 14);
+  --glass-blur: blur(20px) saturate(170%);
+  --scrim: rgb(0 0 0 / 0.6);
 }
 
 [data-theme='light'] {
+  /* Warm off-white base, matching the web client's light theme (client/src/index.css). */
   color-scheme: light;
-  --c-bg: 245 244 242;
+  --c-bg: 246 243 238;
   --c-surface: 255 255 255;
-  --c-surface-2: 238 236 233;
-  --c-surface-3: 232 229 224;
-  --c-input: 250 249 247;
-  --c-line: 222 218 212;
-  --c-line-soft: 232 229 224;
-  --c-line-strong: 201 196 188;
+  --c-surface-2: 239 235 228;
+  --c-surface-3: 232 226 216;
+  --c-input: 251 249 246;
+  --c-line: 221 214 203;
+  --c-line-soft: 233 228 220;
+  --c-line-strong: 198 189 175;
   --c-text: 26 25 22;
-  --c-text-2: 92 88 82;
-  --c-text-3: 140 135 128;
+  --c-text-2: 87 82 75;
+  --c-text-3: 115 109 100; /* #736d64: AA on the base and on white */
   --c-accent: 184 149 106;
   --c-accent-strong: 160 122 82;
-  --c-accent-ink: 138 106 68;
+  --c-accent-ink: 135 100 52; /* #876434: gold as text, 4.8:1 on the base */
   --c-on-accent: 18 14 8;
   --c-danger: 201 64 64;
   --c-success: 58 143 106;
-  --c-warning: 180 118 10;
+  --c-warning: 150 96 6;
   --c-info: 58 110 200;
-  --c-overlay: 20 18 14;
+  --c-overlay: 48 38 24;
+  --accent-glow: 0 8px 20px -10px rgb(150 108 56 / 0.5);
+  --accent-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.38) 0%, rgb(255 255 255 / 0.12) 38%, rgb(255 255 255 / 0) 62%);
+  --accent-rim: inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -1px 0 rgb(90 60 20 / 0.22);
   --glass: linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.2));
   --spec: inset 0 1px 0 rgb(255 255 255 / 0.6);
-  --shadow-sheet: 0 -8px 32px rgb(40 30 10 / 0.12);
-  --shadow-pop: 0 12px 32px rgb(40 30 10 / 0.16);
+  --shadow-sheet: 0 -1px 2px rgb(60 44 20 / 0.04), 0 -12px 36px -8px rgb(60 44 20 / 0.16);
+  --shadow-pop: 0 1px 2px rgb(60 44 20 / 0.06), 0 16px 40px -12px rgb(60 44 20 / 0.24);
+  --glass-tint: rgb(255 253 250 / 0.66);
+  --glass-tint-strong: rgb(255 253 250 / 0.84);
+  --glass-tint-bar: rgb(250 248 244 / 0.72);
+  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.8) 0%, rgb(255 255 255 / 0.25) 40%, rgb(255 255 255 / 0) 75%);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.4);
+  --glass-border: rgb(120 92 54 / 0.14);
+  --glass-shadow: 0 1px 3px rgb(60 44 20 / 0.06), 0 18px 44px -14px rgb(60 44 20 / 0.24);
+  --glass-shadow-up: 0 -8px 28px -14px rgb(60 44 20 / 0.2);
+  --glass-solid: rgb(252 250 247);
+  --glass-solid-bar: rgb(250 248 244);
+  --scrim: rgb(48 38 24 / 0.32);
 }
 
 @theme inline {
@@ -174,15 +206,66 @@
   }
 }
 @utility pressable {
-  transition: transform 120ms var(--ease-out-soft), background-color 120ms, opacity 120ms;
+  transition: transform 160ms var(--ease-out-soft), background-color 160ms, opacity 160ms, box-shadow 200ms, filter 160ms;
   &:active {
     transform: scale(0.97);
   }
 }
 
+/* Gold fill with gloss: the gradient, a specular highlight across the top half, a lit rim. */
 @utility bg-gold {
-  background: var(--accent-grad);
-  box-shadow: var(--accent-glow), var(--spec);
+  background: var(--accent-sheen), var(--accent-grad);
+  box-shadow: var(--accent-glow), var(--accent-rim);
+}
+
+/*
+ * Liquid glass. Only for surfaces that float over content: never on screens, list rows or
+ * long scrolling lists (backdrop-filter is costly there, and the base should stay calm).
+ *   glass         toasts, popovers, floating pills and banners (lifted)
+ *   glass-strong  sheets and dialogs: more opaque, so long text stays readable
+ *   glass-bar     edge-to-edge bars (tab bar, composer); the component adds its own hairline
+ *   glass-header  sticky screen headers: tinted with the page colour, so they stay quiet
+ * glass and glass-strong colour the border; the component sets its width (border, border-t).
+ * Without backdrop-filter (old Android WebViews) each falls back to a solid colour below.
+ */
+@utility glass {
+  background-color: var(--glass-tint);
+  background-image: var(--glass-sheen);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+}
+@utility glass-strong {
+  background-color: var(--glass-tint-strong);
+  background-image: var(--glass-sheen);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+}
+@utility glass-bar {
+  background-color: var(--glass-tint-bar);
+  background-image: var(--glass-sheen);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), var(--glass-shadow-up);
+}
+@utility glass-header {
+  background-color: rgb(var(--c-bg) / 0.82);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background-color: var(--glass-solid); }
+  .glass-strong { background-color: var(--glass-solid); }
+  .glass-bar { background-color: var(--glass-solid-bar); }
+  .glass-header { background-color: rgb(var(--c-bg)); }
+}
+
+/* Dims what is under a sheet or dialog; lighter and warmer in light mode. */
+@utility scrim {
+  background-color: var(--scrim);
 }
 
 /* Screen transitions for the stack navigator. */
@@ -211,14 +294,42 @@
   40% { opacity: 1; }
 }
 
-.animate-screen-in { animation: screen-in 240ms var(--ease-out-soft) both; }
+.animate-screen-in { animation: screen-in 220ms var(--ease-out-soft) both; }
 .animate-fade-in { animation: fade-in 180ms ease-out both; }
-.animate-sheet-in { animation: sheet-in 280ms var(--ease-out-soft) both; }
+.animate-sheet-in { animation: sheet-in 220ms var(--ease-out-soft) both; }
 .animate-pop-in { animation: pop-in 180ms var(--ease-out-soft) both; }
 /* Wide windows: sheets are centred dialogs (ui/Overlay.jsx), so they pop in instead. */
 @media (min-width: 1024px) {
   .animate-sheet-in { animation: pop-in 180ms var(--ease-out-soft) both; }
 }
+/* First-launch intro (features/auth/Intro.jsx): the mark lands, then the words and the
+   little conversation rise in one after another. Reduced motion shows everything at once. */
+@keyframes intro-mark {
+  0% { transform: scale(0.55) rotate(-8deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(0); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes intro-rise {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes intro-bubble {
+  0% { transform: translateY(10px) scale(0.92); opacity: 0; }
+  70% { transform: translateY(-2px) scale(1.01); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes intro-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.intro-mark { animation: intro-mark 700ms var(--ease-out-soft) both; }
+.intro-rise { animation: intro-rise 520ms var(--ease-out-soft) both; }
+.intro-bubble { animation: intro-bubble 480ms var(--ease-out-soft) both; }
+.intro-breathe { animation: intro-breathe 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .intro-mark, .intro-rise, .intro-bubble, .intro-breathe { animation: none; }
+}
+
 .skeleton {
   background: linear-gradient(90deg, rgb(var(--c-surface-2)) 0, rgb(var(--c-surface-3)) 50%, rgb(var(--c-surface-2)) 100%);
   background-size: 400px 100%;

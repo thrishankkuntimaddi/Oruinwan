@@ -31,7 +31,7 @@
     .hw-panel { width: 100vw; bottom: calc(56px + env(safe-area-inset-bottom)); }
 }
 
-.hw-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid var(--border-subtle); }
+.hw-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid var(--lg-border); background-color: var(--lg-chrome); background-image: var(--lg-sheen); box-shadow: var(--lg-edge); }
 .hw-head-titles { flex: 1; min-width: 0; }
 .hw-title { margin: 0; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hw-sub { margin: 2px 0 0; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
@@ -129,13 +129,15 @@
     gap: 8px;
     max-width: calc(100vw - 32px);
     padding: 6px 6px 6px 12px;
-    background: var(--bg-surface);
-    background-image: var(--gl-glass-strong);
-    border: 1px solid var(--border-accent);
-    border-left: 3px solid var(--state-success);
+    background-color: var(--lg-tint);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
     border-radius: 999px;
-    box-shadow: var(--gl-drop), var(--gl-spec);
+    box-shadow: var(--lg-edge), var(--lg-shadow), inset 3px 0 0 var(--state-success);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
     font-family: var(--font, Inter, system-ui, sans-serif);
+    animation: gl-dialog-in var(--gl-dur-3) var(--gl-ease);
 }
 /* Clear of the icon sidebar's profile button on desktop. */
 @media (min-width: 641px) {
@@ -149,3 +151,41 @@
 .hw-pill-time { font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .hw-pill .gl-icon-btn { border-radius: 999px; }
 .hw-pill-leave { background: var(--state-danger) !important; color: #fff !important; border-color: var(--state-danger) !important; }
+
+/* A DM call ringing for me. */
+.hw-ring {
+    position: fixed;
+    right: 16px;
+    top: 56px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(380px, calc(100vw - 32px));
+    padding: 12px 12px 12px 14px;
+    background-color: var(--lg-tint-strong);
+    background-image: var(--lg-sheen);
+    border: 1px solid var(--lg-border);
+    border-left: 3px solid var(--state-success);
+    border-radius: var(--gl-radius-md, 7px);
+    box-shadow: var(--lg-edge), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-filter);
+    backdrop-filter: var(--lg-filter);
+    font-family: var(--font, Inter, system-ui, sans-serif);
+    animation: hw-ring-in 220ms ease;
+}
+.hw-ring-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; color: var(--state-success); border: 1px solid var(--state-success); animation: hw-ring-pulse 1.4s ease-in-out infinite; }
+.hw-ring-text { flex: 1; min-width: 0; }
+.hw-ring-title { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-ring-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-secondary); }
+.hw-ring-actions { display: flex; gap: 6px; flex-shrink: 0; }
+@keyframes hw-ring-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes hw-ring-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--state-success) 45%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (max-width: 640px) {
+    .hw-ring { top: calc(8px + env(safe-area-inset-top)); right: 8px; left: 8px; width: auto; }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .hw-pill, .hw-ring { background-color: var(--lg-solid); }
+}
+@media (prefers-reduced-motion: reduce) { .hw-pill, .hw-ring { animation: none; } }

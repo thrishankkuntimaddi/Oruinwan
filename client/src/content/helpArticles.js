@@ -31,18 +31,18 @@ export const ARTICLES = [
         id: 'create-workspace',
         topic: 'getting-started',
         title: 'Create a workspace',
-        summary: 'Start a new workspace from the workspace list, from a template or blank.',
-        keywords: 'new workspace create start template blank setup',
+        summary: 'Name it, say what your team is working on, then invite teammates with a link or by email.',
+        keywords: 'new workspace create start template blank setup wizard project teammates team link',
         appPath: '/workspaces',
         appLabel: 'Go to your workspaces',
         body: [
             'A workspace is where a team talks, plans and keeps its knowledge. You can belong to several and switch between them on the **Workspaces** page.',
             { steps: [
                 'Open **Workspaces** and choose **Create New Workspace**.',
-                'Pick a template, or **Blank workspace**.',
-                'Give it a name and an optional description, then choose an icon and a color.',
-                'Confirm the owner responsibilities.',
-                'Invite your team by entering email addresses (separated by commas or new lines), or choose **Skip & Launch** and invite people later.',
+                '**Name**: type the name of your team or company, and pick an icon and a colour. You can also start from a template.',
+                '**Project**: say what your team is working on right now. Oruinwan makes a channel for it next to `#general` and `#random`. Choose **Skip** if you’d rather not.',
+                'Choose **Create workspace**. You are its owner.',
+                '**Teammates**: copy the team link and share it, or type email addresses (separated by commas or new lines). Choose **Open workspace** when you’re done, or **Skip for now**.',
             ] },
             { note: 'Personal accounts can own up to 3 workspaces. In company accounts, members may not be allowed to create workspaces; ask your admin.' },
         ],
@@ -51,8 +51,8 @@ export const ARTICLES = [
         id: 'invite-people',
         topic: 'getting-started',
         title: 'Invite people to a workspace',
-        summary: 'Send email invites or share a one-time invite link.',
-        keywords: 'invite add member teammate email link share join',
+        summary: 'Send email invites, share a one-time link, or share the workspace’s team link.',
+        keywords: 'invite add member teammate email link share join team link one-time revoke',
         appPath: 'home',
         body: [
             { steps: [
@@ -60,7 +60,12 @@ export const ARTICLES = [
                 'Choose **Invite people**.',
                 'Under **Invite via**, pick **Email address** to send invitations, or **Shareable link** to copy a link.',
             ] },
-            'Each shareable link is one-time use and expires after 7 days. Pending invites are listed in the same dialog, where you can revoke them.',
+            { list: [
+                '**Team link** (from workspace setup): anyone who has it can join until it expires after 7 days.',
+                '**One-time link** (from **Invite people**): works for one person and also expires after 7 days.',
+                '**Email invite**: sent to one address.',
+            ] },
+            'Pending invites and team links are listed in the same dialog (and in **Workspace admin → Invitations**), where you can revoke them. A revoked link stops working straight away.',
             { note: 'If a workspace admin has turned off member invites, only admins can invite.' },
         ],
     },
@@ -76,6 +81,41 @@ export const ARTICLES = [
             'Opening an invite link shows who invited you, how many members the workspace has and the role you will get. Sign in (or create an account) and accept.',
             'Already signed in? On the **Workspaces** page choose **Join a workspace** and paste the invite link.',
             'Company invitations sent by email take you to a page where you set your name and password first.',
+        ],
+    },
+    {
+        id: 'sign-in',
+        topic: 'getting-started',
+        title: 'Create an account and sign in',
+        summary: 'Sign up with email or Google, verify your email, and sign in with a password, passkey or Google.',
+        keywords: 'sign up signup register account create login log in sign in email verify verification google password passkey two-factor 2fa',
+        body: [
+            { steps: [
+                'Choose **Get started**, pick a username, and enter your email, date of birth and a password.',
+                'Open the verification link we email you (it works for 24 hours). You can sign in once your email is verified.',
+                'Sign in with your email and password. If you turned on two-factor sign-in, enter the 6-digit code from your authenticator app.',
+            ] },
+            { list: [
+                '**Continue with Google** (on the web and in the phone apps) signs you in, or creates an account after you choose a username. Google has already verified your email.',
+                '**Sign in with a passkey** (web app) once you have added one in **Settings → Password & security**.',
+                'The desktop and tablet apps sign in with email and password. They are already set up for your Oruinwan server, so there is no server address to enter.',
+            ] },
+            { note: 'Didn’t get the verification email, or it expired? Choose **Resend verification email**.' },
+        ],
+    },
+    {
+        id: 'apps',
+        topic: 'getting-started',
+        title: 'Desktop, phone and tablet apps',
+        summary: 'Oruinwan on the web, on Mac, Windows and Linux, on Android phones and iPhones, and on tablets.',
+        keywords: 'apps app desktop mac windows linux phone mobile android iphone ios ipad tablet testflight download install',
+        body: [
+            { list: [
+                '**Desktop apps** for Mac, Windows and Linux: the full workspace in its own window, with notifications, an unread badge and split view.',
+                '**Phone apps** for Android and iPhone (iPhone through TestFlight while it is in testing): chats, threads, Oruinwan AI and agents, tasks, notes, files, voice huddles and push notifications.',
+                '**Tablets** (Android tablets and iPads) get the full workspace, including video huddles, screen sharing and split view.',
+            ] },
+            'Every app is already set up for your Oruinwan server: open it and sign in.',
         ],
     },
 
@@ -118,6 +158,19 @@ export const ARTICLES = [
         body: [
             'Hover a message and choose **Reply in thread**. The thread opens next to the conversation.',
             'Channels have a **Threads** tab listing their threads. Threads can be marked resolved, and **Summarize thread** (in a message’s More menu) asks Oruinwan AI for a recap.',
+            'On a desktop or tablet, choose **Open in split view** in the thread header to keep the thread beside the main view while you move around.',
+        ],
+    },
+    {
+        id: 'split-view',
+        topic: 'messaging',
+        title: 'Split view',
+        summary: 'Open a second conversation, a thread or another page beside the main one on a desktop or tablet.',
+        keywords: 'split view side by side beside two conversations pane thread desktop tablet ipad',
+        body: [
+            'Choose the **Split view** button in the top bar, or press **Cmd/Ctrl + \\**, then pick a channel, a direct message, a note or a page such as Tasks or Oruinwan AI. Drag the pane’s edge to resize it.',
+            'In a thread, choose **Open in split view** to keep the thread beside the main view while you switch channels.',
+            { note: 'Split view needs a wide screen: desktops and tablets in landscape.' },
         ],
     },
     {
@@ -281,7 +334,7 @@ export const ARTICLES = [
         keywords: 'knowledge search workspace find ai notes tasks pages semantic',
         body: [
             'Ask questions like “what did we decide about the launch date?”. Oruinwan AI searches the notes, tasks and knowledge pages you have access to, by meaning rather than exact words.',
-            'Messages are end-to-end encrypted, so they are never indexed for AI search.',
+            'Messages are never indexed for AI search. To make a decision findable, write it into a note or knowledge page.',
         ],
     },
     {
@@ -295,6 +348,24 @@ export const ARTICLES = [
         body: [
             'Oruinwan AI runs on the Oruinwan Engine, our own AI engine. By default your questions are not sent to any third-party AI service.',
             'Workspace admins can see the engine’s status and usage in **Settings → Oruinwan AI**, and turn AI features on or off for the workspace. If an admin connects an outside AI provider to a workspace, Oruinwan AI tells you so there.',
+        ],
+    },
+    {
+        id: 'agents',
+        topic: 'ai',
+        title: 'Add an agent like Claude',
+        summary: 'Admins install an outside agent for the workspace; members can connect their own with an API key.',
+        keywords: 'agent agents claude grok assistant install connect my own api key personal workspace mention',
+        appPath: 'agents',
+        appLabel: 'Open Agents & tools',
+        body: [
+            'Besides the built-in Oruinwan AI, a workspace can use outside agents such as Claude. Open **Agents & tools → Directory** and pick one.',
+            { list: [
+                '**Install for workspace** (admins): paste an API key from your account at that company. Everyone in the workspace can then use the agent.',
+                '**Connect my own** (members): use your own API key, just for you. Only your requests use it, and nobody else can see it. Admins can switch personal connections off.',
+            ] },
+            'Then chat with the agent under **Agents** in the sidebar, pick it in the AI panel, or mention it in a conversation (for example `@claude`).',
+            { note: 'Questions and the context sent with them go to that agent’s company and are processed under its terms.' },
         ],
     },
 
@@ -367,12 +438,14 @@ export const ARTICLES = [
         id: 'huddles',
         topic: 'huddles',
         title: 'Start, join or schedule a huddle',
-        summary: 'Voice and video calls from the Huddles page or any conversation.',
-        keywords: 'huddle call voice video meeting schedule join start',
+        summary: 'Audio and video calls with screen sharing and raise hand, from the Huddles page or any conversation.',
+        keywords: 'huddle call voice audio video meeting schedule scheduled join start screen share raise hand',
         appPath: 'huddles',
         body: [
             'Open **Huddles** to **Start a huddle** or **Schedule a meeting**. The page shows what is **Live now**, **Scheduled** and **Recent**; select a live huddle to join it.',
             'From a conversation, use the call buttons in the header, or type `/call`, `/video` or `/meet`.',
+            'In a call you can mute, turn your camera on or off, **Share screen** and **Raise hand**. Each scheduled meeting has its own call, which you join from the meeting.',
+            { note: 'In the phone apps, huddles are audio only. Video and screen sharing work on the web, the desktop apps and tablets.' },
         ],
     },
 
@@ -432,12 +505,25 @@ export const ARTICLES = [
         id: 'encryption',
         topic: 'security',
         title: 'How your messages are encrypted',
-        summary: 'Messages are encrypted in your browser before they are sent.',
-        keywords: 'encryption e2ee end-to-end encrypted aes security keys unlock password',
+        summary: 'End-to-end encrypted between devices, with a server-escrowed copy of each conversation key.',
+        keywords: 'encryption e2ee end-to-end encrypted aes security keys unlock password escrow recovery reset agents tls at rest',
         body: [
-            'Messages are encrypted on your device with AES-256-GCM before they leave it, using a key for each conversation. Oruinwan’s servers store message text only in encrypted form, which is why messages are never indexed for search or AI.',
-            'Your encryption keys are protected with your password. On a new browser you may be asked for your password to unlock your messages.',
-            'So that new members can read a conversation they join, Oruinwan keeps a protected copy of each conversation key on its servers.',
+            'Messages are encrypted on your device with AES-256-GCM before they leave it, using a key for each conversation. They travel over encrypted connections (TLS) and are stored encrypted at rest. Message content is never shown to admins.',
+            'Your copy of each conversation key is protected by your own keys, which your password unlocks. On a new browser you may be asked for your password to unlock your messages.',
+            'Your Oruinwan server also keeps an escrowed copy of each conversation key, protected by a server master key. It lets AI agents answer in encrypted conversations, lets you get your conversations back after a password reset, and lets new members read a conversation they join.',
+            { note: 'Because of the escrowed keys, this is not zero-knowledge messaging. Attachments are stored on the server and are not end-to-end encrypted.' },
+        ],
+    },
+    {
+        id: 'admin-privacy',
+        topic: 'security',
+        title: 'What admins can see',
+        summary: 'Admins never see your messages or message counts, and there are no per-person activity metrics.',
+        keywords: 'privacy admin admins see read messages monitor monitoring activity metrics analytics tracking productivity',
+        body: [
+            'Workspace admins and company owners and admins manage people, roles, settings and security. They **never** see the content of your messages, in channels or DMs, and they don’t see how many messages anyone sends.',
+            'Analytics count members, channels, tasks, notes and files. There are no per-person activity metrics or productivity tracking.',
+            'Your personal agent keys and your own GitHub or Jira connections are visible and usable only by you.',
         ],
     },
     {
@@ -456,6 +542,24 @@ export const ARTICLES = [
             ] },
             'From then on, after your password Oruinwan asks for the 6-digit code from your authenticator app.',
             { note: 'Oruinwan supports authenticator apps only; codes are not sent by SMS.' },
+        ],
+    },
+    {
+        id: 'passkeys',
+        topic: 'security',
+        title: 'Sign in with a passkey',
+        summary: 'Use your fingerprint, face or screen lock instead of typing a password.',
+        keywords: 'passkey passkeys webauthn fingerprint face id touch id windows hello sign in login security key',
+        appPath: '/settings?tab=security',
+        appLabel: 'Open Password & security',
+        body: [
+            { steps: [
+                'Go to **Settings → Password & security**.',
+                'Under **Passkeys** choose **Add a passkey** and confirm with your fingerprint, face or screen lock.',
+                'Next time, choose **Sign in with a passkey** on the sign-in page.',
+            ] },
+            'Rename passkeys to tell devices apart, or remove one you no longer use.',
+            { note: 'Passkeys work in the web app in recent browsers. The desktop and tablet apps sign in with your password.' },
         ],
     },
     {
@@ -575,6 +679,7 @@ export const SHORTCUTS = [
     { group: 'Anywhere', label: 'AI command box', keys: [['Mod', '/']] },
     { group: 'Anywhere', label: 'Open or close Help', keys: [['?']], where: 'outside text fields' },
     { group: 'Anywhere', label: 'Close a dialog, menu or panel', keys: [['Esc']] },
+    { group: 'Anywhere', label: 'Open or close split view', keys: [['Mod', '\\']], where: 'desktop and tablet' },
     { group: 'Composer', label: 'Send message', keys: [['Enter']] },
     { group: 'Composer', label: 'New line', keys: [['Shift', 'Enter']] },
     { group: 'Composer', label: 'Pick a mention or command suggestion', keys: [['Enter'], ['Tab']] },
@@ -587,7 +692,11 @@ export const SHORTCUTS = [
 
 /** Recent changes, newest first. */
 export const WHATS_NEW = [
-    { id: 'rebrand', date: 'September 2026', title: 'Chttrix is now Oruinwan', text: 'Same workspace, new name and a new look, with glass-style panels in both light and dark themes.' },
+    { id: 'agents', date: 'October 2026', title: 'Agents for every workspace', text: 'Install Claude, ChatGPT, Gemini or Grok for the whole workspace, or connect your own with your API key.', articleId: 'agents' },
+    { id: 'split-view', date: 'October 2026', title: 'Split view', text: 'On a desktop or tablet, open a second conversation, a thread or another page beside the one you are in.', articleId: 'split-view' },
+    { id: 'apps', date: 'October 2026', title: 'Apps for every device', text: 'Desktop apps for Mac, Windows and Linux, phone apps for Android and iPhone, and the full workspace on tablets.', articleId: 'apps' },
+    { id: 'passkeys', date: 'October 2026', title: 'Passkeys', text: 'Sign in with your fingerprint, face or screen lock in the web app.', articleId: 'passkeys' },
+    { id: 'rebrand', date: 'September 2026', title: 'A new look', text: 'Glass-style panels and a refreshed design in both light and dark themes.' },
     { id: 'own-ai', date: 'September 2026', title: 'Oruinwan AI on our own engine', text: 'The assistant now runs on the Oruinwan Engine, with answers that stream in live and a Stop button.', articleId: 'ai-engine' },
     { id: 'ai-chats', date: 'September 2026', title: '@Oruinwan in every conversation', text: 'Mention @Oruinwan in a channel, DM or thread to get an answer there, then keep asking follow-ups without mentioning it again.', articleId: 'ai-in-chats' },
     { id: 'ai-memory', date: 'September 2026', title: 'Personal memory, workspace knowledge and code review', text: 'Tell the assistant what to remember, ask about your notes, tasks and knowledge pages, and get code reviewed from any message.', articleId: 'ai-memory' },

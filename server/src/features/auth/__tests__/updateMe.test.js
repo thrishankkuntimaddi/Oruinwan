@@ -123,6 +123,41 @@ describe('PUT /api/auth/me validation', () => {
   });
 });
 
+describe('getting-started checklist', () => {
+  test('saves finished steps and hiding, and returns them with /me', async () => {
+    const ok = await run({ preferences: { gettingStarted: { done: ['invite', 'ai', 'invite'] } } });
+    expect(ok.statusCode).toBe(200);
+    expect(mockState.user.preferences.gettingStarted).toEqual({ done: ['invite', 'ai'], hidden: false });
+    expect(ok.body.user.preferences.gettingStarted).toEqual({ done: ['invite', 'ai'], hidden: false });
+
+    const hidden = await run({ preferences: { gettingStarted: { hidden: true } } });
+    expect(hidden.body.user.preferences.gettingStarted).toEqual({ done: ['invite', 'ai'], hidden: true });
+  });
+
+  test('refuses unknown steps and wrong types', async () => {
+    expect((await run({ preferences: { gettingStarted: { done: ['hack'] } } })).statusCode).toBe(400);
+    expect((await run({ preferences: { gettingStarted: { hidden: 'yes' } } })).statusCode).toBe(400);
+    expect((await run({ preferences: { gettingStarted: 'x' } })).statusCode).toBe(400);
+  });
+});
+
+describe('first-run tour', () => {
+  test('is not done for accounts that never saw it, and saves done', async () => {
+    const before = await run({ about: 'hi' });
+    expect(before.body.user.preferences.tour).toEqual({ done: false });
+    const ok = await run({ preferences: { tour: { done: true } } });
+    expect(ok.statusCode).toBe(200);
+    expect(mockState.user.preferences.tour.done).toBe(true);
+    expect(ok.body.user.preferences.tour).toEqual({ done: true });
+  });
+
+  test('refuses anything but a boolean done', async () => {
+    expect((await run({ preferences: { tour: { done: 'yes' } } })).statusCode).toBe(400);
+    expect((await run({ preferences: { tour: true } })).statusCode).toBe(400);
+    expect((await run({ preferences: { tour: null } })).statusCode).toBe(400);
+  });
+});
+
 describe('computeHasPassword', () => {
   test('OAuth placeholder or random hashes do not count until a password is set', () => {
     expect(computeHasPassword({ passwordHash: null })).toBe(false);

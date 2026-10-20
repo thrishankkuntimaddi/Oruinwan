@@ -65,7 +65,7 @@ const WorkspaceRow = ({ ws, navigate }) => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <StatCell label="Messages" value={ws.activity?.messages || 0} />
+                <StatCell label="Members" value={ws.memberCount || 0} />
                 <StatCell label="Open Tasks" value={ws.activity?.tasksActive || 0} />
                 <StatCell label="Completed" value={ws.activity?.tasksCompleted || 0} />
                 <ManageBtn onClick={() => navigate(`/workspace/${ws._id}/home`)} />

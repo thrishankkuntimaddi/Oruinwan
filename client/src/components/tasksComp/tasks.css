@@ -36,8 +36,8 @@ html.light .tasks-ui textarea { color-scheme: light; }
 }
 .tasks-ui .tk-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-accent); background: var(--bg-hover); }
 .tasks-ui .tk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.tasks-ui .tk-btn-primary { background: var(--accent); border-color: var(--accent); color: #0c0c0c; font-weight: 700; }
-.tasks-ui .tk-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #0c0c0c; }
+.tasks-ui .tk-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--bg-base); font-weight: 700; }
+.tasks-ui .tk-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--bg-base); }
 .tasks-ui .tk-btn-danger { color: var(--state-danger); border-color: color-mix(in srgb, var(--state-danger) 40%, transparent); }
 .tasks-ui .tk-btn-danger:hover:not(:disabled) { color: #fff; background: var(--state-danger); border-color: var(--state-danger); }
 .tasks-ui .tk-icon-btn {
