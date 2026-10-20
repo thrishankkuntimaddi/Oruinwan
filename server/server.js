@@ -75,7 +75,6 @@ const path = require("path");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const helmet = require("helmet");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -123,7 +122,7 @@ const { captureRawBody } = require('./src/features/integrations/webhook.verify')
 app.use(express.json({ limit: '50mb', verify: captureRawBody }));
 app.use(express.urlencoded({ limit: '50mb', extended: true, verify: captureRawBody }));
 app.use(cookieParser());
-app.use(helmet());
+app.use(require('./src/shared/middleware/securityHeaders').securityHeaders());
 
 const isProduction = process.env.NODE_ENV === 'production';
 // FRONTEND_URL, CORS_EXTRA_ORIGINS, and localhost dev servers outside production
