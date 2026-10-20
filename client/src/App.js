@@ -87,6 +87,7 @@ import Status from "./pages/resources/Status";
 
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
+import DeleteAccount from "./pages/legal/DeleteAccount";
 import CookieSettings from "./pages/legal/CookieSettings";
 
 import RegisterCompany from "./pages/RegisterCompany";
@@ -755,6 +756,7 @@ function App() {
 
                           <Route path="/privacy" element={<Privacy />} />
                           <Route path="/terms" element={<Terms />} />
+                          <Route path="/delete-account" element={<DeleteAccount />} />
                           <Route path="/cookies" element={<CookieSettings />} />
 
                           {}
@@ -964,6 +966,8 @@ function App() {
                             }
                           />
                           <Route path="/chttrix-admin/*" element={<LegacyRedirect from="/chttrix-admin" to="/platform-admin" />} />
+                          {/* Unknown addresses go home instead of rendering an empty page */}
+                          <Route path="*" element={<Navigate to="/" replace />} />
 
                             </Routes>
                           </AppErrorBoundary>

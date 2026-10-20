@@ -31,7 +31,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The web app's host, for invitation links (AndroidManifest.xml). Set ORUINWAN_WEB_HOST
         // (environment) or oruinwanWebHost (gradle.properties) once the production domain is known.
-        manifestPlaceholders += [oruinwanWebHost: System.getenv('ORUINWAN_WEB_HOST') ?: (project.findProperty('oruinwanWebHost') ?: 'app.example.com')]
+        manifestPlaceholders += [oruinwanWebHost: System.getenv('ORUINWAN_WEB_HOST') ?: (project.findProperty('oruinwanWebHost') ?: 'oruinwan.poelys.com')]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -47,6 +47,24 @@ android {
                 keyAlias signingValue('ANDROID_KEY_ALIAS', 'keyAlias')
                 keyPassword signingValue('ANDROID_KEY_PASSWORD', 'keyPassword')
             }
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    // Two builds from the same code:
+    //  - github: the APK published on GitHub Releases. Updates itself (AppUpdaterPlugin).
+    //  - play:   the bundle uploaded to Google Play. Play installs updates, so there is no
+    //            in-app updater and no REQUEST_INSTALL_PACKAGES permission (src/play/AndroidManifest.xml).
+    flavorDimensions.add("store")
+    productFlavors {
+        github {
+            dimension "store"
+            buildConfigField "boolean", "IN_APP_UPDATES", "true"
+        }
+        play {
+            dimension "store"
+            buildConfigField "boolean", "IN_APP_UPDATES", "false"
         }
     }
     buildTypes {

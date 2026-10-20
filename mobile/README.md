@@ -54,7 +54,7 @@ npm install
 npm run dev            # browser preview at http://localhost:5174 (talks to VITE_SERVER_URL)
 npm run lint
 npm test               # Vitest
-npm run android:debug  # debug APK (phone UI + web client): android/app/build/outputs/apk/debug/app-debug.apk
+npm run android:debug  # debug APK (phone UI + web client): android/app/build/outputs/apk/github/debug/app-github-debug.apk
 npm run assemble       # just www/ (builds ../client in app mode; ORUINWAN_SKIP_WEB_BUILD=1 reuses client/dist-app)
 ```
 

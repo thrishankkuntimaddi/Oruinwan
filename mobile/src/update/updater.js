@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { registerPlugin } from '@capacitor/core';
 import { UPDATE_MANIFEST_URL, RELEASES_PAGE } from '../config/env.js';
 import { refreshRemoteConfig, remoteSnapshot } from '../config/remote.js';
-import { desktop, isAndroid, isDesktop, isIOS, isNative, isWeb, nativeAppInfo, openExternal } from '../native/index.js';
+import { desktop, isAndroid, isDesktop, isIOS, isNative, isPlayStore, isWeb, nativeAppInfo, openExternal } from '../native/index.js';
 import { prefs } from '../native/storage.js';
 import { desktopDownload, evaluate, normalizeManifest, pickNewest } from './manifest.js';
 
@@ -40,7 +40,7 @@ async function fetchManifestUrl() {
 
 export async function checkForUpdate({ auto = false } = {}) {
   const state = useUpdate.getState();
-  if (isWeb || isIOS) {
+  if (isWeb || isIOS || isPlayStore) {
     useUpdate.setState({ status: 'current', manifest: null, error: null });
     return useUpdate.getState();
   }

@@ -35,6 +35,9 @@ env:
   # SHA-256 of the (password-protected) release keystore file, to catch a damaged secret early.
   RELEASE_KEYSTORE_SHA256: 8193055c4e748cd0407d5e10d7b200bdf74d6a7512a7b1cf72ddbe66ac5b60bd
   IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+  # Signed Android builds (release APK + Google Play bundle): tags, and manual runs (Actions →
+  # Build apps → Run workflow), which make the Play bundle without publishing a GitHub Release.
+  SIGNED_ANDROID: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
 
 jobs:
   check:
@@ -143,21 +146,21 @@ jobs:
           npx cap sync android
 
       - name: Build a debug APK
-        if: env.IS_RELEASE != 'true'
+        if: env.SIGNED_ANDROID != 'true'
         working-directory: mobile/android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleGithubDebug
 
       - name: Debug APK artifact
-        if: env.IS_RELEASE != 'true'
+        if: env.SIGNED_ANDROID != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: oruinwan-android-debug
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: mobile/android/app/build/outputs/apk/github/debug/app-github-debug.apk
           retention-days: 14
 
       # Secrets exist only inside this step, never in $GITHUB_ENV, and the key file is removed after.
-      - name: Build the signed release APK
-        if: env.IS_RELEASE == 'true'
+      - name: Build the signed release APK and Google Play bundle
+        if: env.SIGNED_ANDROID == 'true'
         working-directory: mobile/android
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -198,21 +201,38 @@ jobs:
           ANDROID_KEY_PASSWORD="$CANDIDATE"
           ANDROID_KEY_ALIAS=$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n[:space:]' | sed 's/%$//')
           export ANDROID_KEY_ALIAS
-          ./gradlew --no-daemon assembleRelease
+          # GitHub APK (updates itself) and the Google Play bundle (Play installs updates).
+          ./gradlew --no-daemon assembleGithubRelease bundlePlayRelease
 
       - name: Verify the release signature
-        if: env.IS_RELEASE == 'true'
+        if: env.SIGNED_ANDROID == 'true'
         run: |
           mkdir -p dist-release
-          cp android/app/build/outputs/apk/release/app-release.apk dist-release/Oruinwan-Android.apk
+          cp android/app/build/outputs/apk/github/release/app-github-release.apk dist-release/Oruinwan-Android.apk
+          cp android/app/build/outputs/bundle/playRelease/app-play-release.aab "dist-release/Oruinwan-GooglePlay-$(node -p "require('./package.json').version").aab"
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
           SIGNER=$("$APKSIGNER" verify --print-certs dist-release/Oruinwan-Android.apk | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
           if [ "$SIGNER" != "$RELEASE_CERT_SHA256" ]; then
             echo "::error::The APK is signed with $SIGNER, not the Oruinwan release key ($RELEASE_CERT_SHA256). Not publishing."
             exit 1
           fi
+          # The Play bundle must carry the same key: it is the upload key registered with Play.
+          AAB_SIGNER=$(keytool -printcert -jarfile dist-release/Oruinwan-GooglePlay-*.aab | grep -m1 'SHA256:' | awk '{print $2}' | tr -d ':' | tr 'A-F' 'a-f')
+          if [ "$AAB_SIGNER" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::The Play bundle is signed with $AAB_SIGNER, not the Oruinwan release key ($RELEASE_CERT_SHA256)."
+            exit 1
+          fi
+      # Uploaded by hand in Play Console (Production or Testing → Create new release). Not part
+      # of the GitHub Release: phones install the APK there, and Play serves the bundle.
+      - name: Google Play bundle artifact
+        if: env.SIGNED_ANDROID == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oruinwan-google-play
+          path: mobile/dist-release/Oruinwan-GooglePlay-*.aab
+          retention-days: 30
       - name: Release APK artifact
-        if: env.IS_RELEASE == 'true'
+        if: env.SIGNED_ANDROID == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: release-android

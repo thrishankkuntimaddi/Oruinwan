@@ -18,6 +18,8 @@ export const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
 export const isNative = Capacitor.isNativePlatform();
 export const isAndroid = platform === 'android';
 export const isIOS = platform === 'ios';
+/** Installed from Google Play: the Play build has no in-app updater (android/app/build.gradle). */
+export const isPlayStore = isAndroid && !Capacitor.isPluginAvailable('AppUpdater');
 
 // The desktop app (desktop/, Electron) runs this same build and exposes a small bridge from
 // its preload script: { platform, arch, version, setBadgeCount, openExternal }.

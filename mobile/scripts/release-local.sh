@@ -20,12 +20,12 @@ VERSION=$(node -p "require('./package.json').version")
 npm run build
 node scripts/assemble-native.mjs   # phone UI + the web client for tablets (needs yarn install at the repo root)
 npx cap sync android
-(cd android && ./gradlew --no-daemon -q assembleRelease)
+(cd android && ./gradlew --no-daemon -q assembleGithubRelease)
 
 mkdir -p release
 # Oruinwan-Android.apk is the name latest.json points at; the versioned copy is for archiving.
 APK=release/Oruinwan-Android.apk
-cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+cp android/app/build/outputs/apk/github/release/app-github-release.apk "$APK"
 cp "$APK" "release/Oruinwan-Android-$VERSION.apk"
 NOTES=release-notes/$VERSION.md
 # --android-only: a local build has no desktop installers, so latest.json must not point at any.

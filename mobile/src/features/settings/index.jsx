@@ -15,7 +15,7 @@ import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
 import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
 import { prefs } from '../../native/storage.js';
-import { deviceNoun, isAndroid, isDesktop, isIOS, isWeb, onAppState, openExternal, platformLabel } from '../../native/index.js';
+import { deviceNoun, isAndroid, isDesktop, isIOS, isPlayStore, isWeb, onAppState, openExternal, platformLabel } from '../../native/index.js';
 import { usePushState } from '../push/usePushState.js';
 import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
@@ -677,10 +677,12 @@ export function UpdateSettings() {
             ? 'The web app always runs the latest version. Reload the page to pick up a new release.'
             : isIOS
               ? 'Updates come from the App Store (or TestFlight while Oruinwan is in testing) and keep your data.'
+              : isPlayStore
+                ? 'Updates come from Google Play and keep your data.'
               : isDesktop
                 ? 'The app checks for updates when it opens, at most every few hours. Install the new version over this one: your data is kept.'
                 : 'The app checks for updates when it opens, at most every few hours. Updates install over this version and keep your data.'}
-          {isAndroid ? ' Android asks you to confirm each install.' : ''}
+          {isAndroid && !isPlayStore ? ' Android asks you to confirm each install.' : ''}
         </p>
         <Section title="Features in this version">
           <RowGroup footer={`Source: ${source === 'remote' ? 'remote configuration' : source === 'cached' ? 'last remote configuration' : 'built into this version'}. New features can be switched on remotely without reinstalling.`}>

@@ -46,6 +46,8 @@ export default function UpdateNotice() {
 
   useEffect(() => {
     if (platform === 'ios') return undefined;
+    // Google Play builds have no AppUpdater plugin: Play installs the updates.
+    if (platform !== 'desktop' && window.Capacitor && !window.Capacitor.isPluginAvailable?.('AppUpdater')) return undefined;
     let cancelled = false;
     const check = async () => {
       try {

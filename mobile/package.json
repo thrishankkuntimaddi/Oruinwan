@@ -1,6 +1,6 @@
 {
   "name": "oruinwan-mobile",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "description": "Oruinwan for Android and iOS: a phone UI, and the full web client on tablets, in a Capacitor shell",
@@ -12,8 +12,9 @@
     "test": "vitest run",
     "assemble": "node scripts/assemble-native.mjs",
     "sync": "vite build && node scripts/assemble-native.mjs && cap sync android",
-    "android:debug": "npm run sync && cd android && ./gradlew assembleDebug",
-    "android:release": "npm run sync && cd android && ./gradlew assembleRelease",
+    "android:debug": "npm run sync && cd android && ./gradlew assembleGithubDebug",
+    "android:release": "npm run sync && cd android && ./gradlew assembleGithubRelease",
+    "android:play": "npm run sync && cd android && ./gradlew bundlePlayRelease",
     "icons": "bash scripts/make-icons.sh"
   },
   "engines": {

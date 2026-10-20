@@ -38,7 +38,9 @@ const IS_DEV = process.env.ELECTRON_IS_DEV === '1' || process.env.NODE_ENV === '
 const DEV_URL = process.env.ORUINWAN_DEV_URL || 'http://localhost:3000';
 const SCHEME = 'app';
 const APP_ORIGIN = `${SCHEME}://oruinwan`;
-const START_URL = IS_DEV ? DEV_URL : `${APP_ORIGIN}/index.html`;
+// The root, not /index.html: the web client has no /index.html route, so that address
+// painted an empty window.
+const START_URL = IS_DEV ? DEV_URL : `${APP_ORIGIN}/`;
 const PAGE_ORIGIN = originOf(START_URL);
 const APP_DIR = path.join(__dirname, '..', 'app');
 const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';

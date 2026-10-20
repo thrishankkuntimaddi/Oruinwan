@@ -248,8 +248,9 @@ Each command first builds the client in app mode (`vite build --mode app`) and b
 
 ```bash
 cd mobile && npm install
-npm run android:debug      # android/app/build/outputs/apk/debug/app-debug.apk
-npm run android:release    # release build (needs the release signing key)
+npm run android:debug      # android/app/build/outputs/apk/github/debug/app-github-debug.apk
+npm run android:release    # release APK for GitHub (needs the release signing key)
+npm run android:play       # Google Play bundle: android/app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 The APK contains both the phone UI and the client's app build for Android tablets. `./scripts/release-local.sh` in `mobile/` builds a signed release APK locally.
