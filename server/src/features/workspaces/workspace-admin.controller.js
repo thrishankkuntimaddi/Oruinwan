@@ -234,7 +234,7 @@ exports.resendInvite = async (req, res) => {
         
         Object.assign(invite, await inviteStore.update(invite._id, { tokenHash, expiresAt, status: "pending" }));
 
-        const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+        const inviteLink = `${require('../../shared/utils/webAppUrl').webAppUrl()}/join-workspace?token=${raw}`;
 
         
         // Link-type invites carry no address; there is nothing to resend by email.

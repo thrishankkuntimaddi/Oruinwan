@@ -26,7 +26,7 @@ async function createInviteToken(user) {
 async function sendInviteEmail(toEmail, companyName, rawToken, options = {}) {
     const { name = '', jobTitle = '' } = options;
 
-    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${rawToken}`;
+    const inviteLink = `${require('../../shared/utils/webAppUrl').webAppUrl()}/accept-invite?token=${rawToken}`;
     const tpl = inviteTemplate(name, companyName, inviteLink, { jobTitle });
     try {
         await sendEmail({ to: toEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });

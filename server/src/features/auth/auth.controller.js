@@ -16,6 +16,7 @@ const {
   generateVerificationCode,
 } = require('../../../utils/emailTemplates');
 const { OAuth2Client } = require('google-auth-library');
+const { webAppUrl } = require('../../shared/utils/webAppUrl');
 const axios = require('axios');
 
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
@@ -329,7 +330,7 @@ exports.signup = async (req, res) => {
 
     
 
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    const verifyUrl = `${webAppUrl()}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
     
     try {
@@ -898,7 +899,7 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000;
     await saveWithRetry(user);
 
-    const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
+    const url = `${webAppUrl()}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
 
     
     try {
@@ -1683,7 +1684,7 @@ exports.resendSignupVerification = async (req, res) => {
     user.verificationTokenExpires = Date.now() + 86400000;
     await saveWithRetry(user);
 
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+    const verifyUrl = `${webAppUrl()}/verify-email?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
     try {
       const tpl = verifyEmailTemplate(user.username, verifyUrl);
       await sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });

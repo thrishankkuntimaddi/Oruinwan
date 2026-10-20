@@ -184,7 +184,7 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
       // Email is best effort: the decision is already saved.
       try {
         const personalEmail = adminUser.personalEmail || adminUser.email;
-        const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+        const loginUrl = `${require('../../shared/utils/webAppUrl').webAppUrl()}/login`;
         const { companyApprovedTemplate } = require('../../../utils/emailTemplates');
         const template = companyApprovedTemplate(adminUser.username, company.name, loginUrl, message);
         await sendEmail({ to: personalEmail, subject: template.subject, html: template.html, text: template.text });

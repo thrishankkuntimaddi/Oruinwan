@@ -70,7 +70,7 @@ emitter.on('task.assigned', async ({ io, assigneeId, assignerUsername, workspace
                 null,         
                 taskTitle,
                 assignerUsername,
-                `${process.env.FRONTEND_URL || '#'}/tasks/${taskId || ''}`
+                `${require('../../shared/utils/webAppUrl').webAppUrl()}/tasks/${taskId || ''}`
             );
             await emailService.sendEmailNotification({
                 to: assigneeEmail,
@@ -119,7 +119,7 @@ emitter.on('meeting.scheduled', async ({ io, recipientIds = [], workspaceId, tit
         for (let i = 0; i < recipientIds.length; i++) {
             const email = recipientEmails[i];
             if (email && await shouldNotify(recipientIds[i], workspaceId, 'email')) {
-                const tpl = meetingScheduledTemplate(null, title, null, `${process.env.FRONTEND_URL || '#'}/huddles`);
+                const tpl = meetingScheduledTemplate(null, title, null, `${require('../../shared/utils/webAppUrl').webAppUrl()}/huddles`);
                 await emailService.sendEmailNotification({
                     to: email,
                     subject: tpl.subject,

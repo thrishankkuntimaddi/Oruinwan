@@ -25,6 +25,10 @@ permissions:
   contents: read
 
 env:
+  # The Oruinwan server every app connects to (Settings → Secrets and variables → Actions →
+  # Variables → ORUINWAN_SERVER_URL), e.g. https://api.oruinwan.poelys.com. Vite bundles it into
+  # the phone UI and the desktop/tablet client. Unset: the apps look for a server on localhost.
+  VITE_SERVER_URL: ${{ vars.ORUINWAN_SERVER_URL }}
   # Public SHA-256 fingerprint of the permanent release key. A release signed with any other
   # key would not install over existing copies, so publishing stops if it doesn't match.
   RELEASE_CERT_SHA256: 95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5

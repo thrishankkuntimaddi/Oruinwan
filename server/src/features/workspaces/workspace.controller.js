@@ -454,7 +454,7 @@ exports.inviteToWorkspace = async (req, res) => {
           inviteType: "email"
         });
 
-        const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+        const inviteLink = `${require('../../shared/utils/webAppUrl').webAppUrl()}/join-workspace?token=${raw}`;
 
         
         const inviter = await identity.users.findById(req.user.sub);
@@ -505,7 +505,7 @@ exports.inviteToWorkspace = async (req, res) => {
         ...(reusable === true ? { metadata: { reusable: true, uses: 0 } } : {})
       });
 
-      const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
+      const inviteLink = `${require('../../shared/utils/webAppUrl').webAppUrl()}/join-workspace?token=${raw}`;
 
       return res.json({
         message: "Invite link generated",

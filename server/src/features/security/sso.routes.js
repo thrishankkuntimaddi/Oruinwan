@@ -37,7 +37,7 @@ const PROVIDERS = {
   },
 };
 
-const FRONTEND_URL = () => process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = () => require('../../shared/utils/webAppUrl').webAppUrl();
 const BACKEND_URL = () => process.env.BACKEND_URL || 'http://localhost:8080';
 
 function issueToken(user) {

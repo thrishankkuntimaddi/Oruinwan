@@ -21,7 +21,7 @@ function generateTempPassword() {
 
 async function sendInviteEmail({ to, name, companyName, tempPassword }) {
     try {
-        const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const loginUrl = require('../../shared/utils/webAppUrl').webAppUrl();
 
         await sendEmail({
             to,

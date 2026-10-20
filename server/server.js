@@ -38,6 +38,12 @@ if (process.env.NODE_ENV === 'production') {
     logger.error(`❌ FATAL: ${leaked.join(', ')} still use a development password from docker-compose.yml. Set your own values in .env.`);
     process.exit(1);
   }
+  // Every emailed link starts with FRONTEND_URL: a live server must never send localhost links.
+  const linkProblem = require('./src/shared/utils/webAppUrl').webAppUrlProblem();
+  if (linkProblem) {
+    logger.error(`❌ FATAL: ${linkProblem}. Set FRONTEND_URL to the web app's public https:// address.`);
+    process.exit(1);
+  }
 }
 
 const serverKekHex = process.env.SERVER_KEK || '';

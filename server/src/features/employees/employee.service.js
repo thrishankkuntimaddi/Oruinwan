@@ -58,7 +58,7 @@ async function _createInviteRecord({ companyId, email, role, invitedBy, departme
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    const inviteLink = `${require('../../shared/utils/webAppUrl').webAppUrl()}/accept-invite?token=${rawToken}&email=${encodeURIComponent(email)}`;
     return { invite, inviteLink, rawToken };
 }
 

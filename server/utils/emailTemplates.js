@@ -1,6 +1,6 @@
 const YEAR = new Date().getFullYear();
 const APP_NAME = 'Oruinwan';
-const APP_URL = process.env.FRONTEND_URL || 'https://oruinwan.com';
+const APP_URL = require('../src/shared/utils/webAppUrl').webAppUrl();
 
 const T = {
   bgOuter:       '#f0ece6',

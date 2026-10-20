@@ -45,7 +45,7 @@ const connectLimiter = rateLimit({
 
 function webAppUrl(returnTo, workspaceId, params) {
   const { isAllowedOrigin } = require('../../shared/allowedOrigins');
-  const fallback = `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '')}/workspace/${workspaceId}/agents?tab=directory`;
+  const fallback = `${require('../../shared/utils/webAppUrl').webAppUrl()}/workspace/${workspaceId}/agents?tab=directory`;
   let target = returnTo && isAllowedOrigin(returnTo) ? returnTo : fallback;
   try {
     const u = new URL(target);
