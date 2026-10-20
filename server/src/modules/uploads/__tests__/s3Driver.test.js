@@ -122,4 +122,14 @@ describe('S3 storage driver', () => {
         expect(fromS3Metadata({ uploadedby: 'u1', companyid: 'c1', originalname: 'a.txt', custom: 'x' }))
             .toEqual({ uploadedBy: 'u1', companyId: 'c1', originalName: 'a.txt', custom: 'x' });
     });
+
+    test('file names that are not plain ASCII survive the trip through S3 headers', () => {
+        const { toS3MetadataValue, fromS3Metadata } = require('../upload.service');
+        for (const name of ['Screenshot 2026-10-20 at 8.16.31\u202fPM.png', 'café menu.pdf', '報告書.docx', 'u8:literal.txt']) {
+            const stored = toS3MetadataValue(name);
+            expect(stored).toMatch(/^[\x20-\x7e]*$/);
+            expect(fromS3Metadata({ originalname: stored }).originalName).toBe(name);
+        }
+        expect(toS3MetadataValue('photo.JPG')).toBe('photo.JPG');
+    });
 });

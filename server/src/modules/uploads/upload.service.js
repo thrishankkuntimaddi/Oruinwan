@@ -56,11 +56,29 @@ const isNotFound = (err) => err && (err.name === 'NotFound' || err.name === 'NoS
 // S3 lowercases user-metadata keys (x-amz-meta-*), so `uploadedBy` comes back as
 // `uploadedby`. Map them back to the camelCase names the access checks read.
 const METADATA_KEYS = ['originalName', 'uploadedBy', 'companyId', 'workspaceId', 'kind'];
+
+// Metadata travels as HTTP headers, which only carry printable ASCII: a file name with an accent,
+// an emoji or the narrow space in macOS screenshot names ("8.16.31\u202fPM") is refused with
+// ERR_INVALID_CHAR. Such values are stored percent-encoded behind a marker and decoded on read.
+const ENCODED = 'u8:';
+function toS3MetadataValue(value) {
+    const s = String(value);
+    return /^[\x20-\x7e]*$/.test(s) && !s.startsWith(ENCODED) ? s : ENCODED + encodeURIComponent(s);
+}
+function fromS3MetadataValue(value) {
+    if (typeof value !== 'string' || !value.startsWith(ENCODED)) return value;
+    try {
+        return decodeURIComponent(value.slice(ENCODED.length));
+    } catch {
+        return value;
+    }
+}
+
 function fromS3Metadata(meta = {}) {
     const out = {};
     for (const [k, v] of Object.entries(meta || {})) {
         const known = METADATA_KEYS.find((name) => name.toLowerCase() === k.toLowerCase());
-        out[known || k] = v;
+        out[known || k] = fromS3MetadataValue(v);
     }
     return out;
 }
@@ -115,7 +133,7 @@ async function writeObject(objectPath, buffer, { contentType, metadata }) {
     if (storageDriver() === 's3') {
         const { PutObjectCommand } = require('@aws-sdk/client-s3');
         // S3 user metadata is string-only; drop empty values so the header set stays clean.
-        const Metadata = Object.fromEntries(Object.entries(metadata || {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)]));
+        const Metadata = Object.fromEntries(Object.entries(metadata || {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, toS3MetadataValue(v)]));
         await s3().send(new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: objectPath,
@@ -331,6 +349,7 @@ async function ensureBucket() {
 module.exports = {
     ensureBucket,
     fromS3Metadata,
+    toS3MetadataValue,
     uploadObject, streamObject, deleteObject, writeObject, objectHandle,
     // Older names, kept for the existing call sites.
     uploadToGCS: uploadObject, streamGCSFile: streamObject,
