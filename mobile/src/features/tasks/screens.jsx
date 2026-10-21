@@ -111,11 +111,12 @@ const SORTS = {
   title: { label: 'A–Z', fn: (a, b) => a.title.localeCompare(b.title) },
 };
 
-function filterView(tasks, view, me) {
+/** The tasks a view shows. "My tasks" is the web's: ones I created that are assigned to me. */
+export function filterView(tasks, view, me) {
   const open = (t) => !['done', 'cancelled'].includes(t.status);
   switch (view) {
     case 'mine':
-      return tasks.filter((t) => open(t) && t.assigneeIds.includes(me));
+      return tasks.filter((t) => open(t) && t.createdBy === me && t.assigneeIds.includes(me));
     case 'incoming':
       return tasks.filter((t) => open(t) && t.assigneeIds.includes(me) && t.createdBy !== me);
     case 'given':

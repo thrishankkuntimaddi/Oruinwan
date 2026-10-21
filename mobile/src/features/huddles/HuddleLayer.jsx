@@ -1,7 +1,7 @@
 // App-wide huddle chrome: the in-call bar (mute, leave, back to the call) and the ring for a
 // DM call. Mounted once in the shell; listens for huddle events while signed in to a server.
-import { useEffect, useState } from 'react';
-import { Ellipsis, Mic, MicOff, Phone, PhoneOff, Radio } from 'lucide-react';
+import { Suspense, lazy, useEffect, useState } from 'react';
+import { ClipboardList, Ellipsis, Mic, MicOff, Phone, PhoneOff, Radio, X } from 'lucide-react';
 import { useSession } from '../../data/session.js';
 import { useDms, useChannels } from '../../data/hooks.js';
 import { useFlag } from '../../config/flags.js';
@@ -13,6 +13,11 @@ import { openConversation } from '../chats/chatsUi.js';
 import { bindHuddles, dismissRing, joinHuddle, leave, loadLive, toggleMute, useHuddle } from './huddle.js';
 import { bindCallExtras, useCallExtras } from './callExtras.js';
 import { CallMenu, CaptionStrip, RecordingConsentBanner, useActiveRecorder } from './CallExtras.jsx';
+import { nav } from '../../app/nav.js';
+import { bindRecap, dismissRecap, useRecap } from '../meetings/recap.js';
+
+// The call's meeting page, loaded when first opened (it brings the meeting tabs with it).
+const MeetingCallPanel = lazy(() => import('./MeetingCallPanel.jsx'));
 
 function clockSince(start, now) {
   const s = Math.max(0, Math.floor((now - start) / 1000));
@@ -43,6 +48,7 @@ function CallBar() {
   const since = call?.startedAt || Date.now();
   const [now, setNow] = useState(Date.now());
   const [menu, setMenu] = useState(false);
+  const [panel, setPanel] = useState(false);
   const recorder = useActiveRecorder();
   const captions = useCallExtras((s) => s.showCaptions);
   useEffect(() => {
@@ -77,6 +83,20 @@ function CallBar() {
           </span>
         </span>
       </button>
+      <button
+        type="button"
+        onClick={() => setPanel(true)}
+        aria-label="Meeting: agenda, notes, transcript, summary and actions, whiteboard, brainstorm"
+        data-testid="huddle-bar-meeting"
+        className={cx('pressable grid h-10 w-10 place-items-center rounded-full border', panel ? 'border-accent/40 bg-accent/12 text-accent-ink' : 'border-line bg-surface-2 text-text')}
+      >
+        <Icon as={ClipboardList} size={18} />
+      </button>
+      {panel && (
+        <Suspense fallback={null}>
+          <MeetingCallPanel open onClose={() => setPanel(false)} />
+        </Suspense>
+      )}
       <button
         type="button"
         onClick={() => setMenu(true)}
@@ -151,12 +171,51 @@ function Ring() {
   );
 }
 
+/** "Meeting ended · View recap" where the person is, after a call they were part of ends. */
+export function RecapBanner() {
+  const recaps = useRecap((s) => s.recaps);
+  const call = useHuddle((s) => s.call);
+  if (!recaps.length) return null;
+  return (
+    <div className="fixed inset-x-3 z-[61] flex flex-col gap-2" style={{ top: `calc(env(safe-area-inset-top) + ${call ? 124 : 8}px)` }}>
+      {recaps.map((r) => (
+        <div
+          key={r.meetingId}
+          role="status"
+          data-testid="meeting-recap-banner"
+          className="glass-strong mx-auto flex w-full max-w-lg items-center gap-3 rounded-2xl border px-3 py-2.5 animate-sheet-in"
+          style={{ borderLeft: '3px solid rgb(var(--c-accent))' }}
+        >
+          <Icon as={ClipboardList} size={18} className="shrink-0 text-accent-ink" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14px] font-semibold">Meeting ended · View recap</span>
+            <span className="block truncate text-xs text-text-2">{r.title}</span>
+          </span>
+          <Button
+            size="sm"
+            onClick={() => {
+              dismissRecap(r.meetingId);
+              nav.push('meeting', { id: r.meetingId, tab: 'summary' });
+            }}
+          >
+            View recap
+          </Button>
+          <button type="button" aria-label="Dismiss" onClick={() => dismissRecap(r.meetingId)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-3 active:bg-surface-2">
+            <Icon as={X} size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function HuddleLayer() {
   const live = useSession((s) => s.mode === 'live' && s.status === 'signed-in');
   const workspaceId = useSession((s) => s.workspaceId);
   const on = useFlag('huddles');
   useEffect(() => (live && on ? bindHuddles() : undefined), [live, on]);
   useEffect(() => (live && on ? bindCallExtras() : undefined), [live, on]);
+  useEffect(() => (live ? bindRecap() : undefined), [live]);
   useEffect(() => {
     if (!live || !on || !workspaceId) return;
     loadLive();
@@ -170,6 +229,7 @@ export function HuddleLayer() {
     <>
       <Ring />
       <CallBar />
+      <RecapBanner />
       <CaptionStrip />
       <RecordingConsentBanner />
     </>

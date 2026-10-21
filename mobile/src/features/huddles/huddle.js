@@ -20,7 +20,7 @@ const helpers = () => api()?.huddles || null;
 const myId = () => String(useSession.getState().user?.id || '');
 
 export const useHuddle = create(() => ({
-  /** The call I'm in: { huddleId, scope, title } or null. */
+  /** The call I'm in: { huddleId, scope, title, startedAt, meetingId } or null (meetingId: its meeting record). */
   call: null,
   connecting: false,
   participants: [], // [{ userId, username, audioEnabled, isLocal }]
@@ -186,6 +186,13 @@ function joinPendingStart(huddleId) {
   if (call && call.huddleId === huddleId) emit('huddle:join', { ...pending.where, huddleId, audioEnabled: !useHuddle.getState().muted, videoEnabled: false });
 }
 
+/** Huddle payloads carry the call's meeting record id: remember it for the meeting page. */
+function noteMeetingId(p) {
+  const call = useHuddle.getState().call;
+  if (!call || !p?.meetingId || call.huddleId !== p.huddleId || call.meetingId === String(p.meetingId)) return;
+  set({ call: { ...call, meetingId: String(p.meetingId) } });
+}
+
 const handlers = {
   'huddle:started'(p) {
     if (pendingStart?.huddleId === p.huddleId) joinPendingStart(p.huddleId);
@@ -213,7 +220,7 @@ const handlers = {
     // Starting where a huddle already runs joins that one.
     const call = useHuddle.getState().call;
     if (!call || call.huddleId !== p.requestedId) return;
-    set({ call: { ...call, huddleId: p.huddleId } });
+    set({ call: { ...call, huddleId: p.huddleId, ...(p.meetingId ? { meetingId: String(p.meetingId) } : {}) } });
     if (pendingStart?.huddleId === p.requestedId) joinPendingStart(p.huddleId);
   },
   'huddle:roster'(p) {
@@ -319,7 +326,13 @@ let bound = false;
 export function bindHuddles() {
   if (bound) return () => {};
   bound = true;
-  const offHuddle = on('huddle', ({ event, payload }) => handlers[event]?.(payload || {}));
+  const offHuddle = on('huddle', ({ event, payload }) => {
+    const p = payload || {};
+    // Run the handler first: huddle:existing may switch the call to the running huddle's id.
+    const out = handlers[event]?.(p);
+    if (event !== 'huddle:ended') noteMeetingId(p);
+    return out;
+  });
   // After a reconnect the server has dropped me from the call: rejoin with fresh connections.
   const offRealtime = on('realtime', ({ connected }) => {
     if (!connected) return;
@@ -338,7 +351,7 @@ export function bindHuddles() {
   };
 }
 
-async function enter({ huddleId, scope, title, start }) {
+async function enter({ huddleId, scope, title, start, meetingId = null }) {
   const h = helpers();
   if (!h) throw new Error('Huddles need a connection to your server.');
   if (useHuddle.getState().call || useHuddle.getState().connecting) {
@@ -361,7 +374,7 @@ async function enter({ huddleId, scope, title, start }) {
   }
   const me = useSession.getState().user;
   set({
-    call: { huddleId, scope, title: title || 'Huddle', startedAt: Date.now() },
+    call: { huddleId, scope, title: title || 'Huddle', startedAt: Date.now(), meetingId: meetingId ? String(meetingId) : null },
     participants: [{ userId: myId(), username: me?.name || 'You', audioEnabled: true, isLocal: true }],
     muted: false,
   });
@@ -383,17 +396,54 @@ export function startHuddle(scope, title) {
   return enter({ huddleId: uuid(), scope, title, start: true });
 }
 
-export function joinHuddle(huddleId, scope, title) {
-  return enter({ huddleId, scope, title, start: false });
+export function joinHuddle(huddleId, scope, title, meetingId = null) {
+  return enter({ huddleId, scope, title, start: false, meetingId });
+}
+
+/** A huddle for the whole workspace (no channel or DM): everyone in the workspace may join. */
+export function startWorkspaceHuddle(title = 'Workspace huddle') {
+  return enter({ huddleId: uuid(), scope: { workspaceId: useSession.getState().workspaceId }, title, start: true });
+}
+
+/** The scope a meeting's call runs in, from a mapped meeting ({ conversation }) or a raw one. */
+export function meetingScope(m) {
+  const idOf = (v) => (v && typeof v === 'object' ? v._id || v.id : v) || null;
+  const c = m?.conversation;
+  if (c?.kind === 'channel' && c.id) return { channelId: String(c.id) };
+  if (c?.kind === 'dm' && c.id) return { dmId: String(c.id) };
+  if (idOf(m?.channelId)) return { channelId: String(idOf(m.channelId)) };
+  if (idOf(m?.dmSessionId)) return { dmId: String(idOf(m.dmSessionId)) };
+  return { workspaceId: String(idOf(m?.workspaceId) || useSession.getState().workspaceId) };
+}
+
+/**
+ * Join (or start) the call of any meeting record: a scheduled meeting runs as `meeting-<id>`,
+ * an ad-hoc huddle under its own huddle id (joinable while it is live).
+ */
+export function joinMeetingCall(meeting) {
+  if (meeting?.kind === 'huddle') {
+    if (!meeting.huddleId) throw new Error('This huddle has no call to join.');
+    return joinHuddle(meeting.huddleId, meetingScope(meeting), meeting.title, meeting.id);
+  }
+  return joinMeeting(meeting.raw || meeting);
+}
+
+/** "End for everyone": ends the meeting record and its live call (everyone gets huddle:ended). */
+export async function endForEveryone(meetingId) {
+  const id = meetingId || useHuddle.getState().call?.meetingId;
+  if (!id) throw new Error("This call has no meeting page, so it can't be ended for everyone.");
+  const ended = await api().endMeeting(id);
+  // The server removes everyone; don't wait for the event to hang up here.
+  if (useHuddle.getState().call?.meetingId === String(id)) teardown();
+  return ended;
 }
 
 /** A scheduled meeting's call: its own huddle, in its conversation when it has one. */
 export async function joinMeeting(meeting) {
   const h = helpers();
-  const m = (await h.joinMeeting(meeting.id || meeting._id)) || meeting;
-  const idOf = (v) => (v && typeof v === 'object' ? v._id || v.id : v) || null;
-  const scope = idOf(m.channelId) ? { channelId: String(idOf(m.channelId)) } : idOf(m.dmSessionId) ? { dmId: String(idOf(m.dmSessionId)) } : { workspaceId: String(m.workspaceId) };
-  return enter({ huddleId: `meeting-${m._id || meeting.id}`, scope, title: m.title || 'Meeting', start: true });
+  const id = String(meeting.id || meeting._id);
+  const m = (await h.joinMeeting(id)) || meeting;
+  return enter({ huddleId: `meeting-${id}`, scope: meetingScope(m), title: m.title || 'Meeting', start: true, meetingId: id });
 }
 
 export function leave() {

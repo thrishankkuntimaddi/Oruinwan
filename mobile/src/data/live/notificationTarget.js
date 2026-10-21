@@ -5,7 +5,7 @@
 /** Server notification type → the app's kind (icon, filters). Task types map to 'task' separately. */
 export const NOTIF_TYPE = {
   mention: 'mention', dm: 'dm', direct_message: 'dm', thread_reply: 'thread', reaction: 'reaction',
-  meeting_reminder: 'meeting', schedule_created: 'meeting', huddle_started: 'meeting', note_shared: 'note',
+  meeting_reminder: 'meeting', schedule_created: 'meeting', huddle_started: 'meeting', meeting_recap: 'meeting', note_shared: 'note',
   design_review: 'design', ai_suggestion: 'ai',
 };
 
@@ -36,10 +36,16 @@ function targetFromLink(link) {
 
 /**
  * What tapping a notification opens: { kind, id, … } or null.
- * kinds: task, tasks (the Tasks tab), note, thread, meeting, designReview, dm, channel.
+ * kinds: task, tasks (the Tasks tab), note, thread, meeting (+ tab), designReview, dm, channel.
  */
 export function targetOf(n) {
   const meta = n?.meta || {};
+  // "Planning ended · View the recap": the meeting page on Summary & actions (before channelId,
+  // which a recap also carries).
+  if (n?.type === 'meeting_recap' || meta.kind === 'meeting_recap') {
+    const id = meta.meetingId || targetFromLink(n?.link)?.id;
+    if (id) return { kind: 'meeting', id: String(id), tab: 'summary' };
+  }
   if (n?.type === 'design_review' && meta.reviewId) return { kind: 'designReview', id: String(meta.reviewId) };
   if (meta.taskId) return { kind: 'task', id: String(meta.taskId) };
   if (meta.noteId) return { kind: 'note', id: String(meta.noteId) };

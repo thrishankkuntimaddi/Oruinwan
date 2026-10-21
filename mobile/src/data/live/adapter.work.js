@@ -5,7 +5,8 @@
 // Server contracts (all existing routes):
 //   tasks     /v2/tasks/:id/{subtasks,dependency,links,time/start,time/stop}, /v2/tasks/workload
 //   planning  /sprints, /milestones, /task-templates
-//   meetings  /scheduled-meetings, /v2/meetings/:id/{agenda,summarize,action-items}, /v2/meetings/suggest-time,
+//   meetings  /scheduled-meetings, /v2/meetings (?status lists), /v2/meetings/:id/{agenda,notes,summarize,summary,
+//             action-items,end}, /v2/meetings/by-huddle/:huddleId, /v2/meetings/suggest-time (docs/api/meetings-unified.md),
 //             /v2/collaboration/brainstorm/:meetingId (+ socket meeting:join → brainstorm:update)
 //   files     /v2/files/:id/{tags,versions,comments,share}
 //   knowledge /v2/knowledge/pages/:id/{backlinks,link,summarize}, /v2/knowledge/{graph,categories}
@@ -201,29 +202,75 @@ export function normalizeSlots(data) {
     .filter(Boolean);
 }
 
-export function mapMeeting(m) {
-  const start = m.startTime || null;
-  const duration = Number(m.duration) || 30;
+/** meeting.summary is an object { text, generatedAt, by, source, … } now; older servers sent text. */
+export function mapSummary(v) {
+  if (!v) return null;
+  if (typeof v === 'string') return v.trim() ? { text: v, generatedAt: null, by: null, source: null, messageId: null } : null;
+  if (typeof v !== 'object' || !String(v.text || '').trim()) return null;
+  return { text: String(v.text), generatedAt: v.generatedAt || null, by: idOf(v.by), source: v.source || null, messageId: idOf(v.messageId) };
+}
+
+export function mapActionItem(a) {
+  const assignee = a.assigneeId ?? a.assignedTo ?? null;
+  const status = a.status || (a.done ? 'done' : 'pending');
   return {
-    id: idOf(m),
+    id: idOf(a.id || a._id),
+    text: a.text || '',
+    status,
+    done: a.done === true || status === 'done',
+    assigneeId: idOf(assignee),
+    assignee: person(a.assignedTo && typeof a.assignedTo === 'object' ? a.assignedTo : assignee),
+    dueDate: a.dueDate || null,
+    taskId: idOf(a.taskId),
+    source: a.source || 'manual',
+  };
+}
+
+/** { kind: 'channel'|'dm'|'workspace', id, name } — what the meeting belongs to. */
+function mapConversation(m) {
+  const c = m.conversation;
+  if (c && typeof c === 'object' && c.kind) return { kind: c.kind, id: idOf(c.id), name: c.name || null };
+  if (m.channelId) return { kind: 'channel', id: idOf(m.channelId), name: null };
+  if (m.dmSessionId) return { kind: 'dm', id: idOf(m.dmSessionId), name: null };
+  return { kind: 'workspace', id: idOf(m.workspaceId), name: null };
+}
+
+export function mapMeeting(m) {
+  const kind = m.kind === 'huddle' ? 'huddle' : 'scheduled';
+  const start = m.scheduledStart || m.startTime || m.startedAt || null;
+  const duration = Number(m.duration) || 30;
+  const end = m.scheduledEnd || (start && kind === 'scheduled' ? new Date(new Date(start).getTime() + duration * 60000).toISOString() : null);
+  const id = idOf(m);
+  return {
+    id,
+    kind,
     workspaceId: idOf(m.workspaceId),
-    title: m.title || 'Meeting',
+    title: m.title || (kind === 'huddle' ? 'Huddle' : 'Meeting'),
     start,
-    end: start ? new Date(new Date(start).getTime() + duration * 60000).toISOString() : null,
+    end,
     duration,
+    startedAt: m.startedAt || null,
+    endedAt: m.endedAt || null,
+    durationSec: m.durationSec ?? null,
     status: m.status || 'scheduled',
     link: m.meetingLink || null,
+    conversation: mapConversation(m),
+    huddleId: m.huddleId || (kind === 'scheduled' && id ? `meeting-${id}` : null),
+    video: Boolean(m.video),
     organizer: person(m.createdBy),
     participants: (m.participants || []).map(person).filter(Boolean),
+    participantIds: (m.participantIds || []).map(idOf).filter(Boolean),
+    invitees: (m.invitees || []).map(idOf).filter(Boolean),
+    attendees: (m.attendees || []).map((a) => ({ id: idOf(a.userId), name: a.username || 'Someone', joinedAt: a.joinedAt || null })),
     agenda: (m.agenda || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((a) => ({ id: idOf(a), title: a.title, notes: a.notes || '' })),
-    actionItems: (m.actionItems || []).map((a) => ({
-      id: idOf(a),
-      text: a.text,
-      status: a.status || 'pending',
-      assignee: person(a.assignedTo),
-      taskId: idOf(a.taskId),
-    })),
-    summary: m.summary || '',
+    actionItems: (m.actionItems || []).map(mapActionItem),
+    noteId: idOf(m.noteId),
+    summary: mapSummary(m.summary),
+    hasRecording: Boolean(m.hasRecording || m.recording),
+    hasTranscript: Boolean(m.hasTranscript || m.transcript),
+    hasContent: Boolean(m.hasContent),
+    whiteboard: m.whiteboard || null,
+    brainstorm: m.brainstorm || null,
     transcript: m.transcript || '',
     notes: m.sharedNotes || '',
     channelId: idOf(m.channelId),
@@ -512,9 +559,35 @@ export const workAdapter = {
     const data = await api.get('/v2/meetings', { workspaceId: ws, limit: 50, includeCompleted: String(includeCompleted) });
     return (data.meetings || []).map(mapMeeting);
   },
+  /**
+   * One page of scheduled meetings and ad-hoc huddles (docs/api/meetings-unified.md → Lists).
+   * status: 'live' | 'upcoming' | 'past'. Returns { meetings, hasMore, cursor } — pass `cursor` back.
+   */
+  async meetingsPage(ws, { status, q = '', cursor = null, limit = 20, kind } = {}) {
+    const params = { workspaceId: ws, status, limit };
+    if (q.trim()) params.q = q.trim();
+    if (kind) params.kind = kind;
+    if (cursor) params[status === 'upcoming' ? 'after' : 'before'] = cursor;
+    const data = await api.get('/v2/meetings', params);
+    return {
+      meetings: (data.meetings || []).map(mapMeeting),
+      hasMore: Boolean(data.hasMore),
+      cursor: (status === 'upcoming' ? data.nextAfter : data.nextBefore) || null,
+    };
+  },
   async meeting(id) {
     const data = await api.get(`/v2/meetings/${id}`);
     return mapMeeting(data.meeting || data);
+  },
+  /** The meeting record of a huddle id (null when it has none). */
+  async meetingByHuddle(huddleId) {
+    try {
+      const data = await api.get(`/v2/meetings/by-huddle/${encodeURIComponent(huddleId)}`);
+      return data.meeting ? mapMeeting(data.meeting) : null;
+    } catch (err) {
+      if (err?.status === 404) return null;
+      throw err;
+    }
   },
   async scheduleMeeting(ws, { title, start, duration, participantIds, link, channelId }) {
     const data = await api.post('/scheduled-meetings', {
@@ -531,43 +604,72 @@ export const workAdapter = {
   async cancelMeeting(id) {
     await api.patch(`/scheduled-meetings/${id}`, { status: 'cancelled' });
   },
+  /** Ends the meeting and its live call for everyone. */
+  async endMeeting(id) {
+    const data = await api.patch(`/v2/meetings/${id}/end`, {});
+    return data?.meeting ? mapMeeting(data.meeting) : null;
+  },
   async saveAgenda(id, agenda) {
     const data = await api.patch(`/v2/meetings/${id}/agenda`, {
       agenda: agenda.map((a, i) => ({ ...(a.id && !String(a.id).startsWith('new') ? { _id: a.id } : {}), title: a.title, notes: a.notes || '', order: i })),
     });
     return mapMeeting(data.meeting);
   },
+  /** The meeting's one note (created the first time): its id. */
+  async meetingNote(id) {
+    const data = await api.post(`/v2/meetings/${id}/notes`, {});
+    return idOf(data?.noteId);
+  },
+  /** AI summary over the transcript, notes and agenda: { summary (object or null), source, fallback }. */
   async summarizeMeeting(id) {
     const data = await api.post(`/v2/meetings/${id}/summarize`, {});
-    return data.summary || '';
+    return { summary: mapSummary(data.meetingSummary || data.summary), source: data.source || null, fallback: Boolean(data.aiFallback) };
   },
-  async addActionItem(id, { text, assigneeId }) {
-    const data = await api.post(`/v2/meetings/${id}/action-items`, { text, assignedTo: assigneeId || null });
-    return mapMeeting(data.meeting);
+  async saveSummary(id, text) {
+    const data = await api.put(`/v2/meetings/${id}/summary`, { text });
+    return mapSummary(data.summary) || mapSummary(text);
+  },
+  // Action items: every call answers with the whole list (mapped).
+  async actionItems(id) {
+    const data = await api.get(`/v2/meetings/${id}/action-items`);
+    return (data.actionItems || []).map(mapActionItem);
+  },
+  async addActionItem(id, { text, assigneeId, dueDate }) {
+    const data = await api.post(`/v2/meetings/${id}/action-items`, { text, ...(assigneeId ? { assigneeId } : {}), ...(dueDate ? { dueDate } : {}) });
+    return (data.actionItems || data.meeting?.actionItems || []).map(mapActionItem);
   },
   async updateActionItem(id, itemId, patch) {
     const body = {};
-    if ('text' in patch) body.text = patch.text;
-    if ('status' in patch) body.status = patch.status;
-    if ('assigneeId' in patch) body.assignedTo = patch.assigneeId;
-    if ('taskId' in patch) body.taskId = patch.taskId;
+    for (const k of ['text', 'status', 'assigneeId', 'dueDate', 'taskId', 'done']) if (k in patch) body[k] = patch[k];
     const data = await api.patch(`/v2/meetings/${id}/action-items/${itemId}`, body);
-    return mapMeeting(data.meeting);
+    return (data.actionItems || data.meeting?.actionItems || []).map(mapActionItem);
   },
-  /** Turns an action item into a task (assigned to its owner, or to me) and links them. */
-  async actionItemToTask(ws, meeting, item, me) {
-    const assignee = item.assignee?.id;
-    const onlyMe = !assignee || assignee === me;
-    const res = await api.post('/v2/tasks', {
-      workspaceId: ws,
-      title: item.text,
-      description: `From the meeting “${meeting.title}”.`,
-      assignmentType: onlyMe ? 'self' : 'members',
-      ...(onlyMe ? {} : { assignedToIds: [assignee], assignmentMode: 'shared' }),
-    });
-    const taskId = idOf(res.task || res.tasks?.[0]);
-    const updated = await this.updateActionItem(meeting.id, item.id, { taskId });
-    return { taskId, meeting: updated };
+  async toggleActionItem(id, itemId) {
+    const data = await api.post(`/v2/meetings/${id}/action-items/${itemId}/toggle`, {});
+    return (data.actionItems || []).map(mapActionItem);
+  },
+  async deleteActionItem(id, itemId) {
+    const data = await api.del(`/v2/meetings/${id}/action-items/${itemId}`);
+    return (data?.actionItems || []).map(mapActionItem);
+  },
+  /** Turns an action item into a task (server side): { actionItems, taskId }. */
+  async convertActionItem(id, itemId) {
+    const data = await api.post(`/v2/meetings/${id}/action-items/${itemId}/convert`, {});
+    const items = (data.actionItems || []).map(mapActionItem);
+    return { actionItems: items, taskId: idOf(data.task) || items.find((x) => x.id === String(itemId))?.taskId || null };
+  },
+  /** Finds action items in the transcript (else the notes) and adds the new ones. */
+  async extractActionItems(id) {
+    const data = await api.post(`/v2/meetings/${id}/action-items/extract`, { apply: true });
+    return { added: Array.isArray(data.added) ? data.added.length : Number(data.added) || 0, actionItems: (data.meeting?.actionItems || []).map(mapActionItem) };
+  },
+  /** Whiteboard strokes saved over REST (used when live editing is unavailable). */
+  async whiteboard(meetingId) {
+    const data = await api.get(`/v2/collaboration/whiteboard/${meetingId}`);
+    return data?.strokes || [];
+  },
+  async saveWhiteboard(meetingId, strokes) {
+    await api.post(`/v2/collaboration/whiteboard/${meetingId}`, { strokes });
   },
   /** Free slots for these people: [{ start, end, minutes, note }]. */
   async suggestTimes({ participantIds = [], minutes = 30 } = {}) {
@@ -594,6 +696,9 @@ export const workAdapter = {
     socketEmit('meeting:leave', { meetingId });
   },
   mapSticky,
+  mapActionItem,
+  mapSummary,
+  mapMeeting,
 
   // ---- files
   async fileDetail(id) {
