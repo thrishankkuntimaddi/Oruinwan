@@ -58,6 +58,10 @@ test.describe('message toolbar', () => {
     const m = await openMenu(alice, text);
     await expect(m.getByRole('menuitem', { name: 'Unpin message', exact: true })).toBeVisible();
     await m.getByRole('menuitem', { name: 'Unpin message', exact: true }).click();
+    // Unpinning adds a "You unpinned a message" line, which shifts the list: wait for it (and the
+    // menu to close) before hovering the message again.
+    await expect(alice.getByRole('menu')).toHaveCount(0);
+    await expect(alice.getByText('You unpinned a message').last()).toBeVisible();
     const again = await openMenu(alice, text);
     await expect(again.getByRole('menuitem', { name: 'Pin message', exact: true })).toBeVisible();
     await alice.keyboard.press('Escape');
