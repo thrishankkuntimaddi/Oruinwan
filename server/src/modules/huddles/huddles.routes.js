@@ -68,4 +68,46 @@ router.post('/:huddleId/wrap-up', requireAuth, handle(async (req) => {
   });
 }));
 
+// ── Recording, transcript, draft summary (see docs/api/meetings.md) ─────────
+const media = require('./huddleMedia.service');
+const { uploadRecordingMiddleware } = require('../../features/meetings/recordings');
+const sessionIdOf = (req) => (req.query?.sessionId ? String(req.query.sessionId) : undefined);
+
+router.post('/:huddleId/recording', requireAuth, uploadRecordingMiddleware, async (req, res) => {
+  try {
+    res.status(201).json(await media.uploadRecording({
+      userId: userId(req), huddleId: req.params.huddleId, file: req.file,
+      durationSec: req.body?.durationSec, sessionId: sessionIdOf(req), io: req.io,
+    }));
+  } catch (err) {
+    send(res, err);
+  }
+});
+router.get('/:huddleId/recording', requireAuth, handle((req) => media.getRecording({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req) })));
+router.delete('/:huddleId/recording', requireAuth, handle((req) => media.deleteRecording({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req), io: req.io })));
+
+// Signed playback link (no Authorization header): ?s=<sessionId>&u=&exp=&sig=
+router.get('/:huddleId/recording/stream', async (req, res) => {
+  try {
+    const recording = await media.resolveSignedStream({ huddleId: req.params.huddleId, query: req.query });
+    await require('../../features/meetings/recordings').streamRecording(recording, req, res);
+  } catch (err) {
+    if (res.headersSent) return res.destroy();
+    if (err?.code === 404) return res.status(404).json({ message: 'Recording not found' });
+    send(res, err);
+  }
+});
+
+router.post('/:huddleId/transcript/segments', requireAuth, async (req, res) => {
+  try {
+    res.status(201).json(await media.appendTranscript({ userId: userId(req), huddleId: req.params.huddleId, body: req.body, io: req.io }));
+  } catch (err) {
+    send(res, err);
+  }
+});
+router.get('/:huddleId/transcript', requireAuth, handle((req) => media.getTranscript({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req) })));
+
+// Draft wrap-up: summary + action items from the transcript (else the shared notes).
+router.post('/:huddleId/summarize', requireAuth, handle((req) => media.summarize({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req) })));
+
 module.exports = router;

@@ -209,6 +209,14 @@ function serialize(s, { live = false } = {}) {
         participants: people,
         notesId: s.notes ? idOf(s.notes) : null,
         linkedTaskIds: (s.linkedTasks || []).map(idOf),
+        recording: s.recording?.path ? {
+            mimeType: s.recording.mimeType,
+            size: s.recording.size,
+            durationSec: s.recording.durationSec ?? null,
+            uploadedBy: s.recording.uploadedBy ? idOf(s.recording.uploadedBy) : null,
+            uploadedAt: s.recording.uploadedAt,
+        } : null,
+        ...(Array.isArray(s.transcriptSegments) ? { transcriptSegmentCount: s.transcriptSegments.length } : {}),
         summary: s.summary?.message ? {
             messageId: idOf(s.summary.message),
             channelId: s.summary.channel ? idOf(s.summary.channel) : null,
@@ -234,7 +242,7 @@ async function listHistory(userId, workspaceId, { limit = 30 } = {}) {
             { scope: 'channel', channel: { $in: channels.map((c) => c._id) } },
             { scope: 'workspace' },
         ],
-    }).sort({ startedAt: -1 }).limit(Math.min(Math.max(Number(limit) || 30, 1), 100)).lean();
+    }).select('-transcriptSegments').sort({ startedAt: -1 }).limit(Math.min(Math.max(Number(limit) || 30, 1), 100)).lean();
     // Live runs belong in "Live now"; runs nobody joined are noise.
     return sessions
         .filter((s) => !isLive(s) && (s.participants || []).length > 0)
@@ -457,5 +465,9 @@ module.exports = {
     linkTask,
     unlinkTask,
     recordWrapUp,
+    findSession,
+    loadAccessible,
+    assertMember,
+    isLive,
     _lazy: lazy,
 };

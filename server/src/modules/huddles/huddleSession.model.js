@@ -1,6 +1,8 @@
 'use strict';
 
 const mongoose = require('mongoose');
+const { recordingSchema } = require('../../features/meetings/recordings');
+const { segmentSchema } = require('../../features/meetings/transcript');
 
 /**
  * One run of a huddle, from the first join to the last leave. The live state
@@ -33,6 +35,10 @@ const huddleSessionSchema = new mongoose.Schema({
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Note', default: null },
     // Existing tasks someone linked to this huddle from the Tasks tab.
     linkedTasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
+
+    // Uploaded call recording and speech-to-text segments (see features/meetings/recordings.js, transcript.js).
+    recording: { type: recordingSchema, default: null },
+    transcriptSegments: { type: [segmentSchema], default: [] },
 
     // "Post summary to channel": the (E2EE) message that was posted.
     summary: {

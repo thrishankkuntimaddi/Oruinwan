@@ -71,7 +71,7 @@ async function endMeeting(req, res) {
         if (recordingUrl !== undefined && recordingUrl !== null && typeof recordingUrl !== 'string') {
             return res.status(400).json({ message: 'recordingUrl must be a string' });
         }
-        const meeting = await meetingsService.endMeeting(req.params.id, { recordingUrl });
+        const meeting = await meetingsService.endMeeting(req.params.id, { recordingUrl, io: req.io });
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
 
         req.io.to(`meeting:${req.params.id}`).emit('meeting:ended', {
@@ -135,8 +135,26 @@ async function summarizeMeeting(req, res) {
 
 async function suggestTime(req, res) {
     try {
-        const { participantIds = [], durationMinutes = 30 } = req.body || {};
-        const suggestion = await meetingsService.suggestTime({ participantIds, durationMinutes });
+        const { participantIds = [], durationMinutes = 30, workspaceId, from, to, limit, stepMinutes, timezone } = req.body || {};
+        if (!Array.isArray(participantIds)) return res.status(400).json({ message: 'participantIds must be an array' });
+        let ids = [...new Set([...participantIds.map(String), String(req.user.sub)])];
+        if (workspaceId) {
+            // Only people in the workspace: anyone else's busy time is not the caller's business.
+            let access;
+            try {
+                access = await assertWorkspaceMember(workspaceId, req.user.sub);
+            } catch (err) {
+                return sendAccessError(res, err);
+            }
+            const members = new Set((access.workspace?.members || [])
+                .filter((m) => (m.status || 'active') === 'active')
+                .map((m) => String(m.user?._id || m.user)));
+            ids = ids.filter((id) => members.has(id));
+        }
+        const suggestion = await meetingsService.suggestTime({
+            participantIds: ids, durationMinutes, from, to, limit, stepMinutes,
+            timezone: typeof timezone === 'string' ? timezone : undefined,
+        });
         res.json(suggestion);
     } catch (err) {
         fail(res, err, 'Failed to suggest time');
