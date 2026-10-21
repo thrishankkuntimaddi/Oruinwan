@@ -145,6 +145,12 @@ describe('public API', () => {
     expect((await call('GET', '/api/public/messages?channelId=zzz', 'all')).status).toBe(400);
   });
 
+  test('GET /me describes the key without needing a scope', async () => {
+    const r = await call('GET', '/api/public/me', 'readonly');
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ workspaceId: mockWs, keyPrefix: 'chx_ro', name: null, scopes: ['tasks:read'], app: null });
+  });
+
   test('GET /files excludes deleted; GET /channels excludes private; GET /users only active', async () => {
     mockFileFind.mockReturnValue(chain([]));
     expect((await call('GET', '/api/public/files', 'all')).status).toBe(200);

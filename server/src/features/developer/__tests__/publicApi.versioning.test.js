@@ -70,3 +70,26 @@ describe('public API versioning', () => {
     expect(r.status).toBe(418);
   });
 });
+
+describe('OpenAPI spec', () => {
+  test('/v1/openapi.json is served without a key and does not hit the v1 router', async () => {
+    const r = await call('/api/public/v1/openapi.json');
+    expect(r.status).toBe(200);
+    expect(r.headers['api-version']).toBe('v1');
+    expect(r.body.openapi).toMatch(/^3\./);
+    expect(r.body.servers[0].url).toBe('/api/public/v1');
+    expect(r.body.components.securitySchemes.ApiKey).toMatchObject({ type: 'apiKey', in: 'header', name: 'X-Api-Key' });
+    expect(mockHits).toEqual([]);
+  });
+
+  test('every v1 route is described in the spec', () => {
+    const real = jest.requireActual('../publicApi.routes');
+    const { buildOpenApiSpec } = require('../publicApi.openapi');
+    const spec = buildOpenApiSpec();
+    const routes = real.stack.filter((l) => l.route).flatMap((l) => Object.keys(l.route.methods).map((m) => [l.route.path, m]));
+    expect(routes.length).toBeGreaterThan(5);
+    for (const [p, m] of routes) {
+      expect(spec.paths[p] && spec.paths[p][m]).toBeDefined();
+    }
+  });
+});

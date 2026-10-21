@@ -3,7 +3,7 @@
 export interface OruinwanSDKOptions {
   /** Origin of the Oruinwan API, e.g. https://api.example.com. Defaults to window.location.origin in browsers. */
   baseUrl?: string;
-  /** Public API key (chx_...) for /api/public/* resources. */
+  /** Public API key (chx_...) for /api/public/v1/* resources. */
   apiKey?: string;
   /** User JWT for user-scoped endpoints. */
   accessToken?: string;
@@ -39,7 +39,10 @@ export declare class OruinwanError extends Error {
   request?: { method: string; url: string };
 }
 
-export interface PublicMessage { _id: string; content?: string; sender?: { _id: string; username: string; firstName?: string; lastName?: string }; channelId?: string; type?: string; createdAt: string }
+/** Message metadata only: messages are end-to-end encrypted, so content is never returned. */
+export interface PublicMessage { id: string; channelId: string | null; sender: { id: string; username: string } | null; type: string; parentId: string | null; replyCount: number; attachmentCount: number; isEncrypted: boolean; createdAt: string; editedAt: string | null }
+/** GET /api/public/v1/me */
+export interface KeyInfo { workspaceId: string; keyPrefix: string; name: string | null; scopes: string[]; app: { id: string; name: string | null } | null }
 export interface PublicTask { _id: string; title: string; description?: string; status: string; priority: string; assignee?: unknown; dueDate?: string | null; createdAt: string }
 export interface PublicFile { _id: string; name: string; mimeType?: string; size?: number; url?: string; channelId?: string; createdAt: string }
 export interface PublicUser { id: string; username: string; firstName?: string; lastName?: string; avatarUrl?: string; role?: string }
@@ -48,7 +51,7 @@ export interface Webhook { _id: string; workspaceId: string; event: string; url:
 
 export interface ListResource<T> { list(params?: Record<string, unknown>): Promise<{ [k: string]: T[] | number }>; }
 export interface TasksResource extends ListResource<PublicTask> {
-  create(data: { title: string; description?: string; priority?: 'low' | 'medium' | 'high'; dueDate?: string; assigneeId?: string }): Promise<{ task: PublicTask }>;
+  create(data: { title: string; description?: string; priority?: 'lowest' | 'low' | 'medium' | 'high' | 'highest'; status?: string; dueDate?: string; assigneeIds?: string[]; assigneeId?: string }): Promise<{ task: PublicTask }>;
 }
 
 export interface AuthResource {
@@ -125,6 +128,10 @@ export declare class OruinwanSDK {
   files: ListResource<PublicFile>;
   users: ListResource<PublicUser>;
   channels: ListResource<PublicChannel>;
+  /** Describe the calling API key or app token (no scope needed). */
+  me(): Promise<KeyInfo>;
+  /** The public API's OpenAPI 3 document. */
+  openapi(): Promise<Record<string, unknown>>;
   webhooks: WebhooksResource;
   ai: AiResource;
   realtime: RealtimeResource;
