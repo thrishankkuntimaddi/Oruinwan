@@ -24,7 +24,7 @@ import { callsAdapter } from './adapter.calls.js';
 import { opsAdapter } from './adapter.ops.js';
 import { backupAdapter } from './adapter.backup.js';
 import { planAdapter } from './adapter.plan.js';
-import { notificationKind, targetOf } from './notificationTarget.js';
+import { mapNotification } from './notificationLive.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -204,23 +204,6 @@ function mapNote(n) {
     sharedWith: (n.sharedWith || []).map((s) => idOf(s.user || s)),
     visibility: n.isPublic ? 'workspace' : n.sharedWith?.length ? 'shared' : 'private',
     updatedAt: n.updatedAt,
-  };
-}
-
-function mapNotification(n) {
-  return {
-    id: idOf(n),
-    type: notificationKind(n.type),
-    actorId: idOf(n.actor || n.sender || n.meta?.actorId || n.meta?.senderId),
-    actorName: n.meta?.assignerUsername || n.meta?.senderUsername || n.meta?.senderName || n.meta?.actorName
-      || (typeof n.meta?.startedBy === 'string' ? n.meta.startedBy : n.meta?.startedBy?.username) // huddles
-      || (n.title || '').split(' ')[0],
-    title: n.title,
-    text: n.title,
-    preview: n.body || '',
-    at: n.createdAt,
-    read: Boolean(n.read),
-    target: targetOf(n),
   };
 }
 

@@ -44,6 +44,11 @@ export function isViewingConversation(pathname, type, id) {
     return !!open && open.type === type && open.id === String(id);
 }
 
+/** Is that conversation on screen: the main page, or the split-view pane (ctx.panePath)? */
+export function conversationOnScreen(ctx, type, id) {
+    return isViewingConversation(ctx?.pathname, type, id) || isViewingConversation(ctx?.panePath, type, id);
+}
+
 /** Is the page a stored notification points at (task, meeting, note…) open? */
 export function isViewingTarget(pathname, notification, href) {
     const path = String(pathname || '');
@@ -88,6 +93,8 @@ function attention(ctx) {
 
 /** Decide the alert channels once we know the user wants to hear about it. */
 function deliver(ctx, prefs, { toastAllowed = true, osAllowed = true } = {}) {
+    // Do not disturb (or a notification the server sent silently): counted, never popped up.
+    if (ctx.dnd || ctx.silent) return { toast: false, os: false, sound: false };
     const { active, otherTabActive } = attention(ctx);
     if (active) {
         return { toast: toastAllowed, os: false, sound: toastAllowed && prefs.sound !== false };
@@ -102,7 +109,7 @@ function deliver(ctx, prefs, { toastAllowed = true, osAllowed = true } = {}) {
  * A new top-level message (`conversation:activity`).
  * activity: { workspaceId, conversationType, conversationId, senderId, isMention, isDirectMention, muted }
  * prefs: account prefs (+ `workspace`: the per-workspace NotificationPreference)
- * ctx: { currentUserId, workspaceId, pathname, visible, focused, otherTabActive, isLeader, canNotifyOs }
+ * ctx: { currentUserId, workspaceId, pathname, panePath, visible, focused, otherTabActive, isLeader, canNotifyOs, dnd }
  * Returns { count, markRead, toast, os, sound }.
  */
 export function decideMessageAlert(activity, ctx = {}, prefs = {}) {
@@ -112,7 +119,7 @@ export function decideMessageAlert(activity, ctx = {}, prefs = {}) {
 
     const type = activity.conversationType;
     const id = String(activity.conversationId || '');
-    const onRoute = isViewingConversation(ctx.pathname, type, id);
+    const onRoute = conversationOnScreen(ctx, type, id);
     // The chat window marks the open conversation read whenever the tab is
     // visible, so it must not be counted as unread here.
     if (onRoute && ctx.visible) {
@@ -155,7 +162,7 @@ export function decideStoredAlert(notification, ctx = {}, prefs = {}) {
     const type = notification.type;
     const meta = notification.meta || {};
     const conv = notificationConversation(notification);
-    const onConversation = conv ? isViewingConversation(ctx.pathname, conv.type, conv.id) : false;
+    const onConversation = conv ? conversationOnScreen(ctx, conv.type, conv.id) : false;
     const lookingAtIt = !!ctx.visible && !!ctx.focused;
 
     if (type === 'thread_reply') {

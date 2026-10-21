@@ -56,7 +56,7 @@ router.get('/', requireWorkspaceIdParam, async (req, res) => {
 
         const [notifications, total, unreadCount] = await Promise.all([
             Notification.find(filter)
-                .sort({ createdAt: -1 })
+                .sort({ updatedAt: -1 })
                 .skip((Number(page) - 1) * Number(limit))
                 .limit(Number(limit))
                 .lean(),
@@ -105,6 +105,27 @@ router.patch('/read-all', requireWorkspaceIdParam, async (req, res) => {
         res.json({ message: 'All notifications marked as read' });
     } catch (err) {
         res.status(500).json({ message: 'Failed to mark all read' });
+    }
+});
+
+// Several at once: { ids: [...] } (up to 200), so clients never send one request per row.
+router.patch('/read', async (req, res) => {
+    try {
+        const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(String))].filter(isValidId).slice(0, 200) : [];
+        if (!ids.length) return res.status(400).json({ message: 'ids required' });
+        const rows = await Notification.find({ _id: { $in: ids }, recipient: req.user.sub, read: false }).select('_id workspaceId').lean();
+        if (rows.length) {
+            await Notification.updateMany({ _id: { $in: rows.map((r) => r._id) } }, { $set: { read: true } });
+            const byWorkspace = new Map();
+            for (const r of rows) {
+                const ws = String(r.workspaceId);
+                byWorkspace.set(ws, [...(byWorkspace.get(ws) || []), String(r._id)]);
+            }
+            for (const [workspaceId, wsIds] of byWorkspace) sync(req, 'notification:read', { ids: wsIds, workspaceId });
+        }
+        res.json({ updated: rows.length });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to mark read' });
     }
 });
 

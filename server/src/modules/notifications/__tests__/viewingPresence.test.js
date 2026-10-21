@@ -45,3 +45,26 @@ describe('viewingPresence', () => {
         expect(viewing.isActive('u5')).toBe(false);
     });
 });
+
+describe('viewingPresence: threads, split panes and phones', () => {
+    const TH = 'e'.repeat(24);
+    beforeEach(() => viewing._reset());
+
+    it('a thread counts only when that thread is open', () => {
+        viewing.record('u1', 's1', { conversationType: 'channel', conversationId: CH, visible: true, focused: true });
+        expect(viewing.isViewing('u1', CH, Date.now(), { threadId: TH })).toBe(false);
+        viewing.record('u1', 's1', { conversationType: 'channel', conversationId: CH, threadId: TH, visible: true, focused: true });
+        expect(viewing.isViewing('u1', CH, Date.now(), { threadId: TH })).toBe(true);
+    });
+
+    it('split-pane conversations are on screen too', async () => {
+        viewing.record('u1', 's1', { conversationType: 'channel', conversationId: CH, conversations: [{ conversationType: 'dm', conversationId: DM }], visible: true, focused: true });
+        expect(await viewing.isViewingAnywhere('u1', DM)).toBe(true);
+    });
+
+    it('an open phone app is viewing, but not "active" for push', async () => {
+        viewing.record('u1', 'p1', { conversationType: 'dm', conversationId: DM, visible: true, focused: true, client: 'mobile' });
+        expect(await viewing.isViewingAnywhere('u1', DM)).toBe(true);
+        expect(await viewing.isActiveAnywhere('u1')).toBe(false);
+    });
+});

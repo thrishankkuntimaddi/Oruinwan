@@ -93,10 +93,66 @@ function emitToUser(io, userId, event, payload) {
     io.to(`user:${userId}`).emit(event, payload);
 }
 
+// Chat notifications are grouped: one unread row per conversation (or thread) that counts up,
+// instead of one row per message.
+const GROUPED_TYPES = new Set(['dm', 'mention', 'thread_reply']);
+
+/** The grouping key for a chat notification, or null for types that are never grouped. */
+function groupKeyFor(type, meta = {}) {
+    if (!GROUPED_TYPES.has(type)) return null;
+    const conv = meta.dmSessionId || meta.channelId;
+    if (type === 'thread_reply') return meta.parentMessageId ? `thread:${meta.parentMessageId}` : null;
+    if (!conv) return null;
+    if (type === 'dm') return `dm:${conv}`;
+    return meta.parentMessageId ? `mention:${conv}:${meta.parentMessageId}` : `mention:${conv}`;
+}
+
+/** Title for a grouped row once it holds more than one message. */
+function groupedTitle(type, meta, count, fallback) {
+    if (count <= 1) return fallback;
+    const who = meta.senderUsername || 'Someone';
+    if (type === 'dm') return `${who} · ${count} new messages`;
+    if (type === 'thread_reply') return `${count} new replies in a thread`;
+    if (type === 'mention') return `${who} · ${count} mentions`;
+    return fallback;
+}
+
+// Push for a grouped row at most once per window; the push replaces the earlier one on the phone.
+const PUSH_DEBOUNCE_MS = 30 * 1000;
+const recentPush = new Map(); // `${recipient}:${groupKey}` -> time (single-instance fallback)
+
+async function pushAllowedNow(recipient, groupKey, now = Date.now()) {
+    if (!groupKey) return true;
+    const key = `${recipient}:${groupKey}`;
+    const redis = require('../../shared/redis').getRedis();
+    if (redis) {
+        try {
+            return (await redis.set(`oruinwan:notif-push:${key}`, '1', 'PX', PUSH_DEBOUNCE_MS, 'NX')) === 'OK';
+        } catch { /* fall back to memory */ }
+    }
+    const last = recentPush.get(key);
+    if (last && now - last < PUSH_DEBOUNCE_MS) return false;
+    recentPush.set(key, now);
+    if (recentPush.size > 5000) recentPush.clear();
+    return true;
+}
+
+/** "Do not disturb": notifications are still stored, but nothing buzzes or pops up. */
+async function isDoNotDisturb(userId) {
+    try {
+        const user = await identity.users?.findById?.(userId);
+        return user?.userStatus === 'dnd';
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Persist and deliver one notification. Honours the recipient's workspace
- * preferences (in-app toggle per category, push toggle). Returns null when
- * the recipient opted out or on error, so callers never need to guard.
+ * preferences (in-app toggle per category, push toggle). Chat notifications
+ * (DMs, mentions, thread replies) are skipped while the person has that
+ * conversation or thread on screen, and are grouped into one row per
+ * conversation. Returns null when nothing was stored, so callers never need to guard.
  */
 async function create(io, { recipient, workspaceId, type, title, body = '', link = null, meta = {}, push }, { members } = {}) {
     try {
@@ -110,27 +166,63 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
         const prefKey = PREF_KEY_BY_TYPE[type];
         if (prefKey && prefs && prefs[prefKey] === false) return null;
 
-        const notif = await Notification.create({
-            recipient,
-            workspaceId,
-            type,
-            title,
-            body,
-            link,
-            meta,
-            read: false,
+        const viewing = getViewing();
+        const groupKey = groupKeyFor(type, meta);
+        if (groupKey) {
+            // Already reading it (on any device): the message is on screen, no notification.
+            const conversationId = meta.dmSessionId || meta.channelId;
+            const threadId = type === 'thread_reply' || meta.parentMessageId ? meta.parentMessageId : null;
+            if (await viewing.isViewingAnywhere(recipient, conversationId, { threadId })) return null;
+        }
+
+        let notif = null;
+        let grouped = false;
+        if (groupKey) {
+            const existing = await Notification.findOne({ recipient, workspaceId, groupKey, read: false });
+            if (existing) {
+                const count = (existing.meta?.count || 1) + 1;
+                const senders = [...new Set([...(existing.meta?.senders || []), meta.senderUsername].filter(Boolean))].slice(-5);
+                existing.meta = { ...meta, count, senders };
+                existing.title = groupedTitle(type, meta, count, title);
+                existing.body = body;
+                existing.link = link;
+                existing.markModified('meta');
+                notif = await existing.save();
+                grouped = true;
+            }
+        }
+        if (!notif) {
+            notif = await Notification.create({
+                recipient,
+                workspaceId,
+                type,
+                title,
+                body,
+                link,
+                meta: groupKey ? { ...meta, count: 1, senders: meta.senderUsername ? [meta.senderUsername] : [] } : meta,
+                groupKey,
+                read: false,
+            });
+        }
+
+        const dnd = await isDoNotDisturb(recipient);
+        const plain = typeof notif.toObject === 'function' ? notif.toObject() : notif;
+        emitToUser(io, recipient, grouped ? 'notification:updated' : 'notification:new', {
+            notification: plain,
+            // Clients show no toast and play no sound for silent notifications.
+            ...(dnd && { silent: true }),
         });
 
-        emitToUser(io, recipient, 'notification:new', { notification: notif.toObject() });
-
-        // Mobile push only when the user isn't actively using the web app: an
-        // active tab shows its own in-app alert (or nothing, when on screen).
-        if (push !== false && (!prefs || prefs.push !== false) && !getViewing().isActive(recipient)) {
-            getPush().sendToUser(String(recipient), title, body || 'Oruinwan', {
+        // Mobile push only when the user isn't actively using an app (an active app shows its
+        // own alert), never in Do not disturb, and at most once per window for a grouped row.
+        const wantsPush = push !== false && (!prefs || prefs.push !== false) && !dnd;
+        if (wantsPush && !(await viewing.isActiveAnywhere(recipient)) && (await pushAllowedNow(String(recipient), groupKey))) {
+            getPush().sendToUser(String(recipient), notif.title, body || 'Oruinwan', {
                 type,
                 workspaceId: String(workspaceId),
                 link,
                 notificationId: String(notif._id),
+                ...(groupKey && { count: String(notif.meta?.count || 1) }),
                 ...(meta.channelId && { channelId: String(meta.channelId) }),
                 ...(meta.dmSessionId && { dmSessionId: String(meta.dmSessionId) }),
                 ...(meta.parentMessageId && { parentMessageId: String(meta.parentMessageId) }),
@@ -141,6 +233,39 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
     } catch (err) {
         logger.error('[notificationService.create] Error:', err.message);
         return null;
+    }
+}
+
+/**
+ * Mark a person's unread chat notifications for one conversation (or one thread) as read,
+ * and tell every one of their devices. Called when they read the conversation anywhere.
+ */
+async function markConversationRead(io, { userId, conversationType, conversationId, threadId = null }) {
+    try {
+        if (!userId || (!conversationId && !threadId)) return [];
+        const filter = { recipient: userId, read: false };
+        if (threadId) {
+            filter['meta.parentMessageId'] = String(threadId);
+        } else {
+            filter.type = { $in: ['dm', 'mention'] };
+            filter[conversationType === 'dm' ? 'meta.dmSessionId' : 'meta.channelId'] = String(conversationId);
+            // Mentions inside a thread stay until that thread is read.
+            filter['meta.parentMessageId'] = { $in: [null] };
+        }
+        const rows = await Notification.find(filter).select('_id workspaceId').lean();
+        if (!rows.length) return [];
+        await Notification.updateMany({ _id: { $in: rows.map((r) => r._id) } }, { $set: { read: true } });
+        const byWorkspace = new Map();
+        for (const r of rows) {
+            const ws = String(r.workspaceId);
+            if (!byWorkspace.has(ws)) byWorkspace.set(ws, []);
+            byWorkspace.get(ws).push(String(r._id));
+        }
+        for (const [workspaceId, ids] of byWorkspace) emitToUser(io, userId, 'notification:read', { ids, workspaceId });
+        return rows.map((r) => String(r._id));
+    } catch (err) {
+        logger.error('[notificationService.markConversationRead] Error:', err.message);
+        return [];
     }
 }
 
@@ -161,7 +286,7 @@ async function createMany(io, recipients, payload) {
     return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
 }
 
-async function mention(io, { mentionedUserId, senderUsername, workspaceId, channelName, channelId, dmSessionId, snippet, preview, isEveryone = false }) {
+async function mention(io, { mentionedUserId, senderUsername, workspaceId, channelName, channelId, dmSessionId, snippet, preview, isEveryone = false, parentMessageId = null }) {
     const where = channelName ? `in #${channelName}` : 'in a direct message';
     return create(io, {
         recipient: mentionedUserId,
@@ -169,8 +294,8 @@ async function mention(io, { mentionedUserId, senderUsername, workspaceId, chann
         type: 'mention',
         title: isEveryone ? `${senderUsername} notified everyone` : `${senderUsername} mentioned you`,
         body: snippet ? `${where} — "${snippet}"` : where,
-        link: channelId ? `/channel/${channelId}` : (dmSessionId ? `/dm/${dmSessionId}` : null),
-        meta: { senderUsername, channelName, channelId, dmSessionId, preview, isEveryone },
+        link: channelId ? `/channel/${channelId}${parentMessageId ? `?thread=${parentMessageId}` : ''}` : (dmSessionId ? `/dm/${dmSessionId}${parentMessageId ? `?thread=${parentMessageId}` : ''}` : null),
+        meta: { senderUsername, channelName, channelId, dmSessionId, preview, isEveryone, ...(parentMessageId && { parentMessageId: String(parentMessageId) }) },
     });
 }
 
@@ -363,6 +488,9 @@ module.exports = {
     taskLink,
     activeMemberIds,
     emitToUser,
+    groupKeyFor,
+    markConversationRead,
+    _resetPushDebounce: () => recentPush.clear(),
     create,
     createMany,
     mention,

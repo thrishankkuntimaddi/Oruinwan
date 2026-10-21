@@ -6,6 +6,7 @@ import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useAssistants, useChannels, useDirectory, useDms, useMembers } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
+import { useViewing } from '../../data/live/viewing.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -158,6 +159,8 @@ function useMentions({ kind, id, meta, me }) {
 
 export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const conv = useMemo(() => ({ kind, id }), [kind, id]);
+  // On screen: the server sends no notification or push for messages here.
+  useViewing(kind, id);
   const meta = useConversationMeta(kind, id);
   const me = useSession((s) => s.user?.id);
   const ws = useSession((s) => s.workspaceId);
@@ -336,6 +339,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
 
 export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const conv = useMemo(() => ({ kind, id: convId }), [kind, convId]);
+  useViewing(kind, convId, messageId);
   const meta = useConversationMeta(kind, convId);
   const me = useSession((s) => s.user?.id);
   const ws = useSession((s) => s.workspaceId);

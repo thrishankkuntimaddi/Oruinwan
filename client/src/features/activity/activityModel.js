@@ -164,7 +164,9 @@ export function buildActivityRows({
         if (currentUserId && n.meta?.senderId && String(n.meta.senderId) === String(currentUserId)) continue;
         const conv = notificationConversation(n);
         if (conv && sameConversation(conv, openConversation) && n.type !== 'thread_reply') continue;
-        const at = time(n.createdAt);
+        // A grouped chat row ("Ben · 5 new messages") moves up with its latest message.
+        const at = time(n.updatedAt || n.createdAt);
+        const count = Math.max(1, Number(n.meta?.count) || 1);
 
         if (CONVERSATION_NOTIFICATION_TYPES.has(n.type) && conv) {
             const row = convRows.get(convKey(conv.type, conv.id));
@@ -182,7 +184,7 @@ export function buildActivityRows({
             const key = `thread:${parent}`;
             const existing = threads.get(key);
             if (existing) {
-                existing.unread += 1;
+                existing.unread += count;
                 existing.notificationIds.push(n._id);
                 if (at > existing.at) {
                     existing.at = at;
@@ -202,7 +204,7 @@ export function buildActivityRows({
                 preview: n.body || null,
                 senderName: n.meta?.senderUsername || null,
                 avatar: null, userId: null, status: null, isPrivate: false,
-                unread: 1,
+                unread: count,
                 mentioned: false,
                 at,
                 notificationIds: [n._id],
@@ -226,7 +228,8 @@ export function buildActivityRows({
             userId: n.meta?.senderId || null,
             status: null,
             isPrivate: false,
-            unread: 0,
+            // A grouped DM or mention row shows how many messages it holds.
+            unread: count > 1 ? count : 0,
             mentioned: n.type === 'mention',
             at,
             notificationIds: [n._id],

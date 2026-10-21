@@ -29,7 +29,7 @@ function groupByDay(notifications) {
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
     const groups = { Today: [], Yesterday: [], Older: [] };
     notifications.forEach(n => {
-        const d = new Date(n.createdAt); d.setHours(0, 0, 0, 0);
+        const d = new Date(n.updatedAt || n.createdAt); d.setHours(0, 0, 0, 0);
         if (d >= today) groups.Today.push(n);
         else if (d >= yesterday) groups.Yesterday.push(n);
         else groups.Older.push(n);
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
                                                 </p>
                                             )}
                                             <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                                                {timeAgo(n.createdAt)}
+                                                {timeAgo(n.updatedAt || n.createdAt)}
                                             </p>
                                         </div>
 

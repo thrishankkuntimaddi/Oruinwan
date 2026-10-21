@@ -381,11 +381,20 @@ const DIGEST_LABELS = {
     ai_suggestion: 'Suggestions',
 };
 
+// Unread items that make a "smart" digest worth sending on a weekday.
+const IMPORTANT_TYPES = new Set(['mention', 'dm', 'thread_reply', 'task_assigned', 'task_due_soon']);
+const SMART_STALE_MS = 6 * 60 * 60 * 1000;
+
 /**
- * Digest emails go out once the UTC hour reaches DIGEST_EMAIL_HOUR_UTC (default 8):
- * daily subscribers every day, weekly subscribers on Mondays. Cadence comes from the
- * account prefs (emailDigest + digestFrequency). Only notification counts per type and
- * workspace links are sent — never message content. Users with nothing new get nothing.
+ * Digest emails go out once the UTC hour reaches DIGEST_EMAIL_HOUR_UTC (default 8). Cadence comes
+ * from the account prefs (emailDigest + digestFrequency):
+ *   daily  — every day with something new;
+ *   weekly — Mondays;
+ *   smart  — (the default) a daily email only when there are unread mentions, DMs or tasks older
+ *            than 6 hours and the person hasn't been active in any app today; otherwise one
+ *            weekly roundup on Mondays.
+ * Only notification counts per type and workspace links are sent — never message content.
+ * Grouped chat rows count every message they hold. Users with nothing new get nothing.
  */
 async function sendDigestEmails(_io, { now = new Date() } = {}) {
     const { digestHourUtc } = config();
@@ -395,13 +404,15 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
     const weekStart = new Date(now.getTime() - 7 * DAY);
 
     const rows = await Notification.aggregate([
-        { $match: { createdAt: { $gte: weekStart }, type: { $ne: 'digest' } } },
+        { $match: { updatedAt: { $gte: weekStart }, type: { $ne: 'digest' } } },
+        { $addFields: { n: { $ifNull: ['$meta.count', 1] } } },
         {
             $group: {
                 _id: { recipient: '$recipient', workspaceId: '$workspaceId', type: '$type' },
-                week: { $sum: 1 },
-                day: { $sum: { $cond: [{ $gte: ['$createdAt', dayStart] }, 1, 0] } },
-                unread: { $sum: { $cond: [{ $eq: ['$read', false] }, 1, 0] } },
+                week: { $sum: '$n' },
+                day: { $sum: { $cond: [{ $gte: ['$updatedAt', dayStart] }, '$n', 0] } },
+                unread: { $sum: { $cond: [{ $eq: ['$read', false] }, '$n', 0] } },
+                oldestUnread: { $min: { $cond: [{ $eq: ['$read', false] }, '$createdAt', null] } },
             },
         },
     ]);
@@ -423,9 +434,11 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
         try {
             const user = users.get(uid);
             if (!user || !user.email) continue;
-            const cadence = getAccountPrefs().digestCadence(user.preferences?.notifications);
-            if (cadence === 'off' || (cadence === 'weekly' && !isMonday)) continue;
-            const field = cadence === 'weekly' ? 'week' : 'day';
+            const pref = getAccountPrefs().digestCadence(user.preferences?.notifications);
+            const cadence = pref === 'smart' ? smartCadence(groups, user, now, isMonday) : pref;
+            if (!cadence || cadence === 'off' || (cadence === 'weekly' && !isMonday)) continue;
+            // A smart daily email lists what is still unread; the others list what is new.
+            const field = cadence === 'weekly' ? 'week' : pref === 'smart' ? 'unread' : 'day';
 
             const sections = new Map();
             for (const g of groups) {
@@ -439,7 +452,9 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
             }
             if (!sections.size) continue;
 
-            const key = cadence === 'weekly' ? `digest:w:${uid}:${weekKey(now)}` : `digest:d:${uid}:${dayKey(now)}`;
+            // One digest per person per day at most (a smart daily email on a Monday replaces the weekly one).
+            const key = pref === 'smart' ? `digest:s:${uid}:${dayKey(now)}`
+                : cadence === 'weekly' ? `digest:w:${uid}:${weekKey(now)}` : `digest:d:${uid}:${dayKey(now)}`;
             if (!(await claim(key))) continue;
 
             const out = [];
@@ -450,7 +465,7 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
                     wsNames.set(s.workspaceId, ws?.name || 'Workspace');
                 }
                 s.lines.sort((a, b) => b.count - a.count);
-                if (s.unread) s.lines.push({ label: 'Still unread', count: s.unread, unread: true });
+                if (s.unread && field !== 'unread') s.lines.push({ label: 'Still unread', count: s.unread, unread: true });
                 out.push({ workspaceName: wsNames.get(s.workspaceId), lines: s.lines });
             }
             const tpl = getTemplates().notificationDigestTemplate(user.firstName || user.username, cadence, out, appUrl());
@@ -463,8 +478,23 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
     return { emails };
 }
 
+/**
+ * What a "smart" digest does today: 'daily' when unread mentions/DMs/tasks have waited 6+ hours
+ * and the person hasn't been active today, 'weekly' on Mondays, otherwise nothing (null).
+ */
+function smartCadence(groups, user, now, isMonday) {
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const lastActive = user.lastActivityAt ? new Date(user.lastActivityAt) : null;
+    const activeToday = !!(lastActive && lastActive >= startOfDay);
+    const waiting = groups.some((g) => IMPORTANT_TYPES.has(g._id.type) && g.unread > 0
+        && g.oldestUnread && now.getTime() - new Date(g.oldestUnread).getTime() >= SMART_STALE_MS);
+    if (waiting && !activeToday) return 'daily';
+    return isMonday ? 'weekly' : null;
+}
+
 module.exports = {
     config,
+    smartCadence,
     weekKey,
     groupOverdue,
     describe,

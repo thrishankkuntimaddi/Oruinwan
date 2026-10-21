@@ -13,18 +13,51 @@ All routes need a signed-in user (`Authorization: Bearer <token>` / auth cookie)
 | GET | `/api/notifications?workspaceId=&page=&limit=&type=&unreadOnly=true` | `{ notifications, total, unreadCount, page, pages }` |
 | GET | `/api/notifications/unread-count?workspaceId=` | `{ count }` |
 | PATCH | `/api/notifications/read-all?workspaceId=` | emits `notification:read-all` |
+| PATCH | `/api/notifications/read` | body `{ ids: [...] }` (up to 200), emits `notification:read` |
 | PATCH | `/api/notifications/:id/read` | emits `notification:read` |
 | DELETE | `/api/notifications/:id` | emits `notification:deleted` |
 | DELETE | `/api/notifications?workspaceId=` | emits `notification:cleared` |
 | GET | `/api/notifications/preferences?workspaceId=` | workspace preferences (below) |
 | PATCH | `/api/notifications/preferences?workspaceId=` | partial, booleans only |
 
-Notification object: `{ _id, recipient, workspaceId, type, title, body, link, meta, read, createdAt, emailedAt }`.
-`emailedAt` (new) is set once the offline-email job has handled a mention/DM.
+Notification object: `{ _id, recipient, workspaceId, type, title, body, link, meta, groupKey, read, createdAt, updatedAt, emailedAt }`.
+`emailedAt` is set once the offline-email job has handled a mention/DM. Lists are sorted by
+`updatedAt` (newest first).
+
+### Chat notifications are grouped (2.2)
+
+`dm`, `mention` and `thread_reply` notifications are **one row per conversation** (per thread for
+replies and thread mentions) while it is unread. `groupKey` is `dm:<dmId>`, `mention:<convId>`,
+`mention:<convId>:<parentId>` or `thread:<parentId>`. Each new message counts the row up:
+`meta.count`, `meta.senders` (last 5 names), the latest `meta`, and a title like
+`"ben · 5 new messages"`. The first message emits `notification:new`, later ones
+`notification:updated`. Push for a grouped row goes out at most once per 30 seconds and
+carries `data.count`; Android `tag` / iOS `thread-id` replace the earlier push.
+
+### Nothing for what is on screen
+
+Clients report what they show with `presence:viewing { conversationType, conversationId,
+conversations?: [{ conversationType, conversationId }] (split panes), threadId?, client?: 'mobile',
+visible, focused }` on every change and every minute. While any of the person's sessions shows that
+conversation (or, for replies and thread mentions, that thread), the server stores no notification
+and sends no push for it. With `REDIS_URL` this is shared across instances
+(`oruinwan:viewing:<userId>`, 150 s TTL). An active web or desktop session also skips push; an open
+phone app (`client: 'mobile'`) still gets push for other conversations, which it shows as banners.
+
+### Reading clears everywhere
+
+`mark-chat-read` (socket) marks that conversation's unread `dm` / `mention` rows read, and opening a
+thread (`GET /api/threads/:id`) marks its `thread_reply` / thread `mention` rows read; every device
+gets `notification:read { ids, workspaceId }`.
+
+### Do not disturb
+
+While the person's status is `dnd`, notifications are stored and emitted with `silent: true`;
+nothing is pushed, and clients show no toast or OS alert and play no sound.
 
 ### Socket events (room `user:<id>`)
 
-- `notification:new` `{ notification }`
+- `notification:new` `{ notification, silent? }`, `notification:updated` `{ notification, silent? }` (a grouped row counted up)
 - `notification:read` `{ ids, workspaceId }`, `notification:read-all` `{ workspaceId }`
 - `notification:deleted` `{ ids, workspaceId }`, `notification:cleared` `{ workspaceId }`
 
@@ -59,12 +92,15 @@ Show `startTime` in the reader's own time zone; `startsIn` is a ready label (e.g
 
 ```json
 { "emailDigest": true, "marketingEmails": false, "desktopPush": true, "sound": true,
-  "mentionsOnly": false, "dmNotifications": true, "digestFrequency": "daily" }
+  "mentionsOnly": false, "dmNotifications": true, "digestFrequency": "smart", "newSignInEmails": true }
 ```
 
-- `digestFrequency` (**new**): `"daily" | "weekly" | "off"`, default `"daily"`. Any other value → 400.
-- The digest email is sent only while `emailDigest` is `true` **and** `digestFrequency` is not `"off"`
-  (old clients that only toggle `emailDigest` keep working: on = daily).
+- `digestFrequency`: `"smart" | "daily" | "weekly" | "off"`, default `"smart"`. Any other value → 400.
+  A stored `"daily"` that the person never picked themselves (saved before 2.2, no
+  `digestChosen` flag) reads as `"smart"`; saving a cadence sets `digestChosen`.
+- The digest email is sent only while `emailDigest` is `true` **and** `digestFrequency` is not `"off"`.
+- `newSignInEmails` (default `true`): the "new sign-in" security email. Password-changed and
+  signed-out-everywhere emails are always sent.
 - `dmNotifications: false` also removes DMs from offline emails.
 
 These also appear under `preferences.notifications` in `GET /api/auth/me`.
@@ -130,11 +166,26 @@ the next run; handled notifications get `emailedAt` and are never emailed again.
 ### Digest email — hourly, sends once the UTC hour reaches `DIGEST_EMAIL_HOUR_UTC` (default 8)
 
 - daily subscribers: notification counts of the last 24h, once per UTC day;
-- weekly subscribers: counts of the last 7 days, on Mondays.
+- weekly subscribers: counts of the last 7 days, on Mondays;
+- smart (the default): on a day when unread mentions, DMs, thread replies or assigned / due tasks
+  have waited 6 hours or more **and** the person hasn't been active in any app since midnight UTC,
+  an email listing what is still unread; otherwise a weekly roundup on Mondays. At most one
+  digest per person per day.
 
 Grouped by workspace with a count per category (Mentions, Direct messages, Tasks assigned
-to you, Meeting invitations, …) plus "Still unread", and a link to `/notifications`.
-Users with nothing new get no email. The in-app daily `digest` notification is unchanged.
+to you, Meeting invitations, …) plus "Still unread", and a link to `/notifications`. Grouped
+chat rows count every message they hold. Users with nothing new get no email.
+
+There is no in-app digest any more: the bell holds only real notifications (old `digest` rows
+are removed at start-up).
+
+### "New sign-in" email
+
+Sent when an account signs in on a device the server has not seen (a new device id), unless:
+the person turned `newSignInEmails` off; the same browser or app family (e.g. Chrome on Mac)
+signed in from the same network (IPv4 /24, IPv6 /64) in the last 30 days (cleared storage or a
+re-install, not a stranger); or one was already sent in the last 10 minutes. Signing out keeps
+the device id, so signing back in on the same device is never "new".
 
 ### Environment
 

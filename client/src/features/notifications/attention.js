@@ -10,13 +10,29 @@
 // ── Open thread ────────────────────────────────────────────────────────────
 let openThreadId = null;
 
+/** Fired on window when the open thread changes (the server is told what is on screen). */
+export const OPEN_THREAD_EVENT = 'oruinwan:open-thread';
+
+function announceThread() {
+    try {
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(OPEN_THREAD_EVENT, { detail: openThreadId }));
+    } catch { /* no window (tests) */ }
+}
+
 export function setOpenThread(parentId) {
-    openThreadId = parentId ? String(parentId) : null;
+    const next = parentId ? String(parentId) : null;
+    if (next === openThreadId) return;
+    openThreadId = next;
+    announceThread();
 }
 
 /** Clear only if `parentId` is still the open one (panels can swap quickly). */
 export function clearOpenThread(parentId) {
-    if (!parentId || openThreadId === String(parentId)) openThreadId = null;
+    if (!parentId || openThreadId === String(parentId)) {
+        if (openThreadId === null) return;
+        openThreadId = null;
+        announceThread();
+    }
 }
 
 export function getOpenThread() {

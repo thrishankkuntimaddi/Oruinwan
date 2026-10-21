@@ -125,7 +125,7 @@ export function sortDevices(list) {
   return [...list].sort((a, b) => (b.current - a.current) || (new Date(b.lastActive || 0) - new Date(a.lastActive || 0)));
 }
 
-export const DIGEST_FREQUENCIES = ['daily', 'weekly', 'off'];
+export const DIGEST_FREQUENCIES = ['smart', 'daily', 'weekly', 'off'];
 
 export const opsAdapter = {
   // ---- automations
@@ -170,16 +170,19 @@ export const opsAdapter = {
   },
   thisDeviceId: () => deviceId(),
 
-  // ---- account notification settings (email digest)
+  // ---- account notification settings (email digest, new sign-in emails)
   async accountNotificationPrefs() {
     const d = await api.get('/auth/me/preferences/notifications');
     const p = d.preferences || d.notifications || d || {};
-    const freq = DIGEST_FREQUENCIES.includes(p.digestFrequency) ? p.digestFrequency : p.emailDigest === false ? 'off' : 'daily';
-    return { digestFrequency: p.emailDigest === false ? 'off' : freq };
+    const freq = DIGEST_FREQUENCIES.includes(p.digestFrequency) ? p.digestFrequency : p.emailDigest === false ? 'off' : 'smart';
+    return { digestFrequency: p.emailDigest === false ? 'off' : freq, newSignInEmails: p.newSignInEmails !== false };
   },
   async saveDigestFrequency(value) {
-    if (!DIGEST_FREQUENCIES.includes(value)) throw new Error('Pick daily, weekly or off');
+    if (!DIGEST_FREQUENCIES.includes(value)) throw new Error('Pick smart, daily, weekly or off');
     await api.put('/auth/me/preferences/notifications', { digestFrequency: value, emailDigest: value !== 'off' });
+  },
+  async saveNewSignInEmails(on) {
+    await api.put('/auth/me/preferences/notifications', { newSignInEmails: !!on });
   },
 
   // ---- SSO

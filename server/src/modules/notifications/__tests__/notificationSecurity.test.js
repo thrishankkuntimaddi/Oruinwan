@@ -189,7 +189,7 @@ describe('notification routes (N3, N4, N6) and account prefs (N5)', () => {
         identity.users.findById.mockResolvedValue({ _id: BOB, preferences: {} });
         const g = await call('GET', '/api/auth/me/preferences/notifications', BOB);
         expect(g.status).toBe(200);
-        expect(g.body).toEqual({ emailDigest: true, marketingEmails: false, desktopPush: true, sound: true, mentionsOnly: false, dmNotifications: true, digestFrequency: 'daily' });
+        expect(g.body).toEqual({ emailDigest: true, marketingEmails: false, desktopPush: true, sound: true, mentionsOnly: false, dmNotifications: true, digestFrequency: 'smart', newSignInEmails: true });
 
         const bad = await call('PUT', '/api/auth/me/preferences/notifications', BOB, { sound: 'no' });
         expect(bad.status).toBe(400);

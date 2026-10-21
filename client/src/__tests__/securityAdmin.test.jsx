@@ -164,7 +164,8 @@ describe('Notification types and preferences', () => {
     });
 
     it('derives the digest cadence from old and new account prefs', () => {
-        expect(digestValue({ emailDigest: true })).toBe('daily');
+        expect(digestValue({ emailDigest: true })).toBe('smart');
+        expect(digestValue({ emailDigest: true, digestFrequency: 'daily' })).toBe('daily');
         expect(digestValue({ emailDigest: true, digestFrequency: 'weekly' })).toBe('weekly');
         expect(digestValue({ emailDigest: false, digestFrequency: 'weekly' })).toBe('off');
         expect(digestValue({ emailDigest: true, digestFrequency: 'off' })).toBe('off');

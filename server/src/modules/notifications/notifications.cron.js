@@ -1,59 +1,9 @@
-const Notification = require('./notification.model');
 const logger = require('../../../utils/logger');
 const notifEmitter = require('./notificationEventEmitter');
 const { scheduleJob } = require('../../shared/jobs/scheduler');
 const jobs = require('./notificationJobs');
 
 const getTask = () => require('../../../models/Task');
-
-async function generateDigest(io) {
-    try {
-        logger.info('[NotifCron] Running daily digest...');
-
-        
-        const pipeline = [
-            { $match: { read: false, type: { $ne: 'digest' } } },
-            {
-                $group: {
-                    _id: { recipient: '$recipient', workspaceId: '$workspaceId' },
-                    count: { $sum: 1 },
-                    types: { $addToSet: '$type' },
-                }
-            },
-            { $match: { count: { $gte: 2 } } }, 
-        ];
-
-        const groups = await Notification.aggregate(pipeline);
-        logger.info(`[NotifCron] Digest: ${groups.length} user-workspace groups to notify`);
-
-        const notifService = require('./notificationService');
-
-        for (const g of groups) {
-            const { recipient, workspaceId } = g._id;
-            const count = g.count;
-            const typeLabels = g.types.join(', ');
-
-            try {
-                await notifService.create(io, {
-                    recipient,
-                    workspaceId,
-                    type: 'digest',
-                    title: `📬 You have ${count} unread notification${count === 1 ? '' : 's'}`,
-                    body: `Topics: ${typeLabels.replace(/_/g, ' ')}`,
-                    link: '/notifications',
-                    meta: { count, types: g.types },
-                });
-            } catch (err) {
-                
-                logger.warn(`[NotifCron] Digest failed for ${recipient}:`, err.message);
-            }
-        }
-
-        logger.info('[NotifCron] Daily digest complete');
-    } catch (err) {
-        logger.error('[NotifCron] generateDigest error:', err.message);
-    }
-}
 
 const DUE_SOON_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -114,15 +64,16 @@ async function checkDueSoonTasks(io) {
     }
 }
 
-const DIGEST_INTERVAL_MS   = 24 * 60 * 60 * 1000; 
 const DUE_SOON_INTERVAL_MS =  1 * 60 * 60 * 1000; 
 const MINUTE_MS = 60 * 1000;
 
-/** Daily digest and due-soon reminders; each runs on one instance per interval. */
+/** Due-soon reminders and the notification jobs; each runs on one instance per interval.
+ * (There is no in-app digest: the bell only holds real notifications.) */
 function startNotificationsCron(io) {
     logger.info('[NotifCron] Starting notification cron jobs...');
+    // Old "You have N unread" digest items from before 2.2 no longer belong in the bell.
+    try { require('./notification.model').deleteMany({ type: 'digest' })?.catch?.(() => {}); } catch { /* not critical */ }
     const stops = [
-        scheduleJob({ name: 'notifications-digest', intervalMs: DIGEST_INTERVAL_MS, initialDelayMs: 30_000, run: () => generateDigest(io) }),
         scheduleJob({ name: 'notifications-due-soon', intervalMs: DUE_SOON_INTERVAL_MS, initialDelayMs: DUE_SOON_INTERVAL_MS, run: () => checkDueSoonTasks(io) }),
         // notificationJobs.js: reminders, suggestions, offline emails, digest emails.
         scheduleJob({ name: 'notifications-meeting-reminders', intervalMs: MINUTE_MS, initialDelayMs: 20_000, run: () => jobs.sendMeetingReminders(io) }),
@@ -134,4 +85,4 @@ function startNotificationsCron(io) {
     return () => stops.forEach((stop) => stop());
 }
 
-module.exports = { startNotificationsCron, generateDigest, checkDueSoonTasks };
+module.exports = { startNotificationsCron, checkDueSoonTasks };

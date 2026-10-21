@@ -117,11 +117,18 @@ describe('devices', () => {
 describe('account notification settings', () => {
   it('reads the digest frequency (emailDigest off means off)', async () => {
     reply = { emailDigest: true, digestFrequency: 'weekly' };
-    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'weekly' });
+    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'weekly', newSignInEmails: true });
     reply = { emailDigest: false, digestFrequency: 'daily' };
-    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'off' });
+    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'off', newSignInEmails: true });
     reply = { emailDigest: true };
-    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'daily' });
+    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'smart', newSignInEmails: true });
+    reply = { emailDigest: true, digestFrequency: 'smart', newSignInEmails: false };
+    expect(await opsAdapter.accountNotificationPrefs()).toEqual({ digestFrequency: 'smart', newSignInEmails: false });
+  });
+
+  it('turns new sign-in emails on and off', async () => {
+    await opsAdapter.saveNewSignInEmails(false);
+    expect(calls[0]).toMatchObject({ method: 'PUT', path: '/auth/me/preferences/notifications', a: { newSignInEmails: false } });
   });
 
   it('saves it, keeping emailDigest in step for older servers', async () => {
