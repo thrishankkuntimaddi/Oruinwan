@@ -38,8 +38,10 @@ async function getScheduledMeetings(req, res) {
 
     // Upcoming, in progress (started but not over yet) and live meetings.
     const now = Date.now();
+    // Scheduled meetings only: ad-hoc huddle records are listed by GET /api/v2/meetings?status=.
     const query = {
       workspaceId,
+      kind: { $ne: 'huddle' },
       $or: [
         { status: 'live' },
         { status: 'scheduled', startTime: { $gte: new Date(now - 8 * 3600e3) } },
@@ -113,6 +115,8 @@ async function createScheduledMeeting(req, res) {
       duration: duration || 30,
       meetingLink: meetingLink || null,
       participants: participantIds,
+      invitees: participantIds,
+      kind: 'scheduled',
       status: 'scheduled',
     });
 

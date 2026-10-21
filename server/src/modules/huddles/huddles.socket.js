@@ -134,21 +134,76 @@ function huddleError(socket, huddleId, code, message) {
     socket.emit('huddle:error', { huddleId, code, message });
 }
 
+/**
+ * Tell everyone a huddle is over (its call room and its conversation's room), close its
+ * history run and complete its meeting record(s).
+ */
+function announceEnded(io, huddle, reason, { history = defaultHistory(), meetings = defaultMeetings } = {}) {
+    const payload = {
+        huddleId: huddle.huddleId, meetingId: huddle.meetingId || null,
+        channelId: huddle.channelId, dmId: huddle.dmId, workspaceId: huddle.workspaceId, reason, timestamp: new Date(),
+    };
+    io.to(`huddle:${huddle.huddleId}`).emit('huddle:ended', payload);
+    // Only the conversation's own room: a DM or private-channel huddle must not be announced workspace-wide.
+    const room = scopeRoom(huddle);
+    if (room) io.to(room).emit('huddle:ended', payload);
+    history.ended(huddle.huddleId);
+    publishHuddle('huddle.ended', huddle, { huddleId: huddle.huddleId, reason });
+    pendingMeeting.delete(huddle.huddleId);
+    Promise.resolve()
+        .then(() => meetings.huddleEnded(huddle, io))
+        .catch(err => logger.warn('[huddle] could not complete its meetings:', err.message));
+}
+
+/**
+ * End a live huddle for everyone (e.g. "End meeting" on the meeting page).
+ * Returns true when a live huddle was ended.
+ */
+function endHuddle(io, huddleId, reason = 'ended', { registry = defaultRegistry, history = defaultHistory(), meetings = defaultMeetings } = {}) {
+    const huddle = registry.end(huddleId);
+    if (!huddle) return false;
+    announceEnded(io, huddle, reason, { history, meetings });
+    io.in(`huddle:${huddleId}`).socketsLeave(`huddle:${huddleId}`);
+    return true;
+}
+
+// huddleId -> promise of its meeting record id while the run's start is being recorded.
+const pendingMeeting = new Map();
+const MEETING_LINK_WAIT_MS = 3000;
+
+/** Record a new run and resolve its meeting record id (null when unknown in time). */
+function startRun(registry, history, huddle) {
+    const huddleId = huddle.huddleId;
+    const p = Promise.resolve()
+        .then(() => history.started(registry.summary(huddle)))
+        .then((session) => {
+            const meetingId = session?.meeting ? String(session.meeting) : null;
+            if (meetingId && typeof registry.setMeeting === 'function') registry.setMeeting(huddleId, meetingId);
+            return meetingId;
+        })
+        .catch(() => null);
+    pendingMeeting.set(huddleId, p);
+    p.finally(() => { if (pendingMeeting.get(huddleId) === p) pendingMeeting.delete(huddleId); });
+    return p;
+}
+
+/** The huddle's meeting record id: known already, else wait (briefly) for its start to be recorded. */
+async function meetingIdFor(registry, huddleId) {
+    const known = registry.get(huddleId)?.meetingId;
+    if (known) return known;
+    const pending = pendingMeeting.get(huddleId);
+    if (!pending) return null;
+    let timer;
+    const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(null), MEETING_LINK_WAIT_MS); if (timer.unref) timer.unref(); });
+    const id = await Promise.race([pending, timeout]);
+    clearTimeout(timer);
+    return id || registry.get(huddleId)?.meetingId || null;
+}
+
 function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000 } = {}) {
     const uid = () => String(socket.user.id);
 
-    const announceEnded = (huddle, reason) => {
-        const payload = { huddleId: huddle.huddleId, channelId: huddle.channelId, dmId: huddle.dmId, workspaceId: huddle.workspaceId, reason, timestamp: new Date() };
-        io.to(`huddle:${huddle.huddleId}`).emit('huddle:ended', payload);
-        // Only the conversation's own room: a DM or private-channel huddle must not be announced workspace-wide.
-        const room = scopeRoom(huddle);
-        if (room) io.to(room).emit('huddle:ended', payload);
-        history.ended(huddle.huddleId);
-        publishHuddle('huddle.ended', huddle, { huddleId: huddle.huddleId, reason });
-        Promise.resolve()
-            .then(() => meetings.huddleEnded(huddle, io))
-            .catch(err => logger.warn('[huddle] could not complete its meetings:', err.message));
-    };
+    const announce = (huddle, reason) => announceEnded(io, huddle, reason, { history, meetings });
 
     /** Remove this user from a huddle; ends the huddle when nobody is left. */
     const leave = (huddleId, { onlyThisSocket = false, reason = 'left' } = {}) => {
@@ -159,7 +214,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         io.to(`huddle:${huddleId}`).emit('huddle:left', { huddleId, userId: uid(), reason, timestamp: new Date() });
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:participant_left', { huddleId, userId: uid() });
-        if (ended) announceEnded(huddle, 'empty');
+        if (ended) announce(huddle, 'empty');
     };
 
     socket.on('huddle:start', async (data = {}) => {
@@ -173,7 +228,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // One live huddle per channel or DM: starting another joins the one already running.
             const running = registry.liveInScope(registryScope(check.scope), huddleId);
             if (running) {
-                return socket.emit('huddle:existing', { requestedId: huddleId, huddleId: running.huddleId, video: !!running.video });
+                return socket.emit('huddle:existing', { requestedId: huddleId, huddleId: running.huddleId, video: !!running.video, meetingId: running.meetingId || null });
             }
 
             const username = await displayName(socket);
@@ -182,15 +237,17 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video, workspaceId: check.scope.workspaceId || null });
             if (error) return huddleError(socket, huddleId, error, 'Huddle already exists elsewhere');
             if (!existed) {
-                history.started(registry.summary(huddle));
+                startRun(registry, history, huddle);
                 publishHuddle('huddle.started', huddle, { huddleId, channelId: huddle.channelId, dmId: huddle.dmId, startedBy: uid(), video: !!huddle.video });
                 // A huddle nobody joins (the starter's tab closed first) must not stay "live".
                 const timer = setTimeout(() => {
                     const h = registry.get(huddleId);
-                    if (h && h.participants.size === 0 && registry.end(huddleId)) announceEnded(h, 'empty');
+                    if (h && h.participants.size === 0 && registry.end(huddleId)) announce(h, 'empty');
                 }, emptyTimeoutMs);
                 if (timer.unref) timer.unref();
             }
+            // Every call has a meeting record; clients open its page with this id.
+            const meetingId = await meetingIdFor(registry, huddleId);
 
             const scope = registryScope(check.scope);
             const payload = {
@@ -202,6 +259,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                 channelName: check.channelName,
                 startedBy,
                 video: !!huddle.video,
+                meetingId,
                 timestamp: new Date(),
             };
             io.to(startedAudience({ ...scope, workspaceId: huddle.workspaceId }, check.recipientIds)).emit('huddle:started', payload);
@@ -236,7 +294,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled), workspaceId: check.scope.workspaceId || null });
             if (ensured.error) return huddleError(socket, huddleId, ensured.error, 'This huddle belongs to a different conversation');
             if (!existed) {
-                history.started(registry.summary(ensured.huddle));
+                startRun(registry, history, ensured.huddle);
                 publishHuddle('huddle.started', ensured.huddle, { huddleId, channelId: ensured.huddle.channelId, dmId: ensured.huddle.dmId, startedBy: uid(), video: !!ensured.huddle.video });
             }
 
@@ -246,6 +304,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             }
             if (joined.error) return huddleError(socket, huddleId, joined.error, 'Could not join huddle');
             history.joined(huddleId, { userId: uid(), username });
+            const meetingId = await meetingIdFor(registry, huddleId);
 
             const room = `huddle:${huddleId}`;
             if (joined.replacedSocketId) {
@@ -258,11 +317,11 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             socket.join(room);
 
             // The joiner learns who is already here; existing members get huddle:joined and send it offers.
-            socket.emit('huddle:roster', { huddleId, participants: joined.others, maxParticipants: registry.maxParticipants, video: !!joined.huddle.video });
-            socket.to(room).emit('huddle:joined', { huddleId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, timestamp: new Date() });
+            socket.emit('huddle:roster', { huddleId, meetingId, participants: joined.others, maxParticipants: registry.maxParticipants, video: !!joined.huddle.video });
+            socket.to(room).emit('huddle:joined', { huddleId, meetingId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, timestamp: new Date() });
 
             const scoped = scopeRoom(registryScope(check.scope));
-            if (scoped) io.to(scoped).emit('huddle:participant_joined', { huddleId, userId: uid() });
+            if (scoped) io.to(scoped).emit('huddle:participant_joined', { huddleId, meetingId, userId: uid() });
         } catch (err) {
             logger.error('[huddle:join] failed:', err);
             huddleError(socket, huddleId, 'SERVER_ERROR', 'Failed to join huddle');
@@ -281,9 +340,8 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             logger.warn(`🚫 [huddle:end] User ${uid()} denied — not in huddle:${huddleId}`);
             return huddleError(socket, huddleId, 'FORBIDDEN', 'Not in this huddle');
         }
-        const huddle = registry.end(huddleId);
-        if (huddle) announceEnded(huddle, 'ended');
-        io.in(`huddle:${huddleId}`).socketsLeave(`huddle:${huddleId}`);
+        // Ending the huddle also completes its meeting (and "End meeting" on the meeting page ends the huddle).
+        endHuddle(io, huddleId, 'ended', { registry, history, meetings });
     });
 
     socket.on('huddle:audio_toggle', (data = {}) => {
@@ -356,9 +414,9 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         if (!registry.participant(huddleId, uid())) return reply({ ok: false, message: 'Not in this huddle' });
         try {
             const username = await displayName(socket);
-            const { noteId, applied } = await notesOp({ userId: uid(), username, huddleId, op, io });
-            socket.to(`huddle:${huddleId}`).emit('huddle:notes_op', { huddleId, noteId, applied, by: { userId: uid(), username } });
-            reply({ ok: true, noteId, applied });
+            const { noteId, applied, meetingId = null } = await notesOp({ userId: uid(), username, huddleId, op, io });
+            socket.to(`huddle:${huddleId}`).emit('huddle:notes_op', { huddleId, meetingId, noteId, applied, by: { userId: uid(), username } });
+            reply({ ok: true, noteId, meetingId, applied });
         } catch (err) {
             if (!err.status) logger.error('[huddle:notes_op] failed:', err);
             reply({ ok: false, message: err.status ? err.message : 'Could not save the notes' });
@@ -377,3 +435,5 @@ module.exports = registerHuddleHandlers;
 module.exports.verifyScope = verifyScope;
 module.exports.startedAudience = startedAudience;
 module.exports.scopeKind = scopeKind;
+module.exports.endHuddle = endHuddle;
+module.exports.announceEnded = announceEnded;

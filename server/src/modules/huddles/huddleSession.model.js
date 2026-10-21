@@ -31,7 +31,13 @@ const huddleSessionSchema = new mongoose.Schema({
     endedAt: { type: Date, default: null },
     participants: { type: [participantSchema], default: [] },
 
-    // The shared Note everyone in the call edits (type 'meeting').
+    // The call's meeting record (ScheduledMeeting): every run of a meeting's huddle and
+    // every ad-hoc huddle has one. Notes, action items, summary, recording and transcript
+    // of runs with a meeting live on the meeting, not here.
+    meeting: { type: mongoose.Schema.Types.ObjectId, ref: 'ScheduledMeeting', default: null, index: true },
+
+    // The shared Note everyone in the call edits (type 'meeting'). For runs with a meeting
+    // this is the meeting's note (the same one for every run).
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Note', default: null },
     // Existing tasks someone linked to this huddle from the Tasks tab.
     linkedTasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],

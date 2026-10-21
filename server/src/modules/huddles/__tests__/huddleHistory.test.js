@@ -172,7 +172,7 @@ describe('huddle wrap-up', () => {
 
     const res = await service.recordWrapUp({ userId: ALICE, username: 'alice', huddleId: 'h1', messageId, io });
 
-    expect(res).toEqual({ notified: 1, recipients: 1 });
+    expect(res).toEqual({ notified: 1, recipients: 1, meetingId: null });
     expect(Session.updateOne).toHaveBeenCalledWith({ _id: expect.anything() }, {
       $set: { summary: expect.objectContaining({ message: messageId, channel: CH, postedBy: ALICE }) },
     });

@@ -17,6 +17,7 @@ const NOTIFICATION_TYPES = [
     'huddle_started',    
     'schedule_created',  
     'meeting_reminder',  
+    'meeting_recap',     // a call ended: "Meeting ended · View recap" (link to the meeting page)
     'reaction',          
     'thread_reply',      
     'integration_alert', 

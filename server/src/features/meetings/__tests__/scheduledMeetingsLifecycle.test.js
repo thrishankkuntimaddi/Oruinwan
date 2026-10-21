@@ -17,9 +17,10 @@ jest.mock('../../../identity/workspaces.repo', () => ({
 }));
 jest.mock('../../../identity/users.repo', () => ({ findManyByIds: jest.fn(async () => new Map()), findById: jest.fn(async () => null) }));
 jest.mock('../../../models/ScheduledMeeting', () => ({
-    findById: jest.fn(), find: jest.fn(), create: jest.fn(), deleteOne: jest.fn(), updateOne: jest.fn(), updateMany: jest.fn(),
+    findById: jest.fn(), find: jest.fn(), create: jest.fn(), deleteOne: jest.fn(), updateOne: jest.fn(), updateMany: jest.fn(), findOneAndUpdate: jest.fn(),
 }));
 jest.mock('../../../modules/notifications/notificationService', () => ({ scheduleCreated: jest.fn(async () => []) }));
+jest.mock('../../../modules/notifications/notificationEventEmitter', () => ({ emit: jest.fn() }));
 jest.mock('../../../modules/threads/threadAccess', () => ({
     checkConversationAccess: jest.fn(async ({ channel }, uid) => (channel && uid !== '64b0000000000000000000c9' ? { ok: true } : { ok: false, status: 404 })),
 }));
@@ -116,21 +117,32 @@ describe('GET /api/scheduled-meetings', () => {
 
 describe('completeMeetingsForHuddle', () => {
     it("completes the meeting's own huddle and live meetings of the huddle's channel", async () => {
-        ScheduledMeeting.find.mockImplementation(() => chain([{ _id: MEETING, workspaceId: WS, title: 'Standup' }]));
-        ScheduledMeeting.updateMany.mockResolvedValue({});
+        ScheduledMeeting.find.mockImplementation(() => chain([{ _id: MEETING, kind: 'scheduled' }]));
+        const live = { _id: MEETING, workspaceId: WS, title: 'Standup', status: 'live', kind: 'scheduled', participants: [BOB], createdBy: ALICE, startedAt: new Date(Date.now() - 600e3) };
+        ScheduledMeeting.findOneAndUpdate.mockImplementation((q) => chain(String(q._id) === MEETING && q.status.$in.includes(live.status) ? live : null));
+        ScheduledMeeting.updateOne.mockResolvedValue({});
         const emitted = [];
         const io = { to: (room) => ({ emit: (e, p) => emitted.push({ room, e, p }) }) };
 
         const done = await completeMeetingsForHuddle({ huddleId: `meeting-${MEETING}`, channelId: CHANNEL }, io);
 
         expect(done).toEqual([MEETING]);
-        expect(ScheduledMeeting.find.mock.calls[0][0]).toEqual({ status: 'live', $or: [{ _id: MEETING }, { channelId: CHANNEL }] });
-        expect(ScheduledMeeting.updateMany).toHaveBeenCalledWith({ _id: { $in: [MEETING] } }, { $set: { status: 'completed' } });
-        expect(emitted[0]).toMatchObject({ room: `workspace:${WS}`, e: 'schedule:updated', p: { meeting: { status: 'completed' } } });
+        expect(ScheduledMeeting.find.mock.calls[0][0]).toEqual({
+            status: 'live',
+            $or: [{ huddleId: `meeting-${MEETING}` }, { _id: MEETING }, { channelId: CHANNEL, kind: { $ne: 'huddle' } }],
+        });
+        expect(ScheduledMeeting.findOneAndUpdate.mock.calls[0][1]).toEqual({ $set: { status: 'completed', endedAt: expect.any(Date) } });
+        expect(ScheduledMeeting.updateOne.mock.calls[0][1].$set).toMatchObject({ durationSec: expect.any(Number) });
+        expect(emitted.find((x) => x.e === 'schedule:updated')).toMatchObject({ room: `workspace:${WS}`, p: { meeting: { status: 'completed' } } });
+        expect(emitted.find((x) => x.e === 'meeting:ended')).toMatchObject({
+            room: expect.arrayContaining([`user:${BOB}`, `user:${ALICE}`, `meeting:${MEETING}`]),
+            p: { meetingId: MEETING, kind: 'scheduled', title: 'Standup', conversation: { kind: 'workspace' } },
+        });
     });
 
-    it('does nothing for a plain workspace huddle', async () => {
+    it('a plain workspace huddle completes only its own record', async () => {
+        ScheduledMeeting.find.mockImplementation(() => chain([]));
         expect(await completeMeetingsForHuddle({ huddleId: 'abc', workspaceId: WS }, null)).toEqual([]);
-        expect(ScheduledMeeting.find).not.toHaveBeenCalled();
+        expect(ScheduledMeeting.find.mock.calls[0][0]).toEqual({ status: 'live', $or: [{ huddleId: 'abc' }] });
     });
 });

@@ -1,5 +1,9 @@
 # Meetings & huddles API
 
+> **Unified model:** every call (scheduled meeting or ad-hoc huddle) now has one meeting record with one
+> notes store, action-item list and summary. See [meetings-unified.md](./meetings-unified.md); it wins where
+> it differs from this page (access rules, the summary shape, shared notes, huddle aliases).
+
 Two kinds of calls exist:
 
 | Kind | Model | Id | Base path |

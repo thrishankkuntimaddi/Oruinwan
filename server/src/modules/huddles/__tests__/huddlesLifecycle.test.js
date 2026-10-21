@@ -62,6 +62,26 @@ describe('huddle life cycle', () => {
   });
   const list = (socket) => new Promise((resolve) => socket.emit('huddle:list', { workspaceId: 'w1' }, resolve));
 
+  test('every payload carries the call\'s meeting record id', async () => {
+    history.started.mockImplementation(async () => new Promise((r) => setTimeout(() => r({ meeting: 'm-123' }), 30)));
+    const alice = await connect('alice');
+    const bob = await connect('bob');
+    const started = next(bob, 'huddle:started');
+    alice.emit('huddle:start', { huddleId: 'h9', channelId: 'c1' });
+    expect(await started).toMatchObject({ huddleId: 'h9', meetingId: 'm-123' });
+    const roster = next(alice, 'huddle:roster');
+    alice.emit('huddle:join', { huddleId: 'h9', channelId: 'c1' });
+    expect(await roster).toMatchObject({ huddleId: 'h9', meetingId: 'm-123' });
+    const joined = next(alice, 'huddle:joined');
+    bob.emit('huddle:join', { huddleId: 'h9', channelId: 'c1' });
+    expect(await joined).toMatchObject({ userId: 'bob', meetingId: 'm-123' });
+    expect((await list(alice)).huddles[0]).toMatchObject({ huddleId: 'h9', meetingId: 'm-123' });
+    const ended = next(bob, 'huddle:ended');
+    alice.emit('huddle:end', { huddleId: 'h9' });
+    expect(await ended).toMatchObject({ huddleId: 'h9', meetingId: 'm-123', reason: 'ended' });
+    expect(meetings.huddleEnded).toHaveBeenCalledWith(expect.objectContaining({ huddleId: 'h9', meetingId: 'm-123' }), io);
+  });
+
   test('starting a second huddle in the same channel points to the one already running', async () => {
     const alice = await connect('alice');
     const bob = await connect('bob');
@@ -73,7 +93,7 @@ describe('huddle life cycle', () => {
 
     const existing = next(bob, 'huddle:existing');
     bob.emit('huddle:start', { huddleId: 'h2', channelId: 'c1' });
-    expect(await existing).toEqual({ requestedId: 'h2', huddleId: 'h1', video: false });
+    expect(await existing).toEqual({ requestedId: 'h2', huddleId: 'h1', video: false, meetingId: null });
     expect(registry.get('h2')).toBeNull();
   });
 

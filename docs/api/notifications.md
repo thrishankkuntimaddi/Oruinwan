@@ -33,6 +33,7 @@ Notification object: `{ _id, recipient, workspaceId, type, title, body, link, me
 | type | produced by | link | meta |
 | --- | --- | --- | --- |
 | `meeting_reminder` | meeting reminder job | `/meetings/:id` | `{ meetingId, scheduledMeetingId, meetingTitle, startTime (ISO), startsIn }` |
+| `meeting_recap` | a call (scheduled meeting or ad-hoc huddle) ended — see meetings-unified.md | `/meetings/:id` | `{ kind: 'meeting_recap', meetingId, meetingKind, channelId, dmSessionId }` |
 | `ai_suggestion` | suggestion job | task list / task / `/meetings/:id` / `/channel/:id` / `/dm/:id` / `/huddles?tab=history` | `{ kind: 'overdue_tasks' \| 'meeting_action_items' \| 'huddle_action_items', count?, meetingId?, huddleSessionId?, noteId? }` |
 | `mention` (thread reply) | thread replies with `@handle`, `@channel` or `@here` | `/channel/:id` / `/dm/:id` | `{ …, isEveryone }` — `isEveryone: true` for `@channel`/`@here` (title "alice notified everyone") |
 

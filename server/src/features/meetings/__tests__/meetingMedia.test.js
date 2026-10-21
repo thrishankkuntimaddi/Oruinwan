@@ -96,7 +96,7 @@ beforeEach(() => {
     ScheduledMeeting.find.mockImplementation(() => chain(busy));
     ScheduledMeeting.findByIdAndUpdate.mockImplementation(async (id, update) => { applyUpdate(doc, update); return doc; });
     ScheduledMeeting.findOneAndUpdate.mockImplementation((q, update, opts) => {
-        if (!match(q._id)) return chain(null);
+        if (!match(q._id) || (q.status?.$in && !q.status.$in.includes(doc.status))) return chain(null);
         const before = JSON.parse(JSON.stringify(doc));
         applyUpdate(doc, update);
         return chain(opts?.new === false ? before : doc);
@@ -224,13 +224,15 @@ describe('transcript segments', () => {
         expect(r.status).toBe(409);
     });
 
-    test('summarize prefers the transcript over notes', async () => {
+    test('summarize uses the transcript and the notes, transcript first', async () => {
         doc.sharedNotes = 'notes text';
         doc.transcriptSegments = [seg(OWNER, 'We should ship on Monday.', 5)];
         const r = await call('POST', `/api/v2/meetings/${MEETING}/summarize`, OWNER);
         expect(r.status).toBe(200);
         expect(summarizeDocument).toHaveBeenCalledWith(expect.stringContaining('We should ship on Monday.'), expect.any(Object));
-        expect(summarizeDocument.mock.calls[0][0]).not.toContain('notes text');
+        // One summary from everything: transcript first, then the notes.
+        const text = summarizeDocument.mock.calls[0][0];
+        expect(text.indexOf('We should ship on Monday.')).toBeLessThan(text.indexOf('notes text'));
     });
 
     test('action items: extract (dry) then apply without duplicates', async () => {
@@ -244,7 +246,7 @@ describe('transcript segments', () => {
 
         const applied = await call('POST', `/api/v2/meetings/${MEETING}/action-items/extract`, MEMBER, { apply: true });
         expect(applied.body.added).toBe(1);
-        expect(doc.actionItems[1]).toEqual({ text: 'Draft the release notes', assignedTo: GUEST, status: 'pending' });
+        expect(doc.actionItems[1]).toMatchObject({ text: 'Draft the release notes', assignedTo: GUEST, status: 'pending', source: 'ai', taskId: null });
     });
 });
 

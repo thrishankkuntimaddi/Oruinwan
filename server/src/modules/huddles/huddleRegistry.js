@@ -76,6 +76,8 @@ class HuddleRegistry {
       startedBy: meta.startedBy || null,
       video: !!meta.video,
       startedAt: toDate(meta.startedAt),
+      // The meeting record of this call (set once it is known, see setMeeting).
+      meetingId: meta.meetingId ? String(meta.meetingId) : null,
       participants: new Map(),
     };
     this.huddles.set(huddleId, huddle);
@@ -135,6 +137,15 @@ class HuddleRegistry {
     const huddle = this.huddles.get(huddleId) || null;
     this.huddles.delete(huddleId);
     if (huddle) this._changed({ type: 'end', huddleId });
+    return huddle;
+  }
+
+  /** Attach the call's meeting record id (replicated to the other instances). */
+  setMeeting(huddleId, meetingId) {
+    const huddle = this.huddles.get(huddleId);
+    if (!huddle || !meetingId || huddle.meetingId === String(meetingId)) return huddle || null;
+    huddle.meetingId = String(meetingId);
+    this._changed({ type: 'meeting', huddleId, meetingId: huddle.meetingId });
     return huddle;
   }
 
@@ -200,6 +211,7 @@ class HuddleRegistry {
       startedBy: huddle.startedBy,
       startedAt: huddle.startedAt,
       video: !!huddle.video,
+      meetingId: huddle.meetingId || null,
       participants: [...huddle.participants.values()].map(publicParticipant),
     };
   }
@@ -222,6 +234,7 @@ class HuddleRegistry {
       startedBy: huddle.startedBy,
       video: !!huddle.video,
       startedAt: toDate(huddle.startedAt).toISOString(),
+      meetingId: huddle.meetingId || null,
       participants: withParticipants
         ? [...huddle.participants.values()].map((p) => ({ ...p, joinedAt: toDate(p.joinedAt).toISOString() }))
         : [],
@@ -244,6 +257,7 @@ class HuddleRegistry {
       startedBy: data.startedBy || null,
       video: !!data.video,
       startedAt: toDate(data.startedAt),
+      meetingId: data.meetingId || null,
       participants: new Map((data.participants || []).map((p) => [String(p.userId), { ...p, userId: String(p.userId), joinedAt: toDate(p.joinedAt) }])),
     };
     this.huddles.set(huddle.huddleId, huddle);
@@ -274,6 +288,13 @@ class HuddleRegistry {
           if (!existing) { this._restoreOne({ ...h, participants: [] }); return true; }
           if (h.video) existing.video = true;
           if (!existing.workspaceId && h.workspaceId) existing.workspaceId = h.workspaceId;
+          if (!existing.meetingId && h.meetingId) existing.meetingId = h.meetingId;
+          return true;
+        }
+        case 'meeting': {
+          const huddle = this.huddles.get(op.huddleId);
+          if (!huddle || !op.meetingId) return false;
+          huddle.meetingId = String(op.meetingId);
           return true;
         }
         case 'join': {
