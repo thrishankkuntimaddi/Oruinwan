@@ -294,3 +294,20 @@ html.light .srp-filter-input, html.light .srp-filter-select { color-scheme: ligh
     .srp-header { padding: 12px 16px; flex-wrap: wrap; }
     .srp-tabs-bar { padding: 0 16px; }
 }
+
+/* Filter chips (query operators) */
+.srp-chips {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 14px 24px 0;
+    box-sizing: border-box;
+}
+.srp-chip-x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; margin-right: -4px; padding: 0;
+    color: inherit; background: none; border: 0; border-radius: 50%; cursor: pointer;
+}
+.srp-chip-x:hover { background: var(--bg-hover); }
+.srp-chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 640px) { .srp-chips { padding: 12px 16px 0; } }

@@ -28,4 +28,27 @@ describe('local message index', () => {
         indexConversation({ id: 'd1', type: 'dm' }, [{ id: 'm5', decryptedContent: 'lunch at noon', isDeleted: true }]);
         expect(searchLocalMessages('lunch', 'w1')).toEqual([]);
     });
+
+    it('answers operator queries: from:, in:, dates, has:, is:', () => {
+        indexConversation({ id: 'c1', type: 'channel', name: 'general', workspaceId: 'w1' }, [
+            { id: 'a', decryptedContent: 'see https://x.io', sender: { _id: 'u1', username: 'alice' }, createdAt: '2026-01-05T12:00:00' },
+            { id: 'b', payload: { decryptedContent: 'pinned note', isPinned: true, replyCount: 2 }, sender: { _id: 'u2', username: 'bob' }, createdAt: '2026-02-05T12:00:00' },
+            { id: 'c', decryptedContent: '', payload: { attachments: [{ name: 'shot.png', mimeType: 'image/png' }] }, sender: { _id: 'u2', username: 'bob' }, createdAt: '2026-03-05T12:00:00' },
+        ]);
+        indexConversation({ id: 'c2', type: 'channel', name: 'random', workspaceId: 'w1' }, [
+            { id: 'd', decryptedContent: 'note from random', sender: { _id: 'u1', username: 'alice' }, createdAt: '2026-02-06T12:00:00' },
+        ]);
+        const ids = (q) => searchLocalMessages(q, 'w1').map(h => h._id);
+        expect(ids('from:@alice')).toEqual(['d', 'a']);
+        expect(ids('note in:#general')).toEqual(['b']);
+        expect(ids('after:2026-01-31 before:2026-03-01')).toEqual(['d', 'b']);
+        expect(ids('on:2026-01-05')).toEqual(['a']);
+        expect(ids('has:link')).toEqual(['a']);
+        expect(ids('has:image')).toEqual(['c']);
+        expect(ids('shot')).toEqual(['c']);
+        expect(ids('is:pinned')).toEqual(['b']);
+        expect(ids('is:thread from:@bob')).toEqual(['b']);
+        expect(ids('type:task note')).toEqual([]);
+        expect(ids('type:message')).toEqual([]); // no criteria besides the type
+    });
 });

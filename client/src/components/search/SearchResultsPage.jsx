@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, MessageSquare, Paperclip, User, Hash, CheckSquare, FileText, BookOpen,
@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useSearch } from '../../contexts/SearchContext';
 import SearchResultItem from './SearchResultItem';
+import SearchFilterChips from './SearchFilterChips';
+import { parseSearchQuery } from '../../utils/searchQuery';
 import './SearchBar.css';
 
 const TABS = [
@@ -42,8 +44,6 @@ export default function SearchResultsPage() {
     } = useSearch();
 
     const [localFilters, setLocalFilters] = useState({
-        from: filters.from || '',
-        to:   filters.to   || '',
         tags: (filters.tags || []).join(', '),
     });
 
@@ -78,12 +78,20 @@ export default function SearchResultsPage() {
         const tagList = localFilters.tags
             ? localFilters.tags.split(',').map(t => t.trim()).filter(Boolean)
             : [];
-        applyFilters({ from: localFilters.from, to: localFilters.to, tags: tagList });
+        applyFilters({ tags: tagList });
     };
 
     const handleFilterReset = () => {
-        setLocalFilters({ from: '', to: '', tags: '' });
-        applyFilters({ from: '', to: '', tags: [] });
+        setLocalFilters({ tags: '' });
+        applyFilters({ tags: [] });
+    };
+
+    // Chips edit the operators in the query (from:, in:, after:, type:, …); the
+    // server and the local message index both read them from the raw query.
+    const handleChipsChange = (next) => {
+        queryRef.current = next;
+        setSearchParams(next ? { q: next } : {}, { replace: true });
+        setQuery(next, { immediate: true });
     };
 
     const tab = activeTab || 'all';
@@ -94,11 +102,23 @@ export default function SearchResultsPage() {
     const getTabCount = (tabKey) => (tabKey === 'all' ? (results.total || 0) : (results[tabKey] || []).length);
 
     const currentResults = getTabResults(tab);
+    const highlight = parseSearchQuery(query).text.replace(/"/g, '');
     const total = results.total || 0;
     const hasQuery = !!query.trim();
     const settled = hasQuery && !loading;
     const isSemantic = filters.semantic !== false;
     const activeMeta = TABS.find(t => t.key === tab);
+    const suggestions = useMemo(() => {
+        const ch = new Set();
+        const ppl = new Set();
+        (results.channels || []).forEach(c => c.name && ch.add(c.name));
+        (results.users || []).forEach(u => (u.username || u.name) && ppl.add(u.username || u.name));
+        (results.messages || []).forEach((m) => {
+            if (m.parent?.type === 'channel' && m.parent.name) ch.add(m.parent.name);
+            if (m.sender?.name) ppl.add(m.sender.name);
+        });
+        return { channels: [...ch], people: [...ppl] };
+    }, [results]);
     const canLoadMore = tab !== 'all' && currentResults.length > 0
         && (results.lastPageSize ?? currentResults.length) >= (filters.limit || 10);
 
@@ -152,31 +172,18 @@ export default function SearchResultsPage() {
                 </div>
             </div>
 
+            <SearchFilterChips
+                query={query}
+                onChange={handleChipsChange}
+                channels={suggestions.channels}
+                people={suggestions.people}
+            />
+
             <div className="srp-layout">
                 <div className="srp-sidebar">
                     <div className="srp-filter-card">
                         <p className="srp-filter-title">Filters</p>
 
-                        <div className="srp-filter-group">
-                            <label className="srp-filter-label" htmlFor="srp-from">From date</label>
-                            <input
-                                id="srp-from"
-                                type="date"
-                                className="srp-filter-input"
-                                value={localFilters.from}
-                                onChange={e => setLocalFilters(f => ({ ...f, from: e.target.value }))}
-                            />
-                        </div>
-                        <div className="srp-filter-group">
-                            <label className="srp-filter-label" htmlFor="srp-to">To date</label>
-                            <input
-                                id="srp-to"
-                                type="date"
-                                className="srp-filter-input"
-                                value={localFilters.to}
-                                onChange={e => setLocalFilters(f => ({ ...f, to: e.target.value }))}
-                            />
-                        </div>
                         <div className="srp-filter-group">
                             <label className="srp-filter-label" htmlFor="srp-tags">Tags (comma separated)</label>
                             <input
@@ -250,7 +257,7 @@ export default function SearchResultsPage() {
                                     <span>{items.length} result{items.length !== 1 ? 's' : ''}</span>
                                 </div>
                                 {items.map((r, i) => (
-                                    <SearchResultItem key={keyOf(r, i)} result={r} query={query} />
+                                    <SearchResultItem key={keyOf(r, i)} result={r} query={highlight} />
                                 ))}
                             </div>
                         );
@@ -263,7 +270,7 @@ export default function SearchResultsPage() {
                                 <span>{activeMeta && <activeMeta.Icon size={13} />} {activeMeta?.label}</span>
                                 <span>{currentResults.length} result{currentResults.length !== 1 ? 's' : ''}</span>
                             </div>
-                            {currentResults.map((r, i) => <SearchResultItem key={keyOf(r, i)} result={r} query={query} />)}
+                            {currentResults.map((r, i) => <SearchResultItem key={keyOf(r, i)} result={r} query={highlight} />)}
                             {canLoadMore && (
                                 <div className="srp-load-more">
                                     <button className="srp-load-more-btn" onClick={loadMore} disabled={loadingMore}>
