@@ -5,9 +5,9 @@
 //  - Review: the design with numbered pins (tap the image to drop one), each pin a thread you
 //    can reply to and resolve; reviewers approve or request changes. Wide windows put the
 //    comments beside the design; phones and split windows stack them under it.
-// PDFs: the phone's WebView can't draw PDF pages (Android has no PDF renderer in WebView), so a
-// PDF review lists its comments by page, opens the PDF in the system viewer and adds comments to
-// a page rather than to a spot on it.
+// PDFs: the WebView has no PDF renderer, so pages are drawn with pdf.js (pdfPages.js) and pinned
+// like images, one page at a time. If a PDF can't be drawn, the review lists its comments by page
+// and comments go on a page rather than a spot on it.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check, CheckCircle2, ExternalLink, File as FileIcon, FileImage, FileText, FileVideo, MessageSquare, MoreHorizontal, PenTool, Plus, RotateCcw, Send, Trash2, Upload, Users, X,
@@ -30,6 +30,7 @@ import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { openFile, useMediaUrl } from '../media/media.js';
+import { clampPage, drawPage, openPdf } from './pdfPages.js';
 import { PeoplePicker, toDateInput } from '../tasks/TaskEditorSheet.jsx';
 import {
   DECISION_LABEL, REVIEW_STATUS, applyAnnotationEvent, applyPresence, canDeleteAnnotation, canResolve, countsLabel, formatTime, myReviewer,
@@ -353,8 +354,98 @@ function VideoStage({ src, pins, numbers, draft, activeId, onPlace, onOpen, onTi
   );
 }
 
-function PdfStage({ review, file, page, setPage, annotations, onPlace }) {
+function PdfPageButtons({ count, page, setPage, pages }) {
+  return (
+    <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
+      {Array.from({ length: count }, (_, i) => i + 1).map((p) => {
+        const info = pages.find((x) => x.page === p);
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPage(p)}
+            aria-current={p === page ? 'page' : undefined}
+            className={cx('pressable h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p === page ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+          >
+            {`Page ${p}`}
+            {info?.open ? ` · ${info.open}` : ''}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A PDF page drawn with pdf.js, with pins on it. Falls back to comments by page if it can't be drawn. */
+function PdfStage({ review, file, url, page, setPage, annotations, pins, numbers, draft, activeId, onPlace, onOpen }) {
   const pages = pagesWithPins(annotations);
+  const box = useRef(null);
+  const canvas = useRef(null);
+  const [doc, setDoc] = useState(null);
+  const [failed, setFailed] = useState(null);
+  const [drawn, setDrawn] = useState(false);
+
+  useEffect(() => {
+    if (!url) return undefined;
+    let alive = true;
+    let opened = null;
+    setDoc(null);
+    setFailed(null);
+    openPdf(url)
+      .then((d) => {
+        opened = d;
+        if (alive) setDoc(d);
+        else d.destroy?.();
+      })
+      .catch((err) => alive && setFailed(err));
+    return () => {
+      alive = false;
+      opened?.destroy?.();
+    };
+  }, [url]);
+
+  const count = doc?.numPages || 0;
+  useEffect(() => {
+    if (count && page > count) setPage(clampPage(page, count));
+  }, [count, page, setPage]);
+
+  useEffect(() => {
+    if (!doc || !canvas.current || page > doc.numPages) return undefined;
+    setDrawn(false);
+    const width = box.current?.clientWidth || 600;
+    const job = drawPage(doc, page, canvas.current, width);
+    job.done.then(() => setDrawn(true)).catch((err) => err?.name !== 'RenderingCancelledException' && setFailed(err));
+    return () => job.cancel();
+  }, [doc, page]);
+
+  if (doc && !failed) {
+    return (
+      <div ref={box}>
+        <div className="flex justify-center">
+          <div
+            className="relative inline-block cursor-crosshair select-none"
+            onClick={(e) => {
+              if (!drawn) return;
+              const at = pinFromPoint(canvas.current?.getBoundingClientRect(), e.clientX, e.clientY);
+              if (at) onPlace(at);
+            }}
+          >
+            <canvas ref={canvas} aria-label={`Page ${page} of ${count}`} className="block max-w-full rounded-lg bg-white shadow-sm" />
+            {!drawn && (
+              <div className="absolute inset-0 grid place-items-center">
+                <Spinner className="text-text-2" />
+              </div>
+            )}
+            {drawn && pins.map((a) => <Pin key={a.id} n={numbers.get(a.id)} annotation={a} active={a.id === activeId} onOpen={onOpen} />)}
+            {drawn && <DraftPin draft={draft} />}
+          </div>
+        </div>
+        <p className="mt-2 text-center text-[12px] text-text-2">Tap the page where your comment goes.</p>
+        {count > 1 && <PdfPageButtons count={count} page={page} setPage={setPage} pages={pages} />}
+      </div>
+    );
+  }
+
   const maxPage = Math.max(page, ...pages.map((p) => p.page), 1);
   return (
     <div className="rounded-card border border-line-soft bg-surface p-4">
@@ -370,23 +461,16 @@ function PdfStage({ review, file, page, setPage, annotations, onPlace }) {
           Open
         </Button>
       </div>
-      <p className="mt-3 text-[13px] text-text-2">Pins on PDFs are placed on the web or desktop app. Here you can read and answer them by page, and comment on a page.</p>
-      <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
-        {Array.from({ length: maxPage + 1 }, (_, i) => i + 1).map((p) => {
-          const info = pages.find((x) => x.page === p);
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPage(p)}
-              className={cx('pressable h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p === page ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
-            >
-              {`Page ${p}`}
-              {info?.open ? ` · ${info.open}` : ''}
-            </button>
-          );
-        })}
-      </div>
+      {!failed && url ? (
+        <div className="grid h-40 place-items-center">
+          <Spinner className="text-text-2" />
+        </div>
+      ) : (
+        <p className="mt-3 text-[13px] text-text-2">
+          {failed ? "This PDF couldn't be shown here. " : ''}You can read and answer comments by page, and comment on a page.
+        </p>
+      )}
+      <PdfPageButtons count={maxPage + 1} page={page} setPage={setPage} pages={pages} />
       <Button className="mt-3" block variant="secondary" icon={MessageSquare} onClick={() => onPlace({ x: 0.5, y: 0.5 })}>
         Comment on page {page}
       </Button>
@@ -743,7 +827,7 @@ export function DesignReviewScreen({ id }) {
 
   const stage =
     kind === 'pdf' ? (
-      <PdfStage review={review} file={fileForOpen} page={page} setPage={setPage} annotations={ofVersion} onPlace={setDraft} />
+      <PdfStage review={review} file={fileForOpen} url={media.url} page={page} setPage={setPage} annotations={ofVersion} pins={pins} numbers={numbers} draft={draft} activeId={openId} onPlace={setDraft} onOpen={(a) => setOpenId(a.id)} />
     ) : !media.url ? (
       <div className="grid h-64 place-items-center rounded-card border border-line-soft bg-surface">
         {media.error ? <Button variant="secondary" onClick={media.retry}>Couldn't load the design. Try again</Button> : <Spinner className="text-text-2" />}
