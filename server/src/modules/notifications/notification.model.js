@@ -73,6 +73,11 @@ const notificationSchema = new mongoose.Schema(
             enum: ['in-app', 'email', 'push'],
             default: 'in-app',
         },
+        // Set once the offline-email job has handled this mention/DM (sent or skipped).
+        emailedAt: {
+            type: Date,
+            default: null,
+        },
     },
     { timestamps: true }
 );
@@ -80,6 +85,8 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.index({ recipient: 1, workspaceId: 1, createdAt: -1 });
 
 notificationSchema.index({ recipient: 1, workspaceId: 1, read: 1 });
+
+notificationSchema.index({ type: 1, read: 1, emailedAt: 1, createdAt: 1 });
 
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 24 * 60 * 60 });
 

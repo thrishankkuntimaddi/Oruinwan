@@ -21,7 +21,9 @@ async function shouldNotify(userId, workspaceId, prefKey) {
     }
 }
 
-emitter.on('message.sent', async ({ io, mentionedUserIds = [], senderUsername, workspaceId, channelName, channelId, snippet, recipientId, dmSessionId, isMention }) => {
+emitter.on('message.sent', async ({ io, mentionedUserIds = [], senderUsername, workspaceId, channelName, channelId, snippet, recipientId, dmSessionId, isMention, automationOnly }) => {
+    // Automation-only events (messages.service) carry metadata for triggers, never notifications.
+    if (automationOnly) return;
     try {
         const notifService = getNotifService();
 
@@ -145,8 +147,8 @@ emitter.on('meeting.reminder', async ({ io, recipientIds = [], workspaceId, titl
                 type: 'meeting_reminder',
                 title: `🔔 Meeting starting in ${startsIn}`,
                 body: title,
-                link: '/huddles',
-                meta: { meetingId, title, startsIn },
+                link: meetingId ? `/meetings/${meetingId}` : '/huddles?tab=scheduled',
+                meta: { meetingId, scheduledMeetingId: meetingId, title, startsIn },
             });
         }
     } catch (err) {
@@ -175,7 +177,7 @@ emitter.on('integration.webhook_failed', async ({ io, adminIds = [], workspaceId
 emitter.on('ai.suggestion', async ({ io, userId, workspaceId, title, body, link }) => {
     try {
         const notifService = getNotifService();
-        if (await shouldNotify(userId, workspaceId, 'message')) {
+        if (await shouldNotify(userId, workspaceId, 'aiSuggestions')) {
             await notifService.create(io, {
                 recipient: userId,
                 workspaceId,

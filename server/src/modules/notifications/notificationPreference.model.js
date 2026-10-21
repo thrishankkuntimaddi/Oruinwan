@@ -19,6 +19,8 @@ const notificationPreferenceSchema = new mongoose.Schema(
         threadReply: { type: Boolean, default: true },
         task: { type: Boolean, default: true },
         meeting: { type: Boolean, default: true },
+        // Rule-based suggestions (overdue tasks, meeting action items).
+        aiSuggestions: { type: Boolean, default: true },
         
         email: { type: Boolean, default: false }, 
         push: { type: Boolean, default: true },   

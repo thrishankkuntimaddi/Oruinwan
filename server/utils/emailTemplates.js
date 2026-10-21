@@ -565,6 +565,79 @@ function companyRejectedTemplate(name, companyName, reason, note) {
   };
 }
 
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * "While you were away" email for mentions / DMs. Messages are end-to-end
+ * encrypted, so `items` only carry who and where: [{ text, url, count }].
+ */
+function offlineActivityTemplate(name, items, appUrl) {
+  const url = appUrl || APP_URL;
+  const list = (items || []).slice(0, 20);
+  const total = list.reduce((n, i) => n + (i.count || 1), 0);
+  const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${_esc(name)}</strong>,` : 'Hi there,';
+  const rows = list.map((i) => _row(
+    i.count > 1 ? `${i.count}&times;` : '&bull;',
+    i.url ? `<a href="${_esc(i.url)}" style="color:${T.textPrimary};text-decoration:none">${_esc(i.text)}</a>` : _esc(i.text)
+  )).join('');
+  const body = `
+    ${_p(greeting)}
+    ${_p('Here is what happened on Oruinwan while you were away. Messages are end-to-end encrypted, so open the app to read them.')}
+    ${_card(rows)}
+    ${_btn('Open Oruinwan', url)}
+  `;
+  const first = list[0] ? list[0].text : 'You have new activity';
+  return {
+    subject: total > 1 ? `${first} (+${total - 1} more)` : first,
+    text: `${list.map((i) => `- ${i.text}${i.count > 1 ? ` (${i.count})` : ''}`).join('\n')}\n\nOpen Oruinwan: ${url}`,
+    html: _shell({
+      icon: '💬',
+      title: 'While you were away',
+      subtitle: `${total} new mention${total === 1 ? '' : 's'} and direct message${total === 1 ? '' : 's'}.`,
+      preheader: _esc(first),
+      body,
+    }),
+  };
+}
+
+/**
+ * Daily / weekly digest email: counts and links only, never message content.
+ * `sections`: [{ workspaceName, url, lines: [{ label, count }] }]
+ */
+function notificationDigestTemplate(name, cadence, sections, appUrl) {
+  const url = appUrl || APP_URL;
+  const period = cadence === 'weekly' ? 'this week' : 'today';
+  const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${_esc(name)}</strong>,` : 'Hi there,';
+  const cards = (sections || []).map((s) => `
+    ${_p(`<strong style="color:${T.textPrimary}">${_esc(s.workspaceName || 'Workspace')}</strong>`, { mb: '0', mt: '16px' })}
+    ${_card(s.lines.map((l) => _row(_esc(l.label), String(l.count))).join(''))}
+  `).join('');
+  const total = (sections || []).reduce((n, s) => n + s.lines.reduce((m, l) => m + (l.unread ? 0 : l.count), 0), 0);
+  const body = `
+    ${_p(greeting)}
+    ${_p(`Your Oruinwan ${cadence === 'weekly' ? 'weekly' : 'daily'} summary for ${period}.`)}
+    ${cards}
+    ${_btn('Open notifications', `${url}/notifications`)}
+    ${_p('You can change how often you get this email in Settings &rarr; Notifications.', { size: '12px' })}
+  `;
+  return {
+    subject: cadence === 'weekly' ? 'Your weekly Oruinwan digest' : 'Your daily Oruinwan digest',
+    text: (sections || []).map((s) => `${s.workspaceName}\n${s.lines.map((l) => `  ${l.label}: ${l.count}`).join('\n')}`).join('\n\n')
+      + `\n\nOpen notifications: ${url}/notifications`,
+    html: _shell({
+      icon: '📬',
+      title: cadence === 'weekly' ? 'Weekly digest' : 'Daily digest',
+      subtitle: `${total} update${total === 1 ? '' : 's'} ${period}.`,
+      preheader: `${total} update${total === 1 ? '' : 's'} on Oruinwan ${period}.`,
+      body,
+    }),
+  };
+}
+
 /** Six-digit numeric verification code from a CSPRNG (used for email verification flows). */
 function generateVerificationCode() {
   return String(require('crypto').randomInt(0, 1000000)).padStart(6, '0');
@@ -589,7 +662,9 @@ module.exports = {
   
   taskAssignedTemplate,
   meetingScheduledTemplate,
-  
+  offlineActivityTemplate,
+  notificationDigestTemplate,
+
   newDeviceSignInTemplate,
   passwordChangedTemplate,
   allDevicesRevokedTemplate,

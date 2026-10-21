@@ -71,6 +71,7 @@ const PREF_KEY_BY_TYPE = {
     task_transfer: 'task',
     schedule_created: 'meeting',
     meeting_reminder: 'meeting',
+    ai_suggestion: 'aiSuggestions',
 };
 
 const getPrefs = () => require('./notificationPreferenceService');

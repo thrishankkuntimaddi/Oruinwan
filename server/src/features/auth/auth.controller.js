@@ -974,12 +974,9 @@ function computeHasPassword(user) {
 function serializePreferences(prefs) {
   const { privacyWithDefaults } = require('./privacy.service');
   const { regionWithDefaults } = require('./accountPreferences');
-  const { NOTIFICATION_PREF_DEFAULTS } = require('./notificationPreferences');
+  const { withDefaults: notificationsWithDefaults } = require('./notificationPreferences');
   const p = prefs && typeof prefs.toObject === 'function' ? prefs.toObject() : (prefs || {});
-  const notifications = { ...NOTIFICATION_PREF_DEFAULTS };
-  for (const k of Object.keys(NOTIFICATION_PREF_DEFAULTS)) {
-    if (typeof p.notifications?.[k] === 'boolean') notifications[k] = p.notifications[k];
-  }
+  const notifications = notificationsWithDefaults(p.notifications);
   return {
     // No saved choice follows the device, like the web client's own default and the phone app.
     theme: THEMES.includes(p.theme) ? p.theme : 'auto',

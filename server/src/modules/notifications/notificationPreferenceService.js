@@ -14,7 +14,7 @@ async function getUserPreferences(userId, workspaceId) {
 }
 
 async function updateUserPreferences(userId, workspaceId, updates) {
-    const allowedFields = ['message', 'threadReply', 'task', 'meeting', 'email', 'push'];
+    const allowedFields = ['message', 'threadReply', 'task', 'meeting', 'aiSuggestions', 'email', 'push'];
     const sanitized = {};
     for (const key of allowedFields) {
         if (typeof updates[key] === "boolean") sanitized[key] = updates[key];
