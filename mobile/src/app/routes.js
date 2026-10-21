@@ -25,6 +25,8 @@ export const ROUTES = {
   browseChannels: pick(chats, 'BrowseChannelsScreen'),
   profile: pick(chats, 'ProfileScreen'),
   task: pick(tasks, 'TaskScreen'),
+  planning: pick(tasks, 'PlanningScreen'),
+  sprint: pick(tasks, 'SprintScreen'),
   note: pick(notes, 'NoteScreen'),
   knowledge: pick(knowledge, 'KnowledgeScreen'),
   page: pick(knowledge, 'PageScreen'),

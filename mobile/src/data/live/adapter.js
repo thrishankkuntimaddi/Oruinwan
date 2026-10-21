@@ -14,6 +14,7 @@ import { clientPlatform } from '../../native/index.js';
 import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, searchIndex, unloaded } from './messageIndex.js';
 import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
 import { fileIconKind } from '../../lib/files.js';
+import { workAdapter } from './adapter.work.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -384,6 +385,7 @@ async function finishProviderSignIn(path, body) {
 }
 
 export const liveAdapter = {
+  ...workAdapter, // planning, meetings, files, knowledge links, admin, security (adapter.work.js)
   kind: 'live',
   serverUrl,
 
