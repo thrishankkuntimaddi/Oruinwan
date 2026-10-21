@@ -28,6 +28,20 @@ const scheduledMeetingSchema = new mongoose.Schema(
             ref: 'DMSession',
             default: null,
         },
+        // 'scheduled': created from the schedule UI / AI. 'huddle': an ad-hoc call started
+        // in a channel, DM or the workspace (one record per call, created when it starts).
+        kind: {
+            type: String,
+            enum: ['scheduled', 'huddle'],
+            default: 'scheduled',
+            index: true,
+        },
+        // Channel name / DM partner names when the record was made (display only).
+        conversationName: { type: String, default: null },
+        // The huddle id this meeting's call runs under: "meeting-<id>" for scheduled
+        // meetings, the client's huddle uuid for ad-hoc huddles.
+        huddleId: { type: String, default: null, index: true },
+        video: { type: Boolean, default: false },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -57,12 +71,38 @@ const scheduledMeetingSchema = new mongoose.Schema(
             trim: true,
         },
         
+        // Everyone involved: invitees (scheduled) plus everyone who joined the call.
         participants: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User',
             }
         ],
+
+        // Who was invited when the meeting was scheduled (empty for ad-hoc huddles).
+        invitees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+        // Who actually joined the call (first join wins), across every run of its huddle.
+        attendees: [{
+            _id: false,
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+            username: { type: String, default: '' },
+            joinedAt: { type: Date, default: Date.now },
+        }],
+
+        // When the call first went live / last ended, and its length in seconds (endedAt - startedAt).
+        startedAt: { type: Date, default: null },
+        endedAt: { type: Date, default: null },
+        durationSec: { type: Number, default: null },
+
+        // Something worth keeping was added (notes, action items, summary, recording, transcript).
+        // Short (< 1 min) ad-hoc huddles without content are hidden from "Past" by default.
+        hasContent: { type: Boolean, default: false },
+        // Set when transcript segments are added (lists do not load the segments).
+        hasTranscript: { type: Boolean, default: false },
+
+        // The meeting's notes: one Note (type 'meeting') for the meeting's whole life.
+        noteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Note', default: null },
         
         status: {
             type: String,
@@ -88,12 +128,23 @@ const scheduledMeetingSchema = new mongoose.Schema(
             default: '',
         },
 
+        // Summary text (string for compatibility with older readers); who/when/how in summaryMeta.
         summary: {
             type: String,
             default: '',
         },
+        summaryMeta: {
+            generatedAt: { type: Date, default: null },
+            by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+            source: { type: String, default: null }, // 'ai' | 'wrap-up' | 'manual'
+            messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+            channelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Channel', default: null },
+            dmId: { type: mongoose.Schema.Types.ObjectId, ref: 'DMSession', default: null },
+        },
 
-        
+        // DEPRECATED (read-only): the old plain-text "Shared notes". Copied into the meeting's
+        // Note the first time the note is opened; nothing writes it any more.
+        sharedNotesMigratedAt: { type: Date, default: null },
         sharedNotes: {
             type: String,
             default: '',
@@ -130,6 +181,12 @@ const scheduledMeetingSchema = new mongoose.Schema(
                     enum: ['pending', 'in_progress', 'done'],
                     default: 'pending',
                 },
+                dueDate: { type: Date, default: null },
+                // The id the huddle panel gave the item (huddle:notes_op action ops).
+                clientId: { type: String, default: null },
+                source: { type: String, default: 'manual' }, // 'manual' | 'ai' | 'huddle' | 'task'
+                createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+                createdAt: { type: Date, default: Date.now },
             },
         ],
     },
@@ -138,5 +195,7 @@ const scheduledMeetingSchema = new mongoose.Schema(
 
 scheduledMeetingSchema.index({ companyId: 1, workspaceId: 1, startTime: 1, status: 1 });
 scheduledMeetingSchema.index({ workspaceId: 1, startTime: 1, status: 1 });
+scheduledMeetingSchema.index({ workspaceId: 1, status: 1, startTime: -1 });
+scheduledMeetingSchema.index({ huddleId: 1, status: 1 });
 
 module.exports = mongoose.model('ScheduledMeeting', scheduledMeetingSchema);

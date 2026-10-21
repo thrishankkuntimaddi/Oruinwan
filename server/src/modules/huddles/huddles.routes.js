@@ -64,6 +64,8 @@ router.post('/:huddleId/wrap-up', requireAuth, handle(async (req) => {
     username: me?.username,
     huddleId: req.params.huddleId,
     messageId: String(req.body?.messageId || ''),
+    // Optional: the wrap-up text the client posted; it becomes the meeting's summary.
+    summaryText: typeof req.body?.summary === 'string' ? req.body.summary : undefined,
     io: req.io,
   });
 }));
@@ -108,6 +110,6 @@ router.post('/:huddleId/transcript/segments', requireAuth, async (req, res) => {
 router.get('/:huddleId/transcript', requireAuth, handle((req) => media.getTranscript({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req) })));
 
 // Draft wrap-up: summary + action items from the transcript (else the shared notes).
-router.post('/:huddleId/summarize', requireAuth, handle((req) => media.summarize({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req) })));
+router.post('/:huddleId/summarize', requireAuth, handle((req) => media.summarize({ userId: userId(req), huddleId: req.params.huddleId, sessionId: sessionIdOf(req), io: req.io })));
 
 module.exports = router;

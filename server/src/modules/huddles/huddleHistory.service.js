@@ -8,6 +8,11 @@
  * Recorder writes for one huddle run strictly in order (a per-huddle promise
  * chain), so a join can never be written before the session it belongs to.
  * Every write is best-effort: a database hiccup must never break the call.
+ *
+ * Every run belongs to a meeting record (features/meetings/meetingRecords.js): the
+ * scheduled meeting of a "meeting-<id>" huddle, else the ad-hoc huddle's own record,
+ * found or created when the run starts. Notes, action items (linked tasks), the
+ * summary, recording and transcript of such runs live on the meeting.
  */
 
 const mongoose = require('mongoose');
@@ -26,6 +31,23 @@ const lazy = {
     notesNotify: () => require('../../features/notes/notes.notifications'),
     notifications: () => require('../notifications/notificationService'),
     tasks: () => require('../../features/tasks/tasks.service'),
+    records: () => require('../../features/meetings/meetingRecords'),
+};
+
+/** The run's meeting record id: set at start, or implied by a "meeting-<id>" huddle id. */
+function meetingIdOf(session) {
+    if (!session) return null;
+    if (session.meeting) return idOf(session.meeting);
+    return lazy.records().meetingIdFromHuddleId(session.huddleId);
+}
+
+/** Links runs to meeting records (live database only). */
+const defaultMeetingLink = {
+    async started(h) {
+        const m = await lazy.records().findOrCreateForHuddle(h);
+        return m ? idOf(m._id) : null;
+    },
+    joined: (meetingId, user) => lazy.records().addAttendee(meetingId, user),
 };
 
 const idOf = (v) => String(v?._id || v || '');
@@ -61,9 +83,21 @@ function createRecorder({
     Session = null,
     now = () => new Date(),
     isConnected = () => mongoose.connection.readyState === 1,
+    meetingLink = null,
 } = {}) {
     const model = () => Session || lazy.Session();
     const queue = createQueue();
+    // huddleId -> meeting record id of its open run (this process).
+    const meetingOf = new Map();
+    const linkMeeting = async (h) => {
+        if (!meetingLink) return null;
+        try {
+            return await meetingLink.started(h);
+        } catch (err) {
+            logger.warn(`[huddles] meeting record for ${h.huddleId} failed: ${err.message}`);
+            return null;
+        }
+    };
     const write = (huddleId, label, fn) => {
         if (!isConnected()) return Promise.resolve(null);
         return queue.run(huddleId, fn).catch((err) => {
@@ -79,7 +113,10 @@ function createRecorder({
                 const S = model();
                 // A previous run of the same id that never closed (server restart): close it now.
                 await S.updateMany({ huddleId: h.huddleId, endedAt: null }, { $set: { endedAt: now() } });
+                const meetingId = await linkMeeting(h);
+                if (meetingId) meetingOf.set(h.huddleId, meetingId);
                 return S.create({
+                    meeting: isValidId(meetingId) ? meetingId : null,
                     huddleId: h.huddleId,
                     workspace: isValidId(h.workspaceId) ? h.workspaceId : null,
                     scope: scopeOf(h),
@@ -102,11 +139,21 @@ function createRecorder({
                     { huddleId, endedAt: null, 'participants.user': userId },
                     { $set: { 'participants.$.leftAt': null, 'participants.$.username': username || '' } },
                 );
-                if (back.matchedCount) return back;
-                return S.updateOne(
+                const result = back.matchedCount ? back : await S.updateOne(
                     { huddleId, endedAt: null },
                     { $push: { participants: { user: userId, username: username || '', joinedAt: now(), leftAt: null } } },
                 );
+                if (meetingLink) {
+                    let meetingId = meetingOf.get(huddleId);
+                    if (!meetingId) {
+                        // The run was started on another instance.
+                        const open = await S.findOne({ huddleId, endedAt: null }).select('meeting').lean();
+                        meetingId = open?.meeting ? idOf(open.meeting) : null;
+                        if (meetingId) meetingOf.set(huddleId, meetingId);
+                    }
+                    if (meetingId) await meetingLink.joined(meetingId, { userId, username }).catch(() => {});
+                }
+                return result;
             });
         },
 
@@ -119,6 +166,7 @@ function createRecorder({
         },
 
         ended(huddleId) {
+            meetingOf.delete(huddleId);
             return write(huddleId, 'end', () => {
                 const at = now();
                 return model().updateOne(
@@ -134,7 +182,7 @@ function createRecorder({
     };
 }
 
-const recorder = createRecorder();
+const recorder = createRecorder({ meetingLink: defaultMeetingLink });
 
 // ── Access ──────────────────────────────────────────────────────────────────
 
@@ -195,6 +243,7 @@ function serialize(s, { live = false } = {}) {
     return {
         id: idOf(s._id),
         huddleId: s.huddleId,
+        meetingId: meetingIdOf(s),
         scope: s.scope,
         workspaceId: s.workspace ? idOf(s.workspace) : null,
         channelId: s.channel ? idOf(s.channel) : null,
@@ -291,6 +340,19 @@ async function ensureNotes(userId, huddleId, io) {
     assertMember(session, userId);
     if (!session.workspace) throw new HttpError(400, 'Notes need a workspace');
 
+    // A meeting's huddle uses the meeting's notes: the same Note for every run.
+    const meetingId = meetingIdOf(session);
+    if (meetingId) {
+        const { noteId, created } = await lazy.records().ensureNote(meetingId, userId, { io });
+        if (idOf(session.notes) !== noteId) await lazy.Session().updateOne({ _id: session._id }, { $set: { notes: noteId } });
+        if (io && idOf(session.notes) !== noteId) io.to(`huddle:${huddleId}`).emit('huddle:notes_ready', { huddleId, noteId, meetingId });
+        if (created && io) {
+            const populated = await withNoteUsers(lazy.Note().findById(noteId).select('-versions').lean());
+            if (populated) lazy.notesNotify().notifyNoteCreated(populated, io);
+        }
+        return { noteId, created, meetingId };
+    }
+
     return notesQueue.run(`notes:${session._id}`, async () => {
         const Session = lazy.Session();
         const Note = lazy.Note();
@@ -367,6 +429,13 @@ function scheduleNoteUpdated(io, noteId) {
  */
 async function applyNotesOp({ userId, username, huddleId, op, io }) {
     const session = await findSession(huddleId);
+    const meetingId = meetingIdOf(session);
+    if (meetingId && op && (op.kind === 'action' || op.kind === 'action_remove')) {
+        // Action items of a meeting's huddle are the meeting's action items.
+        if (session.endedAt || !lazy.registry().participant(huddleId, userId)) throw new HttpError(403, 'Only people in this huddle can edit its action items');
+        const applied = await lazy.records().applyHuddleActionOp(meetingId, op, { userId, io });
+        return { noteId: session.notes ? idOf(session.notes) : null, applied, meetingId };
+    }
     if (!session || !session.notes) throw new HttpError(404, 'This huddle has no notes yet');
     if (session.endedAt || !lazy.registry().participant(huddleId, userId)) throw new HttpError(403, 'Only people in this huddle can edit its notes');
     const noteId = idOf(session.notes);
@@ -388,7 +457,14 @@ async function linkTask(userId, huddleId, taskId, io) {
     if (!isValidId(taskId)) throw new HttpError(400, 'Invalid task id');
     const session = await loadAccessible(userId, huddleId);
     assertMember(session, userId);
-    await lazy.tasks().getTask(userId, taskId); // throws when the user cannot see it
+    const task = await lazy.tasks().getTask(userId, taskId); // throws when the user cannot see it
+    const meetingId = meetingIdOf(session);
+    if (meetingId) {
+        // A meeting's huddle: the task becomes one of the meeting's action items.
+        const taskIds = await lazy.records().linkTask(meetingId, { ...(task?.task || task || {}), _id: taskId }, { userId, io });
+        if (io) io.to(`huddle:${huddleId}`).emit('huddle:tasks_linked', { huddleId, taskIds, meetingId });
+        return { taskIds, meetingId };
+    }
     const updated = await lazy.Session().findOneAndUpdate({ _id: session._id }, { $addToSet: { linkedTasks: taskId } }, { new: true });
     const taskIds = (updated?.linkedTasks || []).map(idOf);
     if (io) io.to(`huddle:${huddleId}`).emit('huddle:tasks_linked', { huddleId, taskIds });
@@ -399,6 +475,12 @@ async function unlinkTask(userId, huddleId, taskId, io) {
     if (!isValidId(taskId)) throw new HttpError(400, 'Invalid task id');
     const session = await loadAccessible(userId, huddleId);
     assertMember(session, userId);
+    const meetingId = meetingIdOf(session);
+    if (meetingId) {
+        const taskIds = await lazy.records().unlinkTask(meetingId, taskId, { io });
+        if (io) io.to(`huddle:${huddleId}`).emit('huddle:tasks_linked', { huddleId, taskIds, meetingId });
+        return { taskIds, meetingId };
+    }
     const updated = await lazy.Session().findOneAndUpdate({ _id: session._id }, { $pull: { linkedTasks: taskId } }, { new: true });
     const taskIds = (updated?.linkedTasks || []).map(idOf);
     if (io) io.to(`huddle:${huddleId}`).emit('huddle:tasks_linked', { huddleId, taskIds });
@@ -411,7 +493,7 @@ async function unlinkTask(userId, huddleId, taskId, io) {
  * The client posted the wrap-up through the normal (E2EE) send path; record it
  * and notify everyone who was in the call. The server never sees the text.
  */
-async function recordWrapUp({ userId, username, huddleId, messageId, io }) {
+async function recordWrapUp({ userId, username, huddleId, messageId, summaryText, io }) {
     if (!isValidId(messageId)) throw new HttpError(400, 'Invalid message id');
     const session = await loadAccessible(userId, huddleId);
     assertMember(session, userId);
@@ -432,6 +514,17 @@ async function recordWrapUp({ userId, username, huddleId, messageId, io }) {
         $set: { summary: { message: messageId, channel: channelId, dm: dmId, postedBy: userId, postedAt: new Date() } },
     });
 
+    // A meeting's huddle: the wrap-up is the meeting's summary. The client sends the text it
+    // posted (the chat message itself is end-to-end encrypted); without it the meeting keeps
+    // its current summary text and only learns where the wrap-up was posted.
+    const meetingId = meetingIdOf(session);
+    if (meetingId) {
+        const records = lazy.records();
+        const text = typeof summaryText === 'string' && summaryText.trim() ? summaryText : undefined;
+        await records.setSummary(meetingId, { text, by: userId, source: 'wrap-up', messageId, channelId, dmId }, { io })
+            .catch((err) => logger.warn(`[huddles] meeting summary not saved: ${err.message}`));
+    }
+
     let channelName = session.channelName;
     if (channelId && channelId !== idOf(session.channel)) {
         const ch = await lazy.Channel().findById(channelId).select('name').lean();
@@ -446,11 +539,11 @@ async function recordWrapUp({ userId, username, huddleId, messageId, io }) {
             title: 'Huddle summary posted',
             body: `${username || 'Someone'} posted the huddle wrap-up${channelName ? ` in #${channelName}` : ''}`,
             link: channelId ? `/channel/${channelId}` : (dmId ? `/dm/${dmId}` : '/huddles?tab=history'),
-            meta: { kind: 'huddle_summary', huddleId, messageId: String(messageId), channelId, dmSessionId: dmId, channelName },
+            meta: { kind: 'huddle_summary', huddleId, meetingId, messageId: String(messageId), channelId, dmSessionId: dmId, channelName },
         });
     }
-    if (io) io.to(`huddle:${huddleId}`).emit('huddle:wrapped_up', { huddleId, messageId: String(messageId), channelId, dmId, postedBy: String(userId) });
-    return { notified: notified.length, recipients: recipients.length };
+    if (io) io.to(`huddle:${huddleId}`).emit('huddle:wrapped_up', { huddleId, meetingId, messageId: String(messageId), channelId, dmId, postedBy: String(userId) });
+    return { notified: notified.length, recipients: recipients.length, meetingId };
 }
 
 module.exports = {
@@ -467,6 +560,8 @@ module.exports = {
     recordWrapUp,
     findSession,
     loadAccessible,
+    meetingIdOf,
+    defaultMeetingLink,
     assertMember,
     isLive,
     _lazy: lazy,

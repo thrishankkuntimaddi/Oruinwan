@@ -32,9 +32,9 @@ That is not built today because there is nothing to encrypt against.
 
 | `docType`    | `docId`                | Who can open (read)                                                     | Who can write                                    |
 |--------------|------------------------|-------------------------------------------------------------------------|--------------------------------------------------|
-| `note`       | note `_id`             | Active workspace members who own it, are in `sharedWith`, or it is `isPublic` | Owner, or a `sharedWith` user when `allowEditing` |
+| `note`       | note `_id`             | Active workspace members who own it, are in `sharedWith`, or it is `isPublic`; for a meeting's note (`Note.meeting`), also anyone who may open that meeting | Owner, or a `sharedWith` user when `allowEditing`; anyone who may open the meeting for a meeting's note |
 | `knowledge`  | knowledge page `_id`   | Active members of the page's workspace                                  | Same                                             |
-| `whiteboard` | scheduled meeting `_id`| Active members of the meeting's workspace                               | Same                                             |
+| `whiteboard` | meeting `_id` (scheduled or ad-hoc huddle record) | Whoever may open the meeting (see meetings-unified.md → Access) | Same                                             |
 
 These are the same rules as the REST APIs. Access is checked on join and again
 at least once a minute while the socket is connected, so revoking a share takes

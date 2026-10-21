@@ -1,7 +1,6 @@
 'use strict';
 
 const ScheduledMeeting = require('../../models/ScheduledMeeting');
-const { summarizeDocument } = require('../ai/ai.summarizer.service');
 const availability = require('./availability');
 const transcript = require('./transcript');
 
@@ -9,18 +8,23 @@ const transcript = require('./transcript');
 const { hydrate } = require('../../identity/hydrate');
 
 const PERSON = { type: 'user', fields: ['username', 'profilePicture', 'profile'] };
-const FULL_REFS = { createdBy: PERSON, participants: PERSON, 'actionItems.assignedTo': PERSON };
+
+// One record per call (scheduled meetings and ad-hoc huddles): see meetingRecords.js.
+const records = () => require('./meetingRecords');
 
 // Transcript segments can be large: they are served by GET /:id/transcript only.
 const LIGHT = '-transcriptSegments';
 
 async function populateMeeting(meeting) {
-    const doc = await ScheduledMeeting.findById(meeting._id).select(LIGHT).lean();
-    return doc ? hydrate(doc, FULL_REFS) : doc;
+    return records().getMeetingView(meeting._id);
 }
 
+/**
+ * Legacy list (no ?status): scheduled meetings of the workspace, newest first. Ad-hoc
+ * huddle records are left out here; GET /api/v2/meetings?status=... lists them.
+ */
 async function getMeetings({ workspaceId, userId, companyId, limit = 20, includeCompleted = true }) {
-    const query = { workspaceId };
+    const query = { workspaceId, kind: { $ne: 'huddle' } };
     if (companyId) query.companyId = companyId;
     if (!includeCompleted) {
         query.status = { $in: ['scheduled', 'live'] };
@@ -34,42 +38,37 @@ async function getMeetings({ workspaceId, userId, companyId, limit = 20, include
     return hydrate(meetings, { createdBy: PERSON });
 }
 
-async function getMeeting(meetingId, { companyId } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    const doc = await ScheduledMeeting.findOne(query).select(LIGHT).lean();
-    return doc ? hydrate(doc, FULL_REFS) : doc;
+async function getMeeting(meetingId) {
+    return records().getMeetingView(meetingId);
 }
 
 async function joinMeeting(meetingId, userId, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
 
+    const current = await ScheduledMeeting.findOne(query).select('status startedAt').lean();
+    if (!current) return null;
+    const set = {};
+    if (current.status !== 'cancelled') set.status = 'live';
+    if (current.status === 'completed') set.endedAt = null;
+    if (!current.startedAt) set.startedAt = new Date();
     const meeting = await ScheduledMeeting.findOneAndUpdate(
         query,
-        {
-            status: 'live',
-            $addToSet: { participants: userId },
-        },
+        { $set: set, $addToSet: { participants: userId } },
         { new: true }
     );
     if (!meeting) return null;
     return populateMeeting(meeting);
 }
 
-async function endMeeting(meetingId, { companyId, recordingUrl, io = null } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    const update = { status: 'completed' };
-    if (recordingUrl) update.recordingUrl = recordingUrl;
-
-    // new: false - the previous status tells whether this call is the one that completed it.
-    const before = await ScheduledMeeting.findOneAndUpdate(query, update, { new: false });
-    if (!before) return null;
-    if (before.status !== 'completed') emitMeetingCompleted(before, io);
-    return populateMeeting(before);
+/**
+ * End the meeting: completed (with endedAt / durationSec, 'meeting:ended', recap
+ * notifications) and its live huddle is ended for everyone in it.
+ */
+async function endMeeting(meetingId, { recordingUrl, io = null, endedBy = null } = {}) {
+    if (recordingUrl) await ScheduledMeeting.updateOne({ _id: meetingId }, { $set: { recordingUrl } });
+    const result = await records().endMeeting(meetingId, { io, endedBy });
+    return result ? result.meeting : null;
 }
 
 /**
@@ -83,10 +82,10 @@ function emitMeetingCompleted(meeting, io, extra = {}) {
             workspaceId: String(meeting.workspaceId),
             meetingId: String(meeting._id),
             title: meeting.title || '',
-            durationMinutes: meeting.duration || null,
+            durationMinutes: meeting.durationSec != null ? Math.round(meeting.durationSec / 60) : (meeting.duration || null),
             participantCount: (meeting.participants || []).length,
             actionItemCount: (meeting.actionItems || []).length,
-            hasTranscript: !!((meeting.transcriptSegments || []).length || meeting.transcript),
+            hasTranscript: !!(meeting.hasTranscript || (meeting.transcriptSegments || []).length || meeting.transcript),
             hasRecording: !!(meeting.recording?.path || meeting.recordingUrl),
             channelId: meeting.channelId ? String(meeting.channelId) : null,
             createdBy: meeting.createdBy ? String(meeting.createdBy) : null,
@@ -123,40 +122,19 @@ async function updateTranscript(meetingId, transcript, { companyId } = {}) {
     return populateMeeting(meeting);
 }
 
-async function updateSharedNotes(meetingId, sharedNotes, { companyId } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    await ScheduledMeeting.findOneAndUpdate(query, { $set: { sharedNotes } });
+/**
+ * The meeting's single summary (transcript + notes + agenda), saved on the meeting.
+ * Returns the summary text (older callers) or null when the meeting is missing;
+ * meetingRecords.summarize returns the full { summary, text, source, aiFallback }.
+ */
+async function summarizeMeeting(meetingId, { userId = null, io = null } = {}) {
+    const result = await records().summarize(meetingId, { userId, io });
+    return result ? result.text : null;
 }
 
-async function summarizeMeeting(meetingId, { companyId } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    const meeting = await ScheduledMeeting.findOne(query).lean();
-    if (!meeting) return null;
-
-    const { text } = await meetingSourceText(meeting);
-    const { summary } = await summarizeDocument(text, {
-        title: meeting.title,
-        type: 'generic',
-        noCache: true,
-    });
-
-    await ScheduledMeeting.findByIdAndUpdate(meetingId, { $set: { summary } });
-    return summary;
-}
-
-/** The best text to summarise: transcript segments, then the legacy transcript string, then shared notes. */
+/** What a summary is made from: transcript, the meeting's notes, the agenda. */
 async function meetingSourceText(meeting) {
-    const segments = meeting.transcriptSegments || [];
-    if (segments.length) {
-        const names = await speakerNames(segments);
-        return { text: transcript.renderTranscript(segments, { origin: meeting.startTime, names }), source: 'transcript' };
-    }
-    if (meeting.transcript) return { text: meeting.transcript, source: 'transcript' };
-    return { text: meeting.sharedNotes || '', source: meeting.sharedNotes ? 'notes' : 'none' };
+    return records().summarySource(meeting);
 }
 
 /** speakerId -> username for transcript rendering (users live in PostgreSQL). */
@@ -179,7 +157,7 @@ async function speakerNames(segments) {
 async function appendTranscriptSegments(meetingId, segments) {
     const res = await ScheduledMeeting.updateOne(
         { _id: meetingId, $expr: { $lte: [{ $size: { $ifNull: ['$transcriptSegments', []] } }, transcript.MAX_SEGMENTS_TOTAL - segments.length] } },
-        { $push: { transcriptSegments: { $each: segments } } },
+        { $push: { transcriptSegments: { $each: segments } }, $set: { hasTranscript: true, hasContent: true } },
     );
     if (!res.matchedCount) {
         const exists = await ScheduledMeeting.findById(meetingId).select('_id').lean();
@@ -216,25 +194,23 @@ function textAsSegments(text, at) {
  * Action items found in the transcript (rule-based). With apply, new ones (by text) are added
  * to the meeting's action items. Returns { extracted, added, source, meeting } or null.
  */
-async function extractActionItems(meetingId, { apply = false } = {}) {
+async function extractActionItems(meetingId, { apply = false, userId = null, io = null } = {}) {
     const meeting = await ScheduledMeeting.findById(meetingId).lean();
     if (!meeting) return null;
     let segments = meeting.transcriptSegments || [];
     let source = 'transcript';
     if (!segments.length) {
-        source = meeting.transcript ? 'transcript' : (meeting.sharedNotes ? 'notes' : 'none');
-        segments = textAsSegments(meeting.transcript || meeting.sharedNotes, meeting.startTime);
+        const notes = meeting.transcript ? '' : ((await records().noteText(meeting.noteId).catch(() => '')) || meeting.sharedNotes || '');
+        source = meeting.transcript ? 'transcript' : (notes ? 'notes' : 'none');
+        segments = textAsSegments(meeting.transcript || notes, meeting.startTime);
     }
     const extracted = transcript.extractActionItems(segments);
-    let added = [];
+    let added = 0;
     if (apply && extracted.length) {
-        const existing = new Set((meeting.actionItems || []).map((a) => String(a.text || '').trim().toLowerCase()));
-        added = extracted.filter((a) => !existing.has(a.text.toLowerCase()))
-            .map((a) => ({ text: a.text, assignedTo: a.assigneeId || null, status: 'pending' }));
-        if (added.length) await ScheduledMeeting.updateOne({ _id: meetingId }, { $push: { actionItems: { $each: added } } });
+        ({ added } = await records().addActionItemsDeduped(meetingId, extracted, { userId, source: 'ai', io }));
     }
-    const updated = added.length ? await populateMeeting(meeting) : null;
-    return { extracted, added: added.length, source, meeting: updated };
+    const updated = added ? await populateMeeting(meeting) : null;
+    return { extracted, added, source, meeting: updated };
 }
 
 // ── Recording ───────────────────────────────────────────────────────────────
@@ -247,7 +223,7 @@ async function loadForRecording(meetingId) {
 async function setRecording(meetingId, recordingDoc) {
     return ScheduledMeeting.findOneAndUpdate(
         { _id: meetingId },
-        { $set: { recording: recordingDoc, recordingUrl: `/api/v2/meetings/${meetingId}/recording` } },
+        { $set: { recording: recordingDoc, recordingUrl: `/api/v2/meetings/${meetingId}/recording`, hasContent: true } },
         { new: false },
     ).lean();
 }
@@ -259,27 +235,11 @@ async function clearRecording(meetingId) {
 
 
 /**
- * A huddle ended: the scheduled meetings that were live in it are over. That is the
- * meeting's own huddle ("meeting-<id>") and live meetings of the huddle's channel or DM.
+ * A huddle ended: its meeting record(s) are completed (see meetingRecords.completeForHuddle).
+ * Returns the ids of the scheduled meetings that completed.
  */
 async function completeMeetingsForHuddle(huddle, io) {
-    if (!huddle) return [];
-    const or = [];
-    const hid = String(huddle.huddleId || '');
-    const meetingId = hid.startsWith('meeting-') ? hid.slice('meeting-'.length) : null;
-    if (meetingId && /^[a-f0-9]{24}$/i.test(meetingId)) or.push({ _id: meetingId });
-    if (huddle.channelId) or.push({ channelId: huddle.channelId });
-    if (huddle.dmId) or.push({ dmSessionId: huddle.dmId });
-    if (!or.length) return [];
-    const live = await ScheduledMeeting.find({ status: 'live', $or: or })
-        .select('_id workspaceId title startTime duration participants actionItems channelId createdBy recordingUrl recording.path transcript').lean();
-    if (!live.length) return [];
-    await ScheduledMeeting.updateMany({ _id: { $in: live.map(m => m._id) } }, { $set: { status: 'completed' } });
-    for (const m of live) {
-        if (io) io.to(`workspace:${m.workspaceId}`).emit('schedule:updated', { meeting: { ...m, status: 'completed' } });
-        emitMeetingCompleted(m, io, { huddleId: hid || null });
-    }
-    return live.map(m => String(m._id));
+    return records().completeForHuddle(huddle, io);
 }
 
 /**
@@ -341,37 +301,21 @@ async function suggestTime({ participantIds = [], durationMinutes = 30, from, to
     };
 }
 
-async function addActionItem(meetingId, { text, assignedTo, status = 'pending' }, { companyId } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    const item = { text, assignedTo: assignedTo || null, status };
-    const meeting = await ScheduledMeeting.findOneAndUpdate(
-        query,
-        { $push: { actionItems: item } },
-        { new: true }
-    );
-    if (!meeting) return null;
-    return populateMeeting(meeting);
+/** Add an action item; returns the meeting view (its actionItems include the new one). */
+async function addActionItem(meetingId, body, { userId = null, io = null } = {}) {
+    await records().addActionItem(meetingId, body, { userId, io });
+    return records().getMeetingView(meetingId);
 }
 
-async function updateActionItem(meetingId, actionItemId, updates, { companyId } = {}) {
-    const query = { _id: meetingId };
-    if (companyId) query.companyId = companyId;
-
-    const setPayload = {};
-    if (updates.text !== undefined) setPayload['actionItems.$.text'] = updates.text;
-    if (updates.status !== undefined) setPayload['actionItems.$.status'] = updates.status;
-    if (updates.assignedTo !== undefined) setPayload['actionItems.$.assignedTo'] = updates.assignedTo;
-    if (updates.taskId !== undefined) setPayload['actionItems.$.taskId'] = updates.taskId;
-
-    const meeting = await ScheduledMeeting.findOneAndUpdate(
-        { ...query, 'actionItems._id': actionItemId },
-        { $set: setPayload },
-        { new: true }
-    );
-    if (!meeting) return null;
-    return populateMeeting(meeting);
+/** Patch an action item; returns the meeting view, or null when the item is missing. */
+async function updateActionItem(meetingId, actionItemId, updates, { io = null } = {}) {
+    try {
+        await records().updateActionItem(meetingId, actionItemId, updates, { io });
+    } catch (err) {
+        if (err.status === 404) return null;
+        throw err;
+    }
+    return records().getMeetingView(meetingId);
 }
 
 module.exports = {
@@ -381,7 +325,6 @@ module.exports = {
     endMeeting,
     updateAgenda,
     updateTranscript,
-    updateSharedNotes,
     summarizeMeeting,
     suggestTime,
     completeMeetingsForHuddle,

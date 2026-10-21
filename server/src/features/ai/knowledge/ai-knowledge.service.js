@@ -6,6 +6,10 @@ const Message       = require('../../../modules/messages/message.model');
 const KnowledgePage = require('../../knowledge/KnowledgePage');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 
+// Workspace-wide answers only use meetings every member may see: never DM meetings, and not
+// ad-hoc huddles of a channel (the caller may not be in it).
+const WORKSPACE_VISIBLE = { $nor: [{ dmSessionId: { $ne: null } }, { kind: 'huddle', channelId: { $ne: null } }] };
+
 async function search(query, workspaceId, context = {}) {
     if (!query || !workspaceId) return { results: [], cached: false };
 
@@ -88,6 +92,7 @@ async function askQuestion(question, workspaceId, context = {}) {
             workspaceId,
             status: 'completed',
             summary: { $exists: true, $ne: '' },
+            ...WORKSPACE_VISIBLE,
         }).sort({ startTime: -1 }).limit(3).select('title summary startTime').lean(),
     ]);
 
@@ -125,6 +130,7 @@ async function queryMeetings(question, workspaceId, context = {}) {
 
     const meetings = await ScheduledMeeting.find({
         workspaceId,
+        ...WORKSPACE_VISIBLE,
         $or: [
             { title:    { $regex: regex } },
             { summary:  { $regex: regex } },
@@ -137,7 +143,7 @@ async function queryMeetings(question, workspaceId, context = {}) {
 
     const allMeetings = meetings.length
         ? meetings
-        : await ScheduledMeeting.find({ workspaceId, status: 'completed' })
+        : await ScheduledMeeting.find({ workspaceId, status: 'completed', ...WORKSPACE_VISIBLE })
             .sort({ startTime: -1 })
             .limit(5)
             .lean();

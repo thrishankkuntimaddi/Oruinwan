@@ -32,6 +32,10 @@ const NoteSchema = new mongoose.Schema({
     
     channel: { type: mongoose.Schema.Types.ObjectId, ref: "Channel", default: null },
 
+    // The meeting whose notes this is (ScheduledMeeting.noteId points back here).
+    // Anyone who can open that meeting may read and edit the note (see collab.adapters).
+    meeting: { type: mongoose.Schema.Types.ObjectId, ref: "ScheduledMeeting", default: null },
+
     
     attachments: [{
         name: { type: String },
@@ -74,6 +78,7 @@ NoteSchema.index({ workspace: 1, isPublic: 1 });
 NoteSchema.index({ sharedWith: 1 });
 NoteSchema.index({ tags: 1 });
 NoteSchema.index({ channel: 1 });
+NoteSchema.index({ meeting: 1 }, { sparse: true });
 
 /**
  * Access checks. Callers must pass whether `userId` is an active member of the

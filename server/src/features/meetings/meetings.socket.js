@@ -1,33 +1,37 @@
 'use strict';
 
 /**
- * Socket handlers for live scheduled meetings.
+ * Socket handlers for meetings (scheduled meetings and ad-hoc huddle records).
  *
- *   meeting:join   { meetingId } [ack]  -> joins room `meeting:<id>` after the
- *                  caller is verified as an active member of the meeting's
- *                  workspace. ack({ ok, meetingId, notes }) / ack({ ok:false, code, message }).
+ *   meeting:join   { meetingId } [ack]  -> joins room `meeting:<id>` after the caller is
+ *                  verified (meetingAccess: workspace member + the meeting's conversation,
+ *                  or involved). ack({ ok, meetingId, workspaceId, noteId, notes })
+ *                  / ack({ ok:false, code, message }). `notes` is the deprecated plain-text
+ *                  sharedNotes (read-only); live notes are the Note `noteId` (collab docType 'note').
  *   meeting:leave  { meetingId }
- *   meeting:notes_update { meetingId, notes } [ack] -> only from sockets already in
- *                  the meeting room; persists ScheduledMeeting.sharedNotes and
- *                  broadcasts `meeting:notes_update` { meetingId, notes, updatedBy, timestamp }
- *                  to the rest of the room.
+ *   meeting:notes_update  DEPRECATED: always refused with code 'DEPRECATED' (and the noteId
+ *                  to edit instead). Meeting notes are one Note edited over collab:*.
  * Errors are also emitted as `meeting:error` { meetingId, code, message }.
+ *
+ * Events the server sends to `meeting:<id>` (docs/api/meetings-unified.md): meeting:ended,
+ * meeting:note_ready, meeting:action_items_updated, meeting:summary_updated,
+ * meeting:recording_ready / _deleted, meeting:transcript_segments, meeting:agenda_updated.
  */
 
 const logger = require('../../../utils/logger');
 const { HttpError } = require('../../shared/utils/workspaceAccess');
 const { loadMeetingForUser } = require('./meetingAccess');
 
-const MAX_NOTES = 200000;
-
 const CODES = { 400: 'BAD_REQUEST', 403: 'FORBIDDEN', 404: 'NOT_FOUND' };
 
-function registerMeetingHandlers(io, socket, { load = loadMeetingForUser, saveNotes } = {}) {
+async function defaultLoadNotes(meetingId) {
+    const ScheduledMeeting = require('../../models/ScheduledMeeting');
+    const full = await ScheduledMeeting.findById(meetingId).select('sharedNotes noteId').lean();
+    return { notes: full?.sharedNotes || '', noteId: full?.noteId ? String(full.noteId) : null };
+}
+
+function registerMeetingHandlers(io, socket, { load = loadMeetingForUser, loadNotes = defaultLoadNotes } = {}) {
     const uid = () => String(socket.user.id);
-    const persistNotes = saveNotes || (async (meetingId, notes) => {
-        const ScheduledMeeting = require('../../models/ScheduledMeeting');
-        await ScheduledMeeting.updateOne({ _id: meetingId }, { $set: { sharedNotes: notes } });
-    });
 
     const reply = (ack, meetingId, payload) => {
         if (!payload.ok) socket.emit('meeting:error', { meetingId, code: payload.code, message: payload.message });
@@ -39,13 +43,11 @@ function registerMeetingHandlers(io, socket, { load = loadMeetingForUser, saveNo
         try {
             const { meeting } = await load(meetingId, uid());
             socket.join(`meeting:${meetingId}`);
-            let notes = '';
+            let extra = { notes: '', noteId: null };
             try {
-                const ScheduledMeeting = require('../../models/ScheduledMeeting');
-                const full = await ScheduledMeeting.findById(meetingId).select('sharedNotes').lean();
-                notes = full?.sharedNotes || '';
+                extra = await loadNotes(meetingId);
             } catch (_) { /* notes are a convenience; the join itself succeeded */ }
-            reply(ack, meetingId, { ok: true, meetingId, workspaceId: String(meeting.workspaceId), notes });
+            reply(ack, meetingId, { ok: true, meetingId, workspaceId: String(meeting.workspaceId), noteId: extra.noteId || null, notes: extra.notes || '' });
         } catch (err) {
             if (err instanceof HttpError) {
                 return reply(ack, meetingId, { ok: false, code: CODES[err.status] || 'FORBIDDEN', message: err.message });
@@ -59,23 +61,21 @@ function registerMeetingHandlers(io, socket, { load = loadMeetingForUser, saveNo
         if (data && data.meetingId) socket.leave(`meeting:${data.meetingId}`);
     });
 
+    // The plain-text shared notes are read-only now: the meeting's notes are one Note.
     socket.on('meeting:notes_update', async (data = {}, ack) => {
         const meetingId = data && data.meetingId ? String(data.meetingId) : null;
-        const room = `meeting:${meetingId}`;
-        if (!meetingId || !socket.rooms.has(room)) {
-            return reply(ack, meetingId, { ok: false, code: 'FORBIDDEN', message: 'Join the meeting first' });
+        let noteId = null;
+        if (meetingId && socket.rooms.has(`meeting:${meetingId}`)) {
+            try {
+                noteId = (await loadNotes(meetingId)).noteId || null;
+            } catch (_) { /* informational */ }
         }
-        const { notes } = data;
-        if (typeof notes !== 'string') return reply(ack, meetingId, { ok: false, code: 'BAD_REQUEST', message: 'notes must be a string' });
-        if (notes.length > MAX_NOTES) return reply(ack, meetingId, { ok: false, code: 'BAD_REQUEST', message: 'notes are too long' });
-        try {
-            await persistNotes(meetingId, notes);
-            socket.to(room).emit('meeting:notes_update', { meetingId, notes, updatedBy: uid(), timestamp: new Date() });
-            reply(ack, meetingId, { ok: true, meetingId });
-        } catch (err) {
-            logger.error('[meeting:notes_update] failed:', err);
-            reply(ack, meetingId, { ok: false, code: 'SERVER_ERROR', message: 'Failed to save notes' });
-        }
+        reply(ack, meetingId, {
+            ok: false,
+            code: 'DEPRECATED',
+            message: 'Shared notes moved to the meeting notes: POST /api/v2/meetings/:id/notes, then edit the note live (collab docType "note").',
+            noteId,
+        });
     });
 }
 

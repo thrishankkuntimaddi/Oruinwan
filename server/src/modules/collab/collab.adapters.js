@@ -9,7 +9,8 @@
  *   persist(docId, value, { userId }) -> writes the plain content to the owning record
  *
  * Access rules are the same as the REST APIs:
- *   note        view: owner / sharedWith / isPublic (active workspace members); edit: owner, or sharedWith when allowEditing
+ *   note        view: owner / sharedWith / isPublic (active workspace members); edit: owner, or sharedWith when allowEditing;
+ *               a meeting's note (Note.meeting): also anyone who may open that meeting, read and edit
  *   knowledge   any active member of the page's workspace reads and edits
  *   whiteboard  any active member of the meeting's workspace reads and draws (docId = meetingId)
  */
@@ -18,15 +19,34 @@ const { HttpError, isValidId } = require('../../shared/utils/workspaceAccess');
 
 const KNOWLEDGE_VERSION_EVERY_MS = 10 * 60 * 1000;
 
+/** True when the user passes the meeting's access check (meetingAccess.loadMeetingForUser). */
+async function canOpenMeeting(meetingId, userId) {
+    try {
+        await require('../../features/meetings/meetingAccess').loadMeetingForUser(meetingId, userId);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 const note = {
     async authorize(docId, userId) {
         if (!isValidId(docId)) throw new HttpError(400, 'Invalid note id');
         const Note = require('../../../models/Note');
         const policy = require('../../features/notes/notes.policy');
-        const doc = await Note.findById(docId).select('owner workspace isPublic sharedWith allowEditing').lean();
+        const doc = await Note.findById(docId).select('owner workspace isPublic sharedWith allowEditing meeting').lean();
         if (!doc) throw new HttpError(404, 'Note not found');
-        await policy.assertNoteAccess(doc, userId, 'view');
-        return { workspaceId: String(doc.workspace), canWrite: policy.canEdit(doc, userId, true) };
+        try {
+            await policy.assertNoteAccess(doc, userId, 'view');
+        } catch (err) {
+            // A meeting's notes: anyone who may open the meeting reads and edits them.
+            if (doc.meeting && err instanceof HttpError && err.status === 403 && (await canOpenMeeting(String(doc.meeting), userId))) {
+                return { workspaceId: String(doc.workspace), canWrite: true };
+            }
+            throw err;
+        }
+        const canWrite = policy.canEdit(doc, userId, true) || (!!doc.meeting && (await canOpenMeeting(String(doc.meeting), userId)));
+        return { workspaceId: String(doc.workspace), canWrite };
     },
     async loadContent(docId) {
         const Note = require('../../../models/Note');

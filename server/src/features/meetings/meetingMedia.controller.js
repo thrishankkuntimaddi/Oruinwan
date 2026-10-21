@@ -140,11 +140,10 @@ async function getTranscript(req, res) {
 async function extractActionItems(req, res) {
     try {
         const apply = req.body?.apply === true;
-        const result = await meetingsService.extractActionItems(req.params.id, { apply });
+        // With apply, new items (deduped by text) join the meeting's one action-item list and
+        // 'meeting:action_items_updated' goes out (meetingRecords.addActionItemsDeduped).
+        const result = await meetingsService.extractActionItems(req.params.id, { apply, userId: req.user.sub, io: req.io });
         if (!result) return res.status(404).json({ message: 'Meeting not found' });
-        if (apply && result.added && req.io) {
-            req.io.to(`meeting:${req.params.id}`).emit('meeting:action_items_updated', { meetingId: req.params.id, actionItems: result.meeting?.actionItems || [] });
-        }
         return res.json(result);
     } catch (err) {
         return fail(res, err, 'Failed to extract action items');
