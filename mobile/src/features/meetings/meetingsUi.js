@@ -32,3 +32,109 @@ export function applyBrainstormEvent(list, payload, map = (x) => x) {
   if (at >= 0) return list.map((n, i) => (i === at ? { ...n, ...item } : n));
   return action === 'add' || action === 'update' ? [...list, item] : list;
 }
+
+// ---------------------------------------------------------------- the meeting page
+
+/** The meeting page's tabs, same names and order as the web (and inside a call). */
+export const MEETING_TABS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'agenda', label: 'Agenda' },
+  { value: 'notes', label: 'Notes' },
+  { value: 'transcript', label: 'Transcript' },
+  { value: 'summary', label: 'Summary & actions' },
+  { value: 'whiteboard', label: 'Whiteboard' },
+  { value: 'brainstorm', label: 'Brainstorm' },
+];
+
+const OLD_TABS = { actions: 'summary', board: 'brainstorm' };
+/** A tab name from a link or an older build ("actions", "board") → one of MEETING_TABS. */
+export function meetingTab(name, fallback = 'overview') {
+  const v = OLD_TABS[name] || name;
+  return MEETING_TABS.some((t) => t.value === v) ? v : fallback;
+}
+
+export const STATUS_LABEL = { scheduled: 'Scheduled', live: 'Live now', completed: 'Ended', cancelled: 'Cancelled' };
+
+/** "42 min", "1 h 5 min", "under a minute". */
+export function durationLabel(sec) {
+  const s = Number(sec);
+  if (sec == null || !Number.isFinite(s) || s < 0) return null;
+  if (s < 60) return 'under a minute';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
+}
+
+/** "# design", "DM with Carol", "Workspace". */
+export function conversationLabel(c) {
+  if (!c) return null;
+  if (c.kind === 'channel') return c.name ? `# ${c.name}` : 'A channel';
+  if (c.kind === 'dm') return c.name ? `DM with ${c.name}` : 'A direct message';
+  return 'Workspace';
+}
+
+const shortDate = (iso) => new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+/** The second line of a meeting in a list. */
+export function meetingSubtitle(m, now = Date.now()) {
+  const parts = [];
+  if (m.status === 'live') {
+    parts.push('Live now');
+    if (m.startedAt) parts.push(`started ${new Date(m.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
+  } else if (m.status === 'completed' || m.status === 'cancelled') {
+    const at = m.startedAt || m.start || m.endedAt;
+    if (at) parts.push(shortDate(at));
+    if (m.status === 'cancelled') parts.push('Cancelled');
+    else parts.push(durationLabel(m.durationSec));
+  } else {
+    parts.push(meetingWhen(m.start, m.duration, now));
+    parts.push(`${m.duration} min`);
+  }
+  if (m.kind === 'huddle') parts.push('Huddle');
+  if (m.conversation && m.conversation.kind !== 'workspace') parts.push(conversationLabel(m.conversation));
+  return parts.filter(Boolean).join(' · ');
+}
+
+/** The summary's text (an object now; a plain string in an older cached copy). */
+export const summaryText = (s) => (typeof s === 'string' ? s : s?.text || '');
+
+/** The load failed because the caller may not open this meeting (channel/DM members only). */
+export const isAccessError = (err) => err?.status === 403;
+
+/** Merges a list page into what is shown, without duplicates (live updates can add rows twice). */
+export function mergePage(list, page) {
+  const seen = new Set(list.map((m) => m.id));
+  return [...list, ...page.filter((m) => !seen.has(m.id))];
+}
+
+// ---------------------------------------------------------------- whiteboard strokes
+
+/** The board's coordinate space (the web's canvas): strokes are stored in it. */
+export const BOARD_W = 1200;
+export const BOARD_H = 700;
+
+let strokeSeq = 0;
+export const newStrokeId = () => `s-${Date.now().toString(36)}-${(strokeSeq++).toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+/** One decimal, like the web. */
+export const roundPoint = ({ x, y }) => ({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+
+function distToSegment(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/** Whether `pos` touches the stroke (within `radius` plus half its width). */
+export function strokeHit(stroke, pos, radius = 8) {
+  const pts = stroke?.points;
+  if (!Array.isArray(pts) || !pts.length || !pos) return false;
+  const reach = radius + (Number(stroke.lineWidth) || 3) / 2;
+  if (pts.length === 1) return Math.hypot(pos.x - pts[0].x, pos.y - pts[0].y) <= reach;
+  for (let i = 1; i < pts.length; i++) if (distToSegment(pos, pts[i - 1], pts[i]) <= reach) return true;
+  return false;
+}

@@ -80,4 +80,22 @@ describe('huddles on the phone', () => {
     fire('huddle:ended', { huddleId: 'h9', channelId: 'c1', reason: 'ended' });
     expect(useHuddle.getState().call).toBeNull();
   });
+
+  it('remembers the meeting record of the call from huddle payloads', async () => {
+    await huddle.joinHuddle('h7', { channelId: 'c1' });
+    expect(useHuddle.getState().call.meetingId).toBeNull();
+    fire('huddle:roster', { huddleId: 'h7', meetingId: 'rec1', participants: [] });
+    expect(useHuddle.getState().call.meetingId).toBe('rec1');
+  });
+
+  it('starts a workspace huddle and joins a meeting call with its record id', async () => {
+    await huddle.startWorkspaceHuddle();
+    expect(sent.find((x) => x.event === 'huddle:start').payload).toMatchObject({ workspaceId: 'w1' });
+    huddle.leave();
+    await huddle.joinMeetingCall({ id: 'm5', kind: 'scheduled', title: 'Standup', raw: { _id: 'm5' } });
+    expect(useHuddle.getState().call).toMatchObject({ huddleId: 'meeting-m5', meetingId: 'm5', scope: { channelId: 'c1' } });
+    huddle.leave();
+    await huddle.joinMeetingCall({ id: 'r2', kind: 'huddle', huddleId: 'h-live', title: 'Huddle', conversation: { kind: 'dm', id: 'd1' } });
+    expect(useHuddle.getState().call).toMatchObject({ huddleId: 'h-live', meetingId: 'r2', scope: { dmId: 'd1' } });
+  });
 });

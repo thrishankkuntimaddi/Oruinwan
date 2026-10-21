@@ -47,3 +47,13 @@ describe('notification targets', () => {
     expect(pushTarget({})).toBeNull();
   });
 });
+
+describe('meeting recap', () => {
+  it('opens the meeting on Summary & actions, even when it also names its channel', () => {
+    expect(notificationKind('meeting_recap')).toBe('meeting');
+    const n = { type: 'meeting_recap', link: `/meetings/${M}`, meta: { kind: 'meeting_recap', meetingId: M, channelId: 'c1' } };
+    expect(targetOf(n)).toEqual({ kind: 'meeting', id: M, tab: 'summary' });
+    // A push has the link and the channel, no meta.
+    expect(pushTarget({ type: 'meeting_recap', link: `/meetings/${M}`, channelId: 'c1' })).toEqual({ kind: 'meeting', id: M, tab: 'summary' });
+  });
+});

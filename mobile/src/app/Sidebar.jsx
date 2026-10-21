@@ -3,7 +3,7 @@
 // the Home tab's detail pane, so the list on the left keeps its place.
 import { useState } from 'react';
 import {
-  Bell, Bookmark, BookOpen, ChevronDown, FileText, FolderOpen, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig, Workflow,
+  Bell, Bookmark, BookOpen, ChevronDown, FileText, FolderOpen, Headphones, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig, Workflow,
 } from 'lucide-react';
 import { useNav, markPane } from './nav.js';
 import { useDueSoonCount } from './TabBar.jsx';
@@ -17,7 +17,7 @@ import { cx } from '../ui/cx.js';
 import { WorkspaceTile } from '../features/workspace/WorkspaceTile.jsx';
 import { WorkspaceSheet } from '../features/workspace/WorkspaceSheet.jsx';
 
-const HUB_ROUTES = ['search', 'notifications', 'saved', 'files', 'knowledge', 'automations'];
+const HUB_ROUTES = ['huddles', 'meetings', 'search', 'notifications', 'saved', 'files', 'knowledge', 'automations'];
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent);
 export const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 
@@ -80,6 +80,8 @@ export function Sidebar() {
     flags.ai && { id: 'ai', label: 'Oruinwan AI', icon: Sparkles },
     { id: 'tasks', label: 'Tasks', icon: SquareCheckBig, badge: due },
     flags.notes && { id: 'notes', label: 'Notes', icon: FileText },
+    // Not a tab: the Huddles list opens in the Home tab's detail pane (meetings open beside it).
+    flags.huddles && { id: 'huddles', route: 'huddles', label: 'Huddles', icon: Headphones },
   ].filter(Boolean);
   const more = [
     { route: 'search', label: 'Search', icon: Search, hint: SEARCH_SHORTCUT },
@@ -115,7 +117,13 @@ export function Sidebar() {
 
       <div className="no-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {main.map((it) => (
-          <Item key={it.id} {...it} tour={it.id} active={tab === it.id && !hub} onClick={() => (hub && it.id === 'home' ? open('home') : setTab(it.id))} />
+          <Item
+            key={it.id}
+            {...it}
+            tour={it.id}
+            active={it.route ? hub === it.route || (it.route === 'huddles' && hub === 'meetings') : tab === it.id && !hub}
+            onClick={() => (it.route ? open('home', it.route) : hub && it.id === 'home' ? open('home') : setTab(it.id))}
+          />
         ))}
         <div className="mx-1 my-3 border-t border-line-soft" />
         {more.map((it) => (

@@ -1,20 +1,23 @@
-// Huddles: what's live now (channels and DMs I'm in), upcoming meetings, and the controls a
-// conversation shows (start / join).
+// Huddles: every call in the workspace I can open, as one list of meeting records — Live now ·
+// Upcoming · Past (scheduled meetings and quick huddles alike; docs/api/meetings-unified.md →
+// Lists). Rows open the meeting page. Also the controls a conversation shows (start / join).
 import { useEffect, useState } from 'react';
-import { CalendarClock, Headphones, Phone, Radio } from 'lucide-react';
+import { CalendarClock, CalendarPlus, Headphones, Phone, Radio } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
-import { useQuery } from '../../data/query.js';
-import { useChannels, useDms } from '../../data/hooks.js';
+import { invalidate, useQuery } from '../../data/query.js';
 import { useFlag } from '../../config/flags.js';
-import { toast } from '../../lib/bus.js';
+import { on, toast } from '../../lib/bus.js';
+import { prefs } from '../../native/storage.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { Row, RowGroup, Section } from '../../ui/List.jsx';
+import { Chips, SearchField } from '../../ui/Controls.jsx';
+import { Row, RowGroup } from '../../ui/List.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { openConversation } from '../chats/chatsUi.js';
-import { checkConversation, joinHuddle, joinMeeting, scopeKey, startHuddle, useHuddle } from './huddle.js';
+import { ScheduleMeetingSheet } from '../meetings/screens.jsx';
+import { meetingSubtitle, mergePage } from '../meetings/meetingsUi.js';
+import { checkConversation, joinHuddle, joinMeetingCall, scopeKey, startHuddle, startWorkspaceHuddle, useHuddle } from './huddle.js';
 
 /** Huddles need a signed-in server session with the flag on. */
 export function useHuddlesAvailable() {
@@ -23,112 +26,182 @@ export function useHuddlesAvailable() {
   return on && live && Boolean(api()?.huddles);
 }
 
-function whenLabel(iso, duration) {
-  const d = new Date(iso);
-  const now = Date.now();
-  if (d.getTime() <= now && d.getTime() + (duration || 30) * 60000 > now) return 'Now';
-  return d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
-const run = async (fn) => {
+const run = async (fn, fail = 'Could not join the huddle') => {
   try {
     await fn();
   } catch (err) {
-    toast(err.message || 'Could not join the huddle', 'danger');
+    toast(err.message || fail, 'danger');
   }
 };
 
+export const HUDDLE_LISTS = [
+  { value: 'live', label: 'Live now' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+];
+
+const EMPTY = {
+  live: { icon: Headphones, title: 'No live huddles', body: 'Start one for the whole workspace, or from a channel or a direct message: tap the headphones at the top.' },
+  upcoming: { icon: CalendarClock, title: 'Nothing scheduled', body: 'Schedule a meeting, and find a time that works for everyone.' },
+  past: { icon: CalendarClock, title: 'No past meetings', body: 'Meetings and huddles you could join show up here with their notes, summary and action items.' },
+};
+
+/** The first page of a list (cached, refreshed by invalidate('meetingpage:')) plus "Load more" pages. */
+export function useMeetingPages(ws, status, q) {
+  const key = ws && `meetingpage:${ws}:${status}:${q}`;
+  const first = useQuery(key, () => api().meetingsPage(ws, { status, q }), { staleMs: 15_000 });
+  const [more, setMore] = useState({ key: null, meetings: [], cursor: null, hasMore: false });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const extra = more.key === key ? more : null;
+  const meetings = mergePage(first.data?.meetings || [], extra?.meetings || []);
+  const hasMore = extra ? extra.hasMore : Boolean(first.data?.hasMore);
+  const cursor = extra ? extra.cursor : first.data?.cursor;
+  const loadMore = async () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await api().meetingsPage(ws, { status, q, cursor });
+      setMore({ key, meetings: [...(extra?.meetings || []), ...page.meetings], cursor: page.cursor, hasMore: page.hasMore });
+    } catch (err) {
+      toast(err.message || "Couldn't load more", 'danger');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+  const refetch = () => {
+    setMore({ key: null, meetings: [], cursor: null, hasMore: false });
+    return first.refetch();
+  };
+  return { meetings, hasMore: hasMore && Boolean(cursor), loading: first.loading, error: first.error, loadMore, loadingMore, refetch };
+}
+
+function MeetingRow({ m, list }) {
+  const call = useHuddle((s) => s.call);
+  const inIt = call && (call.meetingId === m.id || (m.huddleId && call.huddleId === m.huddleId));
+  const live = m.status === 'live';
+  const open = () => nav.push('meeting', { id: m.id, tab: list === 'past' ? 'summary' : 'overview' });
+  const row = (
+    <Row
+      icon={live ? Radio : m.kind === 'huddle' ? Headphones : CalendarClock}
+      tile={live ? 'accent' : 'neutral'}
+      title={m.title}
+      subtitle={meetingSubtitle(m)}
+      chevron={!live}
+      onClick={open}
+      className={live ? 'min-w-0 flex-1' : undefined}
+    />
+  );
+  if (!live) return row;
+  // A button can't sit inside the row's own button: the join control goes beside it.
+  return (
+    <div className="flex items-center gap-2 pr-3" data-testid="huddle-live-row">
+      {row}
+      {inIt ? (
+        <span className="shrink-0 text-xs font-medium text-success">You're in it</span>
+      ) : (
+        <Button size="sm" className="shrink-0" onClick={() => run(() => joinMeetingCall(m))}>
+          Join huddle
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function HuddlesScreen() {
   const ws = useSession((s) => s.workspaceId);
-  const me = useSession((s) => s.user?.id);
-  const live = useHuddle((s) => s.live);
+  const available = useHuddlesAvailable();
   const call = useHuddle((s) => s.call);
-  const { data: channels } = useChannels();
-  const { data: dms } = useDms();
-  const meetings = useQuery(ws && `meetings:${ws}`, () => api().huddles.meetings(ws));
+  const [list, setList] = useState(() => prefs.get('huddles.list', 'live'));
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const pages = useMeetingPages(ws, list, q);
 
-  const liveRows = Object.entries(live).map(([key, h]) => {
-    const channel = (channels || []).find((c) => c.id === key);
-    const dm = channel ? null : (dms || []).find((d) => d.id === key);
-    if (!channel && !dm) return null;
-    const scope = channel ? { channelId: key } : { dmId: key };
-    const title = channel ? `# ${channel.name}` : `Call with ${dm.user?.name || 'someone'}`;
-    const people = h.participants?.length || 0;
-    return { key, h, scope, title, sub: people ? `${people} in it · started by ${h.startedBy?.username || 'someone'}` : `Started by ${h.startedBy?.username || 'someone'}` };
-  }).filter(Boolean);
+  useEffect(() => {
+    const t = setTimeout(() => setQ(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const upcoming = (meetings.data || []).filter((m) => {
-    const invited = (m.participants || []).map((p) => String(p?._id || p));
-    return !invited.length || invited.includes(me) || String(m.createdBy?._id || m.createdBy) === me;
-  });
+  // Calls starting and ending anywhere I can see move rows between the lists.
+  useEffect(() => {
+    let t = null;
+    const refresh = () => {
+      clearTimeout(t);
+      t = setTimeout(() => invalidate('meetingpage:'), 400);
+    };
+    const offH = on('huddle', ({ event }) => ['huddle:started', 'huddle:ended'].includes(event) && refresh());
+    const offM = on('meeting', ({ event }) => event === 'meeting:ended' && refresh());
+    const offS = on('socket', ({ event }) => event === 'schedule:updated' && refresh());
+    return () => {
+      clearTimeout(t);
+      offH();
+      offM();
+      offS();
+    };
+  }, []);
+
+  const pick = (v) => {
+    setList(v);
+    prefs.set('huddles.list', v);
+  };
+  const startOne = async () => {
+    setStarting(true);
+    await run(() => startWorkspaceHuddle(), "Couldn't start the huddle");
+    setStarting(false);
+  };
+  const empty = EMPTY[list] || EMPTY.live;
 
   return (
     <Screen>
-      <Header title="Huddles" subtitle="Voice calls in your channels and DMs" />
-      <Body onRefresh={meetings.refetch}>
-        <Section title="Live now">
-          {liveRows.length ? (
+      <Header
+        title="Huddles"
+        subtitle="Calls and meetings, live, upcoming and past"
+        actions={
+          <>
+            {available && <IconButton icon={Headphones} label="Start a huddle" disabled={starting || Boolean(call)} onClick={startOne} />}
+            <IconButton icon={CalendarPlus} label="Schedule" onClick={() => setScheduling(true)} />
+          </>
+        }
+      >
+        <SearchField value={search} onChange={setSearch} placeholder="Search meetings and huddles" className="mx-4 mb-2" />
+        <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
+      </Header>
+      <Body onRefresh={pages.refetch}>
+        <div className="mx-4 mt-1 mb-3 flex gap-2">
+          {available && (
+            <Button size="sm" icon={Headphones} loading={starting} disabled={Boolean(call)} onClick={startOne}>
+              Start a huddle
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" icon={CalendarPlus} onClick={() => setScheduling(true)}>
+            Schedule
+          </Button>
+        </div>
+        {pages.loading ? (
+          <SkeletonRows count={4} avatar={false} />
+        ) : pages.meetings.length ? (
+          <>
             <RowGroup>
-              {liveRows.map((r) => (
-                <Row
-                  key={r.key}
-                  icon={Radio}
-                  tile="accent"
-                  title={r.title}
-                  subtitle={r.sub}
-                  chevron={false}
-                  trailing={
-                    call?.huddleId === r.h.huddleId ? (
-                      <span className="text-xs font-medium text-success">You're in it</span>
-                    ) : (
-                      <Button size="sm" onClick={() => run(async () => {
-                        if (r.scope.channelId) openConversation('channel', r.scope.channelId);
-                        else openConversation('dm', r.scope.dmId);
-                        await joinHuddle(r.h.huddleId, r.scope, r.title);
-                      })}>
-                        Join
-                      </Button>
-                    )
-                  }
-                />
+              {pages.meetings.map((m) => (
+                <MeetingRow key={m.id} m={m} list={list} />
               ))}
             </RowGroup>
-          ) : (
-            <EmptyState icon={Headphones} title="No live huddles" body="Start one from a channel or a direct message: tap the headphones at the top." className="py-8" />
-          )}
-        </Section>
-        <Section title="Coming up">
-          {meetings.loading && !meetings.data ? (
-            <SkeletonRows count={2} avatar={false} />
-          ) : upcoming.length ? (
-            <RowGroup>
-              {upcoming.map((m) => (
-                <div key={m._id} className="flex items-center gap-2 pr-3">
-                  <button type="button" onClick={() => nav.push('meeting', { id: m._id })} className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-surface-3 text-text-2">
-                      <Icon as={CalendarClock} size="sm" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px]">{m.title}</span>
-                      <span className="mt-0.5 block truncate text-[13px] text-text-2">{`${whenLabel(m.startTime, m.duration)} · ${m.duration || 30} min${m.status === 'live' ? ' · live' : ''}`}</span>
-                    </span>
-                  </button>
-                  <Button size="sm" variant={m.status === 'live' ? 'primary' : 'secondary'} onClick={() => run(() => joinMeeting(m))}>
-                    {m.status === 'live' ? 'Join' : 'Start'}
-                  </Button>
-                </div>
-              ))}
-            </RowGroup>
-          ) : (
-            <EmptyState icon={CalendarClock} title="Nothing scheduled" body="Meetings you're invited to show up here." className="py-8" />
-          )}
-        </Section>
-        <Section>
-          <RowGroup>
-            <Row icon={CalendarClock} tile="accent" title="All meetings" subtitle="Agendas, summaries, action items and boards" onClick={() => nav.push('meetings')} />
-          </RowGroup>
-        </Section>
+            {pages.hasMore && (
+              <div className="mt-3 flex justify-center">
+                <Button size="sm" variant="secondary" loading={pages.loadingMore} onClick={pages.loadMore}>
+                  Load more
+                </Button>
+              </div>
+            )}
+          </>
+        ) : pages.error ? (
+          <EmptyState icon={CalendarClock} title="Couldn't load meetings" body={pages.error.message || 'Pull down to try again.'} />
+        ) : (
+          <EmptyState icon={empty.icon} title={q ? 'No matches' : empty.title} body={q ? `Nothing in ${HUDDLE_LISTS.find((l) => l.value === list)?.label.toLowerCase()} matches “${q}”.` : empty.body} />
+        )}
       </Body>
+      {scheduling && <ScheduleMeetingSheet open onClose={() => setScheduling(false)} />}
     </Screen>
   );
 }

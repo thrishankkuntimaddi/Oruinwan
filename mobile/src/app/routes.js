@@ -43,7 +43,8 @@ export const ROUTES = {
   integrations: pick(more, 'IntegrationsScreen'),
   agents: pick(() => import('../features/agents/AgentsScreen.jsx'), 'AgentsScreen'),
   huddles: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
-  meetings: pick(meetings, 'MeetingsScreen'),
+  // "All meetings" is the Huddles screen now (live, upcoming and past, quick huddles included).
+  meetings: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
   meeting: pick(meetings, 'MeetingScreen'),
   workspace: pick(more, 'WorkspaceScreen'),
   roadmap: pick(roadmap, 'RoadmapScreen'),

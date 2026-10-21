@@ -32,9 +32,10 @@ export function Toggle({ checked, onChange, label, disabled }) {
 }
 
 /** Segmented control. options: [{ value, label, count? }] */
-export function Segmented({ options, value, onChange, className, size = 'md' }) {
+/** A segmented control. `scroll`: many options in a row that scrolls sideways (phone widths). */
+export function Segmented({ options, value, onChange, className, size = 'md', scroll = false, label }) {
   return (
-    <div role="tablist" className={cx('flex rounded-xl bg-surface-2 p-1 border border-line-soft', className)}>
+    <div role="tablist" aria-label={label} className={cx('flex rounded-xl bg-surface-2 p-1 border border-line-soft', scroll && 'no-scrollbar overflow-x-auto', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -47,8 +48,10 @@ export function Segmented({ options, value, onChange, className, size = 'md' }) 
               if (!active) tap('select');
               onChange(o.value);
             }}
+            ref={scroll && active ? (el) => el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }) : undefined}
             className={cx(
               'flex-1 rounded-lg font-medium transition-all inline-flex items-center justify-center gap-1.5',
+              scroll && 'shrink-0 whitespace-nowrap px-3',
               size === 'sm' ? 'h-7 text-xs' : 'h-8 text-[13px]',
               active ? 'bg-surface text-text shadow-sm' : 'text-text-2',
             )}

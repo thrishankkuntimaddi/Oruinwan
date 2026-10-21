@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBrainstormEvent, combineDateTime, meetingWhen } from './meetingsUi.js';
+import { applyBrainstormEvent, combineDateTime, conversationLabel, durationLabel, meetingSubtitle, meetingWhen, mergePage, strokeHit, summaryText } from './meetingsUi.js';
 import { mapMeeting, workAdapter } from '../../data/live/adapter.work.js';
 
 describe('brainstorm events', () => {
@@ -38,5 +38,38 @@ describe('meeting helpers', () => {
     expect(m.end).toBe('2026-03-03T10:45:00.000Z');
     expect(m.agenda.map((a) => a.title)).toEqual(['First', 'Second']);
     expect(m.actionItems[0]).toMatchObject({ id: 'x', status: 'pending', assignee: { id: 'u1', name: 'sam' }, taskId: null });
+  });
+});
+
+describe('meeting list and page helpers', () => {
+  it('labels lengths and conversations', () => {
+    expect(durationLabel(null)).toBeNull();
+    expect(durationLabel(30)).toBe('under a minute');
+    expect(durationLabel(2520)).toBe('42 min');
+    expect(durationLabel(3900)).toBe('1 h 5 min');
+    expect(conversationLabel({ kind: 'channel', name: 'design' })).toBe('# design');
+    expect(conversationLabel({ kind: 'dm', name: 'Carol' })).toBe('DM with Carol');
+    expect(conversationLabel({ kind: 'workspace' })).toBe('Workspace');
+  });
+
+  it('describes past huddles and upcoming meetings', () => {
+    const past = meetingSubtitle({ status: 'completed', kind: 'huddle', startedAt: '2026-10-20T10:00:00.000Z', durationSec: 1800, conversation: { kind: 'channel', name: 'design' } });
+    expect(past).toContain('30 min');
+    expect(past).toContain('Huddle');
+    expect(past).toContain('# design');
+    expect(meetingSubtitle({ status: 'live', kind: 'scheduled', conversation: { kind: 'workspace' } })).toBe('Live now');
+  });
+
+  it('reads summaries both ways and merges pages', () => {
+    expect(summaryText({ text: 'A' })).toBe('A');
+    expect(summaryText('B')).toBe('B');
+    expect(summaryText(null)).toBe('');
+    expect(mergePage([{ id: 1 }], [{ id: 1 }, { id: 2 }]).map((m) => m.id)).toEqual([1, 2]);
+  });
+
+  it('hits strokes under the eraser', () => {
+    const s = { lineWidth: 3, points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] };
+    expect(strokeHit(s, { x: 50, y: 5 })).toBe(true);
+    expect(strokeHit(s, { x: 50, y: 40 })).toBe(false);
   });
 });
