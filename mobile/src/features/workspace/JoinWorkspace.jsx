@@ -11,7 +11,7 @@ import { Sheet } from '../../ui/Overlay.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { toast } from '../../lib/bus.js';
-import { tap } from '../../native/index.js';
+import { deviceNoun, tap } from '../../native/index.js';
 import { parseInvite } from '../../lib/invite.js';
 import { WorkspaceTile } from './WorkspaceTile.jsx';
 
@@ -166,7 +166,7 @@ export function JoinWithLinkSheet({ open, onClose }) {
       }
     >
       <form onSubmit={submit} className="px-5 pb-4">
-        <p className="mb-4 text-[14px] text-text-2">Paste the invitation link from your email or message. Opening the link on this phone works too.</p>
+        <p className="mb-4 text-[14px] text-text-2">Paste the invitation link from your email or message. Opening the link on this {deviceNoun} works too.</p>
         <Field
           label="Invitation link or code"
           icon={Link2}

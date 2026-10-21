@@ -59,7 +59,8 @@ export function IconButton({ icon, label, onClick, className, badge, tone = 'def
       onClick={onClick}
       className={cx(
         'pressable relative inline-flex shrink-0 items-center justify-center rounded-full',
-        size === 'sm' ? 'h-9 w-9' : 'h-10 w-10',
+        // Tablets (md and up) get the 44 px touch target Apple and Material recommend.
+        size === 'sm' ? 'h-9 w-9 md:h-10 md:w-10' : 'h-10 w-10 md:h-11 md:w-11',
         tone === 'accent' ? 'bg-gold text-on-accent' : active ? 'text-accent-ink active:bg-surface-2 [&_svg]:fill-current' : 'text-text active:bg-surface-2',
         className,
       )}

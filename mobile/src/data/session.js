@@ -5,7 +5,9 @@ import { clearQueries, invalidate } from './query.js';
 import { emit, on } from '../lib/bus.js';
 import { logEvent } from '../config/remote.js';
 import { disablePush, enablePush, lastPushToken, pushAvailable, pushPlatform } from '../native/push.js';
-import { openExternal } from '../native/index.js';
+import { onAppState, openExternal } from '../native/index.js';
+import { cacheScope, clearCache, flushCache, startCache } from './persist.js';
+import { startOutbox, stopOutbox, clearOutbox } from './outbox.js';
 import { parseInvite } from '../lib/invite.js';
 
 let liveModule = null;
@@ -75,14 +77,18 @@ export const useSession = create((set, get) => ({
     }
     try {
       adapter = await loadLive();
+      // Last session's data first, so the app opens with it even offline (data/persist.js).
+      await startCache(cacheScope(get().server, prefs.get('live.user')?.id)).catch(() => {});
       const { user, offline } = await adapter.restore({ server: get().server });
       set({ user, offline: Boolean(offline), status: 'signed-in' });
+      startOutbox(user.id);
       await get().loadWorkspaces();
       // Push tokens can change (reinstall, OS update); re-register quietly if allowed.
       if (!offline) get().syncPush();
     } catch (err) {
       console.warn('[session] restore failed', err?.message);
       adapter = signedOutAdapter;
+      clearCache().catch(() => {});
       set({ status: 'signed-out', mode: null, user: null });
       get().persist();
     }
@@ -106,6 +112,8 @@ export const useSession = create((set, get) => ({
     const { user } = await live.signIn({ server, email, password, otp });
     adapter = live;
     clearQueries();
+    startCache(cacheScope(live.serverUrl(), user.id)).catch(() => {});
+    startOutbox(user.id);
     set({ mode: 'live', server: live.serverUrl(), user, status: 'signed-in', workspaceId: null, offline: false, pickingWorkspace: true });
     await get().loadWorkspaces();
     get().persist();
@@ -137,6 +145,8 @@ export const useSession = create((set, get) => ({
   async finishLiveSignIn(live, { user, requiresPasswordSetup }, kind) {
     adapter = live;
     clearQueries();
+    startCache(cacheScope(live.serverUrl(), user.id)).catch(() => {});
+    startOutbox(user.id);
     set({ mode: 'live', server: live.serverUrl(), user, status: 'signed-in', workspaceId: null, offline: false, needsPassword: requiresPasswordSetup, pickingWorkspace: true });
     get().persist();
     await get().loadWorkspaces().catch(() => {});
@@ -263,6 +273,9 @@ export const useSession = create((set, get) => ({
       /* server unreachable: still sign out locally */
     }
     adapter = signedOutAdapter;
+    stopOutbox();
+    clearOutbox();
+    await clearCache().catch(() => {});
     clearQueries();
     prefs.set('workspaces.cache', null);
     if (wipe) await wipeDevice();
@@ -299,3 +312,8 @@ on('auth:expired', () => {
   useSession.getState().signOut();
   emit('toast', { message: 'Your session ended. Please sign in again.', tone: 'warning', id: 'auth' });
 });
+
+// Save the cache when the app goes to the background (it may be closed there).
+onAppState((active) => {
+  if (!active) flushCache();
+}).catch(() => {});

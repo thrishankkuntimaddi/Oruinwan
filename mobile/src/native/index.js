@@ -30,14 +30,18 @@ export const isWeb = !isNative && !isDesktop;
 // Lets CSS style the desktop app like any mouse-driven device (styles/index.css).
 if (isDesktop) document.documentElement.dataset.desktop = '';
 
+/** An Android tablet or iPad (shortest screen side 600 dp or more). Same UI, laid out wider. */
+export const isTablet =
+  isNative && typeof screen !== 'undefined' && Math.min(screen.width || 0, screen.height || 0) >= 600;
+
 /** What to call the thing the app runs on, in user-facing copy. */
-export const deviceNoun = isDesktop ? 'computer' : isWeb ? 'browser' : 'phone';
+export const deviceNoun = isDesktop ? 'computer' : isWeb ? 'browser' : isTablet ? 'tablet' : 'phone';
 export const platformLabel = isDesktop
   ? { darwin: 'Mac', win32: 'Windows', linux: 'Linux' }[desktop.platform] || 'Desktop'
   : isWeb
     ? 'Web'
     : isIOS
-      ? 'iPhone'
+      ? isTablet ? 'iPad' : 'iPhone'
       : 'Android';
 
 /** Sent as x-client-platform: the server then hands apps their refresh token in the body. */
@@ -185,6 +189,37 @@ export async function shareLink({ title, text, url }) {
     if (/cancel|abort/i.test(String(err?.message || err?.name))) return 'cancelled';
   }
   return (await copyText(url)) ? 'copied' : 'cancelled';
+}
+
+/**
+ * Saves a JSON document for the person: a download in a browser or the desktop app, the share
+ * sheet on phones and tablets (Files, Drive, Mail…). Returns 'saved' | 'shared' | 'copied' | 'cancelled'.
+ */
+export async function saveJson(fileName, data) {
+  const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  if (!isNative) {
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: fileName });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      return 'saved';
+    } catch {
+      /* fall through to the clipboard */
+    }
+  } else {
+    try {
+      if ((await Share.canShare()).value) {
+        await Share.share({ title: fileName, text, dialogTitle: fileName });
+        return 'shared';
+      }
+    } catch (err) {
+      if (/cancel|abort/i.test(String(err?.message || err?.name))) return 'cancelled';
+    }
+  }
+  return (await copyText(text)) ? 'copied' : 'cancelled';
 }
 
 /** Copies text to the clipboard. Returns true when it worked. */

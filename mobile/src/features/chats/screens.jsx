@@ -153,7 +153,7 @@ function useMentions({ kind, id, meta, me }) {
   }, [members, channels, policy, workspace?.role, kind, meta?.memberIds, me]);
 }
 
-export function ConversationScreen({ kind, id, highlight = null }) {
+export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const conv = useMemo(() => ({ kind, id }), [kind, id]);
   const meta = useConversationMeta(kind, id);
   const me = useSession((s) => s.user?.id);
@@ -300,7 +300,7 @@ export function ConversationScreen({ kind, id, highlight = null }) {
           onVoice={canPost ? (file) => convo.sendFiles([file]) : null}
           disabled={readOnly}
           disabledReason="Only admins can post in this channel."
-          initial={tools.editing?.text || ''}
+          initial={tools.editing?.text || draft}
           editing={Boolean(tools.editing)}
           onCancelEdit={() => tools.setEditing(null)}
           onPlus={() => setPlus(true)}
@@ -330,7 +330,7 @@ export function ConversationScreen({ kind, id, highlight = null }) {
   );
 }
 
-export function ThreadScreen({ kind, convId, messageId }) {
+export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const conv = useMemo(() => ({ kind, id: convId }), [kind, convId]);
   const meta = useConversationMeta(kind, convId);
   const me = useSession((s) => s.user?.id);
@@ -457,7 +457,7 @@ export function ThreadScreen({ kind, convId, messageId }) {
         assistants={assistants}
         mentions={mentions.composer}
         onVoice={(file) => convo.sendFiles([file])}
-        initial={tools.editing?.text || ''}
+        initial={tools.editing?.text || draft}
         editing={Boolean(tools.editing)}
         onCancelEdit={() => tools.setEditing(null)}
         onSend={(text) => {

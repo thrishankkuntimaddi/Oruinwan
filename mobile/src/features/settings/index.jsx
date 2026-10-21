@@ -34,6 +34,8 @@ import { UpdateButton, UpdateDetails, UpdateProgress } from '../update/UpdatePan
 import { UnlockSheet } from '../chats/E2eeBanner.jsx';
 import { useE2ee } from '../../data/e2ee.js';
 import { startTour } from '../tour/tourState.js';
+import { EncryptionDevices } from './account.jsx';
+export { AccountDataSettings, TwoFactorSettings } from './account.jsx';
 
 const STATUS = [
   { value: 'active', label: 'Active', color: 'bg-success' },
@@ -96,6 +98,7 @@ export function SettingsScreen() {
             <Row icon={User} tile="accent" title="Profile" onClick={() => nav.push('settings.profile')} />
             <Row icon={KeyRound} tile="accent" title="Password & security" onClick={() => nav.push('settings.security')} />
             <Row icon={Laptop} tile="accent" title="Devices" onClick={() => nav.push('settings.devices')} />
+            <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
           </RowGroup>
         </Section>
 
@@ -117,6 +120,9 @@ export function SettingsScreen() {
           <RowGroup>
             <Row icon={Building2} tile="accent" title={workspace?.name || 'Workspace'} subtitle="Members and workspace settings" onClick={() => nav.push('workspace')} />
             <Row icon={Plug} tile="accent" title="Integrations" onClick={() => nav.push('integrations')} />
+            {['owner', 'admin'].includes(workspace?.role) && (
+              <Row icon={ShieldCheck} tile="accent" title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
+            )}
           </RowGroup>
         </Section>
 
@@ -270,14 +276,9 @@ export function SecuritySettings() {
             <Section title="Sign-in">
               <RowGroup>
                 <Row icon={KeyRound} title="Change password" trailing={External} disabled={!web()} onClick={web('/settings?tab=security')} />
-                <Row
-                  icon={Fingerprint}
-                  title="Two-factor authentication"
-                  value={data?.twoFactor ? 'On' : 'Off'}
-                  trailing={External}
-                  disabled={!web()}
-                  onClick={web('/settings?tab=security')}
-                />
+                <Row icon={Fingerprint} title="Two-factor authentication" value={data?.twoFactor ? 'On' : 'Off'} onClick={() => nav.push('settings.twofactor')} />
+                {/* Passkeys are tied to the web origin (WebAuthn relying party); the app's WebView can't use them yet. */}
+                <Row icon={KeyRound} title="Passkeys" subtitle="Set up on the web" trailing={External} disabled={!web()} onClick={web('/settings?tab=security')} />
               </RowGroup>
               {!web() && <p className="mx-5 mt-2 text-xs text-text-2">Available when you're signed in to your own server.</p>}
             </Section>
@@ -346,6 +347,7 @@ export function DevicesSettings() {
                 </RowGroup>
               </Section>
             )}
+            <EncryptionDevices />
           </>
         )}
       </Body>

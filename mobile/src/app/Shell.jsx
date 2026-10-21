@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { FileText, House, MessagesSquare, SquareCheckBig } from 'lucide-react';
 import { TABS, markPane, useNav } from './nav.js';
 import { TAB_ROOTS, ROUTES } from './routes.js';
-import { PaneContext, SPLIT_TABS, useSplit, useWide } from './layout.js';
+import { PaneContext, SPLIT_TABS, useListWidth, useSplit, useWide } from './layout.js';
 import { TabBar } from './TabBar.jsx';
 import { Sidebar } from './Sidebar.jsx';
 import { ErrorBoundary } from './ErrorBoundary.jsx';
@@ -21,6 +21,38 @@ import { logEvent } from '../config/remote.js';
 import { useUnreadCounts } from '../data/hooks.js';
 import { setBadgeCount } from '../native/index.js';
 import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
+import { SHORTCUTS, shortcutFor } from './shortcuts.js';
+import { useOutbox } from '../data/outbox.js';
+
+/** A small pill while there is no connection: what you see is saved data; sends are queued. */
+function OfflinePill() {
+  const online = useOutbox((s) => s.online);
+  const queued = useOutbox((s) => s.items.filter((i) => i.status !== 'failed').length);
+  if (online && !queued) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4" style={{ top: 'calc(var(--sat) + 6px)' }} role="status" aria-live="polite">
+      <span className="glass rounded-full border px-3 py-1 text-[12px] font-medium text-text-2">
+        {online ? `Sending ${queued} queued message${queued === 1 ? '' : 's'}…` : `Offline · showing saved data${queued ? ` · ${queued} queued` : ''}`}
+      </span>
+    </div>
+  );
+}
+import { Sheet } from '../ui/Overlay.jsx';
+
+function ShortcutsSheet({ open, onClose }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Keyboard shortcuts">
+      <ul className="px-5 pb-4">
+        {SHORTCUTS.map((s) => (
+          <li key={s.keys} className="flex items-center justify-between gap-4 border-b border-line-soft py-2.5 text-[15px] last:border-0">
+            <span>{s.label}</span>
+            <kbd className="shrink-0 rounded-md border border-line bg-surface-2 px-2 py-0.5 font-sans text-[13px] text-text-2">{s.keys}</kbd>
+          </li>
+        ))}
+      </ul>
+    </Sheet>
+  );
+}
 
 function Fallback() {
   return (
@@ -99,6 +131,7 @@ function UnreadBadge() {
 }
 
 function WideTab({ tab, stack }) {
+  const listWidth = useListWidth();
   if (!SPLIT_TABS.has(tab)) {
     return (
       <div className="relative mx-auto h-full w-full max-w-3xl border-x border-line-soft" {...paneEvents(tab, 'detail')}>
@@ -111,7 +144,8 @@ function WideTab({ tab, stack }) {
     <div className="flex h-full">
       <section
         aria-label="List"
-        className="relative h-full w-[360px] shrink-0 border-r border-line-soft xl:w-[400px]"
+        className="relative h-full shrink-0 border-r border-line-soft"
+        style={{ width: listWidth }}
         {...paneEvents(tab, 'list')}
       >
         <Root tab={tab} />
@@ -142,6 +176,7 @@ function DetailPane({ tab, stack }) {
  * never covers the open item's composer. Tabs that aren't lists (AI) use the phone layout.
  */
 function SplitTab({ tab, stack }) {
+  const listWidth = useListWidth();
   if (!SPLIT_TABS.has(tab)) {
     return (
       <div className="relative h-full">
@@ -153,7 +188,7 @@ function SplitTab({ tab, stack }) {
   }
   return (
     <div className="flex h-full">
-      <section aria-label="List" className="relative h-full w-[340px] shrink-0 border-r border-line-soft" {...paneEvents(tab, 'list')}>
+      <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
         <Root tab={tab} />
         <TabBar />
       </section>
@@ -180,19 +215,27 @@ export function Shell() {
     if ((tab === 'ai' && !flags.ai) || (tab === 'notes' && !flags.notes)) useNav.getState().setTab('home');
   }, [tab, flags.ai, flags.notes]);
 
-  // Ctrl+K / ⌘K opens search from anywhere.
+  // Hardware keyboard shortcuts (app/shortcuts.js): ⌘K search, ⌘1-5 tabs, ⌘[ back, ⌘, settings.
+  const [help, setHelp] = useState(false);
   useEffect(() => {
+    const tabs = TABS.filter((t) => (t !== 'ai' || flags.ai) && (t !== 'notes' || flags.notes));
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (useNav.getState().overlays.length) return;
-        if (wide) useNav.getState().open('home', 'search');
-        else useNav.getState().push('search');
-      }
+      const action = shortcutFor(e, tabs);
+      if (!action) return;
+      e.preventDefault();
+      const navState = useNav.getState();
+      if (navState.overlays.length && action.kind !== 'help') return;
+      const openHub = (name) => (wide ? navState.open('home', name) : navState.push(name));
+      if (action.kind === 'search') openHub('search');
+      else if (action.kind === 'settings') openHub('settings');
+      else if (action.kind === 'notifications') openHub('notifications');
+      else if (action.kind === 'back') navState.pop();
+      else if (action.kind === 'tab') navState.setTab(action.tab);
+      else if (action.kind === 'help') setHelp((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [wide]);
+  }, [wide, flags.ai, flags.notes]);
 
   const stack = stacks[tab];
 
@@ -201,6 +244,8 @@ export function Shell() {
       <div className="flex h-full overflow-hidden bg-bg">
         <UnreadBadge />
         <HuddleLayer />
+        <OfflinePill />
+        <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
         <Sidebar />
         <main className="relative min-w-0 flex-1">
           {TABS.filter((t) => visited.has(t)).map((t) => (
@@ -223,6 +268,8 @@ export function Shell() {
         ))}
         <UnreadBadge />
         <HuddleLayer />
+        <OfflinePill />
+        <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
       </div>
     );
   }
@@ -238,6 +285,8 @@ export function Shell() {
       {stack.length === 0 && <TabBar />}
       <UnreadBadge />
       <HuddleLayer />
+        <OfflinePill />
+        <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
     </div>
   );
 }

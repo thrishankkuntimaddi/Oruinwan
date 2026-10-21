@@ -24,8 +24,7 @@ import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { htmlToText } from '../../ui/sanitize.js';
 import { openExternal, shareLink } from '../../native/index.js';
-import { formatBytes, previewKind } from '../../lib/files.js';
-import { openFile } from '../media/media.js';
+import { formatBytes } from '../../lib/files.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { TaskRow } from '../tasks/TaskRow.jsx';
@@ -267,9 +266,8 @@ export function FilesScreen() {
                 tile="accent"
                 title={f.name}
                 subtitle={[formatBytes(f.size), directory[f.owner]?.name, shortAgo(f.at)].filter(Boolean).join(' · ')}
-                chevron={false}
-                // Photos, videos, audio and PDFs open in the viewer; other files open with another app or download.
-                onClick={() => openFile(f, files.filter((x) => ['image', 'video'].includes(previewKind(x))))}
+                // Details: tags, versions, comments and sharing; Open from there shows the file.
+                onClick={() => nav.push('file', { id: f.id })}
               />
             ))}
           </RowGroup>
@@ -388,7 +386,6 @@ async function invite(workspace) {
 export function WorkspaceScreen() {
   const workspace = useWorkspace();
   const mode = useSession((s) => s.mode);
-  const server = useSession((s) => s.server);
   const { data: members, loading } = useMembers();
   const { data: channels } = useChannels();
   if (!workspace) {
@@ -422,7 +419,7 @@ export function WorkspaceScreen() {
             <Row icon={Plug} title="Integrations" onClick={() => nav.push('integrations')} />
             <Row icon={SquareCheckBig} title="Tasks" onClick={() => nav.setTab('tasks')} />
             {isAdmin && mode === 'live' && (
-              <Row icon={Shield} title="Admin console" subtitle="Members, permissions and audit logs" trailing={<Icon as={ExternalLink} size="sm" className="text-text-3" />} onClick={() => openExternal(`${server}/workspace/${workspace.id}/admin`)} />
+              <Row icon={Shield} title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
             )}
           </RowGroup>
         </Section>

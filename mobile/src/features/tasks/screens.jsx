@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  LayoutGrid, List, Plus, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, ListChecks,
+  LayoutGrid, List, Plus, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -23,6 +23,8 @@ import { dueLabel, shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
 import { TaskRow, StatusIcon } from './TaskRow.jsx';
+import { TaskExtras } from './TaskExtras.jsx';
+import { TemplatePickerSheet } from './PlanningScreen.jsx';
 import { TaskEditorSheet, PeoplePicker, toDateInput, fromDateInput } from './TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
 
@@ -91,6 +93,8 @@ export function TasksScreen() {
   const [sort, setSort] = useState(() => prefs.get('tasks.sort', 'due'));
   const [sortSheet, setSortSheet] = useState(false);
   const [create, setCreate] = useState(false);
+  const [newMenu, setNewMenu] = useState(false);
+  const [fromTemplate, setFromTemplate] = useState(false);
 
   const tasks = useMemo(() => filterView(data || [], view, me).sort(SORTS[sort].fn), [data, view, me, sort]);
   const groups = useMemo(() => {
@@ -109,6 +113,7 @@ export function TasksScreen() {
         title="Tasks"
         actions={
           <>
+            <IconButton icon={CalendarRange} label="Planning: sprints, milestones, timeline" onClick={() => nav.push('planning')} />
             <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} onClick={() => setSortSheet(true)} />
             <IconButton
               icon={layout === 'list' ? LayoutGrid : List}
@@ -152,7 +157,7 @@ export function TasksScreen() {
       <button
         type="button"
         aria-label="New task"
-        onClick={() => setCreate(true)}
+        onClick={() => setNewMenu(true)}
         className="pressable absolute right-4 z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent"
         style={{ bottom: 'calc(var(--sab) + 76px)' }}
       >
@@ -168,6 +173,16 @@ export function TasksScreen() {
         }))}
       />
       <TaskEditorSheet open={create} onClose={() => setCreate(false)} />
+      <ActionSheet
+        open={newMenu}
+        onClose={() => setNewMenu(false)}
+        title="New task"
+        actions={[
+          { icon: Plus, label: 'Blank task', onSelect: () => setCreate(true) },
+          { icon: LayoutTemplate, label: 'From a template', hint: 'Title, details and subtasks filled in', onSelect: () => setFromTemplate(true) },
+        ]}
+      />
+      <TemplatePickerSheet open={fromTemplate} onClose={() => setFromTemplate(false)} />
     </Screen>
   );
 }
@@ -351,23 +366,6 @@ export function TaskScreen({ id }) {
           </RowGroup>
         </Section>
 
-        {task.subtasks && (
-          <Section title="Child issues">
-            <div className="mx-4 rounded-card border border-line-soft bg-surface p-4">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Icon as={ListChecks} size="sm" className="text-text-2" />
-                  {task.subtasks.done} of {task.subtasks.total} done
-                </span>
-                <span className="text-text-2">{Math.round((task.subtasks.done / task.subtasks.total) * 100)}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
-                <div className="h-full bg-accent" style={{ width: `${(task.subtasks.done / task.subtasks.total) * 100}%` }} />
-              </div>
-            </div>
-          </Section>
-        )}
-
         <Section
           title="Description"
           action={
@@ -391,6 +389,7 @@ export function TaskScreen({ id }) {
             </Button>
           )}
         </Section>
+        <TaskExtras id={id} />
       </Body>
 
       <ActionSheet

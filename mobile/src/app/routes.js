@@ -9,6 +9,8 @@ const notes = () => import('../features/notes/index.js');
 const settings = () => import('../features/settings/index.jsx');
 const more = () => import('../features/more/index.jsx');
 const knowledge = () => import('../features/knowledge/screens.jsx');
+const meetings = () => import('../features/meetings/screens.jsx');
+const admin = () => import('../features/admin/screens.jsx');
 
 export const TAB_ROOTS = {
   chats: pick(chats, 'ChatsScreen'),
@@ -26,19 +28,37 @@ export const ROUTES = {
   profile: pick(chats, 'ProfileScreen'),
   saved: pick(chats, 'SavedScreen'),
   task: pick(tasks, 'TaskScreen'),
+  planning: pick(tasks, 'PlanningScreen'),
+  sprint: pick(tasks, 'SprintScreen'),
   note: pick(notes, 'NoteScreen'),
   knowledge: pick(knowledge, 'KnowledgeScreen'),
   page: pick(knowledge, 'PageScreen'),
   files: pick(more, 'FilesScreen'),
+  file: pick(() => import('../features/files/FileScreen.jsx'), 'FileScreen'),
   notifications: pick(more, 'NotificationsScreen'),
   search: pick(() => import('../features/search/SearchScreen.jsx'), 'SearchScreen'),
   integrations: pick(more, 'IntegrationsScreen'),
   agents: pick(() => import('../features/agents/AgentsScreen.jsx'), 'AgentsScreen'),
   huddles: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
+  meetings: pick(meetings, 'MeetingsScreen'),
+  meeting: pick(meetings, 'MeetingScreen'),
   workspace: pick(more, 'WorkspaceScreen'),
+  admin: pick(admin, 'AdminScreen'),
+  'admin.analytics': pick(admin, 'AdminAnalyticsScreen'),
+  'admin.features': pick(admin, 'AdminFeaturesScreen'),
+  'admin.permissions': pick(admin, 'AdminPermissionsScreen'),
+  'admin.channels': pick(admin, 'AdminChannelsScreen'),
+  'admin.directory': pick(admin, 'AdminDirectoryScreen'),
+  'admin.org': pick(admin, 'AdminOrgScreen'),
+  'admin.departments': pick(admin, 'AdminDepartmentsScreen'),
+  'admin.audit': pick(admin, 'AdminAuditScreen'),
+  'admin.templates': pick(admin, 'AdminTemplatesScreen'),
+  'admin.data': pick(admin, 'AdminDataScreen'),
   settings: pick(settings, 'SettingsScreen'),
   'settings.profile': pick(settings, 'ProfileSettings'),
   'settings.security': pick(settings, 'SecuritySettings'),
+  'settings.twofactor': pick(settings, 'TwoFactorSettings'),
+  'settings.account-data': pick(settings, 'AccountDataSettings'),
   'settings.devices': pick(settings, 'DevicesSettings'),
   'settings.notifications': pick(settings, 'NotificationSettings'),
   'settings.appearance': pick(settings, 'AppearanceSettings'),

@@ -1,20 +1,23 @@
 # Oruinwan for Android, iPhone and iPad
 
-One native app per platform, two UIs inside it:
+One native app per platform, one UI for every screen size (`src/`), in a
+[Capacitor](https://capacitorjs.com) shell on the system WebView (`android/`, `ios/`):
 
-| Device | UI | Source |
-|---|---|---|
-| **Android phones, iPhone** | the phone UI in this directory: one-handed, a bottom tab bar, about 1.4 MB | `src/` |
-| **Android tablets, iPad** | the full Oruinwan web client, the same as on the desktop apps | `../client` in app mode (`client/src/appMode`) |
+| Window | Layout (`src/app/layout.js`) |
+|---|---|
+| **Phones**, and any window under 768 px wide or 500 px tall (phones in landscape, iPad Slide Over) | one screen at a time, bottom tab bar |
+| **Tablets in portrait**, iPad split-screen halves (768–1023 px) | list column + open item, tab bar under the list |
+| **Tablets in landscape**, desktops (1024 px and up) | sidebar, list column + open item |
 
-Both run in a [Capacitor](https://capacitorjs.com) shell on the system WebView (`android/`, `ios/`).
-`scripts/assemble-native.mjs` builds `www/`, the bundle the apps load: the web client at the root and
-the phone UI in `www/phone/`. A two-line script at the top of `www/index.html` sends devices whose
-shortest screen side is under 600 dp (phones) to the phone UI; tablets stay on the web client. Both
+The list column is fluid (about a third of the window, 300–420 px), detail content is centred at a
+readable width, and the layout follows rotation and multitasking resizes without losing what is open.
+Hardware keyboards: ⌘/Ctrl K search, ⌘1–5 tabs, ⌘[ back, ⌘, settings, ⌘⇧N notifications, ⌘/ list.
+
+`scripts/assemble-native.mjs` copies the build (`dist/`) into `www/`, the bundle the apps load. Until 1.4
+tablets ran the web client instead; it is no longer bundled (the desktop apps still use it). Both
 talk to one server fixed at build time (`VITE_SERVER_URL`; a local server until production exists).
 
-The desktop apps (`../desktop`) run the same web client build. The phone UI also has a wide layout
-(`src/app/layout.js`) for large windows, used when you preview it in a desktop browser.
+The desktop apps (`../desktop`) run the web client (`../client` in app mode).
 
 | | |
 |---|---|
@@ -27,10 +30,10 @@ The desktop apps (`../desktop`) run the same web client build. The phone UI also
 | **Workspaces** | Create one in three steps (name, project, teammates: share a team invite link or invite by email). After sign-in, a "Welcome back" list of your workspaces. |
 | **Oruinwan AI in chats** | Mention `@ai` in a channel, DM or thread; typing `@a` suggests it. The answer streams in live for everyone in the conversation. |
 | **Search** | Messages are searched on the phone (they're end-to-end encrypted): what's been decrypted, plus the latest messages of conversations not opened yet. Kept in memory only. |
-| **Push notifications** | Android through Firebase, iPhone through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). |
+| **Push notifications** | Android through Firebase, iPhone and iPad through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). Message notifications have **Reply** (opens the conversation with your text in the composer: replies are encrypted in the app) and **Mark as read**; see `docs/api/mobile-work.md` for platform limits. |
+| **Offline** | The last data is saved on the device (encrypted with a device-only key) and shown when there is no connection. Messages sent offline are encrypted, queued as "Queued", and sent in order when the connection is back. |
 
-Not yet in the phone UI: sending files or photos, voice and video huddles (tablets have them, through
-the web client). Tablets don't get push notifications yet.
+Tablets get push notifications like phones (they run the same UI).
 
 ### Turning on push notifications
 
@@ -54,15 +57,14 @@ npm install
 npm run dev            # browser preview at http://localhost:5174 (talks to VITE_SERVER_URL)
 npm run lint
 npm test               # Vitest
-npm run android:debug  # debug APK (phone UI + web client): android/app/build/outputs/apk/github/debug/app-github-debug.apk
-npm run assemble       # just www/ (builds ../client in app mode; ORUINWAN_SKIP_WEB_BUILD=1 reuses client/dist-app)
+npm run android:debug  # debug APK: android/app/build/outputs/apk/github/debug/app-github-debug.apk
+npm run assemble       # just www/ (copies dist/)
 ```
 
-Requirements: Node 20+, JDK 21 and the Android SDK (platform 36) for APK builds. The web client's
-dependencies come from the repository root (`yarn install`). iOS builds need a Mac with Xcode:
+Requirements: Node 20+, JDK 21 and the Android SDK (platform 36) for APK builds. iOS builds need a Mac with Xcode:
 `npm run build && npm run assemble && npx cap sync ios`, then open `ios/App/App.xcodeproj`.
 
-To see the tablet UI, use a tablet emulator (for example the Pixel Tablet AVD) or an iPad simulator.
+To see the tablet layouts, resize the browser preview, or use a tablet emulator (for example the Pixel Tablet AVD) or an iPad simulator.
 
 Signing in to a real server from the **browser preview** needs that server to allow the preview's
 origin in `CORS_EXTRA_ORIGINS`. The apps need no CORS entry: their requests go through native HTTP.
@@ -114,7 +116,7 @@ permanent key, or phones will refuse to update.
    git tag v1.2.0 && git push origin main v1.2.0
    ```
 4. The **Build apps** workflow (`.github/workflows/apps.yml`) lints and tests, builds the web client
-   once in app mode, builds the signed APK (and checks it is signed with the release key) and the
+   once in app mode (for the desktop apps), builds the signed APK (and checks it is signed with the release key) and the
    desktop apps for Mac (Apple Silicon and Intel), Windows and Linux, and publishes them in **one**
    GitHub Release with `latest.json`. The iOS app goes to TestFlight (see below).
 

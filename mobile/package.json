@@ -3,7 +3,7 @@
   "version": "1.4.1",
   "private": true,
   "type": "module",
-  "description": "Oruinwan for Android and iOS: a phone UI, and the full web client on tablets, in a Capacitor shell",
+  "description": "Oruinwan for Android and iOS phones and tablets, in a Capacitor shell",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -29,6 +29,7 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.3",
     "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.2",

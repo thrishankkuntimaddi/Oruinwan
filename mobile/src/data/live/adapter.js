@@ -15,6 +15,7 @@ import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, sear
 import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
 import { fileIconKind } from '../../lib/files.js';
 import { chatsAdapter, messageExtras } from './adapter.chats.js';
+import { workAdapter } from './adapter.work.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -386,6 +387,7 @@ async function finishProviderSignIn(path, body) {
 }
 
 export const liveAdapter = {
+  ...workAdapter, // planning, meetings, files, knowledge links, admin, security (adapter.work.js)
   kind: 'live',
   serverUrl,
   ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),
@@ -681,7 +683,7 @@ export const liveAdapter = {
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
-    const body = { ...(await encryptText(key, text)), clientTempId, ...(mentionText ? { mentionText } : {}) };
+    const body = { ...(await encryptText(key, text)), clientTempId, clientMessageId: clientTempId, ...(mentionText ? { mentionText } : {}) }; // server dedupes on clientMessageId
     let data;
     if (parentId) data = await api.post(`/v2/messages/thread/${parentId}`, body);
     else if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });

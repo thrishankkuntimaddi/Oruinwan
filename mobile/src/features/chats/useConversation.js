@@ -7,6 +7,7 @@ import { on, toast } from '../../lib/bus.js';
 import { mapChecklist, mapPoll } from '../../data/live/adapter.chats.js';
 import { mentionsAI } from '../../lib/aiMention.js';
 import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
+import { enqueue, isNetworkError, isOffline, retryQueued, useQueuedMessages } from '../../data/outbox.js';
 
 function toggleReaction(m, emoji, me) {
   const users = new Set(m.reactions?.[emoji] || []);
@@ -64,7 +65,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
 
   const patch = useCallback((fn) => setQueryData(key, (d) => (d ? { ...d, items: fn(d.items) } : d)), [key]);
 
-  const send = useCallback(
+  const sendNow = useCallback(
     async (text, { retryId, mentionText } = {}) => {
       const body = text.trim();
       if (!body) return;
@@ -110,10 +111,22 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
             .catch((err) => toast(err.message || 'Oruinwan AI could not answer right now.', 'danger'));
         }
       } catch (err) {
+        // No connection: hand it to the offline queue (same id, so the server dedupes a retry).
+        if (isNetworkError(err)) {
+          patch((items) => items.filter((m) => m.id !== tempId));
+          enqueue({ conv, key, parentId: threadOf || null, text: body, clientMessageId: tempId, mentionText });
+          return;
+        }
         patch((items) => items.map((m) => (m.id === tempId ? { ...m, pending: false, failed: true, error: err.message } : m)));
       }
     },
     [conv, me, patch, threadOf, key, name, agentId],
+  );
+
+  // Offline: messages are encrypted and queued, then sent in order when back online (data/outbox.js).
+  const send = useCallback(
+    (text, opts) => (isOffline() && text.trim() && !opts?.retryId ? enqueue({ conv, key, parentId: threadOf || null, text: text.trim(), mentionText: opts?.mentionText }) : sendNow(text, opts)),
+    [conv, key, threadOf, sendNow],
   );
 
   const react = useCallback(
@@ -166,8 +179,9 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
 
   // Files still uploading (or failed, waiting for Retry) follow the sent messages.
   const uploads = useUploads(key);
+  const queued = useQueuedMessages(key);
   const items = query.data?.items || [];
-  const merged = uploads.length ? [...items, ...uploads] : items;
+  const merged = uploads.length || queued.length ? [...items, ...uploads, ...queued] : items;
 
   /** Replaces one message (or the thread's parent) in the cache. */
   const patchMessage = useCallback(
@@ -191,7 +205,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     error: query.error,
     refetch: query.refetch,
     send,
-    retry: (m) => (m.upload ? retryUpload(m.id) : send(m.text, { retryId: m.id })),
+    retry: (m) => (m.queued ? retryQueued(m.id) : m.upload ? retryUpload(m.id) : send(m.text, { retryId: m.id })),
     /** Uploads files and sends each one as its own message. */
     sendFiles: (files) => sendFiles({ key, conv, threadOf, me, files }),
     cancelUpload,

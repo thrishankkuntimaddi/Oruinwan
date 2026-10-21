@@ -35,7 +35,7 @@ export function openNotification(n) {
   else if (t.kind === 'thread') {
     nav.open('chats', 'conversation', { kind: t.convKind || 'channel', id: t.conv });
     nav.push('thread', { kind: t.convKind || 'channel', convId: t.conv, messageId: t.id });
-  } else if (t.kind === 'meeting') nav.push('huddles');
+  } else if (t.kind === 'meeting') nav.push('meeting', { id: t.id });
   else if (t.kind === 'task') nav.push('task', { id: t.id });
   else if (t.kind === 'note') nav.push('note', { id: t.id });
 }

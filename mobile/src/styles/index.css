@@ -149,6 +149,12 @@
   #root {
     height: 100%;
   }
+  /* Phones on their side and tablets with a camera cut-out: keep content clear of the left and
+     right insets (the background still runs edge to edge). */
+  #root {
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;

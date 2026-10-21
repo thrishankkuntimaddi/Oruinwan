@@ -1,9 +1,9 @@
 name: Build apps
 
 # Two UIs, one release:
-#  - the phone UI (mobile/) on Android phones and iPhones
+#  - the app UI (mobile/) on Android phones and tablets, iPhones and iPads (phone, split and wide
+#    layouts, see mobile/src/app/layout.js)
 #  - the web client (client/, built with `vite --mode app`) on Mac, Windows and Linux (desktop/)
-#    and on Android tablets and iPads (bundled next to the phone UI, see mobile/scripts/assemble-native.mjs)
 # Pull requests and main: lint, test and build everything as downloadable workflow artifacts
 # (iOS as a simulator build). Tags named vX.Y.Z: the same builds with the Android release key,
 # published together as ONE GitHub Release with latest.json (read by the in-app updaters), and
@@ -84,7 +84,7 @@ jobs:
           path: mobile/dist
           retention-days: 3
 
-  # The web client in app mode, built once for the desktop apps, Android tablets and iPads.
+  # The web client in app mode, built once for the desktop apps.
   client-app:
     name: Web client (app build)
     runs-on: ubuntu-24.04
@@ -109,7 +109,7 @@ jobs:
 
   android:
     name: Android
-    needs: [check, client-app]
+    needs: [check]
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -133,16 +133,11 @@ jobs:
         with:
           name: phone-bundle
           path: mobile/dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: client-app-bundle
-          path: client/dist-app
 
-      # Phone UI + web client for tablets, copied into the Android project. No signing secret
-      # is visible to these npm steps.
+      # The app UI, copied into the Android project. No signing secret is visible to these npm steps.
       - name: Assemble the app
         run: |
-          ORUINWAN_SKIP_WEB_BUILD=1 node scripts/assemble-native.mjs
+          node scripts/assemble-native.mjs
           npx cap sync android
 
       - name: Build a debug APK
@@ -319,7 +314,7 @@ jobs:
 
   ios:
     name: iOS
-    needs: [check, client-app]
+    needs: [check]
     runs-on: macos-latest
     defaults:
       run:
@@ -338,13 +333,9 @@ jobs:
         with:
           name: phone-bundle
           path: mobile/dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: client-app-bundle
-          path: client/dist-app
       - name: Assemble the app
         run: |
-          ORUINWAN_SKIP_WEB_BUILD=1 node scripts/assemble-native.mjs
+          node scripts/assemble-native.mjs
           npx cap sync ios
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
@@ -474,9 +465,9 @@ jobs:
             echo
             echo "### Install"
             echo
-            echo "- **Android:** open the APK and allow your browser to install apps if asked. Phones get the phone app, tablets the full workspace. Already installed? The app offers the update itself and keeps your data."
+            echo "- **Android:** open the APK and allow your browser to install apps if asked. Phones and tablets get the same app, laid out for the screen. Already installed? The app offers the update itself and keeps your data."
             if [ "$HAS_TESTFLIGHT" = true ]; then
-              echo "- **iPhone and iPad:** through TestFlight while the app is in testing (ask your admin for an invite); iPads get the full workspace."
+              echo "- **iPhone and iPad:** through TestFlight while the app is in testing (ask your admin for an invite)."
             else
               echo "- **iPhone and iPad:** no app yet; use the web app in Safari."
             fi
@@ -484,7 +475,7 @@ jobs:
             echo "- **Windows:** run the installer. The app isn't code-signed yet, so SmartScreen may warn: click **More info → Run anyway**."
             echo "- **Linux:** \`chmod +x Oruinwan-Linux.AppImage\` and run it, or \`sudo apt install ./Oruinwan-Linux.deb\`."
             echo
-            echo "The desktop and tablet apps connect to the Oruinwan server they were built for (\`VITE_SERVER_URL\`), so just sign in as on the web."
+            echo "The desktop, phone and tablet apps connect to the Oruinwan server they were built for (\`VITE_SERVER_URL\`), so just sign in as on the web."
             echo
             echo "The APK is signed with the Oruinwan release key (certificate SHA-256 \`${RELEASE_CERT_SHA256}\`). \`latest.json\` is read by the apps' updaters. You can ignore the automatic *Source code* archives."
           } > body.md
