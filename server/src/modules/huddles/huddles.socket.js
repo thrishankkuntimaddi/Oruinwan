@@ -33,11 +33,12 @@ async function defaultPlanLimits(workspaceId, { userId = null } = {}) {
     }
 }
 
-function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy }) {
+function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy, registry = defaultRegistry }) {
     if (!workspaceId) return;
     const notificationService = require('../notifications/notificationService');
     notificationService.huddleStarted(io, {
-        recipientIds: (recipientIds || []).filter(id => id !== String(socket.user.id)),
+        // Nobody is notified about a new call while they are already in one.
+        recipientIds: (recipientIds || []).filter(id => id !== String(socket.user.id) && !registry.callOf(id)),
         workspaceId,
         channelId,
         dmSessionId,
@@ -166,6 +167,60 @@ function huddleError(socket, huddleId, code, message) {
     socket.emit('huddle:error', { huddleId, code, message });
 }
 
+const PLATFORMS = ['web', 'desktop', 'android', 'ios'];
+
+/**
+ * The device a client says it is calling from: { id, label, platform }, or null.
+ * Older apps send none; for them the old rules apply (a new join silently replaces the old one).
+ */
+function deviceFrom(data) {
+    const d = data && data.device;
+    if (!d || typeof d !== 'object') return null;
+    const text = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
+    return {
+        id: text(d.id, 100),
+        label: text(d.label, 80) || 'another device',
+        platform: PLATFORMS.includes(d.platform) ? d.platform : 'web',
+    };
+}
+
+/** Where a call is, for "you're already in a call" questions. */
+function callInfo(huddle, participant) {
+    return {
+        huddleId: huddle.huddleId,
+        channelId: huddle.channelId || null,
+        dmId: huddle.dmId || null,
+        workspaceId: huddle.workspaceId || null,
+        channelName: huddle.channelName || null,
+        meetingId: huddle.meetingId || null,
+        device: participant?.device || null,
+    };
+}
+
+const NO_CALL = {
+    huddleId: null, channelId: null, dmId: null, workspaceId: null, channelName: null,
+    meetingId: null, video: false, device: null, socketId: null, audioEnabled: false, videoEnabled: false,
+};
+
+/** The person's current call as their own devices see it (huddle:self_active, huddle:mine), or null. */
+function selfActive(registry, userId) {
+    const found = registry.callOf(userId);
+    if (!found) return null;
+    const { huddle, participant: p } = found;
+    return {
+        ...callInfo(huddle, p),
+        video: !!huddle.video,
+        socketId: p.socketId,
+        audioEnabled: p.audioEnabled !== false,
+        videoEnabled: !!p.videoEnabled,
+    };
+}
+
+/** Tell every device of this person where their call is now (so the others can offer "Move here"). */
+function emitSelfActive(io, registry, userId) {
+    io.to(`user:${userId}`).emit('huddle:self_active', selfActive(registry, userId) || NO_CALL);
+}
+
 /**
  * Tell everyone a huddle is over (its call room and its conversation's room), close its
  * history run and complete its meeting record(s).
@@ -200,6 +255,7 @@ function endHuddle(io, huddleId, reason = 'ended', { registry = defaultRegistry,
     if (!huddle) return false;
     announceEnded(io, huddle, reason, { history, meetings });
     io.in(`huddle:${huddleId}`).socketsLeave(`huddle:${huddleId}`);
+    for (const userId of huddle.participants.keys()) emitSelfActive(io, registry, userId);
     return true;
 }
 
@@ -246,11 +302,50 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         const { removed, ended, huddle } = registry.leave(huddleId, uid(), onlyThisSocket ? socket.id : undefined);
         socket.leave(`huddle:${huddleId}`);
         if (!removed || !huddle) return;
+        afterLeave(huddleId, huddle, { ended, reason });
+    };
+
+    const afterLeave = (huddleId, huddle, { ended, reason }) => {
         history.left(huddleId, uid());
         io.to(`huddle:${huddleId}`).emit('huddle:left', { huddleId, userId: uid(), reason, timestamp: new Date() });
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:participant_left', { huddleId, userId: uid() });
         if (ended) announce(huddle, 'empty');
+        emitSelfActive(io, registry, uid());
+    };
+
+    /** "Switch": take this user out of the call they are in on another device (or tab). */
+    const leaveOtherCall = (found) => {
+        const { huddle, participant } = found;
+        const oldId = huddle.huddleId;
+        const { removed, ended } = registry.leave(oldId, uid());
+        if (!removed) return;
+        io.in(participant.socketId).socketsLeave(`huddle:${oldId}`);
+        io.to(participant.socketId).emit('huddle:ended', { huddleId: oldId, reason: 'switched' });
+        afterLeave(oldId, huddle, { ended, reason: 'switched' });
+    };
+
+    /**
+     * One call per person. Returns the huddle:error to send, or null when this socket may go ahead.
+     * Only apps that say which device they are (data.device) get these rules.
+     */
+    const callConflict = (huddleId, data) => {
+        const device = deviceFrom(data);
+        if (!device) return null;
+        const found = registry.callOf(uid());
+        if (!found) return null;
+        const { huddle, participant } = found;
+        if (huddle.huddleId === huddleId) {
+            if (participant.socketId === socket.id) return null;
+            // Another tab of the same browser, or this app reconnecting: just replace it.
+            if (device.id && participant.device?.id === device.id) return null;
+            if (data.transfer === true) return null;
+            return { huddleId, code: 'ALREADY_IN_CALL', sameCall: true, current: callInfo(huddle, participant),
+                message: `You're in this call on ${participant.device?.label || 'another device'}.` };
+        }
+        if (data.switch === true || participant.socketId === socket.id) return null;
+        return { huddleId, code: 'ALREADY_IN_CALL', sameCall: false, current: callInfo(huddle, participant),
+            message: 'You are already in another call.' };
     };
 
     socket.on('huddle:start', async (data = {}) => {
@@ -260,6 +355,10 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         try {
             const check = await verify(socket, { channelId, dmId, workspaceId });
             if (!check.ok) return huddleError(socket, huddleId, 'FORBIDDEN', check.message);
+
+            // Already in a different call: ask first (the join that follows a "switch" moves the person).
+            const conflict = callConflict(huddleId, data);
+            if (conflict && !conflict.sameCall) return socket.emit('huddle:error', conflict);
 
             // One live huddle per channel or DM: starting another joins the one already running.
             const running = registry.liveInScope(registryScope(check.scope), huddleId);
@@ -308,6 +407,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                     dmSessionId: check.scope.dmId,
                     channelName: check.channelName,
                     startedBy: username,
+                    registry,
                 });
             }
         } catch (err) {
@@ -325,6 +425,14 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             if (!check.ok) return huddleError(socket, huddleId, 'FORBIDDEN', check.message);
 
             const username = await displayName(socket);
+            const device = deviceFrom(data);
+            // One call per person: ask before switching calls or moving this call to this device.
+            const conflict = callConflict(huddleId, data);
+            if (conflict) return socket.emit('huddle:error', conflict);
+            const current = registry.callOf(uid());
+            if (current && current.huddle.huddleId !== huddleId) leaveOtherCall(current);
+            const before = registry.participant(huddleId, uid());
+
             // A join for a huddle this process never saw (e.g. after a restart) re-creates it.
             const existed = !!registry.get(huddleId);
             const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled), workspaceId: check.scope.workspaceId || null, ...planMeta(check.scope, uid()) });
@@ -338,7 +446,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // The registry checks it in the same step that adds the person (no await in between).
             const source = planSourceOf(ensured.huddle);
             const limits = await planLimits(source.workspaceId, { userId: source.userId });
-            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null });
+            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device });
             if (joined.error === 'PLAN_LIMIT') {
                 const { planLimitBody } = require('../../shared/plans/plans');
                 const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
@@ -355,9 +463,11 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const room = `huddle:${huddleId}`;
             if (joined.replacedSocketId) {
                 // Same user joined from another tab/device: evict the old connection so peers reconnect to the new one.
-                const old = io.sockets.sockets.get(joined.replacedSocketId);
-                if (old) old.leave(room);
-                io.to(joined.replacedSocketId).emit('huddle:ended', { huddleId, reason: 'joined_elsewhere' });
+                io.in(joined.replacedSocketId).socketsLeave(room);
+                const moved = !!device && !(device.id && before?.device?.id === device.id);
+                io.to(joined.replacedSocketId).emit('huddle:ended', moved
+                    ? { huddleId, reason: 'moved', to: device.label }
+                    : { huddleId, reason: 'joined_elsewhere' });
                 socket.to(room).emit('huddle:left', { huddleId, userId: uid(), reason: 'rejoined', timestamp: new Date() });
             }
             socket.join(room);
@@ -374,6 +484,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
             const scoped = scopeRoom(registryScope(check.scope));
             if (scoped) io.to(scoped).emit('huddle:participant_joined', { huddleId, meetingId, userId: uid() });
+            emitSelfActive(io, registry, uid());
         } catch (err) {
             logger.error('[huddle:join] failed:', err);
             huddleError(socket, huddleId, 'SERVER_ERROR', 'Failed to join huddle');
@@ -382,7 +493,9 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
     socket.on('huddle:leave', (data = {}) => {
         if (!data.huddleId) return;
-        leave(data.huddleId);
+        // Only the device that is in the call can leave it (a late "leave" from the device the
+        // call moved away from must not hang up the new one).
+        leave(data.huddleId, { onlyThisSocket: true });
     });
 
     socket.on('huddle:end', (data = {}) => {
@@ -400,12 +513,20 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         const { huddleId, audioEnabled } = data;
         if (!huddleId || !registry.setAudio(huddleId, uid(), audioEnabled)) return;
         io.to(`huddle:${huddleId}`).emit('huddle:audio_changed', { huddleId, userId: uid(), audioEnabled: audioEnabled !== false });
+        emitSelfActive(io, registry, uid());
     });
 
     socket.on('huddle:video_toggle', (data = {}) => {
         const { huddleId, videoEnabled } = data;
         if (!huddleId || !registry.setVideo(huddleId, uid(), videoEnabled)) return;
         io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled });
+        emitSelfActive(io, registry, uid());
+    });
+
+    // Where my own call is right now (any device), for a fresh page or app start.
+    socket.on('huddle:mine', (_data, ack) => {
+        const reply = typeof ack === 'function' ? ack : (typeof _data === 'function' ? _data : null);
+        if (reply) reply({ active: selfActive(registry, uid()) });
     });
 
     // Active huddles this socket can see in a workspace, so a fresh page load shows live huddles:

@@ -46,7 +46,6 @@ import { useLinkPreview } from './hooks/useLinkPreview.js';
 
 // Huddle calls live in the app-wide provider (they survive page changes); this hook scopes one to the conversation.
 import { useConversationHuddle as useHuddle } from '../../huddles/useConversationHuddle.js';
-import HuddleOverlay from '../../huddles/components/HuddleOverlay.jsx';
 
 import './chatWindow.css';
 import { CODE_REVIEW_EVENT } from '../../integrations/codeReviewBus';
@@ -69,6 +68,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const huddle = useHuddle({
         channelId: chat?.type === 'channel' ? chat?.id : null,
         dmId: chat?.type === 'dm' ? chat?.id : null,
+        name: chat?.name || '',
         currentUser: user,
         socket: rawSocket,
     });
@@ -1933,23 +1933,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     }}
                 />
             )}
-            {(chat?.type === 'channel' || chat?.type === 'dm') && (
-                <HuddleOverlay
-                    active={huddle.active}
-                    participants={huddle.participants}
-                    muted={huddle.muted}
-                    channelName={chat?.name || ''}
-                    isDM={chat?.type === 'dm'}
-                    onToggleMute={huddle.toggleMute}
-                    onLeave={huddle.leaveHuddle}
-                    isVideo={huddle.isVideo}
-                    cameraOn={huddle.cameraOn}
-                    onToggleCamera={huddle.toggleCamera}
-                    localStream={huddle.localStream}
-                    remoteStreams={huddle.remoteStreams}
-                />
-            )}
-            {}
+            {/* The call itself shows app-wide (features/huddles/call/CallScreen). */}
             {features.huddles && (chat?.type === 'channel' || chat?.type === 'dm') && huddle.huddleAnnouncement && !huddle.active && (
                 <div data-testid="huddle-announcement" className="gl-card" style={{
                     position: 'fixed', bottom: '16px', right: '16px', zIndex: 50,

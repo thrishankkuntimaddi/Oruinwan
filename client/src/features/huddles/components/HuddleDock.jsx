@@ -1,37 +1,73 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, PanelRight, Phone, Video } from 'lucide-react';
+import { Phone, Video } from 'lucide-react';
 import { playChime } from '../../notifications/osNotifier';
-import { useHuddleContext, callTitle } from '../HuddleContext';
+import { useHuddleContext } from '../HuddleContext';
 import HuddleWorkspacePanel from '../workspace/HuddleWorkspacePanel';
-import { formatDuration } from '../workspace/wrapUp';
+import CallScreen, { CallConnecting } from '../call/CallScreen';
+import MiniCall, { MiniCallBody } from '../call/MiniCall';
+import { ConflictDialog, ElsewherePill } from '../call/CallDialogs';
+import { openFloatingWindow } from '../call/floatingWindow';
 import '../workspace/huddleWorkspace.css';
+import '../call/callScreen.css';
 
-/** Where "return to the call" goes. */
-function callPath(call, workspaceId) {
-    const ws = call?.workspaceId || workspaceId;
-    if (!ws) return null;
-    if (call?.channelId) return `/workspace/${ws}/channel/${call.channelId}`;
-    if (call?.dmId) return `/workspace/${ws}/dm/${call.dmId}`;
-    return `/workspace/${ws}/huddles`;
+/**
+ * The floating call window (desktop app window or browser Picture-in-Picture). `auto` marks a
+ * window the desktop app opened by itself when you switched away, which closes again when you
+ * come back.
+ */
+function useFloatingCall(active) {
+    const [floating, setFloating] = useState(null); // { win, auto }
+    const ref = useRef(null);
+    ref.current = floating;
+
+    const close = useCallback(() => {
+        const f = ref.current;
+        ref.current = null;
+        setFloating(null);
+        try { f?.win?.close(); } catch { /* already closed */ }
+    }, []);
+
+    const open = useCallback(async ({ auto = false } = {}) => {
+        if (ref.current) return true;
+        const win = await openFloatingWindow();
+        if (!win) return false;
+        const gone = () => { if (ref.current?.win === win) { ref.current = null; setFloating(null); } };
+        win.addEventListener('pagehide', gone);
+        win.addEventListener('unload', gone);
+        ref.current = { win, auto };
+        setFloating({ win, auto });
+        return true;
+    }, []);
+
+    // A call that ends closes its window.
+    useEffect(() => { if (!active) close(); }, [active, close]);
+
+    // The desktop app calls this when its window is minimised or loses focus, and again when
+    // it comes back (desktop/electron/main.js).
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        window.__oruinwanCallAway = (away) => {
+            if (away && active) open({ auto: true });
+            else if (!away && ref.current?.auto) close();
+        };
+        return () => { delete window.__oruinwanCallAway; };
+    }, [active, open, close]);
+
+    return { floating, open, close };
 }
 
 /**
- * App-wide huddle chrome: a small "in huddle" pill whenever you are in a call
- * that no page is showing (so you can go back or leave), and the huddle
- * workspace panel when it is open.
+ * App-wide call chrome: the full call screen or the small floating one, the call in its own
+ * window, "switch / move here?" questions, "in a call on another device", the ring for an
+ * incoming DM call, and the meeting panel.
  */
 export default function HuddleDock() {
     const ctx = useHuddleContext();
     const navigate = useNavigate();
     const location = useLocation();
-    const [now, setNow] = useState(Date.now());
-
-    useEffect(() => {
-        if (!ctx.active) return undefined;
-        const t = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(t);
-    }, [ctx.active]);
+    const { floating, open: popOut, close: closeFloating } = useFloatingCall(ctx.active);
 
     // A DM call ringing for me (the DM page itself shows its own "Join" bar).
     const ring = ctx.incomingCall;
@@ -50,37 +86,26 @@ export default function HuddleDock() {
         ctx.joinHuddle({ id: r.huddleId, dmId: r.dmId, video: r.video }, { quiet: true }).catch(() => {});
     };
 
-    const call = ctx.selectedHuddle || ctx.panelCall;
-    const shownByPage = ctx.huddleId && ctx.inlineUIs[ctx.huddleId] > 0;
-    const showPill = ctx.active && !shownByPage;
-    const started = ctx.session?.startedAt || call?.startTime;
-    const path = callPath(call || ctx.callScope, ctx.workspaceId);
+    const expandFromFloating = () => {
+        closeFloating();
+        ctx.expandCall();
+        try { window.focus(); } catch { /* the app brings itself forward */ }
+    };
+
+    const full = ctx.active && ctx.callView === 'full';
+    const mini = ctx.active && ctx.callView === 'mini' && !floating;
 
     return (
         <>
-            {showPill && (
-                <div className="hw-pill" data-testid="huddle-pill" role="region" aria-label="You are in a huddle">
-                    <button type="button" className="hw-pill-main" title="Back to the huddle"
-                        onClick={() => { if (path && location.pathname !== path) navigate(path); }}>
-                        <span className="hw-live-dot" />
-                        <span className="hw-pill-title">{callTitle({ ...(call || {}), channelName: call?.channelName || ctx.session?.channelName })}</span>
-                        {started && <span className="hw-pill-time">{formatDuration(Math.round((now - new Date(started).getTime()) / 1000))}</span>}
-                    </button>
-                    <button type="button" className="gl-icon-btn" onClick={ctx.toggleMute} aria-pressed={ctx.muted}
-                        title={ctx.muted ? 'Unmute' : 'Mute'} aria-label={ctx.muted ? 'Unmute' : 'Mute'}
-                        style={ctx.muted ? { color: 'var(--state-danger)' } : undefined}>
-                        {ctx.muted ? <MicOff size={13} /> : <Mic size={13} />}
-                    </button>
-                    <button type="button" className="gl-icon-btn" aria-pressed={ctx.workspaceOpen}
-                        onClick={() => (ctx.workspaceOpen ? ctx.closeWorkspace() : ctx.openWorkspace())}
-                        title={ctx.workspaceOpen ? 'Hide the meeting panel' : 'Meeting panel: notes, agenda, transcript and recap'} aria-label="Meeting panel">
-                        <PanelRight size={13} />
-                    </button>
-                    <button type="button" className="gl-icon-btn hw-pill-leave" onClick={ctx.leaveHuddle} title="Leave huddle" aria-label="Leave huddle">
-                        <PhoneOff size={13} />
-                    </button>
-                </div>
+            {!ctx.active && ctx.connecting && <CallConnecting label={ctx.connecting.label} onCancel={ctx.leaveHuddle} />}
+            {full && <CallScreen ctx={ctx} onPopOut={() => popOut()} />}
+            {mini && <MiniCall ctx={ctx} onPopOut={() => popOut()} />}
+            {floating && ctx.active && createPortal(
+                <MiniCallBody ctx={ctx} floating onExpand={expandFromFloating} />,
+                floating.win.document.body,
             )}
+            {!ctx.active && <ElsewherePill call={ctx.callElsewhere} onMove={() => ctx.moveCallHere().catch(() => {})} />}
+            <ConflictDialog conflict={ctx.conflict} onAnswer={ctx.resolveConflict} />
             {ring && !ringHere && (
                 <div className="hw-ring" data-testid="huddle-ring" role="alertdialog" aria-label="Incoming call">
                     <span className="hw-ring-icon">{ring.video ? <Video size={16} /> : <Phone size={16} />}</span>

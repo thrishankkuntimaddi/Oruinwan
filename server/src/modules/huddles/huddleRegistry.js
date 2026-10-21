@@ -100,7 +100,7 @@ class HuddleRegistry {
    * the copies converge through replication, so two joins that land on two
    * different instances within that delay can still overshoot by one.
    */
-  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null }) {
+  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null, device = null }) {
     const huddle = this.huddles.get(huddleId);
     if (!huddle) return { error: 'HUDDLE_NOT_FOUND' };
     const uid = String(userId);
@@ -118,6 +118,8 @@ class HuddleRegistry {
       audioEnabled: audioEnabled !== false,
       videoEnabled: !!videoEnabled,
       socketId,
+      // Which of the person's devices is in the call: { id, label, platform } (null for older apps).
+      device: device || null,
       joinedAt: previous?.joinedAt || toDate(joinedAt),
     };
     huddle.participants.set(uid, participant);
@@ -200,6 +202,16 @@ class HuddleRegistry {
     if (!key || scope.workspaceId) return null;
     for (const h of this.huddles.values()) {
       if (h.scopeKey === key && h.huddleId !== exceptId && h.participants.size > 0) return h;
+    }
+    return null;
+  }
+
+  /** The call this person is in right now (on any device): { huddle, participant } or null. */
+  callOf(userId) {
+    const uid = String(userId);
+    for (const huddle of this.huddles.values()) {
+      const participant = huddle.participants.get(uid);
+      if (participant) return { huddle, participant };
     }
     return null;
   }

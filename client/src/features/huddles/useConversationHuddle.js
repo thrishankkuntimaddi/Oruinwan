@@ -11,7 +11,7 @@ import { HuddleContext } from './HuddleContext';
  * for "X started a huddle" announcements. Without an app-wide provider (tests,
  * embeds) it falls back to a conversation-local call, as before.
  */
-export function useConversationHuddle({ channelId, dmId, currentUser, socket }) {
+export function useConversationHuddle({ channelId, dmId, name = '', currentUser, socket }) {
     const ctx = useContext(HuddleContext);
     const local = useHuddle({ channelId, dmId, currentUser, socket });
 
@@ -39,10 +39,11 @@ export function useConversationHuddle({ channelId, dmId, currentUser, socket }) 
             startScreenShare: ctx.startScreenShare,
             stopScreenShare: ctx.stopScreenShare,
             leaveHuddle: ctx.leaveHuddle,
-            startHuddle: (opts = {}) => ctx.startHuddle('Huddle', { ...opts, scope, quiet: true }),
-            joinHuddle: (id, opts = {}) => ctx.joinHuddle({ id, video: !!opts.video, ...(scope || {}) }, { quiet: true }),
+            // The call screen names the call after the conversation ("# general", "Call with Bob").
+            startHuddle: (opts = {}) => ctx.startHuddle(dmId && name ? `Call with ${name}` : 'Huddle', { ...opts, scope, quiet: true, channelName: channelId ? name : undefined }),
+            joinHuddle: (id, opts = {}) => ctx.joinHuddle({ id, video: !!opts.video, ...(scope || {}), channelName: channelId ? name : undefined, title: dmId && name ? `Call with ${name}` : undefined }, { quiet: true }),
         };
-    }, [ctx, local, channelId, dmId]);
+    }, [ctx, local, channelId, dmId, name]);
 }
 
 export default useConversationHuddle;

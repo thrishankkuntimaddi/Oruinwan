@@ -109,7 +109,7 @@ test.describe('composer', () => {
     await alice.keyboard.type('/call');
     await alice.keyboard.press('Escape');
     await alice.keyboard.press('Enter');
-    const overlay = alice.getByTestId('huddle-overlay');
+    const overlay = alice.getByTestId('call-screen');
     await expect(overlay).toBeVisible();
     await overlay.getByTitle('Leave huddle').click();
     await expect(overlay).toBeHidden();

@@ -17,7 +17,7 @@
  */
 
 const {
-  app, BrowserWindow, Menu, Notification, Tray, ipcMain, nativeImage, net, powerMonitor, protocol, screen, session, shell,
+  app, BrowserWindow, Menu, Notification, Tray, desktopCapturer, dialog, ipcMain, nativeImage, net, powerMonitor, protocol, screen, session, shell,
 } = require('electron');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -26,6 +26,7 @@ const { pathToFileURL } = require('node:url');
 const { googleSignIn } = require('./googleSignIn');
 const trayState = require('./trayState');
 const ota = require('./ota');
+const { shareOptions } = require('./screenShare');
 
 /**
  * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
@@ -57,7 +58,10 @@ const BOOT_WATCHDOG_MS = 45_000;
 const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan';
 
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:']);
-const GRANTABLE = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'media', 'fullscreen']);
+const GRANTABLE = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'media', 'display-capture', 'fullscreen']);
+// The small always-on-top call window the page opens with window.open('', CALL_WINDOW_NAME)
+// (client/src/features/huddles/call/floatingWindow.js).
+const CALL_WINDOW_NAME = 'oruinwan-call';
 
 // Must run before the app is ready. `standard` + `secure` give the bundle a real origin, so
 // localStorage, IndexedDB and WebCrypto (the encryption keys) work as they do on https.
@@ -294,6 +298,98 @@ function lockDownPermissions(ses) {
   });
   ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) =>
     GRANTABLE.has(permission) && originOf(requestingOrigin) === PAGE_ORIGIN);
+  allowScreenShare(ses);
+}
+
+/**
+ * Screen sharing in calls (getDisplayMedia). The system picker where the OS has one (macOS 15+);
+ * otherwise a short list of screens and windows to choose from.
+ */
+function allowScreenShare(ses) {
+  if (typeof ses.setDisplayMediaRequestHandler !== 'function') return;
+  ses.setDisplayMediaRequestHandler(async (request, callback) => {
+    try {
+      const origin = originOf((request.frame && request.frame.url) || request.securityOrigin || '');
+      if (origin !== PAGE_ORIGIN) return callback({});
+      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } });
+      const choice = await pickScreenSource(sources);
+      callback(choice ? { video: choice } : {});
+    } catch (err) {
+      console.warn('[screen share] failed:', err.message);
+      callback({});
+    }
+  }, { useSystemPicker: true });
+}
+
+/** Ask which screen or window to share. Resolves with the source, or null when cancelled. */
+async function pickScreenSource(sources) {
+  const options = shareOptions(sources);
+  if (options.length === 0) return null;
+  if (options.length === 1) return options[0].source;
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+  const { response } = await dialog.showMessageBox(parent, {
+    type: 'question',
+    title: 'Share your screen',
+    message: 'What do you want to share?',
+    buttons: [...options.map((o) => o.label), 'Cancel'],
+    cancelId: options.length,
+    defaultId: 0,
+    noLink: true,
+  });
+  return response < options.length ? options[response].source : null;
+}
+
+/**
+ * During a call, the page pops the call out into its small always-on-top window when the app
+ * is minimised, hidden or behind another app, and closes it again when the app is back
+ * (window.__oruinwanCallAway, client/src/features/huddles/components/HuddleDock.jsx).
+ * The `true` makes it count as a user action, which opening a window needs.
+ */
+function tellPageAway(win, away) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents
+    .executeJavaScript(`window.__oruinwanCallAway && window.__oruinwanCallAway(${away ? 'true' : 'false'})`, true)
+    .catch(() => {});
+}
+
+function watchCallWindow(win) {
+  let awayTimer = null;
+  let callWindow = null;
+  const away = () => {
+    clearTimeout(awayTimer);
+    // A short wait, so clicking into the call window itself does not flicker.
+    awayTimer = setTimeout(() => {
+      if (win.isDestroyed() || win.isFocused()) return;
+      const focused = BrowserWindow.getFocusedWindow();
+      if (focused && callWindow && focused === callWindow) return;
+      tellPageAway(win, true);
+    }, 250);
+  };
+  const back = () => {
+    clearTimeout(awayTimer);
+    if (!win.isMinimized() && win.isVisible()) tellPageAway(win, false);
+  };
+  win.on('minimize', away);
+  win.on('hide', away);
+  win.on('blur', away);
+  win.on('restore', back);
+  win.on('show', back);
+  win.on('focus', back);
+
+  win.webContents.on('did-create-window', (child, { frameName }) => {
+    if (frameName !== CALL_WINDOW_NAME) return;
+    callWindow = child;
+    child.setAlwaysOnTop(true, 'floating');
+    if (typeof child.setVisibleOnAllWorkspaces === 'function') child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    child.setMenuBarVisibility(false);
+    // Closing the call window (or "Open the call" in it) brings the app back.
+    child.on('closed', () => {
+      if (callWindow === child) callWindow = null;
+      if (win.isDestroyed()) return;
+      if (win.isMinimized()) win.restore();
+      if (!win.isVisible()) win.show();
+    });
+  });
 }
 
 // ─── Window ───────────────────────────────────────────────────────────────────
@@ -371,10 +467,32 @@ function createWindow() {
   win.webContents.on('will-redirect', (event) => {
     if (event.isMainFrame && originOf(event.url) !== PAGE_ORIGIN) event.preventDefault();
   });
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    // The page's own call window: a small window in this same page (it renders the call into it).
+    if (frameName === CALL_WINDOW_NAME && (url === 'about:blank' || url === '')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 340,
+          height: 236,
+          minWidth: 260,
+          minHeight: 180,
+          title: 'Oruinwan call',
+          // Not a child window: macOS hides children when the app window is minimised.
+          alwaysOnTop: true,
+          skipTaskbar: true,
+          minimizable: false,
+          maximizable: false,
+          fullscreenable: false,
+          autoHideMenuBar: true,
+          backgroundColor: '#0c0c0c',
+        },
+      };
+    }
     openExternalSafely(url);
     return { action: 'deny' };
   });
+  watchCallWindow(win);
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   win.loadURL(START_URL).catch((err) => console.error('[window] failed to load', START_URL, err.message));

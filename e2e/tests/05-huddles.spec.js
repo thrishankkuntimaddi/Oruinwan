@@ -30,27 +30,73 @@ test('a DM voice huddle: start, join from the other side, connect, leave', async
 
   // Alice starts the call.
   await alice.locator('button[title="Start Voice Call"], button[title="Start huddle"]').first().click();
-  const aliceOverlay = alice.getByTestId('huddle-overlay');
-  await expect(aliceOverlay).toBeVisible();
+  const aliceCall = alice.getByTestId('call-screen');
+  await expect(aliceCall).toBeVisible();
 
   // Bob is offered the live huddle and joins it (not a second, separate huddle).
   const banner = bob.getByTestId('huddle-announcement');
   await expect(banner).toContainText('alice');
   await banner.getByRole('button', { name: 'Join' }).click();
-  const bobOverlay = bob.getByTestId('huddle-overlay');
-  await expect(bobOverlay).toContainText('2 participants');
-  await expect(aliceOverlay).toContainText('2 participants');
-  await expect(bobOverlay).toContainText('alice');
+  const bobCall = bob.getByTestId('call-screen');
+  await expect(bobCall).toContainText('2 participants');
+  await expect(aliceCall).toContainText('2 participants');
+  await expect(bobCall).toContainText('alice');
 
   await Promise.all([peerConnected(alice), peerConnected(bob)]);
 
-  // Alice leaves; Bob sees it and the call ends when he leaves too.
-  await aliceOverlay.getByTitle('Leave huddle').click();
-  await expect(aliceOverlay).toBeHidden();
-  await expect(bobOverlay).toContainText('1 participant');
-  await bobOverlay.getByTitle('Leave huddle').click();
-  await expect(bobOverlay).toBeHidden();
+  // Minimise to the small call (the app stays usable), then open the full call again.
+  await alice.getByTestId('call-minimise').click();
+  await expect(aliceCall).toBeHidden();
+  await expect(alice.getByTestId('call-mini')).toBeVisible();
+  await alice.getByTestId('mini-expand').click();
+  await expect(aliceCall).toBeVisible();
 
+  // Alice leaves; Bob sees it and the call ends when he leaves too.
+  await aliceCall.getByTitle('Leave huddle').click();
+  await expect(aliceCall).toBeHidden();
+  await expect(bobCall).toContainText('1 participant');
+  await bobCall.getByTitle('Leave huddle').click();
+  await expect(bobCall).toBeHidden();
+
+  await Promise.all(contexts.map((c) => c.close()));
+});
+
+test('a call moves from one of my devices to another', async ({ browser }) => {
+  // Two browser profiles = two devices for Alice (each has its own device id).
+  const contexts = await Promise.all([browser.newContext(), browser.newContext(), browser.newContext()]);
+  await Promise.all(contexts.map((c) => c.addInitScript(trackPeerConnections)));
+  const [laptop, phone, bob] = await Promise.all(contexts.map((c) => c.newPage()));
+  await login(bob, 'bob'); await openWorkspace(bob);
+  await login(laptop, 'alice'); await openWorkspace(laptop);
+  await login(phone, 'alice'); await openWorkspace(phone);
+  await openDm(laptop, 'bob'); await openDm(bob, 'alice');
+  await Promise.all([waitForComposerReady(laptop), waitForComposerReady(bob)]);
+
+  await laptop.locator('button[title="Start Voice Call"], button[title="Start huddle"]').first().click();
+  await expect(laptop.getByTestId('call-screen')).toBeVisible();
+  await bob.getByTestId('huddle-announcement').getByRole('button', { name: 'Join' }).click();
+  await expect(bob.getByTestId('call-screen')).toContainText('2 participants');
+
+  // The other device shows "In a call on … · Move here". Starting a call in that same DM there
+  // asks to move the call (not to start a second one); saying no keeps it on the laptop.
+  await expect(phone.getByTestId('call-elsewhere')).toBeVisible();
+  await openDm(phone, 'bob');
+  await waitForComposerReady(phone);
+  await phone.locator('button[title="Start Voice Call"], button[title="Start huddle"]').first().click();
+  await expect(phone.getByTestId('call-conflict')).toContainText('Move it to this device');
+  await phone.getByTestId('call-conflict-no').click();
+  await expect(laptop.getByTestId('call-screen')).toBeVisible();
+
+  // "Move here": the call moves and the laptop is told.
+  await phone.getByTestId('call-move-here').click();
+  await expect(phone.getByTestId('call-screen')).toBeVisible();
+  await expect(laptop.getByTestId('call-screen')).toBeHidden();
+  await expect(laptop.getByText(/Call moved to/)).toBeVisible();
+  await expect(bob.getByTestId('call-screen')).toContainText('2 participants');
+  await peerConnected(phone);
+
+  await phone.getByTitle('Leave huddle').click();
+  await bob.getByTitle('Leave huddle').click();
   await Promise.all(contexts.map((c) => c.close()));
 });
 
@@ -64,13 +110,13 @@ test('a DM video call shows both cameras', async ({ browser }) => {
   await Promise.all([waitForComposerReady(alice), waitForComposerReady(bob)]);
 
   await alice.locator('button[title="Start Video Call"]').click();
-  const aliceOverlay = alice.getByTestId('huddle-overlay');
-  await expect(aliceOverlay.getByTestId('video-tile-local').locator('video')).toBeVisible();
+  const aliceCall = alice.getByTestId('call-screen');
+  await expect(aliceCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
 
   const banner = bob.getByTestId('huddle-announcement');
   await banner.getByRole('button', { name: 'Join' }).click();
-  const bobOverlay = bob.getByTestId('huddle-overlay');
-  await expect(bobOverlay.getByTestId('video-tile-local').locator('video')).toBeVisible();
+  const bobCall = bob.getByTestId('call-screen');
+  await expect(bobCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
   await Promise.all([peerConnected(alice), peerConnected(bob)]);
 
   // Each side is actually receiving the other's video frames.
@@ -81,10 +127,10 @@ test('a DM video call shows both cameras', async ({ browser }) => {
   await Promise.all([remoteVideoPlaying(alice), remoteVideoPlaying(bob)]);
 
   // Turning the camera off shows the initial instead of video on the other side.
-  await aliceOverlay.getByTitle('Turn camera off').click();
-  await expect(bobOverlay.getByTestId('video-tile-remote').locator('video')).toHaveCount(0);
+  await aliceCall.getByTitle('Turn camera off').click();
+  await expect(bobCall.getByTestId('video-tile-remote').locator('video')).toHaveCount(0);
 
-  await aliceOverlay.getByTitle('Leave huddle').click();
-  await bobOverlay.getByTitle('Leave huddle').click();
+  await aliceCall.getByTitle('Leave huddle').click();
+  await bobCall.getByTitle('Leave huddle').click();
   await Promise.all(contexts.map((c) => c.close()));
 });

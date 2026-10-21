@@ -1,0 +1,168 @@
+/* The call screen (full window), the mini call and the floating call window.
+   Colours come from the theme tokens, so dark and light both work. */
+
+.cs-screen {
+    position: fixed;
+    top: var(--oru-inset-top, 0px);
+    right: var(--oru-inset-right, 0px);
+    bottom: var(--oru-inset-bottom, 0px);
+    left: var(--oru-inset-left, 0px);
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font, Inter, system-ui, sans-serif);
+    animation: gl-fade-in var(--gl-dur-2, 160ms) ease;
+}
+/* The meeting panel docks beside the call on wide screens, above it on narrow ones. */
+@media (min-width: 1000px) {
+    body.hw-docked .cs-screen { right: var(--hw-dock-w); }
+}
+.hw-panel { z-index: 85; }
+.hw-ring { z-index: 90; }
+
+.cs-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lg-border, var(--border-subtle));
+    background-color: var(--lg-chrome, var(--bg-surface));
+    background-image: var(--lg-sheen, none);
+    flex-shrink: 0;
+    min-width: 0;
+}
+.cs-title { margin: 0; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cs-time { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.cs-sub { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.cs-head-spacer { flex: 1; }
+.cs-chip { flex-shrink: 0; padding: 2px 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--border-default); border-radius: 999px; color: var(--text-secondary); }
+.cs-chip.is-accent { color: var(--accent); border-color: var(--border-accent); }
+.cs-chip.is-danger { color: var(--state-danger); border-color: var(--state-danger); }
+
+.cs-body { flex: 1; display: flex; min-height: 0; }
+.cs-stage { flex: 1; min-width: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
+.cs-grid { display: grid; gap: 12px; width: 100%; margin: 0 auto; }
+.cs-waiting { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-secondary); }
+
+.cs-tile {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius-md, 7px);
+    transition: box-shadow 140ms ease, border-color 140ms ease;
+}
+.cs-tile.is-speaking { border-color: var(--state-success); box-shadow: 0 0 0 2px var(--state-success); }
+.cs-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.cs-avatar { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-active); border: 1px solid var(--border-accent); }
+.cs-avatar span { font-size: 28px; font-weight: 700; }
+.cs-tile.is-compact .cs-avatar { width: 52px; height: 52px; }
+.cs-tile.is-compact .cs-avatar span { font-size: 18px; }
+.cs-name {
+    position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 6px; max-width: calc(100% - 20px);
+    padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: var(--bg-base); border: 1px solid var(--border-default); color: var(--text-primary);
+}
+.cs-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-name.on-video { background: rgba(0, 0, 0, 0.6); border-color: transparent; color: #fff; }
+.cs-tile.is-compact .cs-name { left: 6px; bottom: 6px; font-size: 11px; padding: 2px 6px; }
+.cs-hand { position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--bg-base); font-size: 11px; font-weight: 700; }
+.cs-status { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; background: var(--bg-base); border: 1px solid var(--border-default); font-size: 11px; color: var(--text-secondary); }
+.cs-status.is-failed { color: var(--state-danger); }
+
+.cs-dock {
+    display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--lg-border, var(--border-subtle));
+    background-color: var(--lg-chrome, var(--bg-surface));
+    background-image: var(--lg-sheen, none);
+}
+.cs-sep { width: 1px; height: 28px; background: var(--border-default); margin: 0 4px; }
+
+.cs-btn {
+    position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    background: var(--bg-active); color: var(--text-primary); border: 1px solid var(--border-default);
+    border-radius: 999px; cursor: pointer; transition: background 120ms ease, transform 120ms ease;
+}
+.cs-btn:hover { background: var(--bg-hover, var(--bg-active)); }
+.cs-btn:active { transform: scale(0.96); }
+.cs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-btn.is-wide { width: 64px; }
+.cs-btn.is-small { width: 32px; height: 32px; }
+.cs-btn.is-active { background: var(--accent); color: var(--bg-base); border-color: var(--accent); }
+.cs-btn.is-danger { background: var(--state-danger); color: #fff; border-color: var(--state-danger); }
+.cs-btn.is-unavailable { cursor: not-allowed; opacity: 0.45; }
+.cs-badge { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: var(--text-primary); color: var(--bg-base); }
+
+.cs-people { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border-default); background: var(--bg-surface); }
+.cs-people-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 700; }
+.cs-people ul { list-style: none; margin: 0; padding: 6px 0; overflow-y: auto; }
+.cs-people li { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+.cs-people-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--bg-active); border: 1px solid var(--border-default); }
+.cs-people-text { flex: 1; min-width: 0; }
+.cs-people-text p { margin: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-people-text .cs-people-sub { font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+
+.cs-muted { color: var(--text-secondary); }
+.cs-danger { color: var(--state-danger); }
+.cs-accent { color: var(--accent); }
+.cs-success { color: var(--state-success); flex-shrink: 0; }
+
+.cs-connecting { align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 32px; }
+
+/* Mini call: a small box above the app you can drag anywhere. */
+.cs-mini {
+    position: fixed;
+    z-index: 75;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    border: 1px solid var(--lg-border, var(--border-default));
+    border-radius: var(--gl-radius-lg, 10px);
+    overflow: hidden;
+    background-color: var(--lg-tint-strong, var(--bg-surface));
+    background-image: var(--lg-sheen, none);
+    box-shadow: var(--lg-edge, none), var(--lg-shadow, var(--card-shadow)), inset 0 3px 0 var(--state-success);
+    -webkit-backdrop-filter: var(--lg-filter, none);
+    backdrop-filter: var(--lg-filter, none);
+    font-family: var(--font, Inter, system-ui, sans-serif);
+    color: var(--text-primary);
+    animation: gl-dialog-in var(--gl-dur-3, 200ms) var(--gl-ease, ease);
+}
+@media (max-width: 640px) {
+    .cs-mini { width: 220px; }
+}
+.cs-mini-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.cs-mini-head { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 2px 0; cursor: grab; user-select: none; touch-action: none; }
+.cs-mini-head:active { cursor: grabbing; }
+.cs-mini-title { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-mini-dock { display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* The call in its own window: it fills the window. */
+.cs-floating-body { margin: 0; min-height: 100vh; background: var(--bg-base); overflow: hidden; }
+.cs-mini-body.is-floating { height: 100vh; box-sizing: border-box; }
+.cs-mini-body.is-floating .cs-mini-head { cursor: default; }
+.cs-mini-body.is-floating .cs-tile { flex: 1; aspect-ratio: auto; min-height: 0; }
+
+/* "In a call on another device · Move here". */
+.hw-pill.cs-elsewhere { z-index: 76; padding: 6px 6px 6px 12px; }
+.hw-pill.cs-elsewhere .hw-pill-title { max-width: min(300px, calc(100vw - 170px)); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .cs-mini { background-color: var(--lg-solid, var(--bg-surface)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cs-screen, .cs-mini { animation: none; }
+    .cs-btn, .cs-tile { transition: none; }
+}
+@media (max-width: 640px) {
+    .cs-head { padding: 10px 12px; }
+    .cs-head .cs-sub, .cs-head .cs-chip { display: none; }
+    .cs-stage { padding: 12px; }
+    .cs-people { position: absolute; inset: 0 0 auto auto; height: 100%; width: min(100vw, 300px); z-index: 1; }
+}

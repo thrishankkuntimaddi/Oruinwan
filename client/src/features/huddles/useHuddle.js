@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import api from '../../services/api';
 import logger from '../../utils/logger';
 import { useToast } from '../../contexts/ToastContext';
+import { callDevice } from './callDevice';
 
 // Used only when the server cannot be reached; STUN alone fails behind strict NATs.
 const FALLBACK_ICE_CONFIG = {
@@ -46,9 +47,17 @@ const HUDDLE_ERROR_MESSAGES = {
  * Several instances can share one socket (the workspace HuddleProvider and each
  * chat window), so every handler ignores events for huddles this instance is not
  * in, and announcements are limited to this instance's channel/DM/workspace.
+ *
+ * `onConflict(error, retry)` is called when the server says the person is already in a
+ * call (on another device, or in another call): the app asks, then calls `retry({ switch })`
+ * or `retry({ transfer })`.
  */
-export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket }) {
+export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, onConflict = null }) {
     const { showToast } = useToast();
+    const onConflictRef = useRef(onConflict);
+    onConflictRef.current = onConflict;
+    // The last start/join, so a conflict can be retried with switch / transfer.
+    const lastEnterRef = useRef(null);
     const [active, setActive] = useState(false);
     const [huddleId, setHuddleId] = useState(null);
     const [participants, setParticipants] = useState([]);
@@ -249,7 +258,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
 
     // `scope` ({ channelId } | { dmId } | { workspaceId }) overrides this instance's
     // own scope: the app-wide provider places calls in any channel or DM.
-    const enter = useCallback(async (id, { start, video = false, scope = null }) => {
+    // `switchCall` leaves the call I'm in on another device; `transfer` moves this call here
+    // (then `startMuted` keeps the mute I had on the other device).
+    const enter = useCallback(async (id, { start, video = false, scope = null, switchCall = false, transfer = false, startMuted = false }) => {
         const target = scope
             ? { channelId: scope.channelId || null, dmId: scope.channelId ? null : (scope.dmId || null), workspaceId: scope.workspaceId || workspaceId || null }
             : { channelId, dmId, workspaceId };
@@ -289,6 +300,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             if (localStreamRef.current === stream) localStreamRef.current = null;
             return null;
         }
+        if (startMuted) stream.getAudioTracks().forEach(t => { t.enabled = false; });
         localStreamRef.current = stream;
         setLocalStream(stream);
         setIsVideo(!!video);
@@ -297,8 +309,11 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         huddleIdRef.current = id;
         joinScopeRef.current = target;
         setCallScope(target);
+        lastEnterRef.current = { id, start, video, scope };
         const payloadScope = scopePayload();
-        const joinPayload = { ...payloadScope, huddleId: id, audioEnabled: true, videoEnabled: withCamera };
+        const device = callDevice();
+        const flags = { ...(switchCall ? { switch: true } : {}), ...(transfer ? { transfer: true } : {}) };
+        const joinPayload = { ...payloadScope, huddleId: id, audioEnabled: !startMuted, videoEnabled: withCamera, device, ...flags };
         if (start) {
             // The server handles start and join concurrently; if join is processed first the
             // huddle is created as voice-only. Join once our own huddle:started has come back.
@@ -325,23 +340,25 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             socket.on('huddle:started', onOwnStart);
             socket.on('huddle:existing', onExisting);
             timer = setTimeout(sendJoin, 1500);
-            socket.emit('huddle:start', { ...payloadScope, huddleId: id, video: !!video });
+            socket.emit('huddle:start', { ...payloadScope, huddleId: id, video: !!video, device, ...flags });
         } else {
             socket.emit('huddle:join', joinPayload);
         }
 
         setHuddleId(id);
         setActive(true);
-        setMuted(false);
+        setMuted(!!startMuted);
         setHuddleAnnouncement(null);
-        setParticipants([{ userId: myUserId, username: myName, audioEnabled: true, videoEnabled: withCamera, isLocal: true }]);
+        setParticipants([{ userId: myUserId, username: myName, audioEnabled: !startMuted, videoEnabled: withCamera, isLocal: true }]);
         return id;
     }, [socket, channelId, dmId, workspaceId, currentUser, myUserId, myName, showToast]);
 
     // opts.huddleId: a fixed id (e.g. one huddle per scheduled meeting); starting an existing one joins it.
-    const startHuddle = useCallback((opts = {}) => enter(opts?.huddleId || uuidv4(), { start: true, video: !!opts?.video, scope: opts?.scope || null }), [enter]);
+    // opts.switchCall / opts.transfer / opts.startMuted: see enter().
+    const callOpts = (opts) => ({ video: !!opts?.video, scope: opts?.scope || null, switchCall: !!opts?.switchCall, transfer: !!opts?.transfer, startMuted: !!opts?.startMuted });
+    const startHuddle = useCallback((opts = {}) => enter(opts?.huddleId || uuidv4(), { start: true, ...callOpts(opts) }), [enter]);
     // Joining a video huddle turns the camera on too (the announcement says which kind it is).
-    const joinHuddle = useCallback((id, opts = {}) => enter(id, { start: false, video: !!opts?.video, scope: opts?.scope || null }), [enter]);
+    const joinHuddle = useCallback((id, opts = {}) => enter(id, { start: false, ...callOpts(opts) }), [enter]);
 
     /**
      * Send a video track to every peer: swap it into an existing video sender, or add it
@@ -547,10 +564,12 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             setParticipants(prev => prev.filter(p => p.userId !== String(userId)));
         };
 
-        const onEnded = ({ huddleId: hid, reason }) => {
+        const onEnded = ({ huddleId: hid, reason, to }) => {
             setHuddleAnnouncement(prev => (prev?.huddleId === hid ? null : prev));
             if (!isMine(hid)) return;
             if (reason === 'joined_elsewhere') showToast?.('You joined this huddle from another window.', 'info');
+            if (reason === 'moved') showToast?.(`Call moved to ${to || 'your other device'}.`, 'info');
+            if (reason === 'switched') showToast?.('You joined another call on another device.', 'info');
             cleanupAll();
             resetState();
         };
@@ -566,8 +585,18 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             setHuddleAnnouncement({ huddleId: payload.huddleId, startedBy: payload.startedBy, video: !!payload.video });
         };
 
-        const onError = ({ huddleId: hid, code, message }) => {
+        const onError = (payload = {}) => {
+            const { huddleId: hid, code, message } = payload;
             if (!isMine(hid)) return;
+            // Already in a call somewhere else: undo this attempt and let the app ask what to do.
+            if (code === 'ALREADY_IN_CALL') {
+                const last = lastEnterRef.current;
+                cleanupAll();
+                resetState();
+                if (onConflictRef.current && last) onConflictRef.current(payload, last);
+                else showToast?.(message || 'You are already in a call.', 'info');
+                return;
+            }
             logger.error(`[useHuddle] ${code}: ${message}`);
             // Free plan refusals (call is full) open the upgrade dialog (PlanLimitProvider) instead of a toast.
             if (code !== 'PLAN_LIMIT') showToast?.(HUDDLE_ERROR_MESSAGES[code] || message || 'Huddle error', 'error');
@@ -582,7 +611,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             const id = huddleIdRef.current;
             if (!id) return;
             cleanupPeers();
-            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn });
+            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice() });
         };
 
         socket.on('huddle:roster', onRoster);

@@ -69,8 +69,25 @@ function describeConnectError(err) {
 export function callTitle(call) {
     if (!call) return 'Huddle';
     if (call.channelName) return `# ${String(call.channelName).replace(/^#\s*/, '')}`;
-    if (call.scope === 'dm' || call.dmId) return 'Direct message call';
+    if (call.scope === 'dm' || call.dmId) return call.title && call.title !== 'Huddle' ? call.title : 'Direct message call';
     return call.title || 'Workspace huddle';
+}
+
+/**
+ * Should starting/joining `targetId` ask first? One call per person:
+ *  - in another call on this device, or on another device → { kind: 'switch' }
+ *  - in this very call on another device → { kind: 'move' }
+ * `local` is this device's call ({ huddleId, title } | null); `elsewhere` is my call on
+ * another device (huddle:self_active) or null.
+ */
+export function callConflict(targetId, { local = null, elsewhere = null } = {}) {
+    if (local?.huddleId) {
+        return local.huddleId === targetId ? null : { kind: 'switch', current: { ...local, here: true } };
+    }
+    if (elsewhere?.huddleId) {
+        return { kind: elsewhere.huddleId === targetId ? 'move' : 'switch', current: elsewhere };
+    }
+    return null;
 }
 
 const sameScope = (a, b) => !!a && !!b && (
@@ -93,11 +110,45 @@ function HuddleProviderImpl({ workspaceId, children }) {
     const { socket } = useSocket();
     const { user: currentUser } = useAuth();
 
+    // "You're already in a call" questions: { kind: 'switch' | 'move', current, run(extraOpts) }.
+    const [conflict, setConflict] = useState(null);
+    // The last start/join the person asked for, to retry it after a server-side conflict.
+    const pendingActionRef = useRef(null);
+    const onConflict = useCallback((err) => {
+        const run = pendingActionRef.current;
+        if (!run) return;
+        setConflict({ kind: err.sameCall ? 'move' : 'switch', current: err.current || null, run });
+    }, []);
+
     const huddle = useHuddle({
         workspaceId: workspaceId || null,
         currentUser,
         socket,
+        onConflict,
     });
+
+    // My call on any device (huddle:self_active / huddle:mine), so another device can offer "Move here".
+    const [selfActive, setSelfActive] = useState(null);
+    const selfActiveRef = useRef(null);
+    selfActiveRef.current = selfActive;
+    useEffect(() => {
+        if (!socket) return undefined;
+        const onSelf = (payload) => setSelfActive(payload?.huddleId ? payload : null);
+        const ask = () => socket.emit('huddle:mine', {}, (res) => setSelfActive(res?.active?.huddleId ? res.active : null));
+        socket.on('huddle:self_active', onSelf);
+        socket.on('connect', ask);
+        if (socket.connected) ask();
+        return () => {
+            socket.off('huddle:self_active', onSelf);
+            socket.off('connect', ask);
+        };
+    }, [socket]);
+
+    // Full call screen or the small floating one; every new call opens full.
+    const [callView, setCallView] = useState('full');
+    useEffect(() => {
+        if (huddle.active && huddle.huddleId) setCallView('full');
+    }, [huddle.active, huddle.huddleId]);
 
     const [selectedHuddle, setSelectedHuddle] = useState(null);
     // Past huddles, from the server (survives reloads).
@@ -118,8 +169,6 @@ function HuddleProviderImpl({ workspaceId, children }) {
     const [workspaceOpen, setWorkspaceOpen] = useState(false);
     const [workspaceTab, setWorkspaceTab] = useState('notes');
     const [panelCall, setPanelCall] = useState(null);
-    // Call UIs rendered by a page (chat overlay, Huddles room): the floating pill hides for them.
-    const [inlineUIs, setInlineUIs] = useState({});
     // A DM call ringing for me: { huddleId, dmId, workspaceId, startedBy, video }.
     const [incomingCall, setIncomingCall] = useState(null);
     const currentUserIdRef = useRef(null);
@@ -178,38 +227,116 @@ function HuddleProviderImpl({ workspaceId, children }) {
     }, []);
 
     /**
+     * One call per person: when this start/join needs a "switch?" or "move here?" answer,
+     * remember how to run it and show the question instead. Returns true when it asked.
+     */
+    const askFirst = useCallback((targetId, opts, run) => {
+        if (opts.confirmed) return false;
+        const h = huddleRef.current;
+        const mySocket = socket?.id;
+        const elsewhere = selfActiveRef.current && selfActiveRef.current.socketId !== mySocket ? selfActiveRef.current : null;
+        const local = h.active ? { huddleId: h.huddleId, channelName: null, title: 'this call' } : null;
+        const found = callConflict(targetId, { local, elsewhere });
+        if (!found) return false;
+        setConflict({ ...found, run });
+        return true;
+    }, [socket]);
+
+    /**
      * Start a huddle (or, with opts.huddleId, start-or-join that fixed huddle).
      * opts.scope = { channelId } | { dmId } places it in a conversation.
+     * opts.switchCall / opts.transfer / opts.startMuted: after "switch" / "move here" (see useHuddle).
      */
-    const startAndSelect = useCallback((title = 'Huddle', opts = {}) => runConnect('Starting huddle', async () => {
-        const h = huddleRef.current;
-        if (h.active && opts.huddleId && h.huddleId === opts.huddleId) return h.huddleId;
-        if (h.active) h.leaveHuddle();
-        const scope = opts.scope && (opts.scope.channelId || opts.scope.dmId) ? opts.scope : null;
-        const id = await h.startHuddle({ video: !!opts.video, huddleId: opts.huddleId, scope });
-        if (id) selectCall(id, { title, video: opts.video, ...(scope || {}) });
-        return id;
-    }, { quiet: !!opts.quiet }), [runConnect, selectCall]);
-
-    /** Join a live huddle: { id, title?, video?, channelId?, dmId?, channel? }. */
-    const joinAndSelect = useCallback((huddleData, opts = {}) => runConnect('Joining huddle', async () => {
-        const h = huddleRef.current;
-        if (h.active && h.huddleId === huddleData.id) return huddleData.id;
-        if (h.active) h.leaveHuddle();
-        const scope = huddleData.channelId ? { channelId: huddleData.channelId } : huddleData.dmId ? { dmId: huddleData.dmId } : null;
-        const id = await h.joinHuddle(huddleData.id, { video: !!huddleData.video, scope });
-        if (id) {
-            selectCall(id, {
-                title: huddleData.title,
-                video: huddleData.video,
-                channelName: huddleData.channel || huddleData.channelName,
-                startTime: huddleData.startTime,
-                meetingId: huddleData.meetingId,
-                ...(scope || {}),
-            });
+    const startAndSelect = useCallback((title = 'Huddle', opts = {}) => {
+        const h0 = huddleRef.current;
+        const target = opts.scope && (opts.scope.channelId || opts.scope.dmId) ? opts.scope : null;
+        // My call is already in this conversation: on this device just show it; on another
+        // device, offer to move it here (starting would only join that same call).
+        if (target && h0.active && sameScope(h0.callScope, target)) {
+            setCallView('full');
+            return Promise.resolve(h0.huddleId);
         }
-        return id;
-    }, { quiet: !!opts.quiet }), [runConnect, selectCall]);
+        const el = selfActiveRef.current && selfActiveRef.current.socketId !== socket?.id ? selfActiveRef.current : null;
+        if (target && el && sameScope(target, el) && !opts.confirmed) {
+            const move = (extra) => joinRef.current({
+                id: el.huddleId, video: !!el.videoEnabled, channelId: el.channelId || null, dmId: el.dmId || null, channelName: el.channelName || null,
+            }, { quiet: !!opts.quiet, ...extra, confirmed: true });
+            pendingActionRef.current = move;
+            setConflict({ kind: 'move', current: el, run: move });
+            return Promise.resolve(null);
+        }
+        const again = (extra) => startAndSelect(title, { ...opts, ...extra, confirmed: true });
+        pendingActionRef.current = again;
+        // A new call has no id yet, so it can only be a "switch" (fixed meeting ids may be a "move").
+        if (askFirst(opts.huddleId || '__new__', opts, again)) return Promise.resolve(null);
+        return runConnect('Starting huddle', async () => {
+            const h = huddleRef.current;
+            if (h.active && opts.huddleId && h.huddleId === opts.huddleId) return h.huddleId;
+            if (h.active) h.leaveHuddle();
+            const scope = opts.scope && (opts.scope.channelId || opts.scope.dmId) ? opts.scope : null;
+            const id = await h.startHuddle({ video: !!opts.video, huddleId: opts.huddleId, scope, switchCall: !!opts.switchCall, transfer: !!opts.transfer, startMuted: !!opts.startMuted });
+            if (id) selectCall(id, { title, video: opts.video, channelName: opts.channelName, ...(scope || {}) });
+            return id;
+        }, { quiet: !!opts.quiet });
+    }, [runConnect, selectCall, askFirst, socket]);
+    const joinRef = useRef(null);
+
+    /** Join a live huddle: { id, title?, video?, channelId?, dmId?, workspaceId?, channel? }. */
+    const joinAndSelect = useCallback((huddleData, opts = {}) => {
+        const again = (extra) => joinAndSelect(huddleData, { ...opts, ...extra, confirmed: true });
+        pendingActionRef.current = again;
+        if (askFirst(huddleData.id, opts, again)) return Promise.resolve(null);
+        return runConnect('Joining huddle', async () => {
+            const h = huddleRef.current;
+            if (h.active && h.huddleId === huddleData.id) { setCallView('full'); return huddleData.id; }
+            if (h.active) h.leaveHuddle();
+            const scope = huddleData.channelId ? { channelId: huddleData.channelId }
+                : huddleData.dmId ? { dmId: huddleData.dmId }
+                    : huddleData.workspaceId ? { workspaceId: huddleData.workspaceId } : null;
+            const id = await h.joinHuddle(huddleData.id, { video: !!huddleData.video, scope, switchCall: !!opts.switchCall, transfer: !!opts.transfer, startMuted: !!opts.startMuted });
+            if (id) {
+                selectCall(id, {
+                    title: huddleData.title,
+                    video: huddleData.video,
+                    channelName: huddleData.channel || huddleData.channelName,
+                    startTime: huddleData.startTime,
+                    meetingId: huddleData.meetingId,
+                    ...(scope && !scope.workspaceId ? scope : {}),
+                });
+            }
+            return id;
+        }, { quiet: !!opts.quiet });
+    }, [runConnect, selectCall, askFirst]);
+    joinRef.current = joinAndSelect;
+
+    /** Answer a "switch?" / "move here?" question. */
+    const resolveConflict = useCallback((yes) => {
+        const c = conflict;
+        setConflict(null);
+        if (!yes || !c) return;
+        if (c.kind === 'move') {
+            const muted = c.current && c.current.audioEnabled === false;
+            c.run({ transfer: true, startMuted: muted }).catch(() => {});
+            return;
+        }
+        // Leaving my call on this device happens inside the retry; another device is told by the server.
+        c.run({ switchCall: true }).catch(() => {});
+    }, [conflict]);
+
+    /** "Move here": bring my call from another device to this one, keeping mute and camera. */
+    const moveCallHere = useCallback(() => {
+        const s = selfActiveRef.current;
+        if (!s?.huddleId) return Promise.resolve(null);
+        return joinAndSelect({
+            id: s.huddleId,
+            video: !!s.videoEnabled,
+            channelId: s.channelId || null,
+            dmId: s.dmId || null,
+            workspaceId: !s.channelId && !s.dmId ? s.workspaceId : null,
+            channelName: s.channelName || null,
+            meetingId: s.meetingId || null,
+        }, { transfer: true, startMuted: s.audioEnabled === false, confirmed: true, quiet: true });
+    }, [joinAndSelect]);
 
     const loadHistory = useCallback(async () => {
         const ws = workspaceIdRef.current;
@@ -310,17 +437,6 @@ function HuddleProviderImpl({ workspaceId, children }) {
         });
     }, [huddle.active, huddle.huddleId, huddle.callScope]);
 
-    const registerInlineUI = useCallback((hid) => {
-        if (!hid) return () => {};
-        setInlineUIs(prev => ({ ...prev, [hid]: (prev[hid] || 0) + 1 }));
-        return () => setInlineUIs(prev => {
-            const n = (prev[hid] || 0) - 1;
-            const next = { ...prev };
-            if (n > 0) next[hid] = n; else delete next[hid];
-            return next;
-        });
-    }, []);
-
     const openWorkspace = useCallback((tab) => {
         if (tab) setWorkspaceTab(tab);
         setWorkspaceOpen(true);
@@ -357,9 +473,9 @@ function HuddleProviderImpl({ workspaceId, children }) {
                     ...prev,
                     toEntry({ ...payload, startedAt: payload.timestamp, participants: [] }),
                 ]));
-                // Someone calls me in a DM: ring, unless I'm already in a call.
+                // Someone calls me in a DM: ring, unless I'm already in a call (on any device).
                 const mine = String(currentUserIdRef.current || '');
-                if (String(payload.startedBy?._id || '') !== mine && !huddleRef.current.active) {
+                if (String(payload.startedBy?._id || '') !== mine && !huddleRef.current.active && !selfActiveRef.current?.huddleId) {
                     setIncomingCall({ huddleId: payload.huddleId, dmId: String(payload.dmId), workspaceId: String(payload.workspaceId), startedBy: payload.startedBy || null, video: !!payload.video });
                 }
                 return;
@@ -481,9 +597,18 @@ function HuddleProviderImpl({ workspaceId, children }) {
         setWorkspaceTab,
         openWorkspace,
         closeWorkspace,
-        inlineUIs,
-        registerInlineUI,
         isCallIn: (scope) => huddle.active && sameScope(huddle.callScope, scope),
+
+        // Full call screen or the floating mini call.
+        callView,
+        expandCall: () => setCallView('full'),
+        minimiseCall: () => setCallView('mini'),
+        // One call per person, across devices.
+        conflict,
+        resolveConflict,
+        callElsewhere: selfActive && selfActive.socketId !== socket?.id
+            && !(huddle.active && huddle.huddleId === selfActive.huddleId) ? selfActive : null,
+        moveCallHere,
     };
 
     return (
