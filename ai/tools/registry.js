@@ -118,16 +118,18 @@ const DECLARATIONS = [
   },
   {
     name: 'schedule_meeting',
-    description: 'Schedule a meeting in the current workspace at a given time with optional participants.',
+    description: 'Schedule a meeting in the current workspace with optional participants. Give startsAt when the user named a time; leave it out to book the earliest slot where every participant is free and inside their working hours (optionally between earliest and latest). If no slot suits everyone, nothing is booked and the best candidate slots are returned so you can ask the user.',
     parameters: {
       type: 'object',
       properties: {
         title: { type: 'string' },
-        startsAt: { type: 'string', description: 'ISO 8601 date-time' },
+        startsAt: { type: 'string', description: 'ISO 8601 date-time. Omit to let the availability finder pick a time.' },
         durationMinutes: { type: 'number', description: 'Defaults to 30' },
         participantIds: { type: 'array', items: { type: 'string' } },
+        earliest: { type: 'string', description: 'ISO 8601 date-time: when no startsAt, search for a slot from here (default now)' },
+        latest: { type: 'string', description: 'ISO 8601 date-time: when no startsAt, the slot must start before this (default 7 days later, max 14)' },
       },
-      required: ['title', 'startsAt'],
+      required: ['title'],
     },
   },
   {

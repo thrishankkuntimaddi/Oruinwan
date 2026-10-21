@@ -238,24 +238,59 @@ async function searchWorkspace({ query }, ctx) {
     };
 }
 
-async function scheduleMeeting({ title, startsAt, durationMinutes = 30, participantIds = [] }, ctx) {
-    if (!title?.trim() || !startsAt) return fail('title and startsAt are required');
-    const start = new Date(startsAt);
-    if (Number.isNaN(start.getTime())) return fail('startsAt must be an ISO date-time');
+/**
+ * Without startsAt, the real availability finder (meetings.service suggestTime: busy meetings +
+ * each attendee's working hours and timezone) picks the earliest slot everyone can make. When no
+ * slot suits everyone nothing is booked; the candidates go back to the model to ask the user.
+ */
+async function scheduleMeeting({ title, startsAt, durationMinutes = 30, participantIds = [], earliest, latest }, ctx) {
+    if (!title?.trim()) return fail('title is required');
+    let start = null;
+    if (startsAt) {
+        start = new Date(startsAt);
+        if (Number.isNaN(start.getTime())) return fail('startsAt must be an ISO date-time');
+    }
     const { ws, error } = await membership(ctx);
     if (error) return error;
     let ScheduledMeeting;
     try { ScheduledMeeting = require('../src/models/ScheduledMeeting'); } catch { return fail('Scheduling is not available'); }
-    const memberIds = new Set((ws.members || []).map(m => String(m.user?._id || m.user)));
-    const participants = (Array.isArray(participantIds) ? participantIds : []).map(String).filter(id => memberIds.has(id));
+    const activeMembers = (ws.members || []).filter(m => (m.status || 'active') === 'active');
+    const memberIds = new Set(activeMembers.map(m => String(m.user?._id || m.user)));
+    const participants = [...new Set((Array.isArray(participantIds) ? participantIds : []).map(String))]
+        .filter(id => memberIds.has(id) && id !== String(ctx.userId));
+    const duration = Math.max(5, Math.min(Number(durationMinutes) || 30, 480));
     const me = await identity.users.findById(ctx.userId);
+
+    let chosenBy = 'user';
+    if (!start) {
+        const meetingsService = require('../src/features/meetings/meetings.service');
+        const suggestion = await meetingsService.suggestTime({
+            participantIds: [String(ctx.userId), ...participants],
+            durationMinutes: duration,
+            from: earliest, to: latest, limit: 3,
+            timezone: me?.preferences?.region?.timezone,
+        });
+        const best = (suggestion.slots || [])[0];
+        if (!best || !best.allAvailable) {
+            return {
+                success: false,
+                error: best ? 'No time suits every participant in that window. Nothing was booked; ask the user to pick one of these slots or another time.'
+                    : 'No free slot in that window. Nothing was booked; ask the user for another time or a wider window.',
+                candidates: (suggestion.slots || []).map(s => ({ start: s.start, end: s.end, availableCount: s.availableCount, attendeeCount: s.attendeeCount })),
+                window: suggestion.window,
+            };
+        }
+        start = new Date(best.start);
+        chosenBy = 'availability';
+    }
+
     const meeting = await ScheduledMeeting.create({
         companyId: me?.companyId || null,
         workspaceId: ctx.workspaceId,
         createdBy: ctx.userId,
         title: title.trim().slice(0, 200),
         startTime: start,
-        duration: Math.max(5, Math.min(Number(durationMinutes) || 30, 480)),
+        duration,
         participants,
         status: 'scheduled',
     });
@@ -268,7 +303,7 @@ async function scheduleMeeting({ title, startsAt, durationMinutes = 30, particip
             workspaceId: ctx.workspaceId, title: meeting.title, scheduledMeetingId: meeting._id,
         });
     } catch { /* non-fatal */ }
-    return { success: true, meetingId: String(meeting._id), title: meeting.title, startTime: meeting.startTime, duration: meeting.duration };
+    return { success: true, meetingId: String(meeting._id), title: meeting.title, startTime: meeting.startTime, duration: meeting.duration, chosenBy };
 }
 
 /* ── Personal memory (private to the user; see ai.memory.service) ─────── */

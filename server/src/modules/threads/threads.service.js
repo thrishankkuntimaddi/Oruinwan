@@ -74,53 +74,88 @@ function emitThreadCounters(io, parent, { replyCount, lastReplyAt }) {
 }
 
 /**
- * Reply-side effects shared by the REST and socket send paths: the replier (and, on the
- * first reply, the parent's author) follow the thread, and every other follower is notified.
- */
-/**
- * @handles in a thread reply, resolved against the people who can see the
- * conversation (channel members / DM participants), excluding the replier.
- * `mentionText` is the plaintext the client extracted (the reply itself is E2EE).
+ * Mentions in a thread reply, resolved against the people who can see the conversation
+ * (channel members / DM participants), excluding the replier. `mentionText` is the plaintext
+ * the client extracted (the reply itself is E2EE).
+ *
+ *   userIds       @handles
+ *   broadcastIds  @channel (every channel member) / @here (members online now), channels only,
+ *                 and only when the channel's broadcastMentions policy lets the replier use them
+ *                 ('admins' → channel managers only), same rule as top-level messages. Members who
+ *                 muted the channel are left out of broadcasts (a direct @handle still reaches them).
  */
 async function resolveThreadMentions(parent, replierId, mentionText) {
-    if (!mentionText || typeof mentionText !== 'string') return [];
+    const none = { userIds: [], broadcastIds: [] };
+    if (!mentionText || typeof mentionText !== 'string') return none;
     const { parseMentionHandles } = require('../../utils/mentionParser');
-    const { userHandles } = parseMentionHandles(mentionText.slice(0, 4000));
-    if (userHandles.length === 0) return [];
+    const { userHandles, isHere, isChannel } = parseMentionHandles(mentionText.slice(0, 4000));
+    if (userHandles.length === 0 && !isHere && !isChannel) return none;
 
     let audience = [];
+    let channelDoc = null;
     if (parent.channel) {
         const Channel = require('../../features/channels/channel.model.js');
-        const ch = await Channel.findById(parent.channel).select('members').lean();
-        audience = (ch?.members || []).map((m) => String(m?.user?._id || m?.user || m));
+        channelDoc = await Channel.findById(parent.channel).select('members mutedBy broadcastMentions admins workspace company').lean();
+        audience = (channelDoc?.members || []).map((m) => String(m?.user?._id || m?.user || m));
     } else if (parent.dm) {
         const DMSession = require('../../../models/DMSession');
         const dm = await DMSession.findById(parent.dm).select('participants').lean();
         audience = (dm?.participants || []).map(String);
     }
-    audience = audience.filter((id) => id && id !== String(replierId));
-    if (audience.length === 0) return [];
+    audience = [...new Set(audience.filter((id) => id && id !== String(replierId)))];
+    if (audience.length === 0) return none;
 
-    const identity = require('../../identity');
-    const users = await identity.users.findManyByIds(audience);
-    const handles = new Set(userHandles);
-    return [...users.values()]
-        .filter((u) => handles.has(String(u.username || '').toLowerCase()))
-        .map((u) => String(u._id));
+    let userIds = [];
+    if (userHandles.length > 0) {
+        const identity = require('../../identity');
+        const users = await identity.users.findManyByIds(audience);
+        const handles = new Set(userHandles);
+        userIds = [...users.values()]
+            .filter((u) => handles.has(String(u.username || '').toLowerCase()))
+            .map((u) => String(u._id));
+    }
+
+    let broadcastIds = [];
+    if (channelDoc && (isHere || isChannel)) {
+        let allowed = true;
+        if (channelDoc.broadcastMentions === 'admins') {
+            const { canManageChannel } = require('../../features/channels/channelMute.controller');
+            allowed = await canManageChannel(channelDoc, String(replierId));
+        }
+        if (allowed) {
+            const muted = new Set((channelDoc.mutedBy || []).map((m) => String(m?.user || m)));
+            let targets = audience.filter((id) => !muted.has(id));
+            if (!isChannel) {
+                // @here reaches only people who are online right now.
+                const { getBulkPresenceAsync } = require('../../features/presence/presence.service');
+                const live = await getBulkPresenceAsync(targets);
+                targets = targets.filter((id) => live[id] && live[id].status !== 'offline');
+            }
+            const direct = new Set(userIds);
+            broadcastIds = targets.filter((id) => !direct.has(id));
+        }
+    }
+    return { userIds, broadcastIds };
 }
 
+/**
+ * Reply-side effects shared by the REST and socket send paths: the replier (and, on the
+ * first reply, the parent's author) follow the thread, and every other follower is notified.
+ */
 async function followAndNotify(io, { parent, replierId, senderUsername, mentionText = '', replyId = null }) {
     const notificationService = require('../notifications/notificationService');
     const Channel = require('../../features/channels/channel.model.js');
     const logger = require('../../../utils/logger');
 
     let mentionedIds = [];
+    let broadcastIds = [];
     try {
-        mentionedIds = await resolveThreadMentions(parent, replierId, mentionText);
+        ({ userIds: mentionedIds, broadcastIds } = await resolveThreadMentions(parent, replierId, mentionText));
     } catch (err) {
         logger.warn({ err: err.message }, '[threads] mention resolution failed');
     }
 
+    // @handles follow the thread; @channel/@here only notify (they would make everyone follow).
     const autoFollow = [String(replierId), ...mentionedIds];
     // replyCount is the value before this reply was counted.
     if ((parent.replyCount || 0) === 0 && parent.sender) autoFollow.push(String(parent.sender._id || parent.sender));
@@ -129,11 +164,11 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
         await Message.updateOne({ _id: replyId }, { $set: { mentions: mentionedIds } }).catch(() => {});
     }
 
-    const mentionedSet = new Set(mentionedIds);
+    const mentionedSet = new Set([...mentionedIds, ...broadcastIds]);
     // Mentioned people get a mention notification instead of the generic "new reply".
     const recipientIds = (await getFollowerIds(parent._id))
         .filter((id) => id !== String(replierId) && !mentionedSet.has(id));
-    if (recipientIds.length === 0 && mentionedIds.length === 0) return 0;
+    if (recipientIds.length === 0 && mentionedSet.size === 0) return 0;
 
     let channelName = null;
     if (parent.channel) {
@@ -143,18 +178,23 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
         } catch (_) { /* the notification still goes out, without the channel name */ }
     }
 
-    if (mentionedIds.length > 0) {
-        await Promise.allSettled(mentionedIds.map((userId) => notificationService.mention(io, {
-            mentionedUserId: userId,
-            senderUsername: senderUsername || 'Someone',
-            workspaceId: parent.workspace,
-            channelName,
-            channelId: parent.channel ? String(parent.channel) : null,
-            dmSessionId: parent.dm ? String(parent.dm) : null,
-            snippet: 'in a thread',
-        })));
+    const notifyMention = (userId, isEveryone) => notificationService.mention(io, {
+        mentionedUserId: userId,
+        senderUsername: senderUsername || 'Someone',
+        workspaceId: parent.workspace,
+        channelName,
+        channelId: parent.channel ? String(parent.channel) : null,
+        dmSessionId: parent.dm ? String(parent.dm) : null,
+        snippet: 'in a thread',
+        ...(isEveryone ? { isEveryone: true } : {}),
+    });
+    if (mentionedSet.size > 0) {
+        await Promise.allSettled([
+            ...mentionedIds.map((userId) => notifyMention(userId, false)),
+            ...broadcastIds.map((userId) => notifyMention(userId, true)),
+        ]);
     }
-    if (recipientIds.length === 0) return mentionedIds.length;
+    if (recipientIds.length === 0) return mentionedSet.size;
 
     await notificationService.threadReply(io, {
         followerIds: recipientIds,
@@ -165,7 +205,7 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
         channelName,
         parentMessageId: String(parent._id),
     });
-    return recipientIds.length + mentionedIds.length;
+    return recipientIds.length + mentionedSet.size;
 }
 
 module.exports.LIVE_REPLY = LIVE_REPLY;

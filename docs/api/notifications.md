@@ -33,7 +33,8 @@ Notification object: `{ _id, recipient, workspaceId, type, title, body, link, me
 | type | produced by | link | meta |
 | --- | --- | --- | --- |
 | `meeting_reminder` | meeting reminder job | `/meetings/:id` | `{ meetingId, scheduledMeetingId, meetingTitle, startTime (ISO), startsIn }` |
-| `ai_suggestion` | suggestion job | task list / task / `/meetings/:id` | `{ kind: 'overdue_tasks' \| 'meeting_action_items', count?, meetingId? }` |
+| `ai_suggestion` | suggestion job | task list / task / `/meetings/:id` / `/channel/:id` / `/dm/:id` / `/huddles?tab=history` | `{ kind: 'overdue_tasks' \| 'meeting_action_items' \| 'huddle_action_items', count?, meetingId?, huddleSessionId?, noteId? }` |
+| `mention` (thread reply) | thread replies with `@handle`, `@channel` or `@here` | `/channel/:id` / `/dm/:id` | `{ …, isEveryone }` — `isEveryone: true` for `@channel`/`@here` (title "alice notified everyone") |
 
 Show `startTime` in the reader's own time zone; `startsIn` is a ready label (e.g. `"10 min"`).
 
@@ -88,6 +89,29 @@ Modest, rule-based, honouring the `aiSuggestions` preference:
 2. **Meeting action items** — a scheduled meeting completed in the last 24h with open
    action items not yet turned into tasks: one nudge to the organizer ("… ended with 2 action
    items — turn them into tasks") and one to each assignee. Once per meeting.
+3. **Huddle action items** — a huddle (not one that held a scheduled meeting; those use rule 2)
+   that ended in the last 24h whose shared huddle notes still have open action items (not done,
+   not turned into a task): one nudge to whoever started it ("The huddle in #design ended with
+   2 open action items") and one to each assignee (body: their item texts). Once per huddle run
+   (claim `ai:huddle-actions:<sessionId>`). Link: the huddle's channel / DM, else `/huddles?tab=history`.
+   `meta: { kind: 'huddle_action_items', huddleSessionId, noteId, count? }`.
+
+The job returns `{ overdue, meetings, huddles }` (counts of nudged items).
+
+## Thread replies: `@channel` / `@here`
+
+The `mentionText` a client sends with a thread reply (plaintext extracted by the client; the
+reply itself stays E2EE) is parsed for `@handle`, `@channel` and `@here`:
+
+- `@handle` — channel members / DM participants with that username get a `mention` notification,
+  follow the thread, and are stored in the reply's `mentions` (unchanged).
+- `@channel` — every member of the parent's channel; `@here` — only members online right now
+  (presence not `offline`). They get a `mention` notification with `meta.isEveryone: true` instead
+  of the generic thread-reply notification. They are **not** made thread followers, and members who
+  muted the channel are skipped (a direct `@handle` still reaches them).
+- The channel's `broadcastMentions` policy applies exactly as for top-level messages: with
+  `'admins'`, only channel admins / workspace admins can use `@channel` / `@here`; for anyone else
+  they are ignored. Ignored in DM threads.
 
 ### Offline mention / DM email — every 5 minutes
 

@@ -20,6 +20,8 @@ jest.mock('../../../identity', () => ({
 jest.mock('../../../features/presence/presence.service', () => ({ getPresenceAsync: jest.fn() }));
 jest.mock('../../../models/ScheduledMeeting', () => ({ find: jest.fn() }));
 jest.mock('../../../../models/Task', () => ({ find: jest.fn() }));
+jest.mock('../../../../models/Note', () => ({ find: jest.fn() }));
+jest.mock('../../huddles/huddleSession.model', () => ({ find: jest.fn() }));
 jest.mock('../../../features/tasks/tasks.store', () => ({ tasksStore: () => 'mongo' }));
 
 const Notification = require('../notification.model');
@@ -31,6 +33,8 @@ const identity = require('../../../identity');
 const presence = require('../../../features/presence/presence.service');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 const Task = require('../../../../models/Task');
+const Note = require('../../../../models/Note');
+const HuddleSession = require('../../huddles/huddleSession.model');
 const jobs = require('../notificationJobs');
 const { offlineActivityTemplate, notificationDigestTemplate } = require('../../../../utils/emailTemplates');
 
@@ -46,6 +50,8 @@ const NOW = new Date('2026-10-19T09:00:00Z'); // a Monday, 09:00 UTC
 beforeEach(() => {
     jest.clearAllMocks();
     claim.mockResolvedValue(true);
+    HuddleSession.find.mockReturnValue(q([]));
+    Note.find.mockReturnValue(q([]));
 });
 
 describe('meeting reminders', () => {
@@ -97,7 +103,7 @@ describe('ai suggestions', () => {
             { _id: 'm2', workspaceId: WS, title: 'Done all', createdBy: 'u1', actionItems: [{ text: 'x', status: 'done' }] },
         ]));
         const out = await jobs.sendAiSuggestions(null, { now: NOW });
-        expect(out).toEqual({ overdue: 1, meetings: 1 });
+        expect(out).toEqual({ overdue: 1, meetings: 1, huddles: 0 });
         expect(claim).toHaveBeenCalledWith(`ai:overdue:u1:${WS}:2026-10-19`);
         expect(claim).toHaveBeenCalledWith('ai:meeting-actions:m1');
         const calls = notifService.aiSuggestion.mock.calls.map((c) => c[1]);
@@ -105,6 +111,60 @@ describe('ai suggestions', () => {
         expect(calls[1]).toMatchObject({ userId: 'u1', link: '/meetings/m1', meta: expect.objectContaining({ count: 1 }) });
         expect(calls[2]).toMatchObject({ userId: 'u5' });
         expect(calls).toHaveLength(3);
+    });
+});
+
+describe('huddle action item suggestions', () => {
+    const U1 = '64b0000000000000000000a1';
+    const U5 = '64b0000000000000000000a5';
+    const actions = (items) => JSON.stringify([
+        { id: 'huddle-actions', type: 'heading', content: 'Action items' },
+        { id: 'huddle-actions-list', type: 'checklist', meta: { huddleActions: true }, content: JSON.stringify(items) },
+    ]);
+
+    beforeEach(() => {
+        Task.find.mockReturnValue(q([]));
+        ScheduledMeeting.find.mockReturnValue(q([]));
+    });
+
+    test('nudges the starter and each assignee once per huddle, linking the channel', async () => {
+        HuddleSession.find.mockReturnValue(q([
+            { _id: 's1', huddleId: 'ch-1', workspace: WS, channel: 'c1', channelName: 'design', startedBy: U1, notes: 'n1' },
+            { _id: 's2', huddleId: 'dm-2', workspace: WS, dm: 'd2', startedBy: U1, notes: 'n2' },
+        ]));
+        Note.find.mockReturnValue(q([
+            { _id: 'n1', content: actions([
+                { id: 'a1', text: 'Fix header', done: false, assigneeId: U5 },
+                { id: 'a2', text: 'Already a task', done: false, taskId: '64b0000000000000000000f1' },
+                { id: 'a3', text: 'Done one', done: true, assigneeId: U5 },
+                { id: 'a4', text: 'Write spec', done: false },
+            ]) },
+            { _id: 'n2', content: actions([{ id: 'b1', text: 'x', done: true }]) },
+        ]));
+        const out = await jobs.sendAiSuggestions(null, { now: NOW });
+        expect(out.huddles).toBe(1);
+        expect(claim).toHaveBeenCalledWith('ai:huddle-actions:s1');
+        expect(claim).not.toHaveBeenCalledWith('ai:huddle-actions:s2');
+        const calls = notifService.aiSuggestion.mock.calls.map((c) => c[1]);
+        expect(calls).toHaveLength(2);
+        expect(calls[0]).toMatchObject({
+            userId: U1, workspaceId: WS, link: '/channel/c1',
+            title: 'The huddle in #design ended with 2 open action items',
+            meta: { kind: 'huddle_action_items', huddleSessionId: 's1', noteId: 'n1', count: 2 },
+        });
+        expect(calls[1]).toMatchObject({ userId: U5, title: 'You have an action item from a huddle', body: 'Fix header' });
+        const filter = HuddleSession.find.mock.calls[0][0];
+        expect(filter.huddleId.$not.test('meeting-abc')).toBe(true); // scheduled-meeting huddles use the meeting rule
+        expect(filter.endedAt.$gte.getTime()).toBe(NOW.getTime() - 24 * 3600e3);
+    });
+
+    test('already claimed huddle is not nudged again', async () => {
+        claim.mockResolvedValue(false);
+        HuddleSession.find.mockReturnValue(q([{ _id: 's1', huddleId: 'ch-1', workspace: WS, startedBy: U1, notes: 'n1' }]));
+        Note.find.mockReturnValue(q([{ _id: 'n1', content: actions([{ id: 'a1', text: 'Open', done: false }]) }]));
+        const out = await jobs.sendAiSuggestions(null, { now: NOW });
+        expect(out.huddles).toBe(0);
+        expect(notifService.aiSuggestion).not.toHaveBeenCalled();
     });
 });
 
