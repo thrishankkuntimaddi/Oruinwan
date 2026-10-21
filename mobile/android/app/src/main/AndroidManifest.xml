@@ -49,6 +49,13 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Keeps a huddle running in the background with an ongoing "In call" notification
+             (CallService.java, started from CallSessionPlugin when a call starts). -->
+        <service
+            android:name=".CallService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera" />
+
         <!-- Sign-in QR codes are scanned with Google's code scanner (@capacitor-mlkit/barcode-scanning). -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
     </application>
@@ -67,6 +74,10 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Calls keep running in the background (CallService): Android 14 needs the type-specific permissions too. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Live captions in calls use the system speech recognizer (@capacitor-community/speech-recognition;

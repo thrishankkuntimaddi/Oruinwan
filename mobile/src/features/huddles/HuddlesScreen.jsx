@@ -2,7 +2,7 @@
 // Upcoming · Past (scheduled meetings and quick huddles alike; docs/api/meetings-unified.md →
 // Lists). Rows open the meeting page. Also the controls a conversation shows (start / join).
 import { useEffect, useState } from 'react';
-import { CalendarClock, CalendarPlus, Headphones, Phone, Radio } from 'lucide-react';
+import { CalendarClock, CalendarPlus, Headphones, Phone, Radio, Video } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
 import { invalidate, useQuery } from '../../data/query.js';
@@ -206,7 +206,10 @@ export function HuddlesScreen() {
   );
 }
 
-/** Header button of a channel or DM: start a huddle, join the live one, or show you're in it. */
+/**
+ * Header buttons of a channel or DM: start a voice or video huddle, join the live one, or show
+ * you're in it.
+ */
 export function HuddleButton({ scope, title }) {
   const available = useHuddlesAvailable();
   const key = scopeKey(scope);
@@ -218,16 +221,27 @@ export function HuddleButton({ scope, title }) {
   }, [available, key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!available) return null;
   const inHere = call && scopeKey(call.scope) === key;
-  const label = inHere ? 'In this huddle' : liveHere ? 'Join the huddle' : 'Start a huddle';
+  const label = inHere ? 'In this huddle' : liveHere ? 'Join the huddle' : 'Start a voice huddle';
   return (
-    <IconButton
-      icon={Headphones}
-      label={label}
-      active={Boolean(inHere || liveHere)}
-      disabled={connecting || inHere}
-      data-testid="conversation-huddle"
-      onClick={() => run(() => (liveHere ? joinHuddle(liveHere.huddleId, scope, title) : startHuddle(scope, title)))}
-    />
+    <>
+      <IconButton
+        icon={Headphones}
+        label={label}
+        active={Boolean(inHere || liveHere)}
+        disabled={connecting || inHere}
+        data-testid="conversation-huddle"
+        onClick={() => run(() => (liveHere ? joinHuddle(liveHere.huddleId, scope, title) : startHuddle(scope, title)))}
+      />
+      {!inHere && !liveHere && (
+        <IconButton
+          icon={Video}
+          label="Start a video huddle"
+          disabled={connecting}
+          data-testid="conversation-video-huddle"
+          onClick={() => run(() => startHuddle(scope, title, { video: true }))}
+        />
+      )}
+    </>
   );
 }
 

@@ -17,6 +17,8 @@ public class MainActivity extends BridgeActivity {
         OtaBundleStore.beforeBridge(this);
         registerPlugin(OtaBundlePlugin.class);
         registerPlugin(GoogleSignInPlugin.class);
+        // Huddles: background calls, speaker/earpiece, microphone and camera permissions.
+        registerPlugin(CallSessionPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

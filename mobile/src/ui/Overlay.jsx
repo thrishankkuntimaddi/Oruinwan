@@ -115,7 +115,7 @@ export function ActionSheet({ open, onClose, title, actions }) {
 }
 
 /** Confirmation dialog for anything destructive. Never a single tap. */
-export function Dialog({ open, onClose, title, body, confirmLabel = 'Confirm', danger, onConfirm, busy, children }) {
+export function Dialog({ open, onClose, title, body, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger, onConfirm, busy, children }) {
   useOverlay(open, onClose);
   const { mounted, closing } = usePresence(open, 160);
   if (!mounted) return null;
@@ -143,7 +143,7 @@ export function Dialog({ open, onClose, title, body, confirmLabel = 'Confirm', d
         {children}
         <div className="mt-5 flex gap-2.5">
           <Button variant="secondary" block onClick={onClose} disabled={busy}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button variant={danger ? 'danger-solid' : 'primary'} block loading={busy} onClick={onConfirm}>
             {confirmLabel}
