@@ -49,6 +49,7 @@ function toEntry(h) {
         startedBy: h.startedBy || null,
         startTime: h.startedAt ? new Date(h.startedAt) : new Date(),
         participants: h.participants || [],
+        meetingId: h.meetingId ? String(h.meetingId) : meetingIdFromHuddleId(h.huddleId),
     };
 }
 
@@ -166,7 +167,7 @@ function HuddleProviderImpl({ workspaceId, children }) {
             channelName: info.channelName || null,
             status: 'live',
             video: !!info.video,
-            meetingId: meetingIdFromHuddleId(id),
+            meetingId: info.meetingId ? String(info.meetingId) : meetingIdFromHuddleId(id),
             workspaceId: workspaceIdRef.current || null,
             startTime: info.startTime ? new Date(info.startTime) : new Date(),
             participants: [],
@@ -203,6 +204,7 @@ function HuddleProviderImpl({ workspaceId, children }) {
                 video: huddleData.video,
                 channelName: huddleData.channel || huddleData.channelName,
                 startTime: huddleData.startTime,
+                meetingId: huddleData.meetingId,
                 ...(scope || {}),
             });
         }
@@ -276,6 +278,7 @@ function HuddleProviderImpl({ workspaceId, children }) {
                     channel: c.channel || s.channelName,
                     startTime: s.startedAt ? new Date(s.startedAt) : c.startTime,
                     workspaceId: c.workspaceId || s.workspaceId,
+                    meetingId: c.meetingId || (s.meetingId ? String(s.meetingId) : null),
                 } : c);
                 setSelectedHuddle(patch);
                 setPanelCall(patch);

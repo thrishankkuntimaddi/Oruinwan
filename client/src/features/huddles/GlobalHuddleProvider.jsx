@@ -4,6 +4,7 @@ import { HuddleProvider } from './HuddleContext';
 import HuddleDock from './components/HuddleDock';
 import { CallCaptureProvider } from './capture/CallCaptureContext';
 import CaptureOverlay from './capture/CaptureOverlay';
+import MeetingRecapListener from '../meetings/MeetingRecapListener';
 
 /**
  * Keeps the huddle connection above the routes, so moving between pages never
@@ -23,6 +24,7 @@ export default function GlobalHuddleProvider({ children }) {
                 {children}
                 <HuddleDock />
                 <CaptureOverlay />
+                <MeetingRecapListener workspaceId={workspaceId || lastWorkspaceId} />
             </CallCaptureProvider>
         </HuddleProvider>
     );

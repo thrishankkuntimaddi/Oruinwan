@@ -202,8 +202,8 @@ export default function HuddleOverlay({
                 {ctx?.openWorkspace && (
                     <button
                         onClick={() => (ctx.workspaceOpen ? ctx.closeWorkspace() : ctx.openWorkspace())}
-                        title="Huddle workspace: notes, tasks, chat, wrap-up"
-                        aria-label="Huddle workspace"
+                        title={ctx.workspaceOpen ? 'Hide the meeting panel' : 'Meeting panel: notes, agenda, transcript and recap'}
+                        aria-label="Meeting panel"
                         aria-pressed={!!ctx.workspaceOpen}
                         data-testid="huddle-open-workspace"
                         style={{ ...btn, ...(ctx.workspaceOpen ? on : neutral) }}

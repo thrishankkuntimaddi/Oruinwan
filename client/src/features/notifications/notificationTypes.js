@@ -1,7 +1,7 @@
 import {
     AtSign, MessageCircle, Check, UserPlus, Bell, Trash2, ExternalLink,
     GitBranch, Calendar, Zap, Brain, AlertTriangle, Pin, Headphones, Smile, ArrowRightLeft,
-    Clock, FileText, PenTool,
+    Clock, FileText, PenTool, ListChecks,
 } from 'lucide-react';
 
 /**
@@ -28,6 +28,7 @@ export const NOTIFICATION_TYPE_META = {
     huddle_started:    { label: 'Huddle',      Icon: Headphones,     color: 'var(--state-danger)',    tab: 'all' },
     schedule_created:  { label: 'Meeting',     Icon: Calendar,       color: 'var(--accent)',          tab: 'all' },
     meeting_reminder:  { label: 'Meeting',     Icon: Calendar,       color: 'var(--accent)',          tab: 'all' },
+    meeting_recap:     { label: 'Recap',       Icon: ListChecks,     color: 'var(--accent)',          tab: 'all' },
     integration_alert: { label: 'Integration', Icon: AlertTriangle,  color: 'var(--accent)',          tab: 'all' },
     ai_suggestion:     { label: 'AI',          Icon: Brain,          color: 'var(--accent)',          tab: 'all' },
     digest:            { label: 'Digest',      Icon: Zap,            color: 'var(--text-secondary)',  tab: 'all' },

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    AtSign, Bot, CalendarClock, Hash, Lock, MessageSquare, MessageSquarePlus, Mic, Plus, Radio, Search, Sparkles,
-    UserPlus, Video, CalendarPlus, ArrowRight, Users,
+    AtSign, Bot, CalendarClock, Hash, Lock, MessageSquare, MessageSquarePlus, Plus, Search, Sparkles,
+    UserPlus, CalendarPlus, ArrowRight, Users,
 } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,6 +14,7 @@ import { useScheduledMeetings } from '../../../hooks/useScheduledMeetings';
 import { openAgentDm, useAgents } from '../../../features/agents/useAgents';
 import InvitePeopleModal from '../../../components/InvitePeopleModal';
 import GettingStarted from '../states/GettingStarted';
+import { HuddlesHome } from '../../../features/meetings/HuddlesLists';
 import {
     DashPage, PageHead, Section, Panel, KpiGrid, Kpi, Grid, Toolbar, SearchBox, FilterTabs, Btn, Chip, EmptyState, Avatar,
 } from '../../../components/ui/page';
@@ -352,50 +353,7 @@ export function MessagesLanding({ onNewMessage }) {
 
 /* ── Huddles ──────────────────────────────────────────────────────────── */
 
-export function HuddlesLanding({ onStart, onStartVideo, onSchedule, starting }) {
-    const { workspaceId } = useParams();
-    const navigate = useNavigate();
-    const { activeWorkspace } = useWorkspace();
-    const { meetings } = useScheduledMeetings(workspaceId);
-    const upcoming = (meetings || []).filter((m) => new Date(m.startTime) > new Date(Date.now() - 3600e3)).slice(0, 5);
-
-    const options = [
-        { Icon: Mic, title: 'Voice huddle', text: 'A quick call. Teammates see it’s live and can drop in.', run: onStart, primary: true },
-        { Icon: Video, title: 'Video huddle', text: 'Face to face, with screen sharing.', run: onStartVideo },
-        { Icon: CalendarPlus, title: 'Schedule a meeting', text: 'Pick a time and invite people; it shows up in their Up next.', run: onSchedule },
-    ];
-
-    return (
-        <DashPage head={(
-            <PageHead
-                eyebrow={activeWorkspace?.name || 'Workspace'}
-                title="Huddles"
-                icon={Radio}
-                lead="Talk it through live. Start a call now, or schedule one for later."
-            />
-        )}>
-            <LandingStyles />
-            <Grid min={220}>
-                {options.map(({ Icon, title, text, run, primary }) => (
-                    <button key={title} type="button" className="gl-card gl-card--interactive ld-tile" onClick={run} disabled={starting}
-                        style={primary ? { borderColor: 'var(--gl-accent-line)', boxShadow: 'var(--gl-spec), var(--gl-accent-glow)' } : undefined}>
-                        <span className="gl-empty-mark" style={{ marginBottom: 0 }}><Icon size={16} /></span>
-                        <span className="ld-tile-title">{starting && primary ? 'Starting…' : title}</span>
-                        <span className="ld-tile-text">{text}</span>
-                    </button>
-                ))}
-            </Grid>
-            <Section title="Coming up">
-                <Panel flush>
-                    {upcoming.length === 0 ? (
-                        <EmptyState icon={CalendarClock} title="Nothing scheduled" text="Scheduled meetings appear here and in everyone’s Up next on Home." />
-                    ) : upcoming.map((m) => (
-                        <Row key={m._id} icon={<CalendarClock size={14} />} title={m.title} sub={`${fmtTime(m.startTime)}${m.duration ? ` · ${m.duration} min` : ''}`}
-                            right={m.status === 'live' ? <Chip tone="success">Live</Chip> : null}
-                            onClick={() => navigate(`/workspace/${workspaceId}/meetings/${m._id}`)} />
-                    ))}
-                </Panel>
-            </Section>
-        </DashPage>
-    );
+/** The Huddles page: Live now · Upcoming · Past (features/meetings/HuddlesLists). */
+export function HuddlesLanding(props) {
+    return <HuddlesHome {...props} />;
 }

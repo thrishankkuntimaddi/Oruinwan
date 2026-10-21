@@ -45,8 +45,10 @@ function conversationPath(workspaceId, type, id) {
  * (/workspace/<ws>/tasks/<id>); older ones are relative to the workspace.
  */
 export function notificationHref(n, workspaceId) {
-    const link = n?.link;
+    let link = n?.link;
     if (!link || typeof link !== 'string') return null;
+    // A meeting recap opens the meeting page on Summary & actions.
+    if (n.type === 'meeting_recap' && /\/meetings\/[^/?#]+$/.test(link)) link = `${link}?tab=summary`;
     if (link.startsWith('/workspace/')) return link;
     const ws = n.workspaceId || workspaceId;
     if (!ws) return null;
@@ -385,7 +387,8 @@ export function NotificationsProvider({ children }) {
             if (decision.toast) {
                 showToast(enriched.body || '', 'message', 4500, {
                     title: enriched.title,
-                    key: `notif:${enriched.type}`,
+                    // A recap shares its toast with the "Meeting ended · View recap" notice.
+                    key: enriched.type === 'meeting_recap' && meta.meetingId ? `meeting-recap:${meta.meetingId}` : `notif:${enriched.type}`,
                     onClick: href ? () => navigate(href) : undefined,
                 });
                 if (decision.sound) playChime();

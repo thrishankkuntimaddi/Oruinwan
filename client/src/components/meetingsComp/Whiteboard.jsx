@@ -6,11 +6,25 @@ import { Confirm } from '../ui/page';
 import useCollabDoc from '../../lib/collab/useCollabDoc';
 import CollabPresence from '../../lib/collab/CollabPresence';
 import { LOCAL_ORIGIN } from '../../lib/collab/noteBlocks';
-import { strokeHit, newStrokeId, roundPoint } from '../../lib/collab/whiteboardStrokes';
+import { strokeHit, newStrokeId, roundPoint, readBoardTheme, strokeDrawColor } from '../../lib/collab/whiteboardStrokes';
 
-const COLORS = ['#FFFFFF', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#000000'];
-// The drawing surface keeps its own dark "board" colour in both themes (strokes are stored with it).
-const BOARD_BG = '#1a1a2e';
+/** The theme's board and pen colours, re-read when light/dark changes. */
+function useBoardTheme() {
+    const [theme, setTheme] = useState(() => readBoardTheme());
+    useEffect(() => {
+        const update = () => setTheme(readBoardTheme());
+        const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+        mq?.addEventListener?.('change', update);
+        let obs = null;
+        if (typeof MutationObserver !== 'undefined') {
+            obs = new MutationObserver(update);
+            obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+            obs.observe(document.body, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+        }
+        return () => { mq?.removeEventListener?.('change', update); obs?.disconnect(); };
+    }, []);
+    return theme;
+}
 const FONT = 'Inter, system-ui, sans-serif';
 const W = 1200;
 const H = 700;
@@ -35,7 +49,12 @@ const Whiteboard = ({ meetingId }) => {
     const [savedAt, setSavedAt] = useState(null);
 
     const [tool, setTool] = useState('pen');
-    const [color, setColor] = useState('#FFFFFF');
+    const theme = useBoardTheme();
+    const themeRef = useRef(theme);
+    themeRef.current = theme;
+    // The pen is a theme slot (0 = ink); its colour follows the theme.
+    const [penIdx, setPenIdx] = useState(0);
+    const color = theme.pens[penIdx]?.color || theme.ink;
     const [lineWidth] = useState(3);
     const [drawing, setDrawing] = useState(false);
     const [currentPoints, setCurrentPoints] = useState([]);
@@ -82,7 +101,7 @@ const Whiteboard = ({ meetingId }) => {
             if (!stroke?.points?.length) return;
             ctx.beginPath();
             // Older boards stored "eraser" strokes painted in the board colour.
-            ctx.strokeStyle = stroke.tool === 'eraser' ? BOARD_BG : (stroke.color || '#FFFFFF');
+            ctx.strokeStyle = strokeDrawColor(stroke, themeRef.current);
             ctx.lineWidth = stroke.tool === 'eraser' ? (stroke.lineWidth * 4) : (stroke.lineWidth || 3);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -94,7 +113,7 @@ const Whiteboard = ({ meetingId }) => {
         });
     }, []);
 
-    useEffect(() => { redraw(strokes); }, [strokes, redraw]);
+    useEffect(() => { redraw(strokes); }, [strokes, redraw, theme]);
 
     const getPos = (e) => {
         const canvas = canvasRef.current;
@@ -150,7 +169,7 @@ const Whiteboard = ({ meetingId }) => {
             const ctx = canvasRef.current?.getContext?.('2d');
             if (ctx && prev.length > 0) {
                 ctx.beginPath();
-                ctx.strokeStyle = color;
+                ctx.strokeStyle = strokeDrawColor({ color }, themeRef.current);
                 ctx.lineWidth = lineWidth;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -230,14 +249,15 @@ const Whiteboard = ({ meetingId }) => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
                         <Palette size={13} style={{ color: 'var(--text-secondary)' }} />
-                        {COLORS.map(c => (
+                        {theme.pens.map((p, i) => (
                             <button
                                 type="button"
-                                key={c}
-                                title={`Colour ${c}`}
-                                aria-label={`Colour ${c}`}
-                                onClick={() => { setColor(c); setTool('pen'); }}
-                                style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: color === c && tool === 'pen' ? '2px solid var(--accent)' : '1px solid var(--border-accent)' }}
+                                key={p.token}
+                                title={`${p.label} pen`}
+                                aria-label={`${p.label} pen`}
+                                aria-pressed={penIdx === i && tool === 'pen'}
+                                onClick={() => { setPenIdx(i); setTool('pen'); }}
+                                style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: `var(${p.token})`, cursor: 'pointer', border: penIdx === i && tool === 'pen' ? '2px solid var(--accent)' : '1px solid var(--border-accent)', boxShadow: penIdx === i && tool === 'pen' ? '0 0 0 2px var(--bg-base)' : 'none' }}
                             />
                         ))}
                     </div>
@@ -256,7 +276,7 @@ const Whiteboard = ({ meetingId }) => {
                 </div>
             )}
 
-            <div style={{ position: 'relative', flex: 1, minHeight: '360px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', background: BOARD_BG, cursor: readOnly ? 'default' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
+            <div style={{ position: 'relative', flex: 1, minHeight: '360px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: readOnly ? 'default' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
                 <canvas
                     ref={canvasRef}
                     width={W}

@@ -21,7 +21,7 @@ import { AI_MAX_TEXT, assistantRequest, buildAiMessages, normaliseActionItems } 
 import { CAPTURE_MARKERS } from '../features/huddles/capture/captions';
 import MeetingAssistant from '../features/huddles/capture/MeetingAssistant';
 import { ConsentDialog } from '../features/huddles/capture/CaptureOverlay';
-import { legacySegments } from '../components/meetingsComp/MeetingTranscriptPanel';
+import { legacySegments } from '../features/meetings/tabs/TranscriptTab';
 
 const at = (s) => new Date(Date.UTC(2026, 9, 21, 10, 0, s)).toISOString();
 const seg = (speakerId, speakerName, text, s) => ({ speakerId, speakerName, text, startedAt: at(s) });
