@@ -30,7 +30,8 @@ The desktop apps (`../desktop`) run the web client (`../client` in app mode).
 | **Workspaces** | Create one in three steps (name, project, teammates: share a team invite link or invite by email). After sign-in, a "Welcome back" list of your workspaces. |
 | **Oruinwan AI in chats** | Mention `@ai` in a channel, DM or thread; typing `@a` suggests it. The answer streams in live for everyone in the conversation. |
 | **Search** | Messages are searched on the phone (they're end-to-end encrypted): what's been decrypted, plus the latest messages of conversations not opened yet. Kept in memory only. |
-| **Push notifications** | Android through Firebase, iPhone through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). |
+| **Push notifications** | Android through Firebase, iPhone and iPad through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). Message notifications have **Reply** (opens the conversation with your text in the composer: replies are encrypted in the app) and **Mark as read**; see `docs/api/mobile-work.md` for platform limits. |
+| **Offline** | The last data is saved on the device (encrypted with a device-only key) and shown when there is no connection. Messages sent offline are encrypted, queued as "Queued", and sent in order when the connection is back. |
 
 Tablets get push notifications like phones (they run the same UI).
 
