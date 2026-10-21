@@ -55,7 +55,12 @@ test.describe('DM header actions', () => {
 
   test('mute stops DM notifications until unmuted', async () => {
     const { users } = seedData();
-    const dmCount = () => withDb((db) => db.collection('notifications').countDocuments({ recipient: new (require(require.resolve('mongodb', { paths: [require('path').join(__dirname, '..', '..', 'server')] })).ObjectId)(users.alice.id), type: 'dm' }));
+    const { ObjectId } = require(require.resolve('mongodb', { paths: [require('path').join(__dirname, '..', '..', 'server')] }));
+    // DM notifications are grouped per conversation (meta.count), so count messages, not rows.
+    const dmCount = () => withDb(async (db) => {
+      const rows = await db.collection('notifications').find({ recipient: new ObjectId(users.alice.id), type: 'dm' }).toArray();
+      return rows.reduce((n, r) => n + ((r.meta && r.meta.count) || 1), 0);
+    });
 
     await headerMenu(alice, 'Mute Notifications');
     await expect.poll(async () => (await alice.request.get(`${E2E.apiUrl}/api/v2/dm/${alice.url().split('/dm/')[1]}/status`, { headers: { Authorization: `Bearer ${await alice.evaluate(() => localStorage.getItem('accessToken'))}` } })).json()).toMatchObject({ isMuted: true });
@@ -66,9 +71,14 @@ test.describe('DM header actions', () => {
     expect(await dmCount()).toBe(before);
 
     await headerMenu(alice, 'Unmute Notifications');
-    await alice.waitForTimeout(500);
+    // Nobody is notified about the chat they're reading, so Alice looks elsewhere first.
+    await alice.getByRole('button', { name: 'Home' }).first().click();
+    await expect(alice).not.toHaveURL(/\/dm\//);
+    await alice.waitForTimeout(1000);
     await sendText(bob, `after unmute ${Date.now()}`);
     await expect.poll(dmCount, { timeout: 10_000 }).toBeGreaterThan(before);
+
+    await openDm(alice, 'bob');
   });
 
   test('block stops the other person from messaging, unblock restores it', async () => {
