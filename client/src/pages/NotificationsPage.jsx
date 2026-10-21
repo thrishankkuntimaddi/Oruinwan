@@ -7,7 +7,7 @@ import {
 import { useNotifications, notificationHref } from '../features/notifications/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
-import { notificationTypeMeta, timeAgo, COUNT_BADGE_STYLE } from '../features/notifications/notificationTypes';
+import { notificationTypeMeta, notificationBody, timeAgo, COUNT_BADGE_STYLE } from '../features/notifications/notificationTypes';
 import { PanelEmpty } from '../components/layout/WorkspacePanel';
 import '../styles/gloss.css';
 import '../styles/gloss-x-panels.css';
@@ -106,9 +106,9 @@ export default function NotificationsPage() {
                                                 )}
                                                 <span className="gl-x-badge">{typeLabel}</span>
                                             </div>
-                                            {n.body && (
+                                            {notificationBody(n) && (
                                                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                    {n.body}
+                                                    {notificationBody(n)}
                                                 </p>
                                             )}
                                             <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', margin: '4px 0 0' }}>

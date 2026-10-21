@@ -1,7 +1,7 @@
 import {
     AtSign, MessageCircle, Check, UserPlus, Bell, Trash2, ExternalLink,
     GitBranch, Calendar, Zap, Brain, AlertTriangle, Pin, Headphones, Smile, ArrowRightLeft,
-    Clock, FileText,
+    Clock, FileText, PenTool,
 } from 'lucide-react';
 
 /**
@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPE_META = {
     task_removed:      { label: 'Task',        Icon: Trash2,         color: 'var(--state-danger)',    tab: 'tasks' },
     task_transfer:     { label: 'Transfer',    Icon: ExternalLink,   color: 'var(--accent)',          tab: 'tasks' },
     note_shared:       { label: 'Note',        Icon: FileText,       color: 'var(--text-secondary)',  tab: 'all' },
+    design_review:     { label: 'Review',      Icon: PenTool,        color: 'var(--accent)',          tab: 'all' },
     member_joined:     { label: 'Team',        Icon: UserPlus,       color: 'var(--state-success)',   tab: 'team' },
     channel_pinned:    { label: 'Channel',     Icon: Pin,            color: 'var(--accent)',          tab: 'all' },
     huddle_started:    { label: 'Huddle',      Icon: Headphones,     color: 'var(--state-danger)',    tab: 'all' },
@@ -36,6 +37,22 @@ const FALLBACK = { label: 'Notice', Icon: Bell, color: 'var(--text-secondary)', 
 
 export function notificationTypeMeta(type) {
     return NOTIFICATION_TYPE_META[type] || FALLBACK;
+}
+
+/**
+ * Body text to show for a stored notification. Meeting reminders carry the
+ * start time as ISO in meta; show it in the reader's own time zone.
+ */
+export function notificationBody(n, locale) {
+    const body = n?.body || '';
+    if (n?.type === 'meeting_reminder' && n?.meta?.startTime) {
+        const start = new Date(n.meta.startTime);
+        if (!Number.isNaN(start.getTime())) {
+            const at = start.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+            return body ? `${body} · starts at ${at}` : `Starts at ${at}`;
+        }
+    }
+    return body;
 }
 
 export function timeAgo(dateStr) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Sparkles, Save, Loader2, Check, AlertCircle } from 'lucide-react';
 import api from '@services/api';
 import logger from '../../../utils/logger';
 import SettingSwitch from '../../../components/ui/SettingSwitch';
@@ -24,13 +24,14 @@ const PREF_ITEMS = [
     { key: 'message',     label: 'Messages & Mentions', description: 'New messages, @mentions, and DMs',                      Icon: MessageCircle },
     { key: 'threadReply', label: 'Thread Replies',      description: 'Replies in threads you follow',                         Icon: GitBranch },
     { key: 'task',        label: 'Tasks',               description: 'Task assignments, status changes, and due date reminders', Icon: CheckSquare },
-    { key: 'meeting',     label: 'Meetings',            description: 'Scheduled meetings and reminders',                      Icon: Calendar },
+    { key: 'meeting',     label: 'Meetings',            description: 'Scheduled meetings and reminders before they start',                      Icon: Calendar },
+    { key: 'aiSuggestions', label: 'AI Suggestions',    description: 'Nudges about overdue tasks and meeting action items',  Icon: Sparkles },
     { key: 'email',       label: 'Email Notifications', description: 'Receive email for important events (task assigned, meeting)', Icon: Mail },
     { key: 'push',        label: 'Desktop Push',        description: 'Browser OS notifications when app is in background',    Icon: Monitor },
 ];
 
 export default function NotificationPreferences({ workspaceId }) {
-    const [prefs, setPrefs] = useState({ message: true, threadReply: true, task: true, meeting: true, email: false, push: true });
+    const [prefs, setPrefs] = useState({ message: true, threadReply: true, task: true, meeting: true, aiSuggestions: true, email: false, push: true });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving]   = useState(false);
     const [saved, setSaved]     = useState(false);

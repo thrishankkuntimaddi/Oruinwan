@@ -8,7 +8,7 @@ import {
     saveAccountNotificationPrefs,
 } from '../../features/notifications/accountNotificationPrefs';
 import {
-    PageIntro, Section, Row, SwitchRow, Button, Notice, LoadingState, ErrorState, SaveBar, useSettingsForm,
+    PageIntro, Section, Row, SwitchRow, Select, Button, Notice, LoadingState, ErrorState, SaveBar, useSettingsForm,
 } from './settingsUi';
 import './preferences.css';
 
@@ -46,6 +46,12 @@ function useNotificationPermission() {
         }
     };
     return [permission, request];
+}
+
+/** Old accounts may only have emailDigest: off wins, otherwise the stored cadence (daily by default). */
+export function digestValue(values) {
+    if (!values?.emailDigest || values?.digestFrequency === 'off') return 'off';
+    return values?.digestFrequency === 'weekly' ? 'weekly' : 'daily';
 }
 
 function lastWorkspaceId() {
@@ -163,12 +169,25 @@ const NotificationsTab = () => {
             </Section>
 
             <Section title="Email" description="Delivered to your inbox.">
-                <SwitchRow
+                <Row
                     label="Activity digest"
-                    description="A summary of what you missed."
-                    checked={values.emailDigest}
-                    onChange={(v) => set('emailDigest', v)}
-                />
+                    description="A summary email of what you missed. Sent only when there is something new."
+                    htmlFor="stg-digest-frequency"
+                >
+                    <Select
+                        id="stg-digest-frequency"
+                        value={digestValue(values)}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            set('digestFrequency', v);
+                            set('emailDigest', v !== 'off');
+                        }}
+                    >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly (Mondays)</option>
+                        <option value="off">Off</option>
+                    </Select>
+                </Row>
                 <SwitchRow
                     label="Product news"
                     description="Tips, offers, and Oruinwan news."

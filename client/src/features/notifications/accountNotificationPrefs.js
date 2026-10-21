@@ -14,7 +14,11 @@ export const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
     sound: true,
     mentionsOnly: false,
     dmNotifications: true,
+    digestFrequency: 'daily',
 });
+
+/** Digest cadence options the server accepts (anything else is a 400). */
+export const DIGEST_FREQUENCIES = Object.freeze(['daily', 'weekly', 'off']);
 
 export const PREFS_EVENT = 'oruinwan:notification-prefs';
 /** Per-workspace NotificationPreference saved: detail { workspaceId, preferences }. */
