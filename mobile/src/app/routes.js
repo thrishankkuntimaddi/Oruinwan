@@ -9,6 +9,7 @@ const notes = () => import('../features/notes/index.js');
 const settings = () => import('../features/settings/index.jsx');
 const more = () => import('../features/more/index.jsx');
 const knowledge = () => import('../features/knowledge/screens.jsx');
+const meetings = () => import('../features/meetings/screens.jsx');
 
 export const TAB_ROOTS = {
   chats: pick(chats, 'ChatsScreen'),
@@ -36,6 +37,8 @@ export const ROUTES = {
   integrations: pick(more, 'IntegrationsScreen'),
   agents: pick(() => import('../features/agents/AgentsScreen.jsx'), 'AgentsScreen'),
   huddles: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
+  meetings: pick(meetings, 'MeetingsScreen'),
+  meeting: pick(meetings, 'MeetingScreen'),
   workspace: pick(more, 'WorkspaceScreen'),
   settings: pick(settings, 'SettingsScreen'),
   'settings.profile': pick(settings, 'ProfileSettings'),

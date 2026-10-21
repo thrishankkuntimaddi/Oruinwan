@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CalendarClock, Headphones, Phone, Radio } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
+import { nav } from '../../app/nav.js';
 import { useQuery } from '../../data/query.js';
 import { useChannels, useDms } from '../../data/hooks.js';
 import { useFlag } from '../../config/flags.js';
@@ -102,23 +103,30 @@ export function HuddlesScreen() {
           ) : upcoming.length ? (
             <RowGroup>
               {upcoming.map((m) => (
-                <Row
-                  key={m._id}
-                  icon={CalendarClock}
-                  title={m.title}
-                  subtitle={`${whenLabel(m.startTime, m.duration)} · ${m.duration || 30} min${m.status === 'live' ? ' · live' : ''}`}
-                  chevron={false}
-                  trailing={
-                    <Button size="sm" variant={m.status === 'live' ? 'primary' : 'secondary'} onClick={() => run(() => joinMeeting(m))}>
-                      {m.status === 'live' ? 'Join' : 'Start'}
-                    </Button>
-                  }
-                />
+                <div key={m._id} className="flex items-center gap-2 pr-3">
+                  <button type="button" onClick={() => nav.push('meeting', { id: m._id })} className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-surface-3 text-text-2">
+                      <Icon as={CalendarClock} size="sm" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px]">{m.title}</span>
+                      <span className="mt-0.5 block truncate text-[13px] text-text-2">{`${whenLabel(m.startTime, m.duration)} · ${m.duration || 30} min${m.status === 'live' ? ' · live' : ''}`}</span>
+                    </span>
+                  </button>
+                  <Button size="sm" variant={m.status === 'live' ? 'primary' : 'secondary'} onClick={() => run(() => joinMeeting(m))}>
+                    {m.status === 'live' ? 'Join' : 'Start'}
+                  </Button>
+                </div>
               ))}
             </RowGroup>
           ) : (
             <EmptyState icon={CalendarClock} title="Nothing scheduled" body="Meetings you're invited to show up here." className="py-8" />
           )}
+        </Section>
+        <Section>
+          <RowGroup>
+            <Row icon={CalendarClock} tile="accent" title="All meetings" subtitle="Agendas, summaries, action items and boards" onClick={() => nav.push('meetings')} />
+          </RowGroup>
         </Section>
       </Body>
     </Screen>

@@ -58,6 +58,8 @@ export function connectRealtime(base) {
   // Huddle signalling and live/ended announcements go to the huddle client (features/huddles).
   socket.onAny((event, payload) => {
     if (event.startsWith('huddle:')) emit('huddle', { event, payload });
+    // Meeting rooms (features/meetings): brainstorm board and agenda changes.
+    else if (event.startsWith('brainstorm:') || event.startsWith('meeting:')) emit('meeting', { event, payload });
   });
   socket.on('connect_error', (err) => {
     // The server rejected the handshake (usually an expired access token). Socket.IO does not
