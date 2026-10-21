@@ -1,22 +1,26 @@
-// The planning half of a task's page: subtasks, dependencies and links, time tracking and the
-// repeat schedule. Reads the full task (api().planningTask) next to the list model TaskScreen uses.
+// The planning half of a task's page: subtasks, sprint and milestone, dependencies and links,
+// everyone's time (own timers and logged time) and the repeat schedule. Reads the full task
+// (api().planningTask) next to the list model TaskScreen uses.
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Link2, ListChecks, Pause, Play, Plus, Repeat, Timer, X } from 'lucide-react';
+import { Check, Clock, Link2, ListChecks, Milestone, Pause, Play, Plus, Repeat, Rocket, Timer, X } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
-import { useTasks } from '../../data/hooks.js';
+import { useDirectory, useTasks } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { trackedSeconds } from '../../data/live/adapter.work.js';
 import { STATUS_META } from '../../data/constants.js';
 import { Section, Row, RowGroup } from '../../ui/List.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { SearchField, Segmented } from '../../ui/Controls.jsx';
-import { Sheet } from '../../ui/Overlay.jsx';
+import { Field, SearchField, Segmented } from '../../ui/Controls.jsx';
+import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
+import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
 import { StatusIcon } from './TaskRow.jsx';
-import { formatClock, formatDuration, recurrenceLabel } from './planning.js';
+import { useBlockerGuard } from './BlockersSheet.jsx';
+import { formatClock, formatDuration, minutesFrom, myOpenSession, openSprints, recurrenceLabel } from './planning.js';
+import { REPEAT_FREQUENCIES, WEEKDAYS, describeRule, fromRecurring, normalizeRule, toRecurringPayload } from './recurrence.js';
 
 const LINK_LABEL = {
   depends: 'Depends on',
@@ -32,7 +36,7 @@ export function usePlanningTask(id) {
 }
 
 function refresh(id) {
-  invalidate(`taskplan:${id}`, `task:${id}`, 'tasks');
+  invalidate(`taskplan:${id}`, `task:${id}`, `tasktime:${id}`, 'tasks', 'planning');
 }
 
 // ---------------------------------------------------------------- subtasks
@@ -61,11 +65,20 @@ function Subtasks({ task }) {
     }
   };
 
+  const blockers = useBlockerGuard();
   const toggle = async (sub) => {
     const next = sub.status === 'done' ? 'todo' : 'done';
-    setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, subtasks: d.subtasks.map((s) => (s.id === sub.id ? { ...s, status: next } : s)) } : d));
+    const put = (status) => setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, subtasks: d.subtasks.map((s) => (s.id === sub.id ? { ...s, status } : s)) } : d));
+    put(next);
     try {
-      await api().setTaskStatus(sub.id, next);
+      const done = await blockers.guard(async (ignoreBlockers) => {
+        await api().setTaskStatus(sub.id, next, undefined, { ignoreBlockers });
+        if (ignoreBlockers) {
+          put(next);
+          refresh(task.id);
+        }
+      });
+      if (!done) put(sub.status);
       refresh(task.id);
     } catch (err) {
       toast(err.message || "Couldn't update the subtask", 'danger');
@@ -115,6 +128,65 @@ function Subtasks({ task }) {
           )}
         </form>
       </div>
+      {blockers.ui}
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------- sprint and milestone
+
+function PlanningPlace({ task }) {
+  const ws = useSession((s) => s.workspaceId);
+  const { data: sprints } = useQuery(ws && `sprints:${ws}`, () => api().sprints(ws));
+  const { data: milestones } = useQuery(ws && `milestones:${ws}`, () => api().milestones(ws));
+  const [pick, setPick] = useState(null); // 'sprint' | 'milestone'
+  const sprint = (sprints || []).find((s) => s.id === task.sprintId);
+  const milestone = (milestones || []).find((m) => m.id === task.milestoneId);
+
+  const move = async (patch, message) => {
+    setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, ...patch } : d));
+    try {
+      await api().setTaskPlanning(task.id, patch);
+      toast(message, 'success');
+    } catch (err) {
+      toast(err.message || "Couldn't move the task", 'danger');
+    }
+    refresh(task.id);
+    invalidate('sprints', 'milestones');
+  };
+
+  const sprintActions = [
+    ...openSprints(sprints)
+      .filter((s) => s.id !== task.sprintId)
+      .map((s) => ({ label: s.name, icon: Rocket, hint: s.status === 'active' ? 'Active sprint' : 'Planned', onSelect: () => move({ sprintId: s.id }, `Moved to ${s.name}`) })),
+    task.sprintId && { label: 'Remove from the sprint', icon: X, danger: true, onSelect: () => move({ sprintId: null }, 'Removed from the sprint') },
+  ].filter(Boolean);
+  const milestoneActions = [
+    ...(milestones || [])
+      .filter((m) => m.id !== task.milestoneId && m.status !== 'completed')
+      .map((m) => ({ label: m.name, icon: Milestone, onSelect: () => move({ milestoneId: m.id }, `Added to ${m.name}`) })),
+    task.milestoneId && { label: 'Remove from the milestone', icon: X, danger: true, onSelect: () => move({ milestoneId: null }, 'Removed from the milestone') },
+  ].filter(Boolean);
+
+  if (task.type === 'subtask') return null;
+  return (
+    <Section title="Planning">
+      <RowGroup>
+        <Row icon={Rocket} title="Sprint" value={sprint?.name || (task.sprintId ? 'A finished sprint' : 'None')} onClick={() => setPick('sprint')} />
+        <Row icon={Milestone} title="Milestone" value={milestone?.name || 'None'} onClick={() => setPick('milestone')} />
+      </RowGroup>
+      <ActionSheet
+        open={pick === 'sprint'}
+        onClose={() => setPick(null)}
+        title={sprintActions.length ? 'Move to sprint' : 'No open sprints. Create one under Planning.'}
+        actions={sprintActions}
+      />
+      <ActionSheet
+        open={pick === 'milestone'}
+        onClose={() => setPick(null)}
+        title={milestoneActions.length ? 'Milestone' : 'No open milestones. Create one under Planning.'}
+        actions={milestoneActions}
+      />
     </Section>
   );
 }
@@ -193,7 +265,11 @@ function Dependencies({ task }) {
   ];
   const remove = async (row) => {
     try {
-      await api().unlinkTask(task.id, row.linkId);
+      if (row.linkId) await api().unlinkTask(task.id, row.linkId);
+      else {
+        const left = await api().removeDependency(task.id, row.taskId);
+        setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, dependencyIds: left } : d));
+      }
       refresh(task.id);
       invalidate(`taskplan:${row.taskId}`);
     } catch (err) {
@@ -210,7 +286,7 @@ function Dependencies({ task }) {
       }
     >
       {rows.length ? (
-        <RowGroup footer={task.dependencyIds.length ? '“Depends on” links are kept with the task; other links can be removed here.' : null}>
+        <RowGroup footer="A task can’t be completed while what it depends on or is blocked by is still open, unless you complete it anyway.">
           {rows.map((r) => (
             <div key={r.key} className="flex items-center pr-2">
               <button type="button" onClick={() => nav.push('task', { id: r.taskId })} className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2">
@@ -223,7 +299,7 @@ function Dependencies({ task }) {
                   </span>
                 </span>
               </button>
-              {r.linkId && <IconButton icon={X} size="sm" label="Remove link" onClick={() => remove(r)} />}
+              <IconButton icon={X} size="sm" label={r.linkId ? 'Remove link' : 'Remove dependency'} onClick={() => remove(r)} />
             </div>
           ))}
         </RowGroup>
@@ -249,12 +325,65 @@ function useNow(active) {
   return now;
 }
 
-function TimeTracking({ task }) {
-  const running = Boolean(task.time.runningSince);
-  const now = useNow(running);
+function LogTimeSheet({ open, onClose, task }) {
+  const [hours, setHours] = useState('');
+  const [minutes, setMinutes] = useState('30');
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const total = minutesFrom(hours, minutes);
+  const save = async () => {
+    if (!total) return;
+    setBusy(true);
+    try {
+      const timeTracking = await api().logTime(task.id, { minutes: total, note: note.trim() });
+      if (timeTracking) {
+        setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, timeTracking, time: { ...d.time, totalSeconds: timeTracking.totalTime || 0, sessions: (timeTracking.sessions || []).length } } : d));
+      }
+      refresh(task.id);
+      toast(`Logged ${formatDuration(total * 60)}`, 'success');
+      onClose();
+    } catch (err) {
+      toast(err.message || "Couldn't log the time", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Log time"
+      footer={
+        <Button block loading={busy} disabled={!total} onClick={save}>
+          {total ? `Log ${formatDuration(total * 60)}` : 'Log time'}
+        </Button>
+      }
+    >
+      <div className="space-y-4 px-5 pb-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Hours" type="number" inputMode="numeric" min="0" max="24" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" />
+          <Field label="Minutes" type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="0" />
+        </div>
+        <Field label="Note" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="What you worked on (optional)" />
+        <p className="text-xs text-text-2">Logged as ending now. Between 1 minute and 24 hours.</p>
+      </div>
+    </Sheet>
+  );
+}
+
+function TimeTracking({ task }) {
+  const me = useSession((s) => s.user?.id);
+  const directory = useDirectory();
+  const { data: breakdown } = useQuery(api().taskTime && `tasktime:${task.id}`, () => api().taskTime(task.id));
+  const mine = myOpenSession(task.timeTracking, me);
+  const running = Boolean(mine);
+  const anyRunning = running || (breakdown?.byUser || []).some((u) => u.running);
+  const now = useNow(anyRunning);
+  const [busy, setBusy] = useState(false);
+  const [logging, setLogging] = useState(false);
   const total = trackedSeconds(task.timeTracking, now);
-  const session = running ? Math.floor((now - new Date(task.time.runningSince).getTime()) / 1000) : 0;
+  const session = running ? Math.floor((now - new Date(mine.start).getTime()) / 1000) : 0;
+  const people = (breakdown?.byUser || []).filter((u) => u.seconds > 0 || u.running).sort((a, b) => b.seconds - a.seconds);
 
   const toggle = async () => {
     setBusy(true);
@@ -265,9 +394,10 @@ function TimeTracking({ task }) {
         toast(`Logged ${formatDuration(elapsed)}`, 'success');
       } else {
         const timeTracking = await api().startTimer(task.id);
-        const open = (timeTracking?.sessions || []).find((s) => !s.end);
+        const open = myOpenSession(timeTracking, me) || (timeTracking?.sessions || []).find((s) => !s.end);
         setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, timeTracking, time: { ...d.time, runningSince: open?.start || new Date().toISOString() } } : d));
       }
+      invalidate(`tasktime:${task.id}`);
     } catch (err) {
       toast(err.message || "Couldn't update the timer", 'danger');
       refresh(task.id);
@@ -277,7 +407,14 @@ function TimeTracking({ task }) {
   };
 
   return (
-    <Section title="Time">
+    <Section
+      title="Time"
+      action={
+        <button type="button" className="text-[13px] font-medium text-accent-ink" onClick={() => setLogging(true)}>
+          Log time
+        </button>
+      }
+    >
       <div className="mx-4 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4">
         <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-[12px]', running ? 'bg-accent/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
           <Icon as={Timer} />
@@ -285,25 +422,154 @@ function TimeTracking({ task }) {
         <div className="min-w-0 flex-1">
           <p className="text-[20px] font-semibold tabular-nums leading-tight">{running ? formatClock(session) : formatDuration(total)}</p>
           <p className="text-[13px] text-text-2">
-            {running ? `Running · ${formatDuration(total)} in total` : task.time.sessions ? `Tracked over ${task.time.sessions} session${task.time.sessions > 1 ? 's' : ''}` : 'No time tracked yet'}
+            {running
+              ? `Your timer · ${formatDuration(total)} in total`
+              : task.time.sessions
+                ? `Tracked over ${task.time.sessions} session${task.time.sessions > 1 ? 's' : ''}`
+                : 'No time tracked yet'}
           </p>
         </div>
         <Button variant={running ? 'secondary' : 'primary'} icon={running ? Pause : Play} loading={busy} onClick={toggle}>
           {running ? 'Stop' : 'Start'}
         </Button>
       </div>
+      {people.length > 0 && (
+        <RowGroup className="mt-2.5" footer={breakdown?.estimatedHours ? `Estimate: ${breakdown.estimatedHours} h. Everyone runs their own timer.` : 'Everyone runs their own timer.'}>
+          {people.map((u) => {
+            const who = directory[u.userId] || u.user || {};
+            return (
+              <Row
+                key={u.userId}
+                leading={<Avatar name={who.name} src={who.avatarUrl} size="sm" />}
+                title={u.userId === me ? 'You' : who.name || 'Someone'}
+                subtitle={u.running ? 'Timer running' : `${u.sessions} session${u.sessions === 1 ? '' : 's'}`}
+                trailing={
+                  <span className={cx('flex items-center gap-1.5 text-sm tabular-nums', u.running ? 'text-accent-ink' : 'text-text-2')}>
+                    {u.running && <Icon as={Clock} size={14} />}
+                    {formatDuration(u.seconds)}
+                  </span>
+                }
+              />
+            );
+          })}
+        </RowGroup>
+      )}
+      {logging && <LogTimeSheet open onClose={() => setLogging(false)} task={task} />}
     </Section>
   );
 }
 
 // ---------------------------------------------------------------- repeat
 
+export function RecurrenceSheet({ open, onClose, task }) {
+  const [rule, setRule] = useState(() => fromRecurring(task.recurring));
+  const [busy, setBusy] = useState(false);
+  const r = normalizeRule(rule);
+  const set = (patch) => setRule((x) => ({ ...x, ...patch }));
+  const toggleDay = (d) => set({ daysOfWeek: r.daysOfWeek.includes(d) ? r.daysOfWeek.filter((x) => x !== d) : [...r.daysOfWeek, d] });
+  const save = async () => {
+    setBusy(true);
+    try {
+      const payload = toRecurringPayload(r, { dueDate: task.due });
+      const saved = await api().setTaskRecurring(task.id, payload);
+      setQueryData(`taskplan:${task.id}`, (d) => (d ? { ...d, recurring: saved ? saved.recurring : payload.isRecurring ? payload : null } : d));
+      refresh(task.id);
+      toast(payload.isRecurring ? describeRule(r) : 'Stopped repeating', 'success');
+      onClose();
+    } catch (err) {
+      toast(err.status === 403 ? 'Only the task’s creator or a workspace admin can change how it repeats.' : err.message || "Couldn't save the schedule", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const unit = r.frequency === 'weekly' ? 'week' : r.frequency === 'monthly' ? 'month' : 'day';
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Repeat"
+      footer={
+        <Button block loading={busy} onClick={save}>
+          Save
+        </Button>
+      }
+    >
+      <div className="space-y-4 px-5 pb-4">
+        <Segmented size="sm" value={r.frequency} onChange={(frequency) => set({ frequency })} options={REPEAT_FREQUENCIES.map((f) => ({ value: f.id, label: f.id === 'none' ? 'Never' : f.label }))} />
+        {r.frequency !== 'none' && (
+          <>
+            {['weekly', 'monthly', 'custom'].includes(r.frequency) && (
+              <div className="flex items-end gap-3">
+                <Field
+                  className="w-24"
+                  label="Every"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="365"
+                  value={rule.interval}
+                  onChange={(e) => set({ interval: e.target.value })}
+                />
+                {r.frequency === 'custom' ? (
+                  <Segmented
+                    size="sm"
+                    className="mb-1.5 flex-1"
+                    value={r.unit}
+                    onChange={(u) => set({ unit: u })}
+                    options={[
+                      { value: 'day', label: r.interval === 1 ? 'day' : 'days' },
+                      { value: 'week', label: r.interval === 1 ? 'week' : 'weeks' },
+                      { value: 'month', label: r.interval === 1 ? 'month' : 'months' },
+                    ]}
+                  />
+                ) : (
+                  <span className="pb-3.5 text-[15px] text-text-2">{r.interval === 1 ? unit : `${unit}s`}</span>
+                )}
+              </div>
+            )}
+            {r.frequency === 'weekly' && (
+              <div>
+                <p className="mb-1.5 text-[13px] font-medium text-text-2">On</p>
+                <div className="flex gap-1.5" role="group" aria-label="Days of the week">
+                  {WEEKDAYS.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      aria-pressed={r.daysOfWeek.includes(d.id)}
+                      aria-label={d.label}
+                      onClick={() => toggleDay(d.id)}
+                      className={cx(
+                        'grid h-10 flex-1 place-items-center rounded-lg border text-[13px] font-medium',
+                        r.daysOfWeek.includes(d.id) ? 'border-accent bg-accent/12 text-accent-ink' : 'border-line bg-input text-text-2',
+                      )}
+                    >
+                      {d.short}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Field label="Ends (optional)" type="date" value={r.endDate} onChange={(e) => set({ endDate: e.target.value })} />
+          </>
+        )}
+        <p className="rounded-xl bg-surface-2 px-3.5 py-3 text-sm text-text-2" data-testid="repeat-summary">
+          {describeRule(r)}
+          {r.frequency !== 'none' && '. Each occurrence creates a new copy of this task.'}
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
 function Recurrence({ task }) {
+  const [editing, setEditing] = useState(false);
+  const next = task.recurring?.nextDue ? new Date(task.recurring.nextDue).toLocaleDateString() : null;
   return (
     <Section title="Repeat">
-      <RowGroup footer={task.recurring ? `Next copy ${task.recurring.nextDue ? `on ${new Date(task.recurring.nextDue).toLocaleDateString()}` : 'is scheduled by the server'}.` : 'Repeat schedules are set up by your server’s automations; the app shows them here.'}>
-        <Row icon={Repeat} title={recurrenceLabel(task.recurring)} chevron={false} />
+      <RowGroup footer={task.recurring ? (next ? `Next copy on ${next}.` : 'The server schedules the next copy.') : null}>
+        <Row icon={Repeat} title={recurrenceLabel(task.recurring)} onClick={() => setEditing(true)} />
       </RowGroup>
+      {editing && <RecurrenceSheet open onClose={() => setEditing(false)} task={task} />}
     </Section>
   );
 }
@@ -322,6 +588,7 @@ export function TaskExtras({ id }) {
           </RowGroup>
         </Section>
       )}
+      <PlanningPlace task={task} />
       <Dependencies task={task} />
       <TimeTracking task={task} />
       <Recurrence task={task} />

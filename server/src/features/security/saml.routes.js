@@ -27,6 +27,7 @@ const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 // A full session (refresh cookie + session row + device row), like password/Google sign-in.
 const startSsoSession = (...args) => require('../auth/auth.controller').startSsoSession(...args);
 const { deviceIdFrom } = require('../devices/devices.service');
+const ssoApp = require('./ssoApp');
 
 function audit(fields) {
   return AuditLog.create({ category: 'security', severity: 'info', resource: 'Company', ...fields })
@@ -103,24 +104,31 @@ router.get('/:companyId/metadata', async (req, res) => {
 });
 
 router.get('/:companyId/login', async (req, res) => {
+  // Started by the phone app (client=app&appChallenge=…): it gets sent back to the app (ssoApp.js).
+  const appChallenge = ssoApp.appChallengeFrom(req.query);
+  const fail = (reason) => res.redirect(appChallenge ? ssoApp.appRedirectWithError(reason) : `${FRONTEND_URL()}/login?error=${reason}`);
   try {
     const { company, config } = await loadCompanySaml(req.params.companyId);
-    if (!company || !config?.enabled) return res.redirect(`${FRONTEND_URL()}/login?error=sso_saml_not_configured`);
-    const url = await saml.buildSaml(company._id, config).getAuthorizeUrlAsync(deviceIdFrom(req, req.query.deviceId) || '', req.get('host'), {});
+    if (!company || !config?.enabled) return fail('sso_saml_not_configured');
+    const relayState = ssoApp.encodeRelayState(deviceIdFrom(req, req.query.deviceId), appChallenge);
+    const url = await saml.buildSaml(company._id, config).getAuthorizeUrlAsync(relayState, req.get('host'), {});
     return res.redirect(url);
   } catch (err) {
     logger.error('[SAML] login error:', err.message);
-    return res.redirect(`${FRONTEND_URL()}/login?error=sso_saml_failed`);
+    return fail('sso_saml_failed');
   }
 });
 
 router.post('/:companyId/acs', express.urlencoded({ extended: false, limit: '2mb' }), async (req, res) => {
   const companyId = req.params.companyId;
+  // RelayState carries the client's device id from /login, and the app's challenge when the app started it.
+  const relay = ssoApp.decodeRelayState(req.body?.RelayState);
+  const fail = (reason) => res.redirect(relay.challenge ? ssoApp.appRedirectWithError(reason) : `${FRONTEND_URL()}/login?error=${reason}`);
   try {
     const { company, config } = await loadCompanySaml(companyId);
-    if (!company || !config?.enabled) return res.redirect(`${FRONTEND_URL()}/login?error=sso_saml_not_configured`);
+    if (!company || !config?.enabled) return fail('sso_saml_not_configured');
     const SAMLResponse = req.body?.SAMLResponse;
-    if (typeof SAMLResponse !== 'string' || !SAMLResponse) return res.redirect(`${FRONTEND_URL()}/login?error=sso_saml_failed`);
+    if (typeof SAMLResponse !== 'string' || !SAMLResponse) return fail('sso_saml_failed');
 
     const { profile } = await saml.buildSaml(company._id, config).validatePostResponseAsync({ SAMLResponse });
     const who = saml.identityFromProfile(profile, config.issuer);
@@ -131,13 +139,17 @@ router.post('/:companyId/acs', express.urlencoded({ extended: false, limit: '2mb
       description: 'SSO login via SAML', ipAddress: req.ip, userAgent: req.headers['user-agent'], category: 'auth', severity: 'info',
     }).catch(() => {});
 
-    // RelayState carries the client's device id from /login (see deviceIdFrom for the allowed format).
-    const { accessToken } = await startSsoSession(req, res, user._id, { method: 'sso_saml', deviceId: req.body?.RelayState });
+    if (relay.challenge) {
+      // The app makes its own session with the code (POST /api/auth/sso/app/exchange).
+      return res.redirect(await ssoApp.appRedirectWithCode({ userId: user._id, deviceId: relay.deviceId, method: 'sso_saml', challenge: relay.challenge }));
+    }
+    // (see deviceIdFrom for the allowed device id format)
+    const { accessToken } = await startSsoSession(req, res, user._id, { method: 'sso_saml', deviceId: relay.deviceId });
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${accessToken}`);
   } catch (err) {
     const code = err instanceof saml.SamlError ? err.code : 'invalid_response';
     logger.warn({ companyId, code, err: err.message }, '[SAML] ACS rejected');
-    return res.redirect(`${FRONTEND_URL()}/login?error=sso_saml_${code}`);
+    return fail(`sso_saml_${code}`);
   }
 });
 

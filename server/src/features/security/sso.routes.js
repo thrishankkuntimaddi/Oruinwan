@@ -42,6 +42,8 @@ const BACKEND_URL = () => process.env.BACKEND_URL || 'http://localhost:8080';
 // A full session (refresh cookie + session row + device row), like password/Google sign-in.
 const startSsoSession = (...args) => require('../auth/auth.controller').startSsoSession(...args);
 const { deviceIdFrom } = require('../devices/devices.service');
+const ssoApp = require('./ssoApp');
+const { isNativeClient } = require('../../../utils/cookieHelper');
 
 function resolve(val) {
   return typeof val === 'function' ? val() : val;
@@ -93,6 +95,44 @@ router.get('/discover', discoverLimiter, async (req, res) => {
   }
 });
 
+const exchangeLimiter = require('express-rate-limit')({
+  windowMs: 60 * 1000,
+  limit: process.env.NODE_ENV === 'production' ? 20 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ message: 'Too many requests, please try again in a minute.' }),
+});
+
+/**
+ * The phone/tablet app finishes an SSO sign-in (see ssoApp.js): it trades the one-time code
+ * from oruinwan://sso?code=… plus its PKCE verifier for a session. Native clients get the
+ * refresh token in the body, like every other app sign-in.
+ */
+router.post('/app/exchange', exchangeLimiter, async (req, res) => {
+  try {
+    const found = await ssoApp.redeemAppCode(req.body?.code, req.body?.verifier);
+    if (!found) return res.status(400).json({ message: 'This sign-in has expired. Start it again.', code: 'SSO_CODE_INVALID' });
+    const user = await users.findById(found.userId);
+    if (!user || user.accountStatus === 'suspended' || user.accountStatus === 'deleted') {
+      return res.status(403).json({ message: 'This account cannot sign in.', code: 'SSO_ACCOUNT_DISABLED' });
+    }
+    const session = await startSsoSession(req, res, found.userId, {
+      method: found.method || 'sso',
+      deviceId: found.deviceId || deviceIdFrom(req),
+    });
+    return res.json({
+      message: 'SSO login success',
+      accessToken: session.accessToken,
+      ...(isNativeClient(req) ? { refreshToken: session.refreshToken } : {}),
+      requiresPasswordSetup: false,
+      user: { id: String(user._id), username: user.username, email: user.email, profilePicture: user.profilePicture || null },
+    });
+  } catch (err) {
+    logger.error('[SSO] app exchange failed:', err.message);
+    return res.status(500).json({ message: 'Sign-in failed. Try again.' });
+  }
+});
+
 router.get('/:provider', (req, res) => {
   const { provider } = req.params;
   const cfg = PROVIDERS[provider];
@@ -124,6 +164,16 @@ router.get('/:provider', (req, res) => {
     state,
   });
 
+  // Started by the phone app: the callback sends it back to the app with a one-time code.
+  const appChallenge = ssoApp.appChallengeFrom(req.query);
+  if (appChallenge) {
+    res.cookie(`sso_app_${provider}`, appChallenge, {
+      httpOnly: true, sameSite: 'Lax', maxAge: 5 * 60 * 1000, secure: process.env.NODE_ENV === 'production',
+    });
+  } else {
+    res.clearCookie(`sso_app_${provider}`);
+  }
+
   // The callback is a top-level navigation without X-Device-Id: carry the client's device id in a cookie.
   const deviceId = deviceIdFrom(req, req.query.deviceId);
   if (deviceId) {
@@ -141,10 +191,14 @@ router.get('/:provider/callback', async (req, res) => {
   if (!cfg) return res.redirect(`${FRONTEND_URL()}/login?error=unknown_provider`);
 
   const { code, state, error } = req.query;
+  const appChallenge = req.cookies?.[`sso_app_${provider}`];
+  const forApp = ssoApp.isChallenge(appChallenge);
+  if (appChallenge) res.clearCookie(`sso_app_${provider}`);
+  const fail = (reason) => res.redirect(forApp ? ssoApp.appRedirectWithError(reason) : `${FRONTEND_URL()}/login?error=${reason}`);
 
   if (error) {
     logger.error(`[SSO] ${provider} error:`, error);
-    return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
+    return fail(`sso_${provider}_failed`);
   }
 
   
@@ -152,7 +206,7 @@ router.get('/:provider/callback', async (req, res) => {
   if (!state || !storedState || state !== storedState) {
     logger.error(`[SSO] ${provider}: state mismatch — CSRF attempt?`);
     res.clearCookie(`sso_state_${provider}`);
-    return res.redirect(`${FRONTEND_URL()}/login?error=sso_state_mismatch`);
+    return fail('sso_state_mismatch');
   }
   res.clearCookie(`sso_state_${provider}`);
 
@@ -187,7 +241,7 @@ router.get('/:provider/callback', async (req, res) => {
     const picture = profile.picture || null;
 
     if (!email) {
-      return res.redirect(`${FRONTEND_URL()}/login?error=sso_no_email`);
+      return fail('sso_no_email');
     }
 
     
@@ -232,11 +286,15 @@ router.get('/:provider/callback', async (req, res) => {
 
     const deviceId = req.cookies?.[`sso_device_${provider}`];
     res.clearCookie(`sso_device_${provider}`);
+    if (forApp) {
+      // The app makes its own session with the code (POST /app/exchange): no cookie here.
+      return res.redirect(await ssoApp.appRedirectWithCode({ userId: user._id, deviceId, method: `sso_${provider}`, challenge: appChallenge }));
+    }
     const session = await startSsoSession(req, res, user._id, { method: `sso_${provider}`, deviceId });
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${session.accessToken}`);
   } catch (err) {
     logger.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
-    return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
+    return fail(`sso_${provider}_failed`);
   }
 });
 

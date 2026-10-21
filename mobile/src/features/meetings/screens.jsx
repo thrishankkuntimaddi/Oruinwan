@@ -2,7 +2,7 @@
 // with its agenda, AI summary, action items (→ tasks), transcript and brainstorm board.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, CalendarClock, CalendarPlus, Check, ClipboardList, ExternalLink, FileText, ListTodo, Plus, Sparkles, StickyNote, Trash2, Users, Wand2, X,
+  ArrowDown, ArrowUp, CalendarClock, CalendarPlus, Check, ClipboardList, Disc, ExternalLink, FileText, ListTodo, Plus, Sparkles, StickyNote, Trash2, Users, Wand2, X,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
@@ -22,6 +22,8 @@ import { Markdown } from '../../ui/Markdown.jsx';
 import { cx } from '../../ui/cx.js';
 import { PeoplePicker, toDateInput } from '../tasks/TaskEditorSheet.jsx';
 import { joinMeeting } from '../huddles/huddle.js';
+import { mergeSegments, transcriptText } from '../huddles/callMedia.js';
+import { AskMeetingSheet, TranscriptList } from '../huddles/CallExtras.jsx';
 import { applyBrainstormEvent, combineDateTime, meetingWhen, STICKY_COLORS } from './meetingsUi.js';
 
 const STATUS_LABEL = { scheduled: 'Scheduled', live: 'Live now', completed: 'Ended', cancelled: 'Cancelled' };
@@ -379,9 +381,78 @@ function ActionsTab({ meeting }) {
   );
 }
 
+function RecordingCard({ meetingId }) {
+  const key = `meetingrec:${meetingId}`;
+  const target = useMemo(() => ({ kind: 'meeting', id: meetingId }), [meetingId]);
+  const { data: rec, loading } = useQuery(key, () => api().callRecording(target), { staleMs: 60_000 });
+  useEffect(() => on('meeting', ({ event, payload }) => {
+    if (String(payload?.meetingId) !== String(meetingId)) return;
+    if (event === 'meeting:recording_ready' || event === 'meeting:recording_deleted') invalidate(key);
+  }), [key, meetingId]);
+  if (loading || !rec?.url) return null;
+  const mins = rec.durationSec ? `${Math.max(1, Math.round(rec.durationSec / 60))} min` : null;
+  return (
+    <div className="mx-4 mb-3 rounded-card border border-line-soft bg-surface p-3.5" style={{ backgroundImage: 'var(--glass)' }}>
+      <div className="mb-2 flex items-center gap-2">
+        <Icon as={Disc} size="sm" className="text-danger" />
+        <p className="flex-1 text-[14px] font-semibold">Recording</p>
+        {mins && <span className="text-[12px] text-text-3">{mins}</span>}
+      </div>
+      {/* The signed link lasts 10 minutes; reopening the tab fetches a fresh one. */}
+      <audio controls preload="none" src={rec.url} className="w-full" aria-label="Meeting recording">
+        <track kind="captions" />
+      </audio>
+    </div>
+  );
+}
+
 function TranscriptTab({ meeting }) {
-  if (!meeting.transcript) return <EmptyState icon={FileText} title="No transcript" body="When a meeting is recorded and transcribed, the transcript shows up here." className="py-8" />;
-  return <div className="selectable mx-4 whitespace-pre-wrap rounded-card border border-line-soft bg-surface p-4 text-[14px] leading-relaxed">{meeting.transcript}</div>;
+  const key = `meetingtranscript:${meeting.id}`;
+  const target = useMemo(() => ({ kind: 'meeting', id: meeting.id }), [meeting.id]);
+  const { data, loading } = useQuery(key, () => api().callTranscript(target), { staleMs: 15_000 });
+  const ws = useSession((s) => s.workspaceId);
+  const [asking, setAsking] = useState(false);
+
+  // Lines arrive live while the meeting runs (captions from everyone in the call).
+  useEffect(() => on('meeting', ({ event, payload }) => {
+    if (event !== 'meeting:transcript_segments' || String(payload?.meetingId) !== String(meeting.id)) return;
+    setQueryData(key, (cur) => ({ text: cur?.text || '', segments: mergeSegments(cur?.segments || [], (payload.segments || []).map((s) => api().mapSegment(s))) }));
+  }), [key, meeting.id]);
+
+  const segments = data?.segments || [];
+  const legacy = !segments.length ? data?.text || meeting.transcript : '';
+  const ask = (question) =>
+    api().askAboutMeeting({ workspaceId: ws, title: meeting.title, transcript: segments.length ? transcriptText(segments) : legacy || meeting.notes, question });
+
+  return (
+    <div>
+      <RecordingCard meetingId={meeting.id} />
+      {(segments.length > 0 || legacy) && (
+        <div className="mx-4 mb-3 flex justify-end">
+          <Button size="sm" variant="secondary" icon={Sparkles} onClick={() => setAsking(true)}>
+            Ask AI about this meeting
+          </Button>
+        </div>
+      )}
+      {loading && !data ? (
+        <SkeletonRows count={3} avatar={false} />
+      ) : segments.length ? (
+        <div className="mx-4 rounded-card border border-line-soft bg-surface p-4">
+          <TranscriptList segments={segments} />
+        </div>
+      ) : legacy ? (
+        <div className="selectable mx-4 whitespace-pre-wrap rounded-card border border-line-soft bg-surface p-4 text-[14px] leading-relaxed">{legacy}</div>
+      ) : (
+        <EmptyState
+          icon={FileText}
+          title="No transcript yet"
+          body="During the call, turn on live captions from the call menu (•••): what people say is written here as they speak."
+          className="py-8"
+        />
+      )}
+      <AskMeetingSheet open={asking} onClose={() => setAsking(false)} ask={ask} hint="Answers come from this meeting’s transcript." />
+    </div>
+  );
 }
 
 function BoardTab({ meeting }) {

@@ -11,6 +11,9 @@ const more = () => import('../features/more/index.jsx');
 const knowledge = () => import('../features/knowledge/screens.jsx');
 const meetings = () => import('../features/meetings/screens.jsx');
 const admin = () => import('../features/admin/screens.jsx');
+const roadmap = () => import('../features/roadmap/screens.jsx');
+const design = () => import('../features/design/screens.jsx');
+const automations = () => import('../features/automations/screens.jsx');
 
 export const TAB_ROOTS = {
   chats: pick(chats, 'ChatsScreen'),
@@ -43,6 +46,12 @@ export const ROUTES = {
   meetings: pick(meetings, 'MeetingsScreen'),
   meeting: pick(meetings, 'MeetingScreen'),
   workspace: pick(more, 'WorkspaceScreen'),
+  roadmap: pick(roadmap, 'RoadmapScreen'),
+  roadmapItem: pick(roadmap, 'RoadmapItemScreen'),
+  designReviews: pick(design, 'DesignReviewsScreen'),
+  designReview: pick(design, 'DesignReviewScreen'),
+  automations: pick(automations, 'AutomationsScreen'),
+  automation: pick(automations, 'AutomationScreen'),
   admin: pick(admin, 'AdminScreen'),
   'admin.analytics': pick(admin, 'AdminAnalyticsScreen'),
   'admin.features': pick(admin, 'AdminFeaturesScreen'),

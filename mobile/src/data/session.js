@@ -2,10 +2,10 @@
 import { create } from 'zustand';
 import { prefs, wipeDevice } from '../native/storage.js';
 import { clearQueries, invalidate } from './query.js';
-import { emit, on } from '../lib/bus.js';
+import { emit, on, toast } from '../lib/bus.js';
 import { logEvent } from '../config/remote.js';
 import { disablePush, enablePush, lastPushToken, pushAvailable, pushPlatform } from '../native/push.js';
-import { onAppState, openExternal } from '../native/index.js';
+import { closeBrowser, onAppState, openExternal } from '../native/index.js';
 import { cacheScope, clearCache, flushCache, startCache } from './persist.js';
 import { startOutbox, stopOutbox, clearOutbox } from './outbox.js';
 import { parseInvite } from '../lib/invite.js';
@@ -62,6 +62,8 @@ export const useSession = create((set, get) => ({
   // An invitation link to join a workspace (opened, or pasted). Saved, so it survives signing in
   // or creating an account first; the join screen shows once someone is signed in.
   joinToken: prefs.get('invite.pending') || null,
+  // A company SSO sign-in is being finished (after the browser came back to the app).
+  ssoBusy: false,
 
   persist() {
     const { mode, server, workspaceId, needsPassword } = get();
@@ -132,6 +134,54 @@ export const useSession = create((set, get) => ({
     if (result.needsSignup) return result;
     await get().finishLiveSignIn(live, result, kind);
     return {};
+  },
+
+  /**
+   * Company SSO, step one: finds the company's sign-in for this email and opens it in the in-app
+   * browser. Resolves false when the email's company has no SSO. The browser comes back through
+   * oruinwan://sso (finishSso).
+   */
+  async startSso({ server, email }) {
+    const live = await loadLive();
+    const found = await live.ssoDiscover({ server, email });
+    if (!found.enabled) return false;
+    const sso = await import('./live/sso.js');
+    const { verifier, challenge } = sso.makePkce();
+    sso.savePending({ server: live.serverUrl(), verifier });
+    const { deviceId } = await import('./live/http.js');
+    await openExternal(sso.appStartUrl(found.startUrl, { challenge, deviceId: deviceId() }));
+    logEvent('sso_start', { protocol: found.protocol || 'unknown' });
+    return true;
+  },
+
+  /** Step two: the link oruinwan://sso?code=… (or ?error=…). Returns false for other links. */
+  finishSso(link) {
+    // Cheap check first, so other links (invitations) never load the SSO code.
+    if (!/^oruinwan(-[a-z]+)?:\/\/sso\b/i.test(String(link || ''))) return false;
+    (async () => {
+      const sso = await import('./live/sso.js');
+      const parsed = sso.parseSsoReturn(link);
+      closeBrowser();
+      const pending = sso.takePending();
+      if (!parsed) return;
+      if (parsed.error || !pending) {
+        set({ ssoBusy: false });
+        toast(pending ? sso.ssoErrorMessage(parsed.error) : 'That sign-in link has expired. Start again.', 'danger');
+        return;
+      }
+      if (get().status === 'signed-in') return;
+      set({ ssoBusy: true });
+      try {
+        const live = await loadLive();
+        const result = await live.ssoSignIn({ server: pending.server, code: parsed.code, verifier: pending.verifier });
+        await get().finishLiveSignIn(live, result, 'sso');
+      } catch (err) {
+        toast(err.message || "Single sign-on didn't finish. Try again.", 'danger');
+      } finally {
+        set({ ssoBusy: false });
+      }
+    })();
+    return true;
   },
 
   /** Creates the account a Google sign-in asked for (username and date of birth), then signs in. */

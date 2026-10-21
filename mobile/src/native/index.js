@@ -101,6 +101,16 @@ export async function openExternal(url) {
   window.open(url, '_blank', 'noopener');
 }
 
+/** Closes the in-app browser openExternal opened (e.g. once SSO has come back to the app). */
+export async function closeBrowser() {
+  if (!isNative) return;
+  try {
+    await Browser.close();
+  } catch {
+    /* already closed (Android Custom Tabs close themselves) */
+  }
+}
+
 /** Android hardware back. The handler returns true when it consumed the event. */
 export async function onBackButton(handler) {
   if (!isNative) return () => {};

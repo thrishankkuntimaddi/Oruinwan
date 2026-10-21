@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowRight, AtSign, CalendarDays, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, RotateCw, Sparkles, ShieldCheck, TriangleAlert, CircleCheck,
+  ArrowRight, AtSign, Building2, CalendarDays, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, RotateCw, Sparkles, ShieldCheck, TriangleAlert, CircleCheck,
 } from 'lucide-react';
 import { cx } from '../../ui/cx.js';
 import { useSession } from '../../data/session.js';
@@ -121,6 +121,30 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
     }
   };
 
+  // Company single sign-on: the email says which company; its sign-in opens in the browser and
+  // comes back to the app (data/live/sso.js).
+  const startSso = useSession((s) => s.startSso);
+  const ssoBusy = useSession((s) => s.ssoBusy);
+  const sso = async () => {
+    setError('');
+    const url = normalizeServerUrl(server);
+    if (!url) return setError("Can't reach Oruinwan right now. Check your internet connection.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Enter your work email first, then choose company sign-in.');
+    setBusy(true);
+    try {
+      const opened = await startSso({ server: url, email: email.trim() });
+      if (opened) {
+        prefs.set('lastServer', url);
+        prefs.set('lastEmail', email.trim());
+      } else setError("Your company doesn't use single sign-on with Oruinwan. Sign in with your password.");
+    } catch (err) {
+      setError(err.message || "Couldn't start single sign-on.");
+    } finally {
+      setBusy(false);
+    }
+    return undefined;
+  };
+
   const google = async () => {
     setError('');
     setBusy(true);
@@ -194,8 +218,8 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
           )}
         </div>
         <ErrorNote text={error} />
-        <Button type="submit" block size="lg" className="mt-6" loading={busy}>
-          {needsOtp ? 'Verify and sign in' : 'Sign in'}
+        <Button type="submit" block size="lg" className="mt-6" loading={busy || ssoBusy} disabled={ssoBusy}>
+          {ssoBusy ? 'Finishing sign-in…' : needsOtp ? 'Verify and sign in' : 'Sign in'}
         </Button>
         {!needsOtp && providers.google && (
           <>
@@ -206,6 +230,20 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
             </div>
             <Button type="button" block size="lg" variant="secondary" onClick={google} disabled={busy}>
               <GoogleMark /> Continue with Google
+            </Button>
+          </>
+        )}
+        {!needsOtp && (
+          <>
+            {!providers.google && (
+              <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-text-3" aria-hidden>
+                <span className="h-px flex-1 bg-line-soft" />
+                or
+                <span className="h-px flex-1 bg-line-soft" />
+              </div>
+            )}
+            <Button type="button" block size="lg" variant="secondary" className={providers.google ? 'mt-3' : ''} icon={Building2} onClick={sso} disabled={busy || ssoBusy}>
+              Sign in with company SSO
             </Button>
           </>
         )}

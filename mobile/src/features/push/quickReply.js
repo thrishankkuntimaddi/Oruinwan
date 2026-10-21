@@ -7,13 +7,25 @@ import { api, useSession } from '../../data/session.js';
 import { invalidate } from '../../data/query.js';
 import { toast } from '../../lib/bus.js';
 import { openPush } from '../home/openTarget.js';
-import { repostWithActions } from '../../native/push.js';
+import { MESSAGE_ACTIONS, repostWithActions } from '../../native/push.js';
 
 /** The conversation a push is about: { kind, id, parentId } or null. */
 export function conversationOf(data = {}) {
   if (data.channelId) return { kind: 'channel', id: String(data.channelId), parentId: data.parentMessageId || null };
   if (data.dmSessionId) return { kind: 'dm', id: String(data.dmSessionId), parentId: data.parentMessageId || null };
   return null;
+}
+
+const MESSAGE_TYPES = new Set(['mention', 'dm', 'direct_message', 'thread_reply', 'message', 'channel_message']);
+
+/**
+ * A push about a message, which gets Reply / Mark as read. Newer servers mark them with
+ * category 'oru.message'; for older ones, a message type with a conversation counts.
+ */
+export function isMessagePush(data = {}) {
+  if (!conversationOf(data)) return false;
+  if (data.category) return data.category === MESSAGE_ACTIONS;
+  return !data.type || MESSAGE_TYPES.has(data.type);
 }
 
 /** 'open' | 'read' | 'reply' | 'notifications' for a notification and its action. */
@@ -70,6 +82,6 @@ function openConversationId() {
 /** A push while the app runs: Android re-posts it with the actions, unless it's on screen. */
 export function handleReceived(notification) {
   const conv = conversationOf(notification?.data);
-  if (!conv) return;
+  if (!conv || !isMessagePush(notification?.data)) return;
   repostWithActions(notification, { show: openConversationId() !== conv.id });
 }

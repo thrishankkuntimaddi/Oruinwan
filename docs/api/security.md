@@ -26,6 +26,29 @@ cookie (`jwt`) and session row are created, the device row is recorded, and the 
 redirected to `{WEB_APP}/oauth-success#access=<accessToken>`. The client then keeps the
 session alive with the normal `POST /api/auth/refresh`.
 
+### SSO from the phone/tablet app
+
+The in-app browser's cookies and the web redirect are useless to the app, so the app starts
+sign-in with two extra query parameters and gets sent back to its URL scheme with a one-time
+code (code: `server/src/features/security/ssoApp.js`):
+
+1. `GET <startUrl>?client=app&appChallenge=<S256 challenge>&deviceId=<X-Device-Id>` (top-level, in the in-app browser).
+   `appChallenge` = base64url(SHA-256(verifier)), 43 chars (PKCE, RFC 7636); the app keeps the verifier.
+   OIDC carries it in an `sso_app_<provider>` cookie; SAML in RelayState (`app:<challenge>:<deviceId>`).
+2. The callback / ACS creates **no** browser session and redirects to
+   `oruinwan://sso?code=<64 hex>` — or `oruinwan://sso?error=<code>` (same codes as the web
+   `?error=`). Override the scheme with `APP_SSO_RETURN_URL` (custom schemes only; http(s) is refused).
+3. `POST /api/auth/sso/app/exchange` `{ code, verifier }` with `x-client-platform: ios|android`
+   (and `X-Device-Id`) → `{ accessToken, refreshToken, requiresPasswordSetup: false, user: { id, username, email, profilePicture } }`
+   (`refreshToken` only for native clients). A full session like any sign-in (session row + device row).
+   `400 { code: 'SSO_CODE_INVALID' }` when the code is unknown, expired (2 min), already used, or the
+   verifier doesn't match (a wrong verifier also burns the code). `403 SSO_ACCOUNT_DISABLED`. Rate-limited 20/min per IP.
+
+Without `client=app` everything behaves as before.
+
+The phone app also sends `X-Device-Id` (a random per-install id) on every API request, so it
+shows up under Devices and its push token is tied to it.
+
 ---
 
 ## SAML 2.0 single sign-on

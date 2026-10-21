@@ -24,6 +24,8 @@ import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
 import { TaskRow, StatusIcon } from './TaskRow.jsx';
 import { TaskExtras } from './TaskExtras.jsx';
+import { BlockersSheet } from './BlockersSheet.jsx';
+import { blockersOf } from '../../data/live/adapter.work.js';
 import { TemplatePickerSheet } from './PlanningScreen.jsx';
 import { TaskEditorSheet, PeoplePicker, toDateInput, fromDateInput } from './TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
@@ -243,6 +245,7 @@ export function TaskScreen({ id }) {
   const [editTitle, setEditTitle] = useState(false);
   const [editDesc, setEditDesc] = useState(false);
   const [trash, setTrash] = useState(false);
+  const [blocked, setBlocked] = useState(null); // { blockers, retry }
 
   if (!task) {
     return (
@@ -253,16 +256,25 @@ export function TaskScreen({ id }) {
     );
   }
 
-  const update = async (patch, message) => {
+  const update = async (patch, message, { ignoreBlockers = false } = {}) => {
+    const before = task;
     const optimistic = { ...task, ...patch };
     setQueryData(`task:${id}`, optimistic);
     setQueryData(`tasks:${ws}`, (list) => list?.map((t) => (t.id === id ? optimistic : t)));
     try {
-      const saved = await api().updateTask(id, patch);
+      const saved = await api().updateTask(id, ignoreBlockers ? { ...patch, ignoreBlockers: true } : patch);
       setQueryData(`task:${id}`, saved);
-      invalidate('tasks');
+      invalidate('tasks', 'planning', `taskplan:${id}`);
       if (message) toast(message, 'success');
     } catch (err) {
+      const blockers = blockersOf(err);
+      if (blockers) {
+        // Open blockers: put the task back and ask before completing it anyway.
+        setQueryData(`task:${id}`, before);
+        setQueryData(`tasks:${ws}`, (list) => list?.map((t) => (t.id === id ? before : t)));
+        setBlocked({ blockers, retry: () => update(patch, message, { ignoreBlockers: true }) });
+        return;
+      }
       toast(err.message || 'Could not update the task', 'danger');
       invalidate('tasks', `task:${id}`);
     }
@@ -402,6 +414,16 @@ export function TaskScreen({ id }) {
         }))}
       />
       <PeoplePicker open={people} onClose={() => setPeople(false)} value={task.assigneeIds} onChange={(ids) => update({ assigneeIds: ids })} />
+      <BlockersSheet
+        open={Boolean(blocked)}
+        blockers={blocked?.blockers || []}
+        onClose={() => setBlocked(null)}
+        onComplete={async () => {
+          const { retry } = blocked;
+          setBlocked(null);
+          await retry();
+        }}
+      />
       <BlockedReasonDialog
         open={blockedAsk}
         onClose={() => setBlockedAsk(false)}

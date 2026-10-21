@@ -7,6 +7,28 @@ jest.mock('../../../identity', () => ({
   users: { findById: jest.fn(async () => mockUser), update: jest.fn(async () => {}) },
 }));
 jest.mock('axios', () => ({ post: jest.fn() }));
+
+// A fake HTTP/2 connection to Apple that records each request and answers 200.
+const mockApnsRequests = [];
+jest.mock('http2', () => {
+  const { EventEmitter } = require('events');
+  return {
+    connect: jest.fn(() => {
+      const session = new EventEmitter();
+      session.close = jest.fn();
+      session.request = (headers) => {
+        const req = new EventEmitter();
+        req.setEncoding = () => {};
+        req.end = (payload) => {
+          mockApnsRequests.push({ headers, payload: JSON.parse(payload) });
+          setImmediate(() => { req.emit('response', { ':status': 200 }); req.emit('end'); });
+        };
+        return req;
+      };
+      return session;
+    }),
+  };
+});
 jest.mock('google-auth-library', () => ({
   GoogleAuth: jest.fn(() => ({ getClient: async () => ({ getAccessToken: async () => ({ token: 'fcm-access' }) }) })),
 }));
@@ -91,4 +113,53 @@ test('Apple is configured only with every key', () => {
   process.env.APNS_BUNDLE_ID = 'com.oruinwan.app';
   expect(push.isConfigured().ios).toBe(true);
   delete process.env.APNS_KEY_ID; delete process.env.APNS_TEAM_ID; delete process.env.APNS_BUNDLE_ID;
+});
+
+describe('message pushes carry the quick-reply category', () => {
+  const ec = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const setApple = () => {
+    process.env.APNS_KEY = ec.privateKey.export({ type: 'pkcs8', format: 'pem' });
+    process.env.APNS_KEY_ID = 'kid';
+    process.env.APNS_TEAM_ID = 'team';
+    process.env.APNS_BUNDLE_ID = 'com.oruinwan.app';
+  };
+  afterEach(() => {
+    delete process.env.APNS_KEY_ID; delete process.env.APNS_TEAM_ID; delete process.env.APNS_BUNDLE_ID;
+    mockApnsRequests.length = 0;
+  });
+
+  test('isMessagePush: message types with a conversation only', () => {
+    const { isMessagePush } = push._internal;
+    expect(isMessagePush({ type: 'mention', channelId: 'c1' })).toBe(true);
+    expect(isMessagePush({ type: 'dm', dmSessionId: 'd1' })).toBe(true);
+    expect(isMessagePush({ type: 'thread_reply', channelId: 'c1', parentMessageId: 'm1' })).toBe(true);
+    expect(isMessagePush({ type: 'mention' })).toBe(false);
+    expect(isMessagePush({ type: 'huddle_started', channelId: 'c1' })).toBe(false);
+    expect(isMessagePush({ type: 'task_assigned' })).toBe(false);
+    expect(isMessagePush(undefined)).toBe(false);
+  });
+
+  test('iOS: aps.category oru.message on a DM push, none on a task push', async () => {
+    setApple();
+    mockUser.deviceTokens = [{ token: 'b'.repeat(64), platform: 'ios' }];
+    await push.sendToUser('u1', 'Ana', 'New message', { type: 'dm', dmSessionId: 'd1', workspaceId: 'ws1' });
+    await push.sendToUser('u1', 'Task', 'Assigned to you', { type: 'task_assigned', workspaceId: 'ws1' });
+
+    expect(mockApnsRequests).toHaveLength(2);
+    const [dm, task] = mockApnsRequests.map((r) => r.payload);
+    expect(dm.aps).toMatchObject({ alert: { title: 'Ana', body: 'New message' }, category: 'oru.message', 'thread-id': 'd1' });
+    expect(dm.category).toBe('oru.message');
+    expect(task.aps.category).toBeUndefined();
+    expect(task.category).toBeUndefined();
+    expect(mockApnsRequests[0].headers['apns-topic']).toBe('com.oruinwan.app');
+  });
+
+  test('Android: message pushes say category oru.message in the data', async () => {
+    process.env.FIREBASE_SERVICE_ACCOUNT = serviceAccount;
+    mockUser.deviceTokens = [{ token: 'a'.repeat(40), platform: 'android' }];
+    axios.post.mockResolvedValue({ data: {} });
+    await push.sendToUser('u1', 'Ana mentioned you', 'in #general', { type: 'mention', channelId: 'c1' });
+    expect(axios.post.mock.calls[0][1].message.data).toMatchObject({ category: 'oru.message', conversationId: 'c1', type: 'mention' });
+    expect(axios.post.mock.calls[0][1].message.android.notification.channel_id).toBe('messages');
+  });
 });

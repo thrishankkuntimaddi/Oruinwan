@@ -65,4 +65,12 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- Live captions in calls use the system speech recognizer (@capacitor-community/speech-recognition;
+         its own manifest merges the same query). Android 11+ hides recognition services without it. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 </manifest>

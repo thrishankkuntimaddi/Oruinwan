@@ -32,7 +32,7 @@ describe('mapPlanningTask', () => {
     expect(t.subtasks).toEqual([{ id: 'c1', title: 'Sub', status: 'done', assigneeIds: [] }]);
     expect(t.links[0]).toMatchObject({ id: 'l1', taskId: 't3', type: 'blocks' });
     expect(t.time.runningSince).toBe('2026-01-01T00:00:00Z');
-    expect(recurrenceLabel(t.recurring)).toBe('Every week');
+    expect(recurrenceLabel(t.recurring)).toBe('Weekly');
   });
 });
 

@@ -2,7 +2,7 @@
 // plus app-only ones: Updates, Server connection, and Data & storage.
 import { useEffect, useState } from 'react';
 import {
-  User, KeyRound, Laptop, Smartphone, Monitor, Bell, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
+  User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
   ExternalLink, Compass, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -22,7 +22,7 @@ import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Field, Segmented, Toggle } from '../../ui/Controls.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
-import { ActionSheet, Dialog } from '../../ui/Overlay.jsx';
+import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { SkeletonRows } from '../../ui/Feedback.jsx';
@@ -34,7 +34,6 @@ import { UpdateButton, UpdateDetails, UpdateProgress } from '../update/UpdatePan
 import { UnlockSheet } from '../chats/E2eeBanner.jsx';
 import { useE2ee } from '../../data/e2ee.js';
 import { startTour } from '../tour/tourState.js';
-import { EncryptionDevices } from './account.jsx';
 export { AccountDataSettings, TwoFactorSettings } from './account.jsx';
 
 const STATUS = [
@@ -291,8 +290,139 @@ export function SecuritySettings() {
 }
 
 const DEVICE_ICON = (s) => (/android|iphone|pixel|phone/i.test(`${s.device} ${s.os}`) ? Smartphone : /mac|windows|linux|pc/i.test(`${s.device} ${s.os}`) ? Laptop : Monitor);
+const PLATFORM_ICON = { ios: Smartphone, android: Smartphone, desktop: Laptop, web: Globe };
+const PLATFORM_LABEL = { ios: 'iPhone / iPad app', android: 'Android app', desktop: 'Desktop app', web: 'Browser' };
 
+/**
+ * Devices: every device signed in to your account (/api/v2/devices). Each one also holds the
+ * keys that decrypt your messages and the push token notifications go to, so signing one out
+ * removes all of that at once. Older servers without the device API show sign-in sessions.
+ */
 export function DevicesSettings() {
+  const { data: devices, loading } = useQuery('devices', () => api().deviceList?.() ?? null);
+  if (loading) {
+    return (
+      <Screen>
+        <Header title="Devices" />
+        <Body>
+          <SkeletonRows count={3} />
+        </Body>
+      </Screen>
+    );
+  }
+  return devices ? <DeviceList devices={devices} /> : <SessionList />;
+}
+
+function DeviceList({ devices }) {
+  const [menu, setMenu] = useState(null);
+  const [rename, setRename] = useState(null);
+  const [name, setName] = useState('');
+  const [confirm, setConfirm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const others = devices.filter((d) => !d.current);
+
+  const saveName = async () => {
+    setBusy(true);
+    try {
+      await api().renameDevice(rename.id, name);
+      invalidate('devices');
+      setRename(null);
+      toast('Device renamed', 'success');
+    } catch (err) {
+      toast(err.message || "Couldn't rename the device", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const signOut = async () => {
+    setBusy(true);
+    try {
+      if (confirm === 'others') await api().signOutOtherDevices();
+      else await api().signOutDevice(confirm.id);
+      invalidate('devices', 'sessions');
+      toast('Signed out', 'success');
+      setConfirm(null);
+    } catch (err) {
+      toast(err.message || 'Could not sign that device out', 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Screen>
+      <Header title="Devices" subtitle={`${devices.length} signed in`} />
+      <Body onRefresh={() => invalidate('devices')}>
+        <Section title="Where you're signed in">
+          <RowGroup footer="Each device holds the keys that unlock your messages and gets your push notifications. Signing one out removes both.">
+            {devices.map((d) => (
+              <Row
+                key={d.id}
+                icon={PLATFORM_ICON[d.platform] || Monitor}
+                tile={d.current ? 'success' : 'neutral'}
+                title={d.name}
+                subtitle={[
+                  PLATFORM_LABEL[d.platform],
+                  d.current ? `This ${deviceNoun}` : d.lastActive && `Active ${shortAgo(d.lastActive)}`,
+                  d.pushTokens ? 'Push on' : null,
+                ].filter(Boolean).join(' · ')}
+                onClick={() => setMenu(d)}
+              />
+            ))}
+          </RowGroup>
+        </Section>
+        {others.length > 0 && (
+          <Section>
+            <RowGroup>
+              <Row icon={LogOut} danger title="Sign out all other devices" chevron={false} onClick={() => setConfirm('others')} />
+            </RowGroup>
+          </Section>
+        )}
+      </Body>
+      <ActionSheet
+        open={Boolean(menu)}
+        onClose={() => setMenu(null)}
+        title={menu?.name}
+        actions={[
+          {
+            label: 'Rename',
+            icon: Pencil,
+            hint: menu?.reportedName && menu.reportedName !== menu.name ? `Reported as ${menu.reportedName}` : null,
+            onSelect: () => {
+              setName(menu.customName || menu.name);
+              setRename(menu);
+            },
+          },
+          menu && !menu.current && { label: 'Sign out', icon: LogOut, danger: true, onSelect: () => setConfirm(menu) },
+        ]}
+      />
+      <Sheet
+        open={Boolean(rename)}
+        onClose={() => setRename(null)}
+        title="Rename device"
+        footer={<Button block loading={busy} onClick={saveName}>Save</Button>}
+      >
+        <div className="px-5 pb-4">
+          <Field label="Name" value={name} maxLength={64} onChange={(e) => setName(e.target.value)} placeholder={rename?.reportedName || 'Work phone'} autoFocus />
+          <p className="mt-2 text-xs text-text-2">Leave it empty to use the name the device reports.</p>
+        </div>
+      </Sheet>
+      <Dialog
+        open={Boolean(confirm)}
+        onClose={() => setConfirm(null)}
+        title={confirm === 'others' ? 'Sign out everywhere else?' : `Sign out ${confirm?.name || 'this device'}?`}
+        body={`It loses access to your messages and stops getting notifications until it signs in again. This ${deviceNoun} stays signed in.`}
+        confirmLabel="Sign out"
+        danger
+        busy={busy}
+        onConfirm={signOut}
+      />
+    </Screen>
+  );
+}
+
+/** Sign-in sessions, for servers without the device API. */
+function SessionList() {
   const { data, loading } = useSessions();
   const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -347,7 +477,6 @@ export function DevicesSettings() {
                 </RowGroup>
               </Section>
             )}
-            <EncryptionDevices />
           </>
         )}
       </Body>
@@ -371,9 +500,40 @@ const NOTIF_ROWS = [
   { key: 'messages', title: 'Messages & mentions', subtitle: 'Direct messages and @mentions' },
   { key: 'threads', title: 'Thread replies', subtitle: 'Replies in threads you follow' },
   { key: 'tasks', title: 'Tasks', subtitle: 'Assigned to you, status changes, due soon' },
-  { key: 'meetings', title: 'Meetings', subtitle: 'Reminders before meetings start' },
-  { key: 'email', title: 'Email notifications', subtitle: 'A digest when you have been away' },
+  { key: 'meetings', title: 'Meetings', subtitle: 'Invitations and reminders before meetings start' },
+  { key: 'aiSuggestions', title: 'Suggestions', subtitle: 'Nudges about overdue tasks and meeting action items' },
+  { key: 'email', title: 'Email notifications', subtitle: 'Mentions and messages while you are away' },
 ];
+
+const DIGEST_OPTIONS = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'off', label: 'Off' },
+];
+
+/** The activity digest email: an account setting, the same in every workspace. */
+function DigestSection() {
+  const { data, loading } = useQuery('accountnotifprefs', () => api().accountNotificationPrefs?.() ?? null);
+  if (loading || !data) return null;
+  const set = async (value) => {
+    setQueryData('accountnotifprefs', (d) => ({ ...d, digestFrequency: value }));
+    try {
+      await api().saveDigestFrequency(value);
+    } catch (err) {
+      toast(err.message || 'Could not save', 'danger');
+      invalidate('accountnotifprefs');
+    }
+  };
+  return (
+    <Section title="Email digest">
+      <RowGroup footer="A summary of what happened in your workspaces. Weekly digests arrive on Mondays. Applies to all workspaces.">
+        <div className="px-4 py-3">
+          <Segmented size="sm" options={DIGEST_OPTIONS} value={data.digestFrequency} onChange={set} />
+        </div>
+      </RowGroup>
+    </Section>
+  );
+}
 
 const PUSH_TEXT = {
   loading: ['Checking…', null],
@@ -458,6 +618,7 @@ export function NotificationSettings() {
             </RowGroup>
           </Section>
         )}
+        <DigestSection />
       </Body>
     </Screen>
   );

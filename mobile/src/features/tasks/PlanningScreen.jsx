@@ -1,7 +1,7 @@
 // Planning: sprints (with a board), milestones, a timeline of due dates, everyone's workload and
 // task templates. One screen with a view picker; sprints open their own board.
 import { useMemo, useState } from 'react';
-import { CalendarRange, Flag, GanttChart, LayoutTemplate, Milestone, Plus, Rocket, Trash2, Users } from 'lucide-react';
+import { CalendarRange, Flag, GanttChart, LayoutTemplate, Milestone, Plus, Rocket, Trash2, Users, X } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
 import { api, useSession } from '../../data/session.js';
@@ -11,7 +11,7 @@ import { PRIORITY_META, STATUS_META, TASK_TRANSITIONS } from '../../data/constan
 import { prefs } from '../../native/storage.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { Chips, Field } from '../../ui/Controls.jsx';
+import { Chips, Field, SearchField } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
@@ -20,7 +20,8 @@ import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
 import { StatusIcon } from './TaskRow.jsx';
 import { PriorityPicker, fromDateInput, toDateInput } from './TaskEditorSheet.jsx';
-import { milestoneProgress, sprintBoard, timelineRows, workloadBars } from './planning.js';
+import { milestoneProgress, openSprints, sprintBoard, timelineRows, workloadBars } from './planning.js';
+import { useBlockerGuard } from './BlockersSheet.jsx';
 
 const VIEWS = [
   { value: 'sprints', label: 'Sprints' },
@@ -136,30 +137,67 @@ function BlockedDialog({ task, onClose, onConfirm }) {
   );
 }
 
-/** Moves a task to another status (the sprint board's "move"), with the blocked reason when needed. */
-export function useMoveTask(keys) {
+/**
+ * Moves a task to another status (the sprint board's "move"), with the blocked reason when needed
+ * and the "blocked by open tasks" question when completing. With `sprints` (the sprint board),
+ * the same sheet also moves the task to another sprint or out of this one.
+ */
+export function useMoveTask(keys, { sprintId = null, sprints = null } = {}) {
   const [moving, setMoving] = useState(null);
   const [blocked, setBlocked] = useState(null);
+  const blockers = useBlockerGuard();
+  const put = (task, patch) => {
+    for (const k of keys) setQueryData(k, (list) => list?.map((t) => (t.id === task.id ? { ...t, ...patch } : t)));
+  };
   const move = async (task, status, reason) => {
     if (status === 'blocked' && !reason) return setBlocked(task);
-    for (const k of keys) setQueryData(k, (list) => list?.map((t) => (t.id === task.id ? { ...t, status } : t)));
+    put(task, { status });
     try {
-      await api().setTaskStatus(task.id, status, reason);
-      toast(`Moved to ${STATUS_META[status].label}`, 'success');
+      const done = await blockers.guard(async (ignoreBlockers) => {
+        await api().setTaskStatus(task.id, status, reason, { ignoreBlockers });
+        if (ignoreBlockers) {
+          put(task, { status });
+          invalidate('tasks', 'planning', `task:${task.id}`, `taskplan:${task.id}`);
+        }
+        toast(`Moved to ${STATUS_META[status].label}`, 'success');
+      });
+      if (!done) put(task, { status: task.status });
     } catch (err) {
       toast(err.message || "Couldn't move the task", 'danger');
     }
     invalidate('tasks', 'planning', `task:${task.id}`, `taskplan:${task.id}`);
     return undefined;
   };
+  const moveSprint = async (task, to) => {
+    put(task, { sprintId: to?.id || null });
+    try {
+      await api().setTaskPlanning(task.id, { sprintId: to?.id || null });
+      toast(to ? `Moved to ${to.name}` : 'Removed from the sprint', 'success');
+    } catch (err) {
+      toast(err.message || "Couldn't move the task", 'danger');
+    }
+    invalidate('tasks', 'planning', 'sprints', `taskplan:${task.id}`);
+  };
+  const sprintActions = moving && sprints
+    ? [
+        ...openSprints(sprints)
+          .filter((s) => s.id !== sprintId)
+          .map((s) => ({ label: `Move to ${s.name}`, icon: Rocket, onSelect: () => moveSprint(moving, s) })),
+        sprintId && { label: 'Remove from this sprint', icon: X, danger: true, onSelect: () => moveSprint(moving, null) },
+      ].filter(Boolean)
+    : [];
   const ui = (
     <>
       <ActionSheet
         open={Boolean(moving)}
         onClose={() => setMoving(null)}
         title={moving ? `Move “${moving.title}”` : ''}
-        actions={(moving ? TASK_TRANSITIONS[moving.status] || [] : []).map((s) => ({ label: STATUS_META[s].label, onSelect: () => move(moving, s) }))}
+        actions={[
+          ...(moving ? TASK_TRANSITIONS[moving.status] || [] : []).map((s) => ({ label: STATUS_META[s].label, onSelect: () => move(moving, s) })),
+          ...sprintActions,
+        ]}
       />
+      {blockers.ui}
       <BlockedDialog
         task={blocked}
         onClose={() => setBlocked(null)}
@@ -174,6 +212,59 @@ export function useMoveTask(keys) {
   return { open: setMoving, ui };
 }
 
+/** Picks tasks (not done, not already in this sprint) to add to a sprint. */
+function AddToSprintSheet({ open, onClose, sprint, tasks }) {
+  const ws = useSession((s) => s.workspaceId);
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(null);
+  const options = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (tasks || [])
+      .filter((t) => t.type !== 'subtask' && !t.parentId && t.sprintId !== sprint?.id && !['done', 'cancelled'].includes(t.status))
+      .filter((t) => !q || t.title.toLowerCase().includes(q) || String(t.issueKey || '').toLowerCase().includes(q))
+      .slice(0, 60);
+  }, [tasks, query, sprint?.id]);
+  const add = async (t) => {
+    setBusy(t.id);
+    try {
+      await api().setTaskPlanning(t.id, { sprintId: sprint.id });
+      setQueryData(`planning:${ws}`, (list) => list?.map((x) => (x.id === t.id ? { ...x, sprintId: sprint.id } : x)));
+      invalidate('sprints', `taskplan:${t.id}`);
+      toast(`Added to ${sprint.name}`, 'success');
+    } catch (err) {
+      toast(err.message || "Couldn't add the task", 'danger');
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title={`Add to ${sprint?.name || 'sprint'}`} full footer={<Button block variant="secondary" onClick={onClose}>Done</Button>}>
+      <div className="px-4 pb-3">
+        <SearchField value={query} onChange={setQuery} placeholder="Find a task" />
+      </div>
+      <div className="px-2 pb-3">
+        {options.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            disabled={Boolean(busy)}
+            onClick={() => add(t)}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left active:bg-surface-2 disabled:opacity-50"
+          >
+            <StatusIcon status={t.status} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px]">{t.title}</span>
+              {t.sprintId && <span className="block truncate text-[12px] text-text-3">In another sprint</span>}
+            </span>
+            <span className="text-xs text-accent-ink">{busy === t.id ? 'Adding…' : 'Add'}</span>
+          </button>
+        ))}
+        {!options.length && <p className="px-3 py-6 text-center text-sm text-text-2">No open tasks to add.</p>}
+      </div>
+    </Sheet>
+  );
+}
+
 export function SprintScreen({ id }) {
   const ws = useSession((s) => s.workspaceId);
   const wide = useWide();
@@ -182,7 +273,8 @@ export function SprintScreen({ id }) {
   const { data: tasks, loading } = usePlanningTasks();
   const sprint = (sprints || []).find((s) => s.id === id);
   const [menu, setMenu] = useState(false);
-  const mover = useMoveTask([`planning:${ws}`]);
+  const mover = useMoveTask([`planning:${ws}`], { sprintId: id, sprints });
+  const [adding, setAdding] = useState(false);
   const board = useMemo(() => sprintBoard(tasks || [], id), [tasks, id]);
   const count = board.reduce((n, c) => n + c.items.length, 0);
 
@@ -201,14 +293,21 @@ export function SprintScreen({ id }) {
       <Header
         title={sprint?.name || 'Sprint'}
         subtitle={sprint ? `${SPRINT_STATUS[sprint.status]} · ${fmtDate(sprint.start)} – ${fmtDate(sprint.end)}` : ''}
-        actions={sprint && <IconButton icon={Flag} label="Sprint status" onClick={() => setMenu(true)} />}
+        actions={
+          sprint && (
+            <>
+              <IconButton icon={Plus} label="Add tasks to this sprint" onClick={() => setAdding(true)} />
+              <IconButton icon={Flag} label="Sprint status" onClick={() => setMenu(true)} />
+            </>
+          )
+        }
       />
       <Body fluid onRefresh={() => invalidate('planning', 'sprints')}>
         {sprint?.goal && <p className="mx-4 mb-2 rounded-card border border-line-soft bg-surface px-4 py-3 text-sm text-text-2">Goal: {sprint.goal}</p>}
         {loading ? (
           <SkeletonRows count={4} avatar={false} />
         ) : !count ? (
-          <EmptyState icon={Rocket} title="No tasks in this sprint" body="Tasks are added to sprints on the web; their progress shows up here." />
+          <EmptyState icon={Rocket} title="No tasks in this sprint" body="Add tasks to plan this sprint, then move them across the board." action={{ label: 'Add tasks', icon: Plus, onClick: () => setAdding(true) }} />
         ) : (
           <div className={cx('px-4 pt-2 pb-4', wide ? 'grid gap-3' : 'no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto')} style={wide ? { gridTemplateColumns: `repeat(${board.length}, minmax(0, 1fr))` } : undefined}>
             {board.map((col) => (
@@ -250,6 +349,7 @@ export function SprintScreen({ id }) {
         )}
       </Body>
       {mover.ui}
+      {adding && <AddToSprintSheet open onClose={() => setAdding(false)} sprint={sprint} tasks={tasks} />}
       <ActionSheet
         open={menu}
         onClose={() => setMenu(false)}
