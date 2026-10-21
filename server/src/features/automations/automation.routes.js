@@ -43,6 +43,49 @@ router.get('/templates', (req, res) => {
     res.json({ templates });
 });
 
+// Next run times for a schedule, so the editor can show "Next: Mon 09:00".
+router.get('/schedule/preview', (req, res) => {
+    try {
+        const { expression, type, timezone } = req.query;
+        const count = Math.min(Math.max(parseInt(req.query.count, 10) || 5, 1), 20);
+        const runs = service.previewSchedule({ expression, type, timezone }, count);
+        const { normalizeSchedule } = require('./automation.schedule');
+        res.json({ schedule: normalizeSchedule({ expression, type, timezone }), nextRuns: runs });
+    } catch (err) {
+        res.status(err.statusCode || 400).json({ message: err.message });
+    }
+});
+
+// "Run now" (executes the steps) or "Test" (dryRun: conditions + interpolated step configs, nothing executed).
+router.post('/:id/run', async (req, res) => {
+    try {
+        const { workspaceId, eventData, dryRun } = req.body || {};
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+        if (!(await _requireWorkspaceAdmin(req.user.sub, workspaceId, res))) return;
+        if (!mongoose.Types.ObjectId.isValid(String(req.params.id))) return res.status(404).json({ message: 'Automation not found' });
+
+        const run = await service.runNow(req.params.id, workspaceId, req.user.sub, { eventData, dryRun: Boolean(dryRun) }, req.app?.get?.('io'));
+        res.status(dryRun ? 200 : 201).json({ run });
+    } catch (err) {
+        logger.error('[AutomationRoutes] POST /:id/run error:', err.message);
+        res.status(err.statusCode || 500).json({ message: err.message });
+    }
+});
+
+router.get('/:id/runs', async (req, res) => {
+    try {
+        const { workspaceId, limit, before } = req.query;
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+        if (!(await _requireWorkspaceMember(req.user.sub, workspaceId, res))) return;
+        if (!mongoose.Types.ObjectId.isValid(String(req.params.id))) return res.status(404).json({ message: 'Automation not found' });
+        const runs = await service.getRuns(req.params.id, workspaceId, { limit, before });
+        res.json({ runs });
+    } catch (err) {
+        logger.error('[AutomationRoutes] GET /:id/runs error:', err.message);
+        res.status(err.statusCode || 500).json({ message: err.message });
+    }
+});
+
 router.post('/', async (req, res) => {
     try {
         const { workspaceId, name, trigger, actions } = req.body;

@@ -90,6 +90,54 @@ const AUTOMATION_TEMPLATES = [
         ]
     },
     {
+        id: 'pr_merged_announce_and_release_task',
+        name: 'PR merged → Announce in #engineering → Create release task',
+        description: 'One automation, two steps: post the merge in #engineering, then create a release task that links back to the announcement.',
+        category: 'Integrations',
+        icon: '🚢',
+        trigger: { type: 'github.pr_merged', config: {} },
+        conditions: [],
+        actions: [
+            {
+                id: 'announce',
+                type: 'send_message',
+                config: {
+                    channelName: 'engineering',
+                    text: '🚀 PR merged: {{event.title}} by {{event.actor}} ({{event.repo}})'
+                }
+            },
+            {
+                id: 'release',
+                type: 'create_task',
+                config: {
+                    title: 'Release {{event.repo}}: {{event.title}}',
+                    description: 'Created by automation after the merge was announced in #{{steps.announce.channelName}}.',
+                    priority: 'high',
+                    dueInDays: 2
+                }
+            }
+        ]
+    },
+    {
+        id: 'weekday_standup_cron',
+        name: 'Weekday standup at 09:30',
+        description: 'Post a standup prompt at 09:30 Monday–Friday (cron schedule, workspace timezone).',
+        category: 'Scheduled',
+        icon: '🗓️',
+        trigger: { type: 'scheduled', config: {} },
+        conditions: [],
+        schedule: { type: 'cron', expression: '30 9 * * 1-5', timezone: 'UTC' },
+        actions: [
+            {
+                type: 'send_message',
+                config: {
+                    channelId: '',
+                    text: '☀️ Standup: what did you do yesterday, what is next, anything blocking?'
+                }
+            }
+        ]
+    },
+    {
         id: 'file_uploaded_create_review_task',
         name: 'File uploaded → Create review task',
         description: 'When a file is uploaded, automatically create a task to review it.',

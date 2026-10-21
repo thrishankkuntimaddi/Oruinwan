@@ -18,6 +18,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 const policy = require('./tasks.policy');
 const { normalizeAttachments } = require('./tasks.validator');
 const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
+const taskEvents = require('./tasks.events');
 const { tasksStore } = require('./tasks.store');
 const {
     httpError,
@@ -1451,11 +1452,35 @@ async function applyExternalUpdate(taskId, { actorId, link = null, note = null, 
     return { task, statusChanged, from, to: statusChanged ? status : from };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Automation triggers (task.created / task.completed) for both stores
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function createTaskWithEvents(userId, taskData, io, req) {
+    return taskEvents.emitCreated(await createTask(userId, taskData, io, req), userId, io);
+}
+
+async function createSubtaskWithEvents(userId, parentId, subtaskData, io, req) {
+    return taskEvents.emitCreated(await createSubtask(userId, parentId, subtaskData, io, req), userId, io);
+}
+
+async function updateTaskWithEvents(userId, taskId, updates, io, req) {
+    const result = await updateTask(userId, taskId, updates, io, req);
+    if (result?.completed) taskEvents.emitCompleted(result.task, userId, io);
+    return result;
+}
+
+async function applyExternalUpdateWithEvents(taskId, opts = {}, io = null) {
+    const result = await applyExternalUpdate(taskId, opts, io);
+    if (result?.statusChanged && result.to === 'done') taskEvents.emitCompleted(result.task, opts.actorId, io);
+    return result;
+}
+
 module.exports = {
     getTasks,
     getTask,
-    createTask,
-    updateTask,
+    createTask: createTaskWithEvents,
+    updateTask: updateTaskWithEvents,
     deleteTask,
     getMyTasks,
     restoreTask,
@@ -1463,7 +1488,7 @@ module.exports = {
     revokeTask,
     requestTransfer,
     handleTransferRequest,
-    createSubtask,
+    createSubtask: createSubtaskWithEvents,
     getTaskActivity,
     addLink,
     removeLink,
@@ -1473,7 +1498,7 @@ module.exports = {
     startTimer,
     stopTimer,
     getWorkload,
-    applyExternalUpdate,
+    applyExternalUpdate: applyExternalUpdateWithEvents,
     // exported for tests
     _buildVisibilityQuery,
     _validateWorkspaceMember,

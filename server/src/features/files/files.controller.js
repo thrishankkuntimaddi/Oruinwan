@@ -16,7 +16,7 @@ const uploadFile = [
             const { workspaceId, description, folderId, tags } = req.body;
             if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
             const parsedTags = tags ? (Array.isArray(tags) ? tags : JSON.parse(tags)) : [];
-            const file = await filesService.uploadFile(req.user.sub, workspaceId, req.file, { description, folderId, tags: parsedTags });
+            const file = await filesService.uploadFile(req.user.sub, workspaceId, req.file, { description, folderId, tags: parsedTags, io: req.io });
             
             if (req.io) req.io.to(`workspace:${workspaceId}`).emit('file:uploaded', { file });
             return res.status(201).json({ file });
