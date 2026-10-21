@@ -70,6 +70,7 @@ import SetPassword from "./pages/SetPassword";
 import SetupPassword from "./pages/SetupPassword";
 import ReactivationFlow from "./pages/ReactivationFlow";
 import Settings from "./pages/Settings";
+import BackupRestoreOffer from "./components/backup/BackupRestoreOffer";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
@@ -1028,6 +1029,7 @@ function App() {
 
                         {}
                         <GlobalPasswordUnlockModal />
+                        <BackupRestoreOffer />
                         {}
                         <AIHub />
                       </UpdatesProvider>

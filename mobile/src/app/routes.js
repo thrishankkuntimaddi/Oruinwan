@@ -69,6 +69,7 @@ export const ROUTES = {
   'settings.security': pick(settings, 'SecuritySettings'),
   'settings.twofactor': pick(settings, 'TwoFactorSettings'),
   'settings.account-data': pick(settings, 'AccountDataSettings'),
+  'settings.backup': pick(settings, 'BackupSettings'),
   'settings.devices': pick(settings, 'DevicesSettings'),
   'settings.notifications': pick(settings, 'NotificationSettings'),
   'settings.appearance': pick(settings, 'AppearanceSettings'),

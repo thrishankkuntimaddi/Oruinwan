@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    ArrowLeft, Bell, Database, Globe, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
+    ArrowLeft, Bell, CloudUpload, Database, Globe, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
@@ -20,6 +20,7 @@ import PrivacyTab from './settingsTabs/PrivacyTab';
 import AITab from './settingsTabs/AITab';
 import IntegrationsTab from './settingsTabs/IntegrationsTab';
 import DataTab from './settingsTabs/DataTab';
+import BackupTab from './settingsTabs/BackupTab';
 import { Field, Select, IconButton } from './settingsTabs/settingsUi';
 import './settingsTabs/settings.css';
 
@@ -61,6 +62,7 @@ const GROUPS = [
         label: 'Data',
         items: [
             { id: 'data', label: 'Your data', icon: Database, description: 'Export, activity, delete', keywords: 'export download gdpr audit activity log retention deactivate delete account legal hold data' },
+            { id: 'backup', label: 'Backup', icon: CloudUpload, description: 'Google Drive backup, restore', keywords: 'backup restore google drive cloud copy encrypted' },
         ],
     },
 ];
@@ -158,6 +160,7 @@ const Settings = () => {
             case 'ai': return <AITab workspaceId={workspaceId} workspaceName={workspaceName} workspacePicker={workspacePicker} />;
             case 'integrations': return <IntegrationsTab workspaceId={workspaceId} workspaceName={workspaceName} workspacePicker={workspacePicker} />;
             case 'data': return <DataTab user={user} />;
+            case 'backup': return <BackupTab />;
             default: return null;
         }
     };

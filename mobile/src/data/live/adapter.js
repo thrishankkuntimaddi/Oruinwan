@@ -20,6 +20,7 @@ import { roadmapAdapter } from './adapter.roadmap.js';
 import { designAdapter } from './adapter.design.js';
 import { callsAdapter } from './adapter.calls.js';
 import { opsAdapter } from './adapter.ops.js';
+import { backupAdapter } from './adapter.backup.js';
 import { notificationKind, targetOf } from './notificationTarget.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
@@ -370,6 +371,7 @@ export const liveAdapter = {
   ...designAdapter, // design reviews (adapter.design.js)
   ...callsAdapter, // meeting recording, transcripts, captions, meeting AI (adapter.calls.js)
   ...opsAdapter, // automations, devices, notification settings, SSO (adapter.ops.js)
+  ...backupAdapter, // Google Drive backup and restore (adapter.backup.js)
   kind: 'live',
   serverUrl,
   ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),

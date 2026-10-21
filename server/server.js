@@ -334,9 +334,14 @@ app.use("/api/v2/devices", require("./src/features/devices/devices.routes"));
 // security.routes is mounted once at /api/company (see above); the /api/v2/security duplicate was removed.
 
 
+// Successful writes here mark the person's Drive backup as due (at most hourly).
+app.use(["/api/v2/tasks", "/api/v2/notes", "/api/v2/knowledge", "/api/v2/meetings", "/api/scheduled-meetings"], require("./src/features/drive-backup/driveBackup.service").markDirtyOnWrite);
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 
 app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
+
+// Google Drive backup (docs/api/backup.md).
+app.use("/api/v2/backup", require("./src/features/drive-backup/driveBackup.routes"));
 
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 
@@ -438,6 +443,7 @@ connectDatabase()
       require('./src/features/tasks/tasks.cron').startRecurringTasksCron();
       require('./src/features/security/retention.cron').startRetentionCron();
       require('./src/features/automations/automation.cron').startAutomationCron(io);
+      require('./src/features/drive-backup/driveBackup.cron').startDriveBackupCron();
       scheduleJob({
         name: 'audit-digest',
         intervalMs: 60 * 60 * 1000,

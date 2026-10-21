@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
-  ExternalLink, Compass, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff,
+  ExternalLink, Compass, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -35,6 +35,7 @@ import { UnlockSheet } from '../chats/E2eeBanner.jsx';
 import { useE2ee } from '../../data/e2ee.js';
 import { startTour } from '../tour/tourState.js';
 export { AccountDataSettings, TwoFactorSettings } from './account.jsx';
+export { BackupSettings } from './backup.jsx';
 
 const STATUS = [
   { value: 'active', label: 'Active', color: 'bg-success' },
@@ -98,6 +99,7 @@ export function SettingsScreen() {
             <Row icon={KeyRound} tile="accent" title="Password & security" onClick={() => nav.push('settings.security')} />
             <Row icon={Laptop} tile="accent" title="Devices" onClick={() => nav.push('settings.devices')} />
             <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
+            <Row icon={CloudUpload} tile="accent" title="Backup" subtitle="Google Drive backup and restore" onClick={() => nav.push('settings.backup')} />
           </RowGroup>
         </Section>
 
