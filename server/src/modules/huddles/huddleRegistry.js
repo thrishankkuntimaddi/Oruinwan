@@ -79,6 +79,9 @@ class HuddleRegistry {
       startedAt: toDate(meta.startedAt),
       // The meeting record of this call (set once it is known, see setMeeting).
       meetingId: meta.meetingId ? String(meta.meetingId) : null,
+      // Whose plan limits the call when no workspace was resolved on the server
+      // (a DM outside any workspace): the person who opened it. See planSourceOf.
+      planUserId: meta.planUserId ? String(meta.planUserId) : null,
       participants: new Map(),
     };
     this.huddles.set(huddleId, huddle);
@@ -90,13 +93,23 @@ class HuddleRegistry {
    * Add or refresh a participant. A user re-joining from another socket replaces
    * their old entry; the old socket id is returned so the caller can evict it.
    */
-  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt }) {
+  /**
+   * `max` is the plan's people-per-call limit: checked here, in the same
+   * synchronous step that adds the person, so two joins on this instance can
+   * never both take the last place ({ error: 'PLAN_LIMIT' }). Across instances
+   * the copies converge through replication, so two joins that land on two
+   * different instances within that delay can still overshoot by one.
+   */
+  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null }) {
     const huddle = this.huddles.get(huddleId);
     if (!huddle) return { error: 'HUDDLE_NOT_FOUND' };
     const uid = String(userId);
     const previous = huddle.participants.get(uid);
     if (!previous && huddle.participants.size >= this.maxParticipants) {
       return { error: 'HUDDLE_FULL' };
+    }
+    if (!previous && Number.isFinite(max) && max > 0 && huddle.participants.size >= max) {
+      return { error: 'PLAN_LIMIT', used: huddle.participants.size };
     }
     const others = [...huddle.participants.values()].filter((p) => p.userId !== uid).map(publicParticipant);
     const participant = {
@@ -236,6 +249,7 @@ class HuddleRegistry {
       video: !!huddle.video,
       startedAt: toDate(huddle.startedAt).toISOString(),
       meetingId: huddle.meetingId || null,
+      planUserId: huddle.planUserId || null,
       participants: withParticipants
         ? [...huddle.participants.values()].map((p) => ({ ...p, joinedAt: toDate(p.joinedAt).toISOString() }))
         : [],
@@ -259,6 +273,7 @@ class HuddleRegistry {
       video: !!data.video,
       startedAt: toDate(data.startedAt),
       meetingId: data.meetingId || null,
+      planUserId: data.planUserId || null,
       participants: new Map((data.participants || []).map((p) => [String(p.userId), { ...p, userId: String(p.userId), joinedAt: toDate(p.joinedAt) }])),
     };
     this.huddles.set(huddle.huddleId, huddle);
@@ -340,4 +355,15 @@ class HuddleRegistry {
 
 const registry = new HuddleRegistry({ maxParticipants: maxParticipantsFromEnv() });
 
-module.exports = { HuddleRegistry, registry, scopeKey, maxParticipantsFromEnv, DEFAULT_MAX_PARTICIPANTS };
+/**
+ * Whose plan limits a call: { workspaceId } when the server resolved its
+ * workspace (channel, DM in a workspace, workspace huddle), otherwise
+ * { workspaceId: null, userId } = the person who opened it.
+ */
+function planSourceOf(huddle) {
+  if (!huddle) return { workspaceId: null, userId: null };
+  if (huddle.planUserId) return { workspaceId: null, userId: huddle.planUserId };
+  return { workspaceId: huddle.workspaceId || null, userId: null };
+}
+
+module.exports = { HuddleRegistry, registry, scopeKey, maxParticipantsFromEnv, planSourceOf, DEFAULT_MAX_PARTICIPANTS };

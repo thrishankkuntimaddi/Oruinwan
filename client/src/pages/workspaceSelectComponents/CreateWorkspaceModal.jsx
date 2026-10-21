@@ -4,6 +4,7 @@ import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Check, Loader2, Copy,
 import { WORKSPACE_ICON_OPTIONS, WORKSPACE_COLORS, DEFAULT_WORKSPACE_COLOR, WorkspaceIcon } from '../../utils/workspaceIcons';
 import { projectChannelName } from './projectChannelName';
 import logger from '../../utils/logger';
+import { skippedChannelsText } from '../../features/plan/planSkips';
 
 const s = {
     label: 'gl-wsp-label',
@@ -116,6 +117,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onCreated, onOpen, showToast })
             setCreated({ id: ws.id, name: ws.name, channels: ws.channels || [] });
             onCreated?.(ws);
             if (res.data.templateError) showToast?.('Workspace created, but the template could not be applied', 'warning');
+            else if (skippedChannelsText(res.data)) showToast?.(`Workspace created. ${skippedChannelsText(res.data)}`, 'warning');
             setStep(3);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create workspace. Please try again.');

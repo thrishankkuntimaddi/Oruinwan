@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { api, useSession } from '../../data/session.js';
 import { emit as busEmit, on, toast } from '../../lib/bus.js';
-import { CALL_FULL, TIME_LIMIT_ENDED } from '../plan/planText.js';
+import { callFullText, timeLimitEndedText } from '../plan/planText.js';
 
 const FALLBACK_ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
 
@@ -221,8 +221,9 @@ const handlers = {
     if (isMine(p.huddleId)) {
       if (p.reason === 'joined_elsewhere') toast('You joined this huddle on another device.');
       const meetingId = useHuddle.getState().call?.meetingId || (p.meetingId ? String(p.meetingId) : null);
+      const maxMinutes = useHuddle.getState().timeLimit?.maxMinutes;
       teardown();
-      if (p.reason === 'time_limit') set({ endedNotice: { message: p.message || TIME_LIMIT_ENDED, meetingId } });
+      if (p.reason === 'time_limit') set({ endedNotice: { message: p.message || timeLimitEndedText(maxMinutes), meetingId } });
     }
   },
   'huddle:existing'(p) {
@@ -301,13 +302,14 @@ const handlers = {
   },
   'huddle:time_warning'(p) {
     if (!isMine(p.huddleId)) return;
-    set({ timeWarning: { minutesLeft: Number(p.minutesLeft) || 0, endsAt: p.endsAt || null, maxMinutes: Number(p.maxMinutes) || 30, message: p.message || '' } });
+    const fromRoster = useHuddle.getState().timeLimit?.maxMinutes;
+    set({ timeWarning: { minutesLeft: Number(p.minutesLeft) || 0, endsAt: p.endsAt || null, maxMinutes: Number(p.maxMinutes) || Number(fromRoster) || null, message: p.message || '' } });
   },
   'huddle:error'(p) {
     if (!isMine(p.huddleId)) return;
     // The free plan's 10 people per call: the upgrade sheet explains it (features/plan/UpgradeSheet.jsx).
     if (p.code === 'PLAN_LIMIT') {
-      busEmit('plan:limit', { ...p, message: p.message || CALL_FULL });
+      busEmit('plan:limit', { ...p, message: p.message || callFullText(p.max) });
       emit('huddle:leave', { huddleId: p.huddleId });
       teardown();
       return;

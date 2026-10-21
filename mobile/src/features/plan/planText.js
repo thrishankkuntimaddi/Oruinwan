@@ -4,8 +4,17 @@
 export const LIMIT_TITLE = 'Free plan limit reached';
 export const COMING_SOON = 'Pro and Enterprise are coming soon.';
 export const EXEMPT_TEXT = 'Your company plan has no free-plan limits.';
-export const CALL_FULL = 'This call is full — 10 people on the free plan';
-export const TIME_LIMIT_ENDED = "This call ended at the free plan's 30-minute limit. Your notes are saved in the meeting notes.";
+// The call numbers come from the server (huddle:error max, huddle:roster timeLimit, GET /api/plan);
+// these are only the fallbacks when an answer leaves them out.
+export const DEFAULT_CALL_PEOPLE = 10;
+export const DEFAULT_CALL_MINUTES = 30;
+const positive = (n, fallback) => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n) : fallback);
+/** "This call is full — 10 people on the free plan" with the server's number. */
+export const callFullText = (max) => `This call is full — ${positive(max, DEFAULT_CALL_PEOPLE)} people on the free plan`;
+/** The call ended at the plan's time limit, with the server's number of minutes. */
+export const timeLimitEndedText = (minutes) => `This call ended at the free plan's ${positive(minutes, DEFAULT_CALL_MINUTES)}-minute limit. Your notes are saved in the meeting notes.`;
+export const CALL_FULL = callFullText();
+export const TIME_LIMIT_ENDED = timeLimitEndedText();
 
 export const isPlanLimit = (err) => Boolean(err && (err.planLimit || err.code === 'PLAN_LIMIT' || err.data?.code === 'PLAN_LIMIT'));
 
@@ -33,7 +42,7 @@ const NOTES = {
   'workspaces.create': (m) => `You've created ${m ?? 'the most'} workspaces, the free plan's limit.`,
   'workspaces.join': (m) => `You've joined ${m ?? 'the most'} workspaces, the free plan's limit.`,
   'members.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} people (including pending invites), the free plan's limit.`,
-  'channels.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} channels besides #general and #random, the free plan's limit.`,
+  'channels.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} channels besides #general, #random and its project channel, the free plan's limit.`,
   'tasks.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} active tasks, the free plan's limit. Finish or close some to add more.`,
   'tasks.selfCreated': (m) => `You have ${m ?? 'the most'} active tasks for yourself, the free plan's limit. Finish some to add more.`,
   'tasks.assignedToOthers': (m) => `You have ${m ?? 'the most'} active tasks assigned to others, the free plan's limit. Finish some to add more.`,
@@ -100,5 +109,5 @@ export function timeWarningText(w) {
   if (!w) return null;
   const n = Number(w.minutesLeft) || 0;
   if (n <= 1) return '1 minute left';
-  return `${n} minutes left — free plan calls end at ${w.maxMinutes || 30} minutes`;
+  return `${n} minutes left — free plan calls end at ${positive(w.maxMinutes, DEFAULT_CALL_MINUTES)} minutes`;
 }

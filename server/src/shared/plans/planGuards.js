@@ -125,4 +125,30 @@ const subtaskCreate = guard('tasks', async (req) => {
     await planService.assertCanCreateTasks(String(parent.workspace._id || parent.workspace), me, adds);
 });
 
-module.exports = { workspaceCreate, workspaceJoin, workspaceInvite, channelCreate, noteCreate, taskCreate, subtaskCreate, tellInviter };
+/** Check what a change to an existing task adds against its creator's counters. */
+async function assertTaskChange(taskId, change) {
+    const task = await require('../../features/tasks/tasks.query').findById(taskId);
+    if (!task?.workspace || !task.createdBy) return;
+    const adds = planService.taskChangeAdds(task, change);
+    if (!adds) return;
+    const creator = String(task.createdBy._id || task.createdBy.id || task.createdBy);
+    await planService.assertCanCreateTasks(String(task.workspace._id || task.workspace), creator, adds);
+}
+
+/**
+ * PUT /api/tasks/:id — reopening a done / cancelled task makes it active again;
+ * reassigning a task from its creator to someone else counts as "assigned to others".
+ */
+const taskUpdate = guard('tasks', async (req) => {
+    const b = req.body || {};
+    if (b.status === undefined && b.assignedTo === undefined) return;
+    const change = {};
+    if (b.status !== undefined) change.status = b.status;
+    if (b.assignedTo !== undefined) change.assignedTo = Array.isArray(b.assignedTo) ? b.assignedTo : [b.assignedTo].filter(Boolean);
+    await assertTaskChange(req.params.id, change);
+});
+
+/** POST /api/tasks/:id/restore — a restored task that is still open is active again. */
+const taskRestore = guard('tasks', (req) => assertTaskChange(req.params.id, { restore: true }));
+
+module.exports = { workspaceCreate, workspaceJoin, workspaceInvite, channelCreate, noteCreate, taskCreate, subtaskCreate, taskUpdate, taskRestore, tellInviter };

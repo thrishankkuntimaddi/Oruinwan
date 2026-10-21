@@ -28,11 +28,12 @@ router.post('/', requireWorkspaceFeature('tasks'), requireCompanyPermission('cre
 
 router.get('/:id/activity', tasksController.getTaskActivity);
 
-router.put('/:id', tasksController.updateTask);
+// Reopening or reassigning to others counts against the free plan's task limits.
+router.put('/:id', require('../../shared/plans/planGuards').taskUpdate, tasksController.updateTask);
 
 router.delete('/:id', tasksController.deleteTask);
 
-router.post('/:id/restore', tasksController.restoreTask);
+router.post('/:id/restore', require('../../shared/plans/planGuards').taskRestore, tasksController.restoreTask);
 
 router.delete('/:id/permanent', tasksController.permanentDeleteTask);
 

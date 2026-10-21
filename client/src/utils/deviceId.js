@@ -12,6 +12,21 @@ export function getDeviceId() {
     return deviceId;
 }
 
+/**
+ * Keep a device id the server made (X-Device-Id on a sign-in answer) when this
+ * browser has none of its own yet, so later requests send the same id.
+ */
+export function adoptDeviceId(id) {
+    try {
+        if (typeof id !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(id)) return false;
+        if (localStorage.getItem('deviceId')) return false;
+        localStorage.setItem('deviceId', id);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export function clearDeviceId() {
     const deviceId = localStorage.getItem('deviceId');
     if (deviceId) {

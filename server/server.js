@@ -135,6 +135,8 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
+    // A device id the server made for a sign-in without one (devices.service assignDeviceId).
+    exposedHeaders: ['X-Device-Id'],
   })
 );
 
@@ -146,6 +148,8 @@ logger.info('🛡️ Input sanitization enabled');
 // (src/features/auth/authRateLimits.js).
 const { authLimiter, credentialLimiter, refreshLimiter } = require('./src/features/auth/authRateLimits').createAuthLimiters();
 app.use("/api/auth", authLimiter, credentialLimiter, refreshLimiter);
+// Every sign-in is recorded and counted under a device id, made here when the client sent none.
+app.use("/api/auth", require('./src/features/devices/devices.service').assignDeviceId);
 
 app.use('/api/health', require('./src/shared/routes/health.routes'));
 

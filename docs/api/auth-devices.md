@@ -5,15 +5,22 @@ Code: `server/src/features/auth/{signInFlow,qrSignIn,approvals,signIn.routes}.js
 `server/src/features/devices/devices.service.js`, `server/src/features/crypto/identity.controller.js`.
 
 All requests send `X-Device-Id` (the install's random device id, `[A-Za-z0-9._:-]{8,128}`).
-Apps also send `x-client-platform: ios|android|desktop` and get the refresh token in JSON; browsers
+A request to `/api/auth/*` without one (and without the device cookie) gets an id made on the
+server: it comes back in the `X-Device-Id` response header (exposed to CORS; the web and phone apps
+keep it when they have none of their own and send it from then on) and in the httpOnly
+`oruinwan_did` cookie (browsers send it back by themselves). So a sign-in without the header is
+still recorded under Devices and counted for the device limit. Apps also send `x-client-platform: ios|android|desktop` and get the refresh token in JSON; browsers
 get it as the httpOnly `jwt` cookie.
 
 ## Configuration
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `DEVICE_LIMIT` | `4` | Devices one account may have signed in at once (web browsers, desktop app, phone/tablet app; each device id counts once). `0` = no limit. |
-| `COMPANY_DEVICE_LIMIT` | = `DEVICE_LIMIT` | Limit for company accounts, when it should differ. |
+| `DEVICE_LIMIT` | `4` | Devices an individual account may have signed in at once (web browsers, desktop app, phone/tablet app; each device id counts once). `0` = no limit. Not plan-based. |
+| `COMPANY_DEVICE_LIMIT` | unset (no limit) | Company accounts are not limited unless this is set (`0` = no limit). |
+
+When the device table can't be read (database down) the sign-in is let through, and the server logs
+an error `DEVICE LIMIT NOT ENFORCED` for every such sign-in.
 | `REFRESH_TOKEN_DAYS` | `7` | A device not seen for this long no longer holds a place. |
 
 A device holds a place while its row in `user_device_sessions` is not signed out (`revoked = false`)
@@ -29,7 +36,8 @@ lookups are made. Without them the IP address is shown.
 
 Every way of signing in — password (`POST /login`), Google on web / desktop / Android
 (`POST /google-login`, `/google-signup`), passkeys (`POST /passkeys/login/verify`), SSO
-(OIDC/SAML browser callbacks and `POST /sso/app/exchange`) and QR (`POST /qr/poll`) — goes through
+(OIDC/SAML browser callbacks and `POST /sso/app/exchange`), QR (`POST /qr/poll`) and reactivating a
+deactivated account (`POST /reactivate/verify-otp`, which answers like `POST /login`) — goes through
 the same gate once the person is known:
 
 1. **Two-step verification** (accounts with 2FA on). Any one of: approve on a signed-in device, the

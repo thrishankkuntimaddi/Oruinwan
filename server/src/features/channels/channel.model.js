@@ -12,6 +12,8 @@ const ChannelSchema = new mongoose.Schema({
   isPrivate: { type: Boolean, default: false },
   isDiscoverable: { type: Boolean, default: true }, 
   isDefault: { type: Boolean, default: false }, 
+  // Made together with the workspace (#general, #random, the wizard's project channel): never counts against the plan's channel limit.
+  autoCreated: { type: Boolean, default: false },
   isPublic: { type: Boolean, default: false }, 
   isArchived: { type: Boolean, default: false },
 

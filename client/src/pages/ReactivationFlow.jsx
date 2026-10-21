@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { RotateCcw, Mail, AlertCircle, ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../contexts/ToastContext';
 import AuthShell from '../components/public/AuthShell';
 import { AuthMark, AuthHead } from '../components/public/AuthParts';
+import { AuthContext } from '../contexts/AuthContext';
+import SignInChallenge, { signInChallengeFrom } from '../components/loginpage/SignInChallenge';
+import { routeAfterPasswordLogin } from '../components/loginpage/LoginForm';
 
 const ReactivationFlow = () => {
     const navigate = useNavigate();
@@ -18,6 +21,17 @@ const ReactivationFlow = () => {
     const [showPwd, setShowPwd] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    // Reactivating signs in like any other sign-in: two-step verification and the device limit.
+    const [challenge, setChallenge] = useState(null);
+    const auth = useContext(AuthContext);
+
+    const takeSession = (data) => {
+        if (auth?.adoptSession) auth.adoptSession(data, { password });
+        else if (data?.accessToken) localStorage.setItem('accessToken', data.accessToken);
+        showToast('Welcome back. Your account is active again.', 'success');
+        if (data?.redirectTo || data?.user) routeAfterPasswordLogin(data, navigate);
+        else navigate('/workspaces');
+    };
 
     const handleReactivate = async (e) => {
         e.preventDefault();
@@ -40,15 +54,13 @@ const ReactivationFlow = () => {
                 `/api/auth/reactivate/verify-otp`,
                 { email, otpCode, password }
             );
-
-            if (response.data.accessToken) {
-                localStorage.setItem('accessToken', response.data.accessToken);
-            }
-
-            showToast('Welcome back. Your account is active again.', 'success');
-
-            navigate('/workspaces');
+            takeSession(response.data);
         } catch (err) {
+            const step = signInChallengeFrom(err.response?.data);
+            if (step) {
+                setChallenge(step);
+                return;
+            }
             setError(err.response?.data?.message || 'We couldn’t reactivate your account. Try again.');
 
             if (err.response?.data?.message?.includes('OTP') || err.response?.data?.message?.includes('expired')) {
@@ -58,6 +70,18 @@ const ReactivationFlow = () => {
             setLoading(false);
         }
     };
+
+    if (challenge) {
+        return (
+            <AuthShell title="Reactivate account">
+                <SignInChallenge
+                    challenge={challenge}
+                    onSession={(data) => { setChallenge(null); takeSession(data); }}
+                    onCancel={(message) => { setChallenge(null); navigate('/login'); if (message) showToast(message, 'info'); }}
+                />
+            </AuthShell>
+        );
+    }
 
     return (
         <AuthShell

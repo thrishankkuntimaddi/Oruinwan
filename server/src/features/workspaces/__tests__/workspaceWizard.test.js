@@ -86,6 +86,8 @@ describe('creating a workspace', () => {
         expect(res.statusCode).toBe(201);
         expect(mockChannels.map((c) => c.name)).toEqual(['general', 'random', 'website-redesign']);
         expect(mockChannels.every((c) => c.isDefault && !c.isPrivate)).toBe(true);
+        // Made with the workspace: none of them counts against the free plan's 10 channels.
+        expect(mockChannels.every((c) => c.autoCreated === true)).toBe(true);
         expect(res.body.workspace.channels.map((c) => c.name)).toEqual(['general', 'random', 'website-redesign']);
     });
 

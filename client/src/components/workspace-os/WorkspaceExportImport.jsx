@@ -3,6 +3,7 @@ import api from '@services/api';
 import { Download, Upload, FileJson, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { Btn, Grid } from '../ui/page';
 import '../../pages/toolkit/toolkit.css';
+import { planSkipsText } from '../../features/plan/planSkips';
 
 /** Workspace settings → Data: download a structure bundle, or rebuild a workspace from one. */
 export default function WorkspaceExportImport({ workspaceId, workspaceName, onImported }) {
@@ -49,7 +50,8 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
             const bundle = JSON.parse(text);
 
             const res = await api.post('/api/workspace-os/import', { bundle });
-            setImportSuccess(`Created “${res.data.workspace?.name}” from the file`);
+            const skipped = planSkipsText(res.data);
+            setImportSuccess(`Created “${res.data.workspace?.name}” from the file${skipped ? `. ${skipped}` : ''}`);
             if (onImported) onImported(res.data.workspace);
         } catch (err) {
             if (err instanceof SyntaxError) {

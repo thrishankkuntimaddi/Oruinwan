@@ -27,6 +27,15 @@ export function deviceId() {
   return id;
 }
 
+/** Keep a device id the server made (X-Device-Id on an answer) when this install has none. */
+export function adoptDeviceId(id) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(id)) return false;
+  const current = prefs.get('device.id');
+  if (typeof current === 'string' && /^[A-Za-z0-9._:-]{8,128}$/.test(current)) return false;
+  prefs.set('device.id', id);
+  return true;
+}
+
 const HEADERS = { Accept: 'application/json', 'x-client-platform': clientPlatform };
 export const NETWORK_MESSAGE = "Can't reach your server. Check your connection and try again.";
 
@@ -97,6 +106,7 @@ async function send(method, url, body, auth) {
   } catch {
     throw new ApiError(NETWORK_MESSAGE, 0, null);
   }
+  adoptDeviceId(res.headers?.get?.('x-device-id'));
   const text = await res.text();
   let data = null;
   try {

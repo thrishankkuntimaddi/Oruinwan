@@ -4,6 +4,29 @@ const workspaceOsService = require('./workspace-os.service');
 const identity = require('../../identity');
 const { handleError } = require('../../../utils/responseHelpers');
 
+const { channelsSkippedMessage } = require('../../shared/plans/planService');
+
+/**
+ * What the free plan left out of a clone / import: skippedMembers [{ userId, name, reason }],
+ * skippedChannels [names], channelLimit, skippedMessage (one line for the UI).
+ */
+function planSkips(ws) {
+    const skippedMembers = ws.skippedMembers || [];
+    const skippedChannels = ws.skippedChannels || [];
+    const parts = [];
+    const ch = channelsSkippedMessage(skippedChannels, ws.channelLimit);
+    if (ch) parts.push(ch);
+    if (skippedMembers.length) {
+        const n = skippedMembers.length;
+        parts.push(`${n} ${n === 1 ? 'person was' : 'people were'} not added: free plan limits (members per workspace or workspaces joined)`);
+    }
+    return {
+        skippedMembers, skippedChannels, channelLimit: ws.channelLimit ?? null,
+        ...(parts.length ? { skippedMessage: parts.join('. ') } : {}),
+    };
+}
+exports._planSkips = planSkips;
+
 const getIp = req => req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
 const getUa = req => req.headers['user-agent'] || '';
 
@@ -50,7 +73,8 @@ exports.cloneWorkspace = async (req, res) => {
                 icon: cloned.icon,
                 color: cloned.color,
                 clonedFrom: sourceId
-            }
+            },
+            ...planSkips(cloned),
         });
     } catch (err) {
         if (err.status) return res.status(err.status).json({ message: err.message });
@@ -96,7 +120,8 @@ exports.importWorkspace = async (req, res) => {
                 name: imported.name,
                 icon: imported.icon,
                 color: imported.color
-            }
+            },
+            ...planSkips(imported),
         });
     } catch (err) {
         if (err.status) return res.status(err.status).json({ message: err.message });

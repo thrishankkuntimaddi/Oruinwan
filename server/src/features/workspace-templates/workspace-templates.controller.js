@@ -226,12 +226,17 @@ exports.importTemplate = async (req, res) => {
 
     // Channels (with encryption keys), settings and feature toggles.
     const before = await Channel.countDocuments({ workspace: workspaceId });
-    await require('../workspace-os/workspace-os.service').applyTemplate({ workspace: ws, templateId: template._id, userId, companyId });
+    const applied = await require('../workspace-os/workspace-os.service').applyTemplate({ workspace: ws, templateId: template._id, userId, companyId });
     const createdCount = (await Channel.countDocuments({ workspace: workspaceId })) - before;
+    const skippedChannels = applied?.skippedChannels || [];
+    const skippedNote = require('../../shared/plans/planService').channelsSkippedMessage(skippedChannels, applied?.channelLimit);
 
     return res.json({
-      message: `Template imported. ${createdCount} channel(s) created.`,
-      createdCount
+      message: `Template imported. ${createdCount} channel(s) created.${skippedNote ? ` ${skippedNote}.` : ''}`,
+      createdCount,
+      skippedChannels,
+      channelLimit: applied?.channelLimit ?? null,
+      ...(skippedNote ? { skippedMessage: skippedNote } : {}),
     });
   } catch (err) {
     return handleError(res, err, 'IMPORT TEMPLATE ERROR');

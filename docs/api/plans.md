@@ -14,7 +14,7 @@ guards in `planGuards.js`), AI counters: `aiQuota.js`, call timer: `huddleTimer.
 | `workspaces.create` | 2 | active personal workspaces where you are the owner |
 | `workspaces.join` | 2 | active personal workspaces where you are a member but not the owner |
 | `members.perWorkspace` | 11 | owner + 10 others: members who are not removed **plus pending email invites** (link invites name nobody and take no seat; bots/agents are not members) |
-| `channels.perWorkspace` | 10 | non-archived channels besides `#general` and `#random`; any member may create, public or private |
+| `channels.perWorkspace` | 10 | non-archived channels besides the ones made with the workspace (`#general`, `#random` and the wizard's project channel, flagged `autoCreated`; in workspaces made before the flag, the project channel is recognised as the default channel without admins made with `#general`); any member may create, public or private |
 | `huddles.participants` | 10 | people in one call at once |
 | `huddles.minutes` | 30 | hard stop per call; warnings at 25:00 and 29:00 |
 | `notes.perTemplate` | 2 | notes you created from one template in one workspace; blank notes are unlimited |
@@ -70,6 +70,10 @@ Where they happen:
 | `POST /api/channels`, `POST /api/workspaces/:id/channels` | `channels.perWorkspace` |
 | `POST /api/v2/notes` (`templateId`) | `notes.perTemplate` |
 | `POST /api/v2/tasks`, `/:id/subtasks`, message → task, meeting action item → task, task templates, public API, AI "extract and create" | `tasks.*` |
+| `POST /api/v2/tasks/:id/restore` (a restored task that is open becomes active again) | `tasks.*` of the task's creator |
+| `PUT /api/v2/tasks/:id` reopening (done / cancelled → an open status) | `tasks.*` of the task's creator |
+| `PUT /api/v2/tasks/:id` `assignedTo` moving an active task from its creator alone to anyone else | `tasks.assignedToOthers` of the task's creator |
+| tasks created by integrations (GitHub, Jira, … `task.create` effects) | `tasks.perWorkspace`, `tasks.assignedToOthers` of the person who connected it: over them no task is made, the channel card says why (`integration.extra.planNote`) and the webhook result lists `skippedTasks` |
 | any AI endpoint answered with the server's key | `ai.userDaily`, `ai.workspaceDaily` |
 
 When an invite cannot be accepted because the invitee reached `workspaces.join`, the inviter gets a
@@ -83,6 +87,33 @@ socket event and an in-app notification (type `plan_limit`):
 
 `POST /api/ai/extract-tasks` with `create: true` stops creating at the task limit and returns
 `planLimit` (the body above) next to `created`.
+
+Tasks that are already active are never refused, whatever the counts (grandfathering).
+
+### Bulk creates: create what fits, report the rest
+
+Cloning, importing and applying a template never fail because of the channel or member limits;
+they create what fits and say what they skipped:
+
+| Request | skipped and reported |
+|---|---|
+| `POST /api/workspace-os/:id/clone`, `POST /api/workspaces/:id/clone` | channels past `channels.perWorkspace` (channels made with the source workspace always come along); with members (`includeMembers` / `includeMembership`), people past their own `workspaces.join` or the clone's `members.perWorkspace` (the cloner is the owner; the source's other owners become admins) |
+| `POST /api/workspace-os/import`, `POST /api/workspaces/import` | channels past `channels.perWorkspace` (a bundle can't mark its own channels free) |
+| `POST /api/workspaces` / `/create` with `templateId`, `POST /api/workspace-templates/:id/import` | template channels past `channels.perWorkspace` |
+
+```json
+{
+  "workspace": { "id": "…", "name": "Acme (copy)" },
+  "skippedChannels": ["design", "ops"],
+  "channelLimit": 10,
+  "skippedMembers": [{ "userId": "…", "name": "Sam", "reason": "workspaces.join" }],
+  "skippedMessage": "2 channels skipped: free plan allows 10 channels. 1 person was not added: free plan limits (members per workspace or workspaces joined)"
+}
+```
+
+Company workspaces and company accounts skip nothing. Signing up with an invite makes a company
+account only when the invite belongs to a company; an invite to a personal workspace keeps a
+personal (free plan) account.
 
 ## GET /api/plan?workspaceId=
 
@@ -132,6 +163,15 @@ After each counted request the person's apps receive:
 ```
 
 ## Calls (huddles)
+
+- Whose plan applies is decided on the server: the channel's workspace, the DM's workspace, or the
+  workspace of a workspace huddle (membership checked). A workspace id sent by the client never
+  exempts a call. A DM outside any workspace follows the **caller's own plan** (the person who
+  opened the call): free → 10 people / 30 minutes; company accounts are not limited.
+- The people limit is checked in the same step that adds the person to the call's registry (no
+  wait in between), so two joins on one server can't both take the last place. With several
+  servers the registry copies converge through replication; two joins landing on two servers
+  within that delay can still overshoot by one.
 
 - `huddle:join` past the plan's people limit is refused:
   `huddle:error { huddleId, code: 'PLAN_LIMIT', limit: 'huddles.participants', max: 10, used: 10, plan, upgradeUrl, message }`.

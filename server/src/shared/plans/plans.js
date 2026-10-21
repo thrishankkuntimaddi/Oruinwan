@@ -46,7 +46,7 @@ const DEFAULT_PLANS = {
             'workspaces.create': 2,
             'workspaces.join': 2,
             'members.perWorkspace': 11, // owner + 10 others (pending invites count, bots don't)
-            'channels.perWorkspace': 10, // besides #general and #random
+            'channels.perWorkspace': 10, // besides the ones made with the workspace (#general, #random, the wizard's project channel)
             'huddles.participants': 10,
             'huddles.minutes': 30,
             'notes.perTemplate': 2,
@@ -87,7 +87,7 @@ const LABELS = {
     'workspaces.create': { label: 'Workspaces you created', noun: (n) => `${n} workspace${n === 1 ? '' : 's'} you created` },
     'workspaces.join': { label: 'Workspaces you joined', noun: (n) => `${n} workspace${n === 1 ? '' : 's'} you joined` },
     'members.perWorkspace': { label: 'Members (incl. pending invites)', noun: (n) => `${n} members per workspace (the owner + ${Math.max(0, n - 1)} others, pending invites included)` },
-    'channels.perWorkspace': { label: 'Channels (besides #general and #random)', noun: (n) => `${n} channels per workspace besides #general and #random` },
+    'channels.perWorkspace': { label: 'Channels (besides #general, #random and your project channel)', noun: (n) => `${n} channels per workspace besides #general, #random and the project channel made with it` },
     'huddles.participants': { label: 'People in a call', noun: (n) => `${n} people in a call` },
     'huddles.minutes': { label: 'Minutes per call', noun: (n) => `${n} minutes per call` },
     'notes.perTemplate': { label: 'Notes per template', noun: (n) => `${n} notes from each template per workspace` },

@@ -12,6 +12,7 @@ import {
   EmptyState, ErrorState, errorMessage,
 } from '../../components/ui/page';
 import '../toolkit/toolkit.css';
+import { skippedChannelsText } from "../../features/plan/planSkips";
 
 // Matches WorkspaceTemplate.category on the server.
 export const TEMPLATE_CATEGORIES = [
@@ -268,8 +269,10 @@ export default function TemplateMarketplacePage() {
   const handleUse = async (template) => {
     setImporting(template._id);
     try {
-      await api.post(`/api/workspace-templates/${template._id}/import`, { workspaceId });
-      showToast(`Applied “${template.name}”`, "success");
+      const { data } = await api.post(`/api/workspace-templates/${template._id}/import`, { workspaceId });
+      const skipped = skippedChannelsText(data);
+      if (skipped) showToast(`Applied “${template.name}”. ${skipped}`, "warning");
+      else showToast(`Applied “${template.name}”`, "success");
       setConfirmUse(null);
       setTemplates((list) => list.map((t) => (t._id === template._id
         ? { ...t, importCount: (t.importCount ?? t.usageCount ?? 0) + 1, usageCount: (t.usageCount || 0) + 1 } : t)));

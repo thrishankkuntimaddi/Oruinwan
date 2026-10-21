@@ -727,6 +727,7 @@ export function AdminTemplatesScreen() {
     try {
       const ws = await api().createWorkspaceFromTemplate({ name: name.trim(), templateId: picked.id });
       if (ws.templateError) toast(`Created, but the template could not be applied: ${ws.templateError}`, 'warning');
+      else if (ws.skippedMessage) toast(`${ws.name} is ready. ${ws.skippedMessage}.`, 'warning');
       else toast(`${ws.name} is ready`, 'success');
       setPicked(null);
       await useSession.getState().finishCreateWorkspace(ws);
@@ -798,7 +799,8 @@ export function AdminDataScreen() {
   };
   const clone = () => run('clone', async () => {
     const ws = await api().cloneWorkspace(workspace.id, { name: cloneName.trim() || `${workspace.name} (copy)`, includeMembers: withMembers });
-    toast(`${ws.name} created`, 'success');
+    if (ws.skippedMessage) toast(`${ws.name} created. ${ws.skippedMessage}.`, 'warning');
+    else toast(`${ws.name} created`, 'success');
     setCloneName('');
     await useSession.getState().loadWorkspaces();
   });
@@ -813,7 +815,8 @@ export function AdminDataScreen() {
     const ws = await api().importWorkspace(bundle);
     setPaste(false);
     setPasted('');
-    toast(`${ws.name} imported`, 'success');
+    if (ws.skippedMessage) toast(`${ws.name} imported. ${ws.skippedMessage}.`, 'warning');
+    else toast(`${ws.name} imported`, 'success');
     await useSession.getState().finishCreateWorkspace(ws);
   });
 

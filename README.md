@@ -94,18 +94,18 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 | | **Free** · available now | **Pro** · coming soon | **Enterprise** · coming soon |
 |---|---|---|---|
 | Who it's for | Small teams, every feature | Growing teams | Organisations |
-| Signed-in devices | Up to 4 | More | Custom |
+| Signed-in devices | Up to 4 per person | Up to 4 per person | Up to 4 per person |
 | Workspaces | Create 2, join 2 | More | Custom |
 | Members per workspace | Owner + 10 | More | Custom |
-| Channels | 10 besides #general and #random | More | Custom |
+| Channels | 10 besides the ones made with the workspace (#general, #random, your project) | More | Custom |
 | Huddles | Up to 10 people, 30 minutes | Longer calls, more people | Custom |
 | Notes | 2 per template, blank notes unlimited | More | Custom |
 | Tasks | 300 active per workspace; 30 for yourself + 30 assigned per person | More | Custom |
-| AI requests | 50 per person per day | More | Custom |
+| AI requests | 50 per person per day, 300 per workspace per day | More | Custom |
 | Backup | Encrypted backup to your Google Drive | ✓ | ✓ |
 | Admin controls, SSO, compliance | | | ✓ |
 
-Prices for Pro and Enterprise aren't set yet. To hear when they launch, email [admin@poelys.com](mailto:admin@poelys.com?subject=Notify%20me%3A%20Oruinwan%20Pro). The limits apply to individual accounts; on your own server you can change or remove them ([Configurable limits](#configurable-limits)).
+Prices for Pro and Enterprise aren't set yet. To hear when they launch, email [admin@poelys.com](mailto:admin@poelys.com?subject=Notify%20me%3A%20Oruinwan%20Pro). The limits apply to individual accounts; company accounts and company workspaces are not limited (the device limit doesn't depend on the plan, and company accounts have none unless `COMPANY_DEVICE_LIMIT` is set). On your own server you can change or remove them ([Configurable limits](#configurable-limits)).
 
 ---
 

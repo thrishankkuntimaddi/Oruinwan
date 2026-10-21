@@ -18,6 +18,7 @@ const conversationKeysService = require("../../modules/conversations/conversatio
 const messagesService = require("../../modules/messages/messages.service");
 
 const { isValidId, userRoom } = require("../../shared/utils/workspaceAccess");
+const planService = require("../../shared/plans/planService");
 
 // Workspace settings a member may see and an admin may change (booleans / numbers only).
 const BOOLEAN_SETTINGS = ['isPrivate', 'allowMemberInvite', 'allowMemberChannelCreation', 'requireAdminApproval', 'isDiscoverable'];
@@ -157,6 +158,7 @@ exports.createWorkspace = async (req, res) => {
       description: "General discussion",
       isPrivate: false,
       isDefault: true,
+      autoCreated: true,
       createdBy: userId,
       members: [{ user: userId, joinedAt: creationDate }],
       systemEvents: [{
@@ -181,6 +183,8 @@ exports.createWorkspace = async (req, res) => {
         description: extra.description,
         isPrivate: false,
         isDefault: true,
+        // Made with the workspace: like #general it never counts against the channel limit.
+        autoCreated: true,
         createdBy: userId,
         members: [{ user: userId, joinedAt: creationDate }],
         systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }]
@@ -220,11 +224,19 @@ exports.createWorkspace = async (req, res) => {
     });
 
     let templateError = null;
+    let templateSkips = null;
     if (templateId) {
       try {
-        await require("../workspace-os/workspace-os.service").applyTemplate({
+        const applied = await require("../workspace-os/workspace-os.service").applyTemplate({
           workspace, templateId, userId, companyId: resolvedCompanyId,
         });
+        if (applied?.skippedChannels?.length) {
+          templateSkips = {
+            skippedChannels: applied.skippedChannels,
+            channelLimit: applied.channelLimit,
+            skippedMessage: planService.channelsSkippedMessage(applied.skippedChannels, applied.channelLimit),
+          };
+        }
       } catch (err) {
         // The workspace exists either way; tell the client the template was skipped.
         logger.warn({ err, templateId }, "Workspace template could not be applied");
@@ -250,7 +262,8 @@ exports.createWorkspace = async (req, res) => {
         defaultChannels: workspace.defaultChannels,
         channels: [generalChannel, ...otherChannels].map(c => ({ id: c._id, name: c.name }))
       },
-      ...(templateError ? { templateError } : {})
+      ...(templateError ? { templateError } : {}),
+      ...(templateSkips || {})
     });
   } catch (err) {
     return handleError(res, err, "CREATE WORKSPACE ERROR");
@@ -1295,9 +1308,10 @@ exports.cloneWorkspace = async (req, res) => {
     if (existing) return res.status(400).json({ message: 'Workspace name already exists in your account' });
 
     
-    const cloneMembers = includeMembership
-      ? source.members.filter(m => m.status !== 'removed').map(m => ({ user: m.user, role: m.role, status: 'active', joinedAt: new Date() }))
-      : [{ user: userId, role: 'owner' }];
+    // "With members": only people within their own join limit and the clone's member cap.
+    const { members: cloneMembers, skipped: skippedPeople } = includeMembership
+      ? await planService.fitCloneMembers({ company: resolvedCompanyId }, source.members, userId)
+      : { members: [{ user: userId, role: 'owner' }], skipped: [] };
 
     let clone = await identity.workspaces.create({
       company: resolvedCompanyId || null,
@@ -1313,10 +1327,12 @@ exports.cloneWorkspace = async (req, res) => {
     });
 
     
-    const sourceChannels = await Channel.find({ workspace: sourceId }).lean();
+    const sourceChannels = await Channel.find({ workspace: sourceId, isArchived: { $ne: true } }).lean();
     const clonedChannelIds = [];
+    const isFree = (ch) => planService.DEFAULT_CHANNELS.includes(ch.name) || !!ch.autoCreated;
+    const { allowed: channelsToCopy, skipped: skippedChannels, max: channelLimit } = await planService.fitChannels(clone, sourceChannels, { isFree });
 
-    for (const ch of sourceChannels) {
+    for (const ch of channelsToCopy) {
       const newChannel = await Channel.create({
         workspace: clone._id,
         company: resolvedCompanyId || null,
@@ -1324,6 +1340,7 @@ exports.cloneWorkspace = async (req, res) => {
         description: ch.description || '',
         isPrivate: ch.isPrivate,
         isDefault: ch.isDefault,
+        autoCreated: isFree(ch),
         createdBy: userId,
         members: [{ user: userId, joinedAt: new Date() }],
         systemEvents: [{ type: 'channel_created', userId, timestamp: new Date() }]
@@ -1346,7 +1363,11 @@ exports.cloneWorkspace = async (req, res) => {
         icon: clone.icon,
         color: clone.color,
         channelsCopied: clonedChannelIds.length
-      }
+      },
+      ...require("../workspace-os/workspace-os.controller")._planSkips({
+        skippedMembers: await require("../workspace-os/workspace-os.service")._describeSkippedMembers(skippedPeople),
+        skippedChannels, channelLimit,
+      }),
     });
   } catch (err) {
     return handleError(res, err, 'CLONE WORKSPACE ERROR');
@@ -1434,8 +1455,11 @@ exports.importWorkspace = async (req, res) => {
     });
 
     const createdChannelIds = [];
-    for (const ch of channels) {
-      if (!ch.name) continue;
+    const defaultIds = [];
+    const named = (Array.isArray(channels) ? channels : []).filter(ch => ch && ch.name);
+    // A snapshot can't mark its own channels free: only #general and #random are.
+    const { allowed: channelsToCreate, skipped: skippedChannels, max: channelLimit } = await planService.fitChannels(imported, named);
+    for (const ch of channelsToCreate) {
       const channel = await Channel.create({
         workspace: imported._id,
         company: resolvedCompanyId || null,
@@ -1448,15 +1472,17 @@ exports.importWorkspace = async (req, res) => {
         systemEvents: [{ type: 'channel_created', userId, timestamp: new Date() }]
       });
       createdChannelIds.push(channel._id);
+      if (ch.isDefault) defaultIds.push(channel._id);
     }
 
     imported = await identity.workspaces.update(imported._id, {
-      defaultChannels: createdChannelIds.filter((_, i) => channels[i]?.isDefault).slice(0, 2),
+      defaultChannels: defaultIds.slice(0, 2),
     });
 
     return res.status(201).json({
       message: 'Workspace imported successfully',
-      workspace: { id: imported._id, name: imported.name, icon: imported.icon, color: imported.color }
+      workspace: { id: imported._id, name: imported.name, icon: imported.icon, color: imported.color },
+      ...require("../workspace-os/workspace-os.controller")._planSkips({ skippedChannels, channelLimit }),
     });
   } catch (err) {
     return handleError(res, err, 'IMPORT WORKSPACE ERROR');

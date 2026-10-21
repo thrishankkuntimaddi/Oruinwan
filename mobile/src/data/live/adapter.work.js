@@ -21,6 +21,13 @@ import { conversationKey, decryptPayload, encryptText } from './crypto.js';
 import { clientPlatform } from '../../native/index.js';
 import { fileIconKind } from '../../lib/files.js';
 
+/** What the free plan left out of a clone / import / template (server: skippedChannels, skippedMembers, skippedMessage). */
+const planSkips = (data) => ({
+  skippedChannels: data?.skippedChannels || [],
+  skippedMembers: data?.skippedMembers || [],
+  skippedMessage: data?.skippedMessage || null,
+});
+
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
 function person(u) {
@@ -823,11 +830,11 @@ export const workAdapter = {
   },
   async createWorkspaceFromTemplate({ name, templateId, icon, color }) {
     const data = await api.post('/workspaces/create', { name, templateId, ...(icon ? { icon } : {}), ...(color ? { color } : {}) });
-    return { id: idOf(data.workspace), name: data.workspace?.name, templateError: data.templateError || null };
+    return { id: idOf(data.workspace), name: data.workspace?.name, templateError: data.templateError || null, ...planSkips(data) };
   },
   async cloneWorkspace(ws, { name, includeMembers }) {
     const data = await api.post(`/workspace-os/${ws}/clone`, { name, includeMembers: Boolean(includeMembers) });
-    return { id: idOf(data.workspace), name: data.workspace?.name };
+    return { id: idOf(data.workspace), name: data.workspace?.name, ...planSkips(data) };
   },
   /** The workspace's structure (settings, channels, toggles; no messages) as a JSON bundle. */
   async exportWorkspace(ws) {
@@ -836,7 +843,7 @@ export const workAdapter = {
   },
   async importWorkspace(bundle) {
     const data = await api.post('/workspace-os/import', { bundle });
-    return { id: idOf(data.workspace), name: data.workspace?.name };
+    return { id: idOf(data.workspace), name: data.workspace?.name, ...planSkips(data) };
   },
   /** Counts only: members, channels, tasks, files, docs, and tasks created/completed per day. */
   async workspaceAnalytics(ws, range = 30) {

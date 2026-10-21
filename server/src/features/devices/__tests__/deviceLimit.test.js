@@ -19,9 +19,11 @@ describe('deviceLimitFor', () => {
     expect(devices.deviceLimitFor({}, { DEVICE_LIMIT: 'lots' })).toBe(4);
   });
 
-  test('company accounts use COMPANY_DEVICE_LIMIT when set, else the same limit', () => {
+  test('company accounts are not limited unless COMPANY_DEVICE_LIMIT is set', () => {
     const company = { userType: 'company', companyId: 'c1' };
-    expect(devices.deviceLimitFor(company, { DEVICE_LIMIT: '3' })).toBe(3);
+    expect(devices.deviceLimitFor(company, {})).toBe(0);
+    expect(devices.deviceLimitFor({ companyId: 'c1' }, { DEVICE_LIMIT: '3' })).toBe(0);
+    expect(devices.deviceLimitFor(company, { DEVICE_LIMIT: '3' })).toBe(0);
     expect(devices.deviceLimitFor(company, { DEVICE_LIMIT: '3', COMPANY_DEVICE_LIMIT: '10' })).toBe(10);
     expect(devices.deviceLimitFor({ userType: 'personal' }, { COMPANY_DEVICE_LIMIT: '10' })).toBe(4);
   });

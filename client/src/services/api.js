@@ -2,7 +2,7 @@ import axios from 'axios';
 import sdkApiClient from '@platform/sdk/api/apiClient.js';
 import logger from '../utils/logger';
 import { handlePlanLimitError } from '../features/plan/planLimit';
-import { getDeviceId } from '../utils/deviceId';
+import { getDeviceId, adoptDeviceId } from '../utils/deviceId';
 
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -147,6 +147,9 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
     (response) => {
+        // A device id the server made because this request carried none: keep it.
+        const serverDeviceId = response.headers?.['x-device-id'];
+        if (serverDeviceId) adoptDeviceId(serverDeviceId);
         const newToken = response.headers?.['x-access-token'];
         if (newToken) {
             localStorage.setItem('accessToken', newToken);

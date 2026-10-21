@@ -27,6 +27,24 @@ function resolveChannel(config, connector, effect) {
   return connector?.defaultChannel && config.defaultChannelId ? String(config.defaultChannelId) : null;
 }
 
+/**
+ * The plan's task limits for a task the integration would create (a channel
+ * task by the person who connected it: an "assigned to others" task). Resolves
+ * to null when it fits, or the PLAN_LIMIT body when it does not. A task that
+ * is already done is not active and never counts. A counting problem allows it.
+ */
+async function taskLimitProblem(integration, status) {
+  if (['done', 'cancelled'].includes(status)) return null;
+  const planService = require('../../shared/plans/planService');
+  try {
+    await planService.enforce(planService.assertCanCreateTasks(integration.workspaceId, integration.connectedBy, { self: 0, others: 1 }));
+    return null;
+  } catch (err) {
+    if (err?.code === 'PLAN_LIMIT') return err.body;
+    throw err;
+  }
+}
+
 /** A channel task created on behalf of the person who connected the integration. */
 async function createTask({ integration, channelId, title, description, link, status = 'todo', dueDate = null }) {
   if (!integration.connectedBy) return null;
@@ -34,6 +52,8 @@ async function createTask({ integration, channelId, title, description, link, st
   if (!channel) return null;
   const ws = await workspaces.findById(integration.workspaceId);
   if (!ws) return null;
+  const limit = await taskLimitProblem(integration, status);
+  if (limit) return { skipped: limit };
   const task = await Tasks.create({
     company: ws.company || null,
     workspace: integration.workspaceId,
@@ -64,8 +84,9 @@ async function createTask({ integration, channelId, title, description, link, st
 async function applyEffects({ integration, connector, effects, io }) {
   const config = integration.config || {};
   const workspaceId = integration.workspaceId;
-  const out = { posted: [], tasks: [], createdTasks: [], automation: null, response: null };
+  const out = { posted: [], tasks: [], createdTasks: [], skippedTasks: [], automation: null, response: null };
   const linked = new Map(); // link url -> tasks
+  const planNotes = new Map(); // link url -> why its task was not created
   const botFor = async (provider) => (await bot.getBotUser(provider))._id;
   const provider = connector.type;
 
@@ -77,6 +98,14 @@ async function applyEffects({ integration, connector, effects, io }) {
         if (!channelId) continue;
         if (e.link?.url && (await links.findTasksByLinkUrl(workspaceId, e.link.url)).length) continue;
         const task = await createTask({ integration, channelId, title: e.title, description: e.description, link: e.link, status: e.status || 'todo', dueDate: e.dueDate || null });
+        if (task?.skipped) {
+          // Over the free plan's task limits: no task, a note on the channel card instead.
+          const note = `No task created: ${task.skipped.message}`;
+          out.skippedTasks.push({ title: String(e.title || ''), url: e.link?.url || null, limit: task.skipped.limit, message: note });
+          if (e.link?.url) planNotes.set(e.link.url, note);
+          logger.info({ provider, workspaceId: String(workspaceId), limit: task.skipped.limit }, '[integrations] task not created: plan limit');
+          continue;
+        }
         if (!task) continue;
         out.createdTasks.push({ id: String(task._id), issueKey: task.issueKey || null });
         if (e.link?.url) linked.set(e.link.url, [task]);
@@ -116,6 +145,8 @@ async function applyEffects({ integration, connector, effects, io }) {
       const channelId = resolveChannel(config, connector, e);
       if (!channelId) continue;
       const card = { ...e.card };
+      const planNote = card.url ? planNotes.get(card.url) : null;
+      if (planNote) card.extra = { ...(card.extra || {}), planNote };
       const tasks = card.url ? linked.get(card.url) : null;
       if (tasks?.length) {
         card.taskIds = tasks.map(t => t._id);
@@ -133,4 +164,4 @@ async function applyEffects({ integration, connector, effects, io }) {
   return out;
 }
 
-module.exports = { applyEffects, createTask, resolveChannel };
+module.exports = { applyEffects, createTask, resolveChannel, taskLimitProblem };

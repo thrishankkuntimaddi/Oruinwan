@@ -185,11 +185,49 @@ async function revokeOtherDevices(userId, current = {}, overrides) {
 // ── Sign-in registration ─────────────────────────────────────────────────
 
 const DEVICE_ID_RE = /^[A-Za-z0-9._:-]{8,128}$/;
+/** Where a browser that sends no X-Device-Id keeps the id the server gave it. */
+const DEVICE_COOKIE = 'oruinwan_did';
+const DEVICE_COOKIE_MAX_AGE_MS = 400 * 24 * 60 * 60 * 1000;
 
-/** The client's device id from X-Device-Id (or an explicit value, e.g. carried through SSO). */
+const validId = (raw) => (typeof raw === 'string' && DEVICE_ID_RE.test(raw) ? raw : null);
+
+/**
+ * The client's device id: an explicit value (e.g. carried through SSO), else the
+ * X-Device-Id header, else the device cookie the server set (see assignDeviceId).
+ */
 function deviceIdFrom(req, explicit) {
-  const raw = explicit || req?.headers?.['x-device-id'];
-  return typeof raw === 'string' && DEVICE_ID_RE.test(raw) ? raw : null;
+  return validId(explicit) || validId(req?.headers?.['x-device-id']) || validId(req?.cookies?.[DEVICE_COOKIE]);
+}
+
+/**
+ * Express middleware for the sign-in routes: a request without a device id
+ * (no X-Device-Id, no device cookie) gets one made on the server, so its
+ * session is still recorded under Devices and counted for the device limit.
+ * The id goes back in the X-Device-Id response header (apps keep it and send it
+ * from then on) and in an httpOnly cookie (browsers send it back by themselves).
+ */
+function assignDeviceId(req, res, next) {
+  try {
+    const header = validId(req.headers?.['x-device-id']);
+    if (!header) {
+      let id = validId(req.cookies?.[DEVICE_COOKIE]);
+      if (!id) {
+        id = `srv-${require('crypto').randomUUID()}`;
+        res.cookie(DEVICE_COOKIE, id, {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: DEVICE_COOKIE_MAX_AGE_MS,
+          path: '/',
+        });
+      }
+      req.headers['x-device-id'] = id;
+      res.setHeader('X-Device-Id', id);
+    }
+  } catch (err) {
+    require('../../../utils/logger').warn({ err: err?.message }, '[devices] could not assign a device id');
+  }
+  next();
 }
 
 /**
@@ -309,17 +347,14 @@ function parseLimit(raw) {
 }
 
 /**
- * How many devices may be signed in at once. DEVICE_LIMIT (default 4; 0 = no limit).
- * Company accounts use COMPANY_DEVICE_LIMIT when set, otherwise the same number.
+ * How many devices may be signed in at once (0 = no limit).
+ *   individual accounts   DEVICE_LIMIT (default 4)
+ *   company accounts      not limited, unless COMPANY_DEVICE_LIMIT is set
  */
 function deviceLimitFor(user, env = process.env) {
-  const base = parseLimit(env.DEVICE_LIMIT) ?? DEFAULT_DEVICE_LIMIT;
   const isCompany = user && (user.userType === 'company' || user.companyId);
-  if (isCompany) {
-    const company = parseLimit(env.COMPANY_DEVICE_LIMIT);
-    if (company !== null) return company;
-  }
-  return base;
+  if (isCompany) return parseLimit(env.COMPANY_DEVICE_LIMIT) ?? 0;
+  return parseLimit(env.DEVICE_LIMIT) ?? DEFAULT_DEVICE_LIMIT;
 }
 
 // A device that has not been seen for longer than a refresh token lives is signed out anyway.
@@ -360,8 +395,12 @@ async function checkDeviceLimit(req, user, { deviceId } = {}, overrides, env = p
     if (id && list.some((dev) => dev.deviceId === id)) return { over: false, limit, devices: [] };
     return { over: list.length >= limit, limit, devices: list.length >= limit ? list.map(limitView) : [] };
   } catch (err) {
-    require('../../../utils/logger').warn({ err: err.message }, '[devices] device limit check skipped');
-    return { over: false, limit, devices: [] };
+    // Fail open (a database problem must not lock everyone out), but loudly.
+    require('../../../utils/logger').error(
+      { err: err.message, userId: String(user?._id || user?.id || '') },
+      '[devices] DEVICE LIMIT NOT ENFORCED: the device table could not be read; this sign-in was let through',
+    );
+    return { over: false, limit, devices: [], unchecked: true };
   }
 }
 
@@ -376,6 +415,6 @@ async function isRequestDeviceRevoked(req, userId, overrides) {
 
 module.exports = {
   DeviceError, listDevices, renameDevice, revokeDevice, revokeOtherDevices, MAX_NAME,
-  recordSignIn, isRequestDeviceRevoked, deviceIdFrom, describeClient, approxLocation,
+  recordSignIn, isRequestDeviceRevoked, deviceIdFrom, assignDeviceId, DEVICE_COOKIE, describeClient, approxLocation,
   touchDevice, signOutDevice, deviceLimitFor, activeDevices, checkDeviceLimit, DEFAULT_DEVICE_LIMIT,
 };

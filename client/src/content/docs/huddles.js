@@ -21,7 +21,7 @@ export default {
                 { list: [
                     '**Mute** / unmute, camera on or off, and **Share screen**.',
                     '**Raise hand** to ask for a turn without interrupting; choose **Lower hand** when you are done.',
-                    'Huddles are peer-to-peer (WebRTC) and hold up to **6 people** by default (a server setting).',
+                    'Huddles are peer-to-peer (WebRTC). On the free plan a call holds up to **10 people** and lasts up to **30 minutes** (a warning comes at 25 and 29 minutes); company workspaces are not limited by the plan.',
                     'On the phone apps, huddles are audio only. Video and screen sharing work on the web, the desktop apps and tablets.',
                 ] },
                 { h: 'The “in huddle” pill' },

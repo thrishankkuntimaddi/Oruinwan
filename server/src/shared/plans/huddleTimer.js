@@ -25,10 +25,17 @@ function startedAtOf(huddle) {
     return Number.isFinite(t) ? t : null;
 }
 
-/** { maxMinutes, startedAt, endsAt } for a call, or null when its plan has no time limit. */
+/**
+ * { maxMinutes, startedAt, endsAt } for a call, or null when its plan has no time limit.
+ * The plan is the server-resolved workspace's, or for a call outside any workspace
+ * its opener's (huddle.planUserId).
+ */
 async function timeLimitFor(huddle, limitsFor) {
-    if (!huddle?.workspaceId) return null;
-    const limits = await limitsFor(huddle.workspaceId);
+    if (!huddle) return null;
+    const { planSourceOf } = require('../../modules/huddles/huddleRegistry');
+    const source = planSourceOf(huddle);
+    if (!source.workspaceId && !source.userId) return null;
+    const limits = source.workspaceId ? await limitsFor(source.workspaceId) : await limitsFor(null, { userId: source.userId });
     if (!limits || !limits.minutes) return null;
     const start = startedAtOf(huddle);
     if (start === null) return null;
@@ -89,7 +96,7 @@ function startHuddleTimer({ io, registry, limitsFor, claim, endHuddle, intervalM
     const deps = {
         io,
         registry,
-        limitsFor: limitsFor || ((workspaceId) => require('./planService').huddleLimits(workspaceId)),
+        limitsFor: limitsFor || ((workspaceId, opts) => require('./planService').huddleLimits(workspaceId, opts)),
         claim: claim || ((key, ttl) => require('./planCounters').claim(key, ttl)),
         endHuddle: endHuddle || ((ioRef, huddleId, reason) => require('../../modules/huddles/huddles.socket').endHuddle(ioRef, huddleId, reason)),
     };

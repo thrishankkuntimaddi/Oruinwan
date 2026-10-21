@@ -4,11 +4,20 @@ import { HuddleContext } from '../huddles/HuddleContext';
 import { useOptionalSocket } from '../../contexts/SocketContext';
 import './plan.css';
 
-export const TIME_LIMIT_ENDED_MESSAGE = "This call ended at the free plan's 30-minute limit. Your notes are saved in the meeting notes.";
+// Only a fallback: the minutes come from the server (huddle:time_warning maxMinutes,
+// huddle:roster timeLimit.maxMinutes).
+export const DEFAULT_CALL_MINUTES = 30;
+const positive = (n) => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n) : null);
 
-/** Banner text for a huddle:time_warning payload. */
-export function timeWarningText(payload) {
-    const max = payload?.maxMinutes || 30;
+/** The call ended at the plan's limit, with the server's number of minutes. */
+export function timeLimitEndedMessage(minutes) {
+    return `This call ended at the free plan's ${positive(minutes) || DEFAULT_CALL_MINUTES}-minute limit. Your notes are saved in the meeting notes.`;
+}
+export const TIME_LIMIT_ENDED_MESSAGE = timeLimitEndedMessage();
+
+/** Banner text for a huddle:time_warning payload; `rosterMax` from huddle:roster when the warning has none. */
+export function timeWarningText(payload, rosterMax) {
+    const max = positive(payload?.maxMinutes) || positive(rosterMax) || DEFAULT_CALL_MINUTES;
     const left = payload?.minutesLeft;
     if (left === 1) return `1 minute left — free plan calls end at ${max} minutes`;
     return `${left || 5} minutes left — free plan calls end at ${max} minutes`;
@@ -36,6 +45,7 @@ export default function HuddleTimeLimitBanner() {
     const [now, setNow] = useState(Date.now());
     const mine = useRef(new Set());
     const endsAtRef = useRef({}); // huddleId -> endsAt from huddle:roster timeLimit
+    const maxRef = useRef({}); // huddleId -> maxMinutes from huddle:roster timeLimit
 
     const currentId = ctx?.active ? ctx.huddleId : null;
     useEffect(() => { if (currentId) mine.current.add(String(currentId)); }, [currentId]);
@@ -46,20 +56,22 @@ export default function HuddleTimeLimitBanner() {
             if (!huddleId) return;
             mine.current.add(String(huddleId));
             if (timeLimit?.endsAt) endsAtRef.current[String(huddleId)] = timeLimit.endsAt;
+            if (timeLimit?.maxMinutes) maxRef.current[String(huddleId)] = timeLimit.maxMinutes;
         };
         const onWarning = (payload = {}) => {
             const id = String(payload.huddleId || '');
             if (id) mine.current.add(id);
             setEnded(null);
-            setWarning({ huddleId: id, text: payload.message && !payload.minutesLeft ? payload.message : timeWarningText(payload), endsAt: payload.endsAt || endsAtRef.current[id] || null });
+            setWarning({ huddleId: id, text: payload.message && !payload.minutesLeft ? payload.message : timeWarningText(payload, maxRef.current[id]), endsAt: payload.endsAt || endsAtRef.current[id] || null });
         };
         const onEnded = ({ huddleId, reason, message } = {}) => {
             const id = String(huddleId || '');
             if (!mine.current.has(id)) return;
             setWarning((w) => (w && (!w.huddleId || w.huddleId === id) ? null : w));
-            if (reason === 'time_limit') setEnded(message || TIME_LIMIT_ENDED_MESSAGE);
+            if (reason === 'time_limit') setEnded(message || timeLimitEndedMessage(maxRef.current[id]));
             mine.current.delete(id);
             delete endsAtRef.current[id];
+            delete maxRef.current[id];
         };
         socket.on('huddle:roster', onRoster);
         socket.on('huddle:time_warning', onWarning);

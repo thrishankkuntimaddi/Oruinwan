@@ -27,6 +27,7 @@ test.describe('workspace admin', () => {
     async put(p, data) { return page.request.put(`${E2E.apiUrl}${p}`, { data, headers: { Authorization: `Bearer ${await this.token()}` } }); },
     async post(p, data) { return page.request.post(`${E2E.apiUrl}${p}`, { data, headers: { Authorization: `Bearer ${await this.token()}` } }); },
     async get(p) { return page.request.get(`${E2E.apiUrl}${p}`, { headers: { Authorization: `Bearer ${await this.token()}` } }); },
+    async del(p) { return page.request.delete(`${E2E.apiUrl}${p}`, { headers: { Authorization: `Bearer ${await this.token()}` } }); },
   });
 
   test('a member cannot change feature toggles', async () => {
@@ -100,6 +101,15 @@ test.describe('workspace admin', () => {
       return String(insertedId);
     });
 
+    // Free plan: alice already created 2 workspaces (the seeded one and "E2E Clone"), so a third is refused
+    // with the upgrade answer. Deleting the clone frees the slot.
+    const refused = await api(alice).post('/api/workspaces', { name: 'From Template', templateId });
+    expect(refused.status()).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: 'PLAN_LIMIT', limit: 'workspaces.create', max: 2, used: 2, upgradeUrl: '/pricing' });
+    const cloneId = await withPg(async (sql) => (await sql("SELECT id FROM workspaces WHERE name = 'E2E Clone'"))[0]?.id);
+    expect(cloneId).toBeTruthy();
+    expect((await api(alice).del(`/api/workspaces/${cloneId}`)).status()).toBe(200);
+
     const created = await api(alice).post('/api/workspaces', { name: 'From Template', templateId });
     expect(created.status()).toBe(201);
     const body = await created.json();
@@ -133,9 +143,10 @@ test.describe('workspace admin', () => {
     const imported = await api(alice).post(`/api/workspace-templates/${templateId}/import`, { workspaceId: newWs });
     expect(imported.status()).toBe(200);
     expect((await imported.json()).createdCount).toBe(0);
-    // That was alice's third workspace: the free-plan cap now applies to clones too.
+    // alice is back at the free plan's 2 created workspaces: clones are refused too.
     const overLimit = await api(alice).post(`/api/workspace-os/${ws()}/clone`, { name: 'One Too Many' });
     expect(overLimit.status()).toBe(403);
+    expect((await overLimit.json()).code).toBe('PLAN_LIMIT');
     // Members cannot apply templates to the shared workspace.
     expect((await api(bob).post(`/api/workspace-templates/${templateId}/import`, { workspaceId: ws() })).status()).toBe(403);
   });

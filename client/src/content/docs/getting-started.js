@@ -26,7 +26,7 @@ export default {
                 { figure: 'chat-ai', caption: 'A typical moment in Oruinwan: a question in a channel, a thread, and @Oruinwan answering with live workspace context.' },
                 { h: 'Two kinds of accounts' },
                 { list: [
-                    '**Personal accounts** are free for individuals. Sign up, then create workspaces (up to 3 you own) or join others with an invite link.',
+                    '**Personal accounts** are free for individuals. Sign up, then create workspaces (2 you own on the free plan) and join up to 2 others with an invite link.',
                     '**Company accounts** belong to an organisation that registered a Company HQ. The company’s owner and admins manage people, departments and workspaces. See [Company HQ](/docs/company/overview).',
                 ] },
                 { h: 'Where to go next' },

@@ -18,9 +18,9 @@ describe('pricing plans', () => {
 
   test('the Free plan lists the launch limits', () => {
     const text = FREE_LIMITS.map((l) => `${l.label} ${l.value}`).join('\n');
-    for (const fragment of ['Up to 4', 'Create 2, join 2', 'Owner + 10', '10 besides #general and #random',
+    for (const fragment of ['Up to 4', 'Create 2, join 2', 'Owner + 10', '10 besides the ones made with the workspace',
       'Up to 10 people, 30 minutes', '2 per template', '300 active per workspace', '30 for yourself + 30 assigned',
-      '50 per person per day', 'Google Drive', 'MIT']) {
+      '50 per person per day', '300 per workspace per day', 'Google Drive', 'MIT']) {
       expect(text).toContain(fragment);
     }
     expect(new Set(FREE_LIMITS.map((l) => l.id)).size).toBe(FREE_LIMITS.length);

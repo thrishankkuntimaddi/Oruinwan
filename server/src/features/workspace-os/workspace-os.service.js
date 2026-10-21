@@ -12,15 +12,22 @@ const { invalidateWorkspaceFeatures } = require('../../shared/workspaceFeatures'
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
 const { recordAdminAction: logAction } = require('../../shared/adminAudit');
+const planService = require('../../shared/plans/planService');
 
-// Same free-plan cap createWorkspace applies to personal accounts.
-const PERSONAL_WORKSPACE_LIMIT = 3;
-async function assertPersonalWorkspaceLimit(companyId, userId) {
-    if (companyId) return;
-    if (await wsQueries.countCreatedBy(userId) >= PERSONAL_WORKSPACE_LIMIT) {
-        throw Object.assign(new Error(`Free plan limit reached. You can only create up to ${PERSONAL_WORKSPACE_LIMIT} workspaces.`), { status: 403, isLimitReached: true });
-    }
+// The free plan's created-workspaces limit is the route guard's job (shared/plans/planGuards).
+
+/** Names (username or email) for skipped people, for the response. */
+async function describeSkippedMembers(skipped) {
+    return Promise.all((skipped || []).map(async ({ userId, reason }) => {
+        let name = null;
+        try {
+            const u = await identity.users.findById(userId);
+            name = u?.username || u?.email || null;
+        } catch { /* the id is enough */ }
+        return { userId: String(userId), name, reason };
+    }));
 }
+exports._describeSkippedMembers = describeSkippedMembers;
 
 exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMembers = false, companyId, ipAddress, userAgent }) {
     const source = await identity.workspaces.findById(sourceId);
@@ -33,11 +40,14 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
 
     const user = await identity.users.findById(userId);
     const resolvedCompanyId = user?.companyId || companyId || null;
-    await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
     const cloneName = name || `${source.name} (Clone)`;
 
-    
+    // "With members": only people within their own join limit and the clone's member cap.
+    const { members: cloneMembers, skipped: skippedPeople } = includeMembers
+        ? await planService.fitCloneMembers({ company: resolvedCompanyId }, source.members || [], userId)
+        : { members: [{ user: userId, role: 'owner', joinedAt: new Date() }], skipped: [] };
+
     let cloned = await identity.workspaces.create({
         company: resolvedCompanyId,
         type: source.type,
@@ -47,20 +57,23 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         color: source.color,
         rules: source.rules || '',
         createdBy: userId,
-        members: includeMembers
-            ? source.members.filter(m => m.status !== 'removed').map(m => ({ user: m.user, role: m.role, status: m.status, joinedAt: new Date() }))
-            : [{ user: userId, role: 'owner', joinedAt: new Date() }],
+        members: cloneMembers,
         settings: { ...(source.settings || {}) },
         clonedFrom: source._id,
         templateId: source.templateId || null
     });
 
     
-    const sourceChannels = await Channel.find({ workspace: sourceId }).lean();
+    const sourceChannels = await Channel.find({ workspace: sourceId, isArchived: { $ne: true } }).lean();
     const channelIdMap = {}; 
 
+    // Channels made with the source workspace stay free; the rest fit the clone's channel allowance.
+    const { allowed: clonedChannels, skipped: skippedChannels, max: channelMax } = await planService.fitChannels(cloned, sourceChannels, {
+        isFree: (ch) => planService.DEFAULT_CHANNELS.includes(ch.name) || !!ch.autoCreated,
+    });
+
     const creationDate = new Date();
-    for (const ch of sourceChannels) {
+    for (const ch of clonedChannels) {
         const newChannel = await Channel.create({
             workspace: cloned._id,
             company: resolvedCompanyId,
@@ -68,6 +81,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
             description: ch.description || '',
             isPrivate: ch.isPrivate,
             isDefault: ch.isDefault,
+            autoCreated: planService.DEFAULT_CHANNELS.includes(ch.name) || !!ch.autoCreated,
             isDiscoverable: ch.isDiscoverable !== false,
             postingPolicy: ch.postingPolicy === 'admins' ? 'admins' : 'everyone',
             broadcastMentions: ch.broadcastMentions === 'admins' ? 'admins' : 'everyone',
@@ -118,10 +132,13 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         action: 'workspace.cloned',
         category: 'workspace', severity: 'info',
         resourceType: 'Workspace', resourceId: cloned._id, resourceName: cloneName,
-        details: { sourceId, cloneName, includeMembers },
+        details: { sourceId, cloneName, includeMembers, skippedMembers: skippedPeople.length, skippedChannels: skippedChannels.length },
         ipAddress, userAgent
     });
 
+    cloned.skippedMembers = await describeSkippedMembers(skippedPeople);
+    cloned.skippedChannels = skippedChannels;
+    cloned.channelLimit = channelMax;
     return cloned;
 };
 
@@ -184,7 +201,6 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
 
     const user = await identity.users.findById(userId);
     const resolvedCompanyId = user?.companyId || companyId || null;
-    await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
     const { workspace: wsData, channels = [], featureToggles = null } = bundle;
 
@@ -210,7 +226,11 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
     const creationDate = new Date();
     const defaultChannelIds = [];
 
-    for (const ch of channels) {
+    // A bundle can't mark its own channels free: only #general and #random are.
+    const named = (Array.isArray(channels) ? channels : []).filter(ch => ch && typeof ch.name === 'string' && ch.name.trim());
+    const { allowed: importChannels, skipped: skippedChannels, max: channelMax } = await planService.fitChannels(imported, named);
+
+    for (const ch of importChannels) {
         const newCh = await Channel.create({
             workspace: imported._id,
             company: resolvedCompanyId,
@@ -256,10 +276,12 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
         action: 'workspace.imported',
         category: 'data-import', severity: 'info',
         resourceType: 'Workspace', resourceId: imported._id, resourceName: finalName,
-        details: { channelCount: channels.length, originalName: wsData.name },
+        details: { channelCount: importChannels.length, skippedChannels: skippedChannels.length, originalName: wsData.name },
         ipAddress, userAgent
     });
 
+    imported.skippedChannels = skippedChannels;
+    imported.channelLimit = channelMax;
     return imported;
 };
 
@@ -330,11 +352,18 @@ exports.applyTemplate = async function ({ workspace, templateId, userId, company
     if (!allowed) throw Object.assign(new Error('Template not available'), { status: 403 });
 
     const existing = new Set((await Channel.find({ workspace: workspace._id }).select('name').lean()).map(c => c.name));
-    const creationDate = new Date();
+    const wanted = [];
     for (const ch of template.defaultChannels || []) {
         const name = String(ch.name || '').trim().toLowerCase().replace(/\s+/g, '-');
         if (!name || existing.has(name)) continue;
         existing.add(name);
+        wanted.push({ ...ch, name });
+    }
+    // Only as many as the workspace's channel allowance has room for.
+    const { allowed: toCreate, skipped, max } = await planService.fitChannels(workspace, wanted);
+    const creationDate = new Date();
+    for (const ch of toCreate) {
+        const name = ch.name;
         const channel = await Channel.create({
             workspace: workspace._id,
             company: workspace.company || null,
@@ -381,5 +410,5 @@ exports.applyTemplate = async function ({ workspace, templateId, userId, company
     }
 
     await WorkspaceTemplate.updateOne({ _id: template._id }, { $inc: { usageCount: 1 } });
-    return template;
+    return { ...template, skippedChannels: skipped, channelLimit: max };
 };

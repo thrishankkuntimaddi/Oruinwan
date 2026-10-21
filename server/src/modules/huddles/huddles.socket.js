@@ -1,5 +1,5 @@
 const logger = require('../../../utils/logger');
-const { registry: defaultRegistry } = require('./huddleRegistry');
+const { registry: defaultRegistry, planSourceOf } = require('./huddleRegistry');
 
 /** Session history (MongoDB); required lazily so tests can inject a fake. */
 const defaultHistory = () => require('./huddleHistory.service').recorder;
@@ -18,14 +18,17 @@ const defaultMeetings = {
 };
 
 /**
- * The plan's call limits for a workspace: { participants, minutes, plan } (null = no plan limit).
+ * The plan's call limits: { participants, minutes, plan } (null = no plan limit).
+ * `workspaceId` is always one the server resolved; without one, `userId`'s own
+ * plan applies (a DM outside any workspace: free -> 10 people / 30 minutes).
  * A failed lookup never blocks a call.
  */
-async function defaultPlanLimits(workspaceId) {
-    if (!workspaceId) return null;
+async function defaultPlanLimits(workspaceId, { userId = null } = {}) {
+    if (!workspaceId && !userId) return null;
     try {
-        return await require('../../shared/plans/planService').huddleLimits(workspaceId);
-    } catch {
+        return await require('../../shared/plans/planService').huddleLimits(workspaceId, { userId });
+    } catch (err) {
+        logger.warn({ err: err?.message }, '[huddle] plan limits unknown, call not limited');
         return null;
     }
 }
@@ -93,7 +96,7 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
         if (!channel || !channel.isMember(uid)) return { ok: false, message: 'Not a member of this channel' };
         return {
             ok: true,
-            scope: { channelId: String(channelId), workspaceId: channel.workspace ? String(channel.workspace) : (workspaceId || null) },
+            scope: { channelId: String(channelId), workspaceId: channel.workspace ? String(channel.workspace) : null, planWorkspaceId: channel.workspace ? String(channel.workspace) : null },
             channelName: channel.name,
             recipientIds: channel.members.map(m => String(m?.user?._id || m?.user || m)),
         };
@@ -104,18 +107,34 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
         const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
         if (!dm || !participants.includes(uid)) return { ok: false, message: 'Not a participant of this DM' };
         if ((dm.blockedBy || []).length > 0) return { ok: false, message: "You can't call this person." };
-        return {
-            ok: true,
-            scope: { dmId: String(dmId), workspaceId: dm.workspace ? String(dm.workspace) : (workspaceId || null) },
-            recipientIds: participants,
-        };
+        if (dm.workspace) {
+            return { ok: true, scope: { dmId: String(dmId), workspaceId: String(dm.workspace), planWorkspaceId: String(dm.workspace) }, recipientIds: participants };
+        }
+        // A DM outside any workspace: the client's workspace id only groups the call (huddle:list,
+        // notifications) and only when the caller belongs to it. It never decides the plan:
+        // the caller's own plan does (planWorkspaceId null).
+        let shownIn = null;
+        if (workspaceId) {
+            const access = await require('../../identity').workspaces.membership(workspaceId, uid).catch(() => null);
+            if (access?.member) shownIn = String(workspaceId);
+        }
+        return { ok: true, scope: { dmId: String(dmId), workspaceId: shownIn, planWorkspaceId: null }, recipientIds: participants };
     }
     if (workspaceId) {
         const access = await require('../../identity').workspaces.membership(workspaceId, uid);
         if (!access?.member) return { ok: false, message: 'Not a member of this workspace' };
-        return { ok: true, scope: { workspaceId: String(workspaceId) } };
+        return { ok: true, scope: { workspaceId: String(workspaceId), planWorkspaceId: String(workspaceId) } };
     }
     return { ok: false, message: 'channelId, dmId, or workspaceId required' };
+}
+
+/**
+ * Registry meta for whose plan applies: a scope without a server-resolved
+ * workspace is limited by the caller's own plan (planUserId).
+ */
+function planMeta(scope, userId) {
+    const planWs = Object.prototype.hasOwnProperty.call(scope, 'planWorkspaceId') ? scope.planWorkspaceId : scope.workspaceId;
+    return planWs ? {} : { planUserId: String(userId) };
 }
 
 /** Membership scope used for registry matching: the most specific id only. */
@@ -251,7 +270,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const username = await displayName(socket);
             const startedBy = { _id: uid(), username };
             const existed = !!registry.get(huddleId);
-            const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video, workspaceId: check.scope.workspaceId || null });
+            const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video, workspaceId: check.scope.workspaceId || null, ...planMeta(check.scope, uid()) });
             if (error) return huddleError(socket, huddleId, error, 'Huddle already exists elsewhere');
             if (!existed) {
                 startRun(registry, history, huddle);
@@ -308,7 +327,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const username = await displayName(socket);
             // A join for a huddle this process never saw (e.g. after a restart) re-creates it.
             const existed = !!registry.get(huddleId);
-            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled), workspaceId: check.scope.workspaceId || null });
+            const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled), workspaceId: check.scope.workspaceId || null, ...planMeta(check.scope, uid()) });
             if (ensured.error) return huddleError(socket, huddleId, ensured.error, 'This huddle belongs to a different conversation');
             if (!existed) {
                 startRun(registry, history, ensured.huddle);
@@ -316,16 +335,16 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             }
 
             // The plan's people-per-call limit (free: 10); someone already in the call may always re-join.
-            const limits = await planLimits(ensured.huddle.workspaceId);
-            if (limits && limits.participants && !registry.participant(huddleId, uid())
-                && ensured.huddle.participants.size >= limits.participants) {
+            // The registry checks it in the same step that adds the person (no await in between).
+            const source = planSourceOf(ensured.huddle);
+            const limits = await planLimits(source.workspaceId, { userId: source.userId });
+            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null });
+            if (joined.error === 'PLAN_LIMIT') {
                 const { planLimitBody } = require('../../shared/plans/plans');
-                const body = planLimitBody('huddles.participants', { max: limits.participants, used: ensured.huddle.participants.size, plan: limits.plan });
+                const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
                 return socket.emit('huddle:error', { huddleId, ...body,
                     message: `This call is full: the free plan allows ${limits.participants} people in a call at once. Pro and Enterprise are coming soon.` });
             }
-
-            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id });
             if (joined.error === 'HUDDLE_FULL') {
                 return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.maxParticipants} people).`);
             }
@@ -471,3 +490,5 @@ module.exports.scopeKind = scopeKind;
 module.exports.endHuddle = endHuddle;
 module.exports.announceEnded = announceEnded;
 module.exports.defaultPlanLimits = defaultPlanLimits;
+module.exports.verifyScopeMembership = verifyScopeMembership;
+module.exports.planMeta = planMeta;

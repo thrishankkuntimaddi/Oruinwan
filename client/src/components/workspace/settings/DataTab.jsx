@@ -4,6 +4,7 @@ import api from '@services/api';
 import WorkspaceExportImport from '../../workspace-os/WorkspaceExportImport';
 import ComplianceExportCard from './ComplianceExportCard';
 import RetentionPolicyCard from './RetentionPolicyCard';
+import { planSkipsText } from '../../../features/plan/planSkips';
 
 /** Export/import a workspace bundle, or clone it. Admins only (the server checks too). */
 export default function DataTab({ workspaceId, workspaceName }) {
@@ -16,7 +17,7 @@ export default function DataTab({ workspaceId, workspaceName }) {
         setStatus('cloning');
         try {
             const { data } = await api.post(`/api/workspace-os/${workspaceId}/clone`, { name: name.trim(), includeMembers });
-            setStatus({ ok: `Created “${data.workspace.name}”.`, id: data.workspace.id });
+            setStatus({ ok: `Created “${data.workspace.name}”.`, id: data.workspace.id, skipped: planSkipsText(data) });
         } catch (err) {
             setStatus({ error: err.response?.data?.message || 'Could not clone the workspace.' });
         }
@@ -45,6 +46,9 @@ export default function DataTab({ workspaceId, workspaceName }) {
                         {status.ok}{' '}
                         <button onClick={() => navigate(`/workspace/${status.id}/home`)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>Open it</button>
                     </p>
+                )}
+                {status?.skipped && (
+                    <p data-testid="clone-skipped" role="note" style={{ fontSize: 12, color: 'var(--state-warning, var(--text-secondary))', marginTop: 6 }}>{status.skipped}.</p>
                 )}
                 {status?.error && <p style={{ fontSize: 12, color: 'var(--state-danger)', marginTop: 8 }}>{status.error}</p>}
             </div>

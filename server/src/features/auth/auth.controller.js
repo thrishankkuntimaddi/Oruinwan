@@ -199,11 +199,15 @@ exports.signup = async (req, res) => {
       const invite = await invites.findUsable(inviteHash, emailLower);
 
       if (invite) {
-        userType = "company";
-        companyId = invite.company;
-        companyRole = invite.role && invite.role !== "owner" ? invite.role : "member"; // never grants ownership
-        assignedDepartment = invite.department;
-        assignedManager = invite.metadata?.managerId;
+        // Only a company's invite makes a company account; an invite to someone's
+        // personal workspace keeps a personal (free-plan) account.
+        if (invite.company) {
+          userType = "company";
+          companyId = invite.company;
+          companyRole = invite.role && invite.role !== "owner" ? invite.role : "member"; // never grants ownership
+          assignedDepartment = invite.department;
+          assignedManager = invite.metadata?.managerId;
+        }
 
         if (invite.workspace) {
           workspacesToJoin.push(invite.workspace);
@@ -2434,45 +2438,22 @@ exports.verifyReactivationOTP = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    
+
     otpRecord.used = true;
     otpRecord.usedAt = new Date();
 
-    
+
     user.deactivatedAt = null;
-
-    
-    // Use the same token format/hashing/cookie as login so /refresh can rotate it.
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    user.refreshTokens.push({
-      tokenHash: sha256(refreshToken),
-      expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
-      deviceInfo: req.get('user-agent') || 'Unknown',
-      ip: getClientIP(req),
-      startedAt: new Date(),
-      createdAt: new Date()
-    });
-
     await user.save();
-
-    setRefreshTokenCookie(res, refreshToken);
-    await recordDeviceSignIn(req, user._id);
-
     logger.info(`✅ Account reactivated for user: ${user.username} (${user._id})`);
 
-    return res.json({
-      message: "Account reactivated successfully",
-      accessToken,
-      ...(isNativeClient(req) ? { refreshToken } : {}),
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        profilePicture: user.profilePicture
-      }
-    });
+    // The session goes through the same checks as every other sign-in: two-step
+    // verification and the device limit (signInFlow.gate). A stop answers with a
+    // pendingToken the client finishes at /api/auth/signin/continue.
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'password', method: 'reactivation', otp: req.body.otp, signIn: { method: 'reactivation', approvedBy: null } });
+    if (blocked) return res.status(blocked.status).json({ ...blocked.body, reactivated: true });
+
+    return finishPasswordLogin(req, res, user, { signIn: { method: 'reactivation' } });
   } catch (_err) {
     logger.error("VERIFY REACTIVATION OTP ERROR:", _err);
     return res.status(500).json({ message: "Server error" });

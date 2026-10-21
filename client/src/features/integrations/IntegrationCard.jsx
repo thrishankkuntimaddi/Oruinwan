@@ -184,6 +184,7 @@ export default function IntegrationCard({ integration, summary, messageId, chann
             </div>
 
             <TaskChips ids={it.taskIds || []} keys={it.taskKeys || []} workspaceId={workspaceId} />
+            {extra.planNote && <p className="oi-card-plan-note oi-muted" role="note" data-testid="integration-plan-note" style={{ fontSize: 12, margin: '6px 0 0' }}>{extra.planNote}</p>}
 
             <div className="oi-card-actions">
                 {isPr && (

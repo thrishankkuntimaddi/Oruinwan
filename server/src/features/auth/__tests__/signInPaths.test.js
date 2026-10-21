@@ -144,3 +144,38 @@ test('signing out frees the device place', async () => {
   expect(res.body.message).toBe('Logged out');
   expect(out).toHaveBeenCalledWith(expect.anything(), 'u1');
 });
+
+describe('reactivating a deactivated account signs in through the same gate', () => {
+  const deactivated = () => {
+    mockState.user.deactivatedAt = new Date();
+    mockState.user.otpCodes = [{ code: '424242', type: 'reactivation', used: false, expiresAt: new Date(Date.now() + 60000) }];
+  };
+  const body = { email: 'a@example.com', otpCode: '424242', password: 'Passw0rd!' };
+
+  test('over the device limit: reactivated, but no session until a device is signed out', async () => {
+    deactivated();
+    const res = await run(auth.verifyReactivationOTP, body);
+    expectLimited(res);
+    expect(res.body.reactivated).toBe(true);
+    expect(mockState.user.deactivatedAt).toBeNull();
+  });
+
+  test('with 2FA on it asks for the second factor', async () => {
+    deactivated();
+    mockState.user.twoFactorEnabled = true;
+    mockState.user.twoFactorSecret = 'enc';
+    const res = await run(auth.verifyReactivationOTP, body);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.code).toBe('MFA_REQUIRED');
+    expect(res.body.accessToken).toBeUndefined();
+  });
+
+  test('within the limit it answers like a password sign-in and records the device', async () => {
+    deactivated();
+    checkSpy.mockResolvedValue({ over: false, limit: 4, devices: [] });
+    const res = await run(auth.verifyReactivationOTP, body);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.accessToken).toBeTruthy();
+    expect(recordSpy).toHaveBeenCalledWith(expect.anything(), 'u1', { signIn: { method: 'reactivation' } });
+  });
+});

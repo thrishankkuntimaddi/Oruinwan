@@ -44,6 +44,9 @@ async function main() {
     ACCESS_TOKEN_SECRET: E2E.accessTokenSecret,
     REFRESH_TOKEN_SECRET: E2E.refreshTokenSecret,
     GOOGLE_CLIENT_ID: 'e2e-google-client-id',
+    // The flows sign the same seeded people in from many fresh browsers; the 4-device limit
+    // has its own server tests (signInFlow, deviceLimit), so it is off here.
+    DEVICE_LIMIT: '0',
     SERVER_KEK: E2E.serverKek,
     // Own 32-byte key-encryption key: never inherit CRYPTO_KEK_* from server/.env.
     CRYPTO_KEK_ACTIVE_VERSION: '1',

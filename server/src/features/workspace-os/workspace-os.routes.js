@@ -6,9 +6,11 @@ const ctrl = require('./workspace-os.controller');
 const requireAuth = require('../../shared/middleware/auth');
 const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
 const requireWorkspaceAdmin = require('../../shared/middleware/requireWorkspaceAdmin');
+const planGuards = require('../../shared/plans/planGuards');
 
 // Cloning and exporting copy every channel (private ones too) and membership: admins only.
-router.post('/:id/clone', requireAuth, requireWorkspaceMember, requireWorkspaceAdmin, ctrl.cloneWorkspace);
+// A clone is a new workspace: the free plan's created-workspaces limit applies.
+router.post('/:id/clone', requireAuth, requireWorkspaceMember, requireWorkspaceAdmin, planGuards.workspaceCreate, ctrl.cloneWorkspace);
 
 router.get('/:id/export', requireAuth, requireWorkspaceMember, requireWorkspaceAdmin, ctrl.exportWorkspace);
 
@@ -36,7 +38,7 @@ async function workspaceCreationPolicy(req, res, next) {
     }
 }
 
-router.post('/import', requireAuth, workspaceCreationPolicy, ctrl.importWorkspace);
+router.post('/import', requireAuth, workspaceCreationPolicy, planGuards.workspaceCreate, ctrl.importWorkspace);
 
 router.get('/:id/analytics', requireAuth, requireWorkspaceMember, ctrl.getWorkspaceAnalytics);
 
