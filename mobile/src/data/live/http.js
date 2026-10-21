@@ -3,7 +3,7 @@
 // On Android and iOS, CapacitorHttp performs these requests natively, so the server needs no
 // CORS entry for the app. `x-client-platform: android|ios` makes the server return refresh
 // tokens in the JSON body (server/utils/cookieHelper.js) instead of a cross-site cookie.
-import { secure } from '../../native/storage.js';
+import { prefs, secure } from '../../native/storage.js';
 import { clientPlatform } from '../../native/index.js';
 import { emit } from '../../lib/bus.js';
 
@@ -12,6 +12,20 @@ let tokens = null; // { access, refresh }
 let refreshing = null;
 // Bumped on sign-out, so a refresh that finishes afterwards can't write tokens back.
 let generation = 0;
+
+/**
+ * This install's device id, sent as X-Device-Id so the server lists it under Devices (rename,
+ * sign out remotely) and ties its push token to it. Random, made once, kept on the device.
+ */
+export function deviceId() {
+  let id = prefs.get('device.id');
+  if (typeof id !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(id)) {
+    const rand = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    id = `${clientPlatform || 'app'}-${rand}`;
+    prefs.set('device.id', id);
+  }
+  return id;
+}
 
 const HEADERS = { Accept: 'application/json', 'x-client-platform': clientPlatform };
 export const NETWORK_MESSAGE = "Can't reach your server. Check your connection and try again.";
@@ -66,7 +80,7 @@ function messageFrom(data, status) {
 }
 
 async function send(method, url, body, auth) {
-  const headers = { ...HEADERS };
+  const headers = { ...HEADERS, 'x-device-id': deviceId() };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth && tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
   let res;

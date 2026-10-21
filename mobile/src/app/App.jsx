@@ -84,7 +84,8 @@ export function App() {
       window.history.replaceState(null, '', '/');
     }
     let off = () => {};
-    onAppUrl((url) => useSession.getState().openInvite(url)).then((f) => (off = f));
+    // oruinwan://sso?code=… finishes a company SSO sign-in; other links are invitations.
+    onAppUrl((url) => useSession.getState().finishSso(url) || useSession.getState().openInvite(url)).then((f) => (off = f));
     return () => off();
   }, []);
 
