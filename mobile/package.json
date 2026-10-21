@@ -3,7 +3,7 @@
   "version": "1.4.1",
   "private": true,
   "type": "module",
-  "description": "Oruinwan for Android and iOS: a phone UI, and the full web client on tablets, in a Capacitor shell",
+  "description": "Oruinwan for Android and iOS phones and tablets, in a Capacitor shell",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

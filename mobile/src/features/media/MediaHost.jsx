@@ -10,7 +10,7 @@ import { Spinner } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { formatBytes, previewKind } from '../../lib/files.js';
 import { finePointer } from '../../app/layout.js';
-import { isNative } from '../../native/index.js';
+import { deviceNoun, isNative } from '../../native/index.js';
 import { canShareFiles, downloadFile, openWithSystem, shareFile, useMediaUrl, useViewer } from './media.js';
 
 function Failed({ file }) {
@@ -192,7 +192,7 @@ function FileActions({ file, onClose }) {
   const actions = !f
     ? []
     : isNative
-      ? [{ icon: ExternalLink, label: 'Open with…', hint: "Opens in your phone's viewer, where you can save or share it", onSelect: () => openWithSystem(f) }]
+      ? [{ icon: ExternalLink, label: 'Open with…', hint: `Opens in your ${deviceNoun}'s viewer, where you can save or share it`, onSelect: () => openWithSystem(f) }]
       : [
           { icon: Download, label: 'Download', hint: formatBytes(f.size) || null, onSelect: () => downloadFile(f) },
           { icon: ExternalLink, label: 'Open in a new tab', onSelect: () => openWithSystem(f) },

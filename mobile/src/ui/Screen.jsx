@@ -43,8 +43,11 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
 }
 
 /** Scrollable body; listens for "tap active tab" to scroll back to top. */
-export function Body({ children, className, tab, onRefresh, padBottom = true, ...rest }) {
+export function Body({ children, className, tab, onRefresh, padBottom = true, fluid = false, ...rest }) {
   const ref = useRef(null);
+  // In a tablet's detail pane, keep lines readable: content is centred at a comfortable width.
+  const { split } = usePane();
+  const contained = split && !fluid;
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const start = useRef(null);
@@ -101,7 +104,7 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, ..
             style={{ transform: refreshing ? undefined : `rotate(${pull * 4}deg)`, opacity: Math.min(pull / 56, 1) }} />
         </div>
       )}
-      {children}
+      {contained ? <div className="mx-auto w-full max-w-3xl">{children}</div> : children}
     </div>
   );
 }
