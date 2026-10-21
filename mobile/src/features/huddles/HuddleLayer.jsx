@@ -1,7 +1,7 @@
 // App-wide huddle chrome: the in-call bar (mute, leave, back to the call) and the ring for a
 // DM call. Mounted once in the shell; listens for huddle events while signed in to a server.
 import { useEffect, useState } from 'react';
-import { Mic, MicOff, Phone, PhoneOff, Radio } from 'lucide-react';
+import { Ellipsis, Mic, MicOff, Phone, PhoneOff, Radio } from 'lucide-react';
 import { useSession } from '../../data/session.js';
 import { useDms, useChannels } from '../../data/hooks.js';
 import { useFlag } from '../../config/flags.js';
@@ -11,6 +11,8 @@ import { Icon } from '../../ui/Icon.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { openConversation } from '../chats/chatsUi.js';
 import { bindHuddles, dismissRing, joinHuddle, leave, loadLive, toggleMute, useHuddle } from './huddle.js';
+import { bindCallExtras, useCallExtras } from './callExtras.js';
+import { CallMenu, CaptionStrip, RecordingConsentBanner, useActiveRecorder } from './CallExtras.jsx';
 
 function clockSince(start, now) {
   const s = Math.max(0, Math.floor((now - start) / 1000));
@@ -40,6 +42,9 @@ function CallBar() {
   const title = useCallTitle(call?.scope, call?.title);
   const since = call?.startedAt || Date.now();
   const [now, setNow] = useState(Date.now());
+  const [menu, setMenu] = useState(false);
+  const recorder = useActiveRecorder();
+  const captions = useCallExtras((s) => s.showCaptions);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -61,11 +66,27 @@ function CallBar() {
         <Icon as={Radio} size={16} className="shrink-0 text-success" />
         <span className="min-w-0">
           <span className="block truncate text-[14px] font-semibold">{title}</span>
-          <span className="block text-xs text-text-2 tabular-nums">
-            {connecting ? 'Connecting…' : `${people} in call · ${clockSince(since, now)}`}
+          <span className="flex items-center gap-1.5 text-xs text-text-2 tabular-nums">
+            {recorder && (
+              <span className="inline-flex items-center gap-1 font-semibold text-danger" data-testid="huddle-rec">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" aria-hidden />
+                REC
+              </span>
+            )}
+            <span className="truncate">{connecting ? 'Connecting…' : `${people} in call · ${clockSince(since, now)}`}</span>
           </span>
         </span>
       </button>
+      <button
+        type="button"
+        onClick={() => setMenu(true)}
+        aria-label="Call options: captions, recording, transcript, ask AI"
+        data-testid="huddle-bar-more"
+        className={cx('pressable grid h-10 w-10 place-items-center rounded-full border', captions ? 'border-accent/40 bg-accent/12 text-accent-ink' : 'border-line bg-surface-2 text-text')}
+      >
+        <Icon as={Ellipsis} size={18} />
+      </button>
+      <CallMenu open={menu} onClose={() => setMenu(false)} />
       <button
         type="button"
         onClick={toggleMute}
@@ -135,6 +156,7 @@ export function HuddleLayer() {
   const workspaceId = useSession((s) => s.workspaceId);
   const on = useFlag('huddles');
   useEffect(() => (live && on ? bindHuddles() : undefined), [live, on]);
+  useEffect(() => (live && on ? bindCallExtras() : undefined), [live, on]);
   useEffect(() => {
     if (!live || !on || !workspaceId) return;
     loadLive();
@@ -148,6 +170,8 @@ export function HuddleLayer() {
     <>
       <Ring />
       <CallBar />
+      <CaptionStrip />
+      <RecordingConsentBanner />
     </>
   );
 }

@@ -39,6 +39,20 @@ let iceConfig = FALLBACK_ICE;
 const peers = {}; // userId -> { pc, pending: [], polite }
 const early = {}; // userId -> ICE candidates that came before the offer
 const audioEls = {};
+const remoteStreams = {}; // userId -> MediaStream (their voice), for recording the call
+const streamWatchers = new Set();
+const notifyStreams = () => streamWatchers.forEach((fn) => fn());
+
+/** The call's audio right now: my microphone and everyone else's voice ({ local, remote: [MediaStream] }). */
+export function callAudio() {
+  return { local: localStream, remote: Object.values(remoteStreams) };
+}
+
+/** Calls fn whenever someone's voice joins or leaves the call (to add them to a recording). Returns an unsubscribe. */
+export function onCallAudio(fn) {
+  streamWatchers.add(fn);
+  return () => streamWatchers.delete(fn);
+}
 
 function emit(event, payload) {
   helpers()?.emit(event, payload);
@@ -69,6 +83,10 @@ function closePeer(userId) {
     delete peers[userId];
   }
   delete early[userId];
+  if (remoteStreams[userId]) {
+    delete remoteStreams[userId];
+    notifyStreams();
+  }
   const el = audioEls[userId];
   if (el) {
     el.srcObject = null;
@@ -114,6 +132,8 @@ function peerFor(userId, polite) {
     }
     el.srcObject = streams[0] || new MediaStream([track]);
     el.play?.().catch(() => {});
+    remoteStreams[userId] = el.srcObject;
+    notifyStreams();
   };
   pc.onconnectionstatechange = () => {
     set((s) => ({ peerStates: { ...s.peerStates, [userId]: pc.connectionState } }));

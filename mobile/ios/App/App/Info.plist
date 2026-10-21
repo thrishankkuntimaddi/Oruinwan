@@ -65,7 +65,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Oruinwan uses the camera so you can take photos to share and turn on video in huddles.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Oruinwan uses the microphone so you can talk in huddles and record voice messages.</string>
+	<string>Oruinwan uses the microphone so you can talk in huddles, record voice messages and calls, and turn on live captions.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Oruinwan turns what you say in a call into live captions and the meeting transcript when you switch captions on.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Oruinwan opens your photo library so you can choose photos and videos to share in conversations.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
