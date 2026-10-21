@@ -29,11 +29,13 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             const allChannels = res.data.channels || [];
 
             
+            // Members are { user, joinedAt } sub-documents; the server also sends isMember.
+            const memberId = (m) => String(m?.user?._id || m?.user || m?._id || m);
             const notJoined = allChannels.filter(ch =>
                 !ch.isPrivate &&
                 ch.isDiscoverable !== false &&
-                !ch.members.some(m => String(m) === String(currentUserId)) &&
-                !ch.members.some(m => String(m._id) === String(currentUserId))
+                ch.isMember !== true &&
+                !(ch.members || []).some(m => memberId(m) === String(currentUserId))
             );
 
             setPublicChannels(notJoined);

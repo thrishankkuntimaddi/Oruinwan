@@ -3,7 +3,7 @@ import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from "reac
 import {
     LayoutDashboard, Building2, CheckSquare, MessageSquare, Megaphone, LifeBuoy,
     CreditCard, Activity, ClipboardList, UserRound, LogOut, Menu, X, Sun, Moon,
-    ChevronsUpDown, Settings,
+    ChevronsUpDown, Settings, Store,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -22,12 +22,14 @@ import Broadcast from "../admin/platform/views/Broadcast";
 import AdminSettings from "../admin/platform/views/AdminSettings";
 import Billing from "../admin/platform/views/Billing";
 import SystemHealth from "../admin/platform/views/SystemHealth";
+import MarketplaceReview from "../admin/platform/views/MarketplaceReview";
 
 const NAV = [
     { label: "Platform", items: [
         { path: "", label: "Overview", icon: LayoutDashboard },
         { path: "companies", label: "Companies", icon: Building2 },
         { path: "pending", label: "Pending requests", icon: CheckSquare },
+        { path: "marketplace", label: "Marketplace review", icon: Store },
     ] },
     { label: "Communication", items: [
         { path: "dm", label: "Direct messages", icon: MessageSquare },
@@ -158,6 +160,7 @@ const ChttrixAdminDashboard = () => {
                     <Routes>
                         <Route index element={<Overview />} />
                         <Route path="pending" element={<PendingRequests />} />
+                        <Route path="marketplace" element={<MarketplaceReview />} />
                         <Route path="companies" element={<ActiveCompanies />} />
                         <Route path="tickets" element={<div className="pf-legacy"><SupportTickets /></div>} />
                         <Route path="broadcast" element={<Broadcast />} />

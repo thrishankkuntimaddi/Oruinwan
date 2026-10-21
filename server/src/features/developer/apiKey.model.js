@@ -48,6 +48,13 @@ const apiKeySchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  // Set on app tokens / app bot users issued by installing a marketplace app.
+  appId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'App',
+    default: null,
+    index: true
+  },
   lastUsedAt: Date,
   usageCount: {
     type: Number,

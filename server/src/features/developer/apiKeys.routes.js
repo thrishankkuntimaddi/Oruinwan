@@ -21,7 +21,8 @@ const adminOfBody = requireWorkspaceAccess({ from: (req) => req.body?.workspaceI
 
 router.get('/api-keys', adminOfQuery, async (req, res) => {
   try {
-    const keys = await ApiKey.find({ workspaceId: req.workspaceAccess.workspaceId, isActive: true })
+    // App tokens are managed by installing/uninstalling the app, not here.
+    const keys = await ApiKey.find({ workspaceId: req.workspaceAccess.workspaceId, isActive: true, appId: null })
       .select('name keyPrefix permissions createdAt lastUsedAt usageCount createdBy')
       .lean()
       .then((rows) => hydrate(rows, { createdBy: userSelect('username firstName lastName') }));
@@ -82,6 +83,7 @@ router.delete('/api-keys/:id', async (req, res) => {
     if (!isValidId(req.params.id)) return res.status(400).json({ message: 'Invalid API key id' });
     const key = await ApiKey.findById(req.params.id);
     if (!key || !key.isActive) return res.status(404).json({ message: 'API key not found' });
+    if (key.appId) return res.status(409).json({ message: 'This is an app token. Uninstall the app to revoke it.' });
 
     const claimed = req.query?.workspaceId || req.body?.workspaceId;
     if (claimed && String(claimed) !== String(key.workspaceId)) {

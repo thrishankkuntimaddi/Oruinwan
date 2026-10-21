@@ -8,6 +8,9 @@ const { installApp, uninstallApp, toPublicApp } = require('./appInstall.service'
 
 router.use(requireAuth);
 
+// Developer-owned apps and the platform admin review queue.
+router.use(require('./myApps.routes'));
+
 const memberFromQuery = requireWorkspaceAccess({ from: (req) => req.query?.workspaceId, optional: true });
 const adminFromBody = requireWorkspaceAccess({ from: (req) => req.body?.workspaceId || req.query?.workspaceId, adminOnly: true });
 
@@ -15,8 +18,8 @@ const adminFromBody = requireWorkspaceAccess({ from: (req) => req.body?.workspac
 router.get('/apps', memberFromQuery, async (req, res) => {
   try {
     const workspaceId = req.workspaceAccess?.workspaceId || null;
-    const apps = await App.find({ isPublished: true })
-      .select('name description category developer version iconUrl installedIn')
+    const apps = await App.find(App.APPROVED_QUERY)
+      .select('name description category developer version iconUrl installedIn scopes botUser homepageUrl ownerId')
       .lean();
 
     res.json({ apps: apps.map(app => toPublicApp(app, workspaceId)) });
@@ -29,7 +32,7 @@ router.get('/apps', memberFromQuery, async (req, res) => {
 // Install / uninstall require workspace owner/admin.
 router.post('/apps/:id/install', adminFromBody, async (req, res) => {
   try {
-    const result = await installApp(req.params.id, req.workspaceAccess.workspaceId);
+    const result = await installApp(req.params.id, req.workspaceAccess.workspaceId, { userId: req.user.sub });
     res.json({ message: `${result.name} installed successfully`, ...result });
   } catch (err) {
     if (err.status) return sendAccessError(res, err);

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   KeyRound, Webhook, Bot, ShoppingBag, FileText, Terminal, Copy, Check, Plus,
-  AlertTriangle, Lock, Send, Trash2, RefreshCw, ExternalLink, ShieldAlert
+  AlertTriangle, Lock, Send, Trash2, RefreshCw, ExternalLink, ShieldAlert, Boxes
 } from 'lucide-react';
 import api from '@services/api';
 import MarketplacePanel from '../../components/apps/MarketplacePanel';
 import useIsWorkspaceAdmin from '../../components/apps/useIsWorkspaceAdmin';
+import MyAppsTab from './MyAppsTab';
+import OpenApiReference from './OpenApiReference';
 import './DeveloperPortalPage.css';
 
 const TABS = [
@@ -14,6 +16,7 @@ const TABS = [
   { id: 'webhooks', label: 'Webhooks', Icon: Webhook },
   { id: 'bots',     label: 'Bots',     Icon: Bot },
   { id: 'apps',     label: 'App Market', Icon: ShoppingBag },
+  { id: 'my-apps',  label: 'My apps',  Icon: Boxes },
   { id: 'docs',     label: 'Docs',     Icon: FileText },
 ];
 
@@ -681,7 +684,7 @@ function DocsTab({ keyScheme, samplePrefix, events }) {
           <h4>2. Make your first request</h4>
           <p>The key already belongs to one workspace, so no workspace id is needed.</p>
           <pre><code>{`curl -H "X-Api-Key: ${exampleKey}" \\
-  "${baseUrl}/api/public/channels"`}</code></pre>
+  "${baseUrl}/api/public/v1/channels"`}</code></pre>
           <h4>3. Use the SDK</h4>
           <pre><code>{`// Node.js / Browser
 const OruinwanSDK = require('./oruinwan-sdk');
@@ -692,6 +695,10 @@ const client = new OruinwanSDK({
 
 const { messages } = await client.messages.list({ limit: 20 });
 const { task } = await client.tasks.create({ title: 'New task' });`}</code></pre>
+          <p className="dp-docs-note">
+            The API is versioned: use <code>/api/public/v1</code>. The old unversioned <code>/api/public</code> path still answers
+            but is deprecated (responses carry a <code>Deprecation</code> header).
+          </p>
         </div>
       )
     },
@@ -726,21 +733,7 @@ const { task } = await client.tasks.create({ title: 'New task' });`}</code></pre
       title: 'API Reference',
       content: (
         <div>
-          {[
-            { method: 'GET', path: '/api/public/messages', desc: 'List recent message metadata in public channels', params: 'limit, channelId' },
-            { method: 'GET', path: '/api/public/tasks', desc: 'List tasks', params: 'limit, status' },
-            { method: 'POST', path: '/api/public/tasks', desc: 'Create a task', params: 'title, description, priority, dueDate, assigneeId' },
-            { method: 'GET', path: '/api/public/files', desc: 'List files', params: 'limit' },
-            { method: 'GET', path: '/api/public/users', desc: 'List workspace members', params: '-' },
-            { method: 'GET', path: '/api/public/channels', desc: 'List public channels', params: '-' },
-          ].map(ep => (
-            <div key={`${ep.method} ${ep.path}`} className="dp-endpoint">
-              <span className={`dp-method dp-method-${ep.method.toLowerCase()}`}>{ep.method}</span>
-              <code className="dp-endpoint-path">{ep.path}</code>
-              <p>{ep.desc}</p>
-              {ep.params !== '-' && <p className="dp-endpoint-params">{ep.method === 'POST' ? 'Body' : 'Query params'}: <code>{ep.params}</code></p>}
-            </div>
-          ))}
+          <OpenApiReference />
           <h4 style={{ marginTop: 24 }}>Errors and rate limits</h4>
           <p>Errors are JSON: <code>{'{ "message": "..." }'}</code>. The public API allows <strong>100 requests / minute</strong> per API key.</p>
         </div>
@@ -789,6 +782,9 @@ X-Chttrix-Delivery: <webhook-id>`}</code></pre>
   apiKey: '${exampleKey}',
   baseUrl: '${baseUrl}'
 });`}</code></pre>
+          <h4>The calling key</h4>
+          <pre><code>{`const me = await client.me();      // { workspaceId, scopes, app }
+const spec = await client.openapi(); // OpenAPI 3 document`}</code></pre>
           <h4>Messages</h4>
           <pre><code>{`await client.messages.list({ limit: 50, channelId: '...' });`}</code></pre>
           <h4>Tasks</h4>
@@ -825,7 +821,10 @@ await client.tasks.create({
 }
 
 export default function DeveloperPortalPage({ workspaceId }) {
-  const [activeTab, setActiveTab] = useState('api-keys');
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    return TABS.some(x => x.id === t) ? t : 'api-keys';
+  });
   const [keyPrefixes, setKeyPrefixes] = useState([]);
   const [events, setEvents] = useState(null);
   const [eventsError, setEventsError] = useState(null);
@@ -874,11 +873,12 @@ export default function DeveloperPortalPage({ workspaceId }) {
 
       <div className="dp-body">
         <div className="dp-body-inner">
-          {isAdmin === undefined && activeTab !== 'docs' ? <Skeleton rows={3} /> : <>
+          {isAdmin === undefined && activeTab !== 'docs' && activeTab !== 'my-apps' ? <Skeleton rows={3} /> : <>
           {activeTab === 'api-keys' && <ApiKeysTab workspaceId={wsId} isAdmin={isAdmin} onKeysChange={onKeysChange} />}
           {activeTab === 'webhooks' && <WebhooksTab workspaceId={wsId} isAdmin={isAdmin} events={events} eventsError={eventsError} />}
           {activeTab === 'bots'     && <BotsTab     workspaceId={wsId} isAdmin={isAdmin} />}
           {activeTab === 'apps'     && <AppsTab     workspaceId={wsId} isAdmin={isAdmin} />}
+          {activeTab === 'my-apps'  && <MyAppsTab />}
           {activeTab === 'docs'     && <DocsTab keyScheme={keyScheme} samplePrefix={samplePrefix} events={events} />}
           </>}
         </div>
