@@ -26,6 +26,12 @@ jest.mock('../../analytics/analytics.service', () => new Proxy({}, {
 jest.mock('../../analytics/analytics.controller', () => ({
     getCompanyAnalytics: (req, res) => res.json({ companyId: req.params.companyId }),
 }));
+jest.mock('../../analytics/teamDelivery', () => ({
+    getTeamDelivery: jest.fn(async (companyId, opts) => ({ companyId: String(companyId), weeks: opts.weeks })),
+}));
+jest.mock('../../analytics/activeDays', () => ({
+    getActiveMembers: jest.fn(async (companyId, period) => ({ companyId: String(companyId), period })),
+}));
 jest.mock('../../security/backup.service', () => ({
     createBackup: jest.fn(async ({ companyId }) => ({ companyId, createdAt: new Date(), recordCount: 1, encryptedPayload: 'x' })),
 }));
@@ -89,6 +95,24 @@ describe('GET /api/dashboard/analytics/*', () => {
     it('refuses members and guests', async () => {
         expect((await h.call(app(), 'GET', '/api/dashboard/analytics/users', MEMBER)).status).toBe(403);
         expect((await h.call(app(), 'GET', '/api/dashboard/analytics/summary', GUEST)).status).toBe(403);
+    });
+});
+
+describe('team delivery and active members', () => {
+    it('admins get their own company, with clamped params', async () => {
+        const t = await h.call(app(), 'GET', '/api/dashboard/analytics/teams?weeks=99', ADMIN);
+        expect(t.status).toBe(200);
+        expect(t.body).toEqual({ companyId: C1, weeks: 26 });
+        const a = await h.call(app(), 'GET', '/api/dashboard/analytics/active-members?period=7', OWNER);
+        expect(a.body).toEqual({ companyId: C1, period: 7 });
+    });
+    it('refuses members', async () => {
+        expect((await h.call(app(), 'GET', '/api/dashboard/analytics/teams', MEMBER)).status).toBe(403);
+        expect((await h.call(app(), 'GET', '/api/dashboard/analytics/active-members', GUEST)).status).toBe(403);
+    });
+    it('the old unimplemented 501 routes are gone', async () => {
+        expect((await h.call(app(), 'GET', '/api/dashboard/admin', ADMIN)).status).toBe(404);
+        expect((await h.call(app(), 'GET', `/api/dashboard/workspace/${C1}`, ADMIN)).status).toBe(404);
     });
 });
 

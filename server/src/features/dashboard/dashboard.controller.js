@@ -73,10 +73,6 @@ exports.getDashboardMetrics = async (req, res) => {
     }
 };
 
-exports.getAdminDashboard = async (req, res) => {
-    res.status(501).json({ message: 'Not implemented yet' });
-};
-
 exports.getEmployeeDashboard = async (req, res) => {
     try {
         const callerId = String(req.user.sub);
@@ -114,10 +110,6 @@ exports.getEmployeeDashboard = async (req, res) => {
     } catch (err) {
         return res.status(err.status || 500).json({ message: err.message || 'Server error' });
     }
-};
-
-exports.getWorkspaceDashboard = async (req, res) => {
-    res.status(501).json({ message: 'Not implemented yet' });
 };
 
 exports.getAnalyticsSummary = async (req, res) => {
@@ -187,6 +179,30 @@ exports.getEngagementTrends = async (req, res) => {
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         const data = await analyticsService.getEngagementTrends(companyId, period);
         res.json(data);
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message || 'Server error' });
+    }
+};
+
+// Team workload & delivery: tasks completed per week, cycle time and overdue trend per team.
+exports.getTeamDelivery = async (req, res) => {
+    try {
+        const { companyId } = await _resolveCompanyId(req.user.sub);
+        if (!companyId) return res.status(400).json({ message: 'No company associated' });
+        const weeks = Math.min(Math.max(parseInt(req.query.weeks) || 8, 1), 26);
+        res.json(await require('../analytics/teamDelivery').getTeamDelivery(companyId, { weeks }));
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message || 'Server error' });
+    }
+};
+
+// Members active per day / per week (counts only).
+exports.getActiveMembers = async (req, res) => {
+    try {
+        const { companyId } = await _resolveCompanyId(req.user.sub);
+        if (!companyId) return res.status(400).json({ message: 'No company associated' });
+        const period = Math.min(Math.max(parseInt(req.query.period) || 30, 1), 365);
+        res.json(await require('../analytics/activeDays').getActiveMembers(companyId, period));
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message || 'Server error' });
     }
