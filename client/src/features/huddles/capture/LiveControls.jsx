@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Captions, CaptionsOff, Circle, Square, Loader2, RefreshCw, Download, X } from 'lucide-react';
-import useCallTranscript from './useCallTranscript';
 import { formatBytes } from './recorderMime';
-import { transcriptText } from './captions';
-import TranscriptView from './TranscriptView';
-import RecordingPlayer from './RecordingPlayer';
 import './capture.css';
 
 function useElapsed(since) {
@@ -19,8 +15,8 @@ function useElapsed(since) {
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Captions and recording controls for the running call. */
-function LiveControls({ cap }) {
+/** Captions and recording controls for the running call (the meeting Transcript tab). */
+export default function LiveControls({ cap }) {
     const { captions, recording } = cap;
     const elapsed = useElapsed(recording.state === 'recording' ? recording.startedAt : null);
     const [confirmRec, setConfirmRec] = useState(false);
@@ -99,42 +95,5 @@ function LiveControls({ cap }) {
             {recording.state !== 'error' && recording.error && <p className="cc-alert" role="note">{recording.error}</p>}
             {cap.sendError && <p className="cc-alert cc-alert--danger" role="alert">{cap.sendError}</p>}
         </>
-    );
-}
-
-/**
- * Huddle workspace tab: live captions, recording and the transcript of the call.
- * For a finished call it shows that run's recording and transcript.
- */
-export default function CallTranscriptTab({ call, session, live }) {
-    const { cap, isLiveHere, target, segments, loading, error } = useCallTranscript(call, session, live);
-    const startedAt = session?.startedAt || call?.startTime;
-    const copy = () => { navigator.clipboard?.writeText(transcriptText(segments, startedAt)).catch(() => {}); };
-
-    if (!call) return null;
-    return (
-        <div data-testid="call-transcript-tab">
-            {isLiveHere && <LiveControls cap={cap} />}
-
-            <div className="hw-section"><span>Recording</span></div>
-            {target && <RecordingPlayer target={target} compact={isLiveHere} refreshKey={isLiveHere ? (cap.recording.lastRecording?.uploadedAt || 0) : 0} />}
-
-            <div className="hw-section">
-                <span>Transcript</span>
-                {segments.length > 0 && <button type="button" className="gl-x-link" onClick={copy}>Copy</button>}
-            </div>
-            {error && <p className="hw-error">{error}</p>}
-            {loading
-                ? <p className="hw-muted"><Loader2 size={12} className="animate-spin" /> Loading transcript…</p>
-                : (
-                    <TranscriptView
-                        segments={segments}
-                        startedAt={startedAt}
-                        myId={cap?.me?.id}
-                        interim={isLiveHere ? cap.interim : ''}
-                        empty={isLiveHere ? 'Nobody has captions on yet. Turn on yours to transcribe what you say.' : 'This call has no transcript.'}
-                    />
-                )}
-        </div>
     );
 }

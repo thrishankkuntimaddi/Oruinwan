@@ -7,8 +7,8 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useToast } from '../../contexts/ToastContext';
 
 // Paper colours for the notes themselves (stored on each note, chosen by the user).
-const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];
-const NOTE_NAMES = ['Yellow', 'Green', 'Blue', 'Pink', 'Lilac', 'Coral', 'Mint'];
+const NOTE_COLORS = ['#E2C08D', '#F2C14E', '#A8D5B0', '#EFA89A', '#E6DFD2'];
+const NOTE_NAMES = ['Gold', 'Amber', 'Sage', 'Clay', 'Sand'];
 
 /**
  * Sticky notes for a meeting. Notes are stored on the server and the server

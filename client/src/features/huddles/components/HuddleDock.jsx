@@ -73,7 +73,7 @@ export default function HuddleDock() {
                     </button>
                     <button type="button" className="gl-icon-btn" aria-pressed={ctx.workspaceOpen}
                         onClick={() => (ctx.workspaceOpen ? ctx.closeWorkspace() : ctx.openWorkspace())}
-                        title="Huddle workspace: notes, tasks, chat" aria-label="Huddle workspace">
+                        title={ctx.workspaceOpen ? 'Hide the meeting panel' : 'Meeting panel: notes, agenda, transcript and recap'} aria-label="Meeting panel">
                         <PanelRight size={13} />
                     </button>
                     <button type="button" className="gl-icon-btn hw-pill-leave" onClick={ctx.leaveHuddle} title="Leave huddle" aria-label="Leave huddle">

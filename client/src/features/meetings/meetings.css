@@ -1,0 +1,79 @@
+/* The meeting experience: one tab set on the meeting page and in the in-call panel.
+   Theme tokens only (Monolith Gloss), so light and dark both work. */
+
+.mt-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.mt-tabs::-webkit-scrollbar { display: none; }
+.mt-tabs .gl-tab { white-space: nowrap; }
+
+.mt-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.mt-stack--wide { max-width: 860px; }
+.mt-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; align-items: start; }
+.mt-compact .mt-cols { grid-template-columns: 1fr; gap: 14px; }
+
+.mt-label { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.mt-label > span:first-child { flex: 1; }
+.mt-muted { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+.mt-error { margin: 0; font-size: 12.5px; color: var(--state-danger); line-height: 1.5; }
+.mt-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mt-grow { flex: 1; min-width: 0; }
+
+/* Overview */
+.mt-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; }
+.mt-fact { padding: 12px 14px; }
+.mt-fact-value { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+.mt-fact-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-secondary); }
+.mt-people { display: flex; flex-wrap: wrap; gap: 6px; }
+.mt-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border: 1px solid var(--border-default); border-radius: 999px; background: var(--bg-surface); font-size: 12px; color: var(--text-primary); }
+.mt-avatar { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 700; background: var(--bg-active); color: var(--text-primary); flex-shrink: 0; }
+.mt-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--state-success); display: inline-block; flex-shrink: 0; }
+
+/* Lists (agenda, action items) */
+.mt-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border: 1px solid var(--border-subtle); border-radius: var(--gl-radius-sm, 3px); background: var(--bg-surface); }
+.mt-item.is-done .mt-item-text { text-decoration: line-through; color: var(--text-secondary); }
+.mt-item-num { width: 20px; height: 20px; border-radius: var(--gl-radius-sm, 3px); background: var(--bg-active); color: var(--text-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.mt-item-text { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-primary); word-break: break-word; }
+.mt-item-meta { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mt-item input[type='checkbox'] { accent-color: var(--accent); width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; }
+.mt-item-tools { display: flex; gap: 2px; flex-shrink: 0; }
+@media (hover: hover) and (pointer: fine) {
+    .mt-item-tools { opacity: 0; transition: opacity var(--gl-dur-1, 150ms) ease; }
+    .mt-item:hover .mt-item-tools, .mt-item:focus-within .mt-item-tools { opacity: 1; }
+}
+.mt-select, .mt-date { height: 26px; padding: 0 6px; font: inherit; font-size: 11.5px; color: var(--text-primary); background: var(--bg-base); border: 1px solid var(--border-default); border-radius: var(--gl-radius-sm, 3px); max-width: 100%; }
+.mt-select:focus, .mt-date:focus { outline: none; border-color: var(--accent); }
+.mt-add { display: flex; gap: 8px; }
+.mt-add .gl-input { flex: 1; min-width: 0; }
+
+/* Summary */
+.mt-summary { padding: 12px 14px; border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent); border-radius: var(--gl-radius-sm, 3px); background: var(--bg-surface); font-size: 13px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; }
+.mt-textarea { width: 100%; min-height: 120px; resize: vertical; padding: 9px 10px; font: inherit; font-size: 13px; line-height: 1.55; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--gl-radius-sm, 3px); outline: none; box-sizing: border-box; }
+.mt-textarea:focus { border-color: var(--accent); }
+.mt-success { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--state-success); border-radius: var(--gl-radius-sm, 3px); font-size: 12.5px; color: var(--text-primary); }
+
+/* Notes (the meeting's one Note, live) */
+.mt-note { display: flex; flex-direction: column; gap: 10px; }
+.mt-note-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mt-note-body { padding: 14px 16px 14px 30px; border: 1px solid var(--border-subtle); border-radius: var(--gl-radius-sm, 3px); background: var(--bg-surface); min-height: 220px; }
+.mt-compact .mt-note-body { padding: 10px 10px 10px 24px; min-height: 160px; }
+.mt-note-block { position: relative; }
+
+/* Transcript */
+.mt-transcript { max-height: 460px; overflow-y: auto; padding-right: 4px; }
+.mt-compact .mt-transcript { max-height: none; }
+
+/* Huddles lists */
+.mt-list-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: none; border: none; border-bottom: 1px solid var(--border-subtle); font: inherit; text-align: left; color: var(--text-primary); cursor: pointer; }
+.mt-list-row:last-child { border-bottom: none; }
+.mt-list-row:hover { background: var(--bg-hover); }
+.mt-list-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mt-list-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--gl-radius-sm, 3px); background: var(--bg-active); color: var(--accent); flex-shrink: 0; }
+.mt-list-title { display: block; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-list-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-list-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.mt-more { display: flex; justify-content: center; padding: 10px; }
+
+/* The meeting page */
+.mt-page-tabs { position: sticky; top: 0; z-index: 2; margin: 0 0 16px; padding: 6px 0; background: var(--bg-base); }
+.mt-page-body { min-height: 0; }
+.mt-back { display: inline-flex; align-items: center; gap: 4px; padding: 0; background: none; border: none; font: inherit; color: inherit; cursor: pointer; }
+.mt-back:hover { color: var(--accent); }

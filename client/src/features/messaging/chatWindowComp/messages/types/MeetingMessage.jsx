@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, Clock, Users, Video, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Users, Video, ExternalLink, ListChecks } from 'lucide-react';
 
 export default function MeetingMessage({ meeting }) {
     const { title, startTime, duration, meetingLink, participants = [], scheduledMeetingId } = meeting || {};
@@ -113,8 +113,17 @@ export default function MeetingMessage({ meeting }) {
                         style={{ flex: 1, justifyContent: 'center' }}>
                         <Video size={12} /> Join huddle
                     </button>
-                    <button type="button" className="gl-btn" onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${scheduledMeetingId}`); }}>
+                    <button type="button" className="gl-btn" data-testid="meeting-card-details" onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${scheduledMeetingId}`); }}>
                         Details
+                    </button>
+                </div>
+            )}
+            {/* Over: the meeting page still has the notes, transcript, summary and action items. */}
+            {scheduledMeetingId && workspaceId && formattedDate?.isPast && (
+                <div style={{ padding: '0 12px 8px', display: 'flex', gap: '6px' }}>
+                    <button type="button" className="gl-btn" data-testid="meeting-card-recap" style={{ flex: 1, justifyContent: 'center' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${scheduledMeetingId}?tab=summary`); }}>
+                        <ListChecks size={12} /> View recap
                     </button>
                 </div>
             )}

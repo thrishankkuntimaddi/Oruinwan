@@ -306,10 +306,10 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                             onClick={cap.captions.on ? cap.captions.stop : cap.captions.start} active={cap.captions.on} unavailable={!cap.captions.supported} />
                     )}
                     {cap?.recording.isHost && (
-                        <DockButton testId="room-record" icon={Circle} label={recording ? 'Recording: open the transcript tab to stop' : 'Record the call'}
+                        <DockButton testId="room-record" icon={Circle} label={recording ? 'Recording: open the Transcript tab to stop' : 'Record the call'}
                             onClick={() => huddle.openWorkspace('transcript')} danger={recording} unavailable={!cap.recording.supported} />
                     )}
-                    <DockButton testId="room-workspace" icon={PanelRight} label={huddle.workspaceOpen ? 'Hide huddle workspace' : 'Notes, tasks, chat and wrap-up'}
+                    <DockButton testId="room-workspace" icon={PanelRight} label={huddle.workspaceOpen ? 'Hide the meeting panel' : 'Meeting panel: notes, agenda, transcript and recap'}
                         onClick={() => (huddle.workspaceOpen ? huddle.closeWorkspace() : huddle.openWorkspace())} active={!!huddle.workspaceOpen} />
                     <span style={{ width: '1px', height: '28px', background: 'var(--border-default)', margin: '0 4px' }} />
                     <DockButton testId="room-participants" icon={Users} label={showParticipants ? 'Hide participants' : 'Show participants'}
