@@ -18,6 +18,10 @@ import { Markdown } from '../../ui/Markdown.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
+import { useLiveDocument } from '../../lib/collab/useCollab.js';
+import { useTextareaBinding } from '../../lib/collab/useEditorBinding.js';
+import { collabView } from '../../lib/collab/state.js';
+import { CollabBanner, PresenceAvatars } from '../../lib/collab/CollabUi.jsx';
 
 // The same starter pages as the web (client/src/pages/SidebarComp/KnowledgePage.jsx).
 export const PAGE_TEMPLATES = [
@@ -181,6 +185,10 @@ function useAutoHeight(ref, value) {
   }, [ref, value]);
 }
 
+const PAGE_PLACEHOLDER = 'Start writing. Markdown works: # heading, **bold**, *italic*, - list, > quote';
+const TEXTAREA_CLASS =
+  'selectable mt-4 block w-full resize-none bg-transparent font-mono text-[14px] leading-6 outline-none placeholder:font-sans placeholder:text-text-3';
+
 function PageEditor({ page, fresh, onDone }) {
   const ws = useSession((s) => s.workspaceId);
   const [title, setTitle] = useState(fresh ? '' : page.title);
@@ -195,16 +203,35 @@ function PageEditor({ page, fresh, onDone }) {
   const timer = useRef(null);
   const dirty = useRef(false);
   useAutoHeight(textRef, `${tab}:${content}`);
+  // Live co-editing (docs/api/collab.md): the Markdown lives in the shared document and the
+  // server saves it; title and icon still save over REST. 'rest' = older server, REST only.
+  const { state: collab, doc, peers } = useLiveDocument('knowledge', page.id);
+  const live = collab.mode !== 'rest';
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const view = collabView(collab, { kind: 'page' });
+  const bound = live && collab.everSynced;
+  const binding = useTextareaBinding(doc, bound && tab === 'write', textRef, !view.editable, setContent);
+  // Someone else's edits while the preview is showing.
+  useEffect(() => {
+    if (!doc || !bound) return undefined;
+    const ytext = doc.getText('content');
+    const sync = () => setContent(ytext.toString());
+    sync();
+    ytext.observe(sync);
+    return () => ytext.unobserve(sync);
+  }, [doc, bound]);
+  const fields = ({ title: t, content: c, icon: i }) =>
+    liveRef.current ? { title: t.trim() || 'Untitled page', icon: i } : { title: t.trim() || 'Untitled page', content: c, icon: i };
 
   const save = async () => {
     clearTimeout(timer.current);
     timer.current = null;
     if (!dirty.current) return true;
     dirty.current = false;
-    const { title: t, content: c, icon: i } = latest.current;
     setStatus('saving');
     try {
-      const saved = await api().updatePage(page.id, { title: t.trim() || 'Untitled page', content: c, icon: i });
+      const saved = await api().updatePage(page.id, fields(latest.current));
       setQueryData(`page:${page.id}`, (p) => ({ ...p, ...saved }));
       setQueryData(`knowledge:${ws}`, (list) => list?.map((p) => (p.id === page.id ? { ...p, title: saved.title, icon: saved.icon, updatedAt: saved.updatedAt } : p)));
       setStatus('saved');
@@ -230,9 +257,8 @@ function PageEditor({ page, fresh, onDone }) {
     () => () => {
       if (timer.current && dirty.current) {
         clearTimeout(timer.current);
-        const { title: t, content: c, icon: i } = latest.current;
         api()
-          .updatePage(page.id, { title: t.trim() || 'Untitled page', content: c, icon: i })
+          .updatePage(page.id, fields(latest.current))
           .then(() => invalidate('knowledge', `page:${page.id}`))
           .catch(() => toast("Your last edit to the page couldn't be saved.", 'danger'));
       }
@@ -241,6 +267,8 @@ function PageEditor({ page, fresh, onDone }) {
   );
 
   const done = async () => {
+    // The server saves the live document when we leave it; show the latest text right away.
+    if (bound && doc) setQueryData(`page:${page.id}`, (p) => (p ? { ...p, content: doc.getText('content').toString() } : p));
     if (await save()) {
       invalidate('knowledge');
       onDone();
@@ -251,11 +279,14 @@ function PageEditor({ page, fresh, onDone }) {
     <Screen>
       <Header
         title=""
-        subtitle={status === 'saving' ? 'Saving…' : status === 'error' ? 'Not saved' : 'All changes saved'}
+        subtitle={status === 'saving' ? 'Saving…' : status === 'error' ? 'Not saved' : live ? view.subtitle : 'All changes saved'}
         actions={
-          <Button size="sm" className="mr-2" onClick={done} data-testid="page-done">
-            Done
-          </Button>
+          <>
+            <PresenceAvatars peers={peers} />
+            <Button size="sm" className="mr-2" onClick={done} data-testid="page-done">
+              Done
+            </Button>
+          </>
         }
       />
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-10">
@@ -280,6 +311,8 @@ function PageEditor({ page, fresh, onDone }) {
             className="min-w-0 flex-1 bg-transparent text-[24px] font-bold leading-tight tracking-tight outline-none placeholder:text-text-3"
           />
         </div>
+        <CollabBanner text={view.banner} tone={collab.mode === 'closed' ? 'locked' : 'offline'} />
+        {collab.message && <CollabBanner text={collab.message} tone="locked" />}
         <Segmented
           className="mt-4"
           size="sm"
@@ -292,17 +325,34 @@ function PageEditor({ page, fresh, onDone }) {
         />
         {tab === 'write' ? (
           <>
-            <textarea
-              ref={textRef}
-              value={content}
-              onChange={(e) => {
-                setContent(e.target.value);
-                change({ content: e.target.value });
-              }}
-              aria-label="Page content"
-              placeholder="Start writing. Markdown works: # heading, **bold**, *italic*, - list, > quote"
-              className="selectable mt-4 block w-full resize-none bg-transparent font-mono text-[14px] leading-6 outline-none placeholder:font-sans placeholder:text-text-3"
-            />
+            {bound ? (
+              <textarea
+                key="live"
+                ref={textRef}
+                defaultValue={content}
+                readOnly={!view.editable}
+                onInput={() => binding.current?.input()}
+                onCompositionStart={() => binding.current?.compositionStart()}
+                onCompositionEnd={() => binding.current?.compositionEnd()}
+                aria-label="Page content"
+                placeholder={PAGE_PLACEHOLDER}
+                className={TEXTAREA_CLASS}
+              />
+            ) : (
+              <textarea
+                key="rest"
+                ref={textRef}
+                value={content}
+                readOnly={live}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  change({ content: e.target.value });
+                }}
+                aria-label="Page content"
+                placeholder={PAGE_PLACEHOLDER}
+                className={TEXTAREA_CLASS}
+              />
+            )}
             <p className="mt-2 text-xs text-text-3"># Heading · **bold** · *italic* · `code` · &gt; quote · - list · 1. steps</p>
           </>
         ) : content.trim() ? (

@@ -23,6 +23,10 @@ import { useFlag } from '../../config/flags.js';
 import { useKeyboard } from '../../native/keyboard.js';
 import { askAiAbout } from '../ai/aiUi.js';
 import { TEMPLATES } from './templates.js';
+import { useLiveDocument } from '../../lib/collab/useCollab.js';
+import { useNoteBinding } from '../../lib/collab/useEditorBinding.js';
+import { collabView } from '../../lib/collab/state.js';
+import { CollabBanner, PresenceAvatars } from '../../lib/collab/CollabUi.jsx';
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -243,6 +247,15 @@ export function NoteScreen({ id, fresh }) {
   const titleRef = useRef('');
   const loadedRef = useRef(false);
   const timer = useRef(null);
+  // Live co-editing (docs/api/collab.md). The note's content then lives in the shared document
+  // and the server saves it; only the title and settings still go over REST. 'rest' mode is an
+  // older server without live editing: everything saves over REST as before.
+  const { state: collab, doc, peers } = useLiveDocument('note', id);
+  const live = collab.mode !== 'rest';
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const view = collabView(collab, { kind: 'note' });
+  const binding = useNoteBinding(doc, live && collab.everSynced && Boolean(note), editorRef);
 
   // Load content into the editor once; afterwards the editor owns it.
   useEffect(() => {
@@ -250,8 +263,9 @@ export function NoteScreen({ id, fresh }) {
     loadedRef.current = true;
     titleRef.current = note.title === 'Untitled' && fresh ? '' : note.title;
     setTitle(titleRef.current);
-    if (editorRef.current) editorRef.current.innerHTML = sanitizeHtml(note.content);
-  }, [note, fresh]);
+    // Already showing the live document: don't put the REST copy over it.
+    if (editorRef.current && !binding.current) editorRef.current.innerHTML = sanitizeHtml(note.content);
+  }, [note, fresh, binding]);
 
   const canEdit = note && (note.ownerId === me || (note.sharedWith || []).includes(me) || note.visibility === 'workspace');
 
@@ -272,8 +286,15 @@ export function NoteScreen({ id, fresh }) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       timer.current = null;
-      save({ title: titleRef.current.trim() || 'Untitled', content: sanitizeHtml(editorRef.current?.innerHTML || '') });
+      const title = titleRef.current.trim() || 'Untitled';
+      save(liveRef.current ? { title } : { title, content: sanitizeHtml(editorRef.current?.innerHTML || '') });
     }, 800);
+  };
+
+  /** The editor changed: into the shared document when live, else a REST save. */
+  const edited = () => {
+    if (binding.current) binding.current.input();
+    else if (!liveRef.current) scheduleSave();
   };
 
   // Flush a pending save when leaving the screen.
@@ -282,8 +303,9 @@ export function NoteScreen({ id, fresh }) {
       if (timer.current) {
         clearTimeout(timer.current);
         if (editorRef.current && loadedRef.current) {
+          const title = titleRef.current.trim() || 'Untitled';
           api()
-            .updateNote(id, { title: titleRef.current.trim() || 'Untitled', content: sanitizeHtml(editorRef.current.innerHTML) })
+            .updateNote(id, liveRef.current ? { title } : { title, content: sanitizeHtml(editorRef.current.innerHTML) })
             .then(() => invalidate('notes'))
             .catch(() => {});
         }
@@ -299,7 +321,7 @@ export function NoteScreen({ id, fresh }) {
     const rect = li.getBoundingClientRect();
     if (e.clientX - rect.left < 28) {
       li.setAttribute('data-checked', li.getAttribute('data-checked') === 'true' ? 'false' : 'true');
-      scheduleSave();
+      edited();
     }
   };
 
@@ -313,14 +335,19 @@ export function NoteScreen({ id, fresh }) {
   }
 
   const statusText = status === 'saving' ? 'Saving…' : status === 'error' ? 'Not saved' : `Saved · ${shortAgo(note.updatedAt)}`;
+  // Live: the server decides who may write (readOnly); the content waits for the first sync.
+  const contentEditable = (live ? view.editable : canEdit) && !note.archived;
+  const titleEditable = canEdit && (!live || view.editable || collab.mode === 'connecting');
+  const subtitle = !canEdit ? 'View only' : live ? (status === 'saving' ? 'Saving…' : view.subtitle) : statusText;
 
   return (
     <Screen>
       <Header
         title=""
-        subtitle={canEdit ? statusText : 'View only'}
+        subtitle={subtitle}
         actions={
           <>
+            <PresenceAvatars peers={peers} />
             <IconButton
               icon={Star}
               label={note.pinned ? 'Remove from favorites' : 'Add to favorites'}
@@ -343,7 +370,7 @@ export function NoteScreen({ id, fresh }) {
         </button>
         <input
           value={title}
-          readOnly={!canEdit}
+          readOnly={!titleEditable}
           onChange={(e) => {
             titleRef.current = e.target.value;
             setTitle(e.target.value);
@@ -353,20 +380,24 @@ export function NoteScreen({ id, fresh }) {
           autoFocus={fresh}
           className="w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none placeholder:text-text-3"
         />
+        <CollabBanner text={view.banner} tone={collab.mode === 'closed' ? 'locked' : 'offline'} />
+        {collab.message && <CollabBanner text={collab.message} tone="locked" />}
         {note.archived && (
           <p className="mt-3 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] text-text-2">This note is archived. Restore it from the menu to edit.</p>
         )}
         <div
           ref={editorRef}
-          contentEditable={canEdit && !note.archived}
+          contentEditable={contentEditable}
           suppressContentEditableWarning
-          onInput={scheduleSave}
+          onInput={edited}
+          onCompositionStart={() => binding.current?.compositionStart()}
+          onCompositionEnd={() => binding.current?.compositionEnd()}
           onClick={onEditorClick}
           data-placeholder="Start writing…"
           className="prose-oru editor-empty selectable mt-4 min-h-[50vh] outline-none"
         />
       </div>
-      {canEdit && !note.archived && keyboardOpen && (
+      {contentEditable && keyboardOpen && (
         <div className="no-scrollbar flex shrink-0 gap-1 overflow-x-auto border-t border-line-soft bg-surface px-2 py-1.5">
           {TOOLS.map((t) => (
             <button
@@ -376,7 +407,7 @@ export function NoteScreen({ id, fresh }) {
               onPointerDown={(e) => {
                 e.preventDefault();
                 t.run();
-                scheduleSave();
+                edited();
               }}
               className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-text-2 active:bg-surface-3"
             >

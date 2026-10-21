@@ -134,6 +134,9 @@ export function socketRequest(event, payload, timeoutMs = 5000) {
 
 export const realtimeConnected = () => Boolean(socket?.connected);
 
+/** The app's socket (or null), for live document editing (lib/collab). */
+export const realtimeSocket = () => socket;
+
 export function setActive(active) {
   socketEmit(active ? 'user:active' : 'user:idle', {});
 }
