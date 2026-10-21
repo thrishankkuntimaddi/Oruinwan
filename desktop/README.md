@@ -35,7 +35,9 @@ Releases are built by CI, not by hand: pushing a `vX.Y.Z` tag runs the **Build a
 publishes the APK and all desktop installers together. See "Releasing a new version" in
 [mobile/README.md](../mobile/README.md). The app's version comes from `mobile/package.json`.
 
-The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts/make-icons.sh`.
+The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts/make-icons.sh`; the tray
+icons in `assets/tray/` from it by `npm run tray-icons`. Unit tests for the tray, close and quick-reply
+logic (`electron/trayState.js`): `npm test`.
 
 ## How it works
 
@@ -45,7 +47,10 @@ The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts
 | **Servers** | Self-hosted servers only allow their own web origins for CORS, so the main process answers CORS for the app's requests (preflights included) and drops `Cross-Origin-Resource-Policy` so avatars load. Sign-in uses the server's app token mode (`x-client-platform: desktop`, refresh token in the response body) instead of the browser's cross-site cookie. |
 | **Bridge** | `electron/preload.js` exposes `window.electronAPI` (what `client/src/desktop/bridge.js` uses for notifications, the badge and notification clicks) and `window.oruinwanDesktop` (`{ platform, arch, version, setBadgeCount, openExternal }`, which marks the desktop app). |
 | **Security** | Sandboxed renderer, context isolation, no Node. Only `app://oruinwan` may load in the window; links and `window.open` go to the system browser (http, https and mailto only). Permissions are limited to notifications, clipboard, media and fullscreen, for the app's own origin. |
-| **Window** | Size and position are remembered (`window-state.json` in the user data folder). A second launch focuses the open window. The unread count shows on the dock (macOS), the launcher (Linux, where supported) and in the window title. |
+| **Window** | Size and position are remembered (`window-state.json` in the user data folder). A second launch focuses the open window. The unread count shows on the dock (macOS), the launcher (Linux, where supported), the tray and in the window title. |
+| **Tray** | A tray / menu bar icon (`assets/tray/`, made by `npm run tray-icons`) gets a dot and the tooltip "Oruinwan — N unread" when there is unread activity. Clicking it opens the window (macOS: right-click for the menu). Its menu: **Open Oruinwan**, **Do Not Disturb** (no native notifications while on; remembered in `desktop-settings.json`), **Launch at Login** (macOS and Windows only; Linux desktops use their own autostart settings, so the item is hidden there) and **Quit Oruinwan**. |
+| **Closing** | Closing the window hides it instead of quitting (macOS: the app stays in the dock and a dock click brings it back; Windows/Linux: it stays in the tray). Only Quit (tray, app menu, Cmd+Q) or logging out ends the app. The page keeps running while hidden, with background throttling off, so the socket keeps syncing messages, notifications and the unread count. If a Linux desktop has no tray, closing quits as before. |
+| **Quick reply** | macOS and Windows notifications for a channel or DM have an inline **Reply** field. The main process validates the conversation ids and caps the text at 4000 characters, then hands it to the page (`oruinwan:quick-reply`), which encrypts it with the conversation key and sends it like the composer does (`client/src/desktop/quickReply.js`); plaintext never goes to the server. If it can't be sent (keys still locked, offline), the conversation opens instead. On Linux, clicking a notification opens the conversation. |
 | **Updates** | The app reads `latest.json` from the latest GitHub release and offers the installer for that computer. Installing over the old version keeps your data. |
 
 ## Installing unsigned builds

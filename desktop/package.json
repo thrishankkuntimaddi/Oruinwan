@@ -15,7 +15,9 @@
     "build:mac": "npm run bundle && electron-builder --mac --publish never",
     "build:win": "npm run bundle && electron-builder --win --publish never",
     "build:linux": "npm run bundle && electron-builder --linux --publish never",
-    "pack": "npm run bundle && electron-builder --dir --publish never"
+    "pack": "npm run bundle && electron-builder --dir --publish never",
+    "test": "node --test electron/__tests__/*.test.js",
+    "tray-icons": "node scripts/make-tray-icons.mjs"
   },
   "devDependencies": {
     "cross-env": "7.0.3",
@@ -33,8 +35,10 @@
     "files": [
       "package.json",
       "electron/**/*",
+      "!electron/__tests__/**",
       "app/**/*",
-      "assets/icon.png"
+      "assets/icon.png",
+      "assets/tray/**/*"
     ],
     "publish": null,
     "mac": {
