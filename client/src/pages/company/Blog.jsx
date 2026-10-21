@@ -15,8 +15,8 @@ const POSTS = [
     },
     {
         id: 2, tag: 'Security', color: '#5cc995', icon: Shield,
-        title: 'How we built end-to-end encryption into a real-time workspace',
-        excerpt: 'Per-conversation keys, X25519 key agreement and AES-GCM on your device: how we encrypt channels and DMs without slowing the conversation down.',
+        title: 'How we encrypt messages in a real-time workspace',
+        excerpt: 'Per-conversation AES-GCM keys on your device, wrapped for each member: how we encrypt channels and DMs without slowing the conversation down.',
         author: 'Security Team', date: 'Mar 22, 2026', readTime: '7 min',
     },
     {

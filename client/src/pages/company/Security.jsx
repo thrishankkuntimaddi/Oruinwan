@@ -14,7 +14,7 @@ const SECTIONS = [
             <>
                 <p>Security isn’t a feature at {BRAND.name}; it’s a foundational commitment. Product decisions, architecture choices and vendor evaluations all start with the same question: how does this affect the people whose data we hold?</p>
                 <List items={[
-                    'End-to-end encryption for messages in channels and direct messages',
+                    'Messages in channels and direct messages encrypted on your device',
                     'Messages are never shown to admins, and there are no per-person activity metrics',
                     'Email verification, passkeys and two-factor authentication',
                     'Role-based permissions that give each person only the access they need',
@@ -29,11 +29,11 @@ const SECTIONS = [
         id: 'encryption', icon: Lock, title: 'Encryption',
         content: (
             <>
-                <p>Messages in channels and DMs are end-to-end encrypted between devices, using a separate key for every conversation. They are encrypted in transit and stored encrypted at rest.</p>
+                <p>Messages in channels and DMs are encrypted on your device, using a separate key for every conversation. They are encrypted in transit and stored encrypted at rest.</p>
                 <List items={[
-                    'Per-conversation keys, shared with members through X25519 key agreement',
+                    'Per-conversation keys, wrapped for each member with their RSA-OAEP identity key',
                     'Message content encrypted with AES-256-GCM using the platform’s native Web Crypto API',
-                    'Your identity key is protected by your password',
+                    'Your identity key is sealed by the server so your new devices unlock automatically after you sign in',
                     'Traffic between the apps and the server travels over HTTPS',
                 ]} />
                 <Callout>
@@ -135,10 +135,10 @@ export default function Security() {
                 eyebrow="Security"
                 icon={Shield}
                 title={<>Security <span className="orw-gloss-text">by design.</span></>}
-                lead={`${BRAND.name} was built with security in every layer, from end-to-end encrypted messages to role-based access on the server.`}
+                lead={`${BRAND.name} was built with security in every layer, from messages encrypted on your device to role-based access on the server.`}
                 meta={<>
-                    <span><Lock size={13} aria-hidden="true" />End-to-end encrypted messages</span>
-                    <span><Key size={13} aria-hidden="true" />X25519 + AES-256-GCM</span>
+                    <span><Lock size={13} aria-hidden="true" />Messages encrypted on your device</span>
+                    <span><Key size={13} aria-hidden="true" />AES-256-GCM + RSA-OAEP</span>
                     <span><FileText size={13} aria-hidden="true" />Audit &amp; compliance logs</span>
                 </>}
                 actions={

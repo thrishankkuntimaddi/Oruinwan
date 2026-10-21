@@ -54,7 +54,7 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 ## Features
 
 ### Chat
-- Public and private channels, direct messages and group DMs
+- Public and private channels and direct messages
 - Messages encrypted on your device with a key for each conversation (see [Security and privacy](#security-and-privacy))
 - Threads, reactions, mentions, pins, polls, search and file sharing
 - Split view on desktop and tablet: two conversations, or a conversation and a thread, side by side
@@ -363,7 +363,7 @@ Every `VITE_` value is bundled into the browser build, so never put secrets here
 
 ## Security and privacy
 
-- **Encrypted messages.** Messages in channels and DMs are encrypted on your device with a key for each conversation (X25519 key agreement, AES-256-GCM), and stay encrypted in transit and at rest.
+- **Encrypted messages.** Messages in channels and DMs are encrypted on your device with a key for each conversation (AES-256-GCM, wrapped for each member with their RSA-OAEP key), and stay encrypted in transit and at rest. The server keeps a protected copy of each conversation key so AI agents can post and people can recover their account, so this is not zero-knowledge: whoever runs the server and holds its keys could decrypt messages. Attachments are not encrypted on the device.
 - **A sealed key on the server, stated plainly.** Oruinwan's server keeps a sealed copy of your key and of each conversation key, protected by the server master key (`SERVER_KEK`). That is what lets your devices unlock automatically after you sign in, lets AI agents answer in encrypted conversations, and lets you keep access after a password reset. Anyone who controls both the server's database and `SERVER_KEK` could therefore decrypt conversations. If you want to hold that key yourself, self-host.
 - **Admins.** Message content is never shown to workspace or company admins, and admins never see message counts.
 - **No individual tracking.** Oruinwan has no per-person activity metrics.

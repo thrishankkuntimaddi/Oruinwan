@@ -45,7 +45,7 @@ export const MOCK_CHANNELS = [
         typing: 'QA lead is typing',
     },
     {
-        id: 'pm', kind: 'dm', name: 'Product lead', topic: 'Direct message · end-to-end encrypted', presence: true,
+        id: 'pm', kind: 'dm', name: 'Product lead', topic: 'Direct message · encrypted', presence: true,
         messages: [
             { who: 'pm', at: '11:20', text: 'Got 10 minutes for a huddle about the launch post?' },
             { who: 'eng', at: '11:21', text: 'Yes, starting one now.' },
@@ -82,7 +82,7 @@ export const PLATFORM_TABS = [
         blurb: 'Channels, DMs, threads and huddles.',
         heading: 'Conversations with structure, not noise.',
         body: 'Channels keep work organised by team and topic. Threads keep side discussions out of the main feed, and a huddle starts in one click when typing gets slow.',
-        points: ['Public and private channels, DMs and group DMs, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
+        points: ['Public and private channels and direct messages, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
         visual: 'thread',
     },
     {
@@ -113,7 +113,7 @@ export const PLATFORM_TABS = [
 
 // ── Feature bento ──────────────────────────────────────────────────────
 export const FEATURES = [
-    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels, DMs and group DMs with end-to-end encrypted messages, reactions, mentions, pins and files.' },
+    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels and DMs with messages encrypted on your device, reactions, mentions, pins and files.' },
     { icon: GitBranch, color: '#7fd4e0', title: 'Threads', desc: 'Side discussions that stay out of the main feed, open beside the conversation in split view.' },
     { icon: Headphones, color: '#5cc995', title: 'Huddles & meetings', desc: 'Audio, video and screen share in one click. Record, follow live captions and get an AI recap after.' },
     { icon: ListChecks, color: '#f5c46b', title: 'Tasks & planning', desc: 'Tasks straight from chat, boards, planning and design reviews, with owners, due dates and progress.' },
@@ -160,7 +160,7 @@ export const AI_PROMPTS = [
 
 // ── Security pillars ───────────────────────────────────────────────────
 export const SECURITY = [
-    { icon: Lock, title: 'Encrypted messages', desc: 'Channel and DM messages are encrypted on your device with per-conversation keys (X25519 + AES-GCM), and stay encrypted in transit and at rest.' },
+    { icon: Lock, title: 'Encrypted messages', desc: 'Channel and DM messages are encrypted on your device with a key per conversation (AES-256-GCM), and stay encrypted in transit and at rest. Your server keeps a protected copy of each key so agents can post and you can recover your account.' },
     { icon: KeyRound, title: 'A sealed key, stated plainly', desc: `${BRAND.name}'s server keeps a sealed copy of your key, protected by a server master key, so your devices unlock automatically after sign-in and AI can answer in encrypted conversations. Self-host to hold that key yourself.` },
     { icon: EyeOff, title: 'Private from admins', desc: 'Admins never see messages or message counts, and there are no per-person activity metrics.' },
     { icon: Fingerprint, title: 'Strong sign-in', desc: 'Email and password or Google, with email verification, passkeys and two-factor authentication.' },

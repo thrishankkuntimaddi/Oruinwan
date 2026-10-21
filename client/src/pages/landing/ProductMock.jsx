@@ -154,7 +154,7 @@ const ProductMock = () => {
             </div>
             <div className="orw-float orw-float--b orw-glass" aria-hidden="true">
                 <span className="orw-float__icon orw-float__icon--good"><Lock size={14} /></span>
-                <span>End-to-end encrypted<small>X25519 · AES-GCM</small></span>
+                <span>Encrypted on your device<small>AES-256-GCM · a key per conversation</small></span>
             </div>
             <p className="orw-mock__hint">Interactive preview. Click a channel to explore.</p>
         </div>
