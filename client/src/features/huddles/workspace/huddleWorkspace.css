@@ -189,3 +189,7 @@
     .hw-pill, .hw-ring { background-color: var(--lg-solid); }
 }
 @media (prefers-reduced-motion: reduce) { .hw-pill, .hw-ring { animation: none; } }
+
+/* Six tabs: scroll sideways on narrow panels instead of wrapping. */
+.hw-tabs-wrap .gl-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.hw-tabs-wrap .gl-tabs::-webkit-scrollbar { display: none; }

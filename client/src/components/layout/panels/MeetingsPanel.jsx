@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
     Video, Calendar, Clock, ChevronRight, Hash, AtSign,
-    Plus, Mic, MicOff, PhoneOff, Radio, History, ExternalLink, NotebookPen, CheckCircle2, PanelRight,
+    Plus, Mic, MicOff, PhoneOff, Radio, History, ExternalLink, NotebookPen, CheckCircle2, PanelRight, Film,
 } from "lucide-react";
 import {
     useHuddleContext, meetingIdFromHuddleId,
@@ -13,6 +13,8 @@ import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
 import ScheduleMeetingModal from "../../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal";
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
+import RecordingPlayer from "../../../features/huddles/capture/RecordingPlayer";
+import { captureTarget } from "../../../features/huddles/capture/captureApi";
 import "../../../styles/gloss-x-panels.css";
 
 const TABS = [
@@ -105,6 +107,7 @@ const MeetingsPanel = ({ title }) => {
     const { meetings, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [expanded, setExpanded] = useState({ live: true, history: true, scheduled: true });
+    const [openRecording, setOpenRecording] = useState(null);
 
     const rawTab = new URLSearchParams(location.search).get("tab");
     const activeTab = rawTab === 'history' ? 'history' : rawTab === 'scheduled' ? 'scheduled' : 'live';
@@ -351,11 +354,17 @@ const MeetingsPanel = ({ title }) => {
                                         <span>·</span><span>{mins} min</span>
                                     </div>
                                     <Avatars people={h.participants || []} />
-                                    {(h.notesId || h.channelId || h.dmId) && (
+                                    {(h.notesId || h.channelId || h.dmId || h.recording) && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
                                             {h.notesId && (
                                                 <button type="button" className="gl-x-link" onClick={() => navigate(`/workspace/${workspaceId}/notes/${h.notesId}`)}>
                                                     <NotebookPen size={11} /> Notes
+                                                </button>
+                                            )}
+                                            {h.recording && (
+                                                <button type="button" className="gl-x-link" aria-expanded={openRecording === h.id} data-testid="huddle-history-recording"
+                                                    onClick={() => setOpenRecording((cur) => (cur === h.id ? null : h.id))}>
+                                                    <Film size={11} /> Recording
                                                 </button>
                                             )}
                                             {h.channelId && (
@@ -368,6 +377,11 @@ const MeetingsPanel = ({ title }) => {
                                                     <AtSign size={10} /> Conversation
                                                 </button>
                                             )}
+                                        </div>
+                                    )}
+                                    {openRecording === h.id && (
+                                        <div style={{ marginTop: '8px' }}>
+                                            <RecordingPlayer target={captureTarget(h.huddleId, h.id)} compact />
                                         </div>
                                     )}
                                 </div>

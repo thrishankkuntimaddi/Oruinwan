@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff,
-    Users, PanelRight, Hand, X, AlertTriangle, RotateCcw,
+    Users, PanelRight, Hand, X, AlertTriangle, RotateCcw, Captions, Circle,
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useHuddleContext, meetingHuddleId, meetingConversationPath, callTitle } from '../../features/huddles/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useCallCapture } from '../../features/huddles/capture/CallCaptureContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
 import { HuddlesLanding } from './landing/Landings';
@@ -224,6 +225,10 @@ const ActiveRoom = ({ huddle, onLeave }) => {
     const cameraLabel = sharing ? 'Stop sharing to change the camera' : cameraOn ? 'Turn camera off' : 'Turn camera on';
     const screenLabel = !canShare ? 'Screen sharing is not supported in this browser' : sharing ? 'Stop sharing screen' : 'Share screen';
     const { handRaised, toggleHand } = huddle;
+    // Live captions and recording of this call (see features/huddles/capture).
+    const capture = useCallCapture();
+    const cap = capture?.live && capture.huddleId === huddleId ? capture : null;
+    const recording = cap?.recording.state === 'recording';
     const anyVideo = isVideo || sharing || cameraOn || participants.some(p => !p.isLocal && p.videoEnabled);
 
     const handleScreen = async () => {
@@ -295,6 +300,15 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                     <DockButton testId="room-screen" icon={sharing ? MonitorOff : Monitor} label={screenLabel} onClick={handleScreen}
                         active={sharing} unavailable={!canShare} />
                     <DockButton testId="room-hand" icon={Hand} label={handRaised ? 'Lower hand' : 'Raise hand'} onClick={toggleHand} active={!!handRaised} />
+                    {cap && (
+                        <DockButton testId="room-captions" icon={Captions}
+                            label={!cap.captions.supported ? cap.captions.reason : cap.captions.on ? 'Stop my live captions' : 'Turn on my live captions'}
+                            onClick={cap.captions.on ? cap.captions.stop : cap.captions.start} active={cap.captions.on} unavailable={!cap.captions.supported} />
+                    )}
+                    {cap?.recording.isHost && (
+                        <DockButton testId="room-record" icon={Circle} label={recording ? 'Recording: open the transcript tab to stop' : 'Record the call'}
+                            onClick={() => huddle.openWorkspace('transcript')} danger={recording} unavailable={!cap.recording.supported} />
+                    )}
                     <DockButton testId="room-workspace" icon={PanelRight} label={huddle.workspaceOpen ? 'Hide huddle workspace' : 'Notes, tasks, chat and wrap-up'}
                         onClick={() => (huddle.workspaceOpen ? huddle.closeWorkspace() : huddle.openWorkspace())} active={!!huddle.workspaceOpen} />
                     <span style={{ width: '1px', height: '28px', background: 'var(--border-default)', margin: '0 4px' }} />

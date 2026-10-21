@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Calendar, Users, FileText, CheckSquare, Sparkles,
@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import Whiteboard from '../../components/meetingsComp/Whiteboard';
 import BrainstormBoard from '../../components/meetingsComp/BrainstormBoard';
+import MeetingTranscriptPanel from '../../components/meetingsComp/MeetingTranscriptPanel';
+import { useAuth } from '../../contexts/AuthContext';
 import { useMeeting, useSharedNotes } from '../../hooks/useMeeting';
 import { useToast } from '../../contexts/ToastContext';
 import { meetingConversationPath } from '../../features/huddles/HuddleContext';
@@ -268,77 +270,6 @@ const NotesTab = ({ meetingId, room, fallbackNotes }) => {
     );
 };
 
-const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
-    const [transcript, setTranscript] = useState(meeting.transcript || '');
-    const [summary, setSummary] = useState(meeting.summary || '');
-    const [saving, setSaving] = useState(false);
-    const [generating, setGenerating] = useState(false);
-    const { showToast } = useToast();
-
-    const saveTranscript = async () => {
-        setSaving(true);
-        try {
-            await onSaveTranscript(transcript);
-            showToast('Transcript saved', 'success');
-        } catch (err) {
-            showToast(err?.response?.data?.message || 'Could not save the transcript', 'error');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const generateSummary = async () => {
-        setGenerating(true);
-        try {
-            const result = await onGenerateSummary();
-            setSummary(result);
-            showToast('Summary generated', 'success');
-        } catch (err) {
-            showToast(err?.response?.data?.message || 'Could not generate a summary', 'error');
-        } finally {
-            setGenerating(false);
-        }
-    };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '860px' }}>
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <h4 style={ui.label}>Transcript</h4>
-                    <button onClick={saveTranscript} disabled={saving} style={{ ...ui.secondary, padding: '5px 10px', fontSize: '12px' }}>
-                        {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
-                    </button>
-                </div>
-                <textarea
-                    value={transcript}
-                    onChange={e => setTranscript(e.target.value)}
-                    placeholder="Paste or type the meeting transcript here…"
-                    style={{ ...ui.input, height: '160px', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-                />
-            </div>
-
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <h4 style={{ ...ui.label, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Sparkles size={13} style={{ color: 'var(--accent)' }} /> AI summary
-                    </h4>
-                    <button onClick={generateSummary} disabled={generating} style={ui.primary(generating)}>
-                        {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                        {generating ? 'Generating…' : 'Generate summary'}
-                    </button>
-                </div>
-                {summary ? (
-                    <div style={{ ...ui.card, padding: '14px 16px', borderLeft: '3px solid var(--accent)' }}>
-                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{summary}</p>
-                    </div>
-                ) : (
-                    <p style={{ ...ui.muted, textAlign: 'center', padding: '24px 0' }}>No summary yet. Add a transcript and click "Generate summary".</p>
-                )}
-            </div>
-        </div>
-    );
-};
-
 const ACTION_TONE = {
     pending: 'var(--text-secondary)',
     in_progress: 'var(--accent)',
@@ -421,7 +352,7 @@ const TABS = [
     { id: 'overview', label: 'Overview', icon: Calendar },
     { id: 'agenda', label: 'Agenda', icon: FileText },
     { id: 'notes', label: 'Shared notes', icon: Edit3 },
-    { id: 'transcript', label: 'Transcript & summary', icon: Sparkles },
+    { id: 'transcript', label: 'Transcript & AI', icon: Sparkles },
     { id: 'actions', label: 'Action items', icon: CheckSquare },
     { id: 'whiteboard', label: 'Whiteboard', icon: PenTool },
     { id: 'brainstorm', label: 'Brainstorm', icon: StickyNote },
@@ -437,8 +368,11 @@ const MeetingDetailPage = () => {
     const {
         meeting, loading, error, room,
         endMeeting, updateAgenda, updateTranscript, generateSummary,
-        addActionItem, updateActionItem,
+        addActionItem, updateActionItem, setMeeting,
     } = useMeeting(meetingId, workspaceId);
+    const { user } = useAuth() || {};
+    const myId = String(user?._id || user?.id || user?.sub || '');
+    const setActionItems = useCallback((actionItems) => setMeeting((prev) => (prev ? { ...prev, actionItems } : prev)), [setMeeting]);
 
     // Join = go to the meeting's call: its conversation, or its huddle on the Huddles page.
     // The Huddles page opens the call: in the meeting's conversation when it has one.
@@ -523,7 +457,8 @@ const MeetingDetailPage = () => {
                     <NotesTab meetingId={meetingId} room={room} fallbackNotes={meeting.sharedNotes || ''} />
                 </div>
                 {activeTab === 'transcript' && (
-                    <TranscriptTab meeting={meeting} onSaveTranscript={updateTranscript} onGenerateSummary={generateSummary} />
+                    <MeetingTranscriptPanel meeting={meeting} workspaceId={workspaceId} myId={myId} onSaveTranscript={updateTranscript}
+                        onGenerateSummary={generateSummary} onActionItems={setActionItems} />
                 )}
                 {activeTab === 'actions' && (
                     <ActionItemsTab meeting={meeting} onAdd={addActionItem} onUpdate={updateActionItem} />

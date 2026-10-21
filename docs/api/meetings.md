@@ -137,6 +137,23 @@ start / huddle run start). For meetings without segments, `text` is the legacy `
 (`PATCH /:id/transcript` still works). Meeting documents returned by the other routes no longer embed
 `transcriptSegments` (use this endpoint).
 
+### Recording / captions notices (client convention)
+
+There is no separate "recording is on" socket event. Clients announce capture to everyone in the call by
+posting a transcript segment from the person who turned it on, with exactly one of these texts:
+
+| Text | Meaning |
+|---|---|
+| `(started recording the call)` / `(stopped recording the call)` | that person's recorder started / stopped |
+| `(turned on live captions)` / `(turned off live captions)` | that person's captions (their own mic) started / stopped |
+
+The segment reaches everyone through `huddle:transcript_segments` / `meeting:transcript_segments`, and people who
+join later read it from `GET …/transcript`. The latest notice per person decides whether they are recording or
+transcribing (ignore people no longer in the call). Clients show a banner while anything is on and ask each
+participant to acknowledge (or leave) once per person and kind. The web client's implementation is
+`client/src/features/huddles/capture/captions.js` (`CAPTURE_MARKERS`, `captureStateFromSegments`, `pendingConsent`).
+Calls that hold a scheduled meeting (`meeting-<id>`) post segments and recordings to the meeting endpoints.
+
 ---
 
 ## Summary & action items (transcript first)

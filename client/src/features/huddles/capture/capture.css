@@ -1,0 +1,86 @@
+/* Call recording, live captions and the in-call AI assistant.
+   Theme tokens only, so light and dark both work. */
+
+/* Banner shown to everyone while someone records or transcribes. */
+.cc-banner {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100vw - 32px);
+    padding: 6px 8px 6px 12px;
+    border: 1px solid var(--state-danger);
+    border-radius: var(--gl-radius, 2px);
+    background-color: var(--lg-chrome, var(--bg-surface));
+    background-image: var(--lg-sheen, none);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font, Inter, system-ui, sans-serif);
+}
+.cc-banner-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cc-rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--state-danger); flex-shrink: 0; animation: cc-pulse 1.6s ease-in-out infinite; }
+.cc-cc-mark { display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; height: 15px; border: 1px solid currentColor; border-radius: 2px; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent); flex-shrink: 0; }
+@keyframes cc-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .cc-rec-dot { animation: none; } }
+
+/* Live caption strip, bottom centre. */
+.cc-strip {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 55;
+    width: min(720px, calc(100vw - 32px));
+    padding: 10px 14px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius, 2px);
+    background: var(--bg-surface);
+    box-shadow: var(--card-shadow);
+    font-family: var(--font, Inter, system-ui, sans-serif);
+    pointer-events: auto;
+}
+@media (max-width: 640px) { .cc-strip { bottom: calc(68px + env(safe-area-inset-bottom)); } }
+.cc-strip-line { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-primary); }
+.cc-strip-line + .cc-strip-line { margin-top: 3px; }
+.cc-strip-who { font-weight: 700; color: var(--accent); margin-right: 6px; }
+.cc-strip-interim { color: var(--text-secondary); font-style: italic; }
+.cc-strip-close { position: absolute; top: 4px; right: 4px; }
+
+/* Consent dialog. */
+.gl-x-overlay.cc-consent-scrim { z-index: 70; }
+.gl-card.gl-x-dialog.cc-consent { max-width: 440px; padding: 18px 18px 14px; }
+.cc-consent h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+.cc-consent p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+.cc-consent ul { margin: 0 0 10px; padding-left: 18px; font-size: 13px; color: var(--text-primary); line-height: 1.6; }
+.cc-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Panel tabs: transcript, recording, assistant. */
+.cc-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.cc-note { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; margin: 4px 0 0; }
+.cc-alert { margin: 8px 0; padding: 8px 10px; font-size: 12px; line-height: 1.5; border: 1px solid var(--border-default); border-left: 3px solid var(--accent); background: var(--bg-surface); color: var(--text-primary); border-radius: var(--gl-radius, 2px); }
+.cc-alert--danger { border-left-color: var(--state-danger); }
+.cc-btn-rec[aria-pressed='true'] { color: var(--state-danger); border-color: var(--state-danger); }
+.cc-transcript { display: flex; flex-direction: column; gap: 8px; }
+.cc-line { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; font-size: 12.5px; line-height: 1.5; }
+.cc-line-time { font-variant-numeric: tabular-nums; color: var(--text-muted, var(--text-secondary)); font-size: 11px; padding-top: 1px; }
+.cc-line-who { font-weight: 700; color: var(--text-primary); margin-right: 4px; }
+.cc-line-text { color: var(--text-primary); word-break: break-word; }
+.cc-line--marker .cc-line-text { color: var(--text-secondary); font-style: italic; }
+.cc-line--interim .cc-line-text { color: var(--text-secondary); font-style: italic; }
+.cc-player { width: 100%; max-height: 260px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--gl-radius, 2px); }
+.cc-progress { height: 4px; background: var(--bg-active); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.cc-progress > span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
+
+.cc-chat { display: flex; flex-direction: column; gap: 10px; }
+.cc-msg { padding: 8px 10px; font-size: 12.5px; line-height: 1.55; border: 1px solid var(--border-default); border-radius: var(--gl-radius, 2px); background: var(--bg-surface); color: var(--text-primary); white-space: pre-wrap; word-break: break-word; }
+.cc-msg--q { background: var(--bg-active); }
+.cc-msg-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 3px; }
+.cc-ask { display: flex; gap: 6px; }
+.cc-ask .gl-input { flex: 1; min-width: 0; }
+.cc-actions-list { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: var(--text-primary); }

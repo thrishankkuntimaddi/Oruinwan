@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Mic, MicOff, PhoneOff, ChevronDown, ChevronUp, Radio, Video, VideoOff, PanelRight, Monitor, MonitorOff, Hand } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, ChevronDown, ChevronUp, Radio, Video, VideoOff, PanelRight, Monitor, MonitorOff, Hand, Captions, Circle } from 'lucide-react';
 import { HuddleContext } from '../HuddleContext';
 import HuddleParticipants from './HuddleParticipants';
 import VideoTile from './VideoTile';
+import { CallCaptureContext } from '../capture/CallCaptureContext';
 
 function formatDuration(secs) {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -30,6 +31,7 @@ export default function HuddleOverlay({
     const [elapsed, setElapsed] = useState(0);
     // The app-wide call (when there is one): this overlay shows it, so the floating pill hides.
     const ctx = useContext(HuddleContext);
+    const capture = useContext(CallCaptureContext);
     const callId = active ? ctx?.huddleId : null;
     const registerInlineUI = ctx?.registerInlineUI;
     useEffect(() => (callId && registerInlineUI ? registerInlineUI(callId) : undefined), [callId, registerInlineUI]);
@@ -52,6 +54,9 @@ export default function HuddleOverlay({
     const anyVideo = sharing || cameraOn || participants.some(p => !p.isLocal && p.videoEnabled);
     const title = isDM ? (channelName ? `Call with ${channelName}` : 'Direct message call') : (channelName ? `# ${channelName.replace(/^#\s*/, '')}` : 'Huddle');
     const raisedCount = participants.filter(p => p.handRaised).length;
+    // Captions and recording of this call (app-wide capture provider, when there is one).
+    const cap = capture?.live && capture.huddleId === callId ? capture : null;
+    const recordingOn = !!cap && (cap.recording.state === 'recording' || [...cap.captureState.values()].some(v => v.recording));
 
     const toggleScreen = async () => {
         if (!ctx) return;
@@ -87,6 +92,7 @@ export default function HuddleOverlay({
                         {formatDuration(shownSeconds)}
                         {sharing ? ' · sharing your screen' : ''}
                         {raisedCount > 0 ? ` · ${raisedCount} ${raisedCount === 1 ? 'hand' : 'hands'} up` : ''}
+                        {recordingOn && <span style={{ color: 'var(--state-danger)', fontWeight: 600 }}> · recording</span>}
                     </p>
                 </div>
                 <button
@@ -163,6 +169,33 @@ export default function HuddleOverlay({
                         style={{ ...btn, ...(ctx.handRaised ? on : neutral) }}
                     >
                         <Hand size={13} />
+                    </button>
+                )}
+
+                {cap && (
+                    <button
+                        onClick={cap.captions.on ? cap.captions.stop : cap.captions.start}
+                        disabled={!cap.captions.supported}
+                        data-testid="huddle-captions"
+                        title={!cap.captions.supported ? cap.captions.reason : cap.captions.on ? 'Stop my live captions' : 'Turn on my live captions'}
+                        aria-label={cap.captions.on ? 'Stop my live captions' : 'Turn on my live captions'}
+                        aria-pressed={cap.captions.on}
+                        style={{ ...btn, ...(cap.captions.on ? on : neutral), opacity: cap.captions.supported ? 1 : 0.5, cursor: cap.captions.supported ? 'pointer' : 'not-allowed' }}
+                    >
+                        <Captions size={13} />
+                    </button>
+                )}
+
+                {cap?.recording.isHost && ctx?.openWorkspace && (
+                    <button
+                        onClick={() => ctx.openWorkspace('transcript')}
+                        data-testid="huddle-record"
+                        title={cap.recording.state === 'recording' ? 'Recording: open to stop' : 'Record the call'}
+                        aria-label={cap.recording.state === 'recording' ? 'Recording: open to stop' : 'Record the call'}
+                        aria-pressed={cap.recording.state === 'recording'}
+                        style={{ ...btn, ...neutral, ...(cap.recording.state === 'recording' ? { color: 'var(--state-danger)', borderColor: 'var(--state-danger)' } : {}) }}
+                    >
+                        <Circle size={13} fill={cap.recording.state === 'recording' ? 'currentColor' : 'none'} />
                     </button>
                 )}
 

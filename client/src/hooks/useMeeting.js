@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
+import { retainMeetingRoom, releaseMeetingRoom } from '../features/huddles/capture/meetingRoom';
 
 const API = '/api/v2/meetings';
 
@@ -129,6 +130,7 @@ export function useMeeting(meetingId, _workspaceId) {
             }
         };
 
+        retainMeetingRoom(meetingId);
         if (socket.connected) join();
         socket.on('connect', join);
         socket.on('disconnect', onDisconnect);
@@ -140,8 +142,9 @@ export function useMeeting(meetingId, _workspaceId) {
             socket.off('disconnect', onDisconnect);
             socket.off('meeting:agenda_updated', onAgendaUpdated);
             socket.off('meeting:ended', onEnded);
-            // After child cleanups (e.g. a pending notes save) have been sent.
-            setTimeout(() => socket.emit('meeting:leave', { meetingId }), 0);
+            // After child cleanups (e.g. a pending notes save) have been sent. A call that
+            // holds this meeting may still need the room for its live transcript.
+            if (releaseMeetingRoom(meetingId)) setTimeout(() => socket.emit('meeting:leave', { meetingId }), 0);
         };
     }, [socket, meetingId]);
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, NotebookPen, ListTodo, MessageSquare, Send } from 'lucide-react';
+import { X, NotebookPen, ListTodo, MessageSquare, Send, Captions, Sparkles } from 'lucide-react';
 import { useHuddleContext, callTitle } from '../HuddleContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSocket } from '../../../contexts/SocketContext';
@@ -10,6 +10,8 @@ import NotesTab from './NotesTab';
 import TasksTab from './TasksTab';
 import ChatTab from './ChatTab';
 import WrapUpTab from './WrapUpTab';
+import CallTranscriptTab from '../capture/CallTranscriptTab';
+import CallAssistantTab from '../capture/CallAssistantTab';
 import { formatDuration } from './wrapUp';
 import './huddleWorkspace.css';
 
@@ -17,6 +19,8 @@ const TABS = [
     { id: 'notes', label: 'Notes', Icon: NotebookPen },
     { id: 'tasks', label: 'Tasks', Icon: ListTodo },
     { id: 'chat', label: 'Chat', Icon: MessageSquare },
+    { id: 'transcript', label: 'Transcript', Icon: Captions },
+    { id: 'assistant', label: 'AI', Icon: Sparkles },
     { id: 'wrapup', label: 'Wrap-up', Icon: Send },
 ];
 
@@ -177,6 +181,10 @@ export default function HuddleWorkspacePanel() {
                     target
                         ? <ChatTab conversation={target} workspaceId={workspaceId} conversationHref={targetHref} onOpen={go(targetHref)} />
                         : <p className="hw-muted" style={{ padding: 14 }}>This is a workspace huddle. Choose a channel in Wrap-up to discuss it there.</p>
+                )}
+                {tab === 'transcript' && <CallTranscriptTab call={call} session={session} live={live} />}
+                {tab === 'assistant' && (
+                    <CallAssistantTab call={call} session={session} live={live} workspaceId={workspaceId} title={title} people={people} />
                 )}
                 {tab === 'wrapup' && (
                     <WrapUpTab

@@ -2,6 +2,8 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { HuddleProvider } from './HuddleContext';
 import HuddleDock from './components/HuddleDock';
+import { CallCaptureProvider } from './capture/CallCaptureContext';
+import CaptureOverlay from './capture/CaptureOverlay';
 
 /**
  * Keeps the huddle connection above the routes, so moving between pages never
@@ -17,8 +19,11 @@ export default function GlobalHuddleProvider({ children }) {
 
     return (
         <HuddleProvider workspaceId={workspaceId || lastWorkspaceId}>
-            {children}
-            <HuddleDock />
+            <CallCaptureProvider>
+                {children}
+                <HuddleDock />
+                <CaptureOverlay />
+            </CallCaptureProvider>
         </HuddleProvider>
     );
 }
