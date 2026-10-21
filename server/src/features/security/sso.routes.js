@@ -5,7 +5,6 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
 const { users } = require('../../identity');
 const { findBySso } = require('../../identity/queries/security');
 const AuditLog = require('../../../models/AuditLog');
@@ -40,17 +39,59 @@ const PROVIDERS = {
 const FRONTEND_URL = () => require('../../shared/utils/webAppUrl').webAppUrl();
 const BACKEND_URL = () => process.env.BACKEND_URL || 'http://localhost:8080';
 
-function issueToken(user) {
-  return jwt.sign(
-    { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m' }
-  );
-}
+// A full session (refresh cookie + session row + device row), like password/Google sign-in.
+const startSsoSession = (...args) => require('../auth/auth.controller').startSsoSession(...args);
+const { deviceIdFrom } = require('../devices/devices.service');
 
 function resolve(val) {
   return typeof val === 'function' ? val() : val;
 }
+
+// SAML 2.0 (per-company IdP) lives under /saml; OIDC providers below.
+router.use('/saml', require('./saml.routes'));
+
+/**
+ * Which SSO sign-in an email's company uses (sign-in screen: "Sign in with your company SSO").
+ *   GET /discover?email=ada@acme.com -> { enabled: true, protocol: 'saml'|'oidc', startUrl } | { enabled: false }
+ * Only companies with a verified domain and an enabled, configured SSO answer; everything
+ * else (unknown domain, misconfigured provider) is { enabled: false }. Rate-limited per IP.
+ */
+function ssoForCompany(company) {
+  if (!company || !company.domainVerified || company.isActive === false) return null;
+  const saml = company.sso?.saml;
+  if (saml?.enabled && saml.entryPoint && saml.cert) {
+    return { protocol: 'saml', startUrl: `${BACKEND_URL()}/api/auth/sso/saml/${encodeURIComponent(company._id)}/login` };
+  }
+  for (const cfg of [company.sso, company.settings?.sso]) {
+    const provider = String(cfg?.provider || '').toLowerCase();
+    if (cfg?.enabled && PROVIDERS[provider] && PROVIDERS[provider].clientId()) {
+      return { protocol: 'oidc', startUrl: `${BACKEND_URL()}/api/auth/sso/${provider}` };
+    }
+  }
+  return null;
+}
+
+const discoverLimiter = require('express-rate-limit')({
+  windowMs: 60 * 1000,
+  limit: process.env.NODE_ENV === 'production' ? 30 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ message: 'Too many requests, please try again in a minute.' }),
+});
+
+router.get('/discover', discoverLimiter, async (req, res) => {
+  try {
+    const email = String(req.query.email || '').trim().toLowerCase();
+    const domain = /^[^\s@]{1,64}@([a-z0-9.-]{1,253})$/.exec(email)?.[1];
+    if (!domain) return res.json({ enabled: false });
+    const { companies } = require('../../identity');
+    const found = ssoForCompany(await companies.findByDomain(domain));
+    return res.json(found ? { enabled: true, ...found } : { enabled: false });
+  } catch (err) {
+    logger.warn('[SSO] discover failed:', err.message);
+    return res.json({ enabled: false });
+  }
+});
 
 router.get('/:provider', (req, res) => {
   const { provider } = req.params;
@@ -82,6 +123,14 @@ router.get('/:provider', (req, res) => {
     scope: cfg.scope,
     state,
   });
+
+  // The callback is a top-level navigation without X-Device-Id: carry the client's device id in a cookie.
+  const deviceId = deviceIdFrom(req, req.query.deviceId);
+  if (deviceId) {
+    res.cookie(`sso_device_${provider}`, deviceId, {
+      httpOnly: true, sameSite: 'Lax', maxAge: 5 * 60 * 1000, secure: process.env.NODE_ENV === 'production',
+    });
+  }
 
   res.redirect(`${resolve(cfg.authUrl)}?${params.toString()}`);
 });
@@ -181,9 +230,10 @@ router.get('/:provider/callback', async (req, res) => {
       });
     } catch (_) {  }
 
-    const token = issueToken(user);
-    
-    return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${token}`);
+    const deviceId = req.cookies?.[`sso_device_${provider}`];
+    res.clearCookie(`sso_device_${provider}`);
+    const session = await startSsoSession(req, res, user._id, { method: `sso_${provider}`, deviceId });
+    return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${session.accessToken}`);
   } catch (err) {
     logger.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
     return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
@@ -191,3 +241,4 @@ router.get('/:provider/callback', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ssoForCompany = ssoForCompany;

@@ -34,6 +34,9 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const ACCESS_EXPIRES = process.env.ACCESS_EXPIRES || "15m";
 const REFRESH_DAYS = parseInt(process.env.REFRESH_TOKEN_DAYS || "7", 10);
 
+// Every sign-in creates/updates the caller's device row (X-Device-Id) so /api/v2/devices lists it.
+const recordDeviceSignIn = (req, userId, opts) => require('../devices/devices.service').recordSignIn(req, userId, opts);
+
 function generateAccessToken(user) {
   return jwt.sign(
     {
@@ -655,6 +658,7 @@ exports.login = async (req, res) => {
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
+    await recordDeviceSignIn(req, user._id);
 
     
     if (user.companyId) {
@@ -783,6 +787,12 @@ exports.refresh = async (req, res) => {
         return res.status(403).json({ message: 'Invalid refresh token signature' });
       }
 
+      // A revoked device cannot mint new tokens even if it still holds a refresh token.
+      if (await require('../devices/devices.service').isRequestDeviceRevoked(req, user._id)) {
+        logger.warn('[REFRESH] Refused: device revoked');
+        return res.status(403).json({ message: 'This device has been signed out', code: 'DEVICE_REVOKED' });
+      }
+
       const newAccess = generateAccessToken(user);
       const newRefresh = generateRefreshToken(user);
 
@@ -805,6 +815,7 @@ exports.refresh = async (req, res) => {
 
       
       setRefreshTokenCookie(res, newRefresh);
+      await recordDeviceSignIn(req, user._id, { reactivate: false });
 
       logger.debug('[REFRESH] Token refresh completed successfully');
       const refreshResponse = { accessToken: newAccess };
@@ -1764,6 +1775,7 @@ async function issueSignInSession(req, res, user, { message, isNewUser, needsPas
 
   await saveWithRetry(user);
   setRefreshTokenCookie(res, refreshToken);
+  await recordDeviceSignIn(req, user._id);
 
   return res.json({
     message,
@@ -2440,6 +2452,7 @@ exports.verifyReactivationOTP = async (req, res) => {
     await user.save();
 
     setRefreshTokenCookie(res, refreshToken);
+    await recordDeviceSignIn(req, user._id);
 
     logger.info(`✅ Account reactivated for user: ${user.username} (${user._id})`);
 
@@ -2463,3 +2476,30 @@ exports.verifyReactivationOTP = async (req, res) => {
 // Shared with passkey sign-in (passkeys.js).
 exports.signInGates = signInGates;
 exports.issueSignInSession = issueSignInSession;
+
+/**
+ * A full session for redirect-based sign-ins (OIDC / SAML SSO): refresh token row +
+ * refresh cookie + device row, like password and Google sign-in. Returns { accessToken, refreshToken }.
+ */
+async function startSsoSession(req, res, userId, { method = 'sso', deviceId } = {}) {
+  const user = await userDocs.findById(userId);
+  if (!user) throw new Error('User not found');
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  user.refreshTokens.push({
+    tokenHash: sha256(refreshToken),
+    expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
+    deviceInfo: req.get('User-Agent') || 'Unknown',
+    ip: getClientIP(req),
+    startedAt: new Date(),
+  });
+  user.failedLoginAttempts = 0;
+  user.lastLoginAt = new Date();
+  user.lastLoginMethod = method;
+  user.lastLoginMethodAt = new Date();
+  await saveWithRetry(user);
+  setRefreshTokenCookie(res, refreshToken);
+  await recordDeviceSignIn(req, user._id, { deviceId });
+  return { accessToken, refreshToken };
+}
+exports.startSsoSession = startSsoSession;

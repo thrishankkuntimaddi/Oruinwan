@@ -6,7 +6,7 @@ const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const requireCompanyAdmin = require('../../shared/middleware/requireCompanyAdmin');
 const { scopedCompanyId } = requireCompanyAdmin;
-const { createBackup } = require('./backup.service');
+const { createBackup, verifyBackup, restoreBackup, BackupError, COLLECTIONS } = require('./backup.service');
 
 // Company admins back up their own company; only platform staff may choose
 // another company or a whole-platform backup (no companyId).
@@ -26,13 +26,62 @@ router.post('/backup', requireAuth, requireCompanyAdmin, async (req, res) => {
         companyId: backup.companyId,
         recordCount: backup.recordCount,
         algorithm: backup.algorithm,
+        format: backup.format,
+        checksum: backup.checksum,
       },
       
       encryptedPayload: backup.encryptedPayload,
     });
   } catch (err) {
+    if (err instanceof BackupError) return res.status(err.status).json({ message: err.message, code: err.code });
     logger.error('[Backup] create error:', err);
     return res.status(500).json({ message: 'Failed to create backup' });
+  }
+});
+
+function backupScope(req) {
+  return { companyId: req.companyId, isPlatformAdmin: !!req.isPlatformAdmin };
+}
+
+// Check a backup file without changing anything: decrypts it, checks the format and
+// per-collection checksums, and reports counts.
+router.post('/backup/verify', requireAuth, requireCompanyAdmin, async (req, res) => {
+  try {
+    const { encryptedPayload, checksum } = req.body || {};
+    const payload = verifyBackup(encryptedPayload, { checksum });
+    if (!req.isPlatformAdmin && String(payload.companyId || '') !== String(req.companyId || '')) {
+      return res.status(403).json({ message: 'This backup belongs to another company', code: 'wrong_company' });
+    }
+    return res.json({
+      valid: true,
+      format: payload.format,
+      backedUpAt: payload.backedUpAt,
+      companyId: payload.companyId || null,
+      recordCount: Object.fromEntries(COLLECTIONS.map((n) => [n, payload.workspaceData[n].length])),
+    });
+  } catch (err) {
+    if (err instanceof BackupError) return res.status(err.status).json({ valid: false, message: err.message, code: err.code });
+    logger.error('[Backup] verify error:', err);
+    return res.status(500).json({ message: 'Failed to verify backup' });
+  }
+});
+
+// Restore missing workspace metadata. Dry run unless { dryRun: false, confirm: "RESTORE" }.
+router.post('/backup/restore', requireAuth, requireCompanyAdmin, async (req, res) => {
+  try {
+    const { encryptedPayload, checksum, collections } = req.body || {};
+    const dryRun = req.body?.dryRun !== false;
+    if (!dryRun && req.body?.confirm !== 'RESTORE') {
+      return res.status(400).json({ message: 'A real restore needs confirm: "RESTORE"', code: 'confirmation_required' });
+    }
+    const result = await restoreBackup({
+      requesterId: req.user.sub, encryptedPayload, checksum, collections, dryRun, scope: backupScope(req),
+    });
+    return res.json(result);
+  } catch (err) {
+    if (err instanceof BackupError) return res.status(err.status).json({ message: err.message, code: err.code });
+    logger.error('[Backup] restore error:', err);
+    return res.status(500).json({ message: 'Failed to restore backup' });
   }
 });
 

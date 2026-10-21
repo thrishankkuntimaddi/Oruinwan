@@ -14,6 +14,7 @@ const {
   getRetentionPolicy,
   setRetentionPolicy,
 } = require('./gdpr.controller');
+const { getWorkspaceRetention, setWorkspaceRetention } = require('./workspaceRetention.controller');
 
 router.use(requireAuth);
 
@@ -32,5 +33,9 @@ router.patch('/legal-hold/:userId', setLegalHold);
 
 router.get('/retention-policy', getRetentionPolicy);
 router.patch('/retention-policy', setRetentionPolicy);
+
+// Workspace-wide policy (owners/admins set it; members can read it).
+router.get('/workspaces/:workspaceId/retention-policy', getWorkspaceRetention);
+router.patch('/workspaces/:workspaceId/retention-policy', setWorkspaceRetention);
 
 module.exports = router;
