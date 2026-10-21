@@ -184,7 +184,7 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
             <Icon as={TriangleAlert} size={13} /> {m.upload && m.error ? `Not sent: ${m.error.replace(/\.$/, '')}. Tap to retry.` : 'Not sent. Tap to retry.'}
           </button>
         )}
-        {m.pending && !m.upload && <span className="text-[11px] text-text-3">Sending…</span>}
+        {m.pending && !m.upload && <span className="text-[11px] text-text-3">{m.queued ? 'Queued · sends when you’re back online' : 'Sending…'}</span>}
         <Reactions m={m} me={me} onReact={onReact} />
         {!hideThread && <ThreadSummary m={m} directory={directory} onOpen={() => onOpenThread(m)} />}
       </div>

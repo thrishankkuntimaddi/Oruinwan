@@ -16,6 +16,7 @@
 //   security  /auth/2fa/{setup,verify-setup,disable}, /v2/devices
 import { ApiError, NETWORK_MESSAGE, absolute, accessToken, api, refreshSession, serverUrl } from './http.js';
 import { socketRequest, socketEmit } from './realtime.js';
+import { conversationKey, decryptPayload, encryptText } from './crypto.js';
 import { clientPlatform } from '../../native/index.js';
 import { fileIconKind } from '../../lib/files.js';
 
@@ -244,6 +245,30 @@ function mapAuditLog(l) {
 }
 
 export const workAdapter = {
+  // ---- offline message queue (data/outbox.js)
+  /**
+   * Encrypts a message now, to send later: { path, body }. The body carries clientMessageId,
+   * so a retry after a lost response is deduplicated by the server. Throws when this device
+   * has no key for the conversation yet (the queue then encrypts it when it sends).
+   */
+  async prepareMessage(conv, text, { parentId, clientMessageId, workspaceId } = {}) {
+    const key = await conversationKey(conv, { workspaceId });
+    const body = { ...(await encryptText(key, text)), clientMessageId, clientTempId: clientMessageId };
+    if (parentId) return { path: `/v2/messages/thread/${parentId}`, body };
+    if (conv.kind === 'channel') return { path: '/v2/messages/channel', body: { ...body, channelId: conv.id } };
+    return { path: '/v2/messages/direct', body: { ...body, dmSessionId: conv.id } };
+  },
+  /** Sends a prepared message. Resolves with the server's message. */
+  async sendPrepared(prepared) {
+    const data = await api.post(prepared.path, prepared.body);
+    return data?.message || data?.reply || data;
+  },
+  /** The text of a queued message (after a restart, the queue keeps only the ciphertext). */
+  async readPrepared(conv, prepared) {
+    const key = await conversationKey(conv);
+    return decryptPayload(key, prepared.body);
+  },
+
   // ---- tasks: detail extras
   async planningTask(id) {
     const data = await api.get(`/v2/tasks/${id}`);

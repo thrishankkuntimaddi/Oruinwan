@@ -22,6 +22,21 @@ import { useUnreadCounts } from '../data/hooks.js';
 import { setBadgeCount } from '../native/index.js';
 import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
 import { SHORTCUTS, shortcutFor } from './shortcuts.js';
+import { useOutbox } from '../data/outbox.js';
+
+/** A small pill while there is no connection: what you see is saved data; sends are queued. */
+function OfflinePill() {
+  const online = useOutbox((s) => s.online);
+  const queued = useOutbox((s) => s.items.filter((i) => i.status !== 'failed').length);
+  if (online && !queued) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4" style={{ top: 'calc(var(--sat) + 6px)' }} role="status" aria-live="polite">
+      <span className="glass rounded-full border px-3 py-1 text-[12px] font-medium text-text-2">
+        {online ? `Sending ${queued} queued message${queued === 1 ? '' : 's'}…` : `Offline · showing saved data${queued ? ` · ${queued} queued` : ''}`}
+      </span>
+    </div>
+  );
+}
 import { Sheet } from '../ui/Overlay.jsx';
 
 function ShortcutsSheet({ open, onClose }) {
@@ -229,6 +244,7 @@ export function Shell() {
       <div className="flex h-full overflow-hidden bg-bg">
         <UnreadBadge />
         <HuddleLayer />
+        <OfflinePill />
         <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
         <Sidebar />
         <main className="relative min-w-0 flex-1">
@@ -252,6 +268,7 @@ export function Shell() {
         ))}
         <UnreadBadge />
         <HuddleLayer />
+        <OfflinePill />
         <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
       </div>
     );
@@ -268,6 +285,7 @@ export function Shell() {
       {stack.length === 0 && <TabBar />}
       <UnreadBadge />
       <HuddleLayer />
+        <OfflinePill />
         <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
     </div>
   );

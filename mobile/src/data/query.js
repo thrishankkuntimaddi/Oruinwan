@@ -10,11 +10,38 @@ function read(key) {
   return entries.get(key) || EMPTY;
 }
 
+const writeListeners = new Set();
+
 function write(key, patch) {
   const next = { ...read(key), ...patch };
   entries.set(key, next);
   listeners.get(key)?.forEach((fn) => fn());
+  if ('data' in patch) writeListeners.forEach((fn) => fn(key));
   return next;
+}
+
+/** Called with the key whenever cached data changes (data/persist.js saves the cache to disk). */
+export function onQueryWrite(fn) {
+  writeListeners.add(fn);
+  return () => writeListeners.delete(fn);
+}
+
+/** [key, { data, updatedAt }] for every query that has data. */
+export function snapshotQueries() {
+  return [...entries].filter(([, e]) => e.data !== undefined).map(([key, e]) => [key, { data: e.data, updatedAt: e.updatedAt }]);
+}
+
+/**
+ * Fills the cache from a saved snapshot (opening the app offline shows the last data). Keeps
+ * each entry's original time, so screens still refetch it once the server is reachable; never
+ * overwrites data fetched since.
+ */
+export function hydrateQueries(list) {
+  for (const [key, e] of list || []) {
+    if (!key || e?.data === undefined || read(key).data !== undefined) continue;
+    entries.set(key, { ...EMPTY, status: 'success', data: e.data, updatedAt: Number(e.updatedAt) || 0 });
+    listeners.get(key)?.forEach((fn) => fn());
+  }
 }
 
 const inflight = new Map();

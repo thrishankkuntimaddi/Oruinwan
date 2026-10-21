@@ -680,7 +680,7 @@ export const liveAdapter = {
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
-    const body = { ...(await encryptText(key, text)), clientTempId };
+    const body = { ...(await encryptText(key, text)), clientTempId, clientMessageId: clientTempId }; // server dedupes on clientMessageId
     let data;
     if (parentId) data = await api.post(`/v2/messages/thread/${parentId}`, body);
     else if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });
