@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X, Calendar, AlertTriangle, ListTodo } from 'lucide-react';
 import { STATUS_META, PRIORITY_META, statusLabel, canTransition } from '../../../../../utils/taskMeta';
 import { FONT, fmtDate, isOverdue } from './channelTaskUtils';
+import { RepeatBadge } from '../../../../../components/tasksComp/RepeatPicker';
 import { Avatar, IssueTypeIcon, PriorityIcon, IconButton, primaryBtn, secondaryBtn, readable } from './ChannelTaskUi';
 
 const COLUMN_MIN_WIDTH = 168;
@@ -113,6 +114,7 @@ export function TaskCard({ task, perms, selected, onOpen, onDelete, onDragStart,
                             color: overdue ? 'var(--state-danger)' : 'var(--text-secondary)',
                         }}><Calendar size={9} />{fmtDate(task.dueDate)}</span>
                     )}
+                    <RepeatBadge task={task} compact />
                     {task.subtasks.length > 0 && (
                         <span title="Child issues done" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--text-secondary)' }}>
                             <ListTodo size={9} /> {subDone}/{task.subtasks.length}

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     X, Eye, Activity, Plus, CheckCircle2, Tag, Loader2, ArrowRight, User, Edit2, Calendar, Trash2,
-    Timer, Link2, PlayCircle, StopCircle, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest,
+    Link2, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest,
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -11,14 +11,8 @@ import AITaskAssist from './AITaskAssist';
 import { STATUS_META, TRANSITIONS, PRIORITIES, PRIORITY_META, statusLabel, priorityLabel, toDateInput, taskErrorMessage } from '../../utils/taskMeta';
 import { StatusBadge, PriorityIcon, UserAvatar, IssueTypeIcon, fmtDate, tint, FONT } from './taskUi';
 import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
-
-function fmtSeconds(s) {
-    const total = Math.max(0, Math.floor(s || 0));
-    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m ${sec}s`;
-    return `${sec}s`;
-}
+import { SubtasksSection, DependenciesSection, TimeTrackingSection, RepeatSection, MilestoneSection } from './TaskDetailSections';
+import { RepeatBadge } from './RepeatPicker';
 
 const Section = ({ label, icon, action, children }) => (
     <section>
@@ -144,7 +138,7 @@ function AssigneeEditor({ members, initial, onCancel, onSave }) {
 }
 
 export default function WorkspaceTaskDetailPanel({
-    task, members = [], allTasks = [], can = {}, fullScreen = false, onClose, onUpdate, onStatusChange, onDelete,
+    task, members = [], allTasks = [], milestones = [], can = {}, fullScreen = false, onClose, onUpdate, onStatusChange, onDelete,
     onRestore, onRequestTransfer, onTransferRespond, onPatchLocal, onFetch,
 }) {
     const { activeWorkspace } = useWorkspace();
@@ -180,55 +174,33 @@ export default function WorkspaceTaskDetailPanel({
         try { return await onUpdate(task.id, updates); } finally { setSaving(false); }
     }, [task.id, onUpdate]);
 
-    // ── Time tracking: state lives on the task (timeTracking), so it survives closing the panel.
-    const sessions = task.timeTracking?.sessions || [];
-    const openSession = [...sessions].reverse().find((s) => s.start && !s.end);
-    const totalTime = task.timeTracking?.totalTime || 0;
-    const [now, setNow] = useState(Date.now());
-    const [timerLoading, setTimerLoading] = useState(false);
-    useEffect(() => {
-        if (!openSession) return undefined;
-        const iv = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(iv);
-    }, [openSession]);
-    const runningFor = openSession ? (now - new Date(openSession.start).getTime()) / 1000 : 0;
-
-    const toggleTimer = async () => {
-        setTimerLoading(true);
-        try {
-            const res = await api.post(`/api/v2/tasks/${task.id}/time/${openSession ? 'stop' : 'start'}`);
-            if (res.data?.timeTracking) onPatchLocal?.(task.id, { timeTracking: res.data.timeTracking });
-            setNow(Date.now());
-            showToast(openSession ? `Timer stopped — +${fmtSeconds(res.data.elapsed)}` : 'Timer started', 'success');
-        } catch (err) {
-            showToast(taskErrorMessage(err, 'Timer update failed'), 'error');
-        } finally { setTimerLoading(false); }
-    };
-
-    // ── Dependencies: pick another task from this workspace.
-    const [depPick, setDepPick] = useState('');
-    const [depLoading, setDepLoading] = useState(false);
-    const byId = useMemo(() => new Map(allTasks.map((t) => [t.id, t])), [allTasks]);
     // Subtask assignees may arrive as bare ids: resolve names/pictures from workspace members.
     const memberById = (u) => {
         const m = members.find((x) => String(x._id || x.id) === String(u?.id));
         return m ? { id: String(m._id || m.id), username: m.username, profilePicture: m.profilePicture } : u;
     };
-    const depIds = (task.dependencies || []).map((d) => d.id);
-    const depCandidates = allTasks.filter((t) => !t.deleted && t.id !== task.id && !depIds.includes(t.id));
-    const addDependency = async () => {
-        if (!depPick) return;
-        setDepLoading(true);
+    // ── Child issues: created with POST /:id/subtasks, ticked off with PUT /:subId {status}.
+    const addSubtask = async (subTitle) => {
         try {
-            const res = await api.post(`/api/v2/tasks/${task.id}/dependency`, { dependencyTaskId: depPick });
-            const ids = (res.data.dependencies || []).map((d) => String(d?._id || d));
-            onPatchLocal?.(task.id, { dependencies: ids.map((id) => ({ id, title: byId.get(id)?.title || '', status: byId.get(id)?.status || null })) });
-            setDepPick('');
-            showToast('Dependency added', 'success');
+            await api.post(`/api/v2/tasks/${task.id}/subtasks`, { title: subTitle, priority: task.priority, assignedTo: task.assigneeIds || [] });
+            await onFetch?.(task.id);
+            return true;
         } catch (err) {
-            showToast(taskErrorMessage(err, 'Failed to add dependency'), 'error');
-        } finally { setDepLoading(false); }
+            showToast(taskErrorMessage(err, 'Could not add the child issue'), 'error');
+            return false;
+        }
     };
+    const toggleSubtask = async (sub) => {
+        const next = sub.status === 'done' ? 'todo' : 'done';
+        onPatchLocal?.(task.id, { subtasks: task.subtasks.map((s) => (s.id === sub.id ? { ...s, status: next } : s)) });
+        try {
+            await api.put(`/api/v2/tasks/${sub.id}`, { status: next });
+        } catch (err) {
+            onPatchLocal?.(task.id, { subtasks: task.subtasks.map((s) => (s.id === sub.id ? { ...s, status: sub.status } : s)) });
+            showToast(taskErrorMessage(err, 'Could not update the child issue'), 'error');
+        }
+    };
+    const canToggleSub = (sub) => !!can.manager || (sub.assignees || []).some((a) => String(a.id) === String(can.userId));
 
     const addLink = () => {
         const url = linkInput.trim();
@@ -249,6 +221,7 @@ export default function WorkspaceTaskDetailPanel({
                 <IssueTypeIcon type={task.issueType} />
                 {task.issueKey && <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)' }}>{task.issueKey}</span>}
                 <StatusBadge status={task.status} compact />
+                <RepeatBadge task={task} compact />
                 {deleted && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--state-danger)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>In trash</span>}
                 <span style={{ flex: 1 }} />
                 {saving && <Loader2 size={13} className="tk-spin" style={{ color: 'var(--accent)' }} />}
@@ -389,21 +362,13 @@ export default function WorkspaceTaskDetailPanel({
                                 onChange={(e) => save({ dueDate: e.target.value || null })} />
                         </Section>
 
+                        {/* Repeat + milestone */}
+                        {!deleted && <RepeatSection task={task} canEdit={!!can.edit} onSave={save} />}
+                        {!deleted && <MilestoneSection task={task} milestones={milestones} canEdit={!!can.edit} onSave={save} />}
+
                         {/* Child issues */}
-                        {task.subtasks?.length > 0 && (
-                            <Section label={`Child issues (${task.subtasks.filter((s) => s.status === 'done').length}/${task.subtasks.length} done)`}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    {task.subtasks.map((s) => (
-                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 6px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
-                                            {s.status === 'done' ? <CheckCircle2 size={12} style={{ color: 'var(--state-success)', flexShrink: 0 }} /> : <span style={{ width: 10, height: 10, border: '1px solid var(--border-accent)', borderRadius: '2px', flexShrink: 0 }} />}
-                                            <span style={{ flex: 1, minWidth: 0, fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: s.status === 'done' ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: s.status === 'done' ? 'line-through' : 'none' }}>{s.title || 'Subtask'}</span>
-                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{statusLabel(s.status)}</span>
-                                            {s.assignees?.[0] && <UserAvatar user={memberById(s.assignees[0])} size={16} />}
-                                        </div>
-                                    ))}
-                                </div>
-                            </Section>
-                        )}
+                        <SubtasksSection task={task} canAdd={!!can.subtask} disabled={deleted}
+                            canToggle={canToggleSub} onAdd={addSubtask} onToggle={toggleSubtask} resolveUser={memberById} />
 
                         {/* Labels */}
                         {task.labels?.length > 0 && (
@@ -443,46 +408,11 @@ export default function WorkspaceTaskDetailPanel({
                         )}
 
                         {/* Time tracking */}
-                        <Section label="Time tracking" icon={<Timer size={10} />}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Logged</span>
-                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{fmtSeconds(totalTime)}</span>
-                                {openSession && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontWeight: 700, color: 'var(--state-success)' }}>● running {fmtSeconds(runningFor)}</span>}
-                            </div>
-                            <button type="button" className={`tk-btn ${openSession ? 'tk-btn-danger' : ''}`} onClick={toggleTimer} disabled={timerLoading || deleted} style={{ width: '100%' }}>
-                                {timerLoading ? <Loader2 size={12} className="tk-spin" /> : openSession ? <><StopCircle size={13} /> Stop timer</> : <><PlayCircle size={13} /> Start timer</>}
-                            </button>
-                        </Section>
+                        <TimeTrackingSection task={task} disabled={deleted} onChange={(timeTracking) => onPatchLocal?.(task.id, { timeTracking })} />
 
                         {/* Dependencies */}
-                        <Section label="Depends on" icon={<Link2 size={10} />}>
-                            {task.dependencies?.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
-                                    {task.dependencies.map((d) => {
-                                        const known = byId.get(d.id);
-                                        const st = known?.status || d.status;
-                                        return (
-                                            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', fontSize: '12px' }}>
-                                                <Link2 size={10} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
-                                                <span style={{ flex: 1, minWidth: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{known?.title || d.title || `Task ${d.id.slice(-6)}`}</span>
-                                                {st && <span style={{ fontSize: '10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{statusLabel(st)}</span>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No dependencies</p>}
-                            {can.dependency && !deleted && (
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                    <select className="tk-field" value={depPick} onChange={(e) => setDepPick(e.target.value)} aria-label="Task this depends on">
-                                        <option value="">Choose a task…</option>
-                                        {depCandidates.map((t) => <option key={t.id} value={t.id}>{t.issueKey ? `${t.issueKey} · ` : ''}{t.title}</option>)}
-                                    </select>
-                                    <button type="button" className="tk-btn" onClick={addDependency} disabled={!depPick || depLoading}>
-                                        {depLoading ? <Loader2 size={11} className="tk-spin" /> : 'Add'}
-                                    </button>
-                                </div>
-                            )}
-                        </Section>
+                        <DependenciesSection task={task} candidates={allTasks} lookup={allTasks} canAdd={!!can.dependency} disabled={deleted}
+                            onAdded={(dependencies) => onPatchLocal?.(task.id, { dependencies })} />
 
                         {/* Pull requests / issues linked by the GitHub and Jira integrations */}
                         {task.externalLinks?.length > 0 && (

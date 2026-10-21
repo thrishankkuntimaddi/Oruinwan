@@ -13,6 +13,8 @@ import { BlockedReasonDialog, primaryBtn, tint } from './channelTasks/ChannelTas
 import { KanbanColumn } from './channelTasks/ChannelTaskBoard';
 import ChannelTaskDetail from './channelTasks/ChannelTaskDetail';
 import ChannelTaskCreateModal from './channelTasks/ChannelTaskCreateModal';
+import { useMilestones } from '../../../../components/tasksComp/useTaskPlanning';
+import { MilestoneProgressStrip } from '../../../../components/tasksComp/MilestonesView';
 
 const NO_INLINE_ADD = ['blocked', 'done', 'cancelled'];
 
@@ -64,6 +66,8 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
     const permsFor = useCallback((t) => taskPerms(t, me, isManager), [me, isManager]);
     const fail = useCallback((err, fallback) => showToast(taskErrorMessage(err, fallback), 'error'), [showToast]);
+    const { milestones } = useMilestones(workspaceId, (m) => showToast(m, 'error'));
+    const patchTask = useCallback((id, patch) => setTasks((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x))), []);
 
     const loadTasks = useCallback(async () => {
         const seq = ++loadSeq.current;
@@ -175,7 +179,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
             const res = await api.put(`/api/v2/tasks/${task.id}`, updates);
             const updated = mapChannelTask(res.data.task);
             if (updated) setTasks((p) => mergeTask(p, updated));
-            return true;
+            return updated || true;
         } catch (err) {
             setTasks((p) => p.map((x) => (x.id === task.id ? prev : x)));
             fail(err, 'Could not update the task.');
@@ -327,6 +331,8 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                 </button>
             </div>
 
+            <MilestoneProgressStrip milestones={milestones} tasks={tasks} />
+
             {fetchError && (
                 <div role="alert" style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
@@ -383,6 +389,9 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                         onRequestBlock={setBlockTarget}
                         onToggleSubtask={handleToggleSubtask}
                         onAddSubtask={handleAddSubtask}
+                        milestones={milestones}
+                        boardTasks={tasks}
+                        onPatchLocal={patchTask}
                     />
                 )}
             </div>

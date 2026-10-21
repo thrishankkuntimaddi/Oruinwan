@@ -108,6 +108,8 @@ export function mapTask(t) {
         timeTracking: t.timeTracking || null,
         dependencies: (t.dependencies || []).map((d) => (d && typeof d === 'object' ? { id: idOf(d), title: d.title || '', status: d.status ? toStatus(d.status) : null } : { id: String(d), title: '', status: null })),
         sprintId: idOf(t.sprintId || t.sprint) || null,
+        milestoneId: idOf(t.milestoneId || t.milestone) || null,
+        recurring: t.recurring && t.recurring.isRecurring ? t.recurring : null,
         blockedReason: t.blockedReason || null,
         completionNote: t.completionNote || '',
         linkedIssues: t.linkedIssues || [],

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Search, CheckCircle2, Circle, Trash2, RotateCcw, Activity, LayoutGrid, List,
-  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare,
+  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare, Flag, LayoutTemplate,
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -13,6 +13,10 @@ import KanbanBoard from '../../components/tasksComp/KanbanBoard';
 import SprintBoard from '../../components/tasksComp/SprintBoard';
 import TimelineView from '../../components/tasksComp/TimelineView';
 import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
+import MilestonesView from '../../components/tasksComp/MilestonesView';
+import TaskTemplatesDialog from '../../components/tasksComp/TaskTemplatesDialog';
+import { RepeatBadge } from '../../components/tasksComp/RepeatPicker';
+import { useMilestones, templateToTaskDraft } from '../../components/tasksComp/useTaskPlanning';
 import {
   StatusBadge, PriorityTag, IssueTypeIcon, AvatarStack, fmtDate, isOverdue, tint, FONT,
 } from '../../components/tasksComp/taskUi';
@@ -76,11 +80,12 @@ const VIEW_MODES = [
   { key: 'sprint', Icon: Activity, label: 'Sprint' },
   { key: 'timeline', Icon: GitBranch, label: 'Timeline' },
   { key: 'workload', Icon: Users, label: 'Workload' },
+  { key: 'milestones', Icon: Flag, label: 'Milestones' },
 ];
 
 const channelKey = (t) => t.channel?.id || 'none';
 
-function ListRow({ task, view, selected, can, onOpen, onDelete, onRestore, onPurge, onTransferRequest, onTransferRespond }) {
+function ListRow({ task, view, selected, can, milestoneName, onOpen, onDelete, onRestore, onPurge, onTransferRequest, onTransferRespond }) {
   const done = task.status === 'done';
   const overdue = isOverdue(task);
   const pendingTransfer = task.transferRequest?.status === 'pending';
@@ -103,6 +108,8 @@ function ListRow({ task, view, selected, can, onOpen, onDelete, onRestore, onPur
           {task.channel?.name && <span className="tk-meta-channel">#{task.channel.name}</span>}
           {view === 'shared-tasks' && task.creator && <span>From <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{task.creator.username}</b></span>}
           {view === 'assigned-tasks' && task.assignees.length > 0 && <span>To <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{task.assignees.map((a) => a.username).join(', ')}</b></span>}
+          <RepeatBadge task={task} compact />
+          {milestoneName && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Flag size={10} style={{ color: 'var(--accent)' }} />{milestoneName}</span>}
           {task.subtasks?.length > 0 && <span>{task.subtasks.filter((s) => s.status === 'done').length}/{task.subtasks.length} subtasks</span>}
           {pendingTransfer && <span style={{ color: 'var(--accent)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Send size={10} /> Transfer pending</span>}
           {task.status === 'blocked' && task.blockedReason && <span style={{ color: 'var(--state-danger)', overflow: 'hidden', textOverflow: 'ellipsis' }}>Blocked: {task.blockedReason}</span>}
@@ -178,6 +185,10 @@ export default function MyTasks() {
   const [selectedId, setSelectedId] = useState(null);
   const [confirm, setConfirm] = useState(null); // { mode, task, to? }
   const [transferTask, setTransferTask] = useState(null);
+  const [prefill, setPrefill] = useState(null); // template draft for the create dialog
+  const [templatesOpen, setTemplatesOpen] = useState(null); // null | 'manage' | 'use'
+  const planning = useMilestones(workspaceId, (m) => showToast(m, 'error'));
+  const milestoneNames = useMemo(() => new Map(planning.milestones.map((m) => [m.id, m.name])), [planning.milestones]);
 
   useEffect(() => { setChannelFilter('all'); }, [activeView]);
 
@@ -347,6 +358,18 @@ export default function MyTasks() {
               )))}
           </PanelSection>
 
+          <PanelSection label="Planning">
+            <button type="button" className={`gl-item${viewMode === 'milestones' ? ' is-active' : ''}`} onClick={() => { setViewMode('milestones'); if (isMobile) setMobileShowList(true); }}>
+              <Flag size={14} className="gl-x-item-icon" />
+              <span className="gl-x-item-title">Milestones</span>
+              <span className="gl-count">{planning.milestones.length}</span>
+            </button>
+            <button type="button" className="gl-item" onClick={() => setTemplatesOpen('manage')}>
+              <LayoutTemplate size={14} className="gl-x-item-icon" />
+              <span className="gl-x-item-title">Templates</span>
+            </button>
+          </PanelSection>
+
           {channelGroups.length > 0 && !isMobile && (
             <PanelSection label="By channel">
               {[{ key: 'all', name: 'All channels', count: channelTotal }, ...channelGroups].map((g) => (
@@ -381,6 +404,11 @@ export default function MyTasks() {
                 {!isMobile && <p>{view.desc}</p>}
               </div>
               {canCreate && (
+                <button type="button" className="gl-btn gl-btn--ghost" onClick={() => setTemplatesOpen('use')} title="New task from a template">
+                  <LayoutTemplate size={13} /> {!isMobile && 'From template'}
+                </button>
+              )}
+              {canCreate && (
                 <button type="button" className="gl-btn gl-btn--primary" onClick={() => setShowModal(true)}>
                   <Plus size={13} strokeWidth={2.5} /> Create
                 </button>
@@ -407,7 +435,7 @@ export default function MyTasks() {
                 ))}
               </div>
               <span className="gl-x-tasks-count">
-                {viewMode !== 'workload' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
+                {viewMode !== 'workload' && viewMode !== 'milestones' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
               </span>
             </div>
           </header>
@@ -415,6 +443,14 @@ export default function MyTasks() {
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {viewMode === 'workload' ? (
               <WorkloadPanel workspaceId={workspaceId} />
+            ) : viewMode === 'milestones' ? (
+              <MilestonesView
+                planning={planning}
+                tasks={tasks}
+                onOpenTask={openTask}
+                canLink={(t) => abilitiesOf(t).edit}
+                onLink={(taskId, milestoneId) => updateTask(taskId, { milestoneId }, { successMessage: milestoneId ? 'Added to milestone' : 'Removed from milestone' })}
+              />
             ) : shown.length === 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                 <EmptyState
@@ -455,6 +491,7 @@ export default function MyTasks() {
                     view={activeView}
                     selected={task.id === selectedId}
                     can={abilitiesOf(task)}
+                    milestoneName={task.milestoneId ? milestoneNames.get(task.milestoneId) : null}
                     onOpen={openTask}
                     onDelete={askDelete}
                     onRestore={restoreTask}
@@ -474,6 +511,7 @@ export default function MyTasks() {
             task={selectedTask}
             members={members || []}
             allTasks={tasks}
+            milestones={planning.milestones}
             can={abilitiesOf(selectedTask)}
             onClose={() => {
               setSelectedId(null);
@@ -495,10 +533,19 @@ export default function MyTasks() {
         <TaskModal
           channels={channels || []}
           teamMembers={members || []}
-          onClose={() => setShowModal(false)}
+          milestones={planning.milestones}
+          prefill={prefill}
+          onClose={() => { setShowModal(false); setPrefill(null); }}
           onAddTask={createAndReveal}
         />
       )}
+
+      <TaskTemplatesDialog
+        open={!!templatesOpen}
+        workspaceId={workspaceId}
+        onClose={() => setTemplatesOpen(null)}
+        onUse={templatesOpen === 'use' ? (t) => { setPrefill(templateToTaskDraft(t)); setTemplatesOpen(null); setShowModal(true); } : undefined}
+      />
 
       {confirm && (
         <TaskCompletionModal key={`${confirm.mode}-${confirm.task.id}`} task={confirm.task} mode={confirm.mode} onClose={() => setConfirm(null)} onConfirm={runConfirm} />

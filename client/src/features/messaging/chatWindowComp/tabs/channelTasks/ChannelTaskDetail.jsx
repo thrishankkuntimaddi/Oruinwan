@@ -8,6 +8,10 @@ import {
 } from '../../../../../utils/taskMeta';
 import { FONT, dateInputValue, canToggleSubtask } from './channelTaskUtils';
 import {
+    DependenciesSection, TimeTrackingSection, RepeatSection, MilestoneSection,
+} from '../../../../../components/tasksComp/TaskDetailSections';
+import { RepeatBadge } from '../../../../../components/tasksComp/RepeatPicker';
+import {
     Avatar, StatusBadge, PriorityIcon, IssueTypeIcon, IconButton, sectionLabel, tint, readable, useColorScheme, primaryBtn,
 } from './ChannelTaskUi';
 
@@ -96,6 +100,7 @@ function ActivityLog({ taskId }) {
 export default function ChannelTaskDetail({
     task, perms, members, currentUserId, isManager,
     onClose, onUpdate, onDelete, onRequestBlock, onToggleSubtask, onAddSubtask,
+    milestones = [], boardTasks = [], onPatchLocal,
 }) {
     const scheme = useColorScheme();
     const [tab, setTab] = useState('details');
@@ -150,6 +155,7 @@ export default function ChannelTaskDetail({
                 <IssueTypeIcon type={task.issueType || 'task'} />
                 {task.issueKey && <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>{task.issueKey}</span>}
                 <StatusBadge status={task.status} />
+                <RepeatBadge task={task} compact />
                 <div style={{ flex: 1 }} />
                 {busy && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-secondary)' }} />}
                 <IconButton title="Close" onClick={onClose}><X size={14} /></IconButton>
@@ -346,6 +352,14 @@ export default function ChannelTaskDetail({
                                 {task.subtasks.length === 0 && !addingSub && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>No child issues</p>}
                             </div>
                         </div>
+
+                        {/* Repeat, milestone, time and dependencies: same sections as the Tasks page panel */}
+                        <RepeatSection task={task} canEdit={!!perms.edit} onSave={(u) => run(() => onUpdate(task, u))} />
+                        <MilestoneSection task={task} milestones={milestones} canEdit={!!perms.edit} onSave={(u) => run(() => onUpdate(task, u))} />
+                        <TimeTrackingSection task={task} onChange={(timeTracking) => onPatchLocal?.(task.id, { timeTracking })} />
+                        <DependenciesSection task={task} candidates={boardTasks} lookup={boardTasks}
+                            canAdd={!!perms.dependency}
+                            onAdded={(dependencies) => onPatchLocal?.(task.id, { dependencies })} />
 
                         {task.labels?.length > 0 && (
                             <div>

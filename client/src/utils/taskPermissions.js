@@ -51,5 +51,9 @@ export function taskAbilities(task, ctx) {
         transfer: canRequestTransfer(task, ctx),
         handleTransfer: canHandleTransfer(task, ctx),
         dependency: canAddDependency(task, ctx),
+        /** Add child issues (server: creator, assignees, managers). */
+        subtask: canChangeStatus(task, ctx),
+        manager: isManagerRole(ctx?.role),
+        userId: ctx?.userId != null ? String(ctx.userId) : null,
     };
 }

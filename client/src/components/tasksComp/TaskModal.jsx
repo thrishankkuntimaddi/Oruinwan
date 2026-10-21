@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  X, User, Users, Hash, Link as LinkIcon, Plus, Paperclip, AlignLeft, Briefcase, Check, Loader2, Edit3, Search,
+  X, User, Users, Hash, Link as LinkIcon, Plus, Paperclip, AlignLeft, Briefcase, Check, Loader2, Edit3, Search, LayoutTemplate, ListChecks,
 } from "lucide-react";
 import api from '@services/api';
 import { PRIORITIES, PRIORITY_META, priorityLabel, statusLabel, TRANSITIONS, toDateInput } from '../../utils/taskMeta';
 import { PriorityIcon, UserAvatar, tint, FONT } from './taskUi';
+import RepeatPicker from './RepeatPicker';
+import { EMPTY_RULE, fromRecurring, toRecurringPayload, normalizeRule } from '../../utils/taskRecurrence';
 
 /** Statuses a new task can start in (blocked needs a reason, done/cancelled make no sense). */
 const CREATE_STATUSES = ['backlog', 'todo', 'in_progress', 'review'];
@@ -25,16 +27,21 @@ const labelStyle = { display: 'flex', alignItems: 'center', gap: '6px' };
  *
  * onAddTask(payload) / onUpdateTask(id, updates) receive
  * { title, description, assignmentType, assignedToIds, channelId, taskMode,
- *   status, blockedReason, priority, dueDate, attachments:[{name,url}] }.
+ *   status, blockedReason, priority, dueDate, attachments:[{name,url}],
+ *   recurring?, milestoneId?, tags?, subtaskTitles? }.
+ *
+ * `prefill` (create only) starts the form from a template draft
+ * (useTaskPlanning.templateToTaskDraft); `milestones` enables the milestone picker.
  */
-export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels = [], teamMembers = [], initialData = null }) {
+export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels = [], teamMembers = [], initialData = null, prefill = null, milestones = [] }) {
   const { showToast } = useToast();
   const { user } = useAuth();
   const currentUserId = String(user?._id || user?.id || '');
   const isEditing = !!initialData;
 
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [description, setDescription] = useState(initialData?.description || "");
+  const seed = initialData || prefill || {};
+  const [title, setTitle] = useState(seed.title || "");
+  const [description, setDescription] = useState(seed.description || "");
   const [channelId, setChannelId] = useState(initialData?.channelId || "");
   const [assignmentType, setAssignmentType] = useState("self");
   const [taskMode, setTaskMode] = useState("split");
@@ -42,7 +49,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
   const [attachments, setAttachments] = useState(initialData?.attachments || []);
   const [newLink, setNewLink] = useState("");
   const [dueDate, setDueDate] = useState(toDateInput(initialData?.dueDate));
-  const [priority, setPriority] = useState(initialData?.priority || "medium");
+  const [priority, setPriority] = useState(seed.priority || "medium");
+  const [repeat, setRepeat] = useState(() => (initialData?.recurring ? fromRecurring(initialData.recurring) : { ...EMPTY_RULE }));
+  const [milestoneId, setMilestoneId] = useState(initialData?.milestoneId || "");
+  const templateSubtasks = !isEditing ? (prefill?.subtaskTitles || []) : [];
   const [status, setStatus] = useState(initialData?.status || "todo");
   const [blockedReason, setBlockedReason] = useState("");
   const [channelMembers, setChannelMembers] = useState(null);
@@ -104,6 +114,13 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
       dueDate: dueDate || null,
       attachments: allAttachments.map((a) => ({ name: a.name || a.url, url: a.url })),
     };
+    const repeatRule = normalizeRule(repeat);
+    if (repeatRule.frequency !== 'none' || initialData?.recurring) {
+      payload.recurring = toRecurringPayload(repeatRule, { dueDate: dueDate || null });
+    }
+    if (milestoneId || initialData?.milestoneId) payload.milestoneId = milestoneId || null;
+    if (!isEditing && prefill?.tags?.length) payload.tags = prefill.tags;
+    if (templateSubtasks.length) payload.subtaskTitles = templateSubtasks;
 
     setSaving(true);
     try {
@@ -146,8 +163,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>
               {isEditing ? 'Edit task' : 'Create task'}
             </h2>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {isEditing ? (initialData.issueKey || 'Update the details below') : 'Only a title is required — everything else is optional.'}
+            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {isEditing ? (initialData.issueKey || 'Update the details below')
+                : prefill?.templateName ? <><LayoutTemplate size={12} style={{ color: 'var(--accent)' }} /> From template “{prefill.templateName}”</>
+                : 'Only a title is required — everything else is optional.'}
             </p>
           </div>
           <button type="button" className="tk-icon-btn danger" onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -193,6 +212,15 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 </div>
               )}
             </div>
+
+            {templateSubtasks.length > 0 && (
+              <div data-testid="template-subtasks">
+                <p className="tk-label"><ListChecks size={11} /> Child issues from the template</p>
+                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                  {templateSubtasks.map((t, i) => <li key={`${t}-${i}`}>{t}</li>)}
+                </ul>
+              </div>
+            )}
 
             {!isEditing && assignmentType === "individual" && (
               <div>
@@ -305,6 +333,21 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               <input id="tk-due" type="date" className="tk-field" value={dueDate} min={isEditing ? undefined : today} max="2100-12-31" onChange={(e) => setDueDate(e.target.value)} />
               {dueDate && <button type="button" className="tk-btn" style={{ marginTop: '6px', padding: '2px 8px', fontSize: '11px' }} onClick={() => setDueDate('')}>Clear date</button>}
             </div>
+
+            <div>
+              <label style={sidebarLabel} htmlFor="tk-modal-repeat-freq">Repeat</label>
+              <RepeatPicker value={repeat} onChange={setRepeat} dueDate={dueDate || null} idPrefix="tk-modal-repeat" />
+            </div>
+
+            {(milestones.length > 0 || milestoneId) && (
+              <div>
+                <label style={sidebarLabel} htmlFor="tk-milestone">Milestone</label>
+                <select id="tk-milestone" className="tk-field" value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)}>
+                  <option value="">No milestone</option>
+                  {milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, Lock, Ban } from 'lucide-react';
 import { BOARD_STATUSES, STATUS_META, statusLabel, canTransition } from '../../utils/taskMeta';
 import { PriorityIcon, AvatarStack, fmtDate, isOverdue, tint, FONT } from './taskUi';
+import { RepeatBadge } from './RepeatPicker';
 
 /**
  * Status board. Moving a card calls onStatusChange(task, status); the page
@@ -56,6 +57,7 @@ function KanbanCard({ task, draggable, onDragStart, onDragEnd, onClick, dragging
               <Calendar size={10} /> {fmtDate(task.dueDate, { month: 'short', day: 'numeric' })}
             </span>
           )}
+          <RepeatBadge task={task} compact />
           <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {!draggable && <Lock size={10} style={{ color: 'var(--text-muted)' }} aria-label="Read-only" />}
             {task.assignees.length > 0 && <AvatarStack users={task.assignees} size={18} max={3} />}

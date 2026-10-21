@@ -67,6 +67,7 @@ export function taskPerms(task, userId, isManager) {
         assignees: can.assignees,
         delete: can.del,
         subtask: creator || isAssignee(task, ctx.userId) || isManager,
+        dependency: can.dependency,
     };
 }
 
@@ -77,7 +78,7 @@ export const canToggleSubtask = (sub, userId, isManager) =>
 /** Apply an update locally (optimistic). `memberById` resolves new assignee ids. */
 export function applyLocalUpdate(task, updates, memberById) {
     const next = { ...task };
-    ['status', 'priority', 'title', 'description', 'dueDate', 'blockedReason'].forEach((k) => {
+    ['status', 'priority', 'title', 'description', 'dueDate', 'blockedReason', 'milestoneId', 'recurring'].forEach((k) => {
         if (updates[k] !== undefined) next[k] = updates[k];
     });
     if (updates.status && updates.status !== 'blocked') next.blockedReason = null;

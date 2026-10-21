@@ -26,7 +26,7 @@ const taskFromPayload = (p) => (p && p.task && typeof p.task === 'object' ? p.ta
 function toUpdatePayload(updates) {
     const out = {};
     const copy = ['title', 'description', 'dueDate', 'tags', 'labels', 'completionNote', 'blockedReason',
-        'storyPoints', 'estimatedHours', 'actualHours', 'resolution', 'sprintId'];
+        'storyPoints', 'estimatedHours', 'actualHours', 'resolution', 'sprintId', 'milestoneId', 'recurring'];
     for (const key of copy) if (updates[key] !== undefined) out[key] = updates[key];
     if (updates.status !== undefined) out.status = toStatus(updates.status);
     if (updates.priority !== undefined) out.priority = toPriority(updates.priority);
@@ -57,6 +57,7 @@ export const TasksProvider = ({ children }) => {
     const [refreshing, setRefreshing] = useState(false);
     const tasksRef = useRef(tasks);
     tasksRef.current = tasks;
+    const fetchTaskRef = useRef(null);
     const latestWorkspace = useRef(workspaceId);
     latestWorkspace.current = workspaceId;
 
@@ -127,6 +128,7 @@ export const TasksProvider = ({ children }) => {
             return null;
         }
     }, [applyServerTask]);
+    fetchTaskRef.current = fetchTask;
 
     // Live updates: every event is applied in place — no full refetch.
     useEffect(() => {
@@ -200,6 +202,8 @@ export const TasksProvider = ({ children }) => {
             attachments: (data.attachments || []).map((a) => ({ name: a.name || a.url, url: a.url })),
         };
         if (data.channelId) payload.channelId = data.channelId;
+        if (data.recurring) payload.recurring = data.recurring;
+        if (data.milestoneId) payload.milestoneId = data.milestoneId;
         if (payload.assignmentType === "individual") {
             payload.assignedToIds = data.assignedToIds || [];
             payload.taskMode = data.taskMode || 'split';
@@ -209,6 +213,23 @@ export const TasksProvider = ({ children }) => {
             const created = (response.data.tasks || [response.data.task]).filter(Boolean).map(mapTask);
             // The socket event may already have added them: upsert by id.
             setTasks((prev) => created.reduce((list, t) => upsertTask(list, t), prev));
+            // Child issues from a template: one per created task (split mode creates several).
+            const subTitles = (data.subtaskTitles || []).map((x) => String(x || '').trim()).filter(Boolean);
+            if (subTitles.length) {
+                let failed = 0;
+                for (const parent of created) {
+                    for (const title of subTitles) {
+                        try {
+                            await api.post(`/api/v2/tasks/${parent.id}/subtasks`, { title, priority: parent.priority, assignedTo: parent.assigneeIds });
+                        } catch (err) {
+                            failed += 1;
+                            logger.error("Failed to add a template child issue:", err);
+                        }
+                    }
+                    fetchTaskRef.current?.(parent.id);
+                }
+                if (failed) showToast(`${failed} child issue${failed === 1 ? '' : 's'} from the template could not be added`, "error");
+            }
             showToast(created.length > 1 ? `Created ${created.length} tasks` : "Task created", "success");
             return created;
         } catch (error) {
