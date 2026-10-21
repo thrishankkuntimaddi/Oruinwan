@@ -1,6 +1,6 @@
 {
   "name": "@oruinwan/sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "JavaScript SDK for the Oruinwan collaboration platform API (Node 18+ and browsers).",
   "main": "oruinwan-sdk.js",
   "types": "index.d.ts",

@@ -44,7 +44,6 @@ exports.createTemplate = async (req, res) => {
       defaultChannels,
       settings,
       featureToggles,
-      isPublic,
       fromWorkspaceId 
     } = req.body;
 
@@ -86,7 +85,8 @@ exports.createTemplate = async (req, res) => {
       defaultChannels: channels,
       settings: templateSettings,
       featureToggles: featureToggles || {},
-      isPublic: !!isPublic,
+      // Public sharing goes through the moderated community gallery (POST /community/publish).
+      isPublic: false,
       company: companyId,
       createdBy: userId
     });
@@ -131,7 +131,8 @@ exports.updateTemplate = async (req, res) => {
       return res.status(403).json({ message: 'Cannot edit this template' });
     }
 
-    const allowed = ['name', 'description', 'icon', 'color', 'category', 'defaultChannels', 'settings', 'featureToggles', 'isPublic'];
+    // isPublic is not editable here: public sharing is moderated (community gallery).
+    const allowed = ['name', 'description', 'icon', 'color', 'category', 'defaultChannels', 'settings', 'featureToggles'];
     allowed.forEach(k => {
       if (req.body[k] !== undefined) template[k] = req.body[k];
     });
@@ -171,7 +172,12 @@ exports.listPublicTemplates = async (req, res) => {
 
     const query = { isActive: true, isPublic: true };
     if (category) query.category = category;
-    if (q) query.$text = { $search: q };
+    if (q) {
+      const rx = require('../../shared/utils/escapeRegex').safeRegex(String(q).slice(0, 100));
+      query.$or = [{ name: rx }, { description: rx }];
+    }
+    // Pending/hidden community templates are never public; approved ones are.
+    query['community.status'] = { $nin: ['pending', 'hidden'] };
 
     const [templates, total] = await Promise.all([
       WorkspaceTemplate.find(query)

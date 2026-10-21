@@ -1,5 +1,5 @@
 // Developer platform: portal, API keys, public API, SDK, webhooks, bots, limits.
-const TASKS_CURL = `curl https://YOUR-SERVER/api/public/tasks?status=todo&limit=20 \\
+const TASKS_CURL = `curl https://YOUR-SERVER/api/public/v1/tasks?status=todo&limit=20 \\
   -H "X-Api-Key: $ORUINWAN_API_KEY"`;
 
 const TASKS_SDK = `const { OruinwanSDK } = require('@oruinwan/sdk');
@@ -15,7 +15,7 @@ console.log(count, tasks.map((t) => \`\${t.issueKey} \${t.title}\`));`;
 const TASKS_PY = `import os, requests
 
 r = requests.get(
-    "https://YOUR-SERVER/api/public/tasks",
+    "https://YOUR-SERVER/api/public/v1/tasks",
     headers={"X-Api-Key": os.environ["ORUINWAN_API_KEY"]},
     params={"status": "todo", "limit": 20},
     timeout=15,
@@ -24,7 +24,7 @@ r.raise_for_status()
 for t in r.json()["tasks"]:
     print(t["issueKey"], t["title"])`;
 
-const CREATE_CURL = `curl -X POST https://YOUR-SERVER/api/public/tasks \\
+const CREATE_CURL = `curl -X POST https://YOUR-SERVER/api/public/v1/tasks \\
   -H "X-Api-Key: $ORUINWAN_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -95,12 +95,12 @@ export default {
                 'Everything for developers lives in the **Developer portal** of each workspace: `/workspace/WORKSPACE_ID/developer` (Settings → Integrations → **Developer portal**). It has tabs for **API Keys**, **Webhooks**, **Bots**, **App Market** and **Docs**. Only workspace owners and admins can create keys, webhooks and bots.',
                 { table: { caption: 'Developer tools', head: ['I want to…', 'Use'], rows: [
                     ['Read tasks, channels, files or people from a script or service', '[Public API](/docs/developers/public-api) with an [API key](/docs/developers/api-keys)'],
-                    ['Create tasks from another system (CI, forms, monitoring)', '`POST /api/public/tasks` (scope `tasks:write`)'],
+                    ['Create tasks from another system (CI, forms, monitoring)', '`POST /api/public/v1/tasks` (scope `tasks:write`)'],
                     ['React when something happens in Oruinwan', '[Outgoing webhooks](/docs/developers/webhooks)'],
                     ['Use JavaScript instead of raw HTTP', 'The [SDK](/docs/developers/sdk) (`@oruinwan/sdk`)'],
                     ['Act as a signed-in user (AI, realtime, anything the app does)', 'The SDK with `auth.login` (a user access token)'],
                 ] } },
-                { figure: 'api-flow', caption: 'Your code calls /api/public with an API key; the key decides which workspace and what it may do.' },
+                { figure: 'api-flow', caption: 'Your code calls /api/public/v1 with an API key; the key decides which workspace and what it may do.' },
                 { h: 'Quick start' },
                 { steps: [
                     'Open the Developer portal and create an API key. Copy it: it is shown only once.',
@@ -134,12 +134,12 @@ export default {
                 ] },
                 { h: 'Scopes' },
                 { table: { caption: 'API key scopes', head: ['Scope', 'Allows'], rows: [
-                    ['`messages:read`', '`GET /api/public/messages` (metadata only)'],
-                    ['`channels:read`', '`GET /api/public/channels`'],
-                    ['`tasks:read`', '`GET /api/public/tasks`'],
-                    ['`tasks:write`', '`POST /api/public/tasks`'],
-                    ['`files:read`', '`GET /api/public/files`'],
-                    ['`users:read`', '`GET /api/public/users`'],
+                    ['`messages:read`', '`GET /api/public/v1/messages` (metadata only)'],
+                    ['`channels:read`', '`GET /api/public/v1/channels`'],
+                    ['`tasks:read`', '`GET /api/public/v1/tasks`'],
+                    ['`tasks:write`', '`POST /api/public/v1/tasks`'],
+                    ['`files:read`', '`GET /api/public/v1/files`'],
+                    ['`users:read`', '`GET /api/public/v1/users`'],
                     ['`webhooks:read`, `webhooks:write`', 'Accepted for future use; no public endpoint checks them yet.'],
                     ['`*`', 'Everything.'],
                 ] } },
@@ -156,18 +156,21 @@ export default {
         {
             id: 'public-api',
             title: 'Public REST API reference',
-            summary: 'Base URL /api/public, X-Api-Key auth, six endpoints, JSON in and out.',
-            keywords: 'rest api reference endpoints public messages tasks files users channels json get post pagination limit',
+            summary: 'Base URL /api/public/v1, X-Api-Key auth, seven endpoints, an OpenAPI 3 spec, JSON in and out.',
+            keywords: 'rest api reference endpoints public messages tasks files users channels json get post pagination limit openapi swagger spec version v1 deprecation me',
             blocks: [
                 { table: { caption: 'Basics', head: ['', ''], rows: [
-                    ['Base URL', '`https://YOUR-SERVER/api/public`'],
+                    ['Base URL', '`https://YOUR-SERVER/api/public/v1`'],
                     ['Auth', 'Header `X-Api-Key: chx_…` (not a Bearer token)'],
                     ['Format', 'JSON request and response bodies'],
                     ['Paging', '`limit` (default 50, max 100); newest first. There is no cursor or offset.'],
                     ['Rate limit', '100 requests per minute per key'],
+                    ['Spec', '`GET /api/public/v1/openapi.json` (OpenAPI 3, no key needed). The Developer portal renders it under **API reference**.'],
+                    ['Versioning', 'Every response carries `API-Version: v1`. The old unversioned `/api/public/*` path still works but is deprecated: its responses add a `Deprecation` header and a `Link: <…/v1/…>; rel="successor-version"` header.'],
                 ] } },
                 { h: 'Endpoints' },
                 { table: { caption: 'Endpoints', head: ['Method and path', 'Scope', 'Parameters', 'Returns'], rows: [
+                    ['`GET /me`', '(any)', '(none)', '`{ workspaceId, keyPrefix, name, scopes, app }`: the calling key, or the app an app token belongs to'],
                     ['`GET /messages`', '`messages:read`', '`limit`, `channelId` (a public channel)', '`{ messages: [{ id, channelId, sender, type, parentId, replyCount, attachmentCount, isEncrypted, createdAt, editedAt }], count }`'],
                     ['`GET /tasks`', '`tasks:read`', '`limit`, `status` (`backlog`, `todo`, `in_progress`, `review`, `blocked`, `done`, `cancelled`)', '`{ tasks: [{ _id, title, description, status, priority, assignedTo, dueDate, createdAt, issueKey }], count }`'],
                     ['`POST /tasks`', '`tasks:write`', 'body below', '`201 { task }`'],
@@ -238,14 +241,14 @@ oruinwan.realtime.on('new-message', (msg) => console.log(msg)); // encrypted pay
                 { h: 'Reference' },
                 { table: { caption: 'SDK', head: ['Part', 'Details'], rows: [
                     ['Constructor', '`new OruinwanSDK({ baseUrl, apiKey, accessToken, refreshToken, fetch, timeoutMs = 15000, retries = 2, io, platform, onTokens })`'],
-                    ['Public API', '`messages.list(params)`, `tasks.list(params)`, `tasks.create(data)`, `files.list()`, `users.list()`, `channels.list()`'],
+                    ['Public API (`/api/public/v1`)', '`me()`, `openapi()`, `messages.list(params)`, `tasks.list(params)`, `tasks.create(data)`, `files.list()`, `users.list()`, `channels.list()`'],
                     ['Auth', '`auth.login(email, password)`, `auth.refresh()`, `auth.me()`, `auth.logout()`, `auth.setAccessToken(t)`, `auth.setApiKey(k)`'],
                     ['Webhooks', '`webhooks.list(workspaceId)`, `webhooks.subscribe({ workspaceId, url, events })`, `webhooks.unsubscribe(id)`'],
                     ['AI', '`ai.chat`, `ai.summarize`, `ai.smartReplies`, `ai.translate`, `ai.extractTasks`, `ai.noteAssist`, `ai.taskAssist`, `ai.usage`…'],
                     ['Raw', '`request(path, { method, body, params, auth: "auto" | "apiKey" | "bearer" | "none" })`'],
                     ['Errors', 'Every failure throws `OruinwanError` with `status`, `code` and `response`. GET requests retry on 408/425/429/5xx, honouring `Retry-After`.'],
                 ] } },
-                { callout: 'note', text: 'The SDK sends `X-Chttrix-SDK: js/1.0.0` with each request. Older code can keep using the `ChttrixSDK` alias.' },
+                { callout: 'note', text: 'The SDK sends `X-Chttrix-SDK: js/1.1.0` with each request. Older code can keep using the `ChttrixSDK` alias.' },
             ],
         },
         {
@@ -306,6 +309,39 @@ X-Chttrix-Delivery: 66f1…   (the webhook subscription id)
                     'Deactivate a bot from the same tab.',
                 ] },
                 { callout: 'warning', title: 'Preview', text: 'Bot tokens are not accepted by any API endpoint yet, so a bot cannot post on its own. For automation today, use an [API key](/docs/developers/api-keys) with the public API and [webhooks](/docs/developers/webhooks).' },
+            ],
+        },
+        {
+            id: 'marketplace-apps',
+            title: 'Build a marketplace app',
+            summary: 'Submit an app for review; once listed, every install gives it a workspace token with the scopes it asked for.',
+            keywords: 'marketplace app apps submit review publish install token scopes bot user webhook signing secret app.installed uninstall developer',
+            blocks: [
+                'Any signed-in person can build an app in the Developer portal’s **My apps** tab. The Oruinwan team reviews it before it is listed in the marketplace for every workspace.',
+                { steps: [
+                    'Create the app: name, description, category, an optional https icon, the **scopes** it needs and, if it should post as itself, a **bot user**.',
+                    'Give it a **webhook URL** (where it receives its token) or a **redirect URL** (where admins finish setup). An app that asks for scopes needs one of them.',
+                    'Choose **Submit for review**. You can withdraw the submission to change it. If it is rejected, the reviewer’s note is shown on the app; edit and submit again.',
+                    'Once approved it is listed. Editing a listed app sends it back to review; workspaces that already installed it keep working.',
+                ] },
+                { h: 'What an install grants' },
+                { table: { caption: 'Per installing workspace', head: ['What', 'Details'], rows: [
+                    ['App token', 'An API key bound to that workspace with exactly the app’s scopes. Use it as `X-Api-Key` on `/api/public/v1`. `GET /api/public/v1/me` returns the app it belongs to.'],
+                    ['Bot token', 'Only when the app declares a bot user: a bot in that workspace named after the app.'],
+                    ['Revoking', 'Uninstalling revokes both. They are not shown under API keys and cannot be revoked there.'],
+                ] } },
+                { h: 'Receiving the token' },
+                'The admin who installs sees the tokens once. If the app has a webhook URL, Oruinwan also POSTs them there, signed with the app’s signing secret (shown in My apps; rotate it any time):',
+                { code: `POST /your/webhook HTTP/1.1
+Content-Type: application/json
+X-Oruinwan-Event: app.installed
+X-Oruinwan-Signature: sha256=<HMAC-SHA256 of the raw body with your signing secret>
+
+{ "event": "app.installed", "appId": "66f…", "timestamp": "…",
+  "data": { "workspaceId": "66e…", "installedBy": "66d…", "scopes": ["tasks:read"], "token": "chx_…", "botToken": null } }`, lang: 'http', title: 'Install delivery' },
+                'Verify the signature the same way as for [webhooks](/docs/developers/webhooks). Uninstalling sends `app.uninstalled` with `{ workspaceId }`. Deliveries time out after 8 seconds and are not retried; the admin can paste the token instead.',
+                { h: 'Reviews' },
+                'People in a workspace that installed an app can rate and review it (one review each; saving again replaces it). The average rating is shown on the marketplace card.',
             ],
         },
         {

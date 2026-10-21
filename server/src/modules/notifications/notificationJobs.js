@@ -4,7 +4,7 @@
  * Background notification jobs (registered in notifications.cron.js):
  *
  *   sendMeetingReminders   every minute  in-app + push "starts in 10 min" for scheduled meetings
- *   sendAiSuggestions      hourly        rule-based nudges: overdue tasks, meeting action items
+ *   sendAiSuggestions      hourly        rule-based nudges: overdue tasks, meeting and huddle action items
  *   sendOfflineEmails      every 5 min   email for unread mentions/DMs when the user is offline
  *   sendDigestEmails       hourly        daily / weekly digest email (counts + links only)
  *
@@ -25,6 +25,9 @@ const getIdentity = () => require('../../identity');
 const getPresence = () => require('../../features/presence/presence.service');
 const getScheduledMeeting = () => require('../../models/ScheduledMeeting');
 const getTask = () => require('../../../models/Task');
+const getNote = () => require('../../../models/Note');
+const getHuddleSession = () => require('../huddles/huddleSession.model');
+const getHuddleNotes = () => require('../huddles/huddleNotes');
 const getAccountPrefs = () => require('../../features/auth/notificationPreferences');
 const appUrl = () => require('../../shared/utils/webAppUrl').webAppUrl();
 
@@ -199,7 +202,67 @@ async function sendAiSuggestions(io, { now = new Date() } = {}) {
         }
         meetings += 1;
     }
-    return { overdue, meetings };
+
+    const huddles = await sendHuddleActionSuggestions(io, notif, now);
+    return { overdue, meetings, huddles };
+}
+
+/**
+ * Huddles that ended in the last 24h whose shared notes still have open action items (not done,
+ * not turned into a task): one nudge to whoever started the huddle and one to each assignee,
+ * once per huddle run. Huddles that held a scheduled meeting ("meeting-<id>") are covered by
+ * the meeting rule above. Only the notes' action-item checklist is read, never messages.
+ */
+async function sendHuddleActionSuggestions(io, notif, now) {
+    const sessions = await getHuddleSession().find({
+        endedAt: { $gte: new Date(now.getTime() - DAY), $lte: now },
+        workspace: { $ne: null },
+        notes: { $ne: null },
+        huddleId: { $not: /^meeting-/ },
+    }).select('_id huddleId workspace channel dm channelName startedBy notes').lean();
+    if (!sessions.length) return 0;
+
+    const notes = await getNote().find({ _id: { $in: sessions.map((s) => s.notes) } }).select('_id content').lean();
+    const contentOf = new Map(notes.map((n) => [idStr(n._id), n.content]));
+    const { actionItems } = getHuddleNotes();
+
+    let sent = 0;
+    for (const s of sessions) {
+        const open = actionItems(contentOf.get(idStr(s.notes)) || '[]')
+            .filter((a) => !a.done && !a.taskId && String(a.text || '').trim());
+        if (!open.length) continue;
+        if (!(await claim(`ai:huddle-actions:${s._id}`))) continue;
+        const workspaceId = idStr(s.workspace);
+        const channelId = idStr(s.channel);
+        const dmId = idStr(s.dm);
+        const link = channelId ? `/channel/${channelId}` : (dmId ? `/dm/${dmId}` : '/huddles?tab=history');
+        const where = s.channelName ? `The huddle in #${String(s.channelName).slice(0, 80)}` : 'Your huddle';
+        const meta = { kind: 'huddle_action_items', huddleSessionId: String(s._id), noteId: idStr(s.notes) };
+        const starter = idStr(s.startedBy);
+        if (starter) {
+            await notif.aiSuggestion(io, {
+                userId: starter,
+                workspaceId,
+                title: `${where} ended with ${open.length} open action item${open.length === 1 ? '' : 's'}`,
+                body: 'Turn them into tasks from the huddle notes so nothing slips.',
+                link,
+                meta: { ...meta, count: open.length },
+            });
+        }
+        const assignees = [...new Set(open.map((a) => idStr(a.assigneeId)).filter((u) => u && u !== starter))];
+        for (const uid of assignees) {
+            await notif.aiSuggestion(io, {
+                userId: uid,
+                workspaceId,
+                title: 'You have an action item from a huddle',
+                body: open.filter((a) => idStr(a.assigneeId) === uid).map((a) => String(a.text).slice(0, 120)).join(' · ').slice(0, 200),
+                link,
+                meta,
+            });
+        }
+        sent += 1;
+    }
+    return sent;
 }
 
 // ── Offline email for mentions / DMs ─────────────────────────────────────────

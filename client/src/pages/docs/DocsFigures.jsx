@@ -233,7 +233,7 @@ const FLOWS = {
     'api-flow': [
         { nodes: [{ icon: Code2, title: 'Your app or script', sub: 'curl, SDK, any HTTP client' }] },
         { link: 'X-Api-Key: chx_…' },
-        { nodes: [{ icon: Server, title: '/api/public/*', sub: 'scope check · 100 req/min' }] },
+        { nodes: [{ icon: Server, title: '/api/public/v1/*', sub: 'scope check · 100 req/min' }] },
         { link: 'JSON' },
         { nodes: [{ icon: Database, title: 'One workspace', sub: 'tasks, channels, files, users' }] },
     ],

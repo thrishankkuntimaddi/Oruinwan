@@ -55,7 +55,8 @@ function mockChain(result) {
 
 const appDoc = () => ({ _id: '64b0000000000000000000d1', name: 'Poll', isPublished: true, installedIn: ['64b000000000000000000002'] });
 jest.mock('../app.model', () => ({
-  find: jest.fn(), findById: jest.fn(), countDocuments: jest.fn(async () => 1), updateOne: jest.fn(async () => ({})),
+  find: jest.fn(), findById: jest.fn(), countDocuments: jest.fn(async () => 1), updateOne: jest.fn(async () => ({ modifiedCount: 1 })),
+  APPROVED_QUERY: { isPublished: { $ne: false } },
 }));
 jest.mock('../../community/AppReview.model', () => ({ aggregate: jest.fn(async () => []) }));
 
@@ -67,6 +68,7 @@ jest.mock('../apiKey.model', () => {
     generateKey: real.generateKey,
     find: jest.fn(() => mockChain([])),
     create: jest.fn(async (d) => ({ _id: 'newkey', ...d })),
+    updateMany: jest.fn(async () => ({ modifiedCount: 0 })),
     findById: jest.fn((id) => {
       const doc = mockKeys[String(id)] || null;
       const p = Promise.resolve(doc);
@@ -84,6 +86,7 @@ jest.mock('../bot.model', () => {
     generateToken: real.generateToken,
     find: jest.fn(() => mockChain([])),
     create: jest.fn(async (d) => ({ _id: 'newbot', ...d })),
+    updateMany: jest.fn(async () => ({ modifiedCount: 0 })),
     findById: jest.fn((id) => {
       const doc = mockBots[String(id)] || null;
       const p = Promise.resolve(doc);
@@ -161,14 +164,14 @@ describe('marketplace (M1/M2)', () => {
   test('q is escaped', async () => {
     const res = await call('GET', '/api/marketplace/apps?q=(', null);
     expect(res.status).toBe(200);
-    expect(App.find.mock.calls[0][0].$or[0].name.source).toBe('\\(');
+    expect(App.find.mock.calls[0][0].$and[0].$or[0].name.source).toBe('\\(');
   });
   test('install/uninstall need workspace admin', async () => {
     expect((await call('POST', '/api/marketplace/install', BOB, { appId: APP, workspaceId: WS })).status).toBe(403);
     expect((await call('POST', '/api/marketplace/install', CAROL, { appId: APP, workspaceId: WS })).status).toBe(403);
     const ok = await call('POST', '/api/marketplace/install', ALICE, { appId: APP, workspaceId: WS });
     expect(ok.status).toBe(200);
-    expect(App.updateOne).toHaveBeenCalledWith({ _id: APP }, { $addToSet: { installedIn: WS } });
+    expect(App.updateOne).toHaveBeenCalledWith({ _id: APP, installedIn: { $ne: WS } }, { $addToSet: { installedIn: WS } });
     expect((await call('POST', '/api/marketplace/uninstall', BOB, { appId: APP, workspaceId: OTHER_WS })).status).toBe(403);
     expect((await call('POST', '/api/marketplace/uninstall', ALICE, { appId: APP, workspaceId: WS })).status).toBe(404); // not installed there
     expect((await call('POST', '/api/marketplace/uninstall', CAROL, { appId: APP, workspaceId: OTHER_WS })).status).toBe(200);

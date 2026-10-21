@@ -305,8 +305,6 @@ app.use("/api/ai", requireAuth, require("./src/features/ai/assistant/ai-assistan
 
 app.use("/api/ai", requireAuth, require("./src/features/ai/knowledge/ai-knowledge.routes"));
 
-app.use("/api/ai", requireAuth, require("./src/features/ai/automation/ai-automation.routes"));
-
 app.use("/api/ai", requireAuth, require("./src/features/ai/insights/ai-insights.routes"));
 
 app.use("/api/activity", require("./src/features/activity/activity.routes"));

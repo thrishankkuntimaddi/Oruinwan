@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Puzzle, CheckCircle2, Star, StarHalf, Download, ShoppingBag, ChevronLeft, ChevronRight, MessageSquare, Trash2, Lock,
+  KeyRound, Bot, Copy, Check,
 } from "lucide-react";
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -34,19 +35,37 @@ function StarRating({ rating, size = 12 }) {
 
 const RATING_WORDS = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
 
-function ReviewDialog({ app, onClose, onSubmitted }) {
+function ReviewDialog({ app, workspaceId, onClose, onSubmitted }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [reviews, setReviews] = useState(null);
+  const [avg, setAvg] = useState(app.avgRating || 0);
+  const [total, setTotal] = useState(app.reviewCount || 0);
+  // Only people in a workspace that installed the app may review it (one review each).
+  const canReview = Boolean(app.installed && workspaceId);
+
+  useEffect(() => {
+    let live = true;
+    api.get(`/api/marketplace/reviews/${app._id}`, { params: { limit: 20 } })
+      .then((res) => {
+        if (!live) return;
+        setReviews(res.data.reviews || []);
+        setAvg(res.data.avgRating || 0);
+        setTotal(res.data.total || 0);
+      })
+      .catch(() => { if (live) setReviews([]); });
+    return () => { live = false; };
+  }, [app._id]);
 
   const submit = async () => {
     if (!rating) return setError("Pick a rating first");
     setSubmitting(true);
     setError("");
     try {
-      await api.post("/api/marketplace/review", { appId: app._id, rating, comment });
+      await api.post("/api/marketplace/review", { appId: app._id, rating, comment, workspaceId });
       onSubmitted?.();
       onClose();
     } catch (err) {
@@ -60,32 +79,80 @@ function ReviewDialog({ app, onClose, onSubmitted }) {
     <Dialog
       open
       size="sm"
-      title={`Review ${app.name}`}
-      lead="Tell your team what it’s like to use."
+      title={`Reviews · ${app.name}`}
+      lead={total ? `${avg.toFixed(1)} out of 5 from ${total} review${total === 1 ? '' : 's'}` : 'No reviews yet.'}
       onClose={onClose}
       busy={submitting}
       footer={(
         <>
-          <Btn variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Btn>
-          <Btn variant="primary" onClick={submit} loading={submitting} disabled={!rating}>Send review</Btn>
+          <Btn variant="ghost" onClick={onClose} disabled={submitting}>{canReview ? 'Cancel' : 'Close'}</Btn>
+          {canReview && <Btn variant="primary" onClick={submit} loading={submitting} disabled={!rating}>Save review</Btn>}
         </>
       )}
     >
-      <Field label="Rating" error={error || undefined}>
-        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} onMouseLeave={() => setHover(0)}>
-          {[1, 2, 3, 4, 5].map(n => (
-            <button key={n} type="button" aria-label={`${n} star${n > 1 ? 's' : ''}`} aria-pressed={rating === n}
-              onMouseEnter={() => setHover(n)} onClick={() => setRating(n)}
-              style={{ padding: 3, background: 'none', border: 0, cursor: 'pointer', lineHeight: 0 }}>
-              <Star size={22} style={{ color: (hover || rating) >= n ? 'var(--accent)' : 'var(--border-default)', fill: (hover || rating) >= n ? 'var(--accent)' : 'none' }} />
-            </button>
+      {canReview ? (
+        <>
+          <Field label="Your rating" hint="One review per person. Saving again replaces your earlier review." error={error || undefined}>
+            <div style={{ display: 'flex', gap: 2, alignItems: 'center' }} onMouseLeave={() => setHover(0)}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} type="button" aria-label={`${n} star${n > 1 ? 's' : ''}`} aria-pressed={rating === n}
+                  onMouseEnter={() => setHover(n)} onClick={() => setRating(n)}
+                  style={{ padding: 3, background: 'none', border: 0, cursor: 'pointer', lineHeight: 0 }}>
+                  <Star size={22} style={{ color: (hover || rating) >= n ? 'var(--accent)' : 'var(--border-default)', fill: (hover || rating) >= n ? 'var(--accent)' : 'none' }} />
+                </button>
+              ))}
+              {(hover || rating) > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>{RATING_WORDS[hover || rating]}</span>}
+            </div>
+          </Field>
+          <Field label="Comment" hint="Optional" htmlFor="review-comment">
+            <textarea id="review-comment" className="gl-input" value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} placeholder="What worked, what didn’t?" />
+          </Field>
+        </>
+      ) : (
+        <div className="tk-notice"><Lock size={14} />Install this app in your workspace to review it.</div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }} data-testid="app-reviews">
+        {reviews === null ? <span className="cd-hint">Loading reviews…</span>
+          : reviews.map((r) => (
+            <div key={r._id} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <StarRating rating={r.rating} size={11} />
+                <span style={{ color: 'var(--text-secondary)' }}>{r.userId?.username || 'Someone'}</span>
+              </div>
+              {r.comment && <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text-primary)' }}>{r.comment}</p>}
+            </div>
           ))}
-          {(hover || rating) > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>{RATING_WORDS[hover || rating]}</span>}
-        </div>
-      </Field>
-      <Field label="Comment" hint="Optional" htmlFor="review-comment">
-        <textarea id="review-comment" className="gl-input" value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} placeholder="What worked, what didn’t?" />
-      </Field>
+      </div>
+    </Dialog>
+  );
+}
+
+function SecretRow({ label, value }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => navigator.clipboard?.writeText(value).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
+  return (
+    <Field label={label}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <code className="gl-input" style={{ flex: 1, overflowX: 'auto', whiteSpace: 'nowrap', fontSize: 12 }}>{value}</code>
+        <IconBtn label={`Copy ${label}`} onClick={copy}>{copied ? <Check size={14} /> : <Copy size={14} />}</IconBtn>
+      </div>
+    </Field>
+  );
+}
+
+/** Shown once after installing an app that was issued tokens. */
+function InstalledDialog({ result, onClose }) {
+  return (
+    <Dialog open size="sm" title={`${result.name} installed`} onClose={onClose}
+      lead={result.webhookDelivered
+        ? 'The app received its token automatically. Keep a copy only if the app’s setup asks you to paste it.'
+        : 'Copy the token into the app’s setup. It is shown only once; uninstalling the app revokes it.'}
+      footer={<Btn variant="primary" onClick={onClose}>Done</Btn>}>
+      {result.appToken && <SecretRow label="App token (X-Api-Key)" value={result.appToken} />}
+      {result.botToken && <SecretRow label="Bot token" value={result.botToken} />}
+      {result.scopes?.length > 0 && (
+        <p className="cd-hint" style={{ margin: 0 }}>Access granted: {result.scopes.join(', ')}</p>
+      )}
     </Dialog>
   );
 }
@@ -107,6 +174,12 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
           : SAMPLE_APP_NAMES.has(app.name) && <Chip title="An example listing: installing it doesn’t connect anything">Sample</Chip>}
       </div>
       <p className="tk-card-text" style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.description}</p>
+      {(app.scopes?.length > 0 || app.botUser?.enabled) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }} aria-label="Access this app asks for">
+          {app.scopes?.length > 0 && <Chip title={app.scopes.join(', ')}><KeyRound size={10} />{app.scopes.length} scope{app.scopes.length === 1 ? '' : 's'}</Chip>}
+          {app.botUser?.enabled && <Chip title="Adds a bot user to the workspace"><Bot size={10} />Bot user</Chip>}
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--text-muted)' }}>
         <StarRating rating={app.avgRating || 0} />
         <span>{app.avgRating > 0 ? <>{app.avgRating.toFixed(1)} ({app.reviewCount})</> : "No reviews yet"}</span>
@@ -124,7 +197,7 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
         ) : (
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{installed ? 'Installed in this workspace' : 'Not installed'}</span>
         )}
-        <IconBtn label={`Review ${app.name}`} onClick={() => onReview(app)}><MessageSquare size={14} /></IconBtn>
+        <IconBtn label={`Reviews of ${app.name}`} onClick={() => onReview(app)}><MessageSquare size={14} /></IconBtn>
       </div>
     </div>
   );
@@ -147,6 +220,7 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
   const [reviewApp, setReviewApp] = useState(null);
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [busy, setBusy] = useState({});
+  const [installResult, setInstallResult] = useState(null);
 
   const fetchApps = useCallback(async () => {
     setLoading(true);
@@ -181,9 +255,10 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
   const runAction = async (app, action) => {
     setBusy(b => ({ ...b, [app._id]: true }));
     try {
-      await api.post(`/api/marketplace/${action}`, { appId: app._id, workspaceId });
+      const res = await api.post(`/api/marketplace/${action}`, { appId: app._id, workspaceId });
       setInstalled(app._id, action === 'install');
-      showToast(action === 'install' ? `${app.name} installed` : `${app.name} uninstalled`, 'success');
+      if (action === 'install' && (res?.data?.appToken || res?.data?.botToken)) setInstallResult({ ...res.data, name: app.name });
+      else showToast(action === 'install' ? `${app.name} installed` : `${app.name} uninstalled`, 'success');
     } catch (err) {
       const status = err?.response?.status;
       if (action === 'install' && status === 409) setInstalled(app._id, true);
@@ -201,9 +276,10 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {reviewApp && (
-        <ReviewDialog app={reviewApp} onClose={() => setReviewApp(null)}
-          onSubmitted={() => { showToast("Thanks, your review is posted", "success"); fetchApps(); }} />
+        <ReviewDialog app={reviewApp} workspaceId={workspaceId} onClose={() => setReviewApp(null)}
+          onSubmitted={() => { showToast("Thanks, your review is saved", "success"); fetchApps(); }} />
       )}
+      {installResult && <InstalledDialog result={installResult} onClose={() => setInstallResult(null)} />}
 
       <Toolbar>
         <SearchBox value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search apps" label="Search marketplace" />
@@ -255,7 +331,7 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
         onConfirm={() => { const a = confirmRemove; setConfirmRemove(null); runAction(a, 'uninstall'); }}
         onClose={() => setConfirmRemove(null)}
       >
-        It’s removed from this workspace for everyone. You can install it again at any time.
+        It’s removed from this workspace for everyone and its app token and bot user are revoked. You can install it again at any time.
       </Confirm>
     </div>
   );

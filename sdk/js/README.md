@@ -22,6 +22,14 @@ const { messages } = await oruinwan.messages.list({ channelId, limit: 50 });
 const { users } = await oruinwan.users.list();
 ```
 
+The SDK calls the versioned public API at `/api/public/v1/*` (the unversioned `/api/public/*` path is a deprecated alias).
+App tokens issued when a marketplace app is installed work exactly like API keys, limited to the app's declared scopes.
+
+```js
+const me = await oruinwan.me();          // { workspaceId, keyPrefix, name, scopes, app }
+const spec = await oruinwan.openapi();   // OpenAPI 3 document of the public API
+```
+
 Public endpoints are rate limited to 100 requests per minute per key. GET requests are retried on 429 and 5xx with backoff.
 
 ## On behalf of a user (JWT)

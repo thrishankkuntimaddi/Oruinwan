@@ -11,7 +11,7 @@ import '../workspace-os/wos.css';
 const CATEGORIES = ['general', 'engineering', 'design', 'marketing', 'sales', 'hr', 'finance', 'support', 'product', 'custom'];
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const newForm = () => ({
-    name: '', description: '', category: 'general', isPublic: false,
+    name: '', description: '', category: 'general',
     defaultChannels: [{ name: 'general', description: 'General discussion', isPrivate: false, isDefault: true }],
 });
 
@@ -131,7 +131,7 @@ export default function WorkspaceTemplates() {
                                         <h3 className="wo-card-title">{t.name}</h3>
                                         <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                                             <Chip tone="accent">{cap(t.category || 'general')}</Chip>
-                                            {t.isPublic && <Chip tone="success">Public</Chip>}
+                                            {t.isPublic && t.company && <Chip tone="success">Public</Chip>}
                                             {!t.company && <Chip>Oruinwan</Chip>}
                                         </div>
                                     </div>
@@ -185,10 +185,10 @@ export default function WorkspaceTemplates() {
                                     </SelectBox>
                                 </Field>
                             </div>
-                            <label className="wo-check" style={{ paddingBottom: 8 }}>
-                                <input type="checkbox" checked={form.isPublic} onChange={(e) => setF('isPublic', e.target.checked)} />
-                                Share with other companies
-                            </label>
+                            <p className="cd-hint" style={{ margin: 0, paddingBottom: 8, flex: '1 1 200px' }}>
+                                Company templates stay inside your company. To share a workspace’s structure with everyone, open
+                                the workspace’s Templates page and choose <strong>Share this workspace</strong>; a moderator reviews it first.
+                            </p>
                         </div>
                         <Field label="Default channels">
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

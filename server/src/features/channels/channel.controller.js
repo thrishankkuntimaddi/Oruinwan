@@ -1695,7 +1695,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
 
     const isWorkspaceMember = workspace.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
-      return memberId === userId.toString();
+      return memberId === userId.toString() && (m.status || 'active') === 'active';
     });
 
     if (!isWorkspaceMember) {

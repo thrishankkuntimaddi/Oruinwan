@@ -11,6 +11,10 @@ REST API for workspace integrations, authenticated with a workspace API key
 | `/api/public/*` (no version) | **Deprecated alias** of v1. It behaves exactly like v1 and will be removed in a later release. | `API-Version: v1`, `Deprecation: @1792540800` (RFC 9745, 2026-10-21T00:00:00Z), `Link: </api/public/v1/<path>>; rel="successor-version"` |
 | `/api/public/v<N>/*` for any other N | Not supported | `404 { "message": "Unsupported public API version. Use /api/public/v1." }` |
 
+`GET /api/public/v1/openapi.json` returns the OpenAPI 3.0 description of v1. It needs no key and is
+not rate limited per key (`Cache-Control: public, max-age=300`). Source: `publicApi.openapi.js`; a test
+checks that every v1 route is described. The Developer portal renders it under **Docs → API Reference**.
+
 Unknown endpoints under `/api/public/v1/` return `404 { "message": "Unknown public API endpoint" }`.
 Both paths share one router, so the per-key rate limit is shared too.
 
@@ -27,6 +31,16 @@ Server: `server/src/features/developer/publicApi.versioning.js` (mount) and
 ## Endpoints (v1)
 
 `limit` query params default to 50; the maximum is 100.
+
+### `GET /api/public/v1/me` (no scope)
+Describes the calling key. App tokens (issued when a marketplace app is installed, see
+[developer.md](developer.md)) name their app.
+
+```json
+{ "workspaceId": "…", "keyPrefix": "chx_1a2b3c4d", "name": "App: Standup", "scopes": ["tasks:read"],
+  "app": { "id": "…", "name": "Standup" } }
+```
+`app` is `null` for ordinary API keys.
 
 ### `GET /api/public/v1/messages` (scope `messages:read`)
 Messages in public, non-archived channels, newest first. Messages are end-to-end encrypted, so
@@ -65,6 +79,5 @@ Non-private, non-archived channels. Response: `{ "channels": [...], "count": n }
 ## Migrating clients
 
 Replace the `/api/public/` base with `/api/public/v1/`. Nothing else changes. Clients can detect the
-deprecated path by the `Deprecation` response header. (The web Developer portal and docs pages under
-`client/src/pages/developer`, `client/src/content/docs/developers.js` and
-`client/src/pages/docs/DocsFigures.jsx` still show the unversioned base URL and should be updated.)
+deprecated path by the `Deprecation` response header. The web Developer portal, the docs and the JS SDK
+(`@oruinwan/sdk` 1.1.0: `sdk.me()`, `sdk.openapi()`) all use `/api/public/v1`.

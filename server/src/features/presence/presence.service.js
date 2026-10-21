@@ -56,6 +56,8 @@ async function setOnline(io, userId, socketId, companyId) {
     .exec());
 
   identity.users.setOnline(userId, true).catch(() => {});
+  // Counts-only daily-active record for company engagement charts (never throws).
+  require('../analytics/activeDays').markActive(userId, companyId);
 
   if (companyId) {
     io.to(`company_${companyId}`).emit('user:online', {
@@ -79,6 +81,7 @@ async function setIdle(io, userId, companyId) {
     .exec());
 
   identity.users.touchActivity(userId).catch(() => {});
+  require('../analytics/activeDays').markActive(userId, companyId);
 
   if (companyId) {
     io.to(`company_${companyId}`).emit('user:idle', {

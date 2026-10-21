@@ -4,12 +4,13 @@ import {
     Activity, Users, CheckSquare, TrendingUp, AlertTriangle, Coffee, BarChart2,
     Zap, RefreshCw, Hash, Target, Layers, Briefcase, Lock,
 } from 'lucide-react';
-import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@services/api';
 import {
     DashPage, PageHead, KpiGrid, Kpi, Grid, Panel, FilterTabs, Btn, Chip, Meter, Avatar,
     EmptyState, LoadingState, errorMessage,
 } from '../../components/company-dash/dashUi';
+import { ActiveMembersPanel, TeamDeliveryPanel } from './InsightsPanels';
 import '../OwnerDashboard/owner.css';
 
 const AXIS = { fontSize: 11, fill: 'var(--text-secondary)' };
@@ -27,7 +28,11 @@ const ENDPOINTS = {
     tasks: '/api/dashboard/analytics/tasks',
     engagement: '/api/dashboard/analytics/engagement',
     workload: '/api/analytics/insights/workload',
+    activeMembers: '/api/dashboard/analytics/active-members',
+    teams: '/api/dashboard/analytics/teams',
 };
+// Weeks of team delivery for each period choice.
+const WEEKS = { 7: 4, 30: 8, 90: 13 };
 
 const pct = (v) => (v == null ? null : `${v}%`);
 const WL_TONE = { overloaded: 'danger', balanced: 'success', idle: undefined };
@@ -66,7 +71,7 @@ const InsightsDashboard = () => {
     const load = useCallback(async () => {
         setState((s) => ({ ...s, loading: true }));
         const keys = Object.keys(ENDPOINTS);
-        const results = await Promise.allSettled(keys.map((k) => api.get(ENDPOINTS[k], { params: { period } })));
+        const results = await Promise.allSettled(keys.map((k) => api.get(ENDPOINTS[k], { params: k === 'teams' ? { weeks: WEEKS[period] || 8 } : { period } })));
         const data = {};
         const errors = {};
         results.forEach((r, i) => {
@@ -99,7 +104,7 @@ const InsightsDashboard = () => {
                     lead="People, tasks, engagement and workload across your company"
                     actions={(
                         <>
-                            <FilterTabs label="Period" value={period} onChange={setPeriod} options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }]} />
+                            <FilterTabs label="Period" value={period} onChange={setPeriod} options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]} />
                             <Btn icon={RefreshCw} loading={loading} onClick={load}>Refresh</Btn>
                         </>
                     )}
@@ -123,20 +128,11 @@ const InsightsDashboard = () => {
 
                     <Grid cols="1">
                         {/* No per-person rankings: insights stay company-wide (see docs → What admins can see). */}
-                        <Panel title="Active people over time" icon={Activity}>
-                            <PanelBody error={errors.users} empty={!activeTrend.some((d) => d.value > 0)} emptyText="No activity in this period">
-                                <div className="od-chart" style={{ height: 180 }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={activeTrend} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
-                                            <XAxis dataKey="label" tick={AXIS} axisLine={false} tickLine={false} minTickGap={12} />
-                                            <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-                                            <Tooltip {...tooltipProps} />
-                                            <Area type="monotone" dataKey="value" name="Active people" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.15} strokeWidth={2} />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </PanelBody>
-                        </Panel>
+                        <ActiveMembersPanel data={data.activeMembers} error={errors.activeMembers || errors.users} fallbackTrend={activeTrend} />
+                    </Grid>
+
+                    <Grid cols="1">
+                        <TeamDeliveryPanel data={data.teams} error={errors.teams} />
                     </Grid>
 
                     <Grid cols="2">

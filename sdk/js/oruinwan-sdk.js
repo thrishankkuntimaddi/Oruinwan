@@ -35,7 +35,8 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
+  const PUBLIC_BASE = '/api/public/v1';
   const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
 
   class OruinwanError extends Error {
@@ -62,7 +63,7 @@
     /**
      * @param {object} options
      * @param {string} [options.baseUrl]       Origin of the Oruinwan API (no trailing slash). Defaults to window.location.origin in browsers.
-     * @param {string} [options.apiKey]        Public API key (chx_...). Used for /api/public/* resources.
+     * @param {string} [options.apiKey]        Public API key (chx_...). Used for /api/public/v1/* resources.
      * @param {string} [options.accessToken]   User JWT for user-scoped endpoints.
      * @param {string} [options.refreshToken]  Refresh token (native/SDK clients only).
      * @param {Function} [options.fetch]       Custom fetch implementation.
@@ -101,6 +102,10 @@
       this.files = this._publicResource('files');
       this.users = this._publicResource('users');
       this.channels = this._publicResource('channels');
+      /** The calling API key / app token: { workspaceId, keyPrefix, name, scopes, app }. */
+      this.me = () => this.request(`${PUBLIC_BASE}/me`, { auth: 'apiKey' });
+      /** The public API's OpenAPI 3 document (no key needed). */
+      this.openapi = () => this.request(`${PUBLIC_BASE}/openapi.json`, { auth: 'none' });
       this.webhooks = this._webhooksResource();
       this.ai = this._aiResource();
       this.realtime = this._realtimeResource();
@@ -239,10 +244,10 @@
       const sdk = this;
       const api = {
         /** @param {object} [params] Query params such as limit, status, channelId. */
-        list: (params = {}) => sdk.request(`/api/public/${resource}`, { params }),
+        list: (params = {}) => sdk.request(`${PUBLIC_BASE}/${resource}`, { params }),
       };
       if (create) {
-        api.create = (data = {}) => sdk.request(`/api/public/${resource}`, { method: 'POST', body: data });
+        api.create = (data = {}) => sdk.request(`${PUBLIC_BASE}/${resource}`, { method: 'POST', body: data });
       }
       return api;
     }

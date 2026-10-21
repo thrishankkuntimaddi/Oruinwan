@@ -17,6 +17,7 @@ const { isValidId } = require('../../shared/utils/workspaceAccess');
  *   GET  /files      files:read      non-deleted workspace files
  *   GET  /users      users:read      active members
  *   GET  /channels   channels:read   non-private, non-archived channels
+ *   GET  /me         (any scope)     the key itself: workspace, scopes, owning app
  */
 
 const publicApiLimiter = rateLimit({
@@ -107,6 +108,29 @@ router.get('/messages', requireScope('messages:read'), async (req, res) => {
   } catch (err) {
     logger.error('[PublicAPI] GET /messages error:', err.message);
     res.status(500).json({ message: 'Failed to fetch messages' });
+  }
+});
+
+/** GET /me — describes the calling key (no scope needed). App tokens name their app. */
+router.get('/me', async (req, res) => {
+  try {
+    const k = req.apiKeyDoc;
+    let app = null;
+    if (k.appId) {
+      const App = require('./app.model');
+      const doc = await App.findById(k.appId).select('name').lean();
+      app = doc ? { id: String(doc._id), name: doc.name } : { id: String(k.appId), name: null };
+    }
+    res.json({
+      workspaceId: String(k.workspaceId),
+      keyPrefix: k.keyPrefix,
+      name: k.name || null,
+      scopes: Array.isArray(k.permissions) ? k.permissions : [],
+      app,
+    });
+  } catch (err) {
+    logger.error('[PublicAPI] GET /me error:', err.message);
+    res.status(500).json({ message: 'Failed to describe API key' });
   }
 });
 

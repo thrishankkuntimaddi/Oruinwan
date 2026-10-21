@@ -20,6 +20,14 @@ const DEPRECATED_AT = '@1792540800';
 
 const versioned = express.Router();
 
+// OpenAPI description of v1: public (no key, no per-key rate-limit bucket).
+versioned.get(`/${CURRENT_VERSION}/openapi.json`, (req, res) => {
+    const { buildOpenApiSpec } = require('./publicApi.openapi');
+    res.set('API-Version', CURRENT_VERSION);
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json(buildOpenApiSpec({ serverUrl: `${req.baseUrl}/${CURRENT_VERSION}` }));
+});
+
 versioned.use(`/${CURRENT_VERSION}`, (req, res, next) => {
     res.set('API-Version', CURRENT_VERSION);
     next();

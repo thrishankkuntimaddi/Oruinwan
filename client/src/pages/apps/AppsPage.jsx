@@ -5,6 +5,7 @@ import { useFlag } from '../../contexts/FeatureFlagsContext';
 import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
 import MarketplacePanel from "../../components/apps/MarketplacePanel";
+import IntegrationsDirectory from "../../components/apps/IntegrationsDirectory";
 import useIsWorkspaceAdmin from "../../components/apps/useIsWorkspaceAdmin";
 import { REAL_INTEGRATIONS, BASIC_CONNECTIONS } from "../../components/apps/realIntegrations";
 import { getIntegrations, getWebhooks } from "../../services/integrations.service";
@@ -80,6 +81,13 @@ export default function AppsPage() {
 
       <Section title="Marketplace" lead="Apps built for Oruinwan. Installing one adds it for everyone in this workspace.">
         <MarketplacePanel workspaceId={workspaceId} canManage={isAdmin} />
+      </Section>
+
+      <Section
+        title="All integrations"
+        lead="Every connector this server supports. Each one is set up with a token or webhook URL in integration settings."
+      >
+        <IntegrationsDirectory onSetup={integrationsEnabled && isAdmin ? openSettings : undefined} />
       </Section>
 
       {integrationsEnabled && selected && (

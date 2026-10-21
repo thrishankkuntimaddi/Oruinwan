@@ -21,17 +21,17 @@ function mockFetch(routes) {
 
 describe('OruinwanSDK', () => {
   test('uses X-Api-Key for public resources and builds query strings', async () => {
-    const { fetchImpl, calls } = mockFetch([{ match: '/api/public/tasks', respond: () => ({ status: 200, body: { tasks: [], count: 0 } }) }]);
+    const { fetchImpl, calls } = mockFetch([{ match: '/api/public/v1/tasks', respond: () => ({ status: 200, body: { tasks: [], count: 0 } }) }]);
     const sdk = new OruinwanSDK({ baseUrl: 'https://api.test/', apiKey: 'chx_1', fetch: fetchImpl });
     const out = await sdk.tasks.list({ status: 'todo', limit: 5, skip: undefined });
     expect(out.count).toBe(0);
-    expect(calls[0].url).toBe('https://api.test/api/public/tasks?status=todo&limit=5');
+    expect(calls[0].url).toBe('https://api.test/api/public/v1/tasks?status=todo&limit=5');
     expect(calls[0].init.headers['X-Api-Key']).toBe('chx_1');
     expect(calls[0].init.headers.Authorization).toBeUndefined();
   });
 
   test('throws OruinwanError with status and body on failure', async () => {
-    const { fetchImpl } = mockFetch([{ match: '/api/public/tasks', respond: () => ({ status: 403, body: { error: 'API key does not have tasks:write permission' } }) }]);
+    const { fetchImpl } = mockFetch([{ match: '/api/public/v1/tasks', respond: () => ({ status: 403, body: { error: 'API key does not have tasks:write permission' } }) }]);
     const sdk = new OruinwanSDK({ baseUrl: 'https://api.test', apiKey: 'k', fetch: fetchImpl });
     await expect(sdk.tasks.create({ title: 'x' })).rejects.toMatchObject({ name: 'OruinwanError', status: 403 });
   });
@@ -68,8 +68,8 @@ describe('OruinwanSDK', () => {
   test('retries GET on 429 honoring retry-after, never retries POST', async () => {
     let gets = 0; let posts = 0;
     const { fetchImpl } = mockFetch([
-      { match: /public\/files/, respond: () => { gets += 1; return gets < 2 ? { status: 429, body: { error: 'slow down' }, headers: { 'retry-after': '0' } } : { status: 200, body: { files: [] } }; } },
-      { match: /public\/tasks/, respond: () => { posts += 1; return { status: 503, body: { error: 'down' } }; } },
+      { match: /public\/v1\/files/, respond: () => { gets += 1; return gets < 2 ? { status: 429, body: { error: 'slow down' }, headers: { 'retry-after': '0' } } : { status: 200, body: { files: [] } }; } },
+      { match: /public\/v1\/tasks/, respond: () => { posts += 1; return { status: 503, body: { error: 'down' } }; } },
     ]);
     const sdk = new OruinwanSDK({ baseUrl: 'https://api.test', apiKey: 'k', fetch: fetchImpl, retries: 2 });
     await expect(sdk.files.list()).resolves.toEqual({ files: [] });
@@ -118,10 +118,27 @@ describe('deprecated Chttrix aliases', () => {
   });
 
   test('still sends the legacy X-Chttrix-SDK header', async () => {
-    const { fetchImpl, calls } = mockFetch([{ match: '/api/public/tasks', respond: () => ({ status: 200, body: { tasks: [] } }) }]);
+    const { fetchImpl, calls } = mockFetch([{ match: '/api/public/v1/tasks', respond: () => ({ status: 200, body: { tasks: [] } }) }]);
     const sdk = new mod.ChttrixSDK({ baseUrl: 'https://api.test', apiKey: 'k', fetch: fetchImpl });
     await sdk.tasks.list();
     expect(calls[0].init.headers['X-Chttrix-SDK']).toMatch(/^js\//);
+  });
+
+  test('public resources use /api/public/v1; me() and openapi()', async () => {
+    const { fetchImpl, calls } = mockFetch([
+      { match: '/api/public/v1/me', respond: () => ({ status: 200, body: { workspaceId: 'w1', scopes: ['tasks:read'], app: null } }) },
+      { match: '/api/public/v1/openapi.json', respond: () => ({ status: 200, body: { openapi: '3.0.3' } }) },
+      { match: '/api/public/v1/channels', respond: () => ({ status: 200, body: { channels: [], count: 0 } }) },
+    ]);
+    const sdk = new OruinwanSDK({ baseUrl: 'https://api.test', apiKey: 'chx_k', accessToken: 'jwt', fetch: fetchImpl });
+    expect((await sdk.me()).workspaceId).toBe('w1');
+    expect(calls[0].init.headers['X-Api-Key']).toBe('chx_k');
+    expect(calls[0].init.headers.Authorization).toBeUndefined();
+    expect((await sdk.openapi()).openapi).toBe('3.0.3');
+    expect(calls[1].init.headers['X-Api-Key']).toBeUndefined();
+    await sdk.channels.list();
+    expect(calls[2].url).toBe('https://api.test/api/public/v1/channels');
+    expect(OruinwanSDK.version).toBe('1.1.0');
   });
 
   test('browser build exposes both globals', () => {
