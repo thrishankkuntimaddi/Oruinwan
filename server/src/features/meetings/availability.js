@@ -140,6 +140,7 @@ function findSlots({
             availableCount: people.length - busyIds.length,
             attendeeCount: people.length,
             allAvailable: busyIds.length === 0,
+            score: people.length ? Math.round(((people.length - busyIds.length) / people.length) * 100) / 100 : 0,
             unavailable: busyIds,
         };
         if (slot.allAvailable) {

@@ -55,7 +55,7 @@ Response `200`:
   "suggestedEnd":   "2026-10-22T13:30:00.000Z",
   "durationMinutes": 30,
   "slots": [
-    { "start": "...", "end": "...", "allAvailable": true, "availableCount": 3, "attendeeCount": 3, "unavailable": [] }
+    { "start": "...", "end": "...", "score": 1, "allAvailable": true, "availableCount": 3, "attendeeCount": 3, "unavailable": [] }
   ],
   "window": { "from": "...", "to": "..." },
   "note": "No time suits everyone; showing the slots most attendees can make"   // only when relevant
