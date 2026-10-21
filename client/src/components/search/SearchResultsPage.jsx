@@ -179,6 +179,14 @@ export default function SearchResultsPage() {
                 people={suggestions.people}
             />
 
+            {/* The server explains operators it could not use (they are searched as words). */}
+            {settled && !error && Array.isArray(results.syntax?.warnings) && results.syntax.warnings.length > 0 && (
+                <div className="gl-x-note srp-syntax-warnings" role="note" data-testid="search-syntax-warnings">
+                    <AlertCircle size={13} />
+                    <span>{results.syntax.warnings.join(' · ')}</span>
+                </div>
+            )}
+
             <div className="srp-layout">
                 <div className="srp-sidebar">
                     <div className="srp-filter-card">

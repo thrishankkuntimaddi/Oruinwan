@@ -54,7 +54,7 @@ export function indexConversation({ id, type, name, workspaceId }, events = []) 
  * Matches shaped like server message results, newest first. `query` may use the
  * operators from ./searchQuery; a query made only of operators lists every match.
  */
-export function searchLocalMessages(query, workspaceId, limit = 20) {
+export function searchLocalMessages(query, workspaceId, limit = 20, me = null) {
     const raw = String(query || '').trim();
     if (!raw) return [];
     const parsed = parseSearchQuery(raw);
@@ -65,7 +65,7 @@ export function searchLocalMessages(query, workspaceId, limit = 20) {
     for (const [convId, conv] of conversations) {
         if (workspaceId && conv.workspaceId && conv.workspaceId !== String(workspaceId)) continue;
         for (const m of conv.messages.values()) {
-            if (!matchesMessage(parsed, m, conv)) continue;
+            if (!matchesMessage(parsed, m, conv, me)) continue;
             out.push({
                 ...m,
                 id: m._id,

@@ -20,6 +20,22 @@ export function stripMarkdown(text = '') {
         .trim();
 }
 
+/**
+ * The signed-in user ({ id, username }) from the access token, so local message
+ * search can honour from:me the way the server does. Null when unknown.
+ */
+export function currentSearchUser(token = (() => { try { return localStorage.getItem('accessToken'); } catch { return null; } })()) {
+    try {
+        const part = String(token || '').split('.')[1];
+        if (!part) return null;
+        const json = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+        const id = json.sub || json.id || json.userId || json._id || null;
+        return id || json.username ? { id: id ? String(id) : null, username: json.username || null } : null;
+    } catch {
+        return null;
+    }
+}
+
 /** Local (decrypted in this session) matches, shaped like server message results. */
 function toServerShape(m) {
     const isChannel = !!m.channelId;
@@ -62,7 +78,7 @@ export async function searchAll(query, filters = {}, workspaceId, { signal } = {
     // decrypted in this session to whatever the server found (first page only).
     const wantsMessages = !filters.type || filters.type === 'all' || filters.type === 'message';
     if (wantsMessages && !filters.offset) {
-        const local = searchLocalMessages(query, workspaceId, filters.limit || 20).map(toServerShape);
+        const local = searchLocalMessages(query, workspaceId, filters.limit || 20, currentSearchUser()).map(toServerShape);
         if (local.length) {
             const key = m => String(m.id || m._id);
             const seen = new Set(data.messages.map(key));

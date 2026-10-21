@@ -1,17 +1,32 @@
 // Search query syntax shared by the results page and local (decrypted) message search.
-// The server understands the same operators, so the raw query is sent unchanged.
+// It mirrors the server parser (server/src/features/search/queryParser.js, docs/api/search.md),
+// which reads the same raw query, so the chips, the local message matches and the server
+// results agree.
 //
-//   from:@username   in:#channel (or in:@person for a DM)
-//   before:YYYY-MM-DD   after:YYYY-MM-DD   on:YYYY-MM-DD
+//   from:@username|me   in:#channel (or in:@person: DMs, local message search only)
+//   before:YYYY-MM-DD   after:YYYY-MM-DD   on:YYYY-MM-DD     (UTC days, like the server)
 //   has:file|link|image   is:pinned|thread
-//   type:task|note|file|page|message
+//   type:message|task|note|file|page|channel|person  (+ the server's aliases)
 //   "quoted phrases"   and plain words
 //
 // Operators with an unknown key or an invalid value stay as plain words.
 
 export const HAS_VALUES = ['file', 'link', 'image'];
 export const IS_VALUES = ['pinned', 'thread'];
-export const TYPE_VALUES = ['task', 'note', 'file', 'page', 'message'];
+export const TYPE_VALUES = ['message', 'task', 'note', 'file', 'page', 'channel', 'person'];
+/** The server's type: aliases, mapped to the names used in queries here. */
+export const TYPE_ALIASES = {
+    message: 'message', messages: 'message', msg: 'message',
+    task: 'task', tasks: 'task',
+    note: 'note', notes: 'note',
+    file: 'file', files: 'file',
+    page: 'page', pages: 'page', knowledge: 'page', doc: 'page', docs: 'page',
+    channel: 'channel', channels: 'channel',
+    person: 'person', people: 'person', user: 'person', users: 'person', contact: 'person',
+};
+/** Same input limits as the server. */
+export const MAX_QUERY_LENGTH = 512;
+export const MAX_TOKENS = 64;
 const LIST_KEYS = ['from', 'in', 'has', 'is', 'type'];
 const DATE_KEYS = ['before', 'after', 'on'];
 export const OPERATOR_KEYS = [...LIST_KEYS, ...DATE_KEYS];
@@ -38,18 +53,32 @@ function normalizeValue(key, raw) {
     const lower = value.toLowerCase();
     if (key === 'has') return HAS_VALUES.includes(lower) ? lower : null;
     if (key === 'is') return IS_VALUES.includes(lower) ? lower : null;
-    if (key === 'type') return TYPE_VALUES.includes(lower) ? lower : null;
-    return value;
+    if (key === 'type') return TYPE_ALIASES[lower] || null;
+    // The server lower-cases every value; do the same so chips show what it searched.
+    return lower;
 }
 
-/** Splits into tokens, keeping "quoted phrases" and key:"quoted values" together. */
+/**
+ * Splits into tokens like the server: a quote always starts a phrase (even mid-word,
+ * so abc"def" is the word abc and the phrase def), and KEY:"quoted value" stays together
+ * for the eight operator keys. Reads at most MAX_QUERY_LENGTH chars and MAX_TOKENS tokens.
+ */
 function tokenize(input) {
     const tokens = [];
-    const re = /([a-zA-Z]+):"([^"]*)"?|"([^"]*)"?|(\S+)/g;
+    const re = /([a-zA-Z]+):"([^"]*)"?|"([^"]*)"?|([^\s"]+)/g;
+    const text = String(input || '').slice(0, MAX_QUERY_LENGTH);
     let m;
-    while ((m = re.exec(input))) {
-        if (m[1] !== undefined) tokens.push({ key: m[1].toLowerCase(), value: m[2], raw: m[0] });
-        else if (m[3] !== undefined) tokens.push({ phrase: m[3], raw: m[0] });
+    while ((m = re.exec(text)) && tokens.length < MAX_TOKENS) {
+        if (m[1] !== undefined) {
+            const key = m[1].toLowerCase();
+            if (OPERATOR_KEYS.includes(key)) {
+                tokens.push({ key, value: m[2], raw: m[0] });
+            } else {
+                // Not an operator: "ratio:" is a word and the quoted part a phrase.
+                tokens.push({ word: m[1] + ':', raw: m[1] + ':' });
+                if (tokens.length < MAX_TOKENS) tokens.push({ phrase: m[2], raw: m[0].slice(m[1].length + 1) });
+            }
+        } else if (m[3] !== undefined) tokens.push({ phrase: m[3], raw: m[0] });
         else tokens.push({ word: m[4], raw: m[0] });
     }
     return tokens;
@@ -179,12 +208,20 @@ export function removeQueryOperator(query, key, value) {
 
 const LINK_RE = /(https?:\/\/|www\.)\S+/i;
 
-/** Local calendar day of a date as YYYY-MM-DD. */
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** Local calendar day of a date as YYYY-MM-DD (for chips the user picks, like "Today"). */
 export function dayKey(date) {
     const d = date instanceof Date ? date : new Date(date);
     if (Number.isNaN(d.getTime())) return null;
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** UTC day of a date as YYYY-MM-DD: the server reads before:/after:/on: as UTC days. */
+export function utcDayKey(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
 }
 
 const isImage = (a) => /^image\//i.test(a?.mimeType || a?.mimetype || a?.type || '')
@@ -196,8 +233,9 @@ const isImage = (a) => /^image\//i.test(a?.mimeType || a?.mimetype || a?.type ||
  * @param {object} parsed  from parseSearchQuery
  * @param {object} msg     { text, sender:{username}, createdAt, attachments?, isPinned?, threadParentId?, replyCount? }
  * @param {object} conv    { type:'channel'|'dm', name }
+ * @param {object} [me]    the signed-in user { id, username }, for from:me
  */
-export function matchesMessage(parsed, msg, conv = {}) {
+export function matchesMessage(parsed, msg, conv = {}, me = null) {
     if (parsed.type.length && !parsed.type.includes('message')) return false;
 
     const attachments = msg.attachments || [];
@@ -208,7 +246,10 @@ export function matchesMessage(parsed, msg, conv = {}) {
 
     if (parsed.from.length) {
         const sender = String(msg.sender?.username || msg.sender?.name || '').toLowerCase();
-        if (!parsed.from.some((f) => f.toLowerCase() === sender)) return false;
+        const senderId = String(msg.sender?._id || msg.sender?.id || msg.senderId || '');
+        const isMe = !!me && ((me.id && senderId && String(me.id) === senderId)
+            || (me.username && String(me.username).toLowerCase() === sender));
+        if (!parsed.from.some((f) => (f === 'me' ? isMe : f === sender))) return false;
     }
     if (parsed.in.length) {
         const name = String(conv.name || '').toLowerCase();
@@ -222,7 +263,7 @@ export function matchesMessage(parsed, msg, conv = {}) {
     }
 
     if (parsed.before || parsed.after || parsed.on) {
-        const day = dayKey(msg.createdAt);
+        const day = utcDayKey(msg.createdAt);
         if (!day) return false;
         if (parsed.on && day !== parsed.on) return false;
         if (parsed.before && !(day < parsed.before)) return false;

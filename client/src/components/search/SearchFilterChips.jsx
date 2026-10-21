@@ -11,6 +11,8 @@ const TYPE_OPTIONS = [
     { value: 'task', label: 'Tasks' },
     { value: 'note', label: 'Notes' },
     { value: 'page', label: 'Knowledge pages' },
+    { value: 'channel', label: 'Channels' },
+    { value: 'person', label: 'People' },
 ];
 
 const HAS_OPTIONS = [
