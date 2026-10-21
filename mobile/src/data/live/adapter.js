@@ -14,6 +14,7 @@ import { clientPlatform } from '../../native/index.js';
 import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, searchIndex, unloaded } from './messageIndex.js';
 import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
 import { fileIconKind } from '../../lib/files.js';
+import { chatsAdapter, messageExtras } from './adapter.chats.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -114,6 +115,7 @@ function toAppMessage(conv, m, text, state) {
     pinned: Boolean(m.isPinned),
     // Channel and DM attachments are on the message; thread replies keep them in the payload.
     attachments: (m.attachments?.length ? m.attachments : m.payload?.attachments || []).map(mapAttachment).filter(Boolean),
+    ...messageExtras(m, me?.id), // polls, checklists, saved, edit history, thread state
   };
 }
 
@@ -386,6 +388,7 @@ async function finishProviderSignIn(path, body) {
 export const liveAdapter = {
   kind: 'live',
   serverUrl,
+  ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),
 
   /**
    * Creates an account. Nothing is signed in: the server emails a link that must be opened
@@ -669,7 +672,7 @@ export const liveAdapter = {
       replies: chronological(await mapMessages(conv, data.replies)),
     };
   },
-  async sendMessage(conv, text, { parentId, clientTempId } = {}) {
+  async sendMessage(conv, text, { parentId, clientTempId, mentionText } = {}) {
     const dm = dmCache.get(conv.id);
     const key = await conversationKey(conv, {
       workspaceId: currentWs,
@@ -678,7 +681,7 @@ export const liveAdapter = {
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
-    const body = { ...(await encryptText(key, text)), clientTempId };
+    const body = { ...(await encryptText(key, text)), clientTempId, ...(mentionText ? { mentionText } : {}) };
     let data;
     if (parentId) data = await api.post(`/v2/messages/thread/${parentId}`, body);
     else if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });

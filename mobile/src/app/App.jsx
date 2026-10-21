@@ -17,6 +17,7 @@ import { watchKeyboard } from '../native/keyboard.js';
 import { onPushTap } from '../native/push.js';
 import { openPush } from '../features/home/openTarget.js';
 import { MediaHost } from '../features/media/MediaHost.jsx';
+import { ReminderLayer } from '../features/chats/ReminderLayer.jsx';
 import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 
 /** While the app restores the session: the mark lands, then breathes until it's ready. */
@@ -133,6 +134,7 @@ export function App() {
     <>
       {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
       {status === 'signed-in' && <MediaHost />}
+      {status === 'signed-in' && <ReminderLayer />}
       {/* The first-run tour, once the workspace itself is on screen (not over sign-in flows). */}
       {status === 'signed-in' && !needsPassword && !joinToken && !creatingWorkspace && !pickingWorkspace && <PhoneTour />}
       <ToastHost />

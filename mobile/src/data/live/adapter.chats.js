@@ -1,0 +1,287 @@
+// Chats, threads, AI and search calls of the live adapter (merged into liveAdapter in
+// adapter.js). Message text is end-to-end encrypted: everything sent to AI here is text the
+// phone decrypted, and checklists are encrypted like any message (the server keeps only ticks).
+import { absolute, api } from './http.js';
+import { conversationKey, decryptPayload, encryptText } from './crypto.js';
+import { useE2ee } from '../e2ee.js';
+
+const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
+
+// ---------------------------------------------------------------- mapping
+
+/** A poll as the app models it. Voters are { id, name } (names only when the server sent them). */
+export function mapPoll(p, sender) {
+  if (!p || !Array.isArray(p.options)) return null;
+  const options = p.options.map((o) => ({
+    text: o.text || '',
+    votes: (o.votes || []).map((v) => ({ id: idOf(v), name: typeof v === 'object' ? v.username || null : null })).filter((v) => v.id),
+  }));
+  const voters = new Set(options.flatMap((o) => o.votes.map((v) => v.id)));
+  return {
+    question: p.question || '',
+    options,
+    allowMultiple: Boolean(p.allowMultiple),
+    anonymous: Boolean(p.anonymous),
+    endDate: p.endDate || null,
+    active: p.isActive !== false,
+    totalVotes: Number.isFinite(p.totalVotes) ? Math.max(p.totalVotes, voters.size) : voters.size,
+    createdBy: idOf(p.createdBy) || idOf(sender),
+  };
+}
+
+/** Checked state of each checklist item (the labels are in the encrypted text). */
+export function mapChecklist(list) {
+  return (list || []).map((i) => ({ checked: Boolean(i.checked), checkedBy: idOf(i.checkedBy), text: i.text || '' }));
+}
+
+/** Fields of a server message beyond the basics in adapter.js toAppMessage. */
+export function messageExtras(m, meId) {
+  const mine = (list) => Boolean(meId) && (list || []).some((v) => idOf(v) === String(meId));
+  return {
+    type: m.type || 'message',
+    poll: m.type === 'poll' ? mapPoll(m.poll, m.sender) : null,
+    checklist: m.type === 'checklist' ? mapChecklist(m.checklist) : null,
+    saved: mine(m.bookmarkedBy),
+    editCount: Array.isArray(m.editHistory) ? m.editHistory.length : 0,
+    resolved: Boolean(m.resolvedThreadAt),
+    following: mine(m.followers),
+    linkedTaskId: idOf(m.linkedTaskId),
+  };
+}
+
+/** A checklist message's decrypted text: { title, items: [text] }, or null. */
+export function parseChecklistText(text) {
+  try {
+    const data = JSON.parse(text);
+    if (!data || !Array.isArray(data.items)) return null;
+    return { title: String(data.title || ''), items: data.items.map((i) => String(typeof i === 'object' ? i?.text || '' : i)) };
+  } catch {
+    return null;
+  }
+}
+
+/** The conversation a stored message belongs to: { kind, id }. */
+export function convOf(m) {
+  const channel = idOf(m?.channel);
+  if (channel) return { kind: 'channel', id: channel, name: typeof m.channel === 'object' && m.channel.name ? `#${m.channel.name}` : null };
+  const dm = idOf(m?.dm);
+  return dm ? { kind: 'dm', id: dm, name: null } : null;
+}
+
+function mapTaskRef(t) {
+  return t ? { id: idOf(t), title: t.title, status: t.status } : null;
+}
+
+const SEARCH_EMPTY = { knowledge: [], files: [], tasks: [], notes: [] };
+
+// ---------------------------------------------------------------- calls
+
+/**
+ * helpers from adapter.js: { mapMessage(conv, serverMessage), me() → user, ws() → workspace id,
+ * dm(id) → cached DM ({ userId }) }.
+ */
+export function chatsAdapter({ mapMessage, me, ws, dm }) {
+  async function keyFor(conv) {
+    const d = dm(conv.id);
+    return conversationKey(conv, { workspaceId: ws(), participantIds: d ? [me().id, d.userId] : undefined, create: conv.kind === 'dm' }).catch((err) => {
+      throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
+    });
+  }
+
+  const mapStored = async (m) => {
+    const conv = convOf(m);
+    if (!conv) return null;
+    return { conv, message: await mapMessage({ kind: conv.kind, id: conv.id }, m) };
+  };
+
+  return {
+    // ---- Saved for later
+    async toggleSave(conv, id) {
+      const data = await api.post(`/v2/messages/${id}/bookmark`, {});
+      return Boolean(data?.bookmarked);
+    },
+    /** Saved messages in this workspace, newest first: [{ conv, message }]. */
+    async savedMessages(workspaceId) {
+      const data = await api.get('/v2/messages/bookmarks', { limit: 100 });
+      const list = (data.messages || []).filter((m) => !m.workspace || !workspaceId || idOf(m.workspace) === workspaceId);
+      return (await Promise.all(list.map(mapStored))).filter(Boolean);
+    },
+
+    // ---- Reminders
+    async remindMe(conv, id, at, note = '') {
+      const data = await api.post(`/v2/messages/${id}/reminder`, { remindAt: new Date(at).toISOString(), note });
+      return { id: idOf(data.reminder), at: data.reminder?.remindAt || at };
+    },
+    /** Reminders not yet delivered: [{ id, at, note, conv, message }]. */
+    async reminders(workspaceId) {
+      const data = await api.get('/v2/messages/reminders');
+      const list = (data.reminders || []).filter((r) => {
+        const w = r.messageId && typeof r.messageId === 'object' ? idOf(r.messageId.workspace) : null;
+        return !w || !workspaceId || w === workspaceId;
+      });
+      return Promise.all(
+        list.map(async (r) => {
+          const stored = r.messageId && typeof r.messageId === 'object' ? await mapStored(r.messageId).catch(() => null) : null;
+          return { id: idOf(r), at: r.remindAt, note: r.note || '', conv: stored?.conv || null, message: stored?.message || null };
+        }),
+      );
+    },
+    async cancelReminder(id) {
+      await api.del(`/v2/messages/reminders/${id}`);
+    },
+    /** A reminder that fired (socket 'reminder-fired' / 'reminder:due'), decrypted for the banner. */
+    async readReminder(payload) {
+      const m = payload?.message && typeof payload.message === 'object' ? payload.message : null;
+      const stored = m ? await mapStored(m).catch(() => null) : null;
+      return { id: idOf(payload?.reminderId), note: payload?.note || '', conv: stored?.conv || null, message: stored?.message || null };
+    },
+
+    // ---- Edit history
+    /** Every version, oldest first, decrypted here: { canRestore, versions: [{ index, version, at, text, current }] }. */
+    async messageVersions(conv, id) {
+      const data = await api.get(`/v2/messages/${id}/versions`);
+      let key = null;
+      try {
+        key = await conversationKey(conv);
+      } catch {
+        key = null;
+      }
+      const read = async (v) => {
+        if (!v.isEncrypted) return { text: v.text ?? '', state: 'ok' };
+        if (!key || !v.ciphertext) return { text: '', state: 'locked' };
+        try {
+          return { text: await decryptPayload(key, v), state: 'ok' };
+        } catch {
+          return { text: '', state: 'failed' };
+        }
+      };
+      const versions = await Promise.all(
+        (data.versions || []).map(async (v) => ({ index: v.index, version: v.version, at: v.editedAt, current: false, ...(await read(v)) })),
+      );
+      const cur = data.current || {};
+      versions.push({ index: null, version: cur.version || versions.length + 1, at: cur.editedAt, current: true, ...(await read(cur)) });
+      return { canRestore: Boolean(data.canRestore), versions };
+    },
+    async restoreVersion(conv, id, versionIndex) {
+      await api.post(`/v2/messages/${id}/restore`, { versionIndex });
+    },
+
+    // ---- Polls
+    /** poll: { question, options: [text], allowMultiple, anonymous, endDate } */
+    async createPoll(conv, poll) {
+      const body = { poll, ...(conv.kind === 'channel' ? { channelId: conv.id } : { dmId: conv.id }) };
+      const data = await api.post('/v2/messages/poll', body);
+      return mapMessage(conv, data.message);
+    },
+    async votePoll(conv, id, optionIndices) {
+      const data = await api.post(`/v2/messages/${id}/vote`, { optionIndices });
+      return mapPoll(data.message?.poll, data.message?.sender);
+    },
+    async closePoll(conv, id) {
+      const data = await api.post(`/v2/messages/${id}/poll/close`, {});
+      return mapPoll(data.message?.poll, data.message?.sender);
+    },
+
+    // ---- Checklists
+    /** { title, items: [text] } as an encrypted checklist message (not in threads: replies carry text only). */
+    async sendChecklist(conv, { title, items }, { clientTempId } = {}) {
+      const key = await keyFor(conv);
+      const clean = items.map((i) => String(i).trim()).filter(Boolean).slice(0, 50);
+      const body = { ...(await encryptText(key, JSON.stringify({ title: title || '', items: clean }))), type: 'checklist', checklistCount: clean.length, clientTempId };
+      let data;
+      if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });
+      else data = await api.post('/v2/messages/direct', { ...body, dmSessionId: conv.id, workspaceId: ws() });
+      return mapMessage(conv, data.message || data);
+    },
+    async toggleChecklistItem(conv, id, index) {
+      const data = await api.post(`/v2/messages/${id}/checklist/${index}`, {});
+      return mapChecklist(data.checklist);
+    },
+
+    // ---- Message → task
+    async convertToTask(conv, id, { title, description, priority, due }) {
+      const data = await api.post(`/v2/messages/${id}/convert-task`, {
+        title: String(title).slice(0, 200),
+        ...(description?.trim() ? { description: description.trim() } : {}),
+        ...(priority ? { priority } : {}),
+        ...(due ? { dueDate: new Date(`${due}T00:00:00`).toISOString() } : {}),
+      });
+      return mapTaskRef(data.task);
+    },
+
+    // ---- Threads
+    /** A thread with who took part, follow and resolve state. */
+    async threadInfo(conv, parentId) {
+      const data = await api.get(`/v2/messages/thread/${parentId}`);
+      const replies = await Promise.all((data.replies || []).map((m) => mapMessage(conv, m)));
+      return {
+        parent: data.parent ? await mapMessage(conv, data.parent) : null,
+        replies: replies.sort((a, b) => new Date(a.at) - new Date(b.at)),
+        participants: (data.participants || []).map((p) => ({ id: idOf(p), username: p.username, avatarUrl: absolute(p.profilePicture), replyCount: p.replyCount || 0 })),
+        resolved: Boolean(data.resolved),
+        resolvedBy: data.resolvedBy ? { id: idOf(data.resolvedBy), username: data.resolvedBy.username } : null,
+        following: Boolean(data.followStatus?.following),
+        followerCount: data.followStatus?.followerCount || 0,
+      };
+    },
+    async followThread(parentId, follow) {
+      const data = follow ? await api.post(`/threads/${parentId}/follow`, {}) : await api.del(`/threads/${parentId}/follow`);
+      return { following: Boolean(data?.following ?? follow), followerCount: data?.followerCount ?? null };
+    },
+    /** Toggles resolved; returns the new state. */
+    async resolveThread(parentId) {
+      const data = await api.post(`/threads/v2/${parentId}/resolve`, {});
+      return Boolean(data?.isResolved ?? data?.resolved);
+    },
+
+    // ---- AI on decrypted messages
+    /** messages: [{ sender, text }] (decrypted here). */
+    async summarizeThread(workspaceId, parentId, parentText, replies) {
+      const data = await api.post('/v2/messages/ai/thread-summary', { workspaceId, parentMessageId: parentId, parentText, replies: replies.slice(-200) });
+      return data.summary || '';
+    },
+    /** mode: summary | bullets | action_items. messages: [{ sender, text, isMe }]. */
+    async summarizeConversation(workspaceId, messages, { title, mode = 'summary' } = {}) {
+      const data = await api.post('/ai/conversation', { workspaceId, messages: messages.slice(-200), mode, title });
+      return data.text || '';
+    },
+    async smartReplies(workspaceId, messages) {
+      const data = await api.post('/ai/smart-replies', { workspaceId, messages: messages.slice(-8) });
+      return (data.suggestions || []).filter((s) => typeof s === 'string' && s.trim()).slice(0, 3);
+    },
+    async translate(workspaceId, text, targetLang) {
+      const data = await api.post('/v2/messages/ai/translate', { workspaceId, text: String(text).slice(0, 5000), targetLang });
+      if (!data?.translated) throw new Error('No translation came back.');
+      return { text: data.translated, detectedLang: data.detectedLang || null };
+    },
+    /** Q&A over the workspace's knowledge pages and meeting notes. */
+    async askKnowledge(workspaceId, question) {
+      const data = await api.post('/ai/ask', { workspaceId, question });
+      return {
+        answer: data.answer || '',
+        fallback: Boolean(data.fallback),
+        references: (data.references || []).map((r) => ({ kind: r.type === 'knowledge' ? 'page' : r.type, id: idOf(r.id), label: r.title || 'Untitled' })).filter((r) => r.id),
+      };
+    },
+
+    // ---- Channels
+    /** Who may use @channel/@here: { broadcastMentions, canManage, postingPolicy }. */
+    async channelPolicy(id) {
+      const data = await api.get(`/channels/${id}/mute`);
+      return { broadcastMentions: data.broadcastMentions || 'everyone', canManage: Boolean(data.canManage), postingPolicy: data.postingPolicy || 'everyone' };
+    },
+
+    // ---- Server search (pages, files, tasks, notes: not end-to-end encrypted)
+    /** kind: 'knowledge' | 'file' | 'task' | 'note'; params from lib/searchQuery serverParams. */
+    async searchServer(workspaceId, params) {
+      if (!params.q) return SEARCH_EMPTY;
+      const data = await api.get('/search', { ...params, workspaceId, limit: 30 });
+      return {
+        knowledge: (data.knowledge || []).map((p) => ({ id: idOf(p.id), title: p.title || 'Untitled page', icon: p.icon || '📄', snippet: p.snippet || '', at: p.createdAt })),
+        files: (data.files || []).map((f) => ({ id: idOf(f.id), name: f.name || 'File', mimeType: f.mimeType || '', size: f.size ?? null, url: f.url || null, owner: f.createdBy?.name || null, at: f.createdAt })),
+        tasks: (data.tasks || []).map((t) => ({ id: idOf(t.id), title: t.title || 'Task', status: t.status || null, at: t.createdAt })),
+        notes: (data.notes || []).map((n) => ({ id: idOf(n.id), title: n.title || 'Untitled', snippet: n.snippet || n.preview || '', at: n.createdAt })),
+      };
+    },
+  };
+}

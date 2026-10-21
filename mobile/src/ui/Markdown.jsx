@@ -2,6 +2,7 @@
 // elements directly (never HTML strings), so message content can't inject markup.
 import { Fragment } from 'react';
 import { cx } from './cx.js';
+import { CodeBlock } from './CodeBlock.jsx';
 
 const INLINE =
   /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)/g;
@@ -60,11 +61,12 @@ export function parseBlocks(src) {
   while (i < lines.length) {
     const line = lines[i];
     if (/^```/.test(line)) {
+      const lang = line.slice(3).trim();
       const body = [];
       i += 1;
       while (i < lines.length && !/^```/.test(lines[i])) body.push(lines[i++]);
       i += 1;
-      blocks.push({ type: 'code', text: body.join('\n') });
+      blocks.push({ type: 'code', text: body.join('\n'), lang });
       continue;
     }
     const h = line.match(/^(#{1,3})\s+(.*)$/);
@@ -110,11 +112,7 @@ export function Markdown({ text, className, onLink }) {
         const k = `b${i}`;
         switch (b.type) {
           case 'code':
-            return (
-              <pre key={k}>
-                <code>{b.text}</code>
-              </pre>
-            );
+            return <CodeBlock key={k} code={b.text} lang={b.lang} />;
           case 'h1':
             return <h1 key={k}>{inline(b.text, k, opts)}</h1>;
           case 'h2':

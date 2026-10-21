@@ -89,7 +89,7 @@ function Video({ file, siblings, upload, onCancel }) {
           <Icon as={Play} size={20} className="translate-x-px" />
         </span>
         <span className="absolute top-2 left-2 max-w-[80%] truncate rounded-md bg-surface/85 px-1.5 py-0.5 text-[11px] text-text-2">
-          {file.duration ? formatDuration(file.duration) : file.name}
+          {[file.variant === 'screen_recording' && 'Screen recording', file.duration ? formatDuration(file.duration) : !file.variant && file.name].filter(Boolean).join(' · ')}
         </span>
       </button>
       <Progress upload={upload} onCancel={onCancel} />

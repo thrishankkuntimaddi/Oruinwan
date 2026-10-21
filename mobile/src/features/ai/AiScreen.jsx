@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Sparkles, History, SquarePen, ArrowUp, Square, Copy, RotateCcw, Check, X, SquareCheckBig, Hash, FileText, MessageCircle, ListTodo, Megaphone, Sun,
+  BookOpen, CalendarDays, Compass, LifeBuoy,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -23,7 +24,7 @@ import { BrandMark } from '../../app/BrandMark.jsx';
 import { finePointer } from '../../app/layout.js';
 import { useAiUi } from './aiUi.js';
 import { useAssistants } from '../../data/hooks.js';
-import { Chips } from '../../ui/Controls.jsx';
+import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { openConversation } from '../chats/chatsUi.js';
 
 const SUGGESTIONS = [
@@ -33,7 +34,15 @@ const SUGGESTIONS = [
   { icon: ListTodo, text: 'Create a task to review the onboarding copy' },
 ];
 
-const SOURCE_ICON = { task: SquareCheckBig, channel: Hash, note: FileText, dm: MessageCircle };
+// Questions for "Company knowledge": answered from knowledge pages and meeting notes.
+const KNOWLEDGE_SUGGESTIONS = [
+  { icon: Compass, text: 'How do we onboard a new teammate?' },
+  { icon: LifeBuoy, text: 'What is our process for a production incident?' },
+  { icon: CalendarDays, text: 'What was decided in the last planning meeting?' },
+  { icon: BookOpen, text: 'Where is the release checklist?' },
+];
+
+const SOURCE_ICON = { task: SquareCheckBig, channel: Hash, note: FileText, dm: MessageCircle, page: BookOpen, meeting: CalendarDays };
 
 function historyKey(ws) {
   return `ai.threads.${ws}`;
@@ -54,6 +63,7 @@ function openSource(s) {
   if (s.kind === 'task') nav.push('task', { id: s.id });
   else if (s.kind === 'note') nav.push('note', { id: s.id });
   else if (s.kind === 'channel' || s.kind === 'dm') openConversation(s.kind, s.id);
+  else if (s.kind === 'page') nav.push('page', { id: s.id }, { tab: 'notes' });
 }
 
 function AssistantMessage({ m, onRetry }) {
@@ -136,6 +146,9 @@ export function AiScreen() {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const pending = useAiUi((s) => s.pending);
+  // 'chat': the assistant. 'knowledge': questions answered from the company's pages and meeting notes.
+  const [mode, setMode] = useState('chat');
+  const knowledge = mode === 'knowledge';
 
   // Who answers: Oruinwan AI, or a model the workspace connected. Remembered per workspace.
   const { data: assistants } = useAssistants();
@@ -189,6 +202,14 @@ export function AiScreen() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
+      if (knowledge && api().askKnowledge) {
+        const r = await api().askKnowledge(ws, question);
+        if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        const text = r.answer || "I couldn't find that in your company's knowledge pages.";
+        const note = r.fallback ? '\n\n_Answered without an AI model. A workspace admin can connect one under Settings → Oruinwan AI on the web._' : '';
+        patchLast((m) => ({ ...m, text: `${text}${note}`, sources: r.references, done: true }));
+        return;
+      }
       const history = next.messages
         .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.text))
         .map((m) => ({ role: m.role, content: m.role === 'user' ? m.content : m.text }));
@@ -233,7 +254,7 @@ export function AiScreen() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TabHeader
-        title={current.name}
+        title={knowledge ? 'Company knowledge' : current.name}
         actions={
           <>
             <IconButton icon={History} label="Past conversations" onClick={() => setHistoryOpen(true)} />
@@ -248,7 +269,25 @@ export function AiScreen() {
           </>
         }
       />
-      {list.length > 1 && (
+      {api().askKnowledge && (
+        <div className="shrink-0 px-4 pb-2">
+          <Segmented
+            size="sm"
+            value={mode}
+            onChange={(v) => {
+              if (v === mode) return;
+              abortRef.current?.abort();
+              setMode(v);
+              setThread({ id: uid('ai'), messages: [] });
+            }}
+            options={[
+              { value: 'chat', label: 'Assistant' },
+              { value: 'knowledge', label: 'Company knowledge' },
+            ]}
+          />
+        </div>
+      )}
+      {list.length > 1 && !knowledge && (
         <div className="shrink-0 pb-2" data-testid="assistant-picker">
           <Chips options={list.map((a) => ({ value: a.id, label: a.name }))} value={current.id} onChange={choose} />
         </div>
@@ -258,13 +297,15 @@ export function AiScreen() {
           <div className="flex min-h-full flex-col justify-end px-4 pb-4">
             <div className="flex flex-col items-center pt-6 pb-8 text-center">
               <BrandMark size={64} glow />
-              <h2 className="mt-5 text-[22px] font-bold tracking-tight">How can I help?</h2>
+              <h2 className="mt-5 text-[22px] font-bold tracking-tight">{knowledge ? 'Ask your company' : 'How can I help?'}</h2>
               <p className="mt-1.5 max-w-xs text-sm text-text-2">
-                Ask about your channels, tasks and notes. I can summarise, draft and create tasks for you.
+                {knowledge
+                  ? "Answers come from your workspace's knowledge pages and meeting notes, with links to the sources."
+                  : 'Ask about your channels, tasks and notes. I can summarise, draft and create tasks for you.'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              {SUGGESTIONS.map((s) => (
+              {(knowledge ? KNOWLEDGE_SUGGESTIONS : SUGGESTIONS).map((s) => (
                 <button
                   key={s.text}
                   type="button"
@@ -306,7 +347,7 @@ export function AiScreen() {
                 if (!busy && input.trim()) ask(input);
               }
             }}
-            placeholder="Message Oruinwan AI…"
+            placeholder={knowledge ? 'Ask about your company…' : 'Message Oruinwan AI…'}
             className="block max-h-[132px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 outline-none placeholder:text-text-3"
           />
           {busy ? (

@@ -1,21 +1,25 @@
 import { useMemo, useState } from 'react';
 import {
-  Info, UserRound, Hash, Lock, BellOff, Bell, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock,
+  Info, UserRound, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useAssistants, useChannels, useDirectory, useDms, useMembers } from '../../data/hooks.js';
-import { invalidate, setQueryData } from '../../data/query.js';
+import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Field, SearchField, Toggle } from '../../ui/Controls.jsx';
-import { Dialog, Sheet } from '../../ui/Overlay.jsx';
+import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows, Spinner } from '../../ui/Feedback.jsx';
 import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
+import { canBroadcast, mentionTextFor } from '../../lib/mentions.js';
+import {
+  ChecklistComposerSheet, ConvertTaskSheet, EditHistorySheet, ParticipantsSheet, PollComposerSheet, ReminderSheet, SummarySheet, TranslateSheet,
+} from './sheets.jsx';
 import { useConversation } from './useConversation.js';
 import { useAiReplies } from './useAiReplies.js';
 import { AiLiveReply, Composer, ComposerPlusSheet, MessageActions, MessageItem, MessageList, useFilePickers } from './messages.jsx';
@@ -38,8 +42,27 @@ function useConversationMeta(kind, id) {
 function useMessageTools({ conv, convo, me, label, threadOf }) {
   const [active, setActive] = useState(null);
   const [taskFrom, setTaskFrom] = useState(null);
+  const [convertFrom, setConvertFrom] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [remindOf, setRemindOf] = useState(null);
+  const [translateOf, setTranslateOf] = useState(null);
+  const [historyOf, setHistoryOf] = useState(null);
   const threadsOn = useFlag('threads');
+  const aiOn = useFlag('ai');
+
+  const save = async (m) => {
+    const before = Boolean(m.saved);
+    convo.patchMessage(m.id, (x) => ({ ...x, saved: !before }));
+    try {
+      const saved = await api().toggleSave(conv, m.id);
+      if (saved === before) convo.patchMessage(m.id, (x) => ({ ...x, saved }));
+      invalidate('saved:');
+      toast(saved ? 'Saved for later' : 'Removed from saved');
+    } catch (err) {
+      convo.patchMessage(m.id, (x) => ({ ...x, saved: before }));
+      toast(err.message || 'Could not update saved messages', 'danger');
+    }
+  };
 
   const actions = (
     <>
@@ -64,15 +87,11 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
               }
             : null
         }
-        onSave={
-          api().toggleSave
-            ? async () => {
-                const saved = await api().toggleSave(conv, active.id);
-                toast(saved ? 'Saved for later' : 'Removed from saved');
-              }
-            : null
-        }
-        onTask={() => setTaskFrom(active)}
+        onSave={api().toggleSave ? () => save(active) : null}
+        onRemind={api().remindMe ? () => setRemindOf(active) : null}
+        onTranslate={api().translate && aiOn ? () => setTranslateOf(active) : null}
+        onHistory={api().messageVersions ? () => setHistoryOf(active) : null}
+        onTask={() => (api().convertToTask ? setConvertFrom(active) : setTaskFrom(active))}
         onEdit={() => setEditing(active)}
         onDelete={() => convo.remove(active.id)}
       />
@@ -83,27 +102,62 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
           taskFrom
             ? {
                 title: taskFrom.text.split('\n')[0].replace(/[*_`#>]/g, '').slice(0, 80),
-                description: `From ${label}:\n> ${taskFrom.text.slice(0, 400)}`,
+                description: taskFrom.text ? `From ${label}:\n> ${taskFrom.text.slice(0, 400)}` : '',
                 channelId: conv.kind === 'channel' ? conv.id : null,
               }
             : null
         }
       />
+      <ConvertTaskSheet message={convertFrom} conv={conv} label={label} onClose={() => setConvertFrom(null)} />
+      <ReminderSheet message={remindOf} conv={conv} onClose={() => setRemindOf(null)} />
+      <TranslateSheet message={translateOf} onClose={() => setTranslateOf(null)} />
+      <EditHistorySheet message={historyOf} conv={conv} onClose={() => setHistoryOf(null)} />
     </>
   );
 
   const onLongPress = (m, what) => {
     if (what === 'profile') nav.push('profile', { userId: m.authorId });
+    else if (what === 'history') setHistoryOf(m);
     else if (!m.pending) setActive(m);
   };
 
   return { actions, onLongPress, editing, setEditing, openTask: () => setTaskFrom({ text: '' }) };
 }
 
-export function ConversationScreen({ kind, id }) {
+/** The decrypted end of a conversation, as AI features take it: [{ id, sender, text, isMe }]. */
+function transcript(items, directory, me, limit = 200) {
+  return items
+    .filter((m) => m.state === 'ok' && m.text?.trim() && !m.pending && m.type !== 'checklist')
+    .slice(-limit)
+    .map((m) => ({ id: m.id, sender: m.authorId === me ? 'Me' : m.author?.name || directory[m.authorId]?.name || 'Someone', text: m.text, isMe: m.authorId === me }));
+}
+
+/** Mentions offered in a conversation's composer, and the handles to send with a message. */
+function useMentions({ kind, id, meta, me }) {
+  const { data: members } = useMembers();
+  const { data: channels } = useChannels();
+  const workspace = useWorkspace();
+  const { data: policy } = useQuery(kind === 'channel' && api().channelPolicy && `channelPolicy:${id}`, () => api().channelPolicy(id), { staleMs: 5 * 60_000 });
+  return useMemo(() => {
+    const all = members || [];
+    const inChannel = kind === 'channel';
+    const memberIds = inChannel && meta?.memberIds?.length ? new Set(meta.memberIds) : null;
+    // In a channel, its members first; anyone in the workspace can still be mentioned.
+    const people = memberIds ? [...all.filter((u) => memberIds.has(u.id)), ...all.filter((u) => !memberIds.has(u.id))] : all;
+    const allowBroadcast = canBroadcast(policy, { canManage: policy?.canManage, workspaceRole: workspace?.role });
+    const usernames = new Set(all.map((u) => String(u.username || '').toLowerCase()).filter(Boolean));
+    return {
+      composer: { people, channels: (channels || []).filter((c) => !c.private || c.isMember), me, inChannel, allowBroadcast },
+      textFor: (text) => mentionTextFor(text, usernames, { allowBroadcast: inChannel && allowBroadcast }),
+    };
+  }, [members, channels, policy, workspace?.role, kind, meta?.memberIds, me]);
+}
+
+export function ConversationScreen({ kind, id, highlight = null }) {
   const conv = useMemo(() => ({ kind, id }), [kind, id]);
   const meta = useConversationMeta(kind, id);
   const me = useSession((s) => s.user?.id);
+  const ws = useSession((s) => s.workspaceId);
   const workspace = useWorkspace();
   const directory = useDirectory();
   const label0 = kind === 'channel' ? `#${meta?.name || 'channel'}` : meta?.user?.name || 'Direct message';
@@ -112,16 +166,34 @@ export function ConversationScreen({ kind, id }) {
   const { data: assistants } = useAssistants();
   const [plus, setPlus] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'poll' | 'checklist' | 'summary'
   const aiOn = useFlag('ai');
+  // Unread when the conversation opened (opening marks it read), for "since you last read".
+  const [unreadAtOpen] = useState(() => meta?.unread || 0);
 
   const label = label0;
   const huddleScope = useMemo(() => (kind === 'channel' ? { channelId: id } : { dmId: id }), [kind, id]);
   const tools = useMessageTools({ conv, convo, me, label });
   const pickers = useFilePickers(convo.sendFiles);
+  const mentions = useMentions({ kind, id, meta, me });
+  const recent = useMemo(() => (aiOn && !meta?.agentId ? transcript(convo.items, directory, me, 8) : null), [aiOn, meta?.agentId, convo.items, directory, me]);
 
   const isAdmin = ['admin', 'owner'].includes(workspace?.role);
   const readOnly = kind === 'channel' && meta?.broadcast && !isAdmin;
   const notMember = kind === 'channel' && meta && !meta.isMember;
+  const canPost = !readOnly && !notMember;
+
+  const summaryOptions = useMemo(() => {
+    const all = () => transcript(convo.items, directory, me);
+    const run = (list, mode) => () => api().summarizeConversation(ws, list, { title: label, mode });
+    const unread = unreadAtOpen > 0 ? all().slice(-unreadAtOpen) : [];
+    return [
+      unread.length > 0 && { id: 'unread', label: `Since you last read (${unread.length})`, run: run(unread, 'summary'), hint: 'The messages that were new when you opened this conversation.' },
+      { id: 'recent', label: 'Recent conversation', run: run(all(), 'summary'), hint: 'The latest messages loaded on this device.' },
+      { id: 'actions', label: 'Action items', run: run(all(), 'action_items') },
+      { id: 'bullets', label: 'Key points', run: run(all(), 'bullets') },
+    ].filter(Boolean);
+  }, [convo.items, directory, me, ws, label, unreadAtOpen]);
 
   const title =
     kind === 'channel' ? (
@@ -168,6 +240,15 @@ export function ConversationScreen({ kind, id }) {
     </div>
   );
 
+  const createPoll = async (poll) => {
+    const m = await api().createPoll(conv, poll);
+    convo.append(m);
+  };
+  const createChecklist = async (list) => {
+    const m = await api().sendChecklist(conv, list);
+    convo.append(m);
+  };
+
   return (
     <Screen>
       <Header
@@ -176,6 +257,7 @@ export function ConversationScreen({ kind, id }) {
         border
         actions={
           <>
+            {aiOn && !meta?.agentId && api().summarizeConversation && <IconButton icon={Sparkles} label="Summarize with AI" onClick={() => setSheet('summary')} />}
             {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
             {kind === 'channel' ? (
               <IconButton icon={Info} label="Channel details" onClick={() => nav.push('channelInfo', { id })} />
@@ -198,6 +280,7 @@ export function ConversationScreen({ kind, id }) {
         onLongPress={tools.onLongPress}
         onOpenThread={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
+        highlightId={highlight}
       />
       <E2eeBanner className="mb-2" />
       {notMember ? (
@@ -212,6 +295,9 @@ export function ConversationScreen({ kind, id }) {
           placeholder={`Message ${label}`}
           aiMentions={aiOn}
           assistants={assistants}
+          mentions={mentions.composer}
+          recent={recent}
+          onVoice={canPost ? (file) => convo.sendFiles([file]) : null}
           disabled={readOnly}
           disabledReason="Only admins can post in this channel."
           initial={tools.editing?.text || ''}
@@ -222,7 +308,7 @@ export function ConversationScreen({ kind, id }) {
             if (tools.editing) {
               convo.edit(tools.editing.id, text);
               tools.setEditing(null);
-            } else convo.send(text);
+            } else convo.send(text, { mentionText: mentions.textFor(text) });
           }}
         />
       )}
@@ -231,10 +317,15 @@ export function ConversationScreen({ kind, id }) {
       <ComposerPlusSheet
         open={plus}
         onClose={() => setPlus(false)}
-        onPick={readOnly || notMember ? null : pickers.pick}
-        onAskAi={aiOn ? () => askAiAbout(`Summarize the recent conversation in ${label} and list any action items for me.`) : null}
+        onPick={canPost ? pickers.pick : null}
+        onPoll={canPost && api().createPoll ? () => setSheet('poll') : null}
+        onChecklist={canPost && api().sendChecklist ? () => setSheet('checklist') : null}
+        onAskAi={aiOn ? () => (api().summarizeConversation ? setSheet('summary') : askAiAbout(`Summarize the recent conversation in ${label} and list any action items for me.`)) : null}
         onTask={tools.openTask}
       />
+      <PollComposerSheet open={sheet === 'poll'} onClose={() => setSheet(null)} onCreate={createPoll} />
+      <ChecklistComposerSheet open={sheet === 'checklist'} onClose={() => setSheet(null)} onCreate={createChecklist} />
+      <SummarySheet open={sheet === 'summary'} onClose={() => setSheet(null)} title={`Summarize ${label}`} options={summaryOptions} />
     </Screen>
   );
 }
@@ -243,6 +334,7 @@ export function ThreadScreen({ kind, convId, messageId }) {
   const conv = useMemo(() => ({ kind, id: convId }), [kind, convId]);
   const meta = useConversationMeta(kind, convId);
   const me = useSession((s) => s.user?.id);
+  const ws = useSession((s) => s.workspaceId);
   const directory = useDirectory();
   const label = kind === 'channel' ? `#${meta?.name || ''}` : meta?.user?.name || '';
   const convo = useConversation(conv, { threadOf: messageId, name: label });
@@ -251,8 +343,55 @@ export function ThreadScreen({ kind, convId, messageId }) {
   const aiOn = useFlag('ai');
   const tools = useMessageTools({ conv, convo, me, label, threadOf: messageId });
   const pickers = useFilePickers(convo.sendFiles);
+  const mentions = useMentions({ kind, id: convId, meta, me });
   const [attach, setAttach] = useState(false);
+  const [sheet, setSheet] = useState(null); // 'menu' | 'people' | 'summary'
+  const info = convo.meta;
 
+  const follow = async () => {
+    const next = !info?.following;
+    convo.patchMeta({ following: next });
+    try {
+      const r = await api().followThread(messageId, next);
+      convo.patchMeta({ following: r.following, ...(r.followerCount != null ? { followerCount: r.followerCount } : {}) });
+      toast(r.following ? "You'll be notified about new replies" : 'Unfollowed this thread');
+    } catch (err) {
+      convo.patchMeta({ following: !next });
+      toast(err.message || 'Could not change following', 'danger');
+    }
+  };
+  const resolve = async () => {
+    const next = !info?.resolved;
+    convo.patchMeta({ resolved: next });
+    try {
+      const resolved = await api().resolveThread(messageId);
+      convo.patchMeta({ resolved, resolvedBy: resolved ? { id: me } : null });
+      invalidate(`messages:${convId}`);
+      toast(resolved ? 'Marked as resolved' : 'Reopened');
+    } catch (err) {
+      convo.patchMeta({ resolved: !next });
+      toast(err.message || 'Could not change the thread', 'danger');
+    }
+  };
+
+  const summaryOptions = useMemo(
+    () => [
+      {
+        id: 'thread',
+        label: 'Summary',
+        run: () =>
+          api().summarizeThread(
+            ws,
+            messageId,
+            convo.parent?.state === 'ok' ? convo.parent.text : '',
+            transcript(convo.items, directory, me).map(({ sender, text }) => ({ sender, text })),
+          ),
+      },
+    ],
+    [ws, messageId, convo.parent, convo.items, directory, me],
+  );
+
+  const resolvedBy = info?.resolvedBy?.id ? directory[info.resolvedBy.id]?.name || info.resolvedBy.username : null;
   const header = convo.parent ? (
     <div className="border-b border-line-soft pb-3">
       <MessageItem
@@ -265,15 +404,39 @@ export function ThreadScreen({ kind, convId, messageId }) {
         onOpenThread={() => {}}
         onRetry={() => {}}
       />
-      <p className="px-4 pt-2 text-xs font-medium text-text-2">
-        {convo.items.length} {convo.items.length === 1 ? 'reply' : 'replies'}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-2 text-xs text-text-2">
+        <span className="font-medium">
+          {convo.items.length} {convo.items.length === 1 ? 'reply' : 'replies'}
+        </span>
+        {info?.participants?.length > 0 && (
+          <button type="button" onClick={() => setSheet('people')} className="inline-flex items-center gap-1 font-medium text-accent-ink">
+            <Icon as={Users} size={13} /> {info.participants.length} {info.participants.length === 1 ? 'person' : 'people'}
+          </button>
+        )}
+        {info?.resolved && (
+          <span className="inline-flex items-center gap-1 text-success">
+            <Icon as={CheckCircle2} size={13} /> Resolved{resolvedBy ? ` by ${resolvedBy}` : ''}
+          </span>
+        )}
+      </div>
     </div>
   ) : null;
 
   return (
     <Screen>
-      <Header title="Thread" subtitle={label && `in ${label}`} border />
+      <Header
+        title="Thread"
+        subtitle={label && `in ${label}`}
+        border
+        actions={
+          info ? (
+            <>
+              <IconButton icon={info.following ? BellRing : Bell} active={info.following} label={info.following ? 'Unfollow thread' : 'Follow thread'} onClick={follow} />
+              <IconButton icon={Ellipsis} label="Thread options" onClick={() => setSheet('menu')} />
+            </>
+          ) : null
+        }
+      />
       <MessageList
         items={convo.items}
         directory={directory}
@@ -288,10 +451,12 @@ export function ThreadScreen({ kind, convId, messageId }) {
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
       />
       <Composer
-        placeholder="Reply in thread"
+        placeholder={info?.resolved ? 'Reply in this resolved thread' : 'Reply in thread'}
         onPlus={() => setAttach(true)}
         aiMentions={aiOn}
         assistants={assistants}
+        mentions={mentions.composer}
+        onVoice={(file) => convo.sendFiles([file])}
         initial={tools.editing?.text || ''}
         editing={Boolean(tools.editing)}
         onCancelEdit={() => tools.setEditing(null)}
@@ -305,6 +470,19 @@ export function ThreadScreen({ kind, convId, messageId }) {
       {tools.actions}
       {pickers.inputs}
       <ComposerPlusSheet open={attach} onClose={() => setAttach(false)} onPick={pickers.pick} title="Add to reply" />
+      <ActionSheet
+        open={sheet === 'menu'}
+        onClose={() => setSheet(null)}
+        title="Thread"
+        actions={[
+          { label: info?.following ? 'Unfollow thread' : 'Follow thread', icon: info?.following ? BellOff : Bell, hint: 'Get notified about new replies', onSelect: follow },
+          { label: info?.resolved ? 'Reopen thread' : 'Mark as resolved', icon: info?.resolved ? RotateCcw : CheckCircle2, onSelect: resolve },
+          { label: 'People in this thread', icon: Users, onSelect: () => setTimeout(() => setSheet('people'), 220) },
+          aiOn && api().summarizeThread && { label: 'Summarize thread', icon: Sparkles, hint: 'With Oruinwan AI, from the replies decrypted here', onSelect: () => setTimeout(() => setSheet('summary'), 220) },
+        ]}
+      />
+      <ParticipantsSheet open={sheet === 'people'} onClose={() => setSheet(null)} participants={info?.participants || []} directory={directory} />
+      <SummarySheet open={sheet === 'summary'} onClose={() => setSheet(null)} title="Thread summary" options={summaryOptions} />
     </Screen>
   );
 }

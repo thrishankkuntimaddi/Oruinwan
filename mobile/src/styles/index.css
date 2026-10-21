@@ -393,6 +393,16 @@
 .prose-oru code { font-family: var(--font-mono); font-size: 0.86em; background: rgb(var(--c-surface-3)); border: 1px solid rgb(var(--c-line)); padding: 0.1em 0.35em; border-radius: 4px; }
 .prose-oru pre { background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); border-radius: 8px; padding: 0.7em 0.85em; overflow-x: auto; font-size: 0.82em; line-height: 1.5; user-select: text; }
 .prose-oru pre code { background: none; border: 0; padding: 0; font-size: 1em; }
+/* Syntax colours (ui/highlight.js), from the theme's own tokens so both themes stay in palette. */
+.hl .hl-keyword, .hl .hl-selector-tag, .hl .hl-built_in, .hl .hl-meta .hl-keyword { color: rgb(var(--c-accent-ink)); font-weight: 600; }
+.hl .hl-string, .hl .hl-regexp, .hl .hl-addition, .hl .hl-attr-value { color: rgb(var(--c-success)); }
+.hl .hl-number, .hl .hl-literal, .hl .hl-symbol, .hl .hl-bullet { color: rgb(var(--c-warning)); }
+.hl .hl-title, .hl .hl-title.function_, .hl .hl-section, .hl .hl-name, .hl .hl-selector-class, .hl .hl-selector-id { color: rgb(var(--c-info)); }
+.hl .hl-attr, .hl .hl-attribute, .hl .hl-variable, .hl .hl-property, .hl .hl-params, .hl .hl-type, .hl .hl-template-variable { color: rgb(var(--c-text)); }
+.hl .hl-comment, .hl .hl-quote, .hl .hl-meta, .hl .hl-doctag { color: rgb(var(--c-text-3)); font-style: italic; }
+.hl .hl-deletion { color: rgb(var(--c-danger)); }
+.hl .hl-emphasis { font-style: italic; }
+.hl .hl-strong { font-weight: 650; }
 .prose-oru hr { border: 0; border-top: 1px solid rgb(var(--c-line)); }
 .prose-oru ul[data-type='checklist'] { list-style: none; padding-left: 0; }
 .prose-oru ul[data-type='checklist'] > li { position: relative; padding-left: 1.7em; }

@@ -75,7 +75,9 @@ async function run(id) {
     patchItem(key, id, { upload: { progress: 100, sending: true } });
     await previous;
     if (controller.signal.aborted) return;
-    const saved = await api().sendAttachment(conv, { ...uploaded, ...(size || {}) }, { parentId: threadOf || null, clientTempId: id });
+    // Recorded voice messages know their length (composerExtras.jsx useVoiceRecorder).
+    const duration = Number.isFinite(file.durationSeconds) ? { duration: file.durationSeconds } : {};
+    const saved = await api().sendAttachment(conv, { ...uploaded, ...(size || {}), ...duration }, { parentId: threadOf || null, clientTempId: id });
     if (controller.signal.aborted) return;
     setQueryData(key, (d) => (d && !d.items.some((m) => m.id === saved.id) ? { ...d, items: [...d.items, saved] } : d));
     removeItem(key, id);
@@ -119,6 +121,7 @@ export function sendFiles({ key, conv, threadOf, me, files }) {
           name: file.name || 'file',
           size: file.size,
           mimeType: file.type || '',
+          duration: Number.isFinite(file.durationSeconds) ? file.durationSeconds : null,
           // Photos and videos show from the phone while they upload.
           localUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
         },
