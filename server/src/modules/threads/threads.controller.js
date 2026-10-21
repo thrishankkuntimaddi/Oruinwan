@@ -240,7 +240,7 @@ exports.postThreadReply = async (req, res) => {
         }
 
         // Following and notifications never delay or fail the reply.
-        followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username })
+        followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username, mentionText: typeof req.body?.mentionText === "string" ? req.body.mentionText : "", replyId: reply._id })
             .catch((err) => logger.error('[THREADS] Follow/notify error (non-fatal):', err.message));
 
         return res.status(201).json({ reply: replyOut });

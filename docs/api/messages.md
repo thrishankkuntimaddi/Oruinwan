@@ -38,3 +38,17 @@ accept `clientMessageId` in the body next to `ciphertext`, `messageIv`, `clientT
    and replace the optimistic bubble (match on `clientTempId` or `clientMessageId`).
 3. Drop the item from the queue only after a success response; retry network errors and 5xx.
    4xx other than 429 are permanent (e.g. no longer a channel member) — surface them.
+
+# Thread replies: @mentions
+
+Thread replies are end-to-end encrypted like other messages, so the client sends the plaintext
+mention part separately as **`mentionText`** (same as channel sends):
+
+- REST `POST /api/threads/:messageId` body: `{ ciphertext, messageIv, attachments?, clientTempId?, clientMessageId?, mentionText? }`
+- socket `send-message` with `parentId`: add `mentionText`.
+
+`@username` handles are resolved against the channel members (or DM participants); the replier is
+ignored. Each mentioned person gets a `mention` notification ("X mentioned you in #channel"),
+starts following the thread, and is left out of the generic `thread_reply` notification so they
+are notified once. The reply's `mentions` field lists their ids. `@here` / `@channel` are not
+expanded in threads.

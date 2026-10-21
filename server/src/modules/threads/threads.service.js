@@ -77,16 +77,63 @@ function emitThreadCounters(io, parent, { replyCount, lastReplyAt }) {
  * Reply-side effects shared by the REST and socket send paths: the replier (and, on the
  * first reply, the parent's author) follow the thread, and every other follower is notified.
  */
-async function followAndNotify(io, { parent, replierId, senderUsername }) {
+/**
+ * @handles in a thread reply, resolved against the people who can see the
+ * conversation (channel members / DM participants), excluding the replier.
+ * `mentionText` is the plaintext the client extracted (the reply itself is E2EE).
+ */
+async function resolveThreadMentions(parent, replierId, mentionText) {
+    if (!mentionText || typeof mentionText !== 'string') return [];
+    const { parseMentionHandles } = require('../../utils/mentionParser');
+    const { userHandles } = parseMentionHandles(mentionText.slice(0, 4000));
+    if (userHandles.length === 0) return [];
+
+    let audience = [];
+    if (parent.channel) {
+        const Channel = require('../../features/channels/channel.model.js');
+        const ch = await Channel.findById(parent.channel).select('members').lean();
+        audience = (ch?.members || []).map((m) => String(m?.user?._id || m?.user || m));
+    } else if (parent.dm) {
+        const DMSession = require('../../../models/DMSession');
+        const dm = await DMSession.findById(parent.dm).select('participants').lean();
+        audience = (dm?.participants || []).map(String);
+    }
+    audience = audience.filter((id) => id && id !== String(replierId));
+    if (audience.length === 0) return [];
+
+    const identity = require('../../identity');
+    const users = await identity.users.findManyByIds(audience);
+    const handles = new Set(userHandles);
+    return [...users.values()]
+        .filter((u) => handles.has(String(u.username || '').toLowerCase()))
+        .map((u) => String(u._id));
+}
+
+async function followAndNotify(io, { parent, replierId, senderUsername, mentionText = '', replyId = null }) {
     const notificationService = require('../notifications/notificationService');
     const Channel = require('../../features/channels/channel.model.js');
-    const autoFollow = [String(replierId)];
+    const logger = require('../../../utils/logger');
+
+    let mentionedIds = [];
+    try {
+        mentionedIds = await resolveThreadMentions(parent, replierId, mentionText);
+    } catch (err) {
+        logger.warn({ err: err.message }, '[threads] mention resolution failed');
+    }
+
+    const autoFollow = [String(replierId), ...mentionedIds];
     // replyCount is the value before this reply was counted.
     if ((parent.replyCount || 0) === 0 && parent.sender) autoFollow.push(String(parent.sender._id || parent.sender));
     await Message.updateOne({ _id: parent._id }, { $addToSet: { followers: { $each: autoFollow } } });
+    if (replyId && mentionedIds.length > 0) {
+        await Message.updateOne({ _id: replyId }, { $set: { mentions: mentionedIds } }).catch(() => {});
+    }
 
-    const recipientIds = (await getFollowerIds(parent._id)).filter((id) => id !== String(replierId));
-    if (recipientIds.length === 0) return 0;
+    const mentionedSet = new Set(mentionedIds);
+    // Mentioned people get a mention notification instead of the generic "new reply".
+    const recipientIds = (await getFollowerIds(parent._id))
+        .filter((id) => id !== String(replierId) && !mentionedSet.has(id));
+    if (recipientIds.length === 0 && mentionedIds.length === 0) return 0;
 
     let channelName = null;
     if (parent.channel) {
@@ -95,6 +142,20 @@ async function followAndNotify(io, { parent, replierId, senderUsername }) {
             channelName = channelDoc?.name || null;
         } catch (_) { /* the notification still goes out, without the channel name */ }
     }
+
+    if (mentionedIds.length > 0) {
+        await Promise.allSettled(mentionedIds.map((userId) => notificationService.mention(io, {
+            mentionedUserId: userId,
+            senderUsername: senderUsername || 'Someone',
+            workspaceId: parent.workspace,
+            channelName,
+            channelId: parent.channel ? String(parent.channel) : null,
+            dmSessionId: parent.dm ? String(parent.dm) : null,
+            snippet: 'in a thread',
+        })));
+    }
+    if (recipientIds.length === 0) return mentionedIds.length;
+
     await notificationService.threadReply(io, {
         followerIds: recipientIds,
         senderUsername: senderUsername || 'Someone',
@@ -104,7 +165,7 @@ async function followAndNotify(io, { parent, replierId, senderUsername }) {
         channelName,
         parentMessageId: String(parent._id),
     });
-    return recipientIds.length;
+    return recipientIds.length + mentionedIds.length;
 }
 
 module.exports.LIVE_REPLY = LIVE_REPLY;
