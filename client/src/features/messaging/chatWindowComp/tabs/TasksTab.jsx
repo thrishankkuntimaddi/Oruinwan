@@ -15,6 +15,8 @@ import ChannelTaskDetail from './channelTasks/ChannelTaskDetail';
 import ChannelTaskCreateModal from './channelTasks/ChannelTaskCreateModal';
 import { useMilestones } from '../../../../components/tasksComp/useTaskPlanning';
 import { MilestoneProgressStrip } from '../../../../components/tasksComp/MilestonesView';
+import { useBlockedPrompt } from '../../../../components/tasksComp/BlockedTaskDialog';
+import { blockedFromError } from '../../../../utils/taskTime';
 
 const NO_INLINE_ADD = ['blocked', 'done', 'cancelled'];
 
@@ -66,6 +68,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
     const permsFor = useCallback((t) => taskPerms(t, me, isManager), [me, isManager]);
     const fail = useCallback((err, fallback) => showToast(taskErrorMessage(err, fallback), 'error'), [showToast]);
+    const { ask: askBlocked, dialog: blockedDialog } = useBlockedPrompt();
     const { milestones } = useMilestones(workspaceId, (m) => showToast(m, 'error'));
     const patchTask = useCallback((id, patch) => setTasks((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x))), []);
 
@@ -182,10 +185,17 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
             return updated || true;
         } catch (err) {
             setTasks((p) => p.map((x) => (x.id === task.id ? prev : x)));
+            const blocked = !updates.ignoreBlockers ? blockedFromError(err) : null;
+            if (blocked) {
+                if (await askBlocked(blocked, prev.title)) return handleUpdateRef.current(task, { ...updates, ignoreBlockers: true });
+                return false;
+            }
             fail(err, 'Could not update the task.');
             return false;
         }
-    }, [memberById, fail]);
+    }, [memberById, fail, askBlocked]);
+    const handleUpdateRef = useRef(handleUpdate);
+    handleUpdateRef.current = handleUpdate;
 
     const handleDelete = useCallback(async (task) => {
         const list = tasksRef.current;
@@ -300,6 +310,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
 
     return (
         <div data-testid="channel-tasks-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-base)', fontFamily: FONT }}>
+            {blockedDialog}
             <div style={{
                 flexShrink: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, rowGap: 6,
                 padding: '8px 16px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)',

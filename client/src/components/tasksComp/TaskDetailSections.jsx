@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Check, Link2, Loader2, PlayCircle, StopCircle, Timer, Repeat, Flag, ListChecks, Lock,
+    Check, Link2, Loader2, PlayCircle, StopCircle, Timer, Repeat, Flag, ListChecks, Lock, X, Plus,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { myOpenSession, othersRunning, parseDuration, logError } from '../../utils/taskTime';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { statusLabel, taskErrorMessage, STATUS_META } from '../../utils/taskMeta';
@@ -148,6 +150,22 @@ export function DependenciesSection({ task, candidates = [], lookup = [], canAdd
         } finally { setBusy(false); }
     };
 
+    const [removing, setRemoving] = useState(null);
+    const remove = async (depId) => {
+        setRemoving(depId);
+        try {
+            const res = await api.delete(`/api/v2/tasks/${task.id}/dependency/${depId}`);
+            const ids = (res?.data?.dependencies || depIds.filter((x) => x !== depId)).map(idOf);
+            onAdded?.(ids.map((id) => {
+                const prev = deps.find((d) => d.id === id);
+                return { id, title: byId.get(id)?.title || prev?.title || '', status: byId.get(id)?.status || prev?.status || null };
+            }));
+            showToast('Dependency removed', 'success');
+        } catch (err) {
+            showToast(taskErrorMessage(err, 'Failed to remove dependency'), 'error');
+        } finally { setRemoving(null); }
+    };
+
     return (
         <DetailSection testId="task-dependencies" label={`Depends on${deps.length ? ` (${deps.length})` : ''}`} icon={<Link2 size={10} />}
             action={!canAdd && !disabled && <LockHint>Creator, assignees and admins</LockHint>}>
@@ -163,6 +181,13 @@ export function DependenciesSection({ task, candidates = [], lookup = [], canAdd
                                     {known?.issueKey ? `${known.issueKey} · ` : ''}{known?.title || d.title || `Task ${d.id.slice(-6)}`}
                                 </span>
                                 {st && <span style={{ fontSize: '10px', whiteSpace: 'nowrap', color: st === 'done' ? 'var(--state-success)' : 'var(--text-secondary)' }}>{statusLabel(st)}</span>}
+                                {canAdd && !disabled && (
+                                    <button type="button" onClick={() => remove(d.id)} disabled={removing === d.id}
+                                        aria-label={`Remove dependency ${known?.title || d.title || d.id}`} title="Remove dependency"
+                                        style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: 0, padding: 2, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                        {removing === d.id ? <Loader2 size={11} className="tk-spin" /> : <X size={12} />}
+                                    </button>
+                                )}
                             </div>
                         );
                     })}
@@ -186,21 +211,45 @@ export function DependenciesSection({ task, candidates = [], lookup = [], canAdd
 
 /* ── Time tracking ────────────────────────────────────────────────────── */
 
-/** Start/stop timer (POST /api/v2/tasks/:id/time/start|stop). `onChange(timeTracking)` stores the result. */
+/**
+ * Per-user timer (POST /api/v2/tasks/:id/time/start|stop), manual logs
+ * (POST /time/log) and a per-person breakdown (GET /time).
+ * `onChange(timeTracking)` stores the task's new timeTracking.
+ */
 export function TimeTrackingSection({ task, disabled = false, onChange }) {
     const { showToast } = useToast();
+    const auth = useAuth();
+    const myId = auth?.user?._id || auth?.user?.id || null;
     const sessions = task.timeTracking?.sessions || [];
-    const openSession = [...sessions].reverse().find((s) => s.start && !s.end);
+    const openSession = myOpenSession(sessions, myId);
     const totalTime = task.timeTracking?.totalTime || 0;
     const [now, setNow] = useState(Date.now());
     const [busy, setBusy] = useState(false);
+    const [summary, setSummary] = useState(null);
+    const [logOpen, setLogOpen] = useState(false);
+    const [logText, setLogText] = useState('');
+    const [logNote, setLogNote] = useState('');
+    const [logErr, setLogErr] = useState(null);
+    const anyOpen = sessions.some((s) => s && s.start && !s.end);
+
+    const loadSummary = React.useCallback(async () => {
+        try {
+            const res = await api.get(`/api/v2/tasks/${task.id}/time`);
+            if (res?.data) setSummary(res.data);
+        } catch { /* breakdown is optional */ }
+    }, [task.id]);
+    useEffect(() => { loadSummary(); }, [loadSummary, totalTime, sessions.length]);
+
     useEffect(() => {
-        if (!openSession) return undefined;
+        if (!anyOpen) return undefined;
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
-    }, [openSession]);
+    }, [anyOpen]);
     const runningFor = openSession ? (now - new Date(openSession.start).getTime()) / 1000 : 0;
+    // Everyone's open timers, so the total and the estimate bar include them.
+    const runningAll = sessions.filter((s) => s && s.start && !s.end).reduce((n, s) => n + Math.max(0, (now - new Date(s.start).getTime()) / 1000), 0);
     const estimate = task.estimatedHours ? task.estimatedHours * 3600 : 0;
+    const others = othersRunning(summary?.byUser, myId);
 
     const toggle = async () => {
         setBusy(true);
@@ -214,25 +263,78 @@ export function TimeTrackingSection({ task, disabled = false, onChange }) {
         } finally { setBusy(false); }
     };
 
+    const submitLog = async (e) => {
+        e?.preventDefault?.();
+        const seconds = parseDuration(logText);
+        const problem = logError(seconds);
+        if (problem) { setLogErr(problem); return; }
+        setBusy(true);
+        try {
+            const body = { seconds };
+            if (logNote.trim()) body.note = logNote.trim().slice(0, 500);
+            const res = await api.post(`/api/v2/tasks/${task.id}/time/log`, body);
+            if (res.data?.timeTracking) onChange?.(res.data.timeTracking);
+            showToast(`Logged ${fmtSeconds(seconds)}`, 'success');
+            setLogText(''); setLogNote(''); setLogErr(null); setLogOpen(false);
+            loadSummary();
+        } catch (err) {
+            setLogErr(taskErrorMessage(err, 'Could not log time'));
+        } finally { setBusy(false); }
+    };
+
     return (
-        <DetailSection testId="task-time" label="Time tracking" icon={<Timer size={10} />}>
+        <DetailSection testId="task-time" label="Time tracking" icon={<Timer size={10} />}
+            action={!disabled && !logOpen && <button type="button" style={linkBtn} onClick={() => setLogOpen(true)}><Plus size={10} style={{ verticalAlign: '-1px' }} /> Log time</button>}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Logged</span>
                 <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{fmtSeconds(totalTime)}</span>
                 {estimate > 0 && <span style={{ color: 'var(--text-secondary)' }}>of {task.estimatedHours}h estimated</span>}
-                {openSession && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontWeight: 700, color: 'var(--state-success)' }}>● running {fmtSeconds(runningFor)}</span>}
+                {openSession && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontWeight: 700, color: 'var(--state-success)' }}>● you · {fmtSeconds(runningFor)}</span>}
             </div>
             {estimate > 0 && (
                 <div aria-hidden style={{ height: '3px', background: 'var(--bg-active)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
-                    <div style={{ width: `${Math.min(100, Math.round(((totalTime + runningFor) / estimate) * 100))}%`, height: '100%', background: totalTime + runningFor > estimate ? 'var(--state-danger)' : 'var(--accent)' }} />
+                    <div style={{ width: `${Math.min(100, Math.round(((totalTime + runningAll) / estimate) * 100))}%`, height: '100%', background: totalTime + runningAll > estimate ? 'var(--state-danger)' : 'var(--accent)' }} />
                 </div>
             )}
+            {others.length > 0 && (
+                <p style={{ margin: '0 0 8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Also tracking: {others.map((u) => u.user?.username || 'someone').join(', ')}
+                </p>
+            )}
             <button type="button" className={`tk-btn ${openSession ? 'tk-btn-danger' : ''}`} onClick={toggle} disabled={busy || disabled} style={{ width: '100%' }}>
-                {busy ? <Loader2 size={12} className="tk-spin" /> : openSession ? <><StopCircle size={13} /> Stop timer</> : <><PlayCircle size={13} /> Start timer</>}
+                {busy && !logOpen ? <Loader2 size={12} className="tk-spin" /> : openSession ? <><StopCircle size={13} /> Stop my timer</> : <><PlayCircle size={13} /> Start timer</>}
             </button>
+            {logOpen && (
+                <form onSubmit={submitLog} style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <input className="tk-field" value={logText} onChange={(e) => { setLogText(e.target.value); setLogErr(null); }}
+                            placeholder="e.g. 45m, 1h 30m, 1:30" aria-label="Time spent" autoFocus />
+                        <button type="submit" className="tk-btn tk-btn-primary" disabled={busy || !logText.trim()}>
+                            {busy ? <Loader2 size={11} className="tk-spin" /> : 'Log'}
+                        </button>
+                        <button type="button" className="tk-btn" onClick={() => { setLogOpen(false); setLogErr(null); }}>Cancel</button>
+                    </div>
+                    <input className="tk-field" value={logNote} onChange={(e) => setLogNote(e.target.value)} placeholder="Note (optional)" aria-label="Time log note" maxLength={500} />
+                    {logErr && <p role="alert" style={{ margin: 0, fontSize: '11px', color: 'var(--state-danger)' }}>{logErr}</p>}
+                </form>
+            )}
+            {summary?.byUser?.length > 0 && (
+                <ul aria-label="Time by person" style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {summary.byUser.map((u) => (
+                        <li key={u.userId} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {String(u.userId) === String(myId) ? 'You' : (u.user?.username || 'Someone')}
+                                {u.running && <span style={{ color: 'var(--state-success)' }}> ●</span>}
+                            </span>
+                            <span style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>{fmtSeconds(u.seconds)}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </DetailSection>
     );
 }
+
 
 /* ── Repeat ───────────────────────────────────────────────────────────── */
 

@@ -6,6 +6,8 @@ import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 import logger from '../utils/logger';
 import { mapTask, upsertTask, toStatus, toPriority, taskErrorMessage, statusLabel } from '../utils/taskMeta';
+import { blockedFromError } from '../utils/taskTime';
+import { useBlockedPrompt } from '../components/tasksComp/BlockedTaskDialog';
 
 /**
  * Workspace tasks for the Tasks page. Tasks are kept in the server's shape
@@ -26,7 +28,7 @@ const taskFromPayload = (p) => (p && p.task && typeof p.task === 'object' ? p.ta
 function toUpdatePayload(updates) {
     const out = {};
     const copy = ['title', 'description', 'dueDate', 'tags', 'labels', 'completionNote', 'blockedReason',
-        'storyPoints', 'estimatedHours', 'actualHours', 'resolution', 'sprintId', 'milestoneId', 'recurring'];
+        'storyPoints', 'estimatedHours', 'actualHours', 'resolution', 'sprintId', 'milestoneId', 'recurring', 'startDate'];
     for (const key of copy) if (updates[key] !== undefined) out[key] = updates[key];
     if (updates.status !== undefined) out.status = toStatus(updates.status);
     if (updates.priority !== undefined) out.priority = toPriority(updates.priority);
@@ -36,6 +38,7 @@ function toUpdatePayload(updates) {
     if (updates.assignedTo !== undefined) out.assignedTo = updates.assignedTo;
     else if (updates.assignedToIds !== undefined) out.assignedTo = updates.assignedToIds;
     if (updates.channelId !== undefined) out.channelId = updates.channelId;
+    if (updates.ignoreBlockers === true && out.status) out.ignoreBlockers = true;
     return out;
 }
 
@@ -45,6 +48,7 @@ export const TasksProvider = ({ children }) => {
     const { user } = useAuth();
     const { socket } = useSocket();
     const currentUserId = user?._id || user?.id || null;
+    const { ask: askBlocked, dialog: blockedDialog } = useBlockedPrompt();
 
     // Only the workspace id matters: navigating inside the app must not refetch.
     const workspaceId = useMemo(() => {
@@ -204,6 +208,10 @@ export const TasksProvider = ({ children }) => {
         if (data.channelId) payload.channelId = data.channelId;
         if (data.recurring) payload.recurring = data.recurring;
         if (data.milestoneId) payload.milestoneId = data.milestoneId;
+        if (data.sprintId) payload.sprintId = data.sprintId;
+        if (data.startDate) payload.startDate = data.startDate;
+        if (data.estimatedHours != null && data.estimatedHours !== '') payload.estimatedHours = Number(data.estimatedHours);
+        if (data.storyPoints != null && data.storyPoints !== '') payload.storyPoints = Number(data.storyPoints);
         if (payload.assignmentType === "individual") {
             payload.assignedToIds = data.assignedToIds || [];
             payload.taskMode = data.taskMode || 'split';
@@ -262,12 +270,21 @@ export const TasksProvider = ({ children }) => {
             else if (body.status && before && body.status !== before.status) showToast(`Moved to ${statusLabel(body.status)}`, "success");
             return saved;
         } catch (error) {
-            logger.error("Failed to update task:", error);
             if (before) setTasks((prev) => prev.map((t) => (t.id === id ? before : t)));
+            // Completing a task whose blockers are still open: ask, then retry with ignoreBlockers.
+            const blocked = !body.ignoreBlockers ? blockedFromError(error) : null;
+            if (blocked) {
+                const go = await askBlocked(blocked, before?.title);
+                if (!go) return null;
+                return updateTaskRef.current(id, { ...updates, ignoreBlockers: true }, { successMessage });
+            }
+            logger.error("Failed to update task:", error);
             showToast(taskErrorMessage(error, "Failed to update task"), "error");
             return null;
         }
-    }, [showToast, applyServerTask]);
+    }, [showToast, applyServerTask, askBlocked]);
+    const updateTaskRef = useRef(updateTask);
+    updateTaskRef.current = updateTask;
 
     /** Merge local-only fields (e.g. timer state returned by a sub-endpoint). */
     const patchTaskLocal = useCallback((id, patch) => {
@@ -375,5 +392,5 @@ export const TasksProvider = ({ children }) => {
     }), [tasks, loading, refreshing, workspaceId, createTask, updateTask, patchTaskLocal, deleteTask,
         permanentlyDeleteTask, restoreTask, requestTransfer, handleTransferResponse, fetchTask, refreshTasks]);
 
-    return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
+    return <TasksContext.Provider value={value}>{children}{blockedDialog}</TasksContext.Provider>;
 };

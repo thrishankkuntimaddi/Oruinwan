@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Search, CheckCircle2, Circle, Trash2, RotateCcw, Activity, LayoutGrid, List,
-  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare, Flag, LayoutTemplate,
+  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare, Flag, LayoutTemplate, Clock,
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -13,6 +13,7 @@ import KanbanBoard from '../../components/tasksComp/KanbanBoard';
 import SprintBoard from '../../components/tasksComp/SprintBoard';
 import TimelineView from '../../components/tasksComp/TimelineView';
 import WorkloadPanel from '../../components/tasksComp/WorkloadPanel';
+import TimeReportView from '../../components/tasksComp/TimeReportView';
 import MilestonesView from '../../components/tasksComp/MilestonesView';
 import TaskTemplatesDialog from '../../components/tasksComp/TaskTemplatesDialog';
 import { RepeatBadge } from '../../components/tasksComp/RepeatPicker';
@@ -364,6 +365,10 @@ export default function MyTasks() {
               <span className="gl-x-item-title">Milestones</span>
               <span className="gl-count">{planning.milestones.length}</span>
             </button>
+            <button type="button" className={`gl-item${viewMode === 'time' ? ' is-active' : ''}`} onClick={() => { setViewMode('time'); if (isMobile) setMobileShowList(true); }}>
+              <Clock size={14} className="gl-x-item-icon" />
+              <span className="gl-x-item-title">Time report</span>
+            </button>
             <button type="button" className="gl-item" onClick={() => setTemplatesOpen('manage')}>
               <LayoutTemplate size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Templates</span>
@@ -435,7 +440,7 @@ export default function MyTasks() {
                 ))}
               </div>
               <span className="gl-x-tasks-count">
-                {viewMode !== 'workload' && viewMode !== 'milestones' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
+                {viewMode !== 'workload' && viewMode !== 'milestones' && viewMode !== 'time' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
               </span>
             </div>
           </header>
@@ -443,6 +448,8 @@ export default function MyTasks() {
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {viewMode === 'workload' ? (
               <WorkloadPanel workspaceId={workspaceId} />
+            ) : viewMode === 'time' ? (
+              <TimeReportView workspaceId={workspaceId} onOpenTask={(id) => setSelectedId(id)} />
             ) : viewMode === 'milestones' ? (
               <MilestonesView
                 planning={planning}
@@ -469,7 +476,9 @@ export default function MyTasks() {
             ) : viewMode === 'board' ? (
               <KanbanBoard tasks={shown} onTaskClick={openTask} onStatusChange={changeStatus} canMove={(t) => !t.deleted && abilitiesOf(t).status} />
             ) : viewMode === 'sprint' ? (
-              <SprintBoard tasks={shown} workspaceId={workspaceId} onTaskClick={openTask} />
+              <SprintBoard tasks={shown} workspaceId={workspaceId} onTaskClick={openTask}
+                canLink={(t) => !t.deleted && abilitiesOf(t).edit}
+                onLink={(taskId, sprintId) => updateTask(taskId, { sprintId }, { successMessage: sprintId ? 'Added to sprint' : 'Removed from sprint' })} />
             ) : viewMode === 'timeline' ? (
               <TimelineView tasks={shown} onTaskClick={openTask} />
             ) : (

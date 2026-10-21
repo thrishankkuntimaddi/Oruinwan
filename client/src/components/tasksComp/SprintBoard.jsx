@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Activity, Calendar, Clock } from 'lucide-react';
+import { ChevronDown, Activity, Calendar, Clock, X } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { taskErrorMessage, STATUS_META } from '../../utils/taskMeta';
@@ -15,7 +15,7 @@ const T = {
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 const inSprint = (t, sprintId) => sameId(t.sprintId, sprintId) || sameId(t.sprint?._id || t.sprint, sprintId);
 
-function SprintTaskRow({ task, onClick }) {
+function SprintTaskRow({ task, onClick, onRemove }) {
   const overdue = isOverdue(task);
   const done = task.status === 'done';
   return (
@@ -40,6 +40,12 @@ function SprintTaskRow({ task, onClick }) {
       </span>
       <span style={{ width: '56px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}><AvatarStack users={task.assignees} size={18} /></span>
       <span style={{ width: '110px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}><StatusBadge status={task.status} compact /></span>
+      {onRemove && (
+        <button type="button" className="gl-icon-btn" aria-label={`Remove ${task.title} from the sprint`} title="Remove from sprint"
+          onClick={(e) => { e.stopPropagation(); onRemove(task); }} style={{ width: 26, height: 26, flexShrink: 0 }}>
+          <X size={13} />
+        </button>
+      )}
     </div>
   );
 }
@@ -51,7 +57,9 @@ function SprintProgress({ sprint, tasks }) {
   return { pct, done, total: sprintTasks.length };
 }
 
-export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
+export default function SprintBoard({ tasks = [], workspaceId, onTaskClick, onLink, canLink = () => true }) {
+  const [pick, setPick] = useState('');
+  const [linking, setLinking] = useState(false);
   const { showToast } = useToast();
   const [sprints, setSprints] = useState([]);
   const [selectedSprint, setSelectedSprint] = useState('all');
@@ -168,7 +176,22 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           )}
         </div>
 
-        {}
+        {onLink && activeSprint && (() => {
+          const options = tasks.filter((t) => !t.deleted && !t.isSubtask && !inSprint(t, activeSprint._id) && canLink(t));
+          const add = async (id) => {
+            if (!id) return;
+            setLinking(true);
+            try { await onLink(id, activeSprint._id); setPick(''); } finally { setLinking(false); }
+          };
+          return (
+            <select className="gl-input" value={pick} disabled={linking || options.length === 0} aria-label="Add a task to this sprint"
+              onChange={(e) => { setPick(e.target.value); add(e.target.value); }} style={{ maxWidth: 220, height: 30, fontSize: 12 }}>
+              <option value="">{options.length ? '+ Add a task to this sprint…' : 'No tasks to add'}</option>
+              {options.map((t) => <option key={t.id} value={t.id}>{t.issueKey ? `${t.issueKey} · ` : ''}{t.title}</option>)}
+            </select>
+          );
+        })()}
+
         {filteredTasks.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '8px' }}>
             {[
@@ -196,6 +219,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           <span style={{ width: '96px', textAlign: 'center' }}>Due date</span>
           <span style={{ width: '56px', textAlign: 'center' }}>Assignee</span>
           <span style={{ width: '110px', textAlign: 'center' }}>Status</span>
+          {onLink && activeSprint && <span style={{ width: '26px' }} />}
         </div>
 
         {filteredTasks.length === 0 ? (
@@ -207,7 +231,8 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           </div>
         ) : (
           filteredTasks.map(task => (
-            <SprintTaskRow key={task.id || task._id} task={task} onClick={onTaskClick} />
+            <SprintTaskRow key={task.id || task._id} task={task} onClick={onTaskClick}
+              onRemove={onLink && activeSprint && canLink(task) ? (t) => onLink(t.id, null) : null} />
           ))
         )}
       </div>
