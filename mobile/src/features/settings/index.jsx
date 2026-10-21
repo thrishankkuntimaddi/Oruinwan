@@ -10,7 +10,7 @@ import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useSessions } from '../../data/hooks.js';
 import { clearQueries, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { useAppearance, TEXT_SIZES } from '../../app/theme.js';
-import { useUpdate, checkForUpdate } from '../../update/updater.js';
+import { useUpdate, checkForUpdate, revertToBuiltInUi } from '../../update/updater.js';
 import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
 import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
@@ -787,7 +787,7 @@ export function AiSettings() {
 // ---------------------------------------------------------------- App
 
 export function UpdateSettings() {
-  const { status, manifest, currentVersion, checkedAt, error } = useUpdate();
+  const { status, manifest, currentVersion, shellVersion, uiSource, checkedAt, error } = useUpdate();
   const flags = useFlags((s) => s.flags);
   const source = useFlags((s) => s.source);
   const [checking, setChecking] = useState(false);
@@ -811,6 +811,7 @@ export function UpdateSettings() {
               </p>
               <p className="text-[13px] text-text-2">
                 You have {currentVersion}
+                {shellVersion && shellVersion !== currentVersion ? ` (app ${shellVersion})` : ''}
                 {checkedAt ? ` · checked ${shortAgo(checkedAt)}` : ''}
               </p>
             </div>
@@ -827,6 +828,20 @@ export function UpdateSettings() {
           )}
           {status === 'unknown' && error && <p className="mt-3 text-[13px] text-text-2">{error}</p>}
         </div>
+        {uiSource === 'downloaded' && (
+          <p className="mx-5 mt-3 text-xs leading-relaxed text-text-2">
+            Running a quick update.{' '}
+            <button
+              type="button"
+              className="font-medium text-accent"
+              onClick={() => {
+                if (window.confirm('Go back to the version that came with the app? The app restarts.')) revertToBuiltInUi();
+              }}
+            >
+              Use the version that came with the app
+            </button>
+          </p>
+        )}
         <div className="mt-3 flex gap-2.5 px-4">
           <Button variant="secondary" block icon={RefreshCw} loading={checking || status === 'checking'} onClick={check}>
             Check now
@@ -841,11 +856,11 @@ export function UpdateSettings() {
             : isIOS
               ? 'Updates come from the App Store (or TestFlight while Oruinwan is in testing) and keep your data.'
               : isPlayStore
-                ? 'Updates come from Google Play and keep your data.'
+                ? 'Small updates install in the app and restart it; bigger ones come from Google Play. Your data is kept.'
               : isDesktop
                 ? 'The app checks for updates when it opens, at most every few hours. Install the new version over this one: your data is kept.'
-                : 'The app checks for updates when it opens, at most every few hours. Updates install over this version and keep your data.'}
-          {isAndroid && !isPlayStore ? ' Android asks you to confirm each install.' : ''}
+                : 'The app checks for updates when it opens and every few hours. Most updates install in the app and restart it, with no reinstall; updates to the app itself install over this version. Your data is kept.'}
+          {isAndroid && !isPlayStore ? ' Android asks you to confirm each full install.' : ''}
         </p>
         <Section title="Features in this version">
           <RowGroup footer={`Source: ${source === 'remote' ? 'remote configuration' : source === 'cached' ? 'last remote configuration' : 'built into this version'}. New features can be switched on remotely without reinstalling.`}>

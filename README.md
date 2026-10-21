@@ -4,7 +4,7 @@
 
 # Oruinwan
 
-**A workspace for companies: channels, direct messages, huddles, tasks, notes and AI agents, on the web, desktop, phones and tablets.**
+**The free, open-source workspace for teams: chat, tasks, notes, huddles and AI, on web, desktop, phone and tablet.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml)
@@ -12,7 +12,9 @@
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 
-[Website](https://thrishankkuntimaddi.github.io/Oruniwan/) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruniwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
+[Website](https://thrishankkuntimaddi.github.io/Oruniwan/) · [Pricing](https://thrishankkuntimaddi.github.io/Oruniwan/pricing) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruniwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
+
+<img src="mobile/play-store/feature-graphic.png" alt="Oruinwan: one workspace, every conversation" width="720" />
 
 </div>
 
@@ -22,104 +24,163 @@
 
 - [What Oruinwan is](#what-oruinwan-is)
 - [Features](#features)
-- [Architecture](#architecture)
-- [Local development](#local-development)
+- [Plans](#plans)
+- [Download](#download)
+- [Self-hosting](#self-hosting)
+- [Configurable limits](#configurable-limits)
+- [Development](#development)
+- [Project structure](#project-structure)
 - [Tests](#tests)
-- [Builds](#builds)
-- [Deployment](#deployment)
+- [Builds and releases](#builds-and-releases)
+- [Updates](#updates)
 - [Environment variables](#environment-variables)
 - [Security and privacy](#security-and-privacy)
 - [Contributing](#contributing)
+- [Documentation](#documentation)
 - [License](#license)
 
 ---
 
 ## What Oruinwan is
 
-Oruinwan is a team workspace for companies of around fifty people. A **company** owns one or more **workspaces**; each workspace has public and private channels, direct messages, threads, huddles, tasks, notes, files and a knowledge base. AI agents (Claude, ChatGPT, Gemini, Grok and the built-in Oruinwan AI) can be added to a workspace and answer in conversations.
+Oruinwan is a workspace for teams. Each **workspace** has public and private channels, direct messages, threads, huddles and meetings, tasks and planning, notes and a knowledge base, files, AI agents, automations and integrations. Companies can also register for a **company console** with departments, roles, permissions and audit logs.
 
-It runs in the browser, as a desktop app for macOS, Windows and Linux, as a phone app for Android and iOS, and as a tablet app on Android tablets and iPads. Every app talks to one Oruinwan server, which a company runs for itself.
+It runs in the browser, as a desktop app for macOS, Windows and Linux, and as an app for Android phones and tablets (with split and wide layouts on larger screens). On iPhone and iPad, use the web app. Every app talks to one Oruinwan server, which you can use as a hosted service or run yourself.
+
+Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Enterprise plans are coming soon.
 
 ---
 
 ## Features
 
-### Sign-in and accounts
-- Email and password, or Google
-- Email verification, passkeys, and two-factor authentication with authenticator-app codes
-- In the desktop and tablet apps, Google sign-in is available on the web only
+### Chat
+- Public and private channels, direct messages and group DMs
+- Messages encrypted on your device with a key for each conversation (see [Security and privacy](#security-and-privacy))
+- Threads, reactions, mentions, pins, polls, search and file sharing
+- Split view on desktop and tablet: two conversations, or a conversation and a thread, side by side
 
-### Workspaces
-- A step-by-step wizard for creating a workspace
-- Invitations by email, by reusable team link, or by one-time link
-- Workspace admins can switch individual features (such as tasks, notes, huddles and polls) off for their workspace
+### Huddles and meetings
+- Audio and video calls with screen sharing and raise hand, started in one click or scheduled ahead
+- One meeting page before, during and after every call: agenda, notes, recording, live transcript and captions
+- An AI recap after the call, from its transcript
 
-### Messaging
-- Public and private channels, direct messages and threads
-- Reactions, pins, mentions, search and file sharing
-- Tasks, notes, files, a knowledge base and company updates alongside conversations
+### Tasks and planning
+- Tasks straight from messages, with owners, due dates, boards and progress
+- Planning views and design reviews with comments on the work itself
 
-### Huddles
-- Audio and video calls with screen sharing and raise hand
-- Scheduled meetings
+### Notes and knowledge
+- Notes with live co-editing, templates and a roadmap
+- Files and a knowledge base the AI can search
 
-### Split view
-- On desktop and tablet, open two conversations, or a conversation and a thread, side by side
+### AI
+- The AI assistant with your choice of model: Claude, ChatGPT, Gemini, Grok, or any model you host (Ollama or any OpenAI-compatible server)
+- Agents installed for a whole workspace by an admin, or connected personally with your own API key
+- Summaries, drafts, rewrites, tasks from threads and meeting recaps
 
-### Agents, workflows and integrations
-- Claude, ChatGPT, Gemini and Grok, plus the built-in Oruinwan AI
-- Agents are installed for the whole workspace by an admin, or connected personally by each member with their own API key
-- Workflows (automations), apps and integrations: GitHub, Jira, Zoom and incoming webhooks
-- Members can connect their personal GitHub and Jira accounts
+### Integrations and automations
+- GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Microsoft Teams, Zoom, Google Drive, OneDrive, Dropbox, CI/CD and incoming webhooks, connected with a personal token or a webhook URL
+- Automations with triggers, conditions, schedules and actions
 
-### Administration
-- **Workspace admin** for each workspace: members, invitations, channels and feature settings
-- **Company console** for owners and admins: departments, people, workspaces, roles and permissions, audit logs and security settings
+### Accounts and administration
+- Email and password or Google sign-in, email verification, passkeys and two-factor authentication
+- Workspace admin (members, invitations, channels, feature switches) and the company console (departments, people, roles, permissions, audit logs)
+- Optional encrypted backup to your own Google Drive
 - Admins never see message content or message counts, and Oruinwan keeps no per-person activity metrics
 
 ---
 
-## Architecture
+## Plans
 
-```
-  Web (React + Vite)    Desktop (Electron)    Phones (Capacitor)    Tablets (Capacitor)
-            \                  |                     |                    /
-             \_________ HTTPS + WebSocket to your Oruinwan server _______/
-                                       |
-              ┌────────────────────────▼────────────────────────┐
-              │  server/   Express 5 + Socket.IO                 │
-              │            also serves the built web app (dist/) │
-              └──┬────────────┬────────────┬────────────┬────────┘
-                 │            │            │            │
-           PostgreSQL     MongoDB        Redis        ai/  ──► model providers
-           + pgvector                  (optional)
-                       S3-compatible object storage for uploads
-```
+| | **Free** · available now | **Pro** · coming soon | **Enterprise** · coming soon |
+|---|---|---|---|
+| Who it's for | Small teams, every feature | Growing teams | Organisations |
+| Signed-in devices | Up to 4 | More | Custom |
+| Workspaces | Create 2, join 2 | More | Custom |
+| Members per workspace | Owner + 10 | More | Custom |
+| Channels | 10 besides #general and #random | More | Custom |
+| Huddles | Up to 10 people, 30 minutes | Longer calls, more people | Custom |
+| Notes | 2 per template, blank notes unlimited | More | Custom |
+| Tasks | 300 active per workspace; 30 for yourself + 30 assigned per person | More | Custom |
+| AI requests | 50 per person per day | More | Custom |
+| Backup | Encrypted backup to your Google Drive | ✓ | ✓ |
+| Admin controls, SSO, compliance | | | ✓ |
 
-| Part | What it is |
-|---|---|
-| `server/` | Express 5 + Socket.IO API. Runs PostgreSQL migrations on boot and serves the web app's production build from `dist/`. |
-| `client/` | React 19 + Vite web app. The same code also builds the desktop and tablet app (`vite build --mode app`, output `client/dist-app`) and the product website (`vite build --mode site`, output `client/dist-site`). |
-| `desktop/` | Electron shell for macOS, Windows and Linux that loads the client's app build. See [desktop/README.md](desktop/README.md). |
-| `mobile/` | Capacitor app for Android and iOS: a phone-first UI on phones, and the client's app build on tablets and iPads. See [mobile/README.md](mobile/README.md). |
-| `ai/` | AI provider layer: agents, tools, memory and providers (Anthropic, OpenAI, Gemini, xAI and any OpenAI-compatible model server). Runs inside the API process by default, or as its own service when `AI_SERVICE_URL` is set. See [ai/README.md](ai/README.md). |
-| `platform/` | Code shared by the web client and server: API client, socket client and event names. |
-| `e2e/` | Playwright end-to-end tests. |
-
-### Data stores
-
-| Store | Used for | Required |
-|---|---|---|
-| **PostgreSQL 16 + pgvector** | Identity (users, companies, workspaces, memberships, keys, sessions), tasks, audit logs, AI knowledge embeddings and the event outbox. Migrations in `server/db/migrations` run on boot. | Yes |
-| **MongoDB 7** | Messages, channels and other documents such as notes and notifications | Yes |
-| **Redis 7** | Socket.IO fan-out, shared presence and live huddles, scheduled-job locks, and the event stream across server instances | Only when running more than one server process |
-| **S3-compatible storage** | File uploads. Locally the `s3` service in `docker-compose.yml`; without `S3_*` the server falls back to local disk (development only) | Yes in production |
-
-More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs/SCALING.md).
+Prices for Pro and Enterprise aren't set yet. To hear when they launch, email [admin@poelys.com](mailto:admin@poelys.com?subject=Notify%20me%3A%20Oruinwan%20Pro). The limits apply to individual accounts; on your own server you can change or remove them ([Configurable limits](#configurable-limits)).
 
 ---
 
-## Local development
+## Download
+
+Every release has the same file names, so these links always fetch the newest version:
+
+| Platform | Download |
+|---|---|
+| Mac (Apple Silicon) | [Oruinwan-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Mac-AppleSilicon.dmg) |
+| Mac (Intel) | [Oruinwan-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Mac-Intel.dmg) |
+| Windows 10 / 11 | [Oruinwan-Windows-Setup.exe](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Windows-Setup.exe) |
+| Linux (any distribution) | [Oruinwan-Linux.AppImage](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Linux.AppImage) |
+| Linux (Debian, Ubuntu) | [Oruinwan-Linux.deb](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Linux.deb) |
+| Android phones and tablets | [Oruinwan-Android.apk](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Android.apk) |
+| iPhone and iPad | Use the web app in Safari |
+
+The release page lists SHA-256 checksums and install notes (the Mac and Windows builds aren't notarized or code-signed yet). Once installed, the apps tell you when an update is ready ([Updates](#updates)).
+
+---
+
+## Self-hosting
+
+The root `Dockerfile` builds one image with the API, the AI module, the migrations and the web app. `docker-compose.yml` runs it next to PostgreSQL (with pgvector), Redis, S3-compatible storage and MongoDB.
+
+```bash
+git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
+cd Oruniwan
+cp server/.env.example server/.env      # then fill in the secrets below
+docker compose --profile mongo --profile app up -d --build
+```
+
+Oruinwan is then on **http://localhost:8080**.
+
+1. In `server/.env`, generate fresh `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `SERVER_KEK` and `CRYPTO_KEK_V1` (each exactly 64 hex characters):
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+2. In a `.env` next to `docker-compose.yml`, set `APP_URL` (the public `https://` address; sign-in cookies need HTTPS anywhere but localhost), `POSTGRES_PASSWORD` and `S3_SECRET_KEY`. Use `APP_MONGO_URI` for a hosted MongoDB instead of the `mongo` service.
+3. Configure email (`BREVO_API_KEY` or `SMTP_*`; `DEV_MAIL=console` prints codes to the log while testing).
+4. Optional: `VITE_GOOGLE_CLIENT_ID` as a build argument for Google sign-in on the web, a TURN server for huddles behind strict firewalls, and an AI provider (`AI_PROVIDER`; the default is a local model through Ollama).
+5. Create the first platform admin: `docker compose exec app node scripts/createChttrixAdmin.js`.
+
+Without Docker: `yarn install && yarn build`, then `NODE_ENV=production node server.js` in `server/`. The server serves the API and the web app from one origin.
+
+Production checklist:
+
+- `NODE_ENV=production`, all secrets freshly generated and the development passwords from `docker-compose.yml` changed
+- `FRONTEND_URL` matches the public web address exactly
+- PostgreSQL (with pgvector), MongoDB and, for more than one process, Redis reachable from every server process
+- `S3_*` set so every process shares the same uploads
+- Email sender domain authenticated (SPF and DKIM)
+- TLS in front (load balancer or reverse proxy) with WebSocket upgrades enabled
+
+Production templates: `server/.env.production.template` and `client/.env.production.template`. To scale out, set `REDIS_URL` and run more instances, or split them by `PROCESS_ROLE`; see [docs/SCALING.md](docs/SCALING.md).
+
+The desktop and phone apps connect to the server they were built for (`VITE_SERVER_URL`), so a self-hosted server needs its own app builds ([Builds and releases](#builds-and-releases)), or its users use the web app.
+
+---
+
+## Configurable limits
+
+The Free plan limits live in one server-side configuration, so a self-hosted server can change them:
+
+| Variable | Effect |
+|---|---|
+| `PLAN_LIMITS_JSON` | JSON that overrides individual plan limits (workspaces, members, channels, huddle size and length, notes, tasks, AI requests); the keys are documented in `server/.env.example` |
+| `DEVICE_LIMIT` | How many devices one account can be signed in on at once (default 4) |
+| `ORUINWAN_UNLIMITED` | `true` turns every plan limit off |
+
+Workspaces that were already over a limit when it was introduced keep working; they just can't grow further.
+
+---
+
+## Development
 
 ### Prerequisites
 
@@ -127,42 +188,20 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](
 - Docker with Compose
 - Optional: [Ollama](https://ollama.com) for the built-in AI
 
-### 1. Install
+### Run everything
 
 ```bash
 git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
 cd Oruniwan
-yarn install          # installs the client, server and e2e workspaces
-```
-
-### 2. Start PostgreSQL, Redis, S3 storage and MongoDB
-
-```bash
-docker compose --profile mongo up -d
-```
-
-Leave out `--profile mongo` if you use a hosted MongoDB.
-
-### 3. Create the env files
-
-| Copy | To | For |
-|---|---|---|
-| `server/.env.example` | `server/.env` | The API server (required) |
-| `client/.env.example` | `client/.env` | The web app, and the desktop/tablet and website builds |
-| `mobile/.env.example` | `mobile/.env` | The phone app (only if you work on `mobile/`) |
-
-```bash
-cp server/.env.example server/.env
+yarn install                         # client, server and e2e workspaces
+cp server/.env.example server/.env   # generate the secrets as in Self-hosting
 cp client/.env.example client/.env
+docker compose up -d                 # PostgreSQL, Redis and S3 storage (add --profile mongo for a local MongoDB)
+yarn build                           # build the web app once (yarn dev serves this build)
+yarn dev:all                         # starts local MongoDB and Ollama if needed, then the API and web app
 ```
 
-In `server/.env`, generate fresh values for `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `SERVER_KEK` and `CRYPTO_KEK_V1` (each key must be exactly 64 hex characters):
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Then point the server at your local services:
+The API is on http://localhost:8080 and the web app on http://localhost:3000 (it proxies `/api` to the API). Point `server/.env` at your local services:
 
 ```bash
 MONGO_URI=mongodb://127.0.0.1:27017/oruinwan
@@ -170,33 +209,60 @@ DATABASE_URL=postgres://oruinwan:oruinwan-dev@localhost:5432/oruinwan
 FRONTEND_URL=http://localhost:3000
 BACKEND_URL=http://localhost:8080
 GOOGLE_CLIENT_ID=placeholder        # or a real client id to use Google sign-in
-```
-
-The S3, Redis and AI defaults in `server/.env.example` already match `docker-compose.yml` and a local Ollama. To work without a real inbox, set `DEV_MAIL=console`: verification codes and invitations are printed in the server console.
-
-### 4. Optional: start the AI engine
-
-```bash
-ollama serve &
-ollama pull qwen2.5:3b
-ollama pull nomic-embed-text
-```
-
-### 5. Run
-
-```bash
-yarn build        # build the web app once into dist/ (yarn dev serves this build)
-yarn dev          # API on http://localhost:8080 and the web app on http://localhost:3000
+DEV_MAIL=console                    # verification codes and invitations in the server console
 ```
 
 | Command | What it does |
 |---|---|
 | `yarn dev:all` | Starts local MongoDB and Ollama if needed, then `yarn dev` |
+| `yarn dev` | The API and the web app |
 | `yarn dev:status` | Shows which services are running |
 | `yarn server` | The API alone, with nodemon |
 | `yarn workspace client start` | The web app with hot reload (Vite dev server) |
+| `cd mobile && npm install && npm run dev` | The phone and tablet UI in a browser |
+| `cd client && npx vite --mode app`, then `cd desktop && npm start` | The desktop app against the dev server |
 
-The web app proxies `/api` to the API on `localhost:8080`. The full guide, including troubleshooting, is in [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
+For the built-in AI: `ollama pull qwen2.5:3b && ollama pull nomic-embed-text`. The full guide, including troubleshooting, is [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
+
+---
+
+## Project structure
+
+```
+  Web (React + Vite)    Desktop (Electron)    Android phones & tablets (Capacitor)
+            \                  |                     /
+             \_____ HTTPS + WebSocket to your Oruinwan server _____/
+                                  |
+         ┌────────────────────────▼────────────────────────┐
+         │  server/   Express 5 + Socket.IO                 │
+         │            also serves the built web app (dist/) │
+         └──┬────────────┬────────────┬────────────┬────────┘
+            │            │            │            │
+      PostgreSQL     MongoDB        Redis        ai/  ──► model providers
+      + pgvector                  (optional)
+                  S3-compatible object storage for uploads
+```
+
+| Folder | What it is |
+|---|---|
+| `server/` | Express 5 + Socket.IO API: features in `server/src/features`, core modules in `server/src/modules`. Runs PostgreSQL migrations on boot and serves the web app's build. |
+| `client/` | React 19 + Vite web app. The same code builds the desktop app (`vite build --mode app`) and the product website (`vite build --mode site`). |
+| `desktop/` | Electron shell for macOS, Windows and Linux around the client's app build. See [desktop/README.md](desktop/README.md). |
+| `mobile/` | Capacitor app for Android (and iOS): its own phone UI, with split and wide layouts on tablets. See [mobile/README.md](mobile/README.md). |
+| `ai/` | AI layer: agents, tools, memory and providers (Anthropic, OpenAI, Gemini, xAI and any OpenAI-compatible server). See [ai/README.md](ai/README.md). |
+| `platform/` | Code shared by the web client and server: API client, socket client and event names. |
+| `sdk/` | The public API SDK. |
+| `e2e/` | Playwright end-to-end tests. |
+| `docs/` | Architecture, scaling, integrations and API documentation. |
+
+| Store | Used for | Required |
+|---|---|---|
+| **PostgreSQL 16 + pgvector** | Identity, tasks, audit logs, AI embeddings and the event outbox | Yes |
+| **MongoDB 7** | Messages, channels, notes, notifications and other documents | Yes |
+| **Redis 7** | Socket.IO fan-out, presence, live huddles, job locks | Only with more than one server process |
+| **S3-compatible storage** | File uploads (falls back to local disk in development) | Yes in production |
+
+More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs/SCALING.md).
 
 ---
 
@@ -204,100 +270,49 @@ The web app proxies `/api` to the API on `localhost:8080`. The full guide, inclu
 
 | Package | Command | Runner |
 |---|---|---|
-| Server, `ai/` and SDK | `yarn workspace server test` | Jest (the server config also runs the `ai/` and `sdk/` suites) |
+| Server, `ai/` and SDK | `yarn workspace server test` | Jest |
 | Web client | `yarn workspace client test` | Vitest |
 | Server and web client together | `yarn test` | |
 | Phone app | `cd mobile && npm test` | Vitest |
+| Desktop app | `cd desktop && npm test` | Node test runner |
 | End-to-end | `yarn test:e2e` | Playwright |
-| Lint | `yarn lint` (server, client, `ai/`, SDK); `cd mobile && npm run lint` | ESLint |
+| Lint | `yarn lint`; `cd mobile && npm run lint` | ESLint |
 
-The end-to-end suite needs PostgreSQL and MongoDB running (for example from `docker compose --profile mongo up -d`). It starts its own API and web app against throwaway `_e2e` databases. Run `yarn playwright install chromium` inside `e2e/` once if Chromium isn't installed.
-
-GitHub Actions runs lint, tests, the web build and the end-to-end suite on every push to `main` and every pull request (`.github/workflows/ci.yml`), and lints, tests and builds the apps in `.github/workflows/apps.yml`.
+The end-to-end suite needs PostgreSQL and MongoDB running; it starts its own API and web app against throwaway `_e2e` databases. GitHub Actions runs lint, tests, builds and the end-to-end suite on every push to `main` and every pull request (`.github/workflows/ci.yml` and `apps.yml`).
 
 ---
 
-## Builds
+## Builds and releases
 
-App builds have the server address fixed at build time through `VITE_SERVER_URL`; the apps never ask users for a server address. Set it in `client/.env` (desktop and tablet) and `mobile/.env` (phone) before building.
-
-### Web
+App builds have the server address fixed at build time through `VITE_SERVER_URL` (in `client/.env` for desktop, `mobile/.env` for the phone app); the apps never ask for a server address.
 
 ```bash
-yarn build        # client production build into dist/, served by the API server
-```
+yarn build                                   # web app into dist/, served by the API server
+cd client && npx vite build --mode site      # product website (GitHub Pages, .github/workflows/web.yml)
 
-The product website is a separate build of the client, deployed to GitHub Pages from `main` by `.github/workflows/web.yml`:
-
-```bash
-cd client && npx vite build --mode site     # output: client/dist-site
-```
-
-### Desktop (macOS, Windows, Linux)
-
-```bash
 cd desktop && npm install
-npm run build:mac      # .dmg
-npm run build:win      # Windows NSIS installer
-npm run build:linux    # AppImage and .deb
-```
+npm run build:mac | build:win | build:linux  # .dmg, NSIS installer, AppImage + .deb
 
-Each command first builds the client in app mode (`vite build --mode app`) and bundles it. During development, run `npx vite --mode app` in `client/` and `npm start` in `desktop/`. See [desktop/README.md](desktop/README.md).
-
-### Android APK
-
-```bash
 cd mobile && npm install
-npm run android:debug      # android/app/build/outputs/apk/github/debug/app-github-debug.apk
-npm run android:release    # release APK for GitHub (needs the release signing key)
-npm run android:play       # Google Play bundle: android/app/build/outputs/bundle/playRelease/app-play-release.aab
+npm run android:debug                        # debug APK
+npm run android:release                      # release APK (needs the release signing key)
+npm run android:play                         # Google Play bundle
 ```
 
-The APK contains both the phone UI and the client's app build for Android tablets. `./scripts/release-local.sh` in `mobile/` builds a signed release APK locally.
-
-### iOS
-
-iOS builds need a Mac with Xcode:
-
-```bash
-cd mobile
-npm run build && npm run assemble && npx cap sync ios
-open ios/App/App.xcodeproj
-```
-
-During testing, iOS builds are distributed through TestFlight.
-
-### Releases
-
-Pushing a `vX.Y.Z` tag runs `.github/workflows/apps.yml`, which builds the signed Android APK and the desktop installers, publishes them together in one GitHub Release with `latest.json` (used by the in-app updaters), and uploads the iOS build to TestFlight when the Apple signing secrets are configured. Release steps and the required repository secrets are in [mobile/README.md](mobile/README.md).
+Pushing a `vX.Y.Z` tag runs `.github/workflows/apps.yml`: it builds the signed Android APK and the desktop installers and publishes them in one GitHub Release with `latest.json`. Release steps and the required repository secrets are in [mobile/README.md](mobile/README.md).
 
 ---
 
-## Deployment
+## Updates
 
-Oruinwan is deployed on AWS. There is no production domain yet, so nothing in this repository assumes one: configure the public address of **your Oruinwan server** through environment variables (`FRONTEND_URL`, `BACKEND_URL`, `VITE_SERVER_URL`, `VITE_WEB_APP_URL`).
+- The desktop and Android apps read `latest.json` from the newest GitHub release when they start and every 6 hours. When a newer version exists they show a toast and a card in Notifications (phone: on Home); **Settings → About & updates** (phone: **Settings → Updates**) shows your versions, *Check for updates* and the release notes.
+- Most releases only change the app's interface. Those ship as a signed **UI bundle** that the app downloads, verifies and restarts into: one click on *Update and restart*, no reinstall. If the new interface fails to start, the app goes back to the last one that worked.
+- Bundles are signed with Ed25519. CI signs them with the `ORUINWAN_UPDATE_SIGNING_KEY` secret (a PKCS#8 PEM private key, or a base64 32-byte seed); the matching public key is in `platform/update-public-key.txt` and is built into the apps. Without the secret CI publishes the bundles unsigned, and the apps refuse them and offer the full download.
+- Releases that change the native app (new plugins, a new Electron version) raise the minimum in `platform/native-shells.json`; older installs are then offered the full installer instead.
+- iPhone and iPad builds update through the App Store / TestFlight.
+- The web app shows *A new version is available — Reload* after a new deploy.
 
-The smallest production setup is one server process running everything. The root `Dockerfile` builds a single image containing the API, the AI module, the migrations and the web app; `docker-compose.yml` can run it (profile `app`) next to PostgreSQL, Redis, S3 storage and MongoDB:
-
-```bash
-docker compose --profile mongo --profile app up -d --build
-```
-
-The `app` service reads `server/.env` and listens on port 8080. Set `APP_URL` (the public address of your Oruinwan server), `POSTGRES_PASSWORD` and `S3_SECRET_KEY` in a `.env` next to `docker-compose.yml`, or `APP_MONGO_URI` to use a hosted MongoDB. To enable Google sign-in on the web, pass `VITE_GOOGLE_CLIENT_ID` as a build argument. Create the first platform admin with `docker compose exec app node scripts/createChttrixAdmin.js`.
-
-Without Docker: build the web app with `yarn install && yarn build`, then start the server from `server/` with `NODE_ENV=production node server.js`. It serves the API and the web app from one origin.
-
-Production checklist:
-
-- `NODE_ENV=production`, with all secrets freshly generated and the development passwords from `docker-compose.yml` changed
-- `FRONTEND_URL` matches the public web address exactly
-- PostgreSQL (with pgvector), MongoDB and, for more than one process, Redis reachable from every server process
-- `S3_*` set so every process shares the same uploads (on AWS, an S3 bucket)
-- Email configured, with the sender domain authenticated (SPF and DKIM)
-- A TLS-terminating load balancer or reverse proxy in front, with WebSocket upgrades enabled
-- A TURN server configured if users are behind strict firewalls
-
-Production templates: `server/.env.production.template` and `client/.env.production.template`. To scale out, set `REDIS_URL` and run more instances, or split them by `PROCESS_ROLE`; see [docs/SCALING.md](docs/SCALING.md).
+Details and key setup: [docs/UPDATES.md](docs/UPDATES.md).
 
 ---
 
@@ -311,7 +326,7 @@ Each `.env.example` documents every variable it uses. The key ones:
 |---|---|---|
 | Required at boot | `MONGO_URI`, `DATABASE_URL`, `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `FRONTEND_URL`, `GOOGLE_CLIENT_ID`, `SERVER_KEK` | The server exits if any is missing |
 | URLs | `BACKEND_URL`, `CORS_EXTRA_ORIGINS` | Public API address; extra allowed web origins |
-| Encryption | `SERVER_KEK`, `CRYPTO_KEK_ACTIVE_VERSION`, `CRYPTO_KEK_V1`, `CRYPTO_KEK_V2` | `SERVER_KEK` is the server master key that protects the escrowed conversation keys and other sealed server secrets. Each key is exactly 64 hex characters |
+| Encryption | `SERVER_KEK`, `CRYPTO_KEK_ACTIVE_VERSION`, `CRYPTO_KEK_V1`, `CRYPTO_KEK_V2` | `SERVER_KEK` is the server master key that protects the sealed keys and other server secrets. Each key is exactly 64 hex characters |
 | Storage | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE` | The bucket is created on boot if missing |
 | Scaling | `REDIS_URL`, `PROCESS_ROLE` | Any role other than `all` needs Redis |
 | Email | `BREVO_API_KEY`, `EMAIL_FROM`, `SMTP_*`, `SMTP_FALLBACK_*`, `DEV_MAIL` | Tried in that order; `DEV_MAIL=console` for development |
@@ -319,6 +334,7 @@ Each `.env.example` documents every variable it uses. The key ones:
 | Push notifications | `FIREBASE_SERVICE_ACCOUNT` (Android), `APNS_*` (iOS) | Optional |
 | AI | `AI_PROVIDER`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_EMBED_MODEL`, `AI_SERVICE_URL`, `AI_SERVICE_TOKEN` | Default provider is `local_llm` |
 | Huddles | `CLOUDFLARE_TURN_*`, or `TURN_URLS` with `TURN_SECRET` or `TURN_USERNAME`/`TURN_CREDENTIAL`; `HUDDLE_MAX_PARTICIPANTS` | Configure one TURN source |
+| Plan limits | `PLAN_LIMITS_JSON`, `DEVICE_LIMIT`, `ORUINWAN_UNLIMITED` | See [Configurable limits](#configurable-limits) |
 | Integrations | `INTEGRATIONS_PUBLIC_URL`, `GITHUB_API_URL` | Optional server-wide settings; credentials are entered in the app |
 | Feature flags | `FEATURES_ENABLED` | Comma list of `billing`, `sso`, `integrations`, `community`, or `all` |
 | Retention | `AUDIT_LOG_RETENTION_DAYS`, `HISTORY_LOG_RETENTION_DAYS`, `ACTIVITY_RETENTION_DAYS`, `SECURITY_AUDIT_RETENTION_DAYS` | `0` keeps logs forever |
@@ -331,28 +347,28 @@ Every `VITE_` value is bundled into the browser build, so never put secrets here
 |---|---|---|
 | `VITE_API_URL`, `VITE_BACKEND_URL` | Web build | API and server address for local development |
 | `VITE_GOOGLE_CLIENT_ID` | Web build | Google sign-in |
-| `VITE_SERVER_URL` | App build (`--mode app`: desktop and tablet) | The Oruinwan server the app talks to, fixed at build time. The apps don't ask for a server address. Empty: `VITE_BACKEND_URL` |
-| `VITE_WEB_APP_URL` | Product website (`--mode site`) | Where "Log in" and "Get started" open, in a new tab. When empty, the site keeps its fallback (links stay in the same tab and point to a local web app) |
+| `VITE_SERVER_URL` | App build (desktop) | The Oruinwan server the app talks to, fixed at build time |
+| `VITE_WEB_APP_URL` | Product website | Where "Log in" and "Get started" open, in a new tab |
 
 ### Phone app (`mobile/.env`)
 
 | Variable | Meaning |
 |---|---|
-| `VITE_SERVER_URL` | The Oruinwan server the phone app talks to, fixed at build time. Empty: `http://localhost:8080` |
-| `VITE_UPDATE_MANIFEST_URL` | Where the Android app looks for newer builds; defaults to `latest.json` on the newest GitHub release |
+| `VITE_SERVER_URL` | The Oruinwan server the app talks to, fixed at build time. Empty: `http://localhost:8080` |
+| `VITE_UPDATE_MANIFEST_URL` | Where the app looks for updates; defaults to `latest.json` on the newest GitHub release |
 | `VITE_FIREBASE_*` | Optional Firebase web config for Remote Config |
-| `ORUINWAN_WEB_HOST` | Native build setting (not bundled): the web app's host, so invitation links open the phone app |
+| `ORUINWAN_WEB_HOST` | Native build setting (not bundled): the web app's host, so invitation links open the app |
 
 ---
 
 ## Security and privacy
 
-- **End-to-end encrypted messages.** Messages are encrypted between devices with a key for each conversation.
-- **Key escrow.** The server also keeps an escrowed copy of each conversation key, protected by a server master key (`SERVER_KEK`). This lets AI agents answer in encrypted conversations, and lets people regain access to their conversations after a password reset. Anyone who controls both the server's database and `SERVER_KEK` could therefore decrypt conversations, so protect that key accordingly.
-- **In transit and at rest.** Traffic is encrypted in transit with TLS, and data is encrypted at rest.
+- **Encrypted messages.** Messages in channels and DMs are encrypted on your device with a key for each conversation (X25519 key agreement, AES-256-GCM), and stay encrypted in transit and at rest.
+- **A sealed key on the server, stated plainly.** Oruinwan's server keeps a sealed copy of your key and of each conversation key, protected by the server master key (`SERVER_KEK`). That is what lets your devices unlock automatically after you sign in, lets AI agents answer in encrypted conversations, and lets you keep access after a password reset. Anyone who controls both the server's database and `SERVER_KEK` could therefore decrypt conversations. If you want to hold that key yourself, self-host.
 - **Admins.** Message content is never shown to workspace or company admins, and admins never see message counts.
 - **No individual tracking.** Oruinwan has no per-person activity metrics.
 - **Accounts.** Passwords are hashed; accounts can add passkeys and two-factor authentication.
+- **Updates.** App UI bundles are verified against an Ed25519 key built into the apps before they are loaded.
 
 Found a vulnerability? Please report it privately through [GitHub security advisories](https://github.com/thrishankkuntimaddi/Oruniwan/security/advisories/new) rather than in a public issue.
 
@@ -360,12 +376,25 @@ Found a vulnerability? Please report it privately through [GitHub security advis
 
 ## Contributing
 
-1. Create a branch, for example `feat/recurring-tasks`.
-2. Make your change and run `yarn lint && yarn test`.
+Issues and pull requests are welcome.
+
+1. Fork the repository and create a branch, for example `feat/recurring-tasks`.
+2. Make your change, with tests, and run `yarn lint && yarn test` (plus `npm test` in `mobile/` or `desktop/` if you touched them).
 3. Write commits in the [Conventional Commits](https://www.conventionalcommits.org) style, for example `feat(tasks): add recurring tasks`.
 4. Open a pull request describing what changed and how you tested it.
 
-Backend code follows the feature-module layout in `server/src/features` and `server/src/modules`; new PostgreSQL changes go in a new numbered migration.
+Backend code follows the feature-module layout in `server/src/features` and `server/src/modules`; new PostgreSQL changes go in a new numbered migration. UI changes keep the existing "Monolith Gloss" theme (`client/src/styles/gloss.css`) in light and dark.
+
+---
+
+## Documentation
+
+- [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md): running the whole stack locally
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs/SCALING.md): how it fits together and how to scale it
+- [docs/UPDATES.md](docs/UPDATES.md): in-app updates and update signing
+- [docs/integrations.md](docs/integrations.md): connecting other tools
+- [docs/api/](docs/api/): API reference by area
+- [desktop/README.md](desktop/README.md), [mobile/README.md](mobile/README.md), [ai/README.md](ai/README.md)
 
 ---
 

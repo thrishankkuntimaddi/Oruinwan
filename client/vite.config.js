@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { copyFileSync, rmSync } from 'fs';
+import { copyFileSync, existsSync, readFileSync, rmSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,6 +53,21 @@ const pagesFallback = (defaultOutDir) => {
   };
 };
 
+// The Oruinwan version (mobile/package.json, one number for every platform) and an id for this
+// build. The web app polls /version.json and offers "Reload" when a newer build is deployed
+// (src/appMode/updates/store.js).
+const mobilePackage = path.resolve(__dirname, '../mobile/package.json');
+const productVersion = process.env.ORUINWAN_APP_VERSION
+  || (existsSync(mobilePackage) ? JSON.parse(readFileSync(mobilePackage, 'utf8')).version : '');
+const buildId = process.env.ORUINWAN_BUILD_ID || `${productVersion || 'dev'}-${Date.now().toString(36)}`;
+const versionFile = () => ({
+  name: 'oruinwan-version-file',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: `${JSON.stringify({ version: productVersion, build: buildId })}\n` });
+  },
+});
+
 export default defineConfig(({ mode }) => {
   const app = mode === 'app';
   const site = mode === 'site';
@@ -67,7 +82,7 @@ export default defineConfig(({ mode }) => {
       }
     : {};
   return {
-    plugins: [react(), ...(app || site ? [pruneAppBundle(outDir)] : []), ...(site ? [pagesFallback(outDir)] : [])],
+    plugins: [react(), versionFile(), ...(app || site ? [pruneAppBundle(outDir)] : []), ...(site ? [pagesFallback(outDir)] : [])],
 
     base: site ? process.env.SITE_BASE || '/' : '/',
 
@@ -78,9 +93,14 @@ export default defineConfig(({ mode }) => {
           // Google sign-in is tied to the web origin it was registered for; apps don't offer it.
           'import.meta.env.VITE_GOOGLE_CLIENT_ID': '""',
           // The Oruinwan app version (mobile/package.json), for the in-app update check.
-          'import.meta.env.VITE_ORUINWAN_APP_VERSION': JSON.stringify(process.env.ORUINWAN_APP_VERSION || '0.0.0'),
+          'import.meta.env.VITE_ORUINWAN_APP_VERSION': JSON.stringify(productVersion || '0.0.0'),
+          'import.meta.env.VITE_ORUINWAN_BUILD_ID': JSON.stringify(buildId),
         }
-      : sameOrigin,
+      : {
+          ...sameOrigin,
+          'import.meta.env.VITE_ORUINWAN_APP_VERSION': JSON.stringify(productVersion),
+          'import.meta.env.VITE_ORUINWAN_BUILD_ID': JSON.stringify(buildId),
+        },
 
     // Tell Vite/esbuild to treat .js files as JSX (matches CRA Babel behavior)
     esbuild: {

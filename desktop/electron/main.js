@@ -13,6 +13,7 @@
  *  4. Window state, single instance, menu, native notifications, dock/taskbar badge
  *  5. Tray icon (unread dot, Do Not Disturb, launch at login); closing hides to the tray so the
  *     page — and its socket — keeps syncing; notification quick reply (macOS, Windows)
+ *  6. Quick updates: signed UI bundles installed without a reinstall, with a boot watchdog (ota.js)
  */
 
 const {
@@ -24,6 +25,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { googleSignIn } = require('./googleSignIn');
 const trayState = require('./trayState');
+const ota = require('./ota');
 
 /**
  * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
@@ -47,7 +49,11 @@ const APP_ORIGIN = `${SCHEME}://oruinwan`;
 // painted an empty window.
 const START_URL = IS_DEV ? DEV_URL : `${APP_ORIGIN}/`;
 const PAGE_ORIGIN = originOf(START_URL);
-const APP_DIR = path.join(__dirname, '..', 'app');
+const BUNDLED_APP_DIR = path.join(__dirname, '..', 'app');
+// The UI being served: the bundled app/ or a downloaded quick update (chosen at start, ota.js).
+let appUi = { dir: BUNDLED_APP_DIR, version: '', source: 'bundled', pending: false };
+// A downloaded UI must confirm it started within this time, or the app goes back (ota.js).
+const BOOT_WATCHDOG_MS = 45_000;
 const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
 
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:']);
@@ -156,10 +162,10 @@ function saveSettings() {
 // ─── app:// — the bundled app ─────────────────────────────────────────────────
 
 /** CSP for the bundle. Inline scripts in index.html (the theme bootstrap) are allowed by hash. */
-function contentSecurityPolicy() {
+function contentSecurityPolicy(appDir) {
   const hashes = [];
   try {
-    const html = fs.readFileSync(path.join(APP_DIR, 'index.html'), 'utf8');
+    const html = fs.readFileSync(path.join(appDir, 'index.html'), 'utf8');
     for (const [, body] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
       hashes.push(`'sha256-${crypto.createHash('sha256').update(body).digest('base64')}'`);
     }
@@ -185,9 +191,16 @@ function contentSecurityPolicy() {
   ].join('; ');
 }
 
+const cspByDir = new Map();
+function cspFor(appDir) {
+  if (!cspByDir.has(appDir)) cspByDir.set(appDir, contentSecurityPolicy(appDir));
+  return cspByDir.get(appDir);
+}
+
 function registerAppScheme() {
-  const csp = contentSecurityPolicy();
   protocol.handle(SCHEME, async (request) => {
+    const APP_DIR = appUi.dir;
+    const csp = cspFor(APP_DIR);
     const url = new URL(request.url);
     if (url.host !== 'oruinwan') return new Response('Not found', { status: 404 });
     let rel;
@@ -365,8 +378,130 @@ function createWindow() {
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   win.loadURL(START_URL).catch((err) => console.error('[window] failed to load', START_URL, err.message));
+  if (appUi.pending) watchBoot(win);
   return win;
 }
+
+// ─── Quick updates (signed UI bundles, ota.js) ────────────────────────────────
+
+const UPDATE_PUBLIC_KEY = ota.loadPublicKey();
+const canApplyBundles = () => !IS_DEV && Boolean(UPDATE_PUBLIC_KEY);
+let bootTimer = null;
+let updateBusy = false;
+
+/** A downloaded UI that fails to load, crashes or never confirms is rolled back. */
+function watchBoot(win) {
+  const fail = (why) => {
+    if (!appUi.pending) return;
+    console.warn(`[updates] UI ${appUi.version} did not start (${why}); going back`);
+    clearTimeout(bootTimer);
+    appUi = ota.rollback({ userData: app.getPath('userData'), bundledDir: BUNDLED_APP_DIR, shellVersion: app.getVersion() });
+    cspByDir.clear();
+    if (!win.isDestroyed()) win.loadURL(START_URL).catch(() => {});
+  };
+  clearTimeout(bootTimer);
+  bootTimer = setTimeout(() => fail('no confirmation'), BOOT_WATCHDOG_MS);
+  win.webContents.once('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
+    if (isMainFrame) fail(`load failed (${code})`);
+  });
+  win.webContents.once('render-process-gone', () => fail('renderer crashed'));
+}
+
+ipcMain.on('oruinwan:update:confirm', (event) => {
+  if (!fromAppPage(event) || !appUi.pending) return;
+  clearTimeout(bootTimer);
+  ota.confirm({ userData: app.getPath('userData') });
+  appUi = { ...appUi, pending: false };
+});
+
+ipcMain.handle('oruinwan:update:info', (event) => {
+  if (!fromAppPage(event)) return null;
+  return {
+    shellVersion: app.getVersion(),
+    uiVersion: appUi.source === 'downloaded' ? appUi.version : app.getVersion(),
+    source: appUi.source,
+    canApplyBundles: canApplyBundles(),
+    staged: ota.stagedVersion({ userData: app.getPath('userData') }),
+  };
+});
+
+/** Downloads, verifies (size, SHA-256, Ed25519 signature) and unpacks a bundle for the next start. */
+ipcMain.handle('oruinwan:update:download', async (event, bundle) => {
+  if (!fromAppPage(event)) return { error: 'Not allowed', code: 'FAILED' };
+  if (!canApplyBundles()) return { error: "This app can't install quick updates.", code: 'NO_KEY' };
+  const b = bundle && typeof bundle === 'object' ? bundle : {};
+  const url = typeof b.url === 'string' ? b.url : '';
+  if (!url.startsWith('https://')) return { error: 'The update address is not valid.', code: 'BAD_URL' };
+  if (updateBusy) return { error: 'An update is already downloading.', code: 'BUSY' };
+  updateBusy = true;
+  const progress = (state, percent) => {
+    if (!event.sender.isDestroyed()) event.sender.send('oruinwan:update:progress', { state, percent });
+  };
+  try {
+    progress('downloading', 0);
+    const res = await net.fetch(url, { cache: 'no-store' });
+    if (!res.ok) return { error: `The update server answered ${res.status}.`, code: 'DOWNLOAD' };
+    const total = Number(res.headers.get('content-length')) || 0;
+    if (total > ota.MAX_BUNDLE_BYTES) return { error: 'The update has an unexpected size.', code: 'SIZE' };
+    const chunks = [];
+    let received = 0;
+    let last = -1;
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.length;
+      if (received > ota.MAX_BUNDLE_BYTES) {
+        reader.cancel().catch(() => {});
+        return { error: 'The update has an unexpected size.', code: 'SIZE' };
+      }
+      chunks.push(Buffer.from(value));
+      const percent = total ? Math.floor((received * 100) / total) : 0;
+      if (percent !== last) {
+        last = percent;
+        progress('downloading', percent);
+      }
+    }
+    progress('verifying', 100);
+    const staged = ota.stageBundle({
+      userData: app.getPath('userData'),
+      shellVersion: app.getVersion(),
+      bytes: Buffer.concat(chunks),
+      bundle: { version: b.version, sha256: b.sha256, signature: b.signature, minNativeVersion: b.minNativeVersion },
+      publicKey: UPDATE_PUBLIC_KEY,
+    });
+    progress('ready', 100);
+    return { ok: true, version: staged.version };
+  } catch (err) {
+    return { error: err.code ? err.message : 'The update could not be downloaded. Check your connection and try again.', code: err.code || 'DOWNLOAD' };
+  } finally {
+    updateBusy = false;
+  }
+});
+
+/** Restarts into the staged bundle. */
+ipcMain.handle('oruinwan:update:apply', (event) => {
+  if (!fromAppPage(event)) return { error: 'Not allowed', code: 'FAILED' };
+  if (!ota.applyStaged({ userData: app.getPath('userData') })) return { error: 'No update is ready.', code: 'NOT_READY' };
+  setTimeout(() => {
+    isQuitting = true;
+    app.relaunch();
+    app.exit(0);
+  }, 150);
+  return { ok: true };
+});
+
+/** Back to the UI that came with the installed app, then restart. */
+ipcMain.handle('oruinwan:update:reset', (event) => {
+  if (!fromAppPage(event)) return { error: 'Not allowed', code: 'FAILED' };
+  ota.reset({ userData: app.getPath('userData'), shellVersion: app.getVersion() });
+  setTimeout(() => {
+    isQuitting = true;
+    app.relaunch();
+    app.exit(0);
+  }, 150);
+  return { ok: true };
+});
 
 // ─── IPC (see preload.js) ─────────────────────────────────────────────────────
 
@@ -561,6 +696,15 @@ app.on('before-quit', () => {
 
 app.whenReady().then(() => {
   loadSettings();
+  if (canApplyBundles()) {
+    try {
+      appUi = ota.chooseAppDir({ userData: app.getPath('userData'), bundledDir: BUNDLED_APP_DIR, shellVersion: app.getVersion() });
+      if (appUi.source === 'downloaded') console.log(`[updates] running UI ${appUi.version}${appUi.pending ? ' (first start)' : ''}`);
+    } catch (err) {
+      console.warn('[updates] could not choose the UI, using the bundled one:', err.message);
+      appUi = { dir: BUNDLED_APP_DIR, version: app.getVersion(), source: 'bundled', pending: false };
+    }
+  }
   registerAppScheme();
   answerCors(session.defaultSession);
   lockDownPermissions(session.defaultSession);

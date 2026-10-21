@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    ArrowRight, Play, Check, CheckCircle2, User, Building2, Download, Globe, Monitor, Smartphone, ShieldCheck,
+    ArrowRight, Play, CheckCircle2, Download, Globe, Monitor, Smartphone, ShieldCheck,
+    Github, Server, Scale, SlidersHorizontal, GitPullRequest,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import BRAND from '../../shared/brand';
@@ -11,9 +12,10 @@ import PlatformTabs from './PlatformTabs';
 import AIConsole from './AIConsole';
 import FAQ from './FAQ';
 import LandingFooter from './LandingFooter';
-import { CAPABILITIES, FEATURES, SECURITY, STEPS } from './data';
+import { CAPABILITIES, FEATURES, REPO_URL, SECURITY, STEPS } from './data';
 import { scrollToId, useRevealAll } from './hooks';
 import AppLink from './AppLink';
+import PlanCards from '../pricing/PlanCards';
 import './landing.css';
 
 // Release files keep the same names in every release (.github/workflows/apps.yml), so these
@@ -50,7 +52,7 @@ const Landing = () => {
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         const prevTitle = document.title;
-        document.title = `${BRAND.name} · Team chat, tasks and AI in one workspace`;
+        document.title = `${BRAND.name} · Free, open-source workspace for teams`;
         if (!window.location.hash) window.scrollTo(0, 0);
         return () => {
             document.documentElement.classList.remove('public-scroll');
@@ -90,25 +92,28 @@ const Landing = () => {
                 <section className="orw-hero" aria-labelledby="orw-hero-title">
                     <div className="orw-container orw-hero__grid">
                         <div>
-                            <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Now available · Free to start</span>
+                            <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Free · Open source · MIT licence</span>
                             <h1 className="orw-hero__title" id="orw-hero-title" data-reveal style={{ '--d': '80ms' }}>
-                                <span>One workspace.</span>
-                                <span className="orw-gloss-text">Every conversation.</span>
+                                <span>The free, open-source</span>
+                                <span className="orw-gloss-text">workspace for teams.</span>
                             </h1>
                             <p className="orw-hero__sub" data-reveal style={{ '--d': '160ms' }}>
-                                <strong>{BRAND.name}</strong> brings channels, DMs, threads, huddles, tasks, notes and AI agents into one
-                                encrypted workspace, on the web, desktop, tablet and phone.
+                                Chat, tasks, notes, huddles and AI in one place with <strong>{BRAND.name}</strong>, on the web,
+                                desktop, phone and tablet.
                             </p>
                             <div className="orw-hero__ctas" data-reveal style={{ '--d': '240ms' }}>
                                 <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
                                     Start free <ArrowRight size={16} />
                                 </AppLink>
-                                <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => scrollToId('platform')}>
+                                <a className="orw-btn orw-btn--ghost orw-btn--lg" href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                                    <Github size={15} aria-hidden="true" /> View on GitHub
+                                </a>
+                                <button type="button" className="orw-btn orw-btn--text" onClick={() => scrollToId('platform')}>
                                     <Play size={14} /> See how it works
                                 </button>
                             </div>
                             <ul className="orw-hero__trust" data-reveal style={{ '--d': '320ms' }}>
-                                {['End-to-end encrypted messages', 'Admins never see messages', 'Passkeys and 2FA'].map(t => (
+                                {['Encrypted messages', 'Free plan, no card', 'Host it yourself'].map(t => (
                                     <li key={t}><CheckCircle2 size={14} aria-hidden="true" />{t}</li>
                                 ))}
                             </ul>
@@ -133,14 +138,14 @@ const Landing = () => {
                 {/* ── Platform ─────────────────────────────────────────── */}
                 <section id="platform" className="orw-section" aria-label="Platform">
                     <div className="orw-container">
-                        <SectionHead eyebrow="Platform"
+                        <SectionHead eyebrow="Features"
                             title={<>Everything your team needs.<br /><span style={{ color: 'var(--o-text-3)' }}>Nothing it doesn’t.</span></>}
-                            lead="Communication, planning, automation and governance, designed as one product rather than stitched together from five." />
+                            lead="Chat, meetings, planning, notes, AI and automation, designed as one product rather than stitched together from five." />
                         <PlatformTabs />
 
                         <div className="orw-bento" data-reveal>
-                            {FEATURES.map(({ icon: Icon, color, title, desc }) => (
-                                <div key={title} className="orw-feat" onMouseMove={spotlight}>
+                            {FEATURES.map(({ icon: Icon, color, title, desc, wide }) => (
+                                <div key={title} className={`orw-feat${wide ? ' orw-feat--wide' : ''}`} onMouseMove={spotlight}>
                                     <div className="orw-feat__icon" style={{ '--c': color }}><Icon size={19} aria-hidden="true" /></div>
                                     <h3>{title}</h3>
                                     <p>{desc}</p>
@@ -154,17 +159,17 @@ const Landing = () => {
                 <section id="ai" className="orw-section orw-section--slab" aria-label="Agents">
                     <div className="orw-container orw-ai">
                         <div data-reveal>
-                            <p className="orw-eyebrow">Agents</p>
-                            <h2 className="orw-h2">AI agents in your channels.<br /><span className="orw-gloss-text">Always in context.</span></h2>
+                            <p className="orw-eyebrow">AI assistant</p>
+                            <h2 className="orw-h2">AI in your channels.<br /><span className="orw-gloss-text">Your choice of model.</span></h2>
                             <p className="orw-lead">
-                                Work with Claude, ChatGPT, Gemini or Grok right in your conversations. An admin can install an agent
-                                for the whole workspace, or you can connect one yourself with your own key.
+                                Work with Claude, ChatGPT, Gemini, Grok or a model you host, right in your conversations. An admin can
+                                install an agent for the whole workspace, or you can connect one yourself with your own key.
                             </p>
                             <ul className="orw-ai__points">
                                 {[
                                     'Mention an agent in a channel, or open a DM with it',
                                     'Summarise threads and turn them into tasks',
-                                    'Answers work in encrypted conversations',
+                                    'A recap after every meeting, from its transcript',
                                     'Draft, rewrite and translate messages',
                                 ].map(p => <li key={p}><span aria-hidden="true" />{p}</li>)}
                             </ul>
@@ -183,7 +188,7 @@ const Landing = () => {
                     <div className="orw-container">
                         <SectionHead center eyebrow="Security & trust"
                             title={<>Private by design.<br />Governed by you.</>}
-                            lead="Messages are end-to-end encrypted and never shown to admins. Admins get the access controls and audit trail a company needs." />
+                            lead="Messages are encrypted and never shown to admins. The server keeps a sealed copy of your key so your devices unlock on their own, and we say so plainly." />
                         <div className="orw-sec" data-reveal>
                             {SECURITY.map(({ icon: Icon, title, desc }) => (
                                 <div className="orw-sec__item" key={title}>
@@ -217,64 +222,16 @@ const Landing = () => {
                     </div>
                 </section>
 
-                {/* ── Plans ────────────────────────────────────────────── */}
-                <section id="plans" className="orw-section" aria-label="Plans">
-                    <div className="orw-container">
-                        <SectionHead center eyebrow="Plans" title="Choose your HQ."
-                            lead="Start on your own for free, or set up your whole organisation with Company HQ." />
-                        <div className="orw-plans">
-                            <article className="orw-plan" data-reveal>
-                                <div className="orw-plan__top">
-                                    <span className="orw-plan__icon"><User size={20} aria-hidden="true" /></span>
-                                    <span className="orw-tag">Personal</span>
-                                </div>
-                                <h3>Personal workspace</h3>
-                                <p className="orw-plan__for">For freelancers, students, side projects and small groups.</p>
-                                <div className="orw-plan__price"><b>Free</b><span>no card required</span></div>
-                                <ul>
-                                    {['Channels, DMs, threads and huddles', 'Tasks, notes and files', 'Agents and integrations', 'End-to-end encrypted messages'].map(f => (
-                                        <li key={f}><Check size={15} aria-hidden="true" />{f}</li>
-                                    ))}
-                                </ul>
-                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block">
-                                    Create free account <ArrowRight size={15} />
-                                </AppLink>
-                            </article>
-
-                            <article className="orw-plan orw-plan--featured" data-reveal style={{ '--d': '100ms' }}>
-                                <div className="orw-plan__top">
-                                    <span className="orw-plan__icon"><Building2 size={20} aria-hidden="true" /></span>
-                                    <span className="orw-tag orw-tag--accent">For organisations</span>
-                                </div>
-                                <h3>Company HQ</h3>
-                                <p className="orw-plan__for">For teams that need structure, oversight and scale.</p>
-                                <div className="orw-plan__price"><b>Early access</b><span>verified onboarding</span></div>
-                                <ul>
-                                    {['Everything in Personal, for your whole company', 'Company console for owners and admins', 'Departments, roles and employee directory', 'Permission matrix and audit logs'].map(f => (
-                                        <li key={f}><Check size={15} aria-hidden="true" />{f}</li>
-                                    ))}
-                                </ul>
-                                <AppLink to="/register-company" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block">
-                                    Register your company <ArrowRight size={15} />
-                                </AppLink>
-                            </article>
-                        </div>
-                        <p className="orw-plans__note" data-reveal>
-                            Already on {BRAND.name}? <AppLink to="/login">Log in to your workspace</AppLink>
-                        </p>
-                    </div>
-                </section>
-
                 {/* ── Download ─────────────────────────────────────────── */}
                 <section id="download" className="orw-section orw-section--slab" aria-label="Download">
                     <div className="orw-container">
-                        <SectionHead eyebrow="Available everywhere" title="Your workspace, wherever you are."
-                            lead="Use it in the browser, or install the app on your computer, phone or tablet. Everything syncs in real time." />
+                        <SectionHead eyebrow="Apps for every platform" title="Your workspace, wherever you are."
+                            lead="Use it in the browser, or install the app on your computer, phone or tablet. Everything syncs in real time, and the apps update themselves in one click." />
                         <div className="orw-dl" data-reveal>
                             <div className="orw-dl__item">
                                 <div className="orw-dl__head"><span className="orw-dl__icon"><Globe size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Available now</span></div>
                                 <h3>Web app</h3>
-                                <p>Works in any modern browser, including Safari on iPad. Nothing to install, always up to date.</p>
+                                <p>Works in any modern browser, including Safari on iPhone and iPad. Nothing to install, always up to date.</p>
                                 <div className="orw-dl__actions">
                                     <AppLink to="/login" className="orw-btn orw-btn--primary orw-btn--block">
                                         Open {BRAND.name} web <ArrowRight size={14} />
@@ -284,7 +241,7 @@ const Landing = () => {
                             <div className="orw-dl__item">
                                 <div className="orw-dl__head"><span className="orw-dl__icon"><Monitor size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Available now</span></div>
                                 <h3>Desktop app</h3>
-                                <p>The full workspace in its own window, with split view, native notifications and an unread badge.</p>
+                                <p>The full workspace in its own window, with split view, native notifications, quick reply and a tray icon.</p>
                                 <div className="orw-dl__actions">
                                     {DESKTOP_DOWNLOADS.map((d) => (
                                         <a key={d.file} className={`orw-btn orw-btn--block ${d.primary ? 'orw-btn--primary' : 'orw-btn--ghost'}`} href={`${RELEASE_DOWNLOADS}${d.file}`}>
@@ -294,19 +251,67 @@ const Landing = () => {
                                 </div>
                             </div>
                             <div className="orw-dl__item">
-                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Android and iOS</span></div>
+                                <div className="orw-dl__head"><span className="orw-dl__icon"><Smartphone size={20} aria-hidden="true" /></span><span className="orw-tag orw-tag--good">Android</span></div>
                                 <h3>Phone and tablet</h3>
-                                <p>A phone app built for one hand, and the full workspace with split view on tablets.</p>
+                                <p>An app built for one hand on phones, with split and wide layouts on tablets. On iPhone and iPad, use the web app in Safari.</p>
                                 <div className="orw-dl__actions">
                                     <a className="orw-btn orw-btn--primary orw-btn--block" href={`${RELEASE_DOWNLOADS}Oruinwan-Android.apk`}>
                                         <Download size={14} aria-hidden="true" /> Android phones and tablets
                                     </a>
-                                    <span className="orw-btn orw-btn--ghost orw-btn--block" aria-disabled="true">iPhone and iPad · via TestFlight</span>
                                 </div>
                             </div>
                         </div>
                         <p className="orw-plans__note" data-reveal>
-                            Every version, with checksums and release notes: <a className="orw-link" href="https://github.com/thrishankkuntimaddi/Oruniwan/releases">GitHub Releases</a>
+                            Every version, with checksums and release notes: <a className="orw-link" href={`${REPO_URL}/releases/latest`}>GitHub Releases</a>
+                        </p>
+                    </div>
+                </section>
+
+                {/* ── Open source ──────────────────────────────────────── */}
+                <section id="open-source" className="orw-section" aria-label="Open source">
+                    <div className="orw-container">
+                        <div className="orw-oss orw-glass" data-reveal>
+                            <div>
+                                <p className="orw-eyebrow">Open source</p>
+                                <h2 className="orw-h2">Open source on GitHub.<br /><span className="orw-gloss-text">MIT licensed.</span></h2>
+                                <p className="orw-lead">
+                                    Read the code, run your own server with Docker Compose, change the limits, or send a pull request.
+                                    The server, web app, desktop and phone apps all live in one repository.
+                                </p>
+                                <div className="orw-oss__ctas">
+                                    <a className="orw-btn orw-btn--primary orw-btn--lg" href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                                        <Github size={16} aria-hidden="true" /> Oruinwan on GitHub
+                                    </a>
+                                    <a className="orw-btn orw-btn--ghost orw-btn--lg" href={`${REPO_URL}#self-hosting`} target="_blank" rel="noopener noreferrer">
+                                        <Server size={15} aria-hidden="true" /> Host it yourself
+                                    </a>
+                                </div>
+                            </div>
+                            <ul className="orw-oss__points">
+                                {[
+                                    { icon: Scale, text: 'MIT licence: use it, change it, ship it' },
+                                    { icon: Server, text: 'Self-host with Docker Compose: PostgreSQL, MongoDB and S3 storage' },
+                                    { icon: SlidersHorizontal, text: 'Every plan limit is configurable on your own server' },
+                                    { icon: GitPullRequest, text: 'Issues and pull requests welcome' },
+                                ].map(({ icon: Icon, text }) => (
+                                    <li key={text}><Icon size={16} aria-hidden="true" />{text}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Pricing teaser ───────────────────────────────────── */}
+                <section id="pricing" className="orw-section orw-section--slab" aria-label="Pricing">
+                    <div className="orw-container">
+                        <SectionHead center eyebrow="Pricing" title="Free for teams. Bigger plans soon."
+                            lead="Every feature is in the Free plan. Pro and Enterprise, with bigger limits, longer calls, more AI and admin controls, are coming soon." />
+                        <div className="prc-root">
+                            <PlanCards site />
+                        </div>
+                        <p className="orw-plans__note" data-reveal>
+                            <Link to="/pricing">See every Free plan limit</Link>
+                            {' · '}Running a company? <AppLink to="/register-company">Register for the company console</AppLink>
                         </p>
                     </div>
                 </section>
@@ -325,7 +330,7 @@ const Landing = () => {
                         <div className="orw-final orw-glass" data-reveal>
                             <p className="orw-eyebrow" style={{ justifyContent: 'center' }}>Get started</p>
                             <h2 className="orw-h2">Build your team’s HQ on <span className="orw-gloss-text">{BRAND.name}</span>.</h2>
-                            <p className="orw-lead">Free to start. Set up in minutes. Bring everyone into one workspace.</p>
+                            <p className="orw-lead">Free and open source. Set up in minutes. Bring everyone into one workspace.</p>
                             <div className="orw-final__ctas">
                                 <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
                                     Get started free <ArrowRight size={16} />

@@ -8,6 +8,10 @@ name: Build apps
 # (iOS as a simulator build). Tags named vX.Y.Z: the same builds with the Android release key,
 # published together as ONE GitHub Release with latest.json (read by the in-app updaters), and
 # the iOS app uploaded to TestFlight when the Apple secrets are set.
+# Each release also carries the built UIs as zips (Oruinwan-UI-phone.zip, Oruinwan-UI-desktop.zip),
+# listed in latest.json with their SHA-256 and an Ed25519 signature made with the secret
+# ORUINWAN_UPDATE_SIGNING_KEY: the apps install them without a reinstall ("quick updates", see
+# docs/UPDATES.md). Without the secret the zips are published unsigned and apps ignore them.
 on:
   push:
     branches: [main]
@@ -83,6 +87,19 @@ jobs:
           name: phone-bundle
           path: mobile/dist
           retention-days: 3
+      # The same UI as a quick-update zip for the release (signed in the publish job).
+      - name: Zip the phone UI for quick updates
+        if: env.IS_RELEASE == 'true'
+        run: |
+          mkdir -p ../dist-ui
+          (cd dist && zip -qr -X ../../dist-ui/Oruinwan-UI-phone.zip .)
+          ls -la ../dist-ui
+      - uses: actions/upload-artifact@v4
+        if: env.IS_RELEASE == 'true'
+        with:
+          name: release-ui-phone
+          path: dist-ui/Oruinwan-UI-phone.zip
+          retention-days: 7
 
   # The web client in app mode, built once for the desktop apps.
   client-app:
@@ -106,6 +123,19 @@ jobs:
           name: client-app-bundle
           path: client/dist-app
           retention-days: 3
+      # The desktop app's UI as a quick-update zip for the release (signed in the publish job).
+      - name: Zip the desktop UI for quick updates
+        if: env.IS_RELEASE == 'true'
+        run: |
+          mkdir -p dist-ui
+          (cd client/dist-app && zip -qr -X ../../dist-ui/Oruinwan-UI-desktop.zip .)
+          ls -la dist-ui
+      - uses: actions/upload-artifact@v4
+        if: env.IS_RELEASE == 'true'
+        with:
+          name: release-ui-desktop
+          path: dist-ui/Oruinwan-UI-desktop.zip
+          retention-days: 7
 
   android:
     name: Android
@@ -417,7 +447,7 @@ jobs:
   publish:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [android, desktop]
+    needs: [check, client-app, android, desktop]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -438,16 +468,25 @@ jobs:
         env:
           # Same secrets the iOS job needs to upload to TestFlight.
           HAS_TESTFLIGHT: ${{ secrets.APPLE_TEAM_ID != '' && secrets.IOS_DIST_CERT_P12_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' && secrets.ASC_KEY_P8_BASE64 != '' }}
+          # Ed25519 private key (PEM, or base64 32-byte seed) for quick-update bundles. Its public
+          # half must match platform/update-public-key.txt. Unset: bundles are published unsigned
+          # (apps then offer the full download). Create one with `node scripts/update-signing.mjs keygen`.
+          ORUINWAN_UPDATE_SIGNING_KEY: ${{ secrets.ORUINWAN_UPDATE_SIGNING_KEY }}
         run: |
           VERSION=$(node -p "require('./mobile/package.json').version")
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           cd dist-release
-          for f in Oruinwan-Android.apk Oruinwan-Mac-AppleSilicon.dmg Oruinwan-Mac-Intel.dmg Oruinwan-Windows-Setup.exe Oruinwan-Linux.AppImage Oruinwan-Linux.deb; do
+          for f in Oruinwan-Android.apk Oruinwan-Mac-AppleSilicon.dmg Oruinwan-Mac-Intel.dmg Oruinwan-Windows-Setup.exe Oruinwan-Linux.AppImage Oruinwan-Linux.deb Oruinwan-UI-phone.zip Oruinwan-UI-desktop.zip; do
             [ -f "$f" ] || { echo "::error::$f is missing from the build artifacts. Not publishing."; exit 1; }
           done
           NOTES=../mobile/release-notes/${VERSION}.md
           [ -f "$NOTES" ] || { echo "::warning::$NOTES not found; publishing without notes"; NOTES=$(mktemp); }
-          RELEASE_TAG="$GITHUB_REF_NAME" node ../mobile/scripts/write-manifest.mjs Oruinwan-Android.apk latest.json --notes "$NOTES"
+          if [ -z "$ORUINWAN_UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::ORUINWAN_UPDATE_SIGNING_KEY is not set, so the quick-update bundles are unsigned and apps will offer the full download instead. See docs/UPDATES.md."
+          fi
+          RELEASE_TAG="$GITHUB_REF_NAME" node ../mobile/scripts/write-manifest.mjs Oruinwan-Android.apk latest.json --notes "$NOTES" \
+            --bundle phone=Oruinwan-UI-phone.zip --bundle desktop=Oruinwan-UI-desktop.zip
+          unset ORUINWAN_UPDATE_SIGNING_KEY
           row() { echo "| $1 | **$2** | $(( $(wc -c < "$2") / 1048576 )) MB | \`$(sha256sum "$2" | cut -d' ' -f1)\` |"; }
           {
             cat "$NOTES"
@@ -475,6 +514,8 @@ jobs:
             echo "- **Windows:** run the installer. The app isn't code-signed yet, so SmartScreen may warn: click **More info → Run anyway**."
             echo "- **Linux:** \`chmod +x Oruinwan-Linux.AppImage\` and run it, or \`sudo apt install ./Oruinwan-Linux.deb\`."
             echo
+            echo "Already have Oruinwan? The desktop and Android apps check for updates on their own; most updates install in the app in a few seconds (*Update and restart*), without downloading the installer again. The \`Oruinwan-UI-*.zip\` files are those signed quick updates."
+            echo
             echo "The desktop, phone and tablet apps connect to the Oruinwan server they were built for (\`VITE_SERVER_URL\`), so just sign in as on the web."
             echo
             echo "The APK is signed with the Oruinwan release key (certificate SHA-256 \`${RELEASE_CERT_SHA256}\`). \`latest.json\` is read by the apps' updaters. You can ignore the automatic *Source code* archives."
@@ -492,5 +533,7 @@ jobs:
             dist-release/Oruinwan-Windows-Setup.exe
             dist-release/Oruinwan-Linux.AppImage
             dist-release/Oruinwan-Linux.deb
+            dist-release/Oruinwan-UI-phone.zip
+            dist-release/Oruinwan-UI-desktop.zip
             dist-release/latest.json
           make_latest: true

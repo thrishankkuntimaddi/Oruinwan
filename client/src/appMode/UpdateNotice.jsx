@@ -1,144 +1,75 @@
-// "A new version is available" for the desktop app and Android tablets. Reads latest.json from
-// the newest GitHub release (the same manifest the phone app uses, mobile/scripts/write-manifest.mjs).
-// Desktop: opens the installer for this computer. Android: downloads, verifies and installs the
-// APK through the app's AppUpdater plugin. iPads update through the App Store.
-import React, { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
-import { appPlatform } from './env';
+// "Oruinwan 2.x is available" toast for the desktop app (Update and restart, or the installer when
+// the app itself changed), older Android tablet builds (APK), and the browser ("A new version is
+// available — Reload"). The state lives in ./updates/store.js; Settings → About & updates and
+// the Notifications page show the same update.
+import React, { useEffect } from 'react';
+import { Download, RefreshCw, X } from 'lucide-react';
+import { actionLabel, getUpdater, hasUpdate, updateTitle, useUpdateState } from './updates/store';
+import { installerReason } from './updates/bundle';
 
-const MANIFEST_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/latest.json';
-const CHECK_EVERY = 6 * 60 * 60 * 1000;
-const DISMISSED_KEY = 'oruinwan.update.dismissed';
+export { desktopDownload, isNewer } from './updates/manifest';
 
-const button = (primary) => ({
-  border: primary ? 0 : '1px solid var(--border-default, #222)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600,
-  cursor: 'pointer', color: primary ? 'var(--gl-on-accent, #120e08)' : 'var(--text-primary, #e4e4e4)',
-  background: primary ? 'var(--gl-accent-grad, linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%))' : 'transparent',
-});
-
-const parts = (v) => String(v || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
-export function isNewer(candidate, current) {
-  const a = parts(candidate);
-  const b = parts(current);
-  for (let i = 0; i < 3; i += 1) {
-    if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
-  }
-  return false;
+/** One-line explanation under the title. */
+export function updateSubtitle(s) {
+  if (s.status === 'failed') return s.error || 'The update could not be installed.';
+  if (s.status === 'downloading') return `Downloading… ${Math.round(s.percent || 0)}%`;
+  if (s.status === 'ready') return 'Downloaded and checked. Restart to finish.';
+  if (s.status === 'applying') return 'Restarting…';
+  if (s.plan?.mode === 'reload') return 'Reload the page to get the latest version.';
+  if (s.plan?.mode === 'bundle') return 'Installs in a few seconds and restarts the app. Your data is kept.';
+  return installerReason(s.plan?.reason) || (s.kind === 'desktop' ? 'Install it over this version. Your data is kept.' : 'Updates keep your data.');
 }
 
-/** The installer for this computer, or the release page. */
-export function desktopDownload(manifest, { platform, arch } = {}) {
-  const d = (manifest && manifest.downloads) || {};
-  const key = platform === 'darwin' ? (arch === 'arm64' ? 'mac-arm64' : 'mac-x64') : platform === 'win32' ? 'win-x64' : null;
-  const url = (key && d[key]) || manifest?.pageUrl;
-  return typeof url === 'string' && url.startsWith('https://') ? url : 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest';
-}
-
-function currentVersion() {
-  return window.oruinwanDesktop?.version || import.meta.env.VITE_ORUINWAN_APP_VERSION || '0.0.0';
-}
-
+/** Starts the automatic checks; renders the toast. Mount once. */
 export default function UpdateNotice() {
-  const platform = appPlatform();
-  const [manifest, setManifest] = useState(null);
-  const [state, setState] = useState(''); // '' | 'working' | message
-  const [hidden, setHidden] = useState(false);
+  const s = useUpdateState();
+  useEffect(() => getUpdater().start(), []);
 
-  useEffect(() => {
-    if (platform === 'ios') return undefined;
-    // Google Play builds have no AppUpdater plugin: Play installs the updates.
-    if (platform !== 'desktop' && window.Capacitor && !window.Capacitor.isPluginAvailable?.('AppUpdater')) return undefined;
-    let cancelled = false;
-    const check = async () => {
-      try {
-        const res = await fetch(`${MANIFEST_URL}?t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data && isNewer(data.version, currentVersion())) setManifest(data);
-      } catch {
-        /* offline or GitHub unreachable: try again later */
-      }
-    };
-    const first = setTimeout(check, 4000);
-    const timer = setInterval(check, CHECK_EVERY);
-    return () => {
-      cancelled = true;
-      clearTimeout(first);
-      clearInterval(timer);
-    };
-  }, [platform]);
-
-  if (!manifest || hidden) return null;
-  let dismissed = null;
-  try {
-    dismissed = localStorage.getItem(DISMISSED_KEY);
-  } catch {
-    /* ignore */
-  }
-  if (dismissed === manifest.version) return null;
-
-  const install = async () => {
-    if (platform === 'desktop') {
-      window.oruinwanDesktop?.openExternal(desktopDownload(manifest, window.oruinwanDesktop));
-      return;
-    }
-    const updater = window.Capacitor?.Plugins?.AppUpdater;
-    if (!updater || !manifest.apkUrl) {
-      window.open(manifest.pageUrl || 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest', '_blank');
-      return;
-    }
-    try {
-      const { granted } = await updater.canInstallPackages();
-      if (!granted) {
-        setState('Allow Oruinwan to install updates, then tap Update again.');
-        await updater.openInstallPermissionSettings();
-        return;
-      }
-      setState('working');
-      await updater.downloadAndInstall({ url: manifest.apkUrl, version: manifest.version, sha256: manifest.sha256 || '' });
-      setState('');
-    } catch (err) {
-      setState(err?.code === 'CHECKSUM' ? 'The download was damaged, so it was not installed. Try again.' : 'The update could not be downloaded. Try again.');
-    }
-  };
-
-  const later = () => {
-    try {
-      localStorage.setItem(DISMISSED_KEY, manifest.version);
-    } catch {
-      /* ignore */
-    }
-    setHidden(true);
-  };
+  const key = s.manifest?.version || s.plan?.mode;
+  if (!hasUpdate(s) || (s.dismissed && s.dismissed === key && s.status === 'available')) return null;
+  const busy = s.status === 'downloading' || s.status === 'applying';
+  const Icon = s.plan?.mode === 'installer' ? Download : RefreshCw;
 
   return (
     <div
       role="status"
+      className="gl-card"
       style={{
-        position: 'fixed', right: 16, bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', zIndex: 9999, width: 320, maxWidth: 'calc(100vw - 32px)',
-        background: 'var(--lg-solid, #151517)', border: '1px solid var(--lg-border, rgba(255,255,255,0.08))', borderRadius: 14, padding: '14px 16px',
-        boxShadow: 'var(--lg-shadow, 0 24px 60px -24px rgba(0,0,0,0.8))', color: 'var(--text-primary, #e4e4e4)', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 13,
+        position: 'fixed', right: 16, bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', zIndex: 9999, width: 340,
+        maxWidth: 'calc(100vw - 32px)', padding: '14px 16px', fontSize: 13, color: 'var(--text-primary)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <Download size={16} style={{ color: 'var(--accent, #c9a87c)', marginTop: 2, flexShrink: 0 }} aria-hidden="true" />
+        <Icon size={16} style={{ color: 'var(--accent)', marginTop: 2, flexShrink: 0 }} aria-hidden="true" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Oruinwan {manifest.version} is available</div>
-          <div style={{ color: 'var(--text-secondary, #8c8c8c)', marginTop: 2 }}>
-            {state && state !== 'working' ? state : platform === 'desktop' ? 'Install it over this version. Your data is kept.' : 'Updates keep your data.'}
-          </div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{updateTitle(s)}</div>
+          <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>{updateSubtitle(s)}</div>
+          {s.status === 'downloading' && (
+            <div style={{ height: 4, borderRadius: 4, background: 'var(--border-default)', marginTop: 8, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.max(4, s.percent || 0)}%`, height: '100%', background: 'var(--accent)', transition: 'width 200ms' }} />
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button type="button" style={button(true)} onClick={install} disabled={state === 'working'}>
-              {state === 'working' ? 'Downloading…' : platform === 'desktop' ? 'Download' : 'Update'}
+            <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => getUpdater().install()} disabled={busy}>
+              {busy ? (s.status === 'applying' ? 'Restarting…' : 'Downloading…') : actionLabel(s)}
             </button>
-            <button type="button" style={button(false)} onClick={later}>
-              Later
-            </button>
+            {s.status === 'available' && (
+              <button type="button" className="gl-btn gl-btn--sm" onClick={() => getUpdater().dismiss()}>
+                Later
+              </button>
+            )}
           </div>
         </div>
-        <button type="button" onClick={() => setHidden(true)} aria-label="Close" style={{ background: 'none', border: 0, color: 'var(--text-muted, #8c8c8c)', cursor: 'pointer', padding: 2 }}>
-          <X size={14} aria-hidden="true" />
-        </button>
+        {!busy && (
+          <button
+            type="button"
+            onClick={() => getUpdater().dismiss()}
+            aria-label="Close"
+            style={{ background: 'none', border: 0, color: 'var(--text-muted)', cursor: 'pointer', padding: 2 }}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   );

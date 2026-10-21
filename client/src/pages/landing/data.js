@@ -1,17 +1,20 @@
 import {
     Hash, MessageCircle, GitBranch, Headphones, ListChecks, NotebookPen, Bot, Plug, Columns2,
-    Workflow, FolderOpen, Search, Video, MessagesSquare, KanbanSquare,
-    ShieldCheck, KeyRound, ScrollText, Lock, Users, EyeOff, Fingerprint,
+    Workflow, FolderOpen, Search, Video, MessagesSquare, KanbanSquare, Captions, Map, PenTool,
+    ShieldCheck, KeyRound, ScrollText, Lock, Users, EyeOff, Fingerprint, MonitorSmartphone, HardDriveUpload,
 } from 'lucide-react';
 import BRAND from '../../shared/brand';
 
+// `id` scrolls to a section of the landing page; `to` opens another page.
 export const NAV_LINKS = [
-    { id: 'platform', label: 'Platform' },
-    { id: 'ai', label: 'Agents' },
+    { id: 'platform', label: 'Features' },
     { id: 'security', label: 'Security' },
-    { id: 'plans', label: 'Plans' },
     { id: 'download', label: 'Download' },
+    { id: 'open-source', label: 'Open source' },
+    { id: 'pricing', label: 'Pricing', to: '/pricing' },
 ];
+
+export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
 
 // ── Hero product mock ──────────────────────────────────────────────────
 // Example teammates are roles, not people.
@@ -59,14 +62,17 @@ export const CAPABILITIES = [
     { icon: GitBranch, label: 'Threads' },
     { icon: Headphones, label: 'Huddles' },
     { icon: Video, label: 'Video and screen share' },
+    { icon: Captions, label: 'Recording, captions and AI recap' },
     { icon: Columns2, label: 'Split view' },
-    { icon: ListChecks, label: 'Tasks' },
-    { icon: NotebookPen, label: 'Notes' },
-    { icon: FolderOpen, label: 'Files' },
+    { icon: ListChecks, label: 'Tasks and planning' },
+    { icon: PenTool, label: 'Design reviews' },
+    { icon: NotebookPen, label: 'Notes with live co-editing' },
+    { icon: Map, label: 'Roadmap' },
+    { icon: FolderOpen, label: 'Files and knowledge' },
     { icon: Search, label: 'Search' },
     { icon: Bot, label: 'Claude, ChatGPT, Gemini, Grok' },
-    { icon: Workflow, label: 'Workflows' },
-    { icon: Plug, label: 'GitHub, Jira, Zoom' },
+    { icon: Workflow, label: 'Automations' },
+    { icon: Plug, label: 'GitHub, GitLab, Jira, Linear, Slack' },
 ];
 
 // ── Platform tabs ──────────────────────────────────────────────────────
@@ -76,23 +82,23 @@ export const PLATFORM_TABS = [
         blurb: 'Channels, DMs, threads and huddles.',
         heading: 'Conversations with structure, not noise.',
         body: 'Channels keep work organised by team and topic. Threads keep side discussions out of the main feed, and a huddle starts in one click when typing gets slow.',
-        points: ['Public and private channels, DMs and group DMs', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles with audio, video, screen share and raise hand, plus scheduled meetings'],
+        points: ['Public and private channels, DMs and group DMs, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
         visual: 'thread',
     },
     {
         id: 'plan', icon: KanbanSquare, title: 'Plan',
-        blurb: 'Tasks, boards and notes.',
+        blurb: 'Tasks, planning and notes.',
         heading: 'Plans live next to the talk.',
-        body: 'Turn a message into a task, track it on a board and record decisions in notes, without leaving the conversation that started it.',
-        points: ['Boards with owners, due dates and progress', 'Shared notes for specs and team wikis', 'Files and search across the workspace'],
+        body: 'Turn a message into a task, plan the work, review designs and write decisions down in notes your team edits together, without leaving the conversation that started it.',
+        points: ['Tasks with owners, due dates, boards and planning', 'Design reviews with comments on the work itself', 'Notes and a roadmap with live co-editing, templates and a knowledge base'],
         visual: 'kanban',
     },
     {
         id: 'automate', icon: Workflow, title: 'Automate',
-        blurb: 'Agents, workflows and integrations.',
+        blurb: 'AI, automations and integrations.',
         heading: 'Put the busywork on rails.',
-        body: 'Bring AI agents into your channels, build workflows with triggers and actions, and connect the tools your team already uses.',
-        points: ['Agents: Claude, ChatGPT, Gemini and Grok', 'Workflows with triggers and actions', 'GitHub, Jira, Zoom and incoming webhooks, with personal GitHub and Jira connections'],
+        body: 'Bring AI into your channels, build automations with triggers and actions, and connect the tools your team already uses with a personal token or a webhook.',
+        points: ['AI with your choice of model: Claude, ChatGPT, Gemini, Grok or one you host', 'Automations with triggers, conditions, schedules and actions', 'GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Zoom, cloud drives and webhooks'],
         visual: 'flow',
     },
     {
@@ -107,14 +113,16 @@ export const PLATFORM_TABS = [
 
 // ── Feature bento ──────────────────────────────────────────────────────
 export const FEATURES = [
-    { icon: Hash, color: '#8ea6ff', title: 'Channels', desc: 'Organised, searchable spaces for every team, project and topic.' },
-    { icon: MessageCircle, color: '#b59cff', title: 'Direct messages', desc: 'Private 1:1 and group conversations, end-to-end encrypted between devices.' },
-    { icon: Headphones, color: '#5cc995', title: 'Huddles & meetings', desc: 'Audio, video and screen share in one click, or schedule a meeting ahead.' },
-    { icon: Columns2, color: '#7fd4e0', title: 'Split view', desc: 'Keep a thread or a second conversation open side by side on desktop and tablet.' },
-    { icon: ListChecks, color: '#f5c46b', title: 'Tasks', desc: 'Boards, assignees, deadlines and progress, created straight from chat.' },
-    { icon: NotebookPen, color: '#f39a6b', title: 'Notes', desc: 'Docs and wikis that sit right beside the conversation they came from.' },
-    { icon: Workflow, color: '#f0a3c4', title: 'Workflows & apps', desc: 'Automate routine steps and connect GitHub, Jira, Zoom and webhooks.' },
-    { icon: Bot, color: '#c8a274', title: 'Agents', desc: 'Claude, ChatGPT, Gemini and Grok, installed by admins or connected with your own key.' },
+    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels, DMs and group DMs with end-to-end encrypted messages, reactions, mentions, pins and files.' },
+    { icon: GitBranch, color: '#7fd4e0', title: 'Threads', desc: 'Side discussions that stay out of the main feed, open beside the conversation in split view.' },
+    { icon: Headphones, color: '#5cc995', title: 'Huddles & meetings', desc: 'Audio, video and screen share in one click. Record, follow live captions and get an AI recap after.' },
+    { icon: ListChecks, color: '#f5c46b', title: 'Tasks & planning', desc: 'Tasks straight from chat, boards, planning and design reviews, with owners, due dates and progress.' },
+    { icon: NotebookPen, color: '#f39a6b', title: 'Notes & knowledge', desc: 'Notes, templates, a roadmap and a knowledge base your team edits together, live.' },
+    { icon: Bot, color: '#ecd6b0', title: 'AI assistant', desc: 'Summaries, drafts and answers in context, with your choice of model: Claude, ChatGPT, Gemini, Grok or your own.' },
+    { icon: Plug, color: '#f0a3c4', title: 'Integrations', desc: 'GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Zoom, cloud drives and webhooks, connected with a token.' },
+    { icon: Workflow, color: '#9fd8a6', title: 'Automations', desc: 'Triggers, conditions, schedules and actions that take the routine steps off your plate.' },
+    { icon: MonitorSmartphone, wide: true, color: '#d9b98f', title: 'Apps for every platform', desc: 'Web, Mac, Windows, Linux and Android phones and tablets, all in sync, with one-click updates.' },
+    { icon: HardDriveUpload, wide: true, color: '#a6c8d9', title: 'Your data, your copy', desc: 'Optional encrypted backup to your own Google Drive, and a server you can host yourself.' },
 ];
 
 // ── AI console demo ────────────────────────────────────────────────────
@@ -152,8 +160,8 @@ export const AI_PROMPTS = [
 
 // ── Security pillars ───────────────────────────────────────────────────
 export const SECURITY = [
-    { icon: Lock, title: 'End-to-end encryption', desc: 'Channel and DM messages are encrypted between devices with per-conversation keys (X25519 + AES-GCM), and stay encrypted in transit and at rest.' },
-    { icon: KeyRound, title: 'Escrowed keys, stated plainly', desc: 'The server keeps an escrowed copy of each conversation key, protected by a server master key, so agents can answer in encrypted conversations and you can recover access after a password reset.' },
+    { icon: Lock, title: 'Encrypted messages', desc: 'Channel and DM messages are encrypted on your device with per-conversation keys (X25519 + AES-GCM), and stay encrypted in transit and at rest.' },
+    { icon: KeyRound, title: 'A sealed key, stated plainly', desc: `${BRAND.name}'s server keeps a sealed copy of your key, protected by a server master key, so your devices unlock automatically after sign-in and AI can answer in encrypted conversations. Self-host to hold that key yourself.` },
     { icon: EyeOff, title: 'Private from admins', desc: 'Admins never see messages or message counts, and there are no per-person activity metrics.' },
     { icon: Fingerprint, title: 'Strong sign-in', desc: 'Email and password or Google, with email verification, passkeys and two-factor authentication.' },
     { icon: Users, title: 'Roles & permissions', desc: 'Owner, admin, manager and member roles with a permission matrix across workspaces and channels.' },
@@ -169,12 +177,14 @@ export const STEPS = [
 
 // ── FAQ ────────────────────────────────────────────────────────────────
 export const FAQ = [
-    { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a workspace for teams: channels, DMs, threads, huddles, tasks, notes and AI agents in one place, with a company console for the people who run it.` },
+    { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a free, open-source workspace for teams: chat, threads, huddles, tasks, notes and AI in one place, on the web, desktop, phone and tablet.` },
+    { q: 'Is it really free?', a: 'Yes. The Free plan has every feature, with limits sized for small teams: up to 4 signed-in devices, 2 workspaces you create and 2 you join, the owner plus 10 members per workspace, huddles of up to 10 people for 30 minutes and 50 AI requests a day. Pro and Enterprise, with bigger limits and admin controls, are coming soon.' },
+    { q: 'Is it open source? Can I host it myself?', a: `Yes. ${BRAND.name} is MIT-licensed on GitHub. You can run the whole server yourself with Docker Compose, and every plan limit is configurable on your own server.` },
     { q: 'How do I sign in?', a: 'With your email and password, or with Google. New accounts verify their email address, and you can add passkeys and two-factor authentication in Settings.' },
     { q: 'How do I bring my team in?', a: 'Create a workspace with the setup wizard, then share a team invite link anyone on your team can use, or send one-time links that work once. You can also invite people by email.' },
-    { q: 'Are messages end-to-end encrypted?', a: 'Messages in channels and DMs are end-to-end encrypted between devices with per-conversation keys, and they are encrypted in transit and at rest. The server also keeps an escrowed copy of each conversation key, protected by a server master key. That copy lets agents answer in encrypted conversations and lets you recover access after a password reset. Messages are never shown to admins.' },
+    { q: 'Are messages encrypted?', a: `Yes. Messages in channels and DMs are encrypted on your device with per-conversation keys, and stay encrypted in transit and at rest. ${BRAND.name}'s server keeps a sealed copy of your key, protected by a server master key, so your devices unlock automatically after you sign in and AI agents can answer in encrypted conversations. Messages are never shown to admins. To hold that key yourself, run your own server.` },
     { q: 'Can admins read our messages or see who is most active?', a: 'No. Admins manage people, workspaces and permissions. They never see messages or message counts, and there are no per-person activity metrics.' },
-    { q: 'Which AI agents can we use?', a: 'Claude, ChatGPT, Gemini and Grok. A workspace admin can install an agent for everyone, or each member can connect one personally with their own API key. Mention an agent in a channel or open a DM with it.' },
-    { q: 'What integrations are there?', a: 'GitHub, Jira, Zoom and incoming webhooks, plus workflows that run on triggers you choose. Members can also connect their personal GitHub and Jira accounts.' },
-    { q: 'Which platforms are supported?', a: `${BRAND.name} runs in any modern browser. There are desktop apps for Mac, Windows and Linux with split view, phone apps for Android and iOS, and the full workspace with split view on Android tablets and iPads. Everything syncs in real time.` },
+    { q: 'Which AI models can we use?', a: 'Claude, ChatGPT, Gemini and Grok, or a model you host yourself. A workspace admin can install an agent for everyone, or each member can connect one with their own API key. Mention an agent in a channel or open a DM with it.' },
+    { q: 'What integrations are there?', a: 'GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Zoom, cloud drives and incoming webhooks, plus automations that run on triggers you choose. You connect them with a personal token or a webhook URL.' },
+    { q: 'Which platforms are supported?', a: `${BRAND.name} runs in any modern browser. There are desktop apps for Mac, Windows and Linux, and an app for Android phones and tablets, with split view on larger screens. Everything syncs in real time, and the apps tell you when an update is ready.` },
 ];
