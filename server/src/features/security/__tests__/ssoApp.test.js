@@ -185,6 +185,18 @@ test('exchange: the right verifier gets a mobile session, once', async () => {
   expect(again.body.code).toBe('SSO_CODE_INVALID');
 });
 
+test('exchange: over the device limit the app gets DEVICE_LIMIT and no session', async () => {
+  const { verifier, challenge } = pkce();
+  const { acs } = await samlAppSignIn(challenge);
+  const code = new URL(acs.headers.location).searchParams.get('code');
+  startSsoSession.mockImplementationOnce(async () => ({ status: 409, pending: { code: 'DEVICE_LIMIT', pendingToken: 'p'.repeat(43), devices: [], limit: 4 } }));
+  const res = await call('POST', '/api/auth/sso/app/exchange', { body: { code, verifier }, headers: { 'x-client-platform': 'ios' } });
+  expect(res.status).toBe(409);
+  expect(res.body.code).toBe('DEVICE_LIMIT');
+  expect(res.body.accessToken).toBeUndefined();
+  expect(res.body.refreshToken).toBeUndefined();
+});
+
 test('exchange: a wrong verifier burns the code; browsers get no refresh token', async () => {
   const { verifier, challenge } = pkce();
   const { acs } = await samlAppSignIn(challenge);

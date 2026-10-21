@@ -6,10 +6,11 @@ import logger from '../../utils/logger';
 import '../shared/entryModals.css';
 
 /**
- * Asked once per browser session: the account password unwraps the encryption keys.
- * It can't be dismissed, because nothing encrypted can be read without it.
+ * Unlocks messages on this device with the account password, once. Only accounts whose key is
+ * still password-protected (set up before automatic unlock) ever see it; after it, the key is
+ * sealed on the server and every device unlocks automatically. onClose makes it dismissible.
  */
-export default function PasswordUnlockModal({ onSubmit, onResetKeys }) {
+export default function PasswordUnlockModal({ onSubmit, onResetKeys, onClose }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     // 'unlock', or 'reset' after a password reset: the old key can't be opened with the new
@@ -62,7 +63,8 @@ export default function PasswordUnlockModal({ onSubmit, onResetKeys }) {
     };
 
     return createPortal(
-        <div className="cd-dialog-backdrop">
+        <div className="cd-dialog-backdrop" onMouseDown={(e) => { if (onClose && e.target === e.currentTarget && !loading) onClose(); }}
+            onKeyDown={(e) => { if (onClose && e.key === 'Escape' && !loading) onClose(); }}>
             <div className="cd-dialog" data-size="sm" role="dialog" aria-modal="true" aria-labelledby="unlock-modal-title" aria-describedby="unlock-modal-lead">
                 <div className="cd-dialog-head">
                     <div className="em-head">
@@ -71,7 +73,7 @@ export default function PasswordUnlockModal({ onSubmit, onResetKeys }) {
                             <h2 id="unlock-modal-title">{mode === 'reset' ? 'Set up encryption again' : 'Unlock your messages'}</h2>
                             <p id="unlock-modal-lead">{mode === 'reset'
                                 ? 'Your password was reset, so the key locked with the old password can’t be opened. Confirm your current password to make a new key for this account.'
-                                : 'Enter your account password to read your encrypted chats.'}</p>
+                                : 'Enter your account password once. After that, your devices unlock messages automatically.'}</p>
                         </div>
                     </div>
                 </div>
@@ -111,7 +113,7 @@ export default function PasswordUnlockModal({ onSubmit, onResetKeys }) {
                         ) : (
                             <div className="em-alert" id="unlock-hint">
                                 <ShieldCheck size={14} />
-                                <span><strong>Only you can unlock them.</strong> Your password is never stored. It’s only used to open your encryption keys.</span>
+                                <span><strong>Asked only once.</strong> Your password isn’t stored. Oruinwan keeps a sealed copy of your message key so your other devices unlock on their own.</span>
                             </div>
                         )}
                     </div>
@@ -126,6 +128,11 @@ export default function PasswordUnlockModal({ onSubmit, onResetKeys }) {
                             <Btn variant="ghost" className="gl-btn--block" disabled={loading}
                                 onClick={() => { setMode('reset'); setError(null); }}>
                                 Reset your password recently? Set up encryption again
+                            </Btn>
+                        )}
+                        {onClose && mode === 'unlock' && (
+                            <Btn variant="ghost" className="gl-btn--block" disabled={loading} onClick={onClose}>
+                                Not now
                             </Btn>
                         )}
                         {mode === 'reset' && (

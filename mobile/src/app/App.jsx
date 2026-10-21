@@ -22,6 +22,7 @@ import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 import { finishBackupLink } from '../features/settings/backupInfo.js';
 import { BackupRestoreOffer } from '../features/settings/backup.jsx';
 import { PlanLayer } from '../features/plan/UpgradeSheet.jsx';
+import { ApprovalHost } from '../features/auth/ApprovalHost.jsx';
 
 /** While the app restores the session: the mark lands, then breathes until it's ready. */
 function Splash() {
@@ -150,6 +151,8 @@ export function App() {
       {status === 'signed-in' && <ReminderLayer />}
       {/* Free-plan limits: the upgrade sheet for any refused addition (features/plan). */}
       {status === 'signed-in' && <PlanLayer />}
+      {/* Sign-in / unlock requests from the person's other devices, and Scan to sign in. */}
+      {status === 'signed-in' && <ApprovalHost />}
       {/* The first-run tour, once the workspace itself is on screen (not over sign-in flows). */}
       {status === 'signed-in' && !needsPassword && !joinToken && !creatingWorkspace && !pickingWorkspace && <PhoneTour />}
       {status === 'signed-in' && !needsPassword && !joinToken && !creatingWorkspace && !pickingWorkspace && <BackupRestoreOffer />}

@@ -70,7 +70,7 @@ describe('Settings → Devices', () => {
         const list = await screen.findByRole('list', { name: 'Signed-in devices' });
         expect(api.get).toHaveBeenCalledWith('/api/v2/devices', expect.objectContaining({ headers: expect.any(Object) }));
         expect(within(list).getByText('This device')).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: 'Revoke Work phone' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Sign out Work phone' }));
         expect(api.delete).not.toHaveBeenCalled();
 
         const dialog = await screen.findByRole('dialog', { name: 'Sign out this device?' });

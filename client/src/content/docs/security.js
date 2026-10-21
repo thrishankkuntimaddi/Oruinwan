@@ -39,14 +39,15 @@ export default {
             id: 'encryption',
             title: 'How messages are encrypted',
             summary: 'End-to-end encrypted between devices with a key per conversation, plus a server-escrowed copy of each key for agents and account recovery.',
-            keywords: 'encryption e2ee end-to-end encrypted aes gcm keys unlock password conversation key new members wrapped escrow escrowed server master key recovery reset agents tls at rest',
+            keywords: 'encryption e2ee end-to-end encrypted aes gcm keys unlock automatic sealed password conversation key new members wrapped escrow escrowed server master key recovery reset agents tls at rest',
             blocks: [
                 { figure: 'e2ee', caption: 'Text is encrypted on your device; the server stores it encrypted, along with protected copies of the conversation key.' },
                 { h: 'End-to-end between devices' },
                 { list: [
                     'Messages are encrypted on your device with **AES-256-GCM** before they leave it, using a key for each conversation.',
-                    'Each member’s copy of a conversation key is protected by that member’s own keys, which are unlocked with their password. On a new browser you may be asked for your password to **unlock** your messages.',
-                    'Messages travel over encrypted connections (TLS) and are stored encrypted at rest.',
+                    'Each member’s copy of a conversation key is protected by that member’s own identity key. Oruinwan’s server keeps a **sealed copy** of the key that opens it, so your devices **unlock automatically** when you sign in, with a password, Google, a passkey or a QR code. You are not asked for your password to read messages.',
+                    'Messages are encrypted in transit (TLS) and at rest.',
+                    'Accounts set up before automatic unlock may be asked once, on one device, for the password (or to approve from another signed-in device). After that every device unlocks on its own.',
                     'Message content is never shown to workspace or company admins.',
                 ] },
                 { h: 'Key escrow on the server' },
@@ -56,7 +57,7 @@ export default {
                     '**Recovery after a password reset**: if you reset your password, the server can give you access to your conversations again.',
                 ] },
                 'The same escrowed copy lets new members read a conversation they join, and lets integration cards (GitHub, Jira) be posted encrypted.',
-                { callout: 'note', title: 'What this means', text: 'Because the server holds an escrowed copy of every conversation key, Oruinwan is not “zero-knowledge” messaging: whoever operates the server and holds its master key could in principle decrypt messages. Attachments are not end-to-end encrypted. Message Info shows whether a message is end-to-end encrypted.' },
+                { callout: 'note', title: 'What this means', text: 'Because the server holds an escrowed copy of every conversation key and a sealed copy of your key, Oruinwan is not “zero-knowledge” messaging: whoever operates the server and holds its master key could in principle decrypt messages. Attachments are not end-to-end encrypted. Message Info shows whether a message is end-to-end encrypted.' },
             ],
         },
         {

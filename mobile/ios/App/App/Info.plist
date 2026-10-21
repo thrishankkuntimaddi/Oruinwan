@@ -63,7 +63,7 @@
 		<string>arm64</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Oruinwan uses the camera so you can take photos to share and turn on video in huddles.</string>
+	<string>Oruinwan uses the camera to scan sign-in QR codes, take photos to share and turn on video in huddles.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Oruinwan uses the microphone so you can talk in huddles, record voice messages and calls, and turn on live captions.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

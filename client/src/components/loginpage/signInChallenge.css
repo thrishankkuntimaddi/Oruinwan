@@ -1,0 +1,28 @@
+/* Sign-in steps after the password (two-step verification, device limit) and QR sign-in.
+   Built on the public kit (public.css); colours only from its --o-* tokens. */
+
+.orw-sic { display: flex; flex-direction: column; gap: 16px; }
+.orw-sic__option { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--o-line-2); background: var(--o-glass); }
+.orw-sic__option-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 650; color: var(--o-text); }
+.orw-sic__option-title svg { color: var(--o-accent-hi); flex-shrink: 0; }
+.orw-sic__option p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--o-text-3); }
+.orw-sic__row { display: flex; gap: 8px; align-items: center; }
+.orw-sic__row .orw-input { flex: 1; min-width: 0; letter-spacing: 0.35em; text-align: center; font-size: 17px; }
+.orw-sic__wait { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--o-text-2); }
+.orw-sic__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--o-accent); animation: orwSicPulse 1.4s ease-in-out infinite; flex-shrink: 0; }
+@keyframes orwSicPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .orw-sic__dot { animation: none; } }
+
+.orw-sic__devices { display: flex; flex-direction: column; gap: 1px; background: var(--o-line-2); border: 1px solid var(--o-line-2); }
+.orw-sic__device { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--o-bg-2); }
+.orw-sic__device svg { flex-shrink: 0; color: var(--o-text-3); }
+.orw-sic__device-info { flex: 1; min-width: 0; }
+.orw-sic__device-name { font-size: 13.5px; font-weight: 650; color: var(--o-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orw-sic__device-meta { font-size: 12px; color: var(--o-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orw-sic__device .orw-btn { flex-shrink: 0; }
+
+.orw-qr { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.orw-qr__frame { width: 232px; height: 232px; display: grid; place-items: center; border: 1px solid var(--o-line-2); } /* the QR image has its own light quiet zone */
+.orw-qr__frame img { width: 100%; height: 100%; image-rendering: pixelated; }
+.orw-qr__frame--dim img { opacity: 0.15; }
+.orw-qr__steps { margin: 0; padding-left: 18px; text-align: left; font-size: 13px; line-height: 1.6; color: var(--o-text-2); }

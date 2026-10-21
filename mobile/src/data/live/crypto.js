@@ -7,8 +7,10 @@
 //  - Conversation keys: random AES-256 keys, wrapped for each member with RSA-OAEP.
 //  - Messages: AES-256-GCM, 12-byte IV; ciphertext = base64(ciphertext || tag).
 //
-// The unlocked private key is kept as a non-extractable CryptoKey in IndexedDB, so the
-// password is needed only once per phone. Everything here uses the WebView's WebCrypto.
+// The unlocked private key is kept as a non-extractable CryptoKey in IndexedDB. Messages unlock
+// automatically: the server keeps a sealed copy of the UMEK and wraps it for each signed-in
+// device. Accounts whose UMEK is still password-derived move to that mode the next time the
+// password is typed on any device (sealUmekOnServer). Everything here uses WebCrypto.
 import { api } from './http.js';
 import { setE2ee } from '../e2ee.js';
 
@@ -109,7 +111,7 @@ async function uploadPublicKey(pem, algorithm, version = 1) {
  * Unlocks the user's identity with their password, or creates it on first use
  * (the same thing the web client does on a first sign-in).
  */
-export async function unlockIdentity(userId, password, { serverProtected = false } = {}) {
+export async function unlockIdentity(userId, password) {
   if (!subtle) {
     setE2ee('unsupported', 'WebCrypto is not available here, so encrypted messages cannot be read.');
     return 'unsupported';
@@ -123,7 +125,7 @@ export async function unlockIdentity(userId, password, { serverProtected = false
       throw err;
     }
   }
-  if (!state) return createIdentity(userId, password, { serverProtected });
+  if (!state) return createIdentity(userId);
   if (!isRsa(state.algorithm)) {
     setE2ee('unsupported', 'This account uses a key type the app does not support yet.');
     return 'unsupported';
@@ -135,7 +137,11 @@ export async function unlockIdentity(userId, password, { serverProtected = false
       setE2ee('password_required');
       return 'password_required';
     }
-    umek = await deriveUmek(password, fromB64(state.umekSalt));
+    // Extractable once, so the opened key can be sealed on the server (automatic unlock from now on).
+    umek = await deriveUmek(password, fromB64(state.umekSalt), true);
+    const jwk = await openPrivateKey(state, umek);
+    await sealUmekOnServer(umek);
+    return keepIdentity(userId, jwk, state);
   } else if (state.umekProtectionType === 'SERVER_KEK') {
     // Accounts without a password (Google / GitHub sign-ups that skipped setting one).
     try {
@@ -150,6 +156,23 @@ export async function unlockIdentity(userId, password, { serverProtected = false
   }
 
   return keepIdentity(userId, await openPrivateKey(state, umek), state);
+}
+
+/**
+ * QR sign-in hands the new device its UMEK wrapped for the ephemeral key it sent (`keys`).
+ * Opens the identity with it; falls back to the normal unlock when the key wasn't included.
+ */
+export async function unlockWithWrappedUmek(userId, privateKey, keys) {
+  if (!subtle) return unlockIdentity(userId);
+  if (!keys?.rewrappedUmek || !privateKey) return unlockIdentity(userId);
+  try {
+    const state = await api.get('/v2/crypto/identity');
+    if (!isRsa(state.algorithm)) return unlockIdentity(userId);
+    const umek = await unwrapUmek(privateKey, keys);
+    return keepIdentity(userId, await openPrivateKey(state, umek), state);
+  } catch {
+    return unlockIdentity(userId);
+  }
 }
 
 /** The identity private key (JWK) inside `state`, opened with `umek`. */
@@ -182,43 +205,43 @@ async function keepIdentity(userId, jwk, state) {
 }
 
 /**
- * After an account without a password sets one. Keys the server held are re-locked with the
- * password and the server deletes its sealed copy, so from then on only the password opens
- * them (the key pair itself is unchanged, so every past message still opens). Accounts with
- * no keys yet get password-protected ones.
+ * After an account without a password sets one. The key stays sealed on the server (messages
+ * unlock automatically on every device); a still password-protected key is moved there too.
  */
 export async function protectIdentityWithPassword(userId, password) {
-  if (!subtle) return unlockIdentity(userId, password);
-  let state = null;
-  try {
-    state = await api.get('/v2/crypto/identity');
-  } catch (err) {
-    if (err.status !== 404) {
-      setE2ee('error', err.message);
-      throw err;
-    }
-  }
-  if (!state || state.umekProtectionType !== 'SERVER_KEK' || !isRsa(state.algorithm)) return unlockIdentity(userId, password);
+  return unlockIdentity(userId, password);
+}
 
-  let jwk;
+/**
+ * Sends the opened UMEK once (over TLS) so the server keeps it sealed under its key and unlocks
+ * the account's other devices automatically. Best effort: a failure keeps the old mode.
+ */
+export async function sealUmekOnServer(umek) {
   try {
-    jwk = await openPrivateKey(state, await unwrapServerUmek());
-  } catch (err) {
-    setE2ee('error', 'Could not unlock your keys from the server. Try again.');
-    throw err;
+    const raw = new Uint8Array(await subtle.exportKey('raw', umek));
+    await api.post('/v2/crypto/identity/seal-umek', { umek: toB64(raw) });
+    return true;
+  } catch {
+    return false;
   }
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const umek = await deriveUmek(password, salt);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, umek, enc.encode(JSON.stringify(jwk)));
-  const { newVersion } = await api.post('/v2/crypto/identity/rotate-umek', {
-    encryptedIdentityPrivateKey: toB64(encrypted),
-    identityPrivateKeyIv: toB64(iv),
-    umekSalt: toB64(salt),
-    umekProtectionType: 'PASSWORD',
-    currentVersion: state.version,
-  });
-  return keepIdentity(userId, jwk, { ...state, version: newVersion || state.version });
+}
+
+/**
+ * For "unlock another device": opens a still password-protected key with the password and seals
+ * it on the server. Resolves true once the server holds it. Throws WRONG_PASSWORD.
+ */
+export async function sealWithPassword(password) {
+  const state = await api.get('/v2/crypto/identity');
+  if (state?.umekProtectionType === 'SERVER_KEK') return true;
+  const umek = await deriveUmek(password, fromB64(state.umekSalt), true);
+  try {
+    // Only checks the password; this device's own unlock state is left alone.
+    await subtle.decrypt({ name: 'AES-GCM', iv: fromB64(state.identityPrivateKeyIv), tagLength: 128 }, umek, fromB64(state.encryptedIdentityPrivateKey));
+  } catch {
+    throw Object.assign(new Error('That password did not unlock your messages.'), { code: 'WRONG_PASSWORD' });
+  }
+  await api.post('/v2/crypto/identity/seal-umek', { umek: toB64(new Uint8Array(await subtle.exportKey('raw', umek))) });
+  return true;
 }
 
 // Same constants as the server (server/src/features/crypto/umekEnvelope.js wrapForDevice)
@@ -232,11 +255,20 @@ const UNWRAP_ITERATIONS = 10000;
  * secret (PBKDF2-SHA256), and the server sends the UMEK encrypted with it (iv | tag | data).
  */
 async function unwrapServerUmek() {
-  const mine = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
-  const myPublic = new Uint8Array(await subtle.exportKey('raw', mine.publicKey));
-  const { serverEphemeralPublicKey, rewrappedUmek } = await api.post('/v2/crypto/identity/unwrap-umek', {
-    clientEphemeralPublicKey: toB64(myPublic),
-  });
+  const mine = await newEphemeralKey();
+  const wrappedKey = await api.post('/v2/crypto/identity/unwrap-umek', { clientEphemeralPublicKey: mine.publicKey });
+  return unwrapUmek(mine.privateKey, wrappedKey);
+}
+
+/** A one-time P-256 key pair; publicKey is the raw point, base64 (what the server expects). */
+export async function newEphemeralKey() {
+  const pair = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+  return { privateKey: pair.privateKey, publicKey: toB64(new Uint8Array(await subtle.exportKey('raw', pair.publicKey))) };
+}
+
+/** Opens { serverEphemeralPublicKey, rewrappedUmek } (server wrapForDevice) with our ephemeral private key. */
+export async function unwrapUmek(privateKey, { serverEphemeralPublicKey, rewrappedUmek }) {
+  const mine = { privateKey };
   const serverPublic = await subtle.importKey('raw', fromB64(serverEphemeralPublicKey), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
   const secret = await subtle.deriveBits({ name: 'ECDH', public: serverPublic }, mine.privateKey, 256);
   const material = await subtle.importKey('raw', secret, 'PBKDF2', false, ['deriveKey']);
@@ -258,16 +290,8 @@ async function unwrapServerUmek() {
   return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['decrypt']);
 }
 
-/**
- * Creates keys for an account that has none yet. With a password the UMEK is derived from it
- * (the server never sees it); with `serverProtected`, for accounts without a password, a random
- * UMEK is sent once over TLS and the server keeps it sealed under its key.
- */
-async function createIdentity(userId, password, { serverProtected = false } = {}) {
-  if (!password && !serverProtected) {
-    setE2ee('password_required');
-    return 'password_required';
-  }
+/** Creates keys for an account that has none yet (server-sealed UMEK, see below). */
+async function createIdentity(userId) {
   const pair = await subtle.generateKey(
     { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
     true,
@@ -275,18 +299,11 @@ async function createIdentity(userId, password, { serverProtected = false } = {}
   );
   const jwk = await subtle.exportKey('jwk', pair.privateKey);
   const pem = `-----BEGIN PUBLIC KEY-----\n${toB64(await subtle.exportKey('spki', pair.publicKey))}\n-----END PUBLIC KEY-----`;
-  let umek;
-  let protection;
-  if (password) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    umek = await deriveUmek(password, salt);
-    // Password accounts are unlocked from umekSalt + password only, so umekEnvelope is a marker.
-    protection = { umekEnvelope: 'password-derived', umekSalt: toB64(salt), umekProtectionType: 'PASSWORD' };
-  } else {
-    const raw = crypto.getRandomValues(new Uint8Array(32));
-    umek = await subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
-    protection = { umekEnvelope: toB64(raw), umekSalt: null, umekProtectionType: 'SERVER_KEK' };
-  }
+  // Every new account: a random UMEK, sent once over TLS and kept sealed by the server, so each
+  // signed-in device unlocks automatically.
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const umek = await subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
+  const protection = { umekEnvelope: toB64(raw), umekSalt: null, umekProtectionType: 'SERVER_KEK' };
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, umek, enc.encode(JSON.stringify(jwk)));
 

@@ -3,25 +3,41 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '@services/api';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, KeyRound, QrCode } from 'lucide-react';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { IS_APP } from '../../appMode/env';
 import { appGoogleAvailable, appGoogleToken } from '../../appMode/appGoogle';
 import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, finishGoogleSession } from './googleContinue';
 import CheckEmailPanel from './CheckEmailPanel';
 import SsoSignIn from './SsoSignIn';
+import SignInChallenge, { signInChallengeFrom } from './SignInChallenge';
+import QrSignIn from './QrSignIn';
+
+/** Where a password sign-in goes once it has a session. */
+export function routeAfterPasswordLogin(response, navigate) {
+    const pendingInvite = localStorage.getItem('pendingInvite');
+    if (pendingInvite) { navigate(`/join-workspace?token=${pendingInvite}`); return; }
+    if (response?.redirectTo) { navigate(response.redirectTo); return; }
+    if (response?.user?.companyStatus === 'pending' || response?.user?.companyStatus === 'pending_verification') { navigate('/pending-verification'); return; }
+    if (response?.user?.roles?.includes('chttrix_admin')) { navigate('/platform-admin'); return; }
+    const companyRole = response?.user?.companyRole;
+    if (companyRole === 'owner') { navigate('/owner/dashboard'); return; }
+    if (companyRole === 'admin') { navigate('/admin/dashboard'); return; }
+    if (companyRole === 'manager') { navigate('/manager/dashboard'); return; }
+    navigate('/workspaces');
+}
 
 const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     const [formData, setFormData] = useState({ email: initialEmail, password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    // Two-step sign-in: set when the server answers { requires2FA } — { via: 'password' | 'google', googleToken? }.
-    const [twoFactor, setTwoFactor] = useState(null);
-    const [otp, setOtp] = useState('');
-    const [otpError, setOtpError] = useState('');
+    // A sign-in step after the first factor (two-step verification or the device limit):
+    // { data, kind: 'password' | 'oauth' | 'qr', password?, ephemeralPrivateKey? }.
+    const [challenge, setChallenge] = useState(null);
+    const [showQr, setShowQr] = useState(false);
     // Set when the password was right but the email was never verified.
     const [unverifiedEmail, setUnverifiedEmail] = useState(null);
-    const { login, setUser } = useContext(AuthContext);
+    const { login, setUser, adoptSession } = useContext(AuthContext);
     const { showToast } = useToast();
     const navigate = useNavigate();
     const uid = useId();
@@ -44,23 +60,10 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         if (!isFormValid) return;
         setLoading(true);
         try {
-            const response = await login(formData.email, formData.password, twoFactor ? otp : undefined);
+            const response = await login(formData.email, formData.password);
             showToast('Login successful!', 'success');
             await new Promise(r => setTimeout(r, 100));
-
-            const pendingInvite = localStorage.getItem('pendingInvite');
-            if (pendingInvite) { navigate(`/join-workspace?token=${pendingInvite}`); return; }
-            if (response.redirectTo) { navigate(response.redirectTo); return; }
-            if (response?.user?.companyStatus === 'pending' || response?.user?.companyStatus === 'pending_verification') { navigate('/pending-verification'); return; }
-
-            const isPlatformAdmin = response?.user?.roles?.includes('chttrix_admin');
-            if (isPlatformAdmin) { navigate('/platform-admin'); return; }
-
-            const companyRole = response?.user?.companyRole;
-            if (companyRole === 'owner') { navigate('/owner/dashboard'); return; }
-            if (companyRole === 'admin') { navigate('/admin/dashboard'); return; }
-            if (companyRole === 'manager') { navigate('/manager/dashboard'); return; }
-            navigate('/workspaces');
+            routeAfterPasswordLogin(response, navigate);
         } catch (err) {
             if (err.response?.data?.requiresReactivation) {
                 showToast('Account deactivated. Check your email for reactivation code.', 'info');
@@ -71,10 +74,9 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
                 setUnverifiedEmail(err.response.data.email || formData.email);
                 return;
             }
-            if (err.response?.data?.requires2FA) {
-                setTwoFactor({ via: 'password' });
-                setOtpError(err.response.data.invalidCode ? err.response.data.message : '');
-                setOtp('');
+            const step = signInChallengeFrom(err.response?.data);
+            if (step) {
+                setChallenge({ data: step, kind: 'password', password: formData.password });
                 return;
             }
             showToast(err.message || 'Login failed', 'error');
@@ -83,21 +85,42 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         }
     };
 
+    /** A sign-in step finished: take the session like the sign-in that started it would have. */
+    const finishChallenge = (data) => {
+        const step = challenge;
+        setChallenge(null);
+        if (step?.kind === 'password') {
+            adoptSession(data, { password: step.password });
+            showToast('Login successful!', 'success');
+            routeAfterPasswordLogin(data, navigate);
+            return;
+        }
+        if (step?.kind === 'qr') {
+            adoptSession(data, { ephemeralPrivateKey: step.ephemeralPrivateKey });
+            showToast('Signed in', 'success');
+            routeAfterPasswordLogin(data, navigate);
+            return;
+        }
+        showToast('Signed in', 'success');
+        finishGoogleSession(data, { setUser, navigate, adoptSession });
+    };
+
+    const leaveChallenge = (message) => {
+        setChallenge(null);
+        if (message) showToast(message, 'info');
+    };
+
     // googleToken: { accessToken } from the browser pop-up, or { credential } (an ID token) from the apps.
-    const signInWithGoogle = async (googleToken, code) => {
+    const signInWithGoogle = async (googleToken) => {
         try {
-            const res = await api.post('/api/auth/google-login', { ...googleToken, ...(code ? { otp: code } : {}) });
+            const res = await api.post('/api/auth/google-login', { ...googleToken });
             if (res.data?.needsSignup) { onGoogleSignup?.(res.data); return; }
             showToast('Signed in with Google', 'success');
-            finishGoogleSession(res.data, { setUser, navigate });
+            finishGoogleSession(res.data, { setUser, navigate, adoptSession });
         } catch (err) {
             const data = err.response?.data;
-            if (data?.requires2FA) {
-                setTwoFactor({ via: 'google', googleToken });
-                setOtpError(data.invalidCode ? data.message : '');
-                setOtp('');
-                return;
-            }
+            const step = signInChallengeFrom(data);
+            if (step) { setChallenge({ data: step, kind: 'oauth' }); return; }
             if (data?.requiresReactivation) {
                 showToast('Account deactivated. Check your email for reactivation code.', 'info');
                 navigate(`/reactivate?email=${encodeURIComponent(data.email || '')}`);
@@ -125,17 +148,6 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         }
     };
 
-    const submitCode = async e => {
-        e.preventDefault();
-        if (otp.length !== 6) return;
-        if (twoFactor?.via === 'google') {
-            setLoading(true);
-            try { await signInWithGoogle(twoFactor.googleToken, otp); } finally { setLoading(false); }
-            return;
-        }
-        await handleSubmit(e);
-    };
-
     // Passkey sign-in: the browser shows its own fingerprint / face / screen-lock prompt.
     // The server skips the authenticator-app code for passkeys (they are already two factors).
     const [passkeyBusy, setPasskeyBusy] = useState(false);
@@ -156,9 +168,11 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
             }
             const res = await api.post('/api/auth/passkeys/login/verify', { response });
             showToast('Signed in with a passkey', 'success');
-            finishGoogleSession(res.data, { setUser, navigate });
+            finishGoogleSession(res.data, { setUser, navigate, adoptSession });
         } catch (err) {
             const data = err.response?.data;
+            const step = signInChallengeFrom(data);
+            if (step) { setChallenge({ data: step, kind: 'oauth' }); return; }
             if (data?.requiresReactivation) {
                 showToast('Account deactivated. Check your email for reactivation code.', 'info');
                 navigate(`/reactivate?email=${encodeURIComponent(data.email || '')}`);
@@ -170,8 +184,6 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         }
     };
 
-    const leaveTwoFactor = () => { setTwoFactor(null); setOtp(''); setOtpError(''); };
-
     // In the desktop and Android apps Google's web pop-up can't run; they use appGoogle.js instead.
     const showGoogle = IS_APP ? appGoogleAvailable(providers) : googleAvailable(providers);
     // Passkeys are bound to the web origin, so the desktop and tablet apps leave them out too.
@@ -181,33 +193,22 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         return <CheckEmailPanel email={unverifiedEmail} reason="unverified" onBack={() => setUnverifiedEmail(null)} />;
     }
 
-    if (twoFactor) {
+    if (challenge) {
+        return <SignInChallenge challenge={challenge.data} onSession={finishChallenge} onCancel={leaveChallenge} />;
+    }
+
+    if (showQr) {
         return (
-            <div>
-                <div className="orw-auth__panel-head">
-                    <h2>Two-step verification</h2>
-                    <p>Enter the 6-digit code from your authenticator app to finish signing in.</p>
-                </div>
-                <form onSubmit={submitCode} className="orw-form">
-                    <div className="orw-field">
-                        <label className="orw-label" htmlFor={`${uid}-otp`}>Authentication code</label>
-                        <input id={`${uid}-otp`} name="otp" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoFocus
-                            autoComplete="one-time-code" placeholder="000000" data-testid="login-otp"
-                            value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
-                            className="orw-input" style={{ letterSpacing: '0.4em', fontSize: 18, textAlign: 'center' }}
-                            aria-invalid={otpError ? 'true' : undefined} aria-describedby={`${uid}-otp-help`} />
-                        <div id={`${uid}-otp-help`} className={otpError ? 'orw-error-text' : 'orw-hint'} role={otpError ? 'alert' : undefined}>
-                            {otpError || 'Open Google Authenticator, Authy or your usual app to see the current code.'}
-                        </div>
-                    </div>
-                    <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={otp.length !== 6 || loading} aria-busy={loading}>
-                        {loading ? 'Verifying…' : <><ShieldCheck size={15} /> Verify and sign in</>}
-                    </button>
-                    <button type="button" className="orw-link" onClick={leaveTwoFactor} style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <ArrowLeft size={13} /> Use a different account
-                    </button>
-                </form>
-            </div>
+            <QrSignIn
+                onBack={() => setShowQr(false)}
+                onSession={(data, { ephemeralPrivateKey }) => {
+                    setShowQr(false);
+                    adoptSession(data, { ephemeralPrivateKey });
+                    showToast('Signed in with QR', 'success');
+                    routeAfterPasswordLogin(data, navigate);
+                }}
+                onChallenge={(data, { ephemeralPrivateKey }) => { setShowQr(false); setChallenge({ data, kind: 'qr', ephemeralPrivateKey }); }}
+            />
         );
     }
 
@@ -249,7 +250,7 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
                 </button>
             </form>
 
-            {(showGoogle || showPasskey) && <div className="orw-auth__divider">Or</div>}
+            <div className="orw-auth__divider">Or</div>
             {showGoogle && <ContinueWithGoogle onClick={IS_APP ? signInWithAppGoogle : googleLogin} disabled={appGoogleBusy} />}
             {showPasskey && (
                 <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={signInWithPasskey}
@@ -258,6 +259,10 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
                     <KeyRound size={15} /> {passkeyBusy ? 'Waiting for your passkey…' : 'Sign in with a passkey'}
                 </button>
             )}
+            <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block" onClick={() => setShowQr(true)}
+                data-testid="sign-in-with-qr" style={showGoogle || showPasskey ? { marginTop: 10 } : undefined}>
+                <QrCode size={15} /> Sign in with QR
+            </button>
             <SsoSignIn initialEmail={formData.email} />
         </div>
     );

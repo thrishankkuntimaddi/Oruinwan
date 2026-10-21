@@ -220,6 +220,9 @@ router.post("/resend-verification", require("./auth.controller").resendSignupVer
 // Passkeys (WebAuthn): sign-in without a password, managed under Settings → Security.
 router.use("/passkeys", require("./passkeys"));
 
+// Two-step verification and device-limit steps, sign-in approvals, QR sign-in (signIn.routes.js).
+router.use(require("./signIn.routes"));
+
 // Sign-in methods: Google and email + password. The login page shows only what this server offers.
 router.get("/providers", (req, res) => {
   res.json({

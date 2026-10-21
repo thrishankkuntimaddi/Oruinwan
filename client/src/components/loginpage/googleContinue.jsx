@@ -25,9 +25,13 @@ export const ContinueWithGoogle = ({ onClick, disabled }) => (
 );
 
 /** Where someone goes once a Google sign-in (or Google sign-up) has a session. */
-export function finishGoogleSession(data, { setUser, navigate }) {
-    localStorage.setItem('accessToken', data.accessToken);
-    setUser(data.user);
+export function finishGoogleSession(data, { setUser, navigate, adoptSession }) {
+    // adoptSession (AuthContext) also opens the message keys; older callers only set the user.
+    if (adoptSession) adoptSession(data);
+    else {
+        localStorage.setItem('accessToken', data.accessToken);
+        setUser(data.user);
+    }
     if (data.requiresPasswordSetup || data.isFirstLogin) {
         localStorage.setItem('oauthPasswordSetupRequired', 'true');
         localStorage.setItem('oauthProvider', 'google');

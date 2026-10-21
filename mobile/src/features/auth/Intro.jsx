@@ -51,7 +51,7 @@ export function Intro({ onGetStarted }) {
           <span className="text-accent-ink">Every conversation.</span>
         </h1>
         <p className="intro-rise mx-auto mt-3 max-w-xs text-center text-[15px] text-text-2" style={delay(380)}>
-          Chat, tasks, notes and AI for your team. End‑to‑end encrypted.
+          Chat, tasks, notes and AI for your team. Encrypted in transit and at rest.
         </p>
         <div className="mt-9">
           <Conversation />

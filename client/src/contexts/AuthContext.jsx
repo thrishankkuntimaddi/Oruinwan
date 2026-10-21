@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setOnTokenRefreshed, refreshAccessToken, API_BASE } from '@services/api';
 import api from '@services/api';
-import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
+import { getDeviceMetadata, clearDeviceId, getDeviceId } from '../utils/deviceId';
 import logger from '../utils/logger';
 import { clearAllAiHistory } from '../utils/aiChatHistoryStorage';
 import { IS_SITE } from '../appMode/env';
@@ -73,7 +73,8 @@ export const AuthProvider = ({ children }) => {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'X-Device-Id': getDeviceId(),
         },
       });
 
@@ -95,7 +96,7 @@ export const AuthProvider = ({ children }) => {
         
         const retryRes = await fetch(`${API_BASE}/api/auth/me`, {
           credentials: "include",
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, 'X-Device-Id': getDeviceId() },
         });
 
         if (!retryRes.ok) {
@@ -137,7 +138,7 @@ export const AuthProvider = ({ children }) => {
   
   
   
-  const initializeEncryption = (data) => {
+  const initializeEncryption = (data, opts = {}) => {
     (async () => {
       try {
         const userId = data._id || data.id || data.sub;
@@ -147,7 +148,10 @@ export const AuthProvider = ({ children }) => {
         }
 
         const identityKeyService = (await import('../services/identityKeyService')).default;
-        const result = await identityKeyService.initializeIdentityKeys(userId, null);
+        const result = await identityKeyService.initializeIdentityKeys(userId, opts.password || null, {
+          wrappedUmek: opts.wrappedUmek || null,
+          ephemeralPrivateKey: opts.ephemeralPrivateKey || null,
+        });
 
         if (result?.status === 'PASSWORD_REQUIRED') {
           
@@ -277,6 +281,33 @@ export const AuthProvider = ({ children }) => {
   
   
   
+  /**
+   * Takes a session from any sign-in answer (password, Google, passkey, SSO, QR, or a pending
+   * sign-in finished at /api/auth/signin/continue): keeps the token, sets the user and opens the
+   * message keys. password: typed by the person (moves old password-protected keys to automatic
+   * unlock). keys + ephemeralPrivateKey: the key a QR sign-in handed over.
+   */
+  const adoptSession = (data, { password = null, ephemeralPrivateKey = null } = {}) => {
+    if (data?.accessToken) {
+      localStorage.setItem("accessToken", data.accessToken);
+      setAccessToken(data.accessToken);
+    }
+    if (!data?.user || typeof data.user !== 'object') return data;
+    const userWithCompany = { ...data.user };
+    if (data.company) userWithCompany.company = data.company;
+    setUser(userWithCompany);
+    const userId = data.user._id || data.user.id;
+    if (userId) {
+      initializeEncryption({ _id: userId }, {
+        password,
+        wrappedUmek: data.keys || null,
+        ephemeralPrivateKey,
+        token: data.accessToken,
+      });
+    }
+    return data;
+  };
+
   // `otp` is the authenticator code, sent on the second try when the server answers { requires2FA }.
   const login = async (email, password, otp) => {
     try {
@@ -294,71 +325,11 @@ export const AuthProvider = ({ children }) => {
       );
 
       const { data } = response;
-
-      
-      if (data.accessToken) {
-        localStorage.setItem("accessToken", data.accessToken);
-        setAccessToken(data.accessToken);
-      }
-
-      
       if (!data || !data.user || typeof data.user !== 'object') {
         throw new Error('Invalid user data received from login');
       }
       sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
-
-      
-      const userWithCompany = { ...data.user };
-      if (data.company) {
-        userWithCompany.company = data.company;
-      }
-      setUser(userWithCompany);
-
-      
-      
-      
-      
-      (async () => {
-        try {
-          const userId = data.user._id || data.user.id;
-          const identityKeyService = (await import('../services/identityKeyService')).default;
-          
-          const result = await identityKeyService.initializeIdentityKeys(userId, password);
-
-          if (result?.status === 'PASSWORD_REQUIRED') {
-            logger.warn('🔐 [PHASE 1] Password required during login (unusual)');
-            setEncryptionReady(false);
-            return;
-          }
-
-          if (result?.status === 'READY') {
-            logger.debug('✅ [PHASE 1] Identity keys initialized successfully');
-            setEncryptionReady(true);
-            setRequiresPassword(false);
-
-            fetch(`${API_BASE}/api/v2/conversations/repair-access`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                Authorization: `Bearer ${data.accessToken}`,
-                'Content-Type': 'application/json'
-              }
-            })
-              .then(res => res.json())
-              .then(repairData => logger.debug('✅ [AUTO-REPAIR] Completed:', repairData))
-              .catch(() => { });
-          }
-        } catch (err) {
-          logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          logger.error('❌ [PHASE 1] HARD crypto failure:', err);
-          logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          setEncryptionReady(false);
-        }
-      })();
-      
-      
-      
-
+      adoptSession(data, { password });
       return data;
     } catch (error) {
       
@@ -520,6 +491,8 @@ export const AuthProvider = ({ children }) => {
         requiresPassword, 
         unlockEncryption, 
         resetEncryptionKeys,
+        retryEncryption: () => { if (user) initializeEncryption(user); },
+        adoptSession,
         login,
         logout,
         loadUser,

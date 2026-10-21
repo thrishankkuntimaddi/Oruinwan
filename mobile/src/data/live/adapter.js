@@ -5,7 +5,9 @@ import {
 } from './http.js';
 import {
   conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
+  unlockWithWrappedUmek,
 } from './crypto.js';
+import { challengeError, signinAdapter } from './adapter.signin.js';
 import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
 import { prefs } from '../../native/storage.js';
 import { useE2ee } from '../e2ee.js';
@@ -335,14 +337,18 @@ async function afterSignIn(user) {
 
 /**
  * Shared end of Google sign-in and Google sign-up: the same two-factor, deactivation and session
- * handling as password sign-in. Keys unlock now when the server holds them; password-protected
+ * handling as password sign-in. Keys unlock from the server's sealed copy; password-protected
  * keys ask for the password in Chats; accounts with no password yet choose one next.
  */
-async function finishProviderSignIn(path, body) {
+async function finishProviderSignIn(path, body, kind = 'google') {
   let data;
   try {
     data = await request('POST', path, { body, auth: false });
   } catch (err) {
+    // Two-step verification (approve / authenticator / email) or the device limit: finished on
+    // the challenge screen (features/auth/SignInChallenge.jsx).
+    const challenge = challengeError(err, { kind });
+    if (challenge) throw challenge;
     if (err.data?.requires2FA) {
       throw Object.assign(new Error(err.data.invalidCode ? "That code didn't work. Try the newest one." : 'Enter the code from your authenticator app.'), {
         code: '2FA_REQUIRED',
@@ -357,18 +363,26 @@ async function finishProviderSignIn(path, body) {
     return { needsSignup: true, ticket: { signupToken: data.signupToken, email: data.email, name: data.name || '' } };
   }
   if (!data?.accessToken || !data?.refreshToken) throw new Error('The server did not return a mobile session. Update your Oruinwan server.');
+  return completeSignIn(data, { kind });
+}
+
+/**
+ * Any sign-in answer with a session → the signed-in user. Unlocks messages on this device:
+ * with the typed password (which also moves an older password-protected key to automatic
+ * unlock), with the key a QR sign-in wrapped for this device, or from the server's sealed copy.
+ */
+async function completeSignIn(data, ctx = {}) {
   await saveTokens({ access: data.accessToken, refresh: data.refreshToken });
   const user = mapUser(await api.get('/auth/me').catch(() => data.user));
   await afterSignIn(user);
-  const requiresPasswordSetup = Boolean(data.requiresPasswordSetup);
-  if (!requiresPasswordSetup) {
-    try {
-      await unlockIdentity(user.id);
-    } catch {
-      /* status is shown in Chats */
-    }
+  try {
+    if (ctx.password) await unlockIdentity(user.id, ctx.password);
+    else if (ctx.privateKey) await unlockWithWrappedUmek(user.id, ctx.privateKey, ctx.keys);
+    else await unlockIdentity(user.id);
+  } catch {
+    /* status is shown in Chats */
   }
-  return { user, requiresPasswordSetup };
+  return { user, requiresPasswordSetup: Boolean(data.requiresPasswordSetup) };
 }
 
 export const liveAdapter = {
@@ -381,6 +395,7 @@ export const liveAdapter = {
   ...planAdapter, // free-plan limits and usage (adapter.plan.js)
   kind: 'live',
   serverUrl,
+  ...signinAdapter((data, ctx) => completeSignIn(data, ctx)), // challenges, QR sign-in, approvals (adapter.signin.js)
   ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),
 
   /**
@@ -405,6 +420,8 @@ export const liveAdapter = {
     try {
       data = await request('POST', '/auth/login', { body: { email, password, ...(otp ? { otp } : {}) }, auth: false });
     } catch (err) {
+      const challenge = challengeError(err, { kind: 'password', password });
+      if (challenge) throw challenge;
       if (err.data?.requires2FA) {
         throw Object.assign(new Error('Enter the code from your authenticator app.'), { code: '2FA_REQUIRED', invalidCode: Boolean(err.data.invalidCode) });
       }
@@ -416,15 +433,8 @@ export const liveAdapter = {
       throw err;
     }
     if (!data?.accessToken || !data?.refreshToken) throw new Error('The server did not return a mobile session. Update your Oruinwan server.');
-    await saveTokens({ access: data.accessToken, refresh: data.refreshToken });
-    const user = mapUser(await api.get('/auth/me').catch(() => data.user));
-    await afterSignIn(user);
-    // Unlock or create encryption keys with the password the user just typed.
-    try {
-      await unlockIdentity(user.id, password);
-    } catch {
-      /* status is shown in Chats; messaging asks for the password again */
-    }
+    // Unlock (or create) encryption keys with the password the user just typed.
+    const { user } = await completeSignIn(data, { kind: 'password', password });
     return { user };
   },
 
@@ -445,7 +455,7 @@ export const liveAdapter = {
    */
   async ssoSignIn({ server, code, verifier }) {
     configure(normalizeServerUrl(server));
-    return finishProviderSignIn('/auth/sso/app/exchange', { code, verifier });
+    return finishProviderSignIn('/auth/sso/app/exchange', { code, verifier }, 'sso');
   },
 
   /** Creates the account a Google sign-in asked to create (`ticket` from googleSignIn), then signs in. */
@@ -455,9 +465,8 @@ export const liveAdapter = {
   },
 
   /**
-   * For accounts without a password (first Google sign-in): set one. Encryption keys
-   * are then locked with it (created, or moved off the server if it held them), so the server
-   * can't read messages. The current session stays.
+   * For accounts without a password (first Google sign-in): set one, so email sign-in works too.
+   * Messages keep unlocking automatically (the server keeps the key sealed). The session stays.
    */
   async protectWithPassword(userId, password) {
     await request('POST', '/auth/oauth/set-password', { body: { password, refreshToken: currentRefreshToken() } });
@@ -467,7 +476,7 @@ export const liveAdapter = {
   /** Or keep signing in with Google only: the server holds the key, sealed. */
   async skipPassword(userId) {
     await request('POST', '/auth/oauth/skip-password', { body: {} });
-    await unlockIdentity(userId, null, { serverProtected: true });
+    await unlockIdentity(userId);
   },
 
   async restore({ server }) {

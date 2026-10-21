@@ -43,6 +43,23 @@ const otpStore = {
     return entry.value;
   },
 
+  /** Reads and deletes in one step: only one caller ever gets the value (single-use tokens). */
+  async take(key) {
+    const redis = getRedis();
+    if (redis) {
+      const k = PREFIX + key;
+      const [[getErr, raw], [delErr]] = await redis.multi().get(k).del(k).exec();
+      if (getErr) throw getErr;
+      if (delErr) throw delErr;
+      return raw === null ? null : JSON.parse(raw);
+    }
+    pruneLocal();
+    const entry = _store.get(key);
+    _store.delete(key);
+    if (!entry || Date.now() >= entry.expiresAt) return null;
+    return entry.value;
+  },
+
   async delete(key) {
     const redis = getRedis();
     if (redis) {

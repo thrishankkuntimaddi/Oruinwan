@@ -160,8 +160,8 @@ import RequireDepartmentManager from "./components/RequireDepartmentManager";
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; 
 import ScrollToTop from "./components/ScrollToTop"; 
 
-import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
-import { useAuth } from "./contexts/AuthContext";
+import MessagesLockedBanner from "./components/security/MessagesLockedBanner";
+import ApprovalPrompt from "./components/security/ApprovalPrompt";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 
 // Old Oruinwan-era URLs (bookmarks, emails) keep working after the rename.
@@ -1052,12 +1052,15 @@ function App() {
   );
 }
 
+// Messages unlock automatically; an older password-protected key shows a non-blocking banner
+// (unlock once). Sign-in / unlock requests from the person's other devices are answered here.
 function GlobalPasswordUnlockModal() {
-  const { requiresPassword, unlockEncryption, resetEncryptionKeys } = useAuth();
-
-  if (!requiresPassword) return null;
-
-  return <PasswordUnlockModal onSubmit={unlockEncryption} onResetKeys={resetEncryptionKeys} />;
+  return (
+    <>
+      <MessagesLockedBanner />
+      <ApprovalPrompt />
+    </>
+  );
 }
 
 function HuddleRouteWrapper() {

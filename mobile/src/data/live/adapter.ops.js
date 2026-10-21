@@ -114,6 +114,9 @@ export function mapDevice(d) {
     revoked: Boolean(d.revoked),
     sessions: Number(d.sessionCount ?? d.sessions?.length ?? 0) || 0,
     pushTokens: Number(d.pushTokenCount) || 0,
+    location: d.location || null,
+    signInMethod: d.signIn?.method || null,
+    approvedBy: d.signIn?.approvedBy?.deviceName || null,
   };
 }
 

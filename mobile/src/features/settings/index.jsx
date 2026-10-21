@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
-  ExternalLink, Compass, ShieldCheck, Gauge, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
+  ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -19,7 +19,8 @@ import { deviceNoun, isAndroid, isDesktop, isIOS, isPlayStore, isWeb, onAppState
 import { usePushState } from '../push/usePushState.js';
 import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
-import { Button } from '../../ui/Button.jsx';
+import { Button, IconButton } from '../../ui/Button.jsx';
+import { openScanToSignIn } from '../auth/ApprovalHost.jsx';
 import { Field, Segmented, Toggle } from '../../ui/Controls.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
@@ -75,7 +76,7 @@ export function SettingsScreen() {
 
   return (
     <Screen>
-      <Header title="Settings" />
+      <Header title="Settings" actions={<IconButton icon={ScanQrCode} label="Scan to sign in" onClick={openScanToSignIn} />} />
       <Body>
         <div className="mx-4 mt-1 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
           <Avatar name={user?.name} src={user?.avatarUrl} size="lg" />
@@ -98,6 +99,7 @@ export function SettingsScreen() {
             <Row icon={User} tile="accent" title="Profile" onClick={() => nav.push('settings.profile')} />
             <Row icon={KeyRound} tile="accent" title="Password & security" onClick={() => nav.push('settings.security')} />
             <Row icon={Laptop} tile="accent" title="Devices" onClick={() => nav.push('settings.devices')} />
+            <Row icon={ScanQrCode} tile="accent" title="Scan to sign in" subtitle="Sign in on a computer with a QR code" onClick={openScanToSignIn} />
             <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
             <Row icon={CloudUpload} tile="accent" title="Backup" subtitle="Google Drive backup and restore" onClick={() => nav.push('settings.backup')} />
             <Row icon={Gauge} tile="accent" title="Plan & usage" subtitle="Your plan, its limits and what you've used" onClick={() => nav.push('settings.plan')} />
@@ -238,7 +240,7 @@ export function ProfileSettings() {
 
 const E2EE_TEXT = {
   ready: { label: `Unlocked on this ${deviceNoun}`, tone: 'text-success' },
-  password_required: { label: `Locked on this ${deviceNoun}. Unlock with your password`, tone: 'text-warning' },
+  password_required: { label: `Locked on this ${deviceNoun}. Unlock once (password or another device)`, tone: 'text-warning' },
   no_identity: { label: 'Not set up yet (set up on the web)', tone: 'text-text-2' },
   unsupported: { label: 'Not available for this account type yet', tone: 'text-text-2' },
   error: { label: "Couldn't check", tone: 'text-danger' },
@@ -258,8 +260,8 @@ export function SecuritySettings() {
           <SkeletonRows count={3} />
         ) : (
           <>
-            <Section title="End-to-end encryption">
-              <RowGroup footer={`Messages are encrypted on the sender's device and only decrypted on yours. Your password unlocks your keys; it is never stored on this ${deviceNoun}.`}>
+            <Section title="Message encryption">
+              <RowGroup footer="Messages are encrypted in transit and at rest. Oruinwan's server keeps a sealed copy of your key so your devices unlock automatically.">
                 <Row
                   icon={ShieldCheck}
                   tile="success"
@@ -357,7 +359,7 @@ function DeviceList({ devices }) {
       <Header title="Devices" subtitle={`${devices.length} signed in`} />
       <Body onRefresh={() => invalidate('devices')}>
         <Section title="Where you're signed in">
-          <RowGroup footer="Each device holds the keys that unlock your messages and gets your push notifications. Signing one out removes both.">
+          <RowGroup footer="Each device holds the keys that unlock your messages and gets your push notifications. Signing one out removes both, and frees its place: you can be signed in on a limited number of devices at once.">
             {devices.map((d) => (
               <Row
                 key={d.id}
@@ -367,11 +369,18 @@ function DeviceList({ devices }) {
                 subtitle={[
                   PLATFORM_LABEL[d.platform],
                   d.current ? `This ${deviceNoun}` : d.lastActive && `Active ${shortAgo(d.lastActive)}`,
+                  d.location,
+                  d.approvedBy ? `Approved by ${d.approvedBy}` : d.signInMethod === 'qr' ? 'Signed in with QR' : null,
                   d.pushTokens ? 'Push on' : null,
                 ].filter(Boolean).join(' · ')}
                 onClick={() => setMenu(d)}
               />
             ))}
+          </RowGroup>
+        </Section>
+        <Section>
+          <RowGroup footer="Scan the QR code on a computer's login screen to sign it in.">
+            <Row icon={ScanQrCode} title="Scan to sign in" onClick={openScanToSignIn} />
           </RowGroup>
         </Section>
         {others.length > 0 && (
@@ -397,6 +406,7 @@ function DeviceList({ devices }) {
             },
           },
           menu && !menu.current && { label: 'Sign out', icon: LogOut, danger: true, onSelect: () => setConfirm(menu) },
+          menu?.current && { label: `Sign out of this ${deviceNoun}`, icon: LogOut, danger: true, onSelect: () => useSession.getState().signOut() },
         ]}
       />
       <Sheet
