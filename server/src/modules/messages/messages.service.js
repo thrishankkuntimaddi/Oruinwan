@@ -1198,6 +1198,10 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     // Same company value as tasks created from the Tasks page.
     const creator = await identity.users.findById(userId);
     const companyId = tasksShared.resolveTaskCompany(ws, creator) || message.company || null;
+    if (ws) {
+        const plansSvc = require('../../shared/plans/planService');
+        await plansSvc.enforce(plansSvc.assertCanCreateTasks(ws, userId, plansSvc.taskAddsFor(userId, assignedTo)));
+    }
     // Tasks.create assigns the next issue key on whichever store holds tasks (TASKS_STORE).
     const Tasks = require('../../features/tasks/tasks.query');
     const task = await Tasks.create({

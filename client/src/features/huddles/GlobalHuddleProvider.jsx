@@ -5,6 +5,7 @@ import HuddleDock from './components/HuddleDock';
 import { CallCaptureProvider } from './capture/CallCaptureContext';
 import CaptureOverlay from './capture/CaptureOverlay';
 import MeetingRecapListener from '../meetings/MeetingRecapListener';
+import HuddleTimeLimitBanner from '../plan/HuddleTimeLimitBanner';
 
 /**
  * Keeps the huddle connection above the routes, so moving between pages never
@@ -24,6 +25,7 @@ export default function GlobalHuddleProvider({ children }) {
                 {children}
                 <HuddleDock />
                 <CaptureOverlay />
+                <HuddleTimeLimitBanner />
                 <MeetingRecapListener workspaceId={workspaceId || lastWorkspaceId} />
             </CallCaptureProvider>
         </HuddleProvider>

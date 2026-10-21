@@ -3,6 +3,7 @@ const { requireCompanyPermission } = require('../../shared/companyPermissions');
 const router = express.Router();
 const workspaceController = require('./workspace.controller');
 const workspaceAdminController = require('./workspace-admin.controller');
+const planGuards = require('../../shared/plans/planGuards');
 
 const requireAuth = require('../../shared/middleware/auth');
 const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
@@ -52,14 +53,14 @@ const requireWorkspaceAdmin = (req, res, next) => {
 };
 const adminGatePersonal = [...memberGatePersonal, requireWorkspaceAdmin];
 
-router.post('/', requireAuth, workspaceController.createWorkspace);
-router.post('/create', requireAuth, workspaceController.createWorkspace); 
+router.post('/', requireAuth, planGuards.workspaceCreate, workspaceController.createWorkspace);
+router.post('/create', requireAuth, planGuards.workspaceCreate, workspaceController.createWorkspace); 
 
 router.get('/my', requireAuth, workspaceController.listMyWorkspaces);
 
 router.get('/invite/:token', workspaceController.getInviteDetails);
 
-router.post('/join', requireAuth, workspaceController.joinWorkspace);
+router.post('/join', requireAuth, planGuards.workspaceJoin, workspaceController.joinWorkspace);
 
 router.get('/:workspaceId/members', ...memberGatePersonal, workspaceController.getWorkspaceMembers);
 
@@ -69,13 +70,13 @@ router.get('/:workspaceId/channels', ...memberGatePersonal, workspaceController.
 
 // Any active member may create channels (public or private); the controller
 // honours workspace.settings.allowMemberChannelCreation for non-admins.
-router.post('/:workspaceId/channels', ...memberGatePersonal, requireCompanyPermission('createChannel'), workspaceController.createWorkspaceChannel);
+router.post('/:workspaceId/channels', ...memberGatePersonal, requireCompanyPermission('createChannel'), planGuards.channelCreate, workspaceController.createWorkspaceChannel);
 
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 
-router.post('/:workspaceId/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), workspaceController.inviteToWorkspace);
+router.post('/:workspaceId/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
 
-router.post('/:id/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), workspaceController.inviteToWorkspace);
+router.post('/:id/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
 
 router.get('/:workspaceId/invites', ...adminGatePersonal, workspaceAdminController.getWorkspaceInvites);
 router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGatePersonal, workspaceAdminController.revokeInvite);
@@ -115,11 +116,11 @@ router.delete('/:id', ...memberGatePersonal, requireWorkspaceOwner, workspaceCon
 const workspacePermissionsRouter = require('../workspace-permissions/workspace-permissions.routes');
 router.use('/:id', workspacePermissionsRouter);
 
-router.post('/:id/clone', ...adminGatePersonal, workspaceController.cloneWorkspace);
+router.post('/:id/clone', ...adminGatePersonal, planGuards.workspaceCreate, workspaceController.cloneWorkspace);
 
 router.get('/:id/export', ...adminGatePersonal, workspaceController.exportWorkspace); // includes private channels: admins only
 
-router.post('/import', requireAuth, workspaceController.importWorkspace);
+router.post('/import', requireAuth, planGuards.workspaceCreate, workspaceController.importWorkspace);
 
 router.get('/:workspaceId/analytics', ...memberGatePersonal, workspaceController.getWorkspaceAnalytics);
 

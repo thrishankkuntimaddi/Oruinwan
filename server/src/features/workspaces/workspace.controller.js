@@ -117,15 +117,7 @@ exports.createWorkspace = async (req, res) => {
     }
 
     
-    if (isPersonalWorkspace) {
-      const ownedWorkspacesCount = await wsQueries.countCreatedBy(userId);
-      if (ownedWorkspacesCount >= 3) {
-        return res.status(403).json({
-          message: "Free plan limit reached. You can only create up to 3 workspaces.",
-          isLimitReached: true
-        });
-      }
-    }
+    // The free plan's workspace limit is checked before this runs (shared/plans/planGuards).
 
     
     const existingWorkspace = await wsQueries.findByNameForCreator(name.trim(), userId);
@@ -1419,13 +1411,7 @@ exports.importWorkspace = async (req, res) => {
 
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
-    if (!resolvedCompanyId) {
-      
-      const owned = await wsQueries.countCreatedBy(userId);
-      if (owned >= 3) {
-        return res.status(403).json({ message: 'Free plan limit: max 3 workspaces', isLimitReached: true });
-      }
-    }
+    // The free plan's workspace limit is checked before this runs (shared/plans/planGuards).
 
     const { workspace: ws, channels = [] } = snapshot;
     const name = (ws.name || 'Imported Workspace').trim();

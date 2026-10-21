@@ -26,6 +26,9 @@ import { formatBytes } from '../../lib/files.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
+import { usePlanBlock } from '../plan/plan.js';
+import { blockedNote } from '../plan/planText.js';
+import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import githubLogo from '../../assets/integrations/github.svg';
 import gitlabLogo from '../../assets/integrations/gitlab.svg';
 import jiraLogo from '../../assets/integrations/jira.svg';
@@ -260,6 +263,8 @@ export function WorkspaceScreen() {
   const mode = useSession((s) => s.mode);
   const { data: members, loading } = useMembers();
   const { data: channels } = useChannels();
+  // The free plan's people per workspace (pending invites count too).
+  const { plan, blocked: inviteBlocked } = usePlanBlock(workspace?.id, 'members.perWorkspace');
   if (!workspace) {
     return (
       <Screen>
@@ -285,7 +290,13 @@ export function WorkspaceScreen() {
         <Section title="This workspace">
           <RowGroup>
             {mode === 'live' && isAdmin && (
-              <Row icon={UserPlus} title="Invite people" subtitle="Share a link to join this workspace" onClick={() => invite(workspace)} />
+              <Row
+                icon={UserPlus}
+                title="Invite people"
+                subtitle={inviteBlocked ? 'Free plan limit reached' : 'Share a link to join this workspace'}
+                onClick={() => invite(workspace)}
+                disabled={inviteBlocked}
+              />
             )}
             <Row icon={Bell} title="Notification settings" onClick={() => nav.push('settings.notifications')} />
             <Row icon={Plug} title="Integrations" onClick={() => nav.push('integrations')} />
@@ -294,6 +305,7 @@ export function WorkspaceScreen() {
               <Row icon={Shield} title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
             )}
           </RowGroup>
+          {inviteBlocked && isAdmin && <PlanLimitNote className="mx-4 mt-2">{blockedNote(plan, 'members.perWorkspace')}</PlanLimitNote>}
         </Section>
         <Section title={`Members${members ? ` · ${members.length}` : ''}`}>
           {loading ? (

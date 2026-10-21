@@ -14,7 +14,7 @@ const COLUMNS = {
     description: 'description', icon: 'icon', color: 'color', rules: 'rules', createdBy: 'created_by',
     defaultChannels: 'default_channels', settings: 'settings', templateId: 'template_id', clonedFrom: 'cloned_from',
     exportedAt: 'exported_at', analyticsCache: 'analytics_cache', lastActivityAt: 'last_activity_at', isActive: 'is_active',
-    isArchived: 'is_archived', archivedAt: 'archived_at', metadata: 'metadata', createdAt: 'created_at', updatedAt: 'updated_at',
+    isArchived: 'is_archived', archivedAt: 'archived_at', metadata: 'metadata', createdAt: 'created_at', updatedAt: 'updated_at', plan: 'plan',
 };
 
 function toMember(r) {

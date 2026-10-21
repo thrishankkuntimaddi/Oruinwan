@@ -204,6 +204,8 @@ router.post('/tasks', requireScope('tasks:write'), async (req, res) => {
     };
     if (due) taskData.dueDate = due.toISOString();
 
+    const plansSvc = require('../../shared/plans/planService');
+    await plansSvc.enforce(plansSvc.assertCanCreateTasks(taskData.workspaceId, actorId, plansSvc.taskAddsForBody(taskData, actorId)));
     const result = await tasksService.createTask(actorId, taskData, req.io || req.app?.get?.('io') || null, req);
     const task = result?.tasks?.[0] || result?.task || result;
     try {
@@ -213,6 +215,7 @@ router.post('/tasks', requireScope('tasks:write'), async (req, res) => {
     } catch { /* webhooks are best-effort */ }
     res.status(201).json({ task });
   } catch (err) {
+    if (require('../../shared/plans').sendPlanLimit(res, err)) return;
     const status = err.statusCode || err.status;
     if (status && status < 500) return res.status(status).json({ message: err.message });
     if (err?.name === 'ValidationError' || err?.name === 'CastError') return res.status(400).json({ message: err.message });

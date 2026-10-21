@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
-  ExternalLink, Compass, ShieldCheck, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff,
+  ExternalLink, Compass, ShieldCheck, Gauge, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -98,6 +98,7 @@ export function SettingsScreen() {
             <Row icon={KeyRound} tile="accent" title="Password & security" onClick={() => nav.push('settings.security')} />
             <Row icon={Laptop} tile="accent" title="Devices" onClick={() => nav.push('settings.devices')} />
             <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
+            <Row icon={Gauge} tile="accent" title="Plan & usage" subtitle="Your plan, its limits and what you've used" onClick={() => nav.push('settings.plan')} />
           </RowGroup>
         </Section>
 

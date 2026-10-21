@@ -569,8 +569,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         const onError = ({ huddleId: hid, code, message }) => {
             if (!isMine(hid)) return;
             logger.error(`[useHuddle] ${code}: ${message}`);
-            showToast?.(HUDDLE_ERROR_MESSAGES[code] || message || 'Huddle error', 'error');
-            if (code === 'HUDDLE_FULL' || code === 'FORBIDDEN' || code === 'HUDDLE_SCOPE_MISMATCH') {
+            // Free plan refusals (call is full) open the upgrade dialog (PlanLimitProvider) instead of a toast.
+            if (code !== 'PLAN_LIMIT') showToast?.(HUDDLE_ERROR_MESSAGES[code] || message || 'Huddle error', 'error');
+            if (code === 'HUDDLE_FULL' || code === 'FORBIDDEN' || code === 'HUDDLE_SCOPE_MISMATCH' || code === 'PLAN_LIMIT') {
                 cleanupAll();
                 resetState();
             }

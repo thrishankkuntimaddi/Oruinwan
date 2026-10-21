@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import '../../../../components/company-dash/dash.css';
 import '../../../../styles/gloss.css';
+import '../../../../features/plan/plan.css';
+import { useOptionalWorkspace } from '../../../../contexts/WorkspaceContext';
+import { usePlan } from '../../../../features/plan/usePlan';
+import { COMING_SOON_LINE, emitPlanLimit } from '../../../../features/plan/planLimit';
 import { X, ArrowRight, FileText, Zap, Layers, ClipboardList, Lightbulb, Users, FolderKanban, Cpu, Megaphone, StickyNote } from 'lucide-react';
 
 export const TEMPLATES = [
@@ -150,7 +154,10 @@ export function templateToNote(template) {
     const noteType = TYPE_MAP[template.id] || template.id || 'note';
     const stamp = Date.now().toString(36);
     const blocks = (template.blocks || []).map((b, i) => ({ ...b, id: `${stamp}-${i}` }));
-    return [template.title, noteType, { content: blocks.length ? JSON.stringify(blocks) : '' }];
+    const extra = { content: blocks.length ? JSON.stringify(blocks) : '' };
+    // Free plan: notes per template are counted on the server (blank is unlimited).
+    if (template.id && template.id !== 'blank') extra.templateId = template.id;
+    return [template.title, noteType, extra];
 }
 
 /** The templates suggested first on the notes home. */
@@ -164,9 +171,20 @@ const templatesIn = (category) => {
 };
 
 /** A template as a card: icon, name, one line, what it contains. */
-export function TemplateCard({ tmpl, onSelect, compact = false }) {
+export function TemplateCard({ tmpl, onSelect, compact = false, limit = null }) {
+    // limit = { used, max } on the free plan (notes per template in this workspace).
+    const atLimit = !!limit && limit.max != null && limit.used >= limit.max;
+    const choose = () => {
+        if (atLimit) {
+            emitPlanLimit({ limit: 'notes.perTemplate', max: limit.max, used: limit.used, message: `You've reached the free plan limit: ${limit.max} notes from the ${tmpl.label} template in this workspace. ${COMING_SOON_LINE}` });
+            return;
+        }
+        onSelect(tmpl);
+    };
     return (
-        <button type="button" className="gl-card gl-card--interactive nt-card" onClick={() => onSelect(tmpl)}>
+        <button type="button" className="gl-card gl-card--interactive nt-card" onClick={choose}
+            aria-disabled={atLimit ? 'true' : undefined} data-plan-blocked={atLimit ? 'true' : undefined}
+            title={atLimit ? `Free plan: ${limit.max} notes per template. Blank notes are unlimited.` : undefined}>
             <span className="nt-card-top">
                 <span className="gl-empty-mark" style={{ margin: 0 }}><tmpl.TypeIcon size={16} /></span>
                 <span style={{ minWidth: 0 }}>
@@ -178,6 +196,11 @@ export function TemplateCard({ tmpl, onSelect, compact = false }) {
                 <ul className="nt-card-list">
                     {tmpl.preview.map((line) => <li key={line}>{line}</li>)}
                 </ul>
+            )}
+            {limit && limit.max != null && (
+                <span className="pl-template-limit" data-at-limit={atLimit ? 'true' : undefined} data-testid={`template-limit-${tmpl.id}`}>
+                    {atLimit ? `Free plan limit reached (${limit.used} of ${limit.max})` : `${limit.used} of ${limit.max} used on the free plan`}
+                </span>
             )}
             <span className="nt-card-foot">
                 {tmpl.blocks.length ? `${tmpl.blocks.length} blocks` : 'Empty page'}
@@ -202,6 +225,11 @@ export const templateCardCss = `
 const NoteTemplateModal = ({ onSelect, onClose }) => {
     const [activeCategory, setActiveCategory] = useState('quick');
     const visible = templatesIn(activeCategory);
+    // Free plan: notes per template (blank is unlimited).
+    const wsId = useOptionalWorkspace()?.activeWorkspace?.id || null;
+    const { plan } = usePlan(wsId || false);
+    const perTemplate = plan && !plan.exempt ? plan.notes?.perTemplate : null;
+    const limitFor = (id) => (perTemplate != null && id !== 'blank' ? { used: plan.notes?.byTemplate?.[id] || 0, max: perTemplate } : null);
 
     useEffect(() => {
         const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -236,7 +264,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                         })}
                     </nav>
                     <div className="nt-modal-grid">
-                        {visible.map(tmpl => <TemplateCard key={tmpl.id} tmpl={tmpl} onSelect={onSelect} />)}
+                        {visible.map(tmpl => <TemplateCard key={tmpl.id} tmpl={tmpl} onSelect={onSelect} limit={limitFor(tmpl.id)} />)}
                     </div>
                 </div>
             </div>

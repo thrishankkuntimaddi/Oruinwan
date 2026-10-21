@@ -146,7 +146,45 @@ async function searchPeople(workspace, excludeUserId, text, { limit = 10, offset
     }));
 }
 
+// ── Plan limits (src/shared/plans) ────────────────────────────────────
+
+/**
+ * Personal (non-company) active workspaces of a user, split into the ones they own
+ * and the ones they joined as a member. Removed memberships do not count.
+ */
+async function planWorkspaceCounts(userId) {
+    const { rows } = await query(
+        `SELECT count(*) FILTER (WHERE m.role = 'owner')::int AS owned,
+                count(*) FILTER (WHERE m.role <> 'owner')::int AS joined
+         FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+         WHERE m.user_id = $1 AND m.status <> 'removed' AND w.is_active = true AND w.company_id IS NULL`,
+        [str(userId)]
+    );
+    return { owned: rows[0]?.owned || 0, joined: rows[0]?.joined || 0 };
+}
+
+/** People who hold a seat in a workspace: active and suspended members (removed ones free their seat). */
+async function countSeats(workspaceId) {
+    const { rows } = await query(
+        "SELECT count(*)::int AS n FROM workspace_members WHERE workspace_id = $1 AND status <> 'removed'",
+        [str(workspaceId)]
+    );
+    return rows[0].n;
+}
+
+/** Email invites still waiting for an answer (not used, revoked or expired). Link invites name nobody, so they do not count. */
+async function countPendingEmailInvites(workspaceId) {
+    const { rows } = await query(
+        `SELECT count(*)::int AS n FROM invites
+         WHERE workspace_id = $1 AND status = 'pending' AND email <> '' AND COALESCE((meta->>'used')::boolean, false) = false
+           AND (expires_at IS NULL OR expires_at > now())`,
+        [str(workspaceId)]
+    );
+    return rows[0].n;
+}
+
 module.exports = {
+    planWorkspaceCounts, countSeats, countPendingEmailInvites,
     searchPeople,
     countCreatedBy, findByNameForCreator, findByNameForMember, listByCompany, membershipsForUser,
     memberIds, countMembers, activeMemberIdsAmong, shareWorkspace, deleteAllMembers, clearPersonalWorkspace, searchByName,

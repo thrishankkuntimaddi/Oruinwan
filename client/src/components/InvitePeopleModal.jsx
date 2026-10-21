@@ -4,6 +4,9 @@ import { useToast } from "../contexts/ToastContext";
 import { Dialog, Confirm, Btn, IconBtn, Field, Chip, FilterTabs, timeAgo } from './ui/page';
 import logger from '../utils/logger';
 import './shared/entryModals.css';
+import { usePlan } from '../features/plan/usePlan';
+import { planBlock, handlePlanLimitResponse } from '../features/plan/planLimit';
+import '../features/plan/plan.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -43,6 +46,9 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
     const [sent, setSent]         = useState(false);
     const [revoking, setRevoking] = useState(null);
     const [revokeBusy, setRevokeBusy] = useState(false);
+    // Free plan: people in a workspace, including pending email invites.
+    const { plan } = usePlan(isOpen && workspaceId ? workspaceId : false);
+    const memberBlock = planBlock(plan, 'members.perWorkspace');
 
     const fetchPendingInvites = useCallback(async () => {
         if (!workspaceId) return;
@@ -71,7 +77,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 body: JSON.stringify({ inviteType: 'link', role: 'member', reusable: linkKind === 'team' })
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.message || 'We couldn’t create an invite link');
+            if (!response.ok) { handlePlanLimitResponse(response.status, data); throw new Error(data.message || 'We couldn’t create an invite link'); }
             setInviteLink(data.inviteLink);
             setCopied(false);
             fetchPendingInvites();
@@ -100,7 +106,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 body: JSON.stringify({ emails: list, inviteType: 'email', role })
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.message || 'We couldn’t send the invites');
+            if (!response.ok) { handlePlanLimitResponse(response.status, data); throw new Error(data.message || 'We couldn’t send the invites'); }
             const undelivered = (data.invites || []).filter(i => i.emailSent === false).length;
             setSent(true);
             if (undelivered) showToast(data.message, 'warning');
@@ -129,14 +135,14 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
     const footer = inviteMethod === 'email' ? (
         <>
             <Btn variant="ghost" onClick={onClose}>Close</Btn>
-            <Btn variant="primary" icon={sent ? Check : Send} loading={loading} disabled={!emailList.length || sent} onClick={handleSendEmails}>
+            <Btn variant="primary" icon={sent ? Check : Send} loading={loading} disabled={!emailList.length || sent || memberBlock.blocked} title={memberBlock.blocked ? memberBlock.reason : undefined} onClick={handleSendEmails}>
                 {loading ? 'Sending…' : sent ? 'Sent' : emailList.length > 1 ? `Send ${emailList.length} invites` : 'Send invite'}
             </Btn>
         </>
     ) : (
         <>
             <Btn variant="ghost" onClick={onClose}>Close</Btn>
-            <Btn variant={inviteLink ? undefined : 'primary'} icon={LinkIcon} loading={loading} onClick={handleGenerateLink}>
+            <Btn variant={inviteLink ? undefined : 'primary'} icon={LinkIcon} loading={loading} disabled={memberBlock.blocked} title={memberBlock.blocked ? memberBlock.reason : undefined} onClick={handleGenerateLink}>
                 {inviteLink ? 'Create another link' : 'Create link'}
             </Btn>
         </>
@@ -153,6 +159,12 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                 footer={footer}
             >
                 <>
+                    {memberBlock.blocked && (
+                        <div className="em-alert" role="note" data-testid="invite-plan-limit">
+                            <Info size={14} />
+                            <span>{memberBlock.reason} Revoke a pending invite below to free a place.</span>
+                        </div>
+                    )}
                     <FilterTabs
                         label="How to invite"
                         value={inviteMethod}

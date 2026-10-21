@@ -31,6 +31,9 @@ import { taskAbilities, isCreator, isAssignee, deleteOnlyHides } from '../../uti
 import WorkspacePanel, { PanelSection } from '../../components/layout/WorkspacePanel';
 import { EmptyState } from '../../components/ui/page';
 import '../../styles/gloss-x-panels.css';
+import { usePlan } from '../../features/plan/usePlan';
+import { planBlock, blockedButtonProps, guardAction } from '../../features/plan/planLimit';
+import '../../features/plan/plan.css';
 
 /* ── Views: one filter per sidebar entry, used for both the list and its count ── */
 // What an empty view means and what to do next.
@@ -321,6 +324,15 @@ export default function MyTasks({ section, children }) {
 
   const view = VIEW_BY_KEY[activeView];
   const canCreate = !view.trash && !view.closed;
+  // Free plan: active tasks per workspace, and per creator (for yourself / for others).
+  const { plan } = usePlan(workspaceId || false);
+  const wsTaskBlock = planBlock(plan, 'tasks.perWorkspace');
+  const selfTaskBlock = planBlock(plan, 'tasks.selfCreated');
+  const othersTaskBlock = planBlock(plan, 'tasks.assignedToOthers');
+  const taskBlock = wsTaskBlock.blocked ? wsTaskBlock : (selfTaskBlock.blocked && othersTaskBlock.blocked ? selfTaskBlock : wsTaskBlock);
+  const partialTaskHint = !taskBlock.blocked ? (selfTaskBlock.reason || othersTaskBlock.reason) : '';
+  const openNewTask = guardAction(taskBlock, () => setShowModal(true));
+  const openTaskTemplates = guardAction(taskBlock, () => setTemplatesOpen('use'));
 
   /* ── First load only: skeleton. Later refreshes happen silently. ── */
   if (loading && !reviewsMode) {
@@ -365,7 +377,7 @@ export default function MyTasks({ section, children }) {
           title="Tasks"
           subtitle={activeWorkspace?.name}
           actions={canCreate && (
-            <button type="button" className="gl-icon-btn" onClick={() => setShowModal(true)} title="New task" aria-label="New task">
+            <button type="button" className="gl-icon-btn" onClick={openNewTask} title="New task" aria-label="New task" {...blockedButtonProps(taskBlock)}>
               <Plus size={15} />
             </button>
           )}
@@ -444,14 +456,17 @@ export default function MyTasks({ section, children }) {
               <div className="gl-x-tasks-title">
                 <h1>{view.label}</h1>
                 {!isMobile && <p>{view.desc}</p>}
+                {canCreate && (taskBlock.blocked || partialTaskHint) && (
+                  <p className="pl-hint" data-testid="task-plan-hint">{taskBlock.blocked ? taskBlock.reason : partialTaskHint}</p>
+                )}
               </div>
               {canCreate && (
-                <button type="button" className="gl-btn gl-btn--ghost" onClick={() => setTemplatesOpen('use')} title="New task from a template">
+                <button type="button" className="gl-btn gl-btn--ghost" onClick={openTaskTemplates} title="New task from a template" {...blockedButtonProps(taskBlock)}>
                   <LayoutTemplate size={13} /> {!isMobile && 'From template'}
                 </button>
               )}
               {canCreate && (
-                <button type="button" className="gl-btn gl-btn--primary" onClick={() => setShowModal(true)}>
+                <button type="button" className="gl-btn gl-btn--primary" onClick={openNewTask} {...blockedButtonProps(taskBlock)}>
                   <Plus size={13} strokeWidth={2.5} /> Create
                 </button>
               )}
@@ -504,7 +519,7 @@ export default function MyTasks({ section, children }) {
                   action={filtered ? (
                     <button type="button" className="gl-btn gl-btn--ghost" onClick={() => { setSearch(''); setChannelFilter('all'); setPriorityFilter('all'); }}>Clear filters</button>
                   ) : canCreate && (
-                    <button type="button" className="gl-btn gl-btn--primary" onClick={() => setShowModal(true)}>
+                    <button type="button" className="gl-btn gl-btn--primary" onClick={openNewTask} {...blockedButtonProps(taskBlock)}>
                       <Plus size={13} strokeWidth={2.5} /> {view.key === 'assigned-tasks' ? 'Assign a task' : 'Create task'}
                     </button>
                   )}

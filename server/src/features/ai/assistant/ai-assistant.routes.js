@@ -10,6 +10,7 @@ const router = express.Router();
 const { aiLimiter, requireAIAccess } = require('../ai.access');
 const gateway = require('../ai.gatewayResolver');
 const logger = require('../../../../utils/logger');
+const { sendPlanLimit } = require('../../../shared/plans');
 
 router.use(aiLimiter);
 
@@ -27,6 +28,7 @@ router.post('/channel-summary', requireAIAccess(), async (req, res) => {
         const { text } = await gateway.conversation({ messages, mode: req.body.mode === 'bullets' ? 'bullets' : 'summary', title: req.body.channelName }, ctx(req));
         return res.json({ summary: text, messageCount: messages.length, fallback: false });
     } catch (err) {
+        if (sendPlanLimit(res, err)) return;
         logger.error('[AI-Assistant] channel-summary error:', err.message);
         return res.status(502).json({ message: 'Channel summarisation failed' });
     }
@@ -39,6 +41,7 @@ router.post('/action-items', requireAIAccess({ optional: true }), async (req, re
         const { tasks } = await gateway.extractTasks({ text: String(text).slice(0, 20_000) }, ctx(req));
         return res.json({ items: tasks.map(t => t.title), tasks, fallback: false });
     } catch (err) {
+        if (sendPlanLimit(res, err)) return;
         logger.error('[AI-Assistant] action-items error:', err.message);
         return res.status(502).json({ message: 'Action item extraction failed' });
     }
@@ -53,6 +56,7 @@ async function smartReplies(req, res) {
         const { suggestions } = await gateway.smartReplies({ messages }, ctx(req));
         return res.json({ suggestions });
     } catch (err) {
+        if (sendPlanLimit(res, err)) return;
         logger.warn('[AI-Assistant] smart-reply error:', err.message);
         return res.json({ suggestions: [], fallback: true });
     }

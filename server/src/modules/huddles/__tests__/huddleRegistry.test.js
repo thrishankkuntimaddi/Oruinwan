@@ -57,9 +57,9 @@ describe('HuddleRegistry', () => {
   });
 
   test('HUDDLE_MAX_PARTICIPANTS env parsing', () => {
-    expect(maxParticipantsFromEnv({})).toBe(6);
-    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: '10' })).toBe(10);
-    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: '1' })).toBe(6);
-    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: 'abc' })).toBe(6);
+    expect(maxParticipantsFromEnv({})).toBe(10);
+    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: '8' })).toBe(8);
+    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: '1' })).toBe(10);
+    expect(maxParticipantsFromEnv({ HUDDLE_MAX_PARTICIPANTS: 'abc' })).toBe(10);
   });
 });

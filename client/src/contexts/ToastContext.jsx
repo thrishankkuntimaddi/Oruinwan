@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import Toast from '../shared/components/ui/Toast';
+import { isDuplicateOfPlanLimit } from '../features/plan/planLimit';
 
 const ToastContext = createContext();
 export const useToast = () => {
@@ -24,6 +25,8 @@ export const ToastProvider = ({ children }) => {
      *   toast with the same key (one toast per conversation).
      */
     const showToast = useCallback((message, type = 'success', duration = 3500, options = {}) => {
+        // The free plan upgrade dialog already explains this refusal.
+        if (type === 'error' && isDuplicateOfPlanLimit(message)) return null;
         const id = Date.now() + Math.random();
         setToasts(prev => {
             const kept = options.key ? prev.filter(t => t.key !== options.key) : prev;

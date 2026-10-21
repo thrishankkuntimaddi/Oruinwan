@@ -26,6 +26,8 @@ import { useAiUi } from './aiUi.js';
 import { useAssistants } from '../../data/hooks.js';
 import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { openConversation } from '../chats/chatsUi.js';
+import { AiQuotaLine } from '../plan/AiQuotaLine.jsx';
+import { refreshAiQuota } from '../plan/plan.js';
 
 const SUGGESTIONS = [
   { icon: Sun, text: "What's on my plate this week?" },
@@ -226,6 +228,8 @@ export function AiScreen() {
     } finally {
       setBusy(false);
       abortRef.current = null;
+      // The free plan's daily AI count ("12 of 50 AI requests left today").
+      refreshAiQuota(ws);
     }
   };
 
@@ -372,7 +376,8 @@ export function AiScreen() {
             </button>
           )}
         </div>
-        <p className="pt-1.5 text-center text-[11px] text-text-3">AI can make mistakes. Check important answers.</p>
+        <AiQuotaLine ws={ws} className="pt-1.5" />
+        <p className="pt-1 text-center text-[11px] text-text-3">AI can make mistakes. Check important answers.</p>
       </div>
       <div aria-hidden style={{ height: keyboardOpen ? 0 : 'calc(72px + var(--sab))' }} className="shrink-0" />
       <Sheet open={historyOpen} onClose={() => setHistoryOpen(false)} title="Past conversations">

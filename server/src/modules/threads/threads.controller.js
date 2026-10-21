@@ -358,10 +358,11 @@ exports.summarizeThread = async (req, res) => {
 
         
         const aiMessagingService = require('../../modules/ai/ai-messaging.service');
-        const summary = await aiMessagingService.summarizeThread(messageId, replyObjs, parentText);
+        const summary = await aiMessagingService.summarizeThread(messageId, replyObjs, parentText, { userId: req.user?.sub, workspaceId: parentMsg.workspace ? String(parentMsg.workspace) : null });
 
         return res.json({ summary, replyCount: replies.length });
     } catch (err) {
+        if (require('../../shared/plans').sendPlanLimit(res, err)) return;
         logger.error('[THREADS] summarizeThread error:', err);
         return res.status(500).json({ message: 'Thread summary failed', error: err.message });
     }

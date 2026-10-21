@@ -36,6 +36,10 @@ const NoteSchema = new mongoose.Schema({
     // Anyone who can open that meeting may read and edit the note (see collab.adapters).
     meeting: { type: mongoose.Schema.Types.ObjectId, ref: "ScheduledMeeting", default: null },
 
+    // The template this note was started from ('meeting', 'projectspec', ...); null for a
+    // blank note. Free-plan limit: 2 notes per template per person per workspace.
+    templateKey: { type: String, default: null },
+
     
     attachments: [{
         name: { type: String },
@@ -79,6 +83,7 @@ NoteSchema.index({ sharedWith: 1 });
 NoteSchema.index({ tags: 1 });
 NoteSchema.index({ channel: 1 });
 NoteSchema.index({ meeting: 1 }, { sparse: true });
+NoteSchema.index({ workspace: 1, owner: 1, templateKey: 1 }, { partialFilterExpression: { templateKey: { $type: 'string' } } });
 
 /**
  * Access checks. Callers must pass whether `userId` is an active member of the

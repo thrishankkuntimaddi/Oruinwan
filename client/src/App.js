@@ -30,6 +30,7 @@ import { HuddleProvider } from "./features/huddles/HuddleContext";
 import GlobalHuddleProvider from "./features/huddles/GlobalHuddleProvider";
 import { NotificationsProvider } from "./features/notifications/NotificationsContext";
 import { AIProvider } from "./contexts/AIContext";
+import PlanLimitProvider from "./features/plan/PlanLimitProvider";
 import NotificationsPage from "./pages/NotificationsPage";
 
 import Home from "./pages/SidebarComp/Home";
@@ -1030,6 +1031,8 @@ function App() {
                         <GlobalPasswordUnlockModal />
                         {}
                         <AIHub />
+                        {/* Free plan limits: the one upgrade dialog */}
+                        <PlanLimitProvider />
                       </UpdatesProvider>
                     </TasksProvider>
                   </NotesProvider>

@@ -365,7 +365,8 @@ export const NotesProvider = ({ children }) => {
                 content: extra.content || "",
                 tags: extra.tags,
                 workspaceId: wsId,
-                type: noteType
+                type: noteType,
+                ...(extra.templateId ? { templateId: extra.templateId } : {}),
             });
 
             const newNote = mapNote(response.data.note);

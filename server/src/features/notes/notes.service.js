@@ -137,6 +137,7 @@ async function createNote(userId, noteData, io, req) {
         tags,
         isPublic: isPublic === true,
         allowEditing: allowEditing === true,
+        templateKey: require('../../shared/plans/planService').templateKeyFor(noteData.templateId),
     });
 
     await note.save();

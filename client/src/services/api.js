@@ -1,6 +1,7 @@
 import axios from 'axios';
 import sdkApiClient from '@platform/sdk/api/apiClient.js';
 import logger from '../utils/logger';
+import { handlePlanLimitError } from '../features/plan/planLimit';
 
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -137,6 +138,9 @@ api.interceptors.response.use(
     },
     async (error) => {
         const originalRequest = error.config;
+
+        // Free plan refusals (403 PLAN_LIMIT) open the app-wide upgrade dialog.
+        handlePlanLimitError(error);
 
         if (!shouldAttemptRefresh(originalRequest, error.response)) {
             return Promise.reject(error);

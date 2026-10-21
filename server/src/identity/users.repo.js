@@ -12,7 +12,7 @@ const { newId, buildUpdate, columnsFor, insertSql, camelRow, str } = require('./
 const COLUMNS = {
     _id: 'id', id: 'id',
     username: 'username', email: 'email', personalEmail: 'personal_email', companyEmail: 'company_email',
-    phone: 'phone', phoneCode: 'phone_code', passwordHash: 'password_hash', userType: 'user_type',
+    phone: 'phone', phoneCode: 'phone_code', passwordHash: 'password_hash', userType: 'user_type', plan: 'plan',
     companyId: 'company_id', companyRole: 'company_role', coOwnerOf: 'co_owner_of', reportsTo: 'reports_to',
     jobTitle: 'job_title', joiningDate: 'joining_date', employeeCategory: 'employee_category',
     personalWorkspace: 'personal_workspace_id', roles: 'roles', verified: 'verified', accountStatus: 'account_status',

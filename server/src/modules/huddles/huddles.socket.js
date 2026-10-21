@@ -17,6 +17,19 @@ const defaultMeetings = {
     },
 };
 
+/**
+ * The plan's call limits for a workspace: { participants, minutes, plan } (null = no plan limit).
+ * A failed lookup never blocks a call.
+ */
+async function defaultPlanLimits(workspaceId) {
+    if (!workspaceId) return null;
+    try {
+        return await require('../../shared/plans/planService').huddleLimits(workspaceId);
+    } catch {
+        return null;
+    }
+}
+
 function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy }) {
     if (!workspaceId) return;
     const notificationService = require('../notifications/notificationService');
@@ -143,6 +156,10 @@ function announceEnded(io, huddle, reason, { history = defaultHistory(), meeting
         huddleId: huddle.huddleId, meetingId: huddle.meetingId || null,
         channelId: huddle.channelId, dmId: huddle.dmId, workspaceId: huddle.workspaceId, reason, timestamp: new Date(),
     };
+    if (reason === 'time_limit') {
+        const { TIME_LIMIT_MESSAGE } = require('../../shared/plans/huddleTimer');
+        payload.message = TIME_LIMIT_MESSAGE(Math.round((Date.now() - new Date(huddle.startedAt).getTime()) / 60000) || 30);
+    }
     io.to(`huddle:${huddle.huddleId}`).emit('huddle:ended', payload);
     // Only the conversation's own room: a DM or private-channel huddle must not be announced workspace-wide.
     const room = scopeRoom(huddle);
@@ -200,7 +217,7 @@ async function meetingIdFor(registry, huddleId) {
     return id || registry.get(huddleId)?.meetingId || null;
 }
 
-function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000 } = {}) {
+function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000, planLimits = defaultPlanLimits } = {}) {
     const uid = () => String(socket.user.id);
 
     const announce = (huddle, reason) => announceEnded(io, huddle, reason, { history, meetings });
@@ -298,6 +315,16 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                 publishHuddle('huddle.started', ensured.huddle, { huddleId, channelId: ensured.huddle.channelId, dmId: ensured.huddle.dmId, startedBy: uid(), video: !!ensured.huddle.video });
             }
 
+            // The plan's people-per-call limit (free: 10); someone already in the call may always re-join.
+            const limits = await planLimits(ensured.huddle.workspaceId);
+            if (limits && limits.participants && !registry.participant(huddleId, uid())
+                && ensured.huddle.participants.size >= limits.participants) {
+                const { planLimitBody } = require('../../shared/plans/plans');
+                const body = planLimitBody('huddles.participants', { max: limits.participants, used: ensured.huddle.participants.size, plan: limits.plan });
+                return socket.emit('huddle:error', { huddleId, ...body,
+                    message: `This call is full: the free plan allows ${limits.participants} people in a call at once. Pro and Enterprise are coming soon.` });
+            }
+
             const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id });
             if (joined.error === 'HUDDLE_FULL') {
                 return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.maxParticipants} people).`);
@@ -317,7 +344,13 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             socket.join(room);
 
             // The joiner learns who is already here; existing members get huddle:joined and send it offers.
-            socket.emit('huddle:roster', { huddleId, meetingId, participants: joined.others, maxParticipants: registry.maxParticipants, video: !!joined.huddle.video });
+            let timeLimit = null;
+            if (limits && limits.minutes) {
+                const start = new Date(joined.huddle.startedAt).getTime();
+                timeLimit = { maxMinutes: limits.minutes, startedAt: new Date(start).toISOString(), endsAt: new Date(start + limits.minutes * 60000).toISOString() };
+            }
+            const maxParticipants = limits && limits.participants ? Math.min(limits.participants, registry.maxParticipants) : registry.maxParticipants;
+            socket.emit('huddle:roster', { huddleId, meetingId, participants: joined.others, maxParticipants, video: !!joined.huddle.video, timeLimit });
             socket.to(room).emit('huddle:joined', { huddleId, meetingId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, timestamp: new Date() });
 
             const scoped = scopeRoom(registryScope(check.scope));
@@ -437,3 +470,4 @@ module.exports.startedAudience = startedAudience;
 module.exports.scopeKind = scopeKind;
 module.exports.endHuddle = endHuddle;
 module.exports.announceEnded = announceEnded;
+module.exports.defaultPlanLimits = defaultPlanLimits;

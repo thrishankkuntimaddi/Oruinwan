@@ -28,6 +28,9 @@ import { openConversation } from './chatsUi.js';
 import { TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
+import { usePlanBlock } from '../plan/plan.js';
+import { blockedNote, isPlanLimit } from '../plan/planText.js';
+import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
@@ -768,8 +771,10 @@ function CreateChannelSheet({ open, onClose, ws }) {
   const [topic, setTopic] = useState('');
   const [isPrivate, setPrivate] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The free plan's channels per workspace: say so here instead of failing on Create.
+  const { plan, blocked } = usePlanBlock(ws, 'channels.perWorkspace');
   const submit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || blocked) return;
     setBusy(true);
     try {
       const c = await api().createChannel(ws, { name, topic, isPrivate });
@@ -779,7 +784,7 @@ function CreateChannelSheet({ open, onClose, ws }) {
       setTopic('');
       openConversation('channel', c.id);
     } catch (err) {
-      toast(err.message || 'Could not create the channel', 'danger');
+      if (!isPlanLimit(err)) toast(err.message || 'Could not create the channel', 'danger');
     } finally {
       setBusy(false);
     }
@@ -790,12 +795,13 @@ function CreateChannelSheet({ open, onClose, ws }) {
       onClose={onClose}
       title="New channel"
       footer={
-        <Button block onClick={submit} loading={busy} disabled={!name.trim()}>
+        <Button block onClick={submit} loading={busy} disabled={!name.trim() || blocked}>
           Create channel
         </Button>
       }
     >
       <div className="space-y-4 px-5 pb-4">
+        {blocked && <PlanLimitNote>{blockedNote(plan, 'channels.perWorkspace')}</PlanLimitNote>}
         <Field label="Name" icon={Hash} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. design-review" autoCapitalize="none" />
         <Field label="Description (optional)" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="What is this channel about?" />
         <div className="flex items-center justify-between rounded-xl border border-line bg-input px-3.5 py-3">

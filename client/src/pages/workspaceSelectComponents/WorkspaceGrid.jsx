@@ -1,4 +1,5 @@
 import React from 'react';
+import { emitPlanLimit } from '../../features/plan/planLimit';
 import { User, ArrowRight, Plus, Shield, Lock, Crown, Users, Bell, SearchX, PauseCircle } from 'lucide-react';
 import { WorkspaceIcon } from '../../utils/workspaceIcons';
 import { getCreatePolicy } from './createPolicy';
@@ -54,8 +55,8 @@ function WorkspaceCard({ ws, unread, onOpen }) {
     );
 }
 
-export function CreateTile({ user, workspaces, onCreateClick }) {
-    const { isLimitReached, isCompanyMember, companyName } = getCreatePolicy(user, workspaces);
+export function CreateTile({ user, workspaces, onCreateClick, plan = null }) {
+    const { isLimitReached, isCompanyMember, companyName, limitMessage } = getCreatePolicy(user, workspaces, plan);
 
     if (isCompanyMember) {
         return (
@@ -71,17 +72,19 @@ export function CreateTile({ user, workspaces, onCreateClick }) {
     }
 
     return (
-        <button type="button" className="gl-wsp-create" onClick={() => { if (!isLimitReached) onCreateClick(); }} disabled={isLimitReached}>
+        <button type="button" className="gl-wsp-create" onClick={() => { if (isLimitReached) emitPlanLimit({ limit: 'workspaces.create', message: limitMessage }); else onCreateClick(); }}
+            aria-disabled={isLimitReached ? 'true' : undefined} data-plan-blocked={isLimitReached ? 'true' : undefined} title={isLimitReached ? limitMessage : undefined}>
             <span className="gl-wsp-create__mark">{isLimitReached ? <Shield size={18} /> : <Plus size={20} />}</span>
-            <span className="gl-wsp-create__title">{isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}</span>
+            <span className="gl-wsp-create__title">{isLimitReached ? 'Free plan limit reached' : 'Create New Workspace'}</span>
             <span className="gl-wsp-create__text">
-                {isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : 'Start a new project or team'}
+                {isLimitReached ? limitMessage : 'Start a new project or team'}
             </span>
+            {isLimitReached && <span className="gl-wsp-create__hint">See plans</span>}
         </button>
     );
 }
 
-const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unreadByWs = {}, onWorkspaceClick, onCreateClick, onClearSearch, user }) => (
+const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unreadByWs = {}, onWorkspaceClick, onCreateClick, onClearSearch, user, plan = null }) => (
     <div className="gl-wsp-grid">
         {workspaces.map(ws => (
             <WorkspaceCard key={ws.id} ws={ws} unread={unreadByWs[String(ws.id)] || 0} onOpen={onWorkspaceClick} />
@@ -96,7 +99,7 @@ const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unr
             </div>
         )}
 
-        {!query && <CreateTile user={user} workspaces={allWorkspaces} onCreateClick={onCreateClick} />}
+        {!query && <CreateTile user={user} workspaces={allWorkspaces} onCreateClick={onCreateClick} plan={plan} />}
     </div>
 );
 

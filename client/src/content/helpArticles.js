@@ -44,7 +44,7 @@ export const ARTICLES = [
                 'Choose **Create workspace**. You are its owner.',
                 '**Teammates**: copy the team link and share it, or type email addresses (separated by commas or new lines). Choose **Open workspace** when you’re done, or **Skip for now**.',
             ] },
-            { note: 'Personal accounts can own up to 3 workspaces. In company accounts, members may not be allowed to create workspaces; ask your admin.' },
+            { note: 'On the free plan you can create up to 2 workspaces and join up to 2 more. In company accounts, members may not be allowed to create workspaces; ask your admin.' },
         ],
     },
     {

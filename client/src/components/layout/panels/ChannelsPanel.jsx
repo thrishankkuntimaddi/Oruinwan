@@ -12,11 +12,15 @@ import { useNotifications } from "../../../features/notifications/NotificationsC
 import CreateChannelModal from "../../../features/messaging/CreateChannelModal";
 import logger from '../../../utils/logger';
 import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark';
+import { usePlan } from '../../../features/plan/usePlan';
+import { planBlock, blockedButtonProps, emitPlanLimit } from '../../../features/plan/planLimit';
+import '../../../features/plan/plan.css';
 
 const ChannelsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
+    const { plan } = usePlan(workspaceId || false);
     const { showToast } = useToast();
     const { socket, addChannelListener } = useSocket();
     const notif = useNotifications();
@@ -278,8 +282,11 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
     const userRole = activeWorkspace?.role?.toLowerCase() || '';
     const canCreateChannel = userRole === 'admin' || userRole === 'owner' || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+    // Free plan: channels besides #general and #random.
+    const channelBlock = planBlock(plan, 'channels.perWorkspace');
     const openCreate = () => {
         if (!canCreateChannel) { showToast('Channel creation is disabled for members in this workspace', 'warning'); return; }
+        if (channelBlock.blocked) { emitPlanLimit({ limit: channelBlock.key, message: channelBlock.message }); return; }
         setShowCreateChannelModal(true);
     };
 
@@ -386,6 +393,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         disabled={!canCreateChannel}
                         title="Create Channel"
                         aria-label="Create channel"
+                        {...blockedButtonProps(channelBlock)}
                     >
                         <Plus size={16} />
                     </button>
@@ -445,7 +453,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     title="No channels yet"
                     text="Create a channel to start collaborating"
                     action={canCreateChannel ? (
-                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => setShowCreateChannelModal(true)}>
+                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={openCreate} {...blockedButtonProps(channelBlock)}>
                             <Plus size={13} /> Create Channel
                         </button>
                     ) : null}

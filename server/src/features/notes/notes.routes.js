@@ -24,7 +24,7 @@ router.post('/', (req, res, next) => {
     if (!ws) return res.status(400).json({ message: 'Workspace ID is required' });
     if (!isValidId(ws)) return res.status(400).json({ message: 'Invalid workspaceId' });
     return next();
-}, requireWorkspaceFeature('notes'), notesController.createNote);
+}, requireWorkspaceFeature('notes'), require('../../shared/plans/planGuards').noteCreate, notesController.createNote);
 
 router.get('/:id', notesController.getNote);
 

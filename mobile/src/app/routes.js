@@ -74,6 +74,7 @@ export const ROUTES = {
   'settings.appearance': pick(settings, 'AppearanceSettings'),
   'settings.privacy': pick(settings, 'PrivacySettings'),
   'settings.ai': pick(settings, 'AiSettings'),
+  'settings.plan': pick(() => import('../features/plan/PlanScreen.jsx'), 'PlanScreen'),
   'settings.updates': pick(settings, 'UpdateSettings'),
   'settings.server': pick(settings, 'ServerSettings'),
   'settings.data': pick(settings, 'DataSettings'),

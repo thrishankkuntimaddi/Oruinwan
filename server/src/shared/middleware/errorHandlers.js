@@ -24,6 +24,8 @@ function globalErrorHandler(err, req, res, next) {
   if (res.headersSent) {
     return next(err);
   }
+  // Plan limits answer with their own body (code PLAN_LIMIT, limit, max, used, upgradeUrl).
+  if (require('../plans').sendPlanLimit(res, err)) return;
 
   let statusCode = Number(err.statusCode || err.status || 500);
   if (!Number.isInteger(statusCode) || statusCode < 400 || statusCode > 599) statusCode = 500;
