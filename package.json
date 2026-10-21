@@ -10,7 +10,7 @@
   "scripts": {
     "start": "yarn dev",
     "dev": "concurrently -k -n server,client -c blue,magenta \"yarn server\" \"yarn client\"",
-    "client": "cd client && npm run preview",
+    "client": "cd client && npm run build && npm run preview",
     "server": "cd server && npm run dev",
     "install-all": "yarn install",
     "lint": "yarn workspace server lint && yarn workspace client lint && yarn lint:ai && yarn lint:sdk",
