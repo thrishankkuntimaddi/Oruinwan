@@ -386,7 +386,6 @@ async function invite(workspace) {
 export function WorkspaceScreen() {
   const workspace = useWorkspace();
   const mode = useSession((s) => s.mode);
-  const server = useSession((s) => s.server);
   const { data: members, loading } = useMembers();
   const { data: channels } = useChannels();
   if (!workspace) {
@@ -420,7 +419,7 @@ export function WorkspaceScreen() {
             <Row icon={Plug} title="Integrations" onClick={() => nav.push('integrations')} />
             <Row icon={SquareCheckBig} title="Tasks" onClick={() => nav.setTab('tasks')} />
             {isAdmin && mode === 'live' && (
-              <Row icon={Shield} title="Admin console" subtitle="Members, permissions and audit logs" trailing={<Icon as={ExternalLink} size="sm" className="text-text-3" />} onClick={() => openExternal(`${server}/workspace/${workspace.id}/admin`)} />
+              <Row icon={Shield} title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
             )}
           </RowGroup>
         </Section>

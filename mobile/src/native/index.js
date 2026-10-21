@@ -191,6 +191,37 @@ export async function shareLink({ title, text, url }) {
   return (await copyText(url)) ? 'copied' : 'cancelled';
 }
 
+/**
+ * Saves a JSON document for the person: a download in a browser or the desktop app, the share
+ * sheet on phones and tablets (Files, Drive, Mail…). Returns 'saved' | 'shared' | 'copied' | 'cancelled'.
+ */
+export async function saveJson(fileName, data) {
+  const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  if (!isNative) {
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: fileName });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      return 'saved';
+    } catch {
+      /* fall through to the clipboard */
+    }
+  } else {
+    try {
+      if ((await Share.canShare()).value) {
+        await Share.share({ title: fileName, text, dialogTitle: fileName });
+        return 'shared';
+      }
+    } catch (err) {
+      if (/cancel|abort/i.test(String(err?.message || err?.name))) return 'cancelled';
+    }
+  }
+  return (await copyText(text)) ? 'copied' : 'cancelled';
+}
+
 /** Copies text to the clipboard. Returns true when it worked. */
 export async function copyText(text) {
   try {
