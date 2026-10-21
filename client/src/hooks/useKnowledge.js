@@ -87,5 +87,23 @@ export function useKnowledge() {
         return data.category;
     }, []);
 
-    return { pages, categories, loading, error, listPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, listCategories, createCategory };
+    /**
+     * Rename / recolour a category. The server needs PATCH /api/v2/knowledge/categories/:id;
+     * callers show a clear message when it answers 404/405 (older servers only list and create).
+     */
+    const updateCategory = useCallback(async (categoryId, updates) => {
+        const { data } = await api.patch(`${API}/categories/${categoryId}`, updates);
+        const next = data?.category || { _id: categoryId, ...updates };
+        setCategories(prev => prev.map(c => c._id === categoryId ? { ...c, ...next } : c));
+        return next;
+    }, []);
+
+    /** Delete a category (DELETE /api/v2/knowledge/categories/:id). Its pages become uncategorised. */
+    const deleteCategory = useCallback(async (categoryId) => {
+        await api.delete(`${API}/categories/${categoryId}`);
+        setCategories(prev => prev.filter(c => c._id !== categoryId));
+        setPages(prev => prev.map(p => String(p.categoryId || '') === String(categoryId) ? { ...p, categoryId: null } : p));
+    }, []);
+
+    return { pages, categories, loading, error, listPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, listCategories, createCategory, updateCategory, deleteCategory };
 }

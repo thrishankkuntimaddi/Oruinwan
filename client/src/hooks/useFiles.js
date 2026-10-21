@@ -3,6 +3,25 @@ import api from '@services/api';
 
 const API = '/api/v2/files';
 
+/** A tag as the server stores it: lower case, trimmed, no leading #. */
+export function normalizeTag(raw) {
+    return String(raw || '').trim().replace(/^#+/, '').trim().toLowerCase().slice(0, 40);
+}
+
+/**
+ * Merge a file the server returned into the one we hold. Mutation endpoints answer with
+ * the raw document (createdBy is an id there), so keep the hydrated creator we already have.
+ */
+export function mergeFile(prev, next) {
+    if (!prev) return next;
+    if (!next) return prev;
+    const merged = { ...prev, ...next };
+    if (prev.createdBy && typeof prev.createdBy === 'object' && (!next.createdBy || typeof next.createdBy !== 'object')) {
+        merged.createdBy = prev.createdBy;
+    }
+    return merged;
+}
+
 export function useFiles() {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -42,8 +61,14 @@ export function useFiles() {
 
     const updateFile = useCallback(async (fileId, updates) => {
         const { data } = await api.patch(`${API}/${fileId}`, updates);
-        setFiles(prev => prev.map(f => f._id === fileId ? { ...f, ...data.file } : f));
+        setFiles(prev => prev.map(f => f._id === fileId ? mergeFile(f, data.file) : f));
         return data.file;
+    }, []);
+
+    /** Replace one file in the list with a newer copy (after a version upload, restore or share). */
+    const patchFile = useCallback((file) => {
+        if (!file?._id) return;
+        setFiles(prev => prev.map(f => f._id === file._id ? mergeFile(f, file) : f));
     }, []);
 
     const deleteFile = useCallback(async (fileId) => {
@@ -61,11 +86,13 @@ export function useFiles() {
         form.append('file', file);
         if (changeNote) form.append('changeNote', changeNote);
         const { data } = await api.post(`${API}/${fileId}/versions`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (data?.file) setFiles(prev => prev.map(f => f._id === fileId ? mergeFile(f, data.file) : f));
         return data;
     }, []);
 
     const restoreVersion = useCallback(async (fileId, versionId) => {
         const { data } = await api.post(`${API}/${fileId}/versions/${versionId}/restore`);
+        if (data?.file) setFiles(prev => prev.map(f => f._id === fileId ? mergeFile(f, data.file) : f));
         return data;
     }, []);
 
@@ -81,6 +108,7 @@ export function useFiles() {
 
     const shareFile = useCallback(async (fileId, permissions) => {
         const { data } = await api.post(`${API}/${fileId}/share`, { permissions });
+        if (data?.file) setFiles(prev => prev.map(f => f._id === fileId ? mergeFile(f, data.file) : f));
         return data;
     }, []);
 
@@ -90,5 +118,5 @@ export function useFiles() {
         return data.file;
     }, []);
 
-    return { files, loading, error, listFiles, uploadFile, getFile, updateFile, deleteFile, getVersions, uploadVersion, restoreVersion, getComments, addComment, shareFile, updateTags };
+    return { files, loading, error, listFiles, uploadFile, getFile, updateFile, deleteFile, getVersions, uploadVersion, restoreVersion, getComments, addComment, shareFile, updateTags, patchFile };
 }

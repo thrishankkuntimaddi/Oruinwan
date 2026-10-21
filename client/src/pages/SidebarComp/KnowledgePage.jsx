@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Sparkles, Link2, Trash2, Tag, Plus, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Book, FileText,
-    Network, Check, Users, Workflow, GraduationCap,
+    Network, Check, Users, Workflow, GraduationCap, Folder,
 } from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -10,8 +10,10 @@ import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
     DashPage, PageHead, Section, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip, Grid,
-    LoadingState, EmptyState, Dialog, Confirm, timeAgo,
+    LoadingState, EmptyState, Dialog, Confirm, SelectBox, timeAgo,
 } from '../../components/ui/page';
+import KnowledgeCategoriesDialog, { KB_CATEGORY_CSS, categoryErrorMessage } from './KnowledgeCategoriesDialog';
+import { UNCATEGORISED, catKey, filterByCategory, countByCategory } from './knowledgeCategories';
 
 /** Other knowledge views (side panel, list) reload when a page is created, renamed or deleted. */
 const KNOWLEDGE_CHANGED = 'oruinwan:knowledge-changed';
@@ -60,7 +62,7 @@ function MarkdownPreview({ content }) {
 }
 
 /** One clickable page row inside a <Panel flush>. */
-function PageRow({ page, first, onOpen, meta }) {
+function PageRow({ page, first, onOpen, meta, categoryName }) {
     return (
         <li style={{ borderTop: first ? 'none' : '1px solid var(--border-subtle)' }}>
             <button type="button" className="kb-row" onClick={onOpen}>
@@ -68,6 +70,7 @@ function PageRow({ page, first, onOpen, meta }) {
                 <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <strong className="kb-row-title">{page.title || 'Untitled page'}</strong>
+                        {categoryName && <Chip tone="accent"><Folder size={10} style={{ marginRight: 3, verticalAlign: '-1px' }} />{categoryName}</Chip>}
                         {(page.tags || []).slice(0, 3).map((t) => <Chip key={t}>#{t}</Chip>)}
                     </span>
                     {meta && <span className="kb-row-meta">{meta}</span>}
@@ -107,8 +110,11 @@ const pageMeta = (p, childCount) => [
     childCount ? `${childCount} sub-page${childCount === 1 ? '' : 's'}` : null,
 ].filter(Boolean).join(' · ');
 
-function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, creating, openPage, openGraph, openHandbook }) {
+function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, creating, openPage, openGraph, openHandbook, categories = [], category = '', setCategory, onManageCategories }) {
     const [query, setQuery] = useState('');
+    const catCounts = useMemo(() => countByCategory(pages), [pages]);
+    const catNames = useMemo(() => Object.fromEntries(categories.map((c) => [String(c._id), c.name])), [categories]);
+    const activeCat = category && category !== UNCATEGORISED ? categories.find((c) => String(c._id) === category) : null;
     const childCounts = useMemo(() => {
         const m = {};
         pages.forEach((p) => { if (p.parentId) m[String(p.parentId)] = (m[String(p.parentId)] || 0) + 1; });
@@ -117,10 +123,10 @@ function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, cre
     const handbookCount = pages.filter(p => p.isHandbook).length;
     const shown = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return [...pages]
+        return [...filterByCategory(pages, category)]
             .filter(p => !q || `${p.title} ${(p.tags || []).join(' ')}`.toLowerCase().includes(q))
             .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-    }, [pages, query]);
+    }, [pages, query, category]);
     const hasAny = pages.length > 0;
 
     return (
@@ -133,6 +139,7 @@ function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, cre
                     lead="Your team’s shared pages: how you work, what you decided and where things live."
                     actions={(
                         <>
+                            <Btn variant="ghost" icon={Folder} onClick={onManageCategories}>Categories</Btn>
                             <Btn variant="ghost" icon={Network} onClick={openGraph}>Graph</Btn>
                             {hasAny && <Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>New page</Btn>}
                         </>
@@ -158,15 +165,27 @@ function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, cre
                 <>
                     <Toolbar>
                         <SearchBox value={query} onChange={setQuery} placeholder="Find a page or #tag" label="Find a page" />
+                        {categories.length > 0 && (
+                            <FilterTabs value={category} onChange={setCategory} label="Category" options={[
+                                { value: '', label: 'All', count: pages.length },
+                                ...categories.map((c) => ({ value: String(c._id), label: c.name, count: catCounts[String(c._id)] || 0 })),
+                                ...(catCounts[UNCATEGORISED] ? [{ value: UNCATEGORISED, label: 'No category', count: catCounts[UNCATEGORISED] }] : []),
+                            ]} />
+                        )}
                     </Toolbar>
-                    <Section title="All pages" lead="Most recently updated first.">
+                    <Section
+                        title={activeCat ? activeCat.name : category === UNCATEGORISED ? 'Pages without a category' : 'All pages'}
+                        lead="Most recently updated first."
+                    >
                         <Panel flush>
                             {shown.length === 0 ? (
-                                <EmptyState title="No pages match" text="Try a different title or tag." />
+                                activeCat && !query.trim()
+                                    ? <EmptyState icon={Folder} title={`No pages in ${activeCat.name} yet`} text="Open a page and choose this category from its Category menu." />
+                                    : <EmptyState title="No pages match" text="Try a different title or tag." />
                             ) : (
                                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                                     {shown.map((p, i) => (
-                                        <PageRow key={p._id} page={p} first={i === 0} onOpen={() => openPage(p._id)} meta={pageMeta(p, childCounts[String(p._id)])} />
+                                        <PageRow key={p._id} page={p} first={i === 0} onOpen={() => openPage(p._id)} meta={pageMeta(p, childCounts[String(p._id)])} categoryName={!category && p.categoryId ? catNames[catKey(p)] : null} />
                                     ))}
                                 </ul>
                             )}
@@ -248,6 +267,8 @@ function HandbookView({ pages, loading, wsName, openPage, onCreate, creating }) 
     );
 }
 
+const NEW_CATEGORY = '__manage__';
+
 const KnowledgePage = () => {
     const isPhone = useIsMobile(); // phones already show the shell's Back button
     const { workspaceId, id } = useParams();
@@ -255,7 +276,21 @@ const KnowledgePage = () => {
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
     const wsName = activeWorkspace?.name;
-    const { pages, loading, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, summarizePage } = useKnowledge();
+    const {
+        pages, loading, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, summarizePage,
+        categories, listCategories, createCategory, updateCategory, deleteCategory,
+    } = useKnowledge();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const category = searchParams.get('category') || '';
+    const setCategory = useCallback((v) => {
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (v) next.set('category', v); else next.delete('category');
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
+    const [manageCats, setManageCats] = useState(false);
+    const [pageCategory, setPageCategory] = useState('');
 
     const [pageData, setPageData] = useState(null);
     const [pageError, setPageError] = useState(false);
@@ -277,6 +312,10 @@ const KnowledgePage = () => {
     const saveTimer = useRef(null);
 
     useEffect(() => {
+        if (workspaceId) listCategories(workspaceId).catch(() => { });
+    }, [workspaceId, listCategories]);
+
+    useEffect(() => {
         if (!workspaceId) return undefined;
         listPages(workspaceId);
         const reload = () => listPages(workspaceId);
@@ -293,6 +332,7 @@ const KnowledgePage = () => {
             setTitle(p.title || '');
             setContent(p.content || '');
             setTags(p.tags || []);
+            setPageCategory(p.categoryId ? catKey(p) : '');
             setSummary(p.summary || '');
         }).catch(() => { setPageError(true); showToast('Page not found', 'error'); });
     }, [id, getPage, showToast]);
@@ -386,6 +426,51 @@ const KnowledgePage = () => {
         setShowLinkModal(false);
     };
 
+    const catCounts = useMemo(() => countByCategory(pages), [pages]);
+
+    const handleCreateCategory = async (name) => {
+        const c = await createCategory(workspaceId, { name });
+        showToast(`Added “${c?.name || name}”`, 'success');
+        return c;
+    };
+    const handleRenameCategory = async (catId, name) => {
+        await updateCategory(catId, { name });
+        showToast('Category renamed', 'success');
+    };
+    const handleDeleteCategory = async (catId) => {
+        await deleteCategory(catId);
+        if (category === String(catId)) setCategory('');
+        if (pageCategory === String(catId)) setPageCategory('');
+        announceChange();
+        showToast('Category deleted', 'success');
+    };
+
+    const handlePageCategory = async (value) => {
+        if (value === NEW_CATEGORY) { setManageCats(true); return; }
+        const before = pageCategory;
+        setPageCategory(value);
+        try {
+            await updatePage(id, { categoryId: value || null });
+            announceChange();
+        } catch (err) {
+            setPageCategory(before);
+            showToast(categoryErrorMessage(err, 'assign'), 'error');
+        }
+    };
+
+    const categoriesDialog = (
+        <KnowledgeCategoriesDialog
+            open={manageCats}
+            onClose={() => setManageCats(false)}
+            categories={categories}
+            counts={catCounts}
+            onCreate={handleCreateCategory}
+            onRename={handleRenameCategory}
+            onDelete={handleDeleteCategory}
+            showToast={showToast}
+        />
+    );
+
     const openPage = (pid) => navigate(`/workspace/${workspaceId}/knowledge/${pid}`);
     const backToList = () => navigate(`/workspace/${workspaceId}/knowledge`);
 
@@ -395,7 +480,12 @@ const KnowledgePage = () => {
 
     if (!id) {
         return (
-            <KnowledgeHome
+            <>
+                <KnowledgeHome
+                categories={categories}
+                category={category}
+                setCategory={setCategory}
+                onManageCategories={() => setManageCats(true)}
                 pages={pages}
                 loading={loading}
                 wsName={wsName}
@@ -405,7 +495,9 @@ const KnowledgePage = () => {
                 openPage={openPage}
                 openGraph={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
                 openHandbook={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
-            />
+                />
+                {categoriesDialog}
+            </>
         );
     }
 
@@ -437,6 +529,11 @@ const KnowledgePage = () => {
                     <span className="kb-save" aria-live="polite">
                         {saving ? <><Loader2 size={11} className="cd-spin" /> Saving…</> : savedOnce ? <><Check size={11} /> Saved</> : null}
                     </span>
+                    <SelectBox value={pageCategory} onChange={handlePageCategory} label="Category" style={{ height: 30, fontSize: 12, maxWidth: 170 }}>
+                        <option value="">No category</option>
+                        {categories.map((c) => <option key={c._id} value={String(c._id)}>{c.name}</option>)}
+                        <option value={NEW_CATEGORY}>Manage categories…</option>
+                    </SelectBox>
                     <Btn size="sm" variant="ghost" icon={Sparkles} loading={summarizing} onClick={handleSummarize}>
                         {summary ? 'Refresh summary' : 'Summarize'}
                     </Btn>
@@ -549,6 +646,7 @@ const KnowledgePage = () => {
             >
                 The page and its links are removed for everyone in the workspace.
             </Confirm>
+            {categoriesDialog}
             <KbStyles />
         </div>
     );
@@ -598,6 +696,7 @@ function KbStyles() {
         .kb-md li { margin-left: 18px; color: var(--text-primary); }
         .kb-md li.kb-ul { list-style: disc; }
         .kb-md li.kb-ol { list-style: decimal; }
+        ${KB_CATEGORY_CSS}
         @media (max-width: 640px) {
             .kb-bar { padding: 8px 12px; }
             .kb-paper { padding: 20px 16px 48px; }

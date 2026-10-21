@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Upload, LayoutGrid, List, X, Download, Trash2, FolderOpen, MessageSquare, History, Loader2, Send,
+    Upload, LayoutGrid, List, Download, Trash2, FolderOpen, Loader2,
 } from 'lucide-react';
-import { useFiles } from '../../hooks/useFiles';
+import { useFiles, mergeFile } from '../../hooks/useFiles';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
-    DashPage, PageHead, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip, Grid,
-    LoadingState, ErrorState, EmptyState, Confirm, timeAgo,
+    DashPage, PageHead, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Grid,
+    LoadingState, ErrorState, EmptyState, Confirm, Dialog, Field, timeAgo,
 } from '../../components/ui/page';
 import { fileKind, formatSize, FILES_CHANGED, announceFilesChanged } from './fileKinds';
+import FilePreviewPanel from './FilePreviewPanel';
+import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
 
 const SOURCE = 'library';
 
@@ -72,7 +74,10 @@ const FileLibrary = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
-    const { files, loading, error, listFiles, uploadFile, deleteFile } = useFiles();
+    const filesApi = useFiles();
+    const { files, loading, error, listFiles, uploadFile, deleteFile, patchFile } = filesApi;
+    const [pendingUploads, setPendingUploads] = useState(null);
+    const [uploadTags, setUploadTags] = useState([]);
     const [view, setView] = useState('grid');
     const [search, setSearch] = useState('');
     const [tagFilter, setTagFilter] = useState('');
@@ -108,14 +113,34 @@ const FileLibrary = () => {
         }
     }, [id, files]);
 
-    const handleUpload = async (fileList) => {
+    // Picking or dropping files opens a short step to tag them before they upload.
+    const queueUpload = (fileList) => {
+        const list = [...(fileList || [])];
+        if (!list.length) return;
+        setUploadTags(tagFilter ? [tagFilter] : []);
+        setPendingUploads(list);
+    };
+
+    const confirmUpload = () => {
+        const list = pendingUploads;
+        const tags = uploadTags;
+        setPendingUploads(null);
+        handleUpload(list, tags);
+    };
+
+    const handleFileChange = useCallback((next) => {
+        patchFile(next);
+        setSelectedFile((prev) => (prev && prev._id === next._id ? mergeFile(prev, next) : prev));
+    }, [patchFile]);
+
+    const handleUpload = async (fileList, tags = []) => {
         const list = [...(fileList || [])];
         if (!list.length) return;
         setUploading(list.length);
         let successCount = 0;
         for (const file of list) {
             try {
-                await uploadFile(workspaceId, file, { tags: [] });
+                await uploadFile(workspaceId, file, { tags });
                 successCount++;
             } catch {
                 showToast(`Couldn’t upload ${file.name}`, 'error');
@@ -167,7 +192,7 @@ const FileLibrary = () => {
             e.preventDefault();
             dragDepth.current = 0;
             setDragging(false);
-            handleUpload(e.dataTransfer.files);
+            queueUpload(e.dataTransfer.files);
         },
     };
 
@@ -182,7 +207,7 @@ const FileLibrary = () => {
 
     return (
         <div className="fl-wrap" {...dropHandlers}>
-            <input ref={inputRef} type="file" multiple hidden onChange={(e) => { handleUpload(e.target.files); e.target.value = ''; }} />
+            <input ref={inputRef} type="file" multiple hidden onChange={(e) => { queueUpload(e.target.files); e.target.value = ''; }} />
             <div className="fl-main">
                 <DashPage
                     wide
@@ -257,8 +282,13 @@ const FileLibrary = () => {
             {selectedFile && (
                 <FilePreviewPanel
                     file={selectedFile}
+                    workspaceId={workspaceId}
+                    api={filesApi}
+                    allTags={allTags}
+                    source={SOURCE}
                     onClose={closePreview}
                     onDelete={() => setConfirmDelete(selectedFile)}
+                    onFileChange={handleFileChange}
                 />
             )}
 
@@ -273,172 +303,33 @@ const FileLibrary = () => {
             >
                 The file, its versions and comments are removed for everyone in the workspace. This can’t be undone.
             </Confirm>
-            <style>{FILES_CSS}</style>
+            <Dialog
+                open={Boolean(pendingUploads)}
+                title={pendingUploads?.length > 1 ? `Upload ${pendingUploads.length} files` : 'Upload a file'}
+                lead="Tags help people find files later. You can change them any time."
+                onClose={() => setPendingUploads(null)}
+                size="sm"
+                footer={(
+                    <>
+                        <Btn variant="ghost" onClick={() => setPendingUploads(null)}>Cancel</Btn>
+                        <Btn variant="primary" icon={Upload} onClick={confirmUpload} data-autofocus="true">Upload</Btn>
+                    </>
+                )}
+            >
+                <ul className="fl-upload-list">
+                    {(pendingUploads || []).slice(0, 6).map((f, i) => (
+                        <li key={`${f.name}-${i}`}><span className="fl-name">{f.name}</span><span className="fl-meta" style={{ marginTop: 0 }}>{formatSize(f.size)}</span></li>
+                    ))}
+                    {pendingUploads?.length > 6 && <li className="fl-meta">and {pendingUploads.length - 6} more</li>}
+                </ul>
+                <Field label="Tags (optional)">
+                    <FileTagsInput value={uploadTags} onChange={setUploadTags} suggestions={allTags} label="Tags for the upload" placeholder="Add a tag and press Enter" />
+                </Field>
+            </Dialog>
+            <style>{FILES_CSS + FILE_TAGS_CSS}</style>
         </div>
     );
 };
-
-function FilePreviewPanel({ file, onClose, onDelete }) {
-    const [comments, setComments] = useState([]);
-    const [newComment, setNewComment] = useState('');
-    const [posting, setPosting] = useState(false);
-    const [activeTab, setActiveTab] = useState('preview');
-    const { getComments, addComment, getVersions } = useFiles();
-    const [versions, setVersions] = useState([]);
-    const { showToast } = useToast();
-
-    const { Icon, label } = fileKind(file.mimeType);
-    const isImage = file.mimeType?.startsWith('image/');
-    const isVideo = file.mimeType?.startsWith('video/');
-    const isAudio = file.mimeType?.startsWith('audio/');
-    const isPDF = file.mimeType?.includes('pdf');
-
-    useEffect(() => {
-        if (activeTab === 'comments') getComments(file._id).then(setComments).catch(() => { });
-        if (activeTab === 'versions') getVersions(file._id).then((d) => setVersions(d.versions || [])).catch(() => { });
-    }, [activeTab, file._id, getComments, getVersions]);
-
-    useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.cd-dialog')) onClose(); };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
-
-    const handleAddComment = async () => {
-        if (!newComment.trim()) return;
-        setPosting(true);
-        try {
-            const c = await addComment(file._id, newComment.trim());
-            setComments((prev) => [...prev, c]);
-            setNewComment('');
-        } catch {
-            showToast('Couldn’t post the comment', 'error');
-        } finally {
-            setPosting(false);
-        }
-    };
-
-    const facts = [
-        ['Size', formatSize(file.size)],
-        ['Version', `v${file.currentVersion || 1}`],
-        ['Uploaded', timeAgo(file.createdAt)],
-        ['Type', (file.mimeType || '').split('/')[1] || label],
-    ];
-
-    return (
-        <aside className="fl-preview" aria-label={`Preview of ${file.name}`}>
-            <div className="fl-preview-head">
-                <span className="gl-empty-mark" style={{ margin: 0, width: 30, height: 30 }}><Icon size={15} /></span>
-                <strong className="fl-name" style={{ flex: 1, fontSize: 14 }} title={file.name}>{file.name}</strong>
-                <IconBtn label="Close preview" onClick={onClose}><X size={16} /></IconBtn>
-            </div>
-
-            <div className="fl-preview-tabs">
-                <div className="gl-tabs" role="tablist" aria-label="File details">
-                    {[['preview', 'Preview'], ['comments', 'Comments'], ['versions', 'Versions']].map(([key, text]) => (
-                        <button key={key} type="button" role="tab" className="gl-tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>{text}</button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="fl-preview-body">
-                {activeTab === 'preview' && (
-                    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div className="fl-media">
-                            {isImage && <img src={file.url} alt={file.name} />}
-                            {isVideo && <video src={file.url} controls />}
-                            {isAudio && <audio src={file.url} controls style={{ width: '100%', padding: 16, boxSizing: 'border-box' }} />}
-                            {isPDF && <iframe src={file.url} title={file.name} style={{ width: '100%', height: 300, border: 0 }} />}
-                            {!isImage && !isVideo && !isAudio && !isPDF && (
-                                <EmptyState icon={Icon} title="No preview for this type" text={`${file.mimeType || 'Unknown type'} — download it to open on your device.`} />
-                            )}
-                        </div>
-
-                        <dl className="fl-facts">
-                            {facts.map(([k, v]) => (
-                                <div key={k}>
-                                    <dt>{k}</dt>
-                                    <dd>{v}</dd>
-                                </div>
-                            ))}
-                        </dl>
-
-                        {file.tags?.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                {file.tags.map((tag) => <Chip key={tag} tone="accent">#{tag}</Chip>)}
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="gl-btn gl-btn--primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
-                                <Download size={13} /> Download
-                            </a>
-                            <Btn variant="ghost" icon={Trash2} onClick={onDelete}>Delete</Btn>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'comments' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {comments.length === 0 && (
-                                <EmptyState icon={MessageSquare} title="No comments yet" text="Ask a question or leave feedback — everyone with access to the file sees it." />
-                            )}
-                            {comments.map((c) => (
-                                <div key={c._id} style={{ display: 'flex', gap: 10 }}>
-                                    <span className="fl-avatar">{(c.author?.username || 'U')[0].toUpperCase()}</span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p className="fl-meta" style={{ margin: '0 0 2px' }}>
-                                            <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{c.author?.username}</strong> · {timeAgo(c.createdAt)}
-                                        </p>
-                                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>{c.content}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="fl-compose">
-                            <input
-                                className="gl-input"
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                                placeholder="Add a comment…"
-                                aria-label="Add a comment"
-                                style={{ flex: 1, minWidth: 0 }}
-                            />
-                            <Btn variant="primary" icon={Send} loading={posting} disabled={!newComment.trim()} onClick={handleAddComment}>Post</Btn>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'versions' && (
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <li className="fl-version" data-current="true">
-                            <span className="fl-vnum">v{file.currentVersion || 1}</span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                                <strong style={{ display: 'block', fontSize: 13, color: 'var(--text-primary)' }}>Current version</strong>
-                                <span className="fl-meta">{timeAgo(file.updatedAt || file.createdAt)}</span>
-                            </span>
-                            <Chip tone="accent">Current</Chip>
-                        </li>
-                        {versions.map((v) => (
-                            <li key={v._id} className="fl-version">
-                                <span className="fl-vnum">v{v.versionNumber}</span>
-                                <span style={{ flex: 1, minWidth: 0 }}>
-                                    <strong style={{ display: 'block', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{v.changeNote || `Version ${v.versionNumber}`}</strong>
-                                    <span className="fl-meta">{timeAgo(v.createdAt)}</span>
-                                </span>
-                            </li>
-                        ))}
-                        {versions.length === 0 && (
-                            <EmptyState icon={History} title="No earlier versions" text="When someone uploads a new version, the older ones are kept here." />
-                        )}
-                    </ul>
-                )}
-            </div>
-        </aside>
-    );
-}
 
 const FILES_CSS = `
 .fl-wrap { display: flex; height: 100%; min-height: 0; background: var(--bg-base); position: relative; }
@@ -477,6 +368,8 @@ const FILES_CSS = `
 .fl-facts dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fl-compose { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border-subtle); }
 .fl-avatar { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--gl-radius); }
+.fl-upload-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.fl-upload-list li { display: flex; align-items: center; gap: 8px; justify-content: space-between; min-width: 0; }
 .fl-version { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
 .fl-version[data-current='true'] { border-color: var(--gl-accent-line); background: var(--gl-accent-soft); }
 .fl-vnum { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); }
