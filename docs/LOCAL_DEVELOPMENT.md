@@ -113,7 +113,7 @@ These keys matter locally. `server/.env.example` documents all of them.
 | `AI_PROVIDER` | `local_llm` (Oruinwan's own engine) |
 | `LOCAL_LLM_BASE_URL` | `http://localhost:11434/v1` |
 | `LOCAL_LLM_MODEL` / `LOCAL_EMBED_MODEL` | `qwen2.5:3b` / `nomic-embed-text` |
-| `FEATURES_ENABLED` | Comma-separated release flags, e.g. `integrations` to show GitHub/Jira/Zoom (see `docs/integrations.md`) |
+| `FEATURES_ENABLED` | Comma-separated release flags, e.g. `billing,sso`. `integrations` is on by default; `FEATURES_DISABLED=integrations` hides it (see `docs/integrations.md`) |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Object storage for uploads; defaults match the `s3` service in `docker-compose.yml`. Without them uploads go to local disk (`LOCAL_UPLOAD_DIR`). `STORAGE_DRIVER=s3|local` forces a driver |
 | Email (`BREVO_API_KEY` / `SMTP_*`) | Needed for sign-up verification, password reset and reactivation codes. Without it, sending fails with "Email not configured" in the API log |
 
@@ -176,7 +176,7 @@ npm run test:e2e              # Playwright browser tests (see below)
 | AI replies never come / "engine unavailable" | `npm run dev:status`, then `npm run dev:services` |
 | AI is slow the first time | The model is loading. It's fast once warm, and stays loaded for 30 minutes |
 | Emails (verification, OTP) don't arrive | Configure `BREVO_API_KEY` or `SMTP_*` in `server/.env`. The API log shows why sending failed, e.g. Brevo's "Authorised IPs" block |
-| Integrations don't show in Settings | Add `integrations` to `FEATURES_ENABLED` and restart the API |
+| Integrations don't show in Settings | Remove `integrations` from `FEATURES_DISABLED` and restart the API |
 
 ---
 

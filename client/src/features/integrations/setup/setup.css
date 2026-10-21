@@ -38,3 +38,25 @@
 .oi-steps li { display: list-item; }
 .oi-setup-block > .stg-btn { align-self: flex-start; }
 .oi-scopes ul { list-style: disc; }
+
+/* Token-based connectors (ConnectorCatalog) and incoming webhooks */
+.oi-conn { flex-direction: column; align-items: stretch; gap: 0; }
+.oi-conn-head { display: flex; align-items: center; gap: 12px; }
+.oi-conn-head > .oi-mark { flex-shrink: 0; }
+.oi-conn-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 13px; }
+.oi-conn-name { font-weight: 600; color: var(--text-primary); }
+.oi-conn-who { font-size: 12px; overflow-wrap: anywhere; }
+.oi-conn-desc { margin-top: 3px; font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.oi-conn-body { padding-bottom: 4px; }
+.oi-conn-first { padding-top: 0; border-top: none; }
+.oi-conn-textarea { min-height: 96px; font-size: 12px; }
+.oi-conn-code {
+    margin: 6px 0; padding: 10px 12px; max-width: 100%; overflow-x: auto; white-space: pre;
+    font-size: 11.5px; line-height: 1.5; color: var(--text-primary);
+    background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 3px;
+}
+.oi-conn > .stg-field { margin-top: 10px; }
+.oi-bridge-dir { flex: 0 0 160px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 560px) {
+    .oi-bridge-dir { flex: 1 1 100%; }
+}

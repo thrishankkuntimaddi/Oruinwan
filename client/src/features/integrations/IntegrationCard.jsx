@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ExternalLink, FileDiff, GitBranch, GitCommitHorizontal, Loader2, MessageSquare, Sparkles, Ticket, User } from 'lucide-react';
-import { ProviderMark, StateBadge, JiraStatus, ChecksDot, DiffCounts, plural, prState } from './ui';
+import { ArrowRight, ExternalLink, FileDiff, GitBranch, GitCommitHorizontal, Loader2, MessageSquare, ShieldOff, Sparkles, Ticket, User } from 'lucide-react';
+import { ProviderMark, StateBadge, JiraStatus, ChecksDot, DiffCounts, plural, prState, PROVIDER_NAME } from './ui';
 import { prKey } from './prRefs';
 import { requestPrReview, reviewStore } from './integrationsApi';
 import useCodeReviewOpener from './useCodeReviewOpener';
@@ -40,6 +40,34 @@ function useReview(key) {
     return useSyncExternalStore(reviewStore.subscribe, () => reviewStore.get(key), () => null);
 }
 
+/**
+ * Text that came from outside Oruinwan (Slack / Teams bridge, an incoming
+ * webhook, Zapier / Make / n8n). It was not end-to-end encrypted at its
+ * source, so the card says so.
+ */
+export function BridgedMessage({ integration, summary }) {
+    const it = integration || {};
+    const source = PROVIDER_NAME[it.provider] || 'an integration';
+    const via = it.provider === 'webhook' ? 'an incoming webhook' : source;
+    return (
+        <div className="oi-bridged" data-provider={it.provider} data-testid="integration-bridged">
+            {(it.title || it.author) && (
+                <div className="oi-bridged-head">
+                    {it.author && <span className="oi-bridged-author">{it.author}</span>}
+                    {it.title && (it.url
+                        ? <a className="oi-bridged-title" href={it.url} target="_blank" rel="noopener noreferrer">{it.title}</a>
+                        : <span className="oi-bridged-title">{it.title}</span>)}
+                </div>
+            )}
+            <p className="oi-bridged-text">{summary}</p>
+            <div className="oi-bridged-meta" title="This message was written outside Oruinwan, so it was not end-to-end encrypted.">
+                <ShieldOff size={11} aria-hidden="true" />
+                <span>Via {via} · not end-to-end encrypted</span>
+            </div>
+        </div>
+    );
+}
+
 /** "Reviewing… 12s" */
 function Elapsed({ since }) {
     const [, tick] = useState(0);
@@ -60,7 +88,8 @@ export default function IntegrationCard({ integration, summary, messageId, chann
     const isPr = provider === 'github' && (kind === 'pull_request' || kind === 'pr_review' || kind === 'checks') && it.number;
     const compact = kind === 'push' || kind === 'checks';
     const extra = it.extra || {};
-    const siteName = { jira: 'Jira', gitlab: 'GitLab' }[provider] || 'GitHub';
+    const siteName = PROVIDER_NAME[provider] || 'GitHub';
+    const keyed = provider === 'jira' || provider === 'linear';
     const ref = isPr ? { repo: it.repo, number: Number(it.number) } : null;
     const key = ref ? prKey(ref) : '';
     const review = useReview(key);
@@ -80,13 +109,15 @@ export default function IntegrationCard({ integration, summary, messageId, chann
     };
     const reviewing = review?.status === 'running';
 
+    if (kind === 'message') return <BridgedMessage integration={it} summary={summary} />;
+
     if (compact) {
         const commits = extra.commitCount ?? it.commits;
         const text = summary || (kind === 'push'
             ? `${extra.forced ? 'Force-pushed' : 'Pushed'} ${commits ? plural(commits, 'commit') : 'changes'} to ${it.branch || 'a branch'}`
             : `Checks ${it.checks?.conclusion || it.checks?.status || 'updated'}${it.checks?.name ? ` · ${it.checks.name}` : it.title ? ` · ${it.title}` : ''}`);
         const headMsg = kind === 'push' && extra.headCommit?.message ? String(extra.headCommit.message).split('\n')[0] : null;
-        const link = (kind === 'push' && extra.compareUrl) || (kind === 'checks' && it.checks?.url) || it.url || (it.repo ? `https://${provider === 'gitlab' ? 'gitlab' : 'github'}.com/${it.repo}` : null);
+        const link = (kind === 'push' && extra.compareUrl) || (kind === 'checks' && it.checks?.url) || it.url || (it.repo && ['github', 'gitlab'].includes(provider) ? `https://${provider}.com/${it.repo}` : null);
         return (
             <div className="oi-card oi-card--compact" data-provider={provider} data-kind={kind} data-testid="integration-card">
                 {kind === 'push' ? <GitCommitHorizontal size={14} className="oi-muted" aria-hidden="true" /> : <ChecksDot checks={it.checks || { status: 'completed', conclusion: it.state }} />}
@@ -104,7 +135,7 @@ export default function IntegrationCard({ integration, summary, messageId, chann
         );
     }
 
-    const state = provider === 'jira' ? null : prState({ state: it.state, merged: it.state === 'merged', draft: it.state === 'draft' });
+    const state = keyed ? null : prState({ state: it.state, merged: it.state === 'merged', draft: it.state === 'draft' });
     const titleId = `oi-card-title-${messageId || key}`;
 
     return (
@@ -112,12 +143,12 @@ export default function IntegrationCard({ integration, summary, messageId, chann
             <header className="oi-card-head">
                 <ProviderMark provider={provider} size={18} />
                 <span className="oi-card-ref">
-                    {provider === 'jira'
-                        ? <span className="oi-mono">{it.key || it.taskKeys?.[0] || it.number || 'Jira'}</span>
+                    {keyed
+                        ? <span className="oi-mono">{it.key || it.taskKeys?.[0] || it.number || siteName}</span>
                         : <><span className="oi-card-repo">{it.repo}</span>{it.number ? <span className="oi-mono"> #{it.number}</span> : null}</>}
                 </span>
-                {provider === 'jira'
-                    ? <JiraStatus status={it.status || it.state} category={extra.statusCategory} />
+                {keyed
+                    ? <JiraStatus status={provider === 'linear' ? (extra.status || it.state) : (it.status || it.state)} category={provider === 'linear' ? ({ completed: 'done', canceled: 'done', started: 'indeterminate' }[extra.statusType] || 'new') : extra.statusCategory} />
                     : <StateBadge state={state} kind={kind === 'issue' ? 'issue' : 'pull_request'} size="sm" />}
                 {kind === 'pr_review' && it.reviewState && (
                     <span className="oi-review-state" data-review={it.reviewState}>{REVIEW_LABEL[it.reviewState] || it.reviewState}</span>
@@ -140,8 +171,8 @@ export default function IntegrationCard({ integration, summary, messageId, chann
                         {it.authorAvatar ? <img src={it.authorAvatar} alt="" className="oi-author-avatar" /> : <User size={11} aria-hidden="true" />}{it.author}
                     </span>
                 )}
-                {provider === 'jira' && extra.assignee && <span className="oi-meta-item">Assignee: {extra.assignee}</span>}
-                {provider === 'jira' && extra.priority && <span className="oi-meta-item">Priority: {extra.priority}</span>}
+                {keyed && extra.assignee && <span className="oi-meta-item">Assignee: {extra.assignee}</span>}
+                {keyed && extra.priority && <span className="oi-meta-item">Priority: {extra.priority}</span>}
                 {it.branch && (
                     <span className="oi-meta-item oi-branch" title={`${it.branch} → ${it.base || 'base'}`}>
                         <GitBranch size={11} aria-hidden="true" />

@@ -10,7 +10,7 @@ import {
 import './stg-ws.css';
 
 /** Providers run by someone else. Oruinwan AI no longer offers them; old workspaces may still point at one. */
-const THIRD_PARTY = ['gemini', 'openai', 'anthropic', 'claude'];
+const THIRD_PARTY = ['gemini', 'openai', 'anthropic', 'claude', 'xai'];
 
 const PRIVACY_LINE = "Runs on Oruinwan's own servers. No third-party AI service sees your data.";
 
@@ -254,7 +254,7 @@ export default function AITab({ workspaceId, workspaceName, workspacePicker }) {
                     <Row label="Model" description={<span className="stg-mono">{effective.model || defaultModel}</span>} />
 
                     <details className="stg-ws-details">
-                        <summary><ChevronRight size={14} /> Advanced: run on your own server</summary>
+                        <summary><ChevronRight size={14} /> Advanced: run on your own server (Local LLM)</summary>
                         <div className="stg-ws-details-body">
                             <div className="stg-hint">
                                 Point this workspace at any OpenAI-compatible server you run (for example Ollama or vLLM). Leave the endpoint empty to only change the model.

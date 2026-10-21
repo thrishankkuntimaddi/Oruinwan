@@ -90,7 +90,7 @@ export async function isConnected(type, workspaceId) {
         throw err;
     }
 }
-export const clearConnectionCache = () => statusCache.clear();
+export const clearConnectionCache = () => { statusCache.clear(); listCache.clear(); };
 
 /* ── GitHub ───────────────────────────────────────────────────────────── */
 
@@ -133,6 +133,40 @@ export const createJiraIssue = (payload) =>
 
 export const createZoomMeeting = (payload) =>
     call('zoom', () => api.post(`${BASE}/zoom/meeting`, payload), 'Could not create the Zoom meeting.');
+
+/* ── Token-based connectors (docs/api/integrations.md) ────────────────── */
+
+const label = (type) => PROVIDER_LABEL[type] || CONNECTOR_LABEL[type] || type;
+export const CONNECTOR_LABEL = {
+    bitbucket: 'Bitbucket', linear: 'Linear', cicd: 'CI/CD', slack: 'Slack', teams: 'Microsoft Teams', google_meet: 'Google Meet',
+    google_drive: 'Google Drive', onedrive: 'OneDrive', dropbox: 'Dropbox', notion: 'Notion', confluence: 'Confluence',
+    zapier: 'Zapier', make: 'Make', n8n: 'n8n',
+};
+Object.assign(PROVIDER_LABEL, CONNECTOR_LABEL);
+
+/** GET or POST /:type/actions/:action. */
+export const connectorAction = (type, action, workspaceId, input = {}, method = 'GET') =>
+    call(type, () => (method === 'GET'
+        ? api.get(`${BASE}/${type}/actions/${action}`, { params: { workspaceId, ...input } })
+        : api.post(`${BASE}/${type}/actions/${action}`, { workspaceId, ...input })), `${label(type)} did not answer. Try again.`);
+
+export const attachToTask = (type, workspaceId, itemId, taskId) =>
+    call(type, () => api.post(`${BASE}/${type}/attach`, { workspaceId, itemId, taskId }), 'Could not attach it to the task.');
+
+export const importToKnowledge = (type, workspaceId, id) =>
+    call(type, () => api.post(`${BASE}/${type}/import`, { workspaceId, id }), 'Could not import the page.');
+
+/** Types connected in the workspace (no config), cached for a minute. */
+const listCache = new Map();
+export async function connectedTypes(workspaceId) {
+    const hit = listCache.get(workspaceId);
+    if (hit && Date.now() - hit.at < 60_000) return hit.value;
+    const value = await api.get(BASE, { params: { workspaceId } })
+        .then(({ data }) => new Set((data?.integrations || []).filter((i) => i.status === 'connected').map((i) => i.type)))
+        .catch(() => new Set());
+    listCache.set(workspaceId, { at: Date.now(), value });
+    return value;
+}
 
 /* ── Reviews shared between the card and the panel ────────────────────── */
 

@@ -11,6 +11,7 @@ import AITaskAssist from './AITaskAssist';
 import { STATUS_META, TRANSITIONS, PRIORITIES, PRIORITY_META, statusLabel, priorityLabel, toDateInput, taskErrorMessage } from '../../utils/taskMeta';
 import { StatusBadge, PriorityIcon, UserAvatar, IssueTypeIcon, fmtDate, tint, FONT } from './taskUi';
 import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
+import { AttachFromApps, usePickerTypes } from '../../features/integrations/CloudPicker';
 
 function fmtSeconds(s) {
     const total = Math.max(0, Math.floor(s || 0));
@@ -149,6 +150,7 @@ export default function WorkspaceTaskDetailPanel({
 }) {
     const { activeWorkspace } = useWorkspace();
     const aiWorkspaceId = activeWorkspace?.id || activeWorkspace?._id || null;
+    const pickerTypes = usePickerTypes(aiWorkspaceId);
     const aiCtx = useAIContext();
     const setAITask = aiCtx?.setTask;
     const { showToast } = useToast();
@@ -484,10 +486,11 @@ export default function WorkspaceTaskDetailPanel({
                             )}
                         </Section>
 
-                        {/* Pull requests / issues linked by the GitHub and Jira integrations */}
-                        {task.externalLinks?.length > 0 && (
-                            <Section label={`Linked pull requests (${task.externalLinks.length})`} icon={<GitPullRequest size={10} />}>
-                                <LinkedPullRequests links={task.externalLinks} workspaceId={aiWorkspaceId} />
+                        {/* Pull requests, issues, files and pages linked by integrations */}
+                        {(task.externalLinks?.length > 0 || pickerTypes.length > 0) && (
+                            <Section label={`Linked items${task.externalLinks?.length ? ` (${task.externalLinks.length})` : ''}`} icon={<GitPullRequest size={10} />}>
+                                <LinkedPullRequests links={task.externalLinks || []} workspaceId={aiWorkspaceId} />
+                                <AttachFromApps workspaceId={aiWorkspaceId} taskId={task._id || task.id} types={pickerTypes} />
                             </Section>
                         )}
 

@@ -7,9 +7,42 @@ import './integrations.css';
  * vendors' artwork). The same shapes live in /public/integrations/*.svg for
  * bot avatars.
  */
+/** Monogram marks for the token-based connectors: [background, letters, label]. */
+export const MONOGRAMS = {
+    bitbucket: ['#2684FF', 'Bb', 'Bitbucket'],
+    linear: ['#222326', 'Li', 'Linear'],
+    cicd: ['#3B4A54', 'CI', 'CI/CD'],
+    slack: ['#2E3238', 'Sl', 'Slack'],
+    teams: ['#37474F', 'Te', 'Microsoft Teams'],
+    google_meet: ['#00897B', 'Me', 'Google Meet'],
+    google_drive: ['#1E8E3E', 'Dr', 'Google Drive'],
+    onedrive: ['#0364B8', 'On', 'OneDrive'],
+    dropbox: ['#0061FE', 'Db', 'Dropbox'],
+    notion: ['#191919', 'N', 'Notion'],
+    confluence: ['#1868DB', 'Co', 'Confluence'],
+    zapier: ['#FF4F00', 'Z', 'Zapier'],
+    make: ['#2B2B2B', 'M', 'Make'],
+    n8n: ['#EA4B71', 'n8n', 'n8n'],
+    webhook: ['#3B4A54', '{}', 'Incoming webhook'],
+};
+
+export const PROVIDER_NAME = {
+    github: 'GitHub', gitlab: 'GitLab', jira: 'Jira', zoom: 'Zoom',
+    ...Object.fromEntries(Object.entries(MONOGRAMS).map(([k, v]) => [k, v[2]])),
+};
+
 export function ProviderMark({ provider, size = 20, title }) {
-    const label = title || { github: 'GitHub', gitlab: 'GitLab', jira: 'Jira', zoom: 'Zoom' }[provider] || provider;
+    const label = title || PROVIDER_NAME[provider] || provider;
     const common = { width: size, height: size, viewBox: '0 0 32 32', role: 'img', 'aria-label': label, className: 'oi-mark', focusable: 'false' };
+    if (MONOGRAMS[provider]) {
+        const [bg, text] = MONOGRAMS[provider];
+        return (
+            <svg {...common}>
+                <rect width="32" height="32" rx="7" fill={bg} />
+                <text x="16" y="16" dy="0.35em" textAnchor="middle" fontFamily="Helvetica, Arial, sans-serif" fontWeight="700" fontSize={text.length >= 3 ? 10 : text.length === 2 ? 13 : 17} fill="#fff">{text}</text>
+            </svg>
+        );
+    }
     if (provider === 'jira') {
         return (
             <svg {...common}>
@@ -47,7 +80,10 @@ export function ProviderMark({ provider, size = 20, title }) {
     );
 }
 
-export const PROVIDER_AVATAR = { github: '/integrations/github.svg', gitlab: '/integrations/gitlab.svg', jira: '/integrations/jira.svg', zoom: '/integrations/zoom.svg' };
+export const PROVIDER_AVATAR = Object.fromEntries(
+    ['github', 'gitlab', 'jira', 'zoom', 'bitbucket', 'linear', 'cicd', 'slack', 'teams', 'zapier', 'make', 'n8n', 'webhook']
+        .map((p) => [p, `/integrations/${p}.svg`]),
+);
 
 const STATE_META = {
     open: { label: 'Open', Icon: GitPullRequest },

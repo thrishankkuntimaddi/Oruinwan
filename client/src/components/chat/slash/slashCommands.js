@@ -28,6 +28,15 @@ export const SLASH_COMMANDS = [
   cmd("/review", "Review pull request", "developer", "🔍", "Open a pull request's changes next to the chat", "Usage: /review owner/repo#12 (or a PR link)", { flag: "integrations" }),
   cmd("/jira", "Jira issue", "developer", "🎫", "Create a Jira issue", "Usage: /jira <PROJECT> <summary>", { flag: "integrations" }),
   cmd("/zoom", "Zoom meeting", "communication", "📹", "Create a Zoom meeting and post the join link", "Usage: /zoom [topic]", { flag: "integrations" }),
+  cmd("/gmeet", "Google Meet", "communication", "🎥", "Create a Google Meet link, or share one you paste", "Usage: /gmeet [title] · /gmeet https://meet.google.com/abc-defg-hij", { flag: "integrations" }),
+  cmd("/gitlab", "GitLab issue", "developer", "🦊", "Open a GitLab issue", "Usage: /gitlab issue group/project <title>", { flag: "integrations" }),
+  cmd("/bitbucket", "Bitbucket issue", "developer", "🪣", "Open a Bitbucket issue", "Usage: /bitbucket issue workspace/repo <title>", { flag: "integrations" }),
+  cmd("/linear", "Linear issue", "developer", "◑", "Create a Linear issue", "Usage: /linear issue TEAM <title>", { flag: "integrations" }),
+  cmd("/drive", "Google Drive", "productivity", "📁", "Share a Google Drive file", "Usage: /drive [search]", { flag: "integrations" }),
+  cmd("/onedrive", "OneDrive", "productivity", "☁️", "Share a OneDrive file", "Usage: /onedrive [search]", { flag: "integrations" }),
+  cmd("/dropbox", "Dropbox", "productivity", "📦", "Share a Dropbox file", "Usage: /dropbox [search]", { flag: "integrations" }),
+  cmd("/notion", "Notion", "productivity", "📝", "Share a Notion page or import it into Knowledge", "Usage: /notion [search]", { flag: "integrations" }),
+  cmd("/confluence", "Confluence", "productivity", "📚", "Share a Confluence page or import it into Knowledge", "Usage: /confluence [search]", { flag: "integrations" }),
 ];
 
 /** Commands available with the given release flags. */
