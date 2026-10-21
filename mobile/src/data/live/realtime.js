@@ -58,6 +58,8 @@ export function connectRealtime(base) {
   // Huddle signalling and live/ended announcements go to the huddle client (features/huddles).
   socket.onAny((event, payload) => {
     if (event.startsWith('huddle:')) emit('huddle', { event, payload });
+    // Everything else too, for features that patch what they show (polls, checklists, reminders).
+    else emit('socket', { event, payload });
   });
   socket.on('connect_error', (err) => {
     // The server rejected the handshake (usually an expired access token). Socket.IO does not

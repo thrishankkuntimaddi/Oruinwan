@@ -3,7 +3,8 @@ import { useCallback, useEffect } from 'react';
 import { api, useSession } from '../../data/session.js';
 import { getQueryData, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { uid } from '../../lib/id.js';
-import { toast } from '../../lib/bus.js';
+import { on, toast } from '../../lib/bus.js';
+import { mapChecklist, mapPoll } from '../../data/live/adapter.chats.js';
 import { mentionsAI } from '../../lib/aiMention.js';
 import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
 
@@ -21,11 +22,40 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const key = threadOf ? `thread:${threadOf}` : conv?.id && `messages:${conv.id}`;
   const query = useQuery(key, () =>
     threadOf
-      ? api()
-          .thread(conv, threadOf)
-          .then((t) => ({ items: t.replies, parent: t.parent, hasMore: false }))
+      ? api().threadInfo
+        ? api()
+            .threadInfo(conv, threadOf)
+            .then(({ replies, parent, ...meta }) => ({ items: replies, parent, hasMore: false, meta }))
+        : api()
+            .thread(conv, threadOf)
+            .then((t) => ({ items: t.replies, parent: t.parent, hasMore: false }))
       : api().messages(conv),
   );
+
+  // Live poll votes, checklist ticks and thread resolve state, patched in place.
+  useEffect(() => {
+    if (!key) return undefined;
+    const patchOne = (id, fn) =>
+      setQueryData(key, (d) =>
+        d
+          ? {
+              ...d,
+              items: d.items.map((m) => (m.id === id ? fn(m) : m)),
+              parent: d.parent?.id === id ? fn(d.parent) : d.parent,
+            }
+          : d,
+      );
+    return on('socket', ({ event, payload: p } = {}) => {
+      const id = p?.messageId && String(p.messageId);
+      if (!id) return;
+      if (event === 'poll:vote_updated' && p.poll) patchOne(id, (m) => ({ ...m, poll: mapPoll(p.poll, m.authorId) }));
+      else if (event === 'message:checklist_updated' && Array.isArray(p.checklist)) patchOne(id, (m) => ({ ...m, checklist: mapChecklist(p.checklist) }));
+      else if (event === 'thread-resolved') {
+        patchOne(id, (m) => ({ ...m, resolved: Boolean(p.isResolved) }));
+        if (threadOf === id) setQueryData(key, (d) => (d?.meta ? { ...d, meta: { ...d.meta, resolved: Boolean(p.isResolved) } } : d));
+      }
+    });
+  }, [key, threadOf]);
 
   useEffect(() => {
     if (!conv?.id || threadOf) return;
@@ -35,7 +65,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const patch = useCallback((fn) => setQueryData(key, (d) => (d ? { ...d, items: fn(d.items) } : d)), [key]);
 
   const send = useCallback(
-    async (text, { retryId } = {}) => {
+    async (text, { retryId, mentionText } = {}) => {
       const body = text.trim();
       if (!body) return;
       const tempId = retryId || uid('tmp');
@@ -53,7 +83,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
       };
       patch((items) => (retryId ? items.map((m) => (m.id === retryId ? optimistic : m)) : [...items, optimistic]));
       try {
-        const saved = await api().sendMessage(conv, body, { parentId: threadOf, clientTempId: tempId });
+        const saved = await api().sendMessage(conv, body, { parentId: threadOf, clientTempId: tempId, mentionText });
         patch((items) => {
           // The realtime echo may already have added the saved message.
           const withoutTemp = items.filter((m) => m.id !== tempId);
@@ -139,8 +169,22 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const items = query.data?.items || [];
   const merged = uploads.length ? [...items, ...uploads] : items;
 
+  /** Replaces one message (or the thread's parent) in the cache. */
+  const patchMessage = useCallback(
+    (id, fn) => setQueryData(key, (d) => (d ? { ...d, items: d.items.map((m) => (m.id === id ? fn(m) : m)), parent: d.parent?.id === id ? fn(d.parent) : d.parent } : d)),
+    [key],
+  );
+  /** Adds a message sent outside send() (a poll or checklist), unless the realtime echo already did. */
+  const append = useCallback((m) => setQueryData(key, (d) => (d && !d.items.some((x) => x.id === m.id) ? { ...d, items: [...d.items, m] } : d)), [key]);
+  const patchMeta = useCallback((p) => setQueryData(key, (d) => (d ? { ...d, meta: { ...(d.meta || {}), ...p } } : d)), [key]);
+
   return {
     items: merged,
+    key,
+    meta: query.data?.meta || null,
+    patchMessage,
+    patchMeta,
+    append,
     parent: query.data?.parent || null,
     hasMore: query.data?.hasMore || false,
     loading: query.loading,

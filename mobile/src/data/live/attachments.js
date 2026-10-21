@@ -25,6 +25,7 @@ export function mapAttachment(a) {
     width: a.width || null,
     height: a.height || null,
     duration: Number.isFinite(a.duration) ? a.duration : null,
+    variant: a.variant || null, // 'screen_recording' | 'video_note' (recorded on the web)
   };
 }
 

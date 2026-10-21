@@ -37,6 +37,7 @@
     "@firebase/analytics": "^0.10.25",
     "@firebase/app": "^0.16.3",
     "@firebase/remote-config": "^0.9.3",
+    "highlight.js": "^11.11.1",
     "lucide-react": "^1.55.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

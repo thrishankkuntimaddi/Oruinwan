@@ -17,13 +17,34 @@ export function nameConversation(convId, { kind, name, ws }) {
   conversations.set(convId, conv);
 }
 
+function checklistWords(json) {
+  try {
+    const d = JSON.parse(json);
+    return [d.title, ...(d.items || []).map((i) => (typeof i === 'object' ? i?.text : i))].filter(Boolean).join('\n');
+  } catch {
+    return '';
+  }
+}
+
 /** Adds decrypted messages (the app's message shape) to the index. */
 export function indexMessages(conv, list, { complete = false } = {}) {
   if (!conv?.id) return;
   const entry = conversations.get(conv.id) || { kind: conv.kind, name: null, ws: null, messages: new Map(), loadedAt: 0 };
   for (const m of list || []) {
-    if (!m?.id || m.state !== 'ok' || !m.text) continue;
-    entry.messages.set(m.id, { id: m.id, text: m.text, authorId: m.authorId, at: m.at, parentId: m.parentId || null });
+    const files = (m?.attachments || []).map((a) => ({ type: a.type, mimeType: a.mimeType }));
+    // A checklist's text is its JSON (title and items); search its words, not the syntax.
+    const text = m?.state === 'ok' ? (m.type === 'checklist' ? checklistWords(m.text) : m.text || '') : '';
+    if (!m?.id || !(text || files.length)) continue;
+    entry.messages.set(m.id, {
+      id: m.id,
+      text,
+      authorId: m.authorId,
+      at: m.at,
+      parentId: m.parentId || null,
+      pinned: Boolean(m.pinned),
+      replyCount: m.replyCount || 0,
+      attachments: files,
+    });
   }
   if (entry.messages.size > MAX_PER_CONVERSATION) {
     const extra = entry.messages.size - MAX_PER_CONVERSATION;
@@ -42,16 +63,25 @@ export function unloaded(ws, convs, now = Date.now()) {
   return convs.filter((c) => now - (conversations.get(c.id)?.loadedAt || 0) > FRESH_MS && (!c.ws || c.ws === ws));
 }
 
-/** Newest first, in the search screen's shape. Every word of the query must appear. */
+/**
+ * Newest first, in the search screen's shape. `query` is text (every word must appear) or a
+ * matcher (message, { kind, name }) => boolean, e.g. from lib/searchQuery.js.
+ */
 export function searchIndex(ws, query, limit = 50) {
-  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return [];
+  let match = query;
+  if (typeof query !== 'function') {
+    const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    match = (m) => {
+      const text = m.text.toLowerCase();
+      return words.every((w) => text.includes(w));
+    };
+  }
   const out = [];
   for (const [convId, conv] of conversations) {
     if (ws && conv.ws && conv.ws !== ws) continue;
     for (const m of conv.messages.values()) {
-      const text = m.text.toLowerCase();
-      if (!words.every((w) => text.includes(w))) continue;
+      if (!match(m, { kind: conv.kind, name: conv.name })) continue;
       out.push({ ...m, convId, convKind: conv.kind, convName: conv.name || (conv.kind === 'channel' ? 'a channel' : 'a direct message') });
     }
   }

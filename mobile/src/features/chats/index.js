@@ -7,3 +7,4 @@ export {
   NewMessageScreen,
   BrowseChannelsScreen,
 } from './screens.jsx';
+export { SavedScreen } from './SavedScreen.jsx';

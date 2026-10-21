@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus, Bot } from 'lucide-react';
+import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus, Bot, Bookmark } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
 import { useAgents, useChannels, useDms } from '../../data/hooks.js';
@@ -138,6 +138,7 @@ export function ChatsScreen() {
         actions={
           <>
             <IconButton icon={Search} label="Search messages" onClick={() => nav.push('search')} />
+            <IconButton icon={Bookmark} label="Saved items and reminders" onClick={() => nav.push('saved')} />
             <IconButton icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
           </>
         }

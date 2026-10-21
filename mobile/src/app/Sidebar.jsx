@@ -3,7 +3,7 @@
 // the Home tab's detail pane, so the list on the left keeps its place.
 import { useState } from 'react';
 import {
-  Bell, BookOpen, ChevronDown, FileText, FolderOpen, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig,
+  Bell, Bookmark, BookOpen, ChevronDown, FileText, FolderOpen, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig,
 } from 'lucide-react';
 import { useNav, markPane } from './nav.js';
 import { useDueSoonCount } from './TabBar.jsx';
@@ -17,7 +17,7 @@ import { cx } from '../ui/cx.js';
 import { WorkspaceTile } from '../features/workspace/WorkspaceTile.jsx';
 import { WorkspaceSheet } from '../features/workspace/WorkspaceSheet.jsx';
 
-const HUB_ROUTES = ['search', 'notifications', 'files', 'knowledge'];
+const HUB_ROUTES = ['search', 'notifications', 'saved', 'files', 'knowledge'];
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent);
 export const SEARCH_SHORTCUT = isMac ? '⌘K' : 'Ctrl K';
 
@@ -84,6 +84,7 @@ export function Sidebar() {
   const more = [
     { route: 'search', label: 'Search', icon: Search, hint: SEARCH_SHORTCUT },
     { route: 'notifications', label: 'Notifications', icon: Bell, badge: unread.notifications },
+    { route: 'saved', label: 'Saved items', icon: Bookmark },
     flags.files && { route: 'files', label: 'Files', icon: FolderOpen },
     flags.knowledge && { route: 'knowledge', label: 'Knowledge', icon: BookOpen },
   ].filter(Boolean);

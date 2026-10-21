@@ -2,7 +2,7 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown, Bookmark, Camera, Copy, CornerDownRight, Ellipsis, ImageIcon, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip,
+  ArrowDown, BarChart3, BellRing, Bookmark, Camera, CheckCircle2, Copy, CornerDownRight, Ellipsis, History, ImageIcon, Languages, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip,
 } from 'lucide-react';
 import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
@@ -17,6 +17,10 @@ import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
 import { Attachments } from '../media/Attachments.jsx';
+import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.js';
+import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
+import { MentionSuggestions, MicButton, RecordingBar, SmartReplies, canRecordVoice, useVoiceRecorder } from './composerExtras.jsx';
+import { useTranslations } from './translate.js';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -57,7 +61,9 @@ export function useLongPress(callback, ms = 420) {
   };
 }
 
-function MessageBody({ m, onCancelUpload }) {
+function MessageBody({ m, onCancelUpload, me, directory }) {
+  if (m.state !== 'deleted' && m.poll) return <PollCard m={m} me={me} directory={directory} />;
+  if (m.state !== 'deleted' && m.type === 'checklist' && (m.state === 'ok' || m.checklist?.length)) return <ChecklistCard m={m} />;
   const files = m.state !== 'deleted' ? m.attachments || [] : [];
   if (files.length) {
     // Files aren't end-to-end encrypted (as on the web), so they show even before the keys
@@ -141,6 +147,11 @@ function ThreadSummary({ m, directory, onOpen }) {
       <span className="text-[13px] font-medium text-accent-ink">
         {m.replyCount} {m.replyCount === 1 ? 'reply' : 'replies'}
       </span>
+      {m.resolved && (
+        <span className="inline-flex items-center gap-1 text-xs text-success">
+          <Icon as={CheckCircle2} size={12} /> Resolved
+        </span>
+      )}
       {m.lastReplyAt && <span className="text-xs text-text-3">Last {shortAgo(m.lastReplyAt)}</span>}
     </button>
   );
@@ -175,10 +186,25 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
             <span className="truncate text-[14px] font-semibold">{author.name}</span>
             <span className="shrink-0 text-[11px] text-text-3">{clock(m.at)}</span>
             {m.pinned && <Icon as={Pin} size={12} className="shrink-0 text-accent-ink" aria-label="Pinned" />}
+            {m.saved && <Icon as={Bookmark} size={12} className="shrink-0 text-accent-ink" aria-label="Saved for later" />}
           </div>
         )}
-        <MessageBody m={m} onCancelUpload={onCancelUpload} />
-        {m.edited && <span className="text-[11px] text-text-3">(edited)</span>}
+        <MessageBody m={m} onCancelUpload={onCancelUpload} me={me} directory={directory} />
+        <TranslationNote m={m} />
+        {m.edited &&
+          (m.editCount > 0 && m.state === 'ok' ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onLongPress(m, 'history')}
+              className="text-[11px] text-text-3 underline-offset-2 active:underline"
+              aria-label="Edited. Show edit history"
+            >
+              (edited)
+            </button>
+          ) : (
+            <span className="text-[11px] text-text-3">(edited)</span>
+          ))}
         {m.failed && (
           <button type="button" onClick={() => onRetry(m)} className="mt-1 flex items-center gap-1.5 text-xs font-medium text-danger">
             <Icon as={TriangleAlert} size={13} /> {m.upload && m.error ? `Not sent: ${m.error.replace(/\.$/, '')}. Tap to retry.` : 'Not sent. Tap to retry.'}
@@ -241,6 +267,17 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
   const live = Array.isArray(footer) ? footer.length : footer ? 1 : 0;
   const count = items.length + live;
   const first = useRef(true);
+
+  // "Translate automatically": other people's recent messages, into the chosen language.
+  const autoLang = useTranslations((s) => s.autoLang);
+  useEffect(() => {
+    if (!autoLang) return;
+    const { byId, translate } = useTranslations.getState();
+    for (const m of items.slice(-30)) {
+      if (m.authorId === me || m.state !== 'ok' || !m.text?.trim() || m.pending || m.type === 'checklist' || byId[m.id]) continue;
+      translate(m.id, m.text, autoLang, { auto: true });
+    }
+  }, [autoLang, items, me]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -329,14 +366,14 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
   );
 }
 
-export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, canThread = true }) {
+export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, canThread = true }) {
   const [confirm, setConfirm] = useState(false);
   if (!message) return null;
   const mine = message.authorId === me;
   const readable = !message.state || message.state === 'ok';
   const items = [
     canThread && !message.parentId && { icon: CornerDownRight, label: 'Reply in thread', run: onReply },
-    readable && {
+    readable && message.type !== 'checklist' && {
       icon: Copy,
       label: 'Copy text',
       run: async () => {
@@ -350,8 +387,11 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
     },
     onPin && { icon: Pin, label: message.pinned ? 'Unpin from conversation' : 'Pin to conversation', run: onPin },
     onSave && { icon: Bookmark, label: message.saved ? 'Remove from saved' : 'Save for later', run: onSave },
-    readable && onTask && { icon: ListTodo, label: 'Create task from message', run: onTask },
-    mine && readable && onEdit && { icon: Pencil, label: 'Edit message', run: onEdit },
+    onRemind && { icon: BellRing, label: 'Remind me about this', run: onRemind },
+    readable && message.text && message.type !== 'checklist' && onTranslate && { icon: Languages, label: 'Translate', run: onTranslate },
+    readable && onTask && !message.linkedTaskId && { icon: ListTodo, label: 'Convert to task', run: onTask },
+    mine && readable && onEdit && message.type !== 'checklist' && { icon: Pencil, label: 'Edit message', run: onEdit },
+    readable && message.editCount > 0 && onHistory && { icon: History, label: 'Edit history', run: onHistory },
     mine && onDelete && { icon: Trash2, label: 'Delete message', danger: true, run: () => setConfirm(true), keepOpen: true },
   ].filter(Boolean);
 
@@ -408,11 +448,14 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
   );
 }
 
-export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, onCancelEdit, aiMentions = false, assistants }) {
+export function Composer({
+  placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, onCancelEdit, aiMentions = false, assistants,
+  mentions = null, recent = null, onVoice = null,
+}) {
   const [text, setText] = useState(initial);
   const [caret, setCaret] = useState(initial.length);
   const ref = useRef(null);
-  // Where the caret goes after the next render (set when @ai is completed), so typing continues after it.
+  // Where the caret goes after the next render (set when a mention is completed), so typing continues after it.
   const pendingCaret = useRef(null);
   useLayoutEffect(() => {
     if (pendingCaret.current == null || !ref.current) return;
@@ -422,6 +465,9 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
   }, [text]);
   // "@a…", "@cl…" being typed: offer the assistants it could be (Oruinwan AI, Claude…).
   const aiAt = aiMentions && !editing ? assistantMentionAt(text, caret, assistants?.length ? assistants : [DEFAULT_ASSISTANT]) : null;
+  // People, @channel/@here and #channels.
+  const at = mentions && !editing ? mentionAt(text, caret) : null;
+  const people = at ? mentionSuggestions(at, mentions) : [];
   const completeAi = (a) => {
     const tag = `@${a.mention} `;
     const next = `${text.slice(0, aiAt.start)}${tag}${text.slice(aiAt.end)}`;
@@ -431,6 +477,14 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
     setCaret(pos);
     tap('select');
   };
+  const completeMention = (s) => {
+    const next = applyMention(text, at, s);
+    pendingCaret.current = next.caret;
+    setText(next.text);
+    setCaret(next.caret);
+    tap('select');
+  };
+  const voice = useVoiceRecorder((file) => onVoice?.(file));
 
   useEffect(() => {
     setText(initial);
@@ -460,13 +514,20 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
     setCaret(0);
     tap('light');
   };
-  // With a physical keyboard, Enter sends and Shift+Enter starts a new line.
+  // With a physical keyboard, Enter sends (or completes a mention) and Shift+Enter starts a new line.
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
       e.preventDefault();
-      send();
+      if (people.length && !people[0].disabled) completeMention(people[0]);
+      else send();
     }
   };
+  const fill = (value) => {
+    setText(value);
+    setCaret(value.length);
+    pendingCaret.current = value.length;
+  };
+  const showMic = Boolean(onVoice) && !editing && !text.trim() && canRecordVoice();
 
   return (
     <div className="glass-header shrink-0 border-t border-line-soft pb-safe">
@@ -489,6 +550,8 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
             </span>
           </button>
         ))}
+      <MentionSuggestions items={people} onPick={completeMention} />
+      {recent && !editing && !text && !voice.recording && <SmartReplies recent={recent} onPick={fill} />}
       {editing && (
         <div className="flex items-center justify-between px-4 pt-2 text-xs text-accent-ink">
           <span className="flex items-center gap-1.5">
@@ -499,48 +562,56 @@ export function Composer({ placeholder, onSend, onPlus, disabled, disabledReason
           </button>
         </div>
       )}
-      <div className="flex items-end gap-2 px-3 py-2.5">
-        {onPlus && (
-          <button
-            type="button"
-            aria-label="More actions"
-            onClick={onPlus}
-            className="pressable grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"
-          >
-            <Icon as={Plus} />
-          </button>
-        )}
-        <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input px-4 focus-within:border-accent/70">
-          <textarea
-            ref={ref}
-            rows={1}
-            value={text}
-            autoFocus={autoFocus}
-            onChange={(e) => {
-              setText(e.target.value);
-              setCaret(e.target.selectionStart ?? e.target.value.length);
-            }}
-            onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
-            onKeyDown={onKeyDown}
-            placeholder={placeholder}
-            enterKeyHint="enter"
-            className="block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3"
-          />
-        </div>
-        <button
-          type="button"
-          aria-label="Send"
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={send}
-          disabled={!text.trim()}
-          className={cx(
-            'pressable grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors',
-            text.trim() ? 'bg-gold text-on-accent' : 'bg-surface-2 text-text-3',
+      {voice.recording ? (
+        <RecordingBar seconds={voice.seconds} onCancel={voice.cancel} onSend={voice.send} />
+      ) : (
+        <div className="flex items-end gap-2 px-3 py-2.5">
+          {onPlus && (
+            <button
+              type="button"
+              aria-label="More actions"
+              onClick={onPlus}
+              className="pressable grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"
+            >
+              <Icon as={Plus} />
+            </button>
           )}
-        >
-          <Icon as={SendHorizontal} size={19} />
-        </button>
-      </div>
+          <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input px-4 focus-within:border-accent/70">
+            <textarea
+              ref={ref}
+              rows={1}
+              value={text}
+              autoFocus={autoFocus}
+              onChange={(e) => {
+                setText(e.target.value);
+                setCaret(e.target.selectionStart ?? e.target.value.length);
+              }}
+              onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
+              onKeyDown={onKeyDown}
+              placeholder={placeholder}
+              enterKeyHint="enter"
+              className="block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3"
+            />
+          </div>
+          {showMic ? (
+            <MicButton onClick={voice.start} />
+          ) : (
+            <button
+              type="button"
+              aria-label="Send"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={send}
+              disabled={!text.trim()}
+              className={cx(
+                'pressable grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors',
+                text.trim() ? 'bg-gold text-on-accent' : 'bg-surface-2 text-text-3',
+              )}
+            >
+              <Icon as={SendHorizontal} size={19} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -570,7 +641,7 @@ export function useFilePickers(onFiles) {
   return { inputs, pick };
 }
 
-export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, title = 'Add to message' }) {
+export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, onPoll, onChecklist, title = 'Add to message' }) {
   // A computer has no camera to point: its file picker covers photos.
   const camera = onPick && !finePointer();
   return (
@@ -580,7 +651,9 @@ export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, titl
           onPick && { icon: ImageIcon, label: 'Photo or video', hint: 'Choose from your gallery', run: () => onPick('media') },
           camera && { icon: Camera, label: 'Take a photo', hint: 'Use the camera', run: () => onPick('camera') },
           onPick && { icon: Paperclip, label: 'File', hint: 'Documents, PDFs and anything else up to 100 MB', run: () => onPick('file') },
-          onAskAi && { icon: Sparkles, label: 'Ask Oruinwan AI', hint: 'Get a summary or a draft for this conversation', run: onAskAi },
+          onPoll && { icon: BarChart3, label: 'Poll', hint: 'Ask everyone to vote', run: onPoll },
+          onChecklist && { icon: ListChecks, label: 'Checklist', hint: 'A list anyone here can tick off', run: onChecklist },
+          onAskAi && { icon: Sparkles, label: 'Summarize with AI', hint: 'Catch up on this conversation, or list its action items', run: onAskAi },
           onTask && { icon: ListTodo, label: 'Create a task', hint: 'Track something from this conversation', run: onTask },
         ]
           .filter(Boolean)
