@@ -8,7 +8,7 @@ import {
   unlockWithWrappedUmek,
 } from './crypto.js';
 import { challengeError, signinAdapter } from './adapter.signin.js';
-import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
+import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, realtimeSocket, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
 import { prefs } from '../../native/storage.js';
 import { useE2ee } from '../e2ee.js';
 import { normalizeServerUrl } from './server.js';
@@ -1035,6 +1035,8 @@ export const liveAdapter = {
     emit: socketEmit,
     request: socketRequest,
     connected: realtimeConnected,
+    // This connection's id: the server's huddle:self_active names the socket my call runs on.
+    socketId: () => realtimeSocket()?.id || null,
     async iceServers() {
       return api.get('/v2/huddles/ice-servers');
     },
