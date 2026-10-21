@@ -509,6 +509,8 @@ module.exports = function registerChatHandlers(io, socket) {
         }
         // Other tabs/devices of the reader drop their unread badge too.
         io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "dm", conversationId: String(id) });
+        // ...and its DM and mention notifications clear everywhere.
+        await require("../modules/notifications/notificationService").markConversationRead(io, { userId: readerId, conversationType: "dm", conversationId: String(id) });
 
       } else if (type === "channel") {
         const channel = await Channel.findById(id).select("members").lean();
@@ -523,6 +525,7 @@ module.exports = function registerChatHandlers(io, socket) {
           io.to(`channel:${id}`).emit("read-update", { readerId, channelId: id });
         }
         io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "channel", conversationId: String(id) });
+        await require("../modules/notifications/notificationService").markConversationRead(io, { userId: readerId, conversationType: "channel", conversationId: String(id) });
       }
     } catch (err) {
       logger.error("MARK READ ERROR:", err);

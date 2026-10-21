@@ -186,6 +186,7 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
         channelId: parent.channel ? String(parent.channel) : null,
         dmSessionId: parent.dm ? String(parent.dm) : null,
         snippet: 'in a thread',
+        parentMessageId: String(parent._id),
         ...(isEveryone ? { isEveryone: true } : {}),
     });
     if (mentionedSet.size > 0) {

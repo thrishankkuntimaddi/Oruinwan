@@ -102,6 +102,13 @@ exports.getThread = async (req, res) => {
             if (m !== parentMessage) seen.get(id).replyCount += 1;
         }
 
+        // Opening a thread reads it: its reply and mention notifications clear on every device.
+        try {
+            require('../notifications/notificationService')
+                .markConversationRead?.(req.app?.get?.('io'), { userId, threadId: messageId })
+                ?.catch?.(() => {});
+        } catch { /* reading the thread never fails because of notifications */ }
+
         let resolvedBy = null;
         if (parentMessage.resolvedBy) {
             const u = await require("../../identity").users.findById(parentMessage.resolvedBy);

@@ -14,10 +14,11 @@ import {
     decideMessageAlert, decideReminderAlert, decideStoredAlert, notificationConversation,
 } from './notificationPolicy';
 import {
-    anotherTabIsActive, getOpenThread, isLeaderTab, onAttentionChange, startTabCoordination,
+    OPEN_THREAD_EVENT, anotherTabIsActive, getOpenThread, isLeaderTab, onAttentionChange, startTabCoordination,
     tabHasFocus, tabIsActive, tabIsVisible,
 } from './attention';
 import { closeOsNotifications, osNotificationsAvailable, playChime, showOsNotification } from './osNotifier';
+import { useSplit } from '../split/splitStore';
 
 const NotificationsContext = createContext(null);
 
@@ -87,6 +88,14 @@ export function NotificationsProvider({ children }) {
     const currentUserId = user?.sub || user?._id;
     const pathnameRef = useRef(location.pathname);
     pathnameRef.current = location.pathname;
+    // A conversation open in the split-view pane is on screen too.
+    const { pane } = useSplit();
+    const panePath = pane && String(pane.workspaceId) === String(workspaceId) ? pane.path : null;
+    const panePathRef = useRef(panePath);
+    panePathRef.current = panePath;
+    // Do not disturb: badges still count, nothing pops up or plays a sound.
+    const dndRef = useRef(false);
+    dndRef.current = user?.userStatus === 'dnd';
     const currentWorkspaceRef = useRef(workspaceId);
     currentWorkspaceRef.current = workspaceId;
     const seenNotificationIdsRef = useRef(new Set());
@@ -244,6 +253,8 @@ export function NotificationsProvider({ children }) {
         currentUserId,
         workspaceId,
         pathname: pathnameRef.current,
+        panePath: panePathRef.current,
+        dnd: dndRef.current,
         visible: tabIsVisible(),
         focused: tabHasFocus(),
         otherTabActive: anotherTabIsActive(),
@@ -262,18 +273,23 @@ export function NotificationsProvider({ children }) {
         osBurstRef.current.reset();
     }), []);
 
-    // Tell the server what this tab shows, so it can skip mobile push for a
-    // conversation already on screen (re-sent while active, and on reconnect).
+    // Tell the server what this tab shows (main page, split pane, open thread), so it skips
+    // notifications and push for what is already on screen (re-sent while active, on reconnect).
     const openConvForPresence = conversationInPath(location.pathname);
     const presenceConvKey = openConvForPresence ? convKey(openConvForPresence.type, openConvForPresence.id) : '';
+    const paneConv = conversationInPath(panePath);
+    const paneConvKey = paneConv ? convKey(paneConv.type, paneConv.id) : '';
     useEffect(() => {
         if (!socket) return undefined;
         const report = () => {
             if (!socket.connected) return;
             const [type, id] = presenceConvKey ? presenceConvKey.split(':') : [null, null];
+            const [paneType, paneId] = paneConvKey ? paneConvKey.split(':') : [null, null];
             socket.emit('presence:viewing', {
                 conversationType: type,
                 conversationId: id,
+                conversations: paneType ? [{ conversationType: paneType, conversationId: paneId }] : [],
+                threadId: getOpenThread(),
                 visible: tabIsVisible(),
                 focused: tabHasFocus(),
             });
@@ -282,8 +298,28 @@ export function NotificationsProvider({ children }) {
         const off = onAttentionChange(report);
         const timer = setInterval(() => { if (tabIsActive()) report(); }, 60000);
         socket.on('connect', report);
-        return () => { off(); clearInterval(timer); socket.off('connect', report); };
-    }, [socket, presenceConvKey]);
+        window.addEventListener(OPEN_THREAD_EVENT, report);
+        return () => {
+            off();
+            clearInterval(timer);
+            socket.off('connect', report);
+            window.removeEventListener(OPEN_THREAD_EVENT, report);
+        };
+    }, [socket, presenceConvKey, paneConvKey]);
+
+    // Read notifications are sent to the server in batches, never one request per row.
+    const readQueueRef = useRef({ ids: new Set(), timer: null });
+    const queueServerRead = useCallback((ids) => {
+        const q = readQueueRef.current;
+        (ids || []).filter(Boolean).forEach((id) => q.ids.add(String(id)));
+        if (q.timer || !q.ids.size) return;
+        q.timer = setTimeout(() => {
+            const batch = [...q.ids];
+            q.ids.clear();
+            q.timer = null;
+            api.patch('/api/notifications/read', { ids: batch }).catch(() => {});
+        }, 400);
+    }, []);
 
     const notifyOs = useCallback(({ title, body, tag, onClick, route }) => {
         showOsNotification({
@@ -360,28 +396,37 @@ export function NotificationsProvider({ children }) {
     // activity handler above; this one alerts for everything else.
     useEffect(() => {
         const unsubscribe = addNotificationListener(async (event, payload) => {
-            if (event !== 'notification:new') return;
+            // `notification:updated`: a grouped chat row ("Ben · 5 new messages") counted up.
+            if (event !== 'notification:new' && event !== 'notification:updated') return;
+            const isUpdate = event === 'notification:updated';
             const raw = payload?.notification;
             if (!raw) return;
             if (String(raw.workspaceId) !== String(workspaceId)) return;
             const nid = raw._id;
-            if (nid) {
+            if (nid && !isUpdate) {
                 if (seenNotificationIdsRef.current.has(nid)) return;
                 seenNotificationIdsRef.current.add(nid);
             }
             const href = notificationHref(raw, workspaceId);
-            const decision = decideStoredAlert(raw, policyContext({ href }), policyPrefs());
+            const decision = decideStoredAlert(raw, policyContext({ href, silent: !!payload.silent }), policyPrefs());
             const enriched = await enrichPreview(raw);
+            const wasUnreadHere = isUpdate && notificationsRef.current.some(n => n._id === nid && !n.read);
+            // New rows go on top; an updated row moves to the top in place of its old copy.
+            const putOnTop = (row) => setNotifications(prev => {
+                if (!isUpdate && nid && prev.some(n => n._id === nid)) return prev;
+                return [row, ...prev.filter(n => !nid || n._id !== nid)];
+            });
 
             if (decision.markRead) {
                 // On screen already: store it read, never count it.
-                const notification = { ...enriched, read: true };
-                setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [notification, ...prev]);
-                if (nid) api.patch(`/api/notifications/${nid}/read`).catch(() => {});
+                putOnTop({ ...enriched, read: true });
+                if (wasUnreadHere) setUnreadCount(c => Math.max(0, c - 1));
+                if (nid) queueServerRead([nid]);
                 return;
             }
-            setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [enriched, ...prev]);
-            if (decision.count) setUnreadCount(c => c + 1);
+            putOnTop(enriched);
+            // An updated row was already counted when it was first created.
+            if (decision.count && !isUpdate) setUnreadCount(c => c + 1);
 
             const meta = enriched.meta || {};
             if (decision.toast) {
@@ -397,9 +442,9 @@ export function NotificationsProvider({ children }) {
                 const tag = enriched.type === 'thread_reply' && meta.parentMessageId
                     ? `oruinwan:thread:${meta.parentMessageId}`
                     : `oruinwan:notif:${nid || enriched.type}`;
-                const count = enriched.type === 'thread_reply' ? osBurstRef.current.hit(tag) : 1;
+                const count = enriched.meta?.count || (enriched.type === 'thread_reply' ? osBurstRef.current.hit(tag) : 1);
                 notifyOs({
-                    title: count > 1 ? `${count} new thread replies` : enriched.title,
+                    title: count > 1 && enriched.type === 'thread_reply' ? `${count} new thread replies` : enriched.title,
                     body: enriched.body || 'Oruinwan',
                     tag,
                     onClick: href ? () => navigate(href) : undefined,
@@ -413,7 +458,7 @@ export function NotificationsProvider({ children }) {
             }
         });
         return unsubscribe;
-    }, [addNotificationListener, workspaceId, enrichPreview, showToast, navigate, notifyOs, policyContext]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [addNotificationListener, workspaceId, enrichPreview, showToast, navigate, notifyOs, policyContext, queueServerRead]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // "Remind me" reminders fire from the server cron as 'reminder-fired'.
     useEffect(() => {
@@ -564,12 +609,10 @@ export function NotificationsProvider({ children }) {
             .map(n => n._id);
         if (!ids.length) return;
         ids.forEach(nid => autoReadPendingRef.current.add(nid));
-        Promise.allSettled(ids.map(nid => api.patch(`/api/notifications/${nid}/read`)))
-            .then(results => {
-                readIds(ids.filter((_, i) => results[i].status === 'fulfilled'));
-                ids.forEach(nid => autoReadPendingRef.current.delete(nid));
-            });
-    }, [openConvKey, notifications, readIds]);
+        readIds(ids);
+        queueServerRead(ids);
+        setTimeout(() => ids.forEach(nid => autoReadPendingRef.current.delete(nid)), 2000);
+    }, [openConvKey, notifications, readIds, queueServerRead]);
 
     const value = {
         notifications,

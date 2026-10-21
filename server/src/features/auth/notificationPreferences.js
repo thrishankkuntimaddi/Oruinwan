@@ -3,12 +3,17 @@
 /**
  * Account-level notification preferences stored on User.preferences.notifications.
  *   GET /api/auth/me/preferences/notifications
- *     -> { emailDigest, marketingEmails, desktopPush, sound, mentionsOnly, dmNotifications, digestFrequency }
+ *     -> { emailDigest, marketingEmails, desktopPush, sound, mentionsOnly, dmNotifications, digestFrequency, newSignInEmails }
  *   PUT /api/auth/me/preferences/notifications  (partial; booleans, digestFrequency one of
- *     'daily' | 'weekly' | 'off'; 400 otherwise) -> same object
+ *     'smart' | 'daily' | 'weekly' | 'off'; 400 otherwise) -> same object
  *
- * The digest email goes out only while emailDigest is true and digestFrequency is not 'off'
- * (emailDigest alone keeps its old meaning: true = daily digest).
+ * The digest email goes out only while emailDigest is true and digestFrequency is not 'off'.
+ * 'smart' (the default): a daily email only on days with unread mentions, DMs or tasks that the
+ * person hasn't opened the app for, otherwise one weekly roundup on Mondays.
+ * Before 2.2 the default was 'daily'; a stored 'daily' the person never picked themselves
+ * (no digestChosen flag) counts as the default, so it becomes 'smart'.
+ * newSignInEmails turns the "new sign-in" security email on or off; other security emails
+ * (password changed, signed out everywhere) always go out.
  */
 
 const logger = require('../../../utils/logger');
@@ -20,10 +25,11 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
     sound: true,
     mentionsOnly: false,
     dmNotifications: true,
-    digestFrequency: 'daily',
+    digestFrequency: 'smart',
+    newSignInEmails: true,
 });
 const FIELDS = Object.keys(NOTIFICATION_PREF_DEFAULTS);
-const DIGEST_FREQUENCIES = ['daily', 'weekly', 'off'];
+const DIGEST_FREQUENCIES = ['smart', 'daily', 'weekly', 'off'];
 
 function validValue(key, value) {
     if (key === 'digestFrequency') return DIGEST_FREQUENCIES.includes(value);
@@ -35,10 +41,12 @@ function withDefaults(stored) {
     for (const k of FIELDS) {
         if (stored && validValue(k, stored[k])) out[k] = stored[k];
     }
+    // The old default, never picked by the person: use the new default.
+    if (out.digestFrequency === 'daily' && !stored?.digestChosen) out.digestFrequency = NOTIFICATION_PREF_DEFAULTS.digestFrequency;
     return out;
 }
 
-/** 'daily' | 'weekly' | 'off' — the effective digest email cadence for stored prefs. */
+/** 'smart' | 'daily' | 'weekly' | 'off' — the effective digest email cadence for stored prefs. */
 function digestCadence(stored) {
     const p = withDefaults(stored);
     return p.emailDigest ? p.digestFrequency : 'off';
@@ -70,6 +78,8 @@ async function updateNotificationPreferences(req, res) {
             }
             $set[`preferences.notifications.${k}`] = body[k];
         }
+        // Remember that this cadence was the person's own choice (see withDefaults).
+        if (body.digestFrequency !== undefined) $set['preferences.notifications.digestChosen'] = true;
         if (!Object.keys($set).length) {
             return res.status(400).json({ message: `Provide at least one of: ${FIELDS.join(', ')}` });
         }

@@ -3,6 +3,7 @@
 import { io } from 'socket.io-client';
 import { emit } from '../../lib/bus.js';
 import { accessToken, refreshSession } from './http.js';
+import { NOTIFICATION_EVENTS, applyNotificationEvent } from './notificationLive.js';
 
 let socket = null;
 let workspaceId = null;
@@ -82,9 +83,8 @@ export function connectRealtime(base) {
   for (const ev of ['channel-created', 'channel-updated', 'channel-deleted', 'channel-member-added']) socket.on(ev, () => emit('data:changed', ['channels']));
   for (const ev of ['task-created', 'task-updated', 'task-assigned', 'task-removed']) socket.on(ev, () => emit('data:changed', ['tasks', 'task:']));
   for (const ev of ['note-created', 'note-updated', 'note-deleted', 'note-shared']) socket.on(ev, () => emit('data:changed', ['notes', 'note:']));
-  for (const ev of ['notification:new', 'notification:read', 'notification:read-all', 'notification:deleted', 'notification:cleared']) {
-    socket.on(ev, () => emit('data:changed', ['notifications']));
-  }
+  // Patch the cached list in place (a refetch per event made the list jump and flood).
+  for (const ev of NOTIFICATION_EVENTS) socket.on(ev, (p) => applyNotificationEvent(ev, p));
   socket.on('workspace-updated', () => emit('data:changed', ['workspaces']));
   // Free-plan limits (features/plan): today's AI count after each request, and an invitee who
   // couldn't join my workspace because they reached their own limit.

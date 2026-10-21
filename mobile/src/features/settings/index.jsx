@@ -519,6 +519,7 @@ const NOTIF_ROWS = [
 ];
 
 const DIGEST_OPTIONS = [
+  { value: 'smart', label: 'Smart' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
   { value: 'off', label: 'Off' },
@@ -528,22 +529,29 @@ const DIGEST_OPTIONS = [
 function DigestSection() {
   const { data, loading } = useQuery('accountnotifprefs', () => api().accountNotificationPrefs?.() ?? null);
   if (loading || !data) return null;
-  const set = async (value) => {
-    setQueryData('accountnotifprefs', (d) => ({ ...d, digestFrequency: value }));
+  const save = async (patch, call) => {
+    setQueryData('accountnotifprefs', (d) => ({ ...d, ...patch }));
     try {
-      await api().saveDigestFrequency(value);
+      await call();
     } catch (err) {
       toast(err.message || 'Could not save', 'danger');
       invalidate('accountnotifprefs');
     }
   };
+  const set = (value) => save({ digestFrequency: value }, () => api().saveDigestFrequency(value));
+  const setSignIn = (on) => save({ newSignInEmails: on }, () => api().saveNewSignInEmails?.(on));
   return (
-    <Section title="Email digest">
-      <RowGroup footer="A summary of what happened in your workspaces. Weekly digests arrive on Mondays. Applies to all workspaces.">
+    <Section title="Email">
+      <RowGroup footer="Smart: an email on days unread mentions, messages or tasks wait for you and you haven't opened Oruinwan, otherwise a weekly roundup on Mondays. Nothing is sent when there's nothing new. Applies to all workspaces.">
         <div className="px-4 py-3">
           <Segmented size="sm" options={DIGEST_OPTIONS} value={data.digestFrequency} onChange={set} />
         </div>
       </RowGroup>
+      {api().saveNewSignInEmails && (
+        <RowGroup footer="Emails about password changes and signing out everywhere are always sent.">
+          <Row title="Email me about new sign-ins" trailing={<Toggle checked={data.newSignInEmails !== false} onChange={setSignIn} label="Email me about new sign-ins" />} />
+        </RowGroup>
+      )}
     </Section>
   );
 }

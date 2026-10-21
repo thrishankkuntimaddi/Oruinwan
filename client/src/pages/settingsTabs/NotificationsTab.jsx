@@ -48,10 +48,10 @@ function useNotificationPermission() {
     return [permission, request];
 }
 
-/** Old accounts may only have emailDigest: off wins, otherwise the stored cadence (daily by default). */
+/** Old accounts may only have emailDigest: off wins, otherwise the stored cadence (smart by default). */
 export function digestValue(values) {
     if (!values?.emailDigest || values?.digestFrequency === 'off') return 'off';
-    return values?.digestFrequency === 'weekly' ? 'weekly' : 'daily';
+    return ['daily', 'weekly'].includes(values?.digestFrequency) ? values.digestFrequency : 'smart';
 }
 
 function lastWorkspaceId() {
@@ -171,7 +171,7 @@ const NotificationsTab = () => {
             <Section title="Email" description="Delivered to your inbox.">
                 <Row
                     label="Activity digest"
-                    description="A summary email of what you missed. Sent only when there is something new."
+                    description="A summary email of what you missed. Smart sends one on days unread mentions, messages or tasks wait for you and you haven't opened Oruinwan, otherwise a weekly roundup. Nothing is sent when there's nothing new."
                     htmlFor="stg-digest-frequency"
                 >
                     <Select
@@ -183,11 +183,18 @@ const NotificationsTab = () => {
                             set('emailDigest', v !== 'off');
                         }}
                     >
+                        <option value="smart">Smart (recommended)</option>
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly (Mondays)</option>
                         <option value="off">Off</option>
                     </Select>
                 </Row>
+                <SwitchRow
+                    label="Security emails: new sign-ins"
+                    description="An email when your account signs in on a new device. Emails about password changes and signing out everywhere are always sent."
+                    checked={values.newSignInEmails !== false}
+                    onChange={(v) => set('newSignInEmails', v)}
+                />
                 <SwitchRow
                     label="Product news"
                     description="Tips, offers, and Oruinwan news."

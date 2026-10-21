@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setOnTokenRefreshed, refreshAccessToken, API_BASE } from '@services/api';
 import api from '@services/api';
-import { getDeviceMetadata, clearDeviceId, getDeviceId } from '../utils/deviceId';
+import { getDeviceMetadata, getDeviceId } from '../utils/deviceId';
 import logger from '../utils/logger';
 import { clearAllAiHistory } from '../utils/aiChatHistoryStorage';
 import { IS_SITE } from '../appMode/env';
@@ -361,8 +361,8 @@ export const AuthProvider = ({ children }) => {
     
     setEncryptionReady(false);
 
-    
-    clearDeviceId();
+    // The device id is kept: this is still the same device, so signing back in must not look
+    // like a new one (and send a "new sign-in" email). Only a revoked device gets a new id.
 
     
     

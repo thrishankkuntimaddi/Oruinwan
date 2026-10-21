@@ -22,6 +22,7 @@ function fakeIo() {
 describe('notificationService.create', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        notificationService._resetPushDebounce();
         Notification.create.mockImplementation(async (doc) => ({
             ...doc,
             _id: 'n1',

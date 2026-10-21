@@ -29,6 +29,71 @@ function toSession(row) {
     };
 }
 
+/** "Chrome on Mac"-style family of a user agent, so a re-installed browser still matches. */
+function userAgentFamily(ua) {
+    const s = String(ua || '');
+    const app = /Oruinwan|Electron/i.test(s) ? 'oruinwan-desktop'
+        : /Edg\//.test(s) ? 'edge' : /Firefox\//.test(s) ? 'firefox'
+            : /Chrome\//.test(s) ? 'chrome' : /Safari\//.test(s) ? 'safari' : 'other';
+    const os = /Android/i.test(s) ? 'android' : /iPhone|iPad|iOS/i.test(s) ? 'ios'
+        : /Mac OS X|Macintosh/i.test(s) ? 'mac' : /Windows/i.test(s) ? 'windows' : /Linux/i.test(s) ? 'linux' : 'other';
+    return `${app}/${os}`;
+}
+
+/** The network an address belongs to: IPv4 /24, IPv6 /64. */
+function networkOf(ip) {
+    const s = String(ip || '').replace(/^::ffff:/i, '');
+    if (!s) return null;
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(s)) return s.split('.').slice(0, 3).join('.');
+    if (s.includes(':')) return s.toLowerCase().split(':').slice(0, 4).join(':');
+    return s;
+}
+
+const NEW_DEVICE_LOOKBACK_DAYS = 30;
+const NEW_DEVICE_EMAIL_GAP_MS = 10 * 60 * 1000;
+const lastNewDeviceEmail = new Map(); // userId -> time (single-instance fallback)
+
+/** At most one "new sign-in" email per person per 10 minutes. */
+async function claimNewDeviceEmail(userId, now = Date.now()) {
+    const redis = require('../shared/redis').getRedis();
+    if (redis) {
+        try {
+            return (await redis.set(`oruinwan:new-device-email:${userId}`, '1', 'PX', NEW_DEVICE_EMAIL_GAP_MS, 'NX')) === 'OK';
+        } catch { /* fall back to memory */ }
+    }
+    const last = lastNewDeviceEmail.get(String(userId));
+    if (last && now - last < NEW_DEVICE_EMAIL_GAP_MS) return false;
+    lastNewDeviceEmail.set(String(userId), now);
+    return true;
+}
+
+/**
+ * Should a brand-new device row send the "new sign-in" email? Not when the person turned it
+ * off, not when the same browser/app family signed in from the same network in the last 30
+ * days (a cleared or re-installed browser, not a stranger), and not twice in 10 minutes.
+ */
+async function shouldEmailNewDevice({ user, userId, deviceId, userAgent, ipAddress }) {
+    if (user?.preferences?.notifications?.newSignInEmails === false) return false;
+    const family = userAgentFamily(userAgent);
+    const net = networkOf(ipAddress);
+    try {
+        const { rows } = await query(
+            `SELECT meta FROM user_device_sessions
+             WHERE user_id = $1 AND device_id <> $2 AND last_activity_at > now() - ($3 || ' days')::interval`,
+            [String(userId), String(deviceId), String(NEW_DEVICE_LOOKBACK_DAYS)]
+        );
+        const known = rows.some((r) => net && networkOf(r.meta?.ipAddress) === net && userAgentFamily(r.meta?.userAgent) === family);
+        if (known) return false;
+    } catch (err) {
+        logger.warn({ err: err.message }, '[deviceSession] known-device check failed; sending the email');
+    }
+    return claimNewDeviceEmail(String(userId));
+}
+
+exports.userAgentFamily = userAgentFamily;
+exports.networkOf = networkOf;
+exports.shouldEmailNewDevice = shouldEmailNewDevice;
+
 exports.createOrUpdateSession = async ({
     userId,
     deviceId,
@@ -68,7 +133,7 @@ exports.createOrUpdateSession = async ({
                 const { users } = require('../identity');
                 const securityNotification = require('./securityNotification.service');
                 const user = await users.findById(userId);
-                if (user) {
+                if (user && await shouldEmailNewDevice({ user, userId, deviceId, userAgent, ipAddress })) {
                     securityNotification.sendSecurityNotification({
                         user,
                         eventType: 'LOGIN_NEW_DEVICE',

@@ -243,7 +243,8 @@ describe('digest emails', () => {
         Notification.aggregate.mockResolvedValue(rows);
         identity.workspaces.findById.mockResolvedValue({ name: 'Acme' });
         identity.users.findManyByIds.mockResolvedValue(new Map([
-            ['u1', { email: 'u1@x.io', preferences: {} }], // daily (default)
+            // An explicit daily choice (a stored 'daily' without digestChosen is the old default → smart).
+            ['u1', { email: 'u1@x.io', preferences: { notifications: { digestFrequency: 'daily', digestChosen: true } } }],
             ['u2', { email: 'u2@x.io', preferences: { notifications: { digestFrequency: 'weekly' } } }],
             ['u3', { email: 'u3@x.io', preferences: { notifications: { emailDigest: false } } }],
         ]));
@@ -273,6 +274,58 @@ describe('digest emails', () => {
         const early = new Date('2026-10-20T03:00:00Z');
         expect((await jobs.sendDigestEmails(null, { now: early })).emails).toBe(0);
         expect(Notification.aggregate).not.toHaveBeenCalled();
+    });
+
+    describe('smart (the default)', () => {
+        const OLD = new Date('2026-10-20T01:00:00Z'); // 8h before 09:00
+        const RECENT = new Date('2026-10-20T08:00:00Z'); // 1h before
+        const tuesday = new Date('2026-10-20T09:00:00Z');
+        const smartUser = (extra = {}) => new Map([['u1', { email: 'u1@x.io', preferences: {}, ...extra }]]);
+
+        test('weekday: an email when unread mentions waited 6h+ and the person was not active today', async () => {
+            Notification.aggregate.mockResolvedValue([
+                { _id: { recipient: 'u1', workspaceId: WS, type: 'mention' }, week: 3, day: 3, unread: 2, oldestUnread: OLD },
+            ]);
+            identity.users.findManyByIds.mockResolvedValue(smartUser({ lastActivityAt: new Date('2026-10-19T20:00:00Z') }));
+            const out = await jobs.sendDigestEmails(null, { now: tuesday });
+            expect(out.emails).toBe(1);
+            expect(claim).toHaveBeenCalledWith('digest:s:u1:2026-10-20');
+            const mail = email.sendEmailNotification.mock.calls[0][0];
+            expect(mail.subject).toBe('Your daily Oruinwan digest');
+            expect(mail.text).toContain('Mentions: 2'); // what is still unread
+        });
+
+        test('weekday: nothing when the person was active today, or the unread items are recent', async () => {
+            Notification.aggregate.mockResolvedValue([
+                { _id: { recipient: 'u1', workspaceId: WS, type: 'dm' }, week: 3, day: 3, unread: 2, oldestUnread: OLD },
+            ]);
+            identity.users.findManyByIds.mockResolvedValue(smartUser({ lastActivityAt: new Date('2026-10-20T07:30:00Z') }));
+            expect((await jobs.sendDigestEmails(null, { now: tuesday })).emails).toBe(0);
+
+            Notification.aggregate.mockResolvedValue([
+                { _id: { recipient: 'u1', workspaceId: WS, type: 'dm' }, week: 3, day: 3, unread: 2, oldestUnread: RECENT },
+            ]);
+            identity.users.findManyByIds.mockResolvedValue(smartUser());
+            expect((await jobs.sendDigestEmails(null, { now: tuesday })).emails).toBe(0);
+        });
+
+        test('Monday: a weekly roundup when nothing is waiting', async () => {
+            Notification.aggregate.mockResolvedValue([
+                { _id: { recipient: 'u1', workspaceId: WS, type: 'task_status' }, week: 4, day: 0, unread: 0, oldestUnread: null },
+            ]);
+            identity.users.findManyByIds.mockResolvedValue(smartUser());
+            const out = await jobs.sendDigestEmails(null, { now: NOW });
+            expect(out.emails).toBe(1);
+            expect(email.sendEmailNotification.mock.calls[0][0].subject).toBe('Your weekly Oruinwan digest');
+        });
+
+        test('smartCadence', () => {
+            const g = [{ _id: { type: 'mention' }, unread: 1, oldestUnread: OLD }];
+            expect(jobs.smartCadence(g, {}, tuesday, false)).toBe('daily');
+            expect(jobs.smartCadence(g, { lastActivityAt: RECENT }, tuesday, false)).toBe(null);
+            expect(jobs.smartCadence([], {}, tuesday, true)).toBe('weekly');
+            expect(jobs.smartCadence([{ _id: { type: 'reaction' }, unread: 5, oldestUnread: OLD }], {}, tuesday, false)).toBe(null);
+        });
     });
 });
 
