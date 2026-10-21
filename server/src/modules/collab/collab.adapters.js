@@ -1,0 +1,99 @@
+'use strict';
+
+/**
+ * Per document type: who may open it, where its plain content lives, and how a
+ * saved Y.Doc is written back to the owning record.
+ *
+ *   authorize(docId, userId) -> { workspaceId, canWrite }   (throws HttpError 400/403/404)
+ *   loadContent(docId)       -> value handed to schema.seed when no Yjs state exists yet
+ *   persist(docId, value, { userId }) -> writes the plain content to the owning record
+ *
+ * Access rules are the same as the REST APIs:
+ *   note        view: owner / sharedWith / isPublic (active workspace members); edit: owner, or sharedWith when allowEditing
+ *   knowledge   any active member of the page's workspace reads and edits
+ *   whiteboard  any active member of the meeting's workspace reads and draws (docId = meetingId)
+ */
+
+const { HttpError, isValidId } = require('../../shared/utils/workspaceAccess');
+
+const KNOWLEDGE_VERSION_EVERY_MS = 10 * 60 * 1000;
+
+const note = {
+    async authorize(docId, userId) {
+        if (!isValidId(docId)) throw new HttpError(400, 'Invalid note id');
+        const Note = require('../../../models/Note');
+        const policy = require('../../features/notes/notes.policy');
+        const doc = await Note.findById(docId).select('owner workspace isPublic sharedWith allowEditing').lean();
+        if (!doc) throw new HttpError(404, 'Note not found');
+        await policy.assertNoteAccess(doc, userId, 'view');
+        return { workspaceId: String(doc.workspace), canWrite: policy.canEdit(doc, userId, true) };
+    },
+    async loadContent(docId) {
+        const Note = require('../../../models/Note');
+        const doc = await Note.findById(docId).select('content').lean();
+        return doc ? doc.content || '' : '';
+    },
+    async persist(docId, value) {
+        const Note = require('../../../models/Note');
+        const { sanitizeNoteContent } = require('../../features/notes/notes.sanitize');
+        await Note.updateOne({ _id: docId }, { $set: { content: sanitizeNoteContent(value || '') } });
+    },
+};
+
+const knowledge = {
+    async authorize(docId, userId) {
+        if (!isValidId(docId)) throw new HttpError(400, 'Invalid page id');
+        const KnowledgePage = require('../../features/knowledge/KnowledgePage');
+        const { getWorkspaceMembership } = require('../../shared/utils/workspaceAccess');
+        const page = await KnowledgePage.findById(docId).select('workspaceId isDeleted').lean();
+        if (!page || page.isDeleted) throw new HttpError(404, 'Page not found');
+        const access = await getWorkspaceMembership(String(page.workspaceId), userId);
+        // Same as REST: pages outside the caller's workspaces answer "not found".
+        if (!access || !access.member) throw new HttpError(404, 'Page not found');
+        return { workspaceId: String(page.workspaceId), canWrite: true };
+    },
+    async loadContent(docId) {
+        const KnowledgePage = require('../../features/knowledge/KnowledgePage');
+        const page = await KnowledgePage.findById(docId).select('content').lean();
+        return page ? page.content || '' : '';
+    },
+    /** Writes content; snapshots the previous content as a version at most every 10 minutes. */
+    async persist(docId, value, { userId, now = Date.now() } = {}) {
+        const KnowledgePage = require('../../features/knowledge/KnowledgePage');
+        const page = await KnowledgePage.findById(docId);
+        if (!page || page.isDeleted) return;
+        const next = typeof value === 'string' ? value : '';
+        if (page.content === next) return;
+        const last = page.versions && page.versions[0];
+        if (!last || now - new Date(last.savedAt).getTime() >= KNOWLEDGE_VERSION_EVERY_MS) {
+            page.versions = [{ content: page.content, savedBy: userId || page.createdBy, savedAt: new Date(now) }, ...(page.versions || [])].slice(0, 50);
+        }
+        page.content = next;
+        await page.save();
+    },
+};
+
+const whiteboard = {
+    async authorize(docId, userId) {
+        const { loadMeetingForUser } = require('../../features/meetings/meetingAccess');
+        const { meeting } = await loadMeetingForUser(docId, userId);
+        return { workspaceId: String(meeting.workspaceId), canWrite: true };
+    },
+    async loadContent(docId) {
+        const Whiteboard = require('../../features/collaboration/whiteboard.model');
+        const wb = await Whiteboard.findOne({ meetingId: docId }).select('strokes').lean();
+        return wb ? wb.strokes || [] : [];
+    },
+    async persist(docId, value, { workspaceId } = {}) {
+        const Whiteboard = require('../../features/collaboration/whiteboard.model');
+        await Whiteboard.findOneAndUpdate(
+            { meetingId: docId },
+            { $set: { strokes: Array.isArray(value) ? value : [] }, $setOnInsert: { meetingId: docId, workspaceId } },
+            { upsert: true }
+        );
+    },
+};
+
+const ADAPTERS = { note, knowledge, whiteboard };
+
+module.exports = { ADAPTERS, KNOWLEDGE_VERSION_EVERY_MS };

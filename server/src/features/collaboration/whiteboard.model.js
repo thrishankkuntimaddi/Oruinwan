@@ -3,6 +3,8 @@
 const mongoose = require('mongoose');
 
 const strokeSchema = new mongoose.Schema({
+    // Stable id so live (Yjs) boards can address a stroke; optional for legacy boards.
+    id: { type: String, default: null },
     tool: { type: String, default: 'pen' },       
     color: { type: String, default: '#FFFFFF' },
     lineWidth: { type: Number, default: 3 },
