@@ -8,6 +8,8 @@ const CREATOR = { type: 'user', fields: ['username', 'profilePicture', 'profile'
 const aiSummarizer = require('../ai/ai.summarizer.service');
 const mongoose = require('mongoose');
 
+const collab = () => require('../../modules/collab/collab.service');
+
 const notFound = () => Object.assign(new Error('Page not found'), { statusCode: 404 });
 
 /** Only active members of a workspace read or change its pages. */
@@ -105,6 +107,8 @@ async function updatePage(userId, pageId, updates) {
     });
 
     await page.save();
+    // Keep an open live editor (and its stored Yjs state) in step with this write.
+    if (updates.content !== undefined) await collab().contentChanged('knowledge', page._id, page.content, { workspaceId: String(page.workspaceId) });
     return { page };
 }
 
@@ -112,6 +116,7 @@ async function deletePage(userId, pageId) {
     const page = await loadPage(pageId, userId);
     page.isDeleted = true;
     await page.save();
+    await collab().documentDeleted('knowledge', page._id);
     
     await PageLink.deleteMany({ $or: [{ fromPageId: pageId }, { toPageId: pageId }] });
     return { message: 'Page deleted' };
@@ -214,17 +219,105 @@ async function getCategories(workspaceId, userId) {
     return { categories };
 }
 
+const badRequest = (message) => Object.assign(new Error(message), { statusCode: 400 });
+const COLOR_RE = /^(#[0-9a-f]{3,8}|[a-z][a-z0-9-]{0,40})$/i;
+
+/** Validated category fields from client input; `partial` skips missing fields. */
+function categoryFields(data = {}, { partial = false } = {}) {
+    const out = {};
+    if (!partial || data.name !== undefined) {
+        if (typeof data.name !== 'string' || !data.name.trim()) throw badRequest('Category name is required');
+        if (data.name.trim().length > 80) throw badRequest('Category name must be at most 80 characters');
+        out.name = data.name.trim();
+    }
+    if (data.color !== undefined && data.color !== null) {
+        // A hex colour or a theme token name.
+        if (typeof data.color !== 'string' || !COLOR_RE.test(data.color)) throw badRequest('Invalid color');
+        out.color = data.color;
+    }
+    if (data.icon !== undefined && data.icon !== null) {
+        if (typeof data.icon !== 'string' || data.icon.length > 16) throw badRequest('Invalid icon');
+        out.icon = data.icon;
+    }
+    return out;
+}
+
 async function createCategory(userId, workspaceId, data) {
     await assertMember(workspaceId, userId);
+    const fields = categoryFields(data);
+    const duplicate = await KnowledgeCategory.findOne({ workspaceId, name: fields.name }).select('_id').lean();
+    if (duplicate) throw Object.assign(new Error('A category with this name already exists'), { statusCode: 409 });
     const count = await KnowledgeCategory.countDocuments({ workspaceId });
     const category = await KnowledgeCategory.create({
         workspaceId,
-        name: data.name,
-        color: data.color || '#6366f1',
-        icon: data.icon || '📂',
+        name: fields.name,
+        color: fields.color || '#c8a274',
+        icon: fields.icon || '📂',
         order: count,
     });
     return { category };
+}
+
+/** A category the user may change (member of its workspace); elsewhere it is "not found". */
+async function loadCategory(categoryId, userId) {
+    const missing = () => Object.assign(new Error('Category not found'), { statusCode: 404 });
+    if (!mongoose.isValidObjectId(String(categoryId))) throw missing();
+    const category = await KnowledgeCategory.findById(categoryId);
+    if (!category) throw missing();
+    try {
+        await assertMember(category.workspaceId, userId);
+    } catch (err) {
+        if (err.statusCode === 403) throw missing();
+        throw err;
+    }
+    return category;
+}
+
+async function updateCategory(userId, categoryId, data) {
+    const category = await loadCategory(categoryId, userId);
+    const fields = categoryFields(data, { partial: true });
+    if (fields.name && fields.name !== category.name) {
+        const duplicate = await KnowledgeCategory.findOne({ workspaceId: category.workspaceId, name: fields.name, _id: { $ne: category._id } }).select('_id').lean();
+        if (duplicate) throw Object.assign(new Error('A category with this name already exists'), { statusCode: 409 });
+    }
+    Object.assign(category, fields);
+    await category.save();
+    return { category };
+}
+
+/** Delete a category; its pages stay and become uncategorised. */
+async function deleteCategory(userId, categoryId) {
+    const category = await loadCategory(categoryId, userId);
+    const res = await KnowledgePage.updateMany(
+        { workspaceId: category.workspaceId, categoryId: category._id },
+        { $set: { categoryId: null } }
+    );
+    await KnowledgeCategory.deleteOne({ _id: category._id });
+    return {
+        message: 'Category deleted',
+        categoryId: String(category._id),
+        workspaceId: String(category.workspaceId),
+        pagesUncategorised: (res && res.modifiedCount) || 0,
+    };
+}
+
+/** Set the order of a workspace's categories: `ids` lists category ids first to last. */
+async function reorderCategories(userId, workspaceId, ids) {
+    await assertMember(workspaceId, userId);
+    if (!Array.isArray(ids) || !ids.length || ids.some(id => !mongoose.isValidObjectId(String(id)))) {
+        throw badRequest('order must be a non-empty array of category ids');
+    }
+    const unique = [...new Set(ids.map(String))];
+    const existing = await KnowledgeCategory.find({ workspaceId }).sort({ order: 1, name: 1 }).select('_id').lean();
+    const known = new Set(existing.map(c => String(c._id)));
+    if (unique.some(id => !known.has(id))) throw badRequest('order contains a category from another workspace');
+    // Categories left out keep their relative order after the listed ones.
+    const rest = existing.map(c => String(c._id)).filter(id => !unique.includes(id));
+    const ordered = [...unique, ...rest];
+    await KnowledgeCategory.bulkWrite(ordered.map((id, i) => ({
+        updateOne: { filter: { _id: id, workspaceId }, update: { $set: { order: i } } },
+    })));
+    return getCategories(workspaceId, userId);
 }
 
 module.exports = {
@@ -232,5 +325,5 @@ module.exports = {
     linkPages, unlinkPages, getBacklinks, getGraph,
     generateSummary,
     searchKnowledge,
-    getCategories, createCategory,
+    getCategories, createCategory, updateCategory, deleteCategory, reorderCategories,
 };

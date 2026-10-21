@@ -1,7 +1,7 @@
 const knowledgeService = require('./knowledge.service');
 
 function handleError(res, err) {
-    const status = err.statusCode || 500;
+    const status = err.statusCode || (err.name === 'CastError' || err.name === 'ValidationError' ? 400 : 500);
     return res.status(status).json({ message: err.message || 'Internal server error' });
 }
 
@@ -108,8 +108,35 @@ async function createCategory(req, res) {
         const { workspaceId } = req.body;
         if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
         const result = await knowledgeService.createCategory(req.user.sub, workspaceId, req.body);
+        if (req.io) req.io.to(`workspace:${workspaceId}`).emit('knowledge:category_created', { category: result.category });
         return res.status(201).json(result);
     } catch (err) { return handleError(res, err); }
 }
 
-module.exports = { getPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, getCategories, createCategory };
+async function updateCategory(req, res) {
+    try {
+        const result = await knowledgeService.updateCategory(req.user.sub, req.params.id, req.body || {});
+        if (req.io) req.io.to(`workspace:${result.category.workspaceId}`).emit('knowledge:category_updated', { category: result.category });
+        return res.json(result);
+    } catch (err) { return handleError(res, err); }
+}
+
+async function deleteCategory(req, res) {
+    try {
+        const result = await knowledgeService.deleteCategory(req.user.sub, req.params.id);
+        if (req.io) req.io.to(`workspace:${result.workspaceId}`).emit('knowledge:category_deleted', { categoryId: result.categoryId });
+        return res.json(result);
+    } catch (err) { return handleError(res, err); }
+}
+
+async function reorderCategories(req, res) {
+    try {
+        const { workspaceId, order } = req.body || {};
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+        const result = await knowledgeService.reorderCategories(req.user.sub, workspaceId, order);
+        if (req.io) req.io.to(`workspace:${workspaceId}`).emit('knowledge:categories_reordered', { categories: result.categories });
+        return res.json(result);
+    } catch (err) { return handleError(res, err); }
+}
+
+module.exports = { updateCategory, deleteCategory, reorderCategories, getPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, getCategories, createCategory };

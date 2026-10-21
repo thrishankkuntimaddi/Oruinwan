@@ -7,6 +7,7 @@ const fileCommentSchema = new mongoose.Schema({
     content: { type: String, required: true, trim: true },
     parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'FileComment', default: null },
     isDeleted: { type: Boolean, default: false },
+    editedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 fileCommentSchema.index({ fileId: 1, createdAt: 1 });
