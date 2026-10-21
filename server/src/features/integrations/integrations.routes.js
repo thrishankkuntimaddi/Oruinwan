@@ -7,9 +7,11 @@ const aiAdmin = requireAIAccess({ adminOnly: true });
 const Webhook = require('./webhook.model');
 const { requireFlag } = require('../../shared/featureFlags');
 
-// Third-party provider connections stay behind the "integrations" flag until the
-// provider handlers are real. Outgoing webhooks and AI providers are live features.
+// Third-party provider connections are behind the "integrations" release flag,
+// which is on by default (FEATURES_DISABLED=integrations turns it off).
+// Outgoing webhooks and AI providers are always available.
 const integrationsFlag = requireFlag('integrations');
+const connectorService = require('./integration.connectors.service');
 
 const mongoose = require('mongoose');
 const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
@@ -55,7 +57,7 @@ const webhookLimiter = rateLimit({
   handler: (_req, res) => res.status(429).json({ message: 'Too many webhook deliveries' }),
 });
 
-function runAutomations(req, type, workspaceId, payload) {
+function runAutomations(req, type, workspaceId, payload, automationEvent = null) {
   try {
     const automationService = require('../automations/automation.service');
     const io = req.app.get('io');
@@ -69,7 +71,7 @@ function runAutomations(req, type, workspaceId, payload) {
         event: payload
       }, io);
     }
-    automationService.processEvent('webhook.received', { workspaceId, webhookType: type, event: payload }, io);
+    automationService.processEvent('webhook.received', { workspaceId, webhookType: type, event: automationEvent || payload }, io);
   } catch (autoErr) {
     logger.error('[IntegrationWebhook] Automation processEvent failed:', autoErr.message);
   }
@@ -82,9 +84,13 @@ router.post('/webhook/:type', integrationsFlag, webhookLimiter, async (req, res)
     if (!workspaceId || !mongoose.Types.ObjectId.isValid(String(workspaceId))) {
       return res.status(401).json({ message: 'Unknown workspace' });
     }
+    const isConnector = connectorService.isConnectorType(type);
+    if (!isConnector && !['github', 'jira'].includes(type)) return res.status(404).json({ message: `No webhooks for ${type}` });
     const integration = await Integration.findOne({ workspaceId, type }).lean();
-    const check = verifyIncoming(type, req, integration);
-    if (!check.ok) return res.status(check.status).json({ message: check.message });
+    if (!isConnector) {
+      const check = verifyIncoming(type, req, integration);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+    }
 
     let payload = req.body || {};
     // GitHub "application/x-www-form-urlencoded" deliveries wrap the JSON in `payload`.
@@ -92,25 +98,60 @@ router.post('/webhook/:type', integrationsFlag, webhookLimiter, async (req, res)
       try { payload = JSON.parse(payload.payload); } catch { return res.status(400).json({ message: 'Invalid payload' }); }
     }
 
-    if (payload?.type === 'url_verification') return res.json({ challenge: payload.challenge });
-
     const io = req.app.get('io');
     let result;
+    let automationEvent = null;
     if (type === 'github') {
       const event = req.get('x-github-event') || '';
       result = await require('./github/github.events').processGithubEvent({ integration, event, payload, io });
     } else if (type === 'jira') {
       result = await require('./jira/jira.events').processJiraEvent({ integration, payload, io });
     } else {
-      result = await integrationService.handleWebhook({ type, payload, headers: req.headers, workspaceId });
+      // Connectors check their own signatures (Slack, Teams, Linear, Bitbucket, …) first.
+      if (type === 'slack' && payload?.type === 'url_verification') {
+        await connectorService.processWebhook({ type, integration, req, payload: {}, io });
+        return res.json({ challenge: payload.challenge });
+      }
+      const r = await connectorService.processWebhook({ type, integration, req, payload, io });
+      result = r.body;
+      automationEvent = r.automation;
     }
 
     Integration.updateOne({ _id: integration._id }, { lastEventAt: new Date() }).catch(() => {});
-    runAutomations(req, type, workspaceId, payload);
+    runAutomations(req, type, workspaceId, payload, automationEvent);
     res.json(result);
   } catch (err) {
-    logger.error({ err: err.message, type }, '[IntegrationWebhook] processing failed');
+    if (err.statusCode && err.statusCode < 500) logger.warn({ err: err.message, type }, '[IntegrationWebhook] rejected');
+    else logger.error({ err: err.message, type }, '[IntegrationWebhook] processing failed');
     res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Webhook processing failed' });
+  }
+});
+
+// ── Generic incoming webhooks (Slack-compatible {text}); the secret is in the URL ──
+
+const incomingHooks = require('./incomingWebhook.service');
+const hookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.INCOMING_HOOK_PER_MIN || 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `hook:${req.params.id}`,
+  validate: false,
+  handler: (_req, res) => res.status(429).type('text/plain').send('rate_limited'),
+});
+
+router.post('/hooks/:id/:token', integrationsFlag, hookLimiter, async (req, res) => {
+  try {
+    let body = req.body || {};
+    if (typeof body.payload === 'string') {
+      try { body = JSON.parse(body.payload); } catch { return res.status(400).type('text/plain').send('invalid_payload'); }
+    }
+    await incomingHooks.deliver({ id: req.params.id, token: req.params.token, body, io: req.app.get('io') });
+    res.type('text/plain').send('ok');
+  } catch (err) {
+    const status = err.statusCode || 500;
+    if (status >= 500) logger.error({ err: err.message }, '[IncomingHook] delivery failed');
+    res.status(status).type('text/plain').send(status >= 500 ? 'internal_error' : err.message);
   }
 });
 
@@ -142,16 +183,13 @@ router.post('/connect', integrationsFlag, ...admin, async (req, res) => {
       return res.status(201).json({ integration: result, ...result });
     }
 
-    const integration = await integrationService.connectIntegration({
-      workspaceId,
-      type,
-      config: config || {},
-      label,
-      userId: req.user.sub
-    });
-    res.status(201).json({ integration });
+    if (connectorService.isConnectorType(type)) {
+      const result = await connectorService.saveConfig({ workspaceId, type, patch: config || {}, label, userId: req.user.sub, req });
+      return res.status(201).json({ integration: result, ...result });
+    }
+    res.status(404).json({ message: `Unknown integration type: ${type}` });
   } catch (err) {
-    res.status(err.statusCode || 500).json({ message: err.message });
+    res.status(err.statusCode || 500).json({ message: err.message, ...(err.code && { code: err.code }) });
   }
 });
 
@@ -187,14 +225,22 @@ async function actorOf(req) {
 }
 
 function devType(req, res, next) {
-  if (!isDevType(req.params.type)) return res.status(404).json({ message: `Unknown integration type: ${req.params.type}` });
+  if (!isDevType(req.params.type) && !connectorService.isConnectorType(req.params.type)) return res.status(404).json({ message: `Unknown integration type: ${req.params.type}` });
   next();
 }
+
+/** GitHub / Jira / Zoom have their own service; everything else is a connector. */
+const serviceFor = (type) => (isDevType(type) ? devService : connectorService);
+
+// What can be connected and how (forms, setup steps, routes, bridges, actions).
+router.get('/catalog', integrationsFlag, ...member, (req, res) => {
+  res.json({ connectors: connectorService.catalog() });
+});
 
 // Members get a redacted view; admins also see the Jira webhook URL (token masked).
 router.get('/:type/config', integrationsFlag, devType, ...member, async (req, res) => {
   try {
-    const view = await devService.getConfig({ workspaceId: req.query.workspaceId, type: req.params.type, req, isAdmin: isAdminReq(req) });
+    const view = await serviceFor(req.params.type).getConfig({ workspaceId: req.query.workspaceId, type: req.params.type, req, isAdmin: isAdminReq(req) });
     // Whether the caller connected their own account (GitHub, Jira): actions they start then work even without a workspace connection.
     if (['github', 'jira'].includes(req.params.type)) {
       view.connectedForYou = Boolean(await require('../connections/connections.service').personalFor(req.query.workspaceId, req.user.sub, req.params.type, { ws: req.workspace }));
@@ -206,20 +252,20 @@ router.get('/:type/config', integrationsFlag, devType, ...member, async (req, re
 router.put('/:type/config', integrationsFlag, devType, ...admin, async (req, res) => {
   try {
     const { workspaceId, label, ...patch } = req.body || {};
-    res.json(await devService.saveConfig({ workspaceId, type: req.params.type, patch, label, userId: req.user.sub, req }));
+    res.json(await serviceFor(req.params.type).saveConfig({ workspaceId, type: req.params.type, patch, label, userId: req.user.sub, req }));
   } catch (err) { sendError(res, err); }
 });
 
 router.post('/:type/rotate-secret', integrationsFlag, devType, ...admin, async (req, res) => {
   try {
-    res.json(await devService.rotateSecret({ workspaceId: req.body.workspaceId, type: req.params.type, req }));
+    res.json(await serviceFor(req.params.type).rotateSecret({ workspaceId: req.body.workspaceId, type: req.params.type, req }));
   } catch (err) { sendError(res, err); }
 });
 
 router.post('/:type/test', integrationsFlag, devType, ...admin, async (req, res) => {
   try {
     const { workspaceId, ...patch } = req.body || {};
-    res.json(await devService.testConnection({ workspaceId, type: req.params.type, patch }));
+    res.json(await serviceFor(req.params.type).testConnection({ workspaceId, type: req.params.type, patch, userId: req.user.sub }));
   } catch (err) { sendError(res, err); }
 });
 
@@ -276,6 +322,90 @@ router.post('/zoom/meeting', integrationsFlag, ...member, async (req, res) => {
   try {
     const { workspaceId, topic, start, durationMinutes } = req.body || {};
     res.status(201).json(await devService.createZoomMeeting({ workspaceId, topic, start, durationMinutes }));
+  } catch (err) { sendError(res, err); }
+});
+
+// ── Connector actions (list / search / create), attachments and imports ─────
+
+function connectorType(req, res, next) {
+  if (!connectorService.isConnectorType(req.params.type)) return res.status(404).json({ message: `Unknown integration type: ${req.params.type}` });
+  next();
+}
+
+async function runConnectorAction(req, res, input) {
+  try {
+    res.json(await connectorService.runAction({
+      workspaceId: input.workspaceId, type: req.params.type, action: req.params.action, input,
+      user: await actorOf(req), isAdmin: isAdminReq(req), io: req.app.get('io'),
+    }));
+  } catch (err) { sendError(res, err); }
+}
+
+router.get('/:type/actions/:action', integrationsFlag, connectorType, ...member, (req, res) => runConnectorAction(req, res, { ...req.query }));
+router.post('/:type/actions/:action', integrationsFlag, connectorType, ...member, (req, res) => runConnectorAction(req, res, { ...(req.body || {}) }));
+
+router.post('/:type/attach', integrationsFlag, connectorType, ...member, async (req, res) => {
+  try {
+    const { workspaceId, itemId, taskId } = req.body || {};
+    res.json(await connectorService.attachToTask({ workspaceId, type: req.params.type, itemId, taskId, user: await actorOf(req), io: req.app.get('io') }));
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/:type/import', integrationsFlag, connectorType, ...member, async (req, res) => {
+  try {
+    const { workspaceId, id, parentId, categoryId } = req.body || {};
+    res.status(201).json(await connectorService.importPage({ workspaceId, type: req.params.type, id, parentId, categoryId, user: await actorOf(req) }));
+  } catch (err) { sendError(res, err); }
+});
+
+// ── Slack / Teams bridge ─────────────────────────────────────────────────────
+
+router.get('/bridge/channels', integrationsFlag, ...member, async (req, res) => {
+  try {
+    res.json({ channels: await connectorService.bridgedChannels(req.query.workspaceId) });
+  } catch (err) { sendError(res, err); }
+});
+
+// The sender's client relays the plaintext of a message it just sent (the server cannot decrypt it).
+router.post('/bridge/relay', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, channelId, messageId, text } = req.body || {};
+    res.json(await connectorService.relayMessage({ workspaceId, channelId, messageId, text, user: await actorOf(req) }));
+  } catch (err) { sendError(res, err); }
+});
+
+// ── Generic incoming webhooks (management, admins) ──────────────────────────
+
+router.get('/incoming-webhooks', integrationsFlag, ...admin, async (req, res) => {
+  try {
+    res.json({ webhooks: await incomingHooks.list(req.query.workspaceId, { req, isAdmin: true }) });
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/incoming-webhooks', integrationsFlag, ...admin, async (req, res) => {
+  try {
+    const { workspaceId, channelId, name } = req.body || {};
+    res.status(201).json({ webhook: await incomingHooks.create({ workspaceId, channelId, name, userId: req.user.sub, req }) });
+  } catch (err) { sendError(res, err); }
+});
+
+router.patch('/incoming-webhooks/:hookId', integrationsFlag, ...admin, async (req, res) => {
+  try {
+    const { workspaceId, ...patch } = req.body || {};
+    res.json({ webhook: await incomingHooks.update({ id: req.params.hookId, workspaceId, patch, req }) });
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/incoming-webhooks/:hookId/rotate', integrationsFlag, ...admin, async (req, res) => {
+  try {
+    res.json({ webhook: await incomingHooks.rotate({ id: req.params.hookId, workspaceId: req.body?.workspaceId, req }) });
+  } catch (err) { sendError(res, err); }
+});
+
+router.delete('/incoming-webhooks/:hookId', integrationsFlag, ...admin, async (req, res) => {
+  try {
+    await incomingHooks.remove({ id: req.params.hookId, workspaceId: req.query.workspaceId || req.body?.workspaceId });
+    res.json({ message: 'Incoming webhook deleted' });
   } catch (err) { sendError(res, err); }
 });
 

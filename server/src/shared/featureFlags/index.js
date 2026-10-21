@@ -7,6 +7,9 @@
  * off unless it is listed in FEATURES_ENABLED (comma separated, or "all"), e.g.
  *   FEATURES_ENABLED=billing,sso
  *
+ * Launched features are on by default (DEFAULT_ON) and can still be switched
+ * off with FEATURES_DISABLED (comma separated), e.g. FEATURES_DISABLED=integrations.
+ *
  * The client reads the resolved map from GET /api/flags; server routes guard
  * themselves with requireFlag(name) so a hidden feature cannot be reached by URL.
  */
@@ -20,6 +23,9 @@ const FLAGS = Object.freeze({
 
 const FLAG_NAMES = Object.freeze(Object.keys(FLAGS));
 
+// Launched: GitHub, Jira, Zoom and the token-based connectors are real (docs/integrations.md).
+const DEFAULT_ON = Object.freeze(['integrations']);
+
 function parseEnabled(raw) {
   const list = String(raw || '')
     .split(',')
@@ -32,7 +38,9 @@ function parseEnabled(raw) {
 /** Resolve every flag to a boolean. Reads the env on each call so tests and restarts see changes. */
 function getFlags(env = process.env) {
   const enabled = parseEnabled(env.FEATURES_ENABLED);
-  return Object.fromEntries(FLAG_NAMES.map((name) => [name, enabled.has(name)]));
+  const disabled = parseEnabled(env.FEATURES_DISABLED);
+  DEFAULT_ON.forEach((name) => enabled.add(name));
+  return Object.fromEntries(FLAG_NAMES.map((name) => [name, enabled.has(name) && !disabled.has(name)]));
 }
 
 function isEnabled(name, env = process.env) {
@@ -57,4 +65,4 @@ function requireFlag(name) {
   };
 }
 
-module.exports = { FLAGS, FLAG_NAMES, getFlags, isEnabled, requireFlag };
+module.exports = { FLAGS, FLAG_NAMES, DEFAULT_ON, getFlags, isEnabled, requireFlag };

@@ -2,7 +2,7 @@
 
 const express = require('express');
 const http = require('http');
-const { FLAG_NAMES, getFlags, isEnabled, requireFlag } = require('../index');
+const { FLAG_NAMES, DEFAULT_ON, getFlags, isEnabled, requireFlag } = require('../index');
 const flagsRouter = require('../routes');
 
 function request(app, path) {
@@ -28,17 +28,23 @@ describe('feature flags', () => {
     else process.env.FEATURES_ENABLED = original;
   });
 
-  test('every flag is off by default', () => {
+  test('every flag is off by default except launched ones (integrations)', () => {
     const flags = getFlags({});
     expect(Object.keys(flags).sort()).toEqual([...FLAG_NAMES].sort());
-    expect(Object.values(flags).every((v) => v === false)).toBe(true);
+    expect(DEFAULT_ON).toEqual(['integrations']);
+    for (const name of FLAG_NAMES) expect(flags[name]).toBe(DEFAULT_ON.includes(name));
+  });
+
+  test('FEATURES_DISABLED turns off a default-on flag', () => {
+    expect(getFlags({ FEATURES_DISABLED: 'Integrations' }).integrations).toBe(false);
+    expect(getFlags({ FEATURES_ENABLED: 'all', FEATURES_DISABLED: 'billing' }).billing).toBe(false);
   });
 
   test('FEATURES_ENABLED turns on listed flags, ignoring case, spaces and unknown names', () => {
     const flags = getFlags({ FEATURES_ENABLED: ' Billing , nope,sso ' });
     expect(flags.billing).toBe(true);
     expect(flags.sso).toBe(true);
-    expect(flags.integrations).toBe(false);
+    expect(flags.community).toBe(false);
     expect(flags).not.toHaveProperty('nope');
   });
 

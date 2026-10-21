@@ -27,6 +27,15 @@ const BOTS = {
   github: { username: 'GitHub', email: 'github@integrations.oruinwan.internal', avatar: '/integrations/github.svg' },
   gitlab: { username: 'GitLab', email: 'gitlab@integrations.oruinwan.internal', avatar: '/integrations/gitlab.svg' },
   jira: { username: 'Jira', email: 'jira@integrations.oruinwan.internal', avatar: '/integrations/jira.svg' },
+  bitbucket: { username: 'Bitbucket', email: 'bitbucket@integrations.oruinwan.internal', avatar: '/integrations/bitbucket.svg' },
+  linear: { username: 'Linear', email: 'linear@integrations.oruinwan.internal', avatar: '/integrations/linear.svg' },
+  cicd: { username: 'CI/CD', email: 'cicd@integrations.oruinwan.internal', avatar: '/integrations/cicd.svg' },
+  slack: { username: 'Slack', email: 'slack@integrations.oruinwan.internal', avatar: '/integrations/slack.svg' },
+  teams: { username: 'Microsoft Teams', email: 'teams@integrations.oruinwan.internal', avatar: '/integrations/teams.svg' },
+  zapier: { username: 'Zapier', email: 'zapier@integrations.oruinwan.internal', avatar: '/integrations/zapier.svg' },
+  make: { username: 'Make', email: 'make@integrations.oruinwan.internal', avatar: '/integrations/make.svg' },
+  n8n: { username: 'n8n', email: 'n8n@integrations.oruinwan.internal', avatar: '/integrations/n8n.svg' },
+  webhook: { username: 'Incoming webhook', email: 'webhook@integrations.oruinwan.internal', avatar: '/integrations/webhook.svg' },
 };
 
 const botPromises = new Map();
