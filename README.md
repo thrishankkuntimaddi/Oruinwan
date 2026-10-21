@@ -389,6 +389,8 @@ Backend code follows the feature-module layout in `server/src/features` and `ser
 
 ## Documentation
 
+- [docs/PRODUCT_MAP.md](docs/PRODUCT_MAP.md): how every feature links, what runs underneath, and the ranked gaps
+- [docs/TEAM_WALKTHROUGH.md](docs/TEAM_WALKTHROUGH.md): a 5-person team uses everything for a week, GitHub and Jira included
 - [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md): running the whole stack locally
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SCALING.md](docs/SCALING.md): how it fits together and how to scale it
 - [docs/UPDATES.md](docs/UPDATES.md): in-app updates and update signing
