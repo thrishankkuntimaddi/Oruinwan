@@ -34,6 +34,9 @@ import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 import { noteTypeOf } from "./notesComponents/noteTypes";
 import { formatDayHeading, formatTime } from "../../utils/userDateFormat";
 import { getUserPreferences } from "../../hooks/useUserPreferences";
+import useCollabDoc from "../../lib/collab/useCollabDoc";
+import CollabPresence, { PeerMarks } from "../../lib/collab/CollabPresence";
+import { readBlocks, applyBlocksToY, LOCAL_ORIGIN } from "../../lib/collab/noteBlocks";
 
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
@@ -134,7 +137,15 @@ const Notes = () => {
     }, [searchParams, id, workspaceId, navigate]);
 
     const note = (allNotes || []).find(n => n.id === id);
-    const { isOwner, canEdit } = getNoteAccess(note);
+    const { isOwner, canEdit: canEditRest } = getNoteAccess(note);
+
+    // Live co-editing (docs/api/collab.md): once synced, the blocks live in the shared
+    // Y.Doc and the server saves them; REST keeps title, tags and sharing.
+    const collab = useCollabDoc('note', id, { enabled: !!note });
+    const live = collab.live;
+    const liveRef = useRef(live);
+    liveRef.current = live;
+    const canEdit = canEditRest && !(live && collab.readOnly);
 
     // Deep link to a note that is not in the list (e.g. opened from a notification).
     const [fetchState, setFetchState] = useState({});
@@ -196,7 +207,34 @@ const Notes = () => {
             setTags(note.tags || []);
         }
     }, [note, canEdit]);
-    const viewBlocks = useMemo(() => (note && !canEdit ? parseBlocks(note.content) : null), [note, canEdit]);
+    const viewBlocks = useMemo(() => {
+        if (!note || canEdit) return null;
+        return live ? blocks : parseBlocks(note.content);
+    }, [note, canEdit, live, blocks]);
+
+    // Going live: send any REST edit still queued, then show (and follow) the shared blocks.
+    const collabDoc = collab.doc;
+    useEffect(() => {
+        if (!live || !collabDoc || !id) return undefined;
+        flushNote(id);
+        const yBlocks = collabDoc.getArray('blocks');
+        const pull = () => {
+            const next = readBlocks(yBlocks);
+            blocksRef.current = next;
+            setBlocks(next);
+        };
+        pull();
+        const onChange = (_events, tx) => { if (tx.origin !== LOCAL_ORIGIN) pull(); };
+        yBlocks.observeDeep(onChange);
+        return () => yBlocks.unobserveDeep(onChange);
+    }, [live, collabDoc, id, flushNote]);
+
+    const setPresence = collab.setPresence;
+    const peersByBlock = useMemo(() => {
+        const map = {};
+        collab.peers.forEach((p) => { if (p.blockId) (map[p.blockId] = map[p.blockId] || []).push(p); });
+        return map;
+    }, [collab.peers]);
 
     // Send unsaved edits when leaving a note (other note, other page, unmount).
     useEffect(() => {
@@ -237,14 +275,19 @@ const Notes = () => {
         setBlocks(next);
         const content = JSON.stringify(next);
         if (snapshot && addVersion) addVersion(id, { title: titleRef.current, content, timestamp: Date.now() });
-        updateNote(id, { content });
+        if (liveRef.current && collabDoc) {
+            // Live: edit the shared doc with minimal operations; the server saves it.
+            collabDoc.transact(() => applyBlocksToY(collabDoc.getArray('blocks'), next), LOCAL_ORIGIN);
+        } else {
+            updateNote(id, { content });
+        }
         // Media removed or replaced: drop the now-unused upload.
         prev.forEach((b) => {
             if (!MEDIA_TYPES.has(b.type) || !isStoredFile(b.content)) return;
             const after = next.find(n => n.id === b.id);
             if (!after || after.content !== b.content) releaseAttachment(b.content, next);
         });
-    }, [canEdit, id, updateNote, addVersion, releaseAttachment]);
+    }, [canEdit, id, updateNote, addVersion, releaseAttachment, collabDoc]);
 
     const handleTitleChange = (e) => {
         const value = e.target.value;
@@ -469,9 +512,14 @@ ${blockHtml}
     const handleRestore = (version) => {
         const restored = parseBlocks(version.content);
         setTitle(version.title || '');
-        blocksRef.current = restored;
-        setBlocks(restored);
-        updateNote(id, { title: version.title || '', content: JSON.stringify(restored) }, { immediate: true });
+        if (liveRef.current) {
+            commitBlocks(restored);
+            updateNote(id, { title: version.title || '' }, { immediate: true });
+        } else {
+            blocksRef.current = restored;
+            setBlocks(restored);
+            updateNote(id, { title: version.title || '', content: JSON.stringify(restored) }, { immediate: true });
+        }
         showToast("Version restored", "success");
         setShowHistory(false);
     };
@@ -558,17 +606,21 @@ ${blockHtml}
             }
         })();
 
+        const blockPeers = peersByBlock[block.id];
         return (
             <div
                 key={block.id}
-                className={`relative group/block transition-all ${dragOverId === block.id ? 'outline outline-1 outline-offset-2' : ''}`}
+                className={`relative group/block transition-all ${dragOverId === block.id ? 'outline outline-1 outline-offset-2' : ''} ${blockPeers ? 'gl-collab-block-busy' : ''}`}
                 style={dragOverId === block.id ? { outlineColor: 'var(--accent)' } : undefined}
                 draggable
                 onDragStart={e => handleDragStart(e, block.id)}
                 onDragOver={e => handleDragOver(e, block.id)}
                 onDrop={e => handleDrop(e, block.id)}
                 onDragLeave={() => setDragOverId(null)}
+                onFocus={live ? () => setPresence({ blockId: String(block.id) }) : undefined}
+                onBlur={live ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setPresence({ blockId: null }); } : undefined}
             >
+                {blockPeers && <span className="gl-collab-block-tag"><PeerMarks peers={blockPeers} label="editing" /></span>}
                 <div className="absolute -left-7 top-2 opacity-0 group-hover/block:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing transition-opacity z-10">
                     <GripVertical size={14} style={{ color: 'var(--text-muted)' }} />
                 </div>
@@ -616,7 +668,9 @@ ${blockHtml}
                             <Clock size={11} style={{ flexShrink: 0 }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formattedDate}</span>
                         </span>
-                        {canEdit && <SaveIndicator status={saveStatus?.[id]} />}
+                        {live || collab.closedText
+                            ? <CollabPresence collab={collab} />
+                            : canEdit && <SaveIndicator status={saveStatus?.[id]} />}
                     </div>
 
                     <div className="nt-head-actions">

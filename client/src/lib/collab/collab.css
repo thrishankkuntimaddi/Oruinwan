@@ -1,0 +1,48 @@
+/* Live collaboration presence (notes, knowledge pages, whiteboard). Theme tokens only. */
+.gl-collab { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--font); }
+
+.gl-collab-avatars { display: inline-flex; align-items: center; }
+.gl-collab-avatar {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border-radius: var(--gl-radius-pill, 999px); overflow: hidden;
+    background: var(--bg-active); color: var(--text-secondary);
+    border: 2px solid var(--bg-base); box-shadow: 0 0 0 1px var(--gl-accent-line);
+    font-size: 10px; font-weight: 700; margin-left: -6px;
+}
+.gl-collab-avatar:first-child { margin-left: 0; }
+.gl-collab-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gl-collab-avatar--more { background: var(--gl-accent-soft); color: var(--accent); font-size: 9.5px; }
+
+.gl-collab-pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    padding: 2px 8px; font-size: 11px; line-height: 16px; color: var(--text-muted);
+    border: 1px solid var(--border-subtle); border-radius: var(--gl-radius-pill, 999px);
+    background: var(--bg-surface); background-image: var(--gl-glass);
+}
+.gl-collab-pill--live { color: var(--accent); border-color: var(--gl-accent-line); background: var(--gl-accent-soft); }
+.gl-collab-pill--offline,
+.gl-collab-pill--warn { color: var(--state-danger); border-color: var(--state-danger); background: transparent; }
+
+/* Who is on which block / line. */
+.gl-collab-marks {
+    display: inline-flex; align-items: center; gap: 3px; pointer-events: none;
+    padding: 1px 6px 1px 2px; border-radius: var(--gl-radius-pill, 999px);
+    background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line);
+    font-size: 10px; color: var(--accent); font-family: var(--font); white-space: nowrap;
+}
+.gl-collab-mark {
+    width: 14px; height: 14px; border-radius: 999px; overflow: hidden; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-active); font-size: 8px; font-weight: 700;
+}
+.gl-collab-mark img { width: 100%; height: 100%; object-fit: cover; }
+.gl-collab-mark-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+/* A block someone else is editing gets an accent rule on its left. */
+.gl-collab-block-busy { box-shadow: inset 2px 0 0 var(--accent); }
+.gl-collab-block-tag { position: absolute; right: 0; top: -9px; z-index: 5; }
+
+@media (max-width: 640px) {
+    .gl-collab-avatars { display: none; }
+    .gl-collab-mark-name { max-width: 72px; }
+}

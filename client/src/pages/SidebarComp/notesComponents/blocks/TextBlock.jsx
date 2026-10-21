@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Trash2, Bold, Italic, Strikethrough, List } from 'lucide-react';
 import { sanitizeHtml } from '../../../../utils/sanitizeHtml';
+import { getCaretOffset, setCaretOffset } from '../../../../lib/collab/caret';
+import { diffText, transformIndex } from '../../../../lib/collab/textDiff';
 
 const TEXT_STYLE = {
     color: 'var(--text-primary)',
@@ -49,6 +51,22 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
         // Only on block identity: re-setting innerHTML while typing would move the caret.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [block.id]);
+
+    // Someone else changed this block (live co-editing): show their text and keep our caret
+    // where it was in the text. Our own edits come back equal to the DOM and are skipped.
+    useEffect(() => {
+        const node = editorRef.current;
+        const next = block.content || '';
+        if (!node || node.innerHTML === next) return;
+        const clean = sanitizeHtml(next);
+        if (node.innerHTML === clean) return;
+        const focused = typeof document !== 'undefined' && document.activeElement === node;
+        const caret = focused ? getCaretOffset(node) : null;
+        const before = node.textContent || '';
+        node.innerHTML = clean;
+        if (caret != null) setCaretOffset(node, transformIndex(caret, diffText(before, node.textContent || '')));
+        setEmpty(isVisuallyEmpty(node));
+    }, [block.content]);
 
     useEffect(() => {
         if (registerRef) registerRef(block.id, editorRef.current);

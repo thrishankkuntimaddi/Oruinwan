@@ -9,6 +9,7 @@
     "axios": "^1.13.2",
     "emoji-picker-react": "^4.18.0",
     "jwt-decode": "^4.0.0",
+    "lib0": "^0.2.114",
     "lucide-react": "^0.525.0",
     "react": "^19.1.0",
     "react-contenteditable": "^3.3.7",
@@ -24,7 +25,9 @@
     "socket.io-client": "^4.8.1",
     "turndown": "^7.2.2",
     "uuid": "^13.0.0",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.27",
+    "xlsx":"https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "scripts": {
     "start": "vite --host 0.0.0.0",

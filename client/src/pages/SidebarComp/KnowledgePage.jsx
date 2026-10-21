@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Sparkles, Link2, Trash2, Tag, Plus, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Book, FileText,
@@ -14,6 +14,10 @@ import {
 } from '../../components/ui/page';
 import KnowledgeCategoriesDialog, { KB_CATEGORY_CSS, categoryErrorMessage } from './KnowledgeCategoriesDialog';
 import { UNCATEGORISED, catKey, filterByCategory, countByCategory } from './knowledgeCategories';
+import useCollabDoc from '../../lib/collab/useCollabDoc';
+import CollabPresence, { PeerMarks } from '../../lib/collab/CollabPresence';
+import { applyTextDiff, transformIndexByDelta } from '../../lib/collab/textDiff';
+import { LOCAL_ORIGIN } from '../../lib/collab/noteBlocks';
 
 /** Other knowledge views (side panel, list) reload when a page is created, renamed or deleted. */
 const KNOWLEDGE_CHANGED = 'oruinwan:knowledge-changed';
@@ -310,6 +314,66 @@ const KnowledgePage = () => {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const saveTimer = useRef(null);
+    const editorRef = useRef(null);
+    const pendingSel = useRef(null);
+
+    // Live co-editing (docs/api/collab.md): the page markdown is a shared Y.Text once
+    // synced; title, tags and category stay REST fields.
+    const collab = useCollabDoc('knowledge', id, { enabled: !!id && id !== 'handbook' && !!pageData && !pageError });
+    const live = collab.live;
+    const liveRef = useRef(live);
+    liveRef.current = live;
+    const collabDoc = collab.doc;
+    const setPresence = collab.setPresence;
+
+    const restDirty = useRef(false); // content typed before going live, not yet sent
+    const latest = useRef({ title, content, tags });
+    latest.current = { title, content, tags };
+
+    useEffect(() => {
+        if (!live || !collabDoc) return undefined;
+        if (restDirty.current && id) {
+            // Typed while connecting: send it once over REST; the server merges it into
+            // the live doc and it comes back as an ordinary update.
+            restDirty.current = false;
+            clearTimeout(saveTimer.current);
+            const { title: t, content: c, tags: tg } = latest.current;
+            updatePage(id, { title: t, content: c, tags: tg }).catch(() => showToast('Could not save the page', 'error'));
+        }
+        const ytext = collabDoc.getText('content');
+        setContent(ytext.toString());
+        const onChange = (event, tx) => {
+            if (tx.origin === LOCAL_ORIGIN) return;
+            const el = editorRef.current;
+            if (el && typeof document !== 'undefined' && document.activeElement === el) {
+                const delta = event.changes.delta;
+                pendingSel.current = {
+                    start: transformIndexByDelta(el.selectionStart, delta),
+                    end: transformIndexByDelta(el.selectionEnd, delta),
+                };
+            }
+            setContent(ytext.toString());
+        };
+        ytext.observe(onChange);
+        return () => ytext.unobserve(onChange);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [live, collabDoc]);
+
+    // Keep the caret where it was in the text when someone else's edit lands.
+    useLayoutEffect(() => {
+        const sel = pendingSel.current;
+        const el = editorRef.current;
+        if (!sel || !el) return;
+        pendingSel.current = null;
+        try { el.setSelectionRange(sel.start, sel.end); } catch { /* not focused */ }
+    }, [content]);
+
+    const shareCursor = (e) => {
+        if (!liveRef.current) return;
+        const el = e.currentTarget;
+        const line = el.value.slice(0, el.selectionStart).split('\n').length;
+        setPresence({ cursor: { line, index: el.selectionStart } });
+    };
 
     useEffect(() => {
         if (workspaceId) listCategories(workspaceId).catch(() => { });
@@ -348,7 +412,10 @@ const KnowledgePage = () => {
         clearTimeout(saveTimer.current);
         saveTimer.current = setTimeout(async () => {
             setSaving(true);
-            const ok = await updatePage(id, { title: newTitle, content: newContent, tags: newTags }).then(() => true).catch(() => false);
+            // While live the server saves the content from the shared doc: never PUT it too.
+            const data = liveRef.current ? { title: newTitle, tags: newTags } : { title: newTitle, content: newContent, tags: newTags };
+            if (!liveRef.current) restDirty.current = false;
+            const ok = await updatePage(id, data).then(() => true).catch(() => false);
             setSaving(false);
             if (ok) { setSavedOnce(true); announceChange(); } else showToast('Could not save the page', 'error');
         }, 1200);
@@ -360,8 +427,15 @@ const KnowledgePage = () => {
     };
 
     const handleContentChange = (e) => {
-        setContent(e.target.value);
-        autoSave(title, e.target.value, tags);
+        const value = e.target.value;
+        setContent(value);
+        if (liveRef.current && collabDoc) {
+            collabDoc.transact(() => applyTextDiff(collabDoc.getText('content'), value), LOCAL_ORIGIN);
+            shareCursor(e);
+            return;
+        }
+        restDirty.current = true;
+        autoSave(title, value, tags);
     };
 
     const addTag = () => {
@@ -526,9 +600,11 @@ const KnowledgePage = () => {
                     ]} />
                 </div>
                 <div className="kb-bar-group">
-                    <span className="kb-save" aria-live="polite">
-                        {saving ? <><Loader2 size={11} className="cd-spin" /> Saving…</> : savedOnce ? <><Check size={11} /> Saved</> : null}
-                    </span>
+                    {live || collab.closedText ? <CollabPresence collab={collab} /> : (
+                        <span className="kb-save" aria-live="polite">
+                            {saving ? <><Loader2 size={11} className="cd-spin" /> Saving…</> : savedOnce ? <><Check size={11} /> Saved</> : null}
+                        </span>
+                    )}
                     <SelectBox value={pageCategory} onChange={handlePageCategory} label="Category" style={{ height: 30, fontSize: 12, maxWidth: 170 }}>
                         <option value="">No category</option>
                         {categories.map((c) => <option key={c._id} value={String(c._id)}>{c.name}</option>)}
@@ -587,9 +663,20 @@ const KnowledgePage = () => {
 
                     {viewMode === 'edit' ? (
                         <>
+                            {live && collab.peers.some((p) => p.cursor) && (
+                                <div className="kb-peers" aria-label="Who is editing where">
+                                    {collab.peers.filter((p) => p.cursor).map((p) => (
+                                        <PeerMarks key={p.key} peers={[p]} label={`on line ${p.cursor.line}`} detail={`line ${p.cursor.line}`} />
+                                    ))}
+                                </div>
+                            )}
                             <textarea
+                                ref={editorRef}
                                 value={content}
                                 onChange={handleContentChange}
+                                onSelect={shareCursor}
+                                onBlur={() => { if (liveRef.current) setPresence({ cursor: null }); }}
+                                readOnly={live && collab.readOnly}
                                 aria-label="Page content"
                                 placeholder="Start writing. Markdown works: # heading, **bold**, *italic*, - list, > quote"
                                 className="kb-editor"
@@ -666,6 +753,7 @@ function KbStyles() {
         .kb-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 8px 24px; min-height: 52px; box-sizing: border-box; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
         .kb-bar-group { display: flex; align-items: center; gap: 6px; min-width: 0; }
         .kb-bar-mark { display: inline-flex; align-items: center; justify-content: center; width: 24px; }
+        .kb-peers { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
         .kb-save { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); margin-right: 4px; }
         .kb-scroll { flex: 1; overflow-y: auto; }
         .kb-paper { max-width: 760px; margin: 0 auto; padding: 32px 40px 64px; }
