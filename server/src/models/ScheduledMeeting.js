@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { recordingSchema } = require('../features/meetings/recordings');
+const { segmentSchema } = require('../features/meetings/transcript');
 
 const scheduledMeetingSchema = new mongoose.Schema(
     {
@@ -74,6 +76,12 @@ const scheduledMeetingSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+
+        // Uploaded recording (object storage); recordingUrl then points at /api/v2/meetings/:id/recording.
+        recording: { type: recordingSchema, default: null },
+
+        // Speech-to-text segments sent by the clients during the call (see features/meetings/transcript.js).
+        transcriptSegments: { type: [segmentSchema], default: [] },
 
         transcript: {
             type: String,

@@ -4,6 +4,7 @@ const DMSession = require("../../models/DMSession");
 const identity = require("../identity");
 const logger = require("../../utils/logger");
 const messagesService = require("../modules/messages/messages.service");
+const { isDuplicateSend } = require("../modules/messages/clientMessageId");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
 const privacyService = require("../features/auth/privacy.service");
@@ -427,7 +428,15 @@ module.exports = function registerChatHandlers(io, socket) {
         quotedMessageId,
         ciphertext,
         messageIv,
+        clientMessageId: data.clientMessageId,
       });
+
+      // Offline-queue resend of a message already stored: confirm it to the
+      // sender only; the conversation already received it the first time.
+      if (isDuplicateSend(saved)) {
+        socket.emit("message-sent", { message: saved, clientTempId, clientMessageId: saved.clientMessageId, duplicate: true });
+        return;
+      }
 
       let updatedParent = null;
       if (parentId) {
@@ -454,7 +463,7 @@ module.exports = function registerChatHandlers(io, socket) {
         const threads = require("../modules/threads/threads.service");
         threads.emitThreadCounters(io, { _id: parentId, channel: targetChannel, dm: targetDM }, updatedParent);
         const replier = await identity.users.findById(userId).catch(() => null);
-        threads.followAndNotify(io, { parent: parentDoc ? { ...parentDoc, _id: parentId } : { _id: parentId }, replierId: userId, senderUsername: replier?.username })
+        threads.followAndNotify(io, { parent: parentDoc ? { ...parentDoc, _id: parentId } : { _id: parentId }, replierId: userId, senderUsername: replier?.username, mentionText: typeof data.mentionText === "string" ? data.mentionText : "", replyId: saved?._id })
           .catch(err => logger.warn("[send-message] thread follow/notify failed:", err.message));
       }
 

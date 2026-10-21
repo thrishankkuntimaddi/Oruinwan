@@ -2,8 +2,13 @@
 
 /**
  * Account-level notification preferences stored on User.preferences.notifications.
- *   GET /api/auth/me/preferences/notifications -> { emailDigest, marketingEmails, desktopPush, sound, mentionsOnly, dmNotifications }
- *   PUT /api/auth/me/preferences/notifications  (partial; booleans only, 400 otherwise) -> same object
+ *   GET /api/auth/me/preferences/notifications
+ *     -> { emailDigest, marketingEmails, desktopPush, sound, mentionsOnly, dmNotifications, digestFrequency }
+ *   PUT /api/auth/me/preferences/notifications  (partial; booleans, digestFrequency one of
+ *     'daily' | 'weekly' | 'off'; 400 otherwise) -> same object
+ *
+ * The digest email goes out only while emailDigest is true and digestFrequency is not 'off'
+ * (emailDigest alone keeps its old meaning: true = daily digest).
  */
 
 const logger = require('../../../utils/logger');
@@ -15,15 +20,28 @@ const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
     sound: true,
     mentionsOnly: false,
     dmNotifications: true,
+    digestFrequency: 'daily',
 });
 const FIELDS = Object.keys(NOTIFICATION_PREF_DEFAULTS);
+const DIGEST_FREQUENCIES = ['daily', 'weekly', 'off'];
+
+function validValue(key, value) {
+    if (key === 'digestFrequency') return DIGEST_FREQUENCIES.includes(value);
+    return typeof value === 'boolean';
+}
 
 function withDefaults(stored) {
     const out = { ...NOTIFICATION_PREF_DEFAULTS };
     for (const k of FIELDS) {
-        if (stored && typeof stored[k] === 'boolean') out[k] = stored[k];
+        if (stored && validValue(k, stored[k])) out[k] = stored[k];
     }
     return out;
+}
+
+/** 'daily' | 'weekly' | 'off' — the effective digest email cadence for stored prefs. */
+function digestCadence(stored) {
+    const p = withDefaults(stored);
+    return p.emailDigest ? p.digestFrequency : 'off';
 }
 
 async function getNotificationPreferences(req, res) {
@@ -46,8 +64,9 @@ async function updateNotificationPreferences(req, res) {
         const $set = {};
         for (const k of FIELDS) {
             if (body[k] === undefined) continue;
-            if (typeof body[k] !== 'boolean') {
-                return res.status(400).json({ message: `${k} must be a boolean` });
+            if (!validValue(k, body[k])) {
+                const expected = k === 'digestFrequency' ? `one of ${DIGEST_FREQUENCIES.join(', ')}` : 'a boolean';
+                return res.status(400).json({ message: `${k} must be ${expected}` });
             }
             $set[`preferences.notifications.${k}`] = body[k];
         }
@@ -63,4 +82,11 @@ async function updateNotificationPreferences(req, res) {
     }
 }
 
-module.exports = { NOTIFICATION_PREF_DEFAULTS, getNotificationPreferences, updateNotificationPreferences };
+module.exports = {
+    NOTIFICATION_PREF_DEFAULTS,
+    DIGEST_FREQUENCIES,
+    withDefaults,
+    digestCadence,
+    getNotificationPreferences,
+    updateNotificationPreferences,
+};

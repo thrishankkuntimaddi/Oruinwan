@@ -153,6 +153,9 @@ const MessageSchema = new mongoose.Schema({
   
   integration: { type: IntegrationCardSchema, default: undefined },
 
+  // Client-generated id for idempotent resends from offline queues (unique per sender).
+  clientMessageId: { type: String, default: undefined },
+
   
   linkPreview: {
     url: String,
@@ -239,6 +242,11 @@ MessageSchema.index({ channel: 1, _id: 1 });
 // One integration card per external object (PR / issue URL) per channel.
 MessageSchema.index({ 'integration.url': 1, channel: 1 }, { sparse: true });
 MessageSchema.index({ dm: 1, _id: 1 });
+// Offline-queue resends: one message per (sender, clientMessageId).
+MessageSchema.index(
+  { sender: 1, clientMessageId: 1 },
+  { unique: true, partialFilterExpression: { clientMessageId: { $type: 'string' } } }
+);
 
 MessageSchema.pre("save", function (next) {
   this._wasNew = this.isNew;

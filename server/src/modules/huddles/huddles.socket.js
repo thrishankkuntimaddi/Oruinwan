@@ -6,9 +6,14 @@ const defaultHistory = () => require('./huddleHistory.service').recorder;
 const defaultNotesOp = (args) => require('./huddleHistory.service').applyNotesOp(args);
 /** Scheduled meetings held in a huddle are completed when it ends (only with a live database). */
 const defaultMeetings = {
-    huddleEnded(huddle, io) {
-        if (require('mongoose').connection.readyState !== 1) return Promise.resolve([]);
-        return require('../../features/meetings/meetings.service').completeMeetingsForHuddle(huddle, io);
+    async huddleEnded(huddle, io) {
+        if (require('mongoose').connection.readyState !== 1) return [];
+        const completedMeetingIds = await require('../../features/meetings/meetings.service').completeMeetingsForHuddle(huddle, io);
+        // "meeting.completed" for automations: a plain huddle reports itself; one that held
+        // scheduled meetings was already reported as those meetings.
+        await require('./huddleMedia.service').emitHuddleCompleted(huddle, io, { completedMeetingIds })
+            .catch(err => logger.warn('[huddle] meeting.completed not emitted:', err.message));
+        return completedMeetingIds;
     },
 };
 

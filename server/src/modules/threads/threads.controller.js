@@ -6,6 +6,7 @@ const Channel = require("../../features/channels/channel.model.js");
 const { followThread, unfollowThread, getFollowStatus, LIVE_REPLY, followAndNotify } = require('./threads.service');
 const { checkThreadAccess } = require('./threadAccess');
 const { sanitizeAttachments } = require('../uploads/attachmentSanitizer');
+const { normalizeClientMessageId, findByClientMessageId, isDuplicateKeyError } = require('../messages/clientMessageId');
 
 exports.getChannelThreads = async (req, res) => {
     try {
@@ -178,7 +179,31 @@ exports.postThreadReply = async (req, res) => {
         if (parentMessage.dm) replyData.dm = parentMessage.dm;
         else if (parentMessage.channel) replyData.channel = parentMessage.channel;
 
-        const reply = await Message.create(replyData);
+        // Offline-queue resend (same clientMessageId): return the stored reply.
+        const clientMessageId = normalizeClientMessageId(req.body?.clientMessageId);
+        const replayed = async () => {
+            const existing = await findByClientMessageId(Message, userId, clientMessageId);
+            if (!existing) return null;
+            const out = existing.toObject();
+            await hydrate(out, { sender: SENDER });
+            return res.status(200).json({ reply: out, duplicate: true });
+        };
+        if (clientMessageId) {
+            replyData.clientMessageId = clientMessageId;
+            const sent = await replayed();
+            if (sent) return sent;
+        }
+
+        let reply;
+        try {
+            reply = await Message.create(replyData);
+        } catch (err) {
+            if (clientMessageId && isDuplicateKeyError(err)) {
+                const sent = await replayed();
+                if (sent) return sent;
+            }
+            throw err;
+        }
         const replyOut = reply.toObject();
         await hydrate(replyOut, { sender: SENDER });
 
@@ -215,7 +240,7 @@ exports.postThreadReply = async (req, res) => {
         }
 
         // Following and notifications never delay or fail the reply.
-        followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username })
+        followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username, mentionText: typeof req.body?.mentionText === "string" ? req.body.mentionText : "", replyId: reply._id })
             .catch((err) => logger.error('[THREADS] Follow/notify error (non-fatal):', err.message));
 
         return res.status(201).json({ reply: replyOut });

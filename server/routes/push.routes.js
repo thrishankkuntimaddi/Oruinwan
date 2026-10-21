@@ -27,7 +27,10 @@ router.post('/register', requireAuth, async (req, res) => {
     const user = await identity.users.findById(userId, { withSecrets: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
     const tokens = (Array.isArray(user.deviceTokens) ? user.deviceTokens : []).filter((t) => t.token !== token);
-    tokens.push({ token, platform, registeredAt: new Date() });
+    // deviceId ties the token to a device session so revoking the device removes it (/api/v2/devices).
+    const rawDeviceId = req.headers['x-device-id'] || req.body?.deviceId;
+    const deviceId = typeof rawDeviceId === 'string' && rawDeviceId.length <= 256 ? rawDeviceId : undefined;
+    tokens.push({ token, platform, registeredAt: new Date(), ...(deviceId ? { deviceId } : {}) });
     // Keep the newest few: old phones that never unregistered shouldn't pile up.
     await identity.users.update(userId, { deviceTokens: tokens.slice(-MAX_TOKENS_PER_USER) });
 

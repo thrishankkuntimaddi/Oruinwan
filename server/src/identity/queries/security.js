@@ -40,6 +40,40 @@ async function usersWithRetention() {
     return rows.map((r) => ({ _id: r.id, retentionDays: r.retention_days }));
 }
 
+/** Ids of every user currently under legal hold (retention must never touch their data). */
+async function legalHoldUserIds() {
+    const { rows } = await query(`SELECT id FROM users WHERE COALESCE((legal_hold->>'enabled')::boolean, false) = true`);
+    return rows.map((r) => r.id);
+}
+
+/** Workspaces with a workspace-wide message retention policy (workspaces.settings.retention). */
+async function workspacesWithRetention() {
+    const { rows } = await query(
+        `SELECT id, company_id, settings->'retention' AS retention FROM workspaces
+         WHERE is_active = true AND COALESCE((settings->'retention'->>'days')::int, 0) > 0`
+    );
+    return rows.map((r) => ({ _id: r.id, companyId: r.company_id, retention: r.retention }));
+}
+
+/** Workspace retention policy { days, setBy, setAt } or null. */
+async function workspaceRetention(workspaceId) {
+    const { rows } = await query(`SELECT settings->'retention' AS retention FROM workspaces WHERE id = $1`, [str(workspaceId)]);
+    if (!rows[0]) return undefined;
+    return rows[0].retention || null;
+}
+
+/** Set (value object) or clear (null) the workspace retention policy without touching other settings. */
+async function setWorkspaceRetention(workspaceId, value) {
+    const { rows } = value
+        ? await query(
+            `UPDATE workspaces SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{retention}', $2::jsonb), updated_at = now()
+             WHERE id = $1 RETURNING settings->'retention' AS retention`, [str(workspaceId), JSON.stringify(value)])
+        : await query(
+            `UPDATE workspaces SET settings = COALESCE(settings, '{}'::jsonb) - 'retention', updated_at = now()
+             WHERE id = $1 RETURNING NULL AS retention`, [str(workspaceId)]);
+    return rows[0] ? (rows[0].retention || null) : undefined;
+}
+
 /**
  * Create a system account once (no password, cannot sign in) and return it.
  * Concurrent callers on several instances get the same row.
@@ -164,5 +198,6 @@ async function listKekRotation(fromVersion, { afterUserId = '', limit = 10 } = {
 module.exports = {
     countKekRotation, listKekRotation,
     legalHoldOf, setLegalHold, usersWithRetention, upsertSystemUser,
+    legalHoldUserIds, workspacesWithRetention, workspaceRetention, setWorkspaceRetention,
     identityExport, eraseIdentity, companyBackup, findBySso,
 };

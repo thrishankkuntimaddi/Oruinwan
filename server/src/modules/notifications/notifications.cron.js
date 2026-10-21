@@ -2,6 +2,7 @@ const Notification = require('./notification.model');
 const logger = require('../../../utils/logger');
 const notifEmitter = require('./notificationEventEmitter');
 const { scheduleJob } = require('../../shared/jobs/scheduler');
+const jobs = require('./notificationJobs');
 
 const getTask = () => require('../../../models/Task');
 
@@ -115,6 +116,7 @@ async function checkDueSoonTasks(io) {
 
 const DIGEST_INTERVAL_MS   = 24 * 60 * 60 * 1000; 
 const DUE_SOON_INTERVAL_MS =  1 * 60 * 60 * 1000; 
+const MINUTE_MS = 60 * 1000;
 
 /** Daily digest and due-soon reminders; each runs on one instance per interval. */
 function startNotificationsCron(io) {
@@ -122,6 +124,11 @@ function startNotificationsCron(io) {
     const stops = [
         scheduleJob({ name: 'notifications-digest', intervalMs: DIGEST_INTERVAL_MS, initialDelayMs: 30_000, run: () => generateDigest(io) }),
         scheduleJob({ name: 'notifications-due-soon', intervalMs: DUE_SOON_INTERVAL_MS, initialDelayMs: DUE_SOON_INTERVAL_MS, run: () => checkDueSoonTasks(io) }),
+        // notificationJobs.js: reminders, suggestions, offline emails, digest emails.
+        scheduleJob({ name: 'notifications-meeting-reminders', intervalMs: MINUTE_MS, initialDelayMs: 20_000, run: () => jobs.sendMeetingReminders(io) }),
+        scheduleJob({ name: 'notifications-offline-email', intervalMs: 5 * MINUTE_MS, initialDelayMs: 60_000, run: () => jobs.sendOfflineEmails(io) }),
+        scheduleJob({ name: 'notifications-ai-suggestions', intervalMs: 60 * MINUTE_MS, initialDelayMs: 5 * MINUTE_MS, run: () => jobs.sendAiSuggestions(io) }),
+        scheduleJob({ name: 'notifications-digest-email', intervalMs: 60 * MINUTE_MS, initialDelayMs: 2 * MINUTE_MS, run: () => jobs.sendDigestEmails(io) }),
     ];
     logger.info('[NotifCron] Notification cron jobs registered ✔');
     return () => stops.forEach((stop) => stop());

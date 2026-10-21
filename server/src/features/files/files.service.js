@@ -78,6 +78,33 @@ function assertAccess(file, userId, minRole = 'view') {
     }
 }
 
+/**
+ * `file.uploaded` automation trigger for workspace library files (metadata only).
+ * Chat attachments are not included: they belong to end-to-end encrypted
+ * conversations, and DM activity must never feed automations.
+ */
+function emitFileUploaded(file, userId, io) {
+    try {
+        const ext = path.extname(file.name || '').replace('.', '').toLowerCase() || null;
+        require('../../modules/notifications/notificationEventEmitter').emit('file.uploaded', {
+            io: io || null,
+            workspaceId: String(file.workspaceId),
+            fileId: String(file._id),
+            fileName: file.name,
+            extension: ext,
+            mimeType: file.mimeType || null,
+            size: file.size || 0,
+            sizeMB: Math.round(((file.size || 0) / (1024 * 1024)) * 100) / 100,
+            folderId: file.folderId ? String(file.folderId) : null,
+            tags: file.tags || [],
+            userId: String(userId),
+            uploadedBy: String(userId),
+        });
+    } catch (err) {
+        logger.warn({ err: err.message }, '[files] file.uploaded emit failed');
+    }
+}
+
 async function uploadFile(userId, workspaceId, multerFile, opts = {}) {
     await assertWorkspaceMember(workspaceId, userId);
     const gcsResult = await uploadStorage(multerFile, `workspaces/${workspaceId}/files`, { userId });
@@ -97,6 +124,7 @@ async function uploadFile(userId, workspaceId, multerFile, opts = {}) {
         currentVersion: 1,
     });
 
+    emitFileUploaded(file, userId, opts.io);
     return file;
 }
 

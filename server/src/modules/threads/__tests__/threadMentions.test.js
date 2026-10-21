@@ -1,0 +1,64 @@
+'use strict';
+
+jest.mock('../../messages/message.model.js', () => ({ updateOne: jest.fn(), findById: jest.fn() }));
+jest.mock('../../../features/channels/channel.model.js', () => ({ findById: jest.fn() }));
+jest.mock('../../../../models/DMSession', () => ({ findById: jest.fn() }));
+jest.mock('../../notifications/notificationService', () => ({ mention: jest.fn(), threadReply: jest.fn() }));
+jest.mock('../../../identity', () => ({ users: { findManyByIds: jest.fn() } }));
+
+const Message = require('../../messages/message.model.js');
+const Channel = require('../../../features/channels/channel.model.js');
+const DMSession = require('../../../../models/DMSession');
+const notificationService = require('../../notifications/notificationService');
+const identity = require('../../../identity');
+const { followAndNotify } = require('../threads.service');
+
+const q = (v) => ({ select: () => ({ lean: async () => v }) });
+const users = (list) => new Map(list.map((u) => [u._id, u]));
+
+let followers;
+beforeEach(() => {
+    jest.clearAllMocks();
+    followers = ['alice', 'bob', 'carol'];
+    Message.updateOne.mockImplementation(async () => ({}));
+    Message.findById.mockImplementation(() => q({ followers }));
+    Channel.findById.mockImplementation(() => q({ name: 'general', members: [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }, { user: 'dave' }] }));
+    const all = [{ _id: 'alice', username: 'alice' }, { _id: 'bob', username: 'Bob' }, { _id: 'carol', username: 'carol' }, { _id: 'dave', username: 'dave' }];
+    identity.users.findManyByIds.mockImplementation(async (ids) => users(all.filter((u) => ids.includes(u._id))));
+});
+
+const parent = { _id: 'p1', channel: 'c1', workspace: 'w1', replyCount: 2, sender: 'alice' };
+
+test('@mentions in a thread reply notify the mentioned channel members', async () => {
+    await followAndNotify(null, { parent, replierId: 'alice', senderUsername: 'alice', mentionText: 'hey @bob and @dave, also @stranger', replyId: 'r1' });
+
+    const mentioned = notificationService.mention.mock.calls.map(([, a]) => a.mentionedUserId).sort();
+    expect(mentioned).toEqual(['bob', 'dave']);
+    expect(notificationService.mention).toHaveBeenCalledWith(null, expect.objectContaining({ channelId: 'c1', channelName: 'general', senderUsername: 'alice' }));
+    // Mentioned users are not sent the generic reply notification too.
+    expect(notificationService.threadReply).toHaveBeenCalledWith(null, expect.objectContaining({ followerIds: ['carol'] }));
+    // Mentioned users follow the thread and the reply records its mentions.
+    expect(Message.updateOne).toHaveBeenCalledWith({ _id: 'p1' }, { $addToSet: { followers: { $each: ['alice', 'bob', 'dave'] } } });
+    expect(Message.updateOne).toHaveBeenCalledWith({ _id: 'r1' }, { $set: { mentions: ['bob', 'dave'] } });
+});
+
+test('the replier mentioning themselves is ignored and no mentionText behaves as before', async () => {
+    await followAndNotify(null, { parent, replierId: 'bob', senderUsername: 'bob', mentionText: '@bob' });
+    expect(notificationService.mention).not.toHaveBeenCalled();
+    expect(notificationService.threadReply).toHaveBeenCalledWith(null, expect.objectContaining({ followerIds: ['alice', 'carol'] }));
+
+    jest.clearAllMocks();
+    Message.findById.mockImplementation(() => q({ followers }));
+    await followAndNotify(null, { parent, replierId: 'alice', senderUsername: 'alice' });
+    expect(identity.users.findManyByIds).not.toHaveBeenCalled();
+    expect(notificationService.threadReply).toHaveBeenCalledWith(null, expect.objectContaining({ followerIds: ['bob', 'carol'] }));
+});
+
+test('DM threads resolve mentions against the participants', async () => {
+    DMSession.findById.mockImplementation(() => q({ participants: ['alice', 'bob'] }));
+    followers = ['alice'];
+    await followAndNotify(null, { parent: { _id: 'p2', dm: 'd1', workspace: 'w1', replyCount: 1 }, replierId: 'alice', senderUsername: 'alice', mentionText: '@bob @dave' });
+    expect(notificationService.mention).toHaveBeenCalledTimes(1);
+    expect(notificationService.mention).toHaveBeenCalledWith(null, expect.objectContaining({ mentionedUserId: 'bob', dmSessionId: 'd1' }));
+    expect(notificationService.threadReply).not.toHaveBeenCalled();
+});

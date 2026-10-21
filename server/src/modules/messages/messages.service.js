@@ -10,6 +10,7 @@ const conversationKeysService = require('../conversations/conversationKeys.servi
 const logger = require('../../shared/utils/logger');
 const mongoose = require('mongoose');
 const { loadAccessibleMessage } = require('./messageAccess');
+const { normalizeClientMessageId, findByClientMessageId, markDuplicate, isDuplicateKeyError } = require('./clientMessageId');
 
 // Users live in PostgreSQL: message user refs are attached with hydrate() instead of populate().
 const SENDER = { type: 'user', fields: ['username', 'email', 'profilePicture'] };
@@ -53,7 +54,16 @@ async function createMessage(messageData, io = null) {
         integration = null,
         
         mentionText = '',
+        clientMessageId: rawClientMessageId = null,
     } = messageData;
+
+    // Offline-queue resend of a message this sender already stored: hand back the
+    // stored copy without broadcasting or notifying a second time.
+    const clientMessageId = normalizeClientMessageId(rawClientMessageId);
+    if (clientMessageId) {
+        const existing = await findByClientMessageId(Message, sender, clientMessageId);
+        if (existing) return markDuplicate(await messageForClient(existing));
+    }
 
     
     
@@ -102,13 +112,21 @@ async function createMessage(messageData, io = null) {
     }
     if (linkPreview) messageDoc.linkPreview = linkPreview;
     if (type === 'integration') messageDoc.integration = integration;
+    if (clientMessageId) messageDoc.clientMessageId = clientMessageId;
 
     logger.debug({ type }, `Creating message${type === 'message' ? ' 🔐' : ''}`);
 
-    
-    
-    
-    const message = await Message.create(messageDoc);
+    let message;
+    try {
+        message = await Message.create(messageDoc);
+    } catch (err) {
+        // Two resends raced: the other one stored it first.
+        if (clientMessageId && isDuplicateKeyError(err)) {
+            const existing = await findByClientMessageId(Message, sender, clientMessageId);
+            if (existing) return markDuplicate(await messageForClient(existing));
+        }
+        throw err;
+    }
 
     
     if (message.quotedMessageId) {
@@ -151,6 +169,9 @@ async function createMessage(messageData, io = null) {
     fireMessageSentWebhook(message, { channel, workspace, sender, type, parentId })
         .catch(err => logger.warn({ err: err?.message }, '[createMessage] message.sent webhook error (non-fatal)'));
 
+    emitMessageSentAutomation(hydratedMessage, { channel, workspace, sender, type, parentId, fromAutomation: messageData.fromAutomation }, io)
+        .catch(err => logger.warn({ err: err?.message }, '[createMessage] message.sent automation error (non-fatal)'));
+
     // Plain object with `sender` filled in (what clients and callers read).
     return hydratedMessage;
 }
@@ -179,6 +200,42 @@ async function fireMessageSentWebhook(message, { channel, workspace, sender, typ
         type: message.type,
         parentId: parentId ? String(parentId) : null,
         hasAttachments: Array.isArray(message.attachments) && message.attachments.length > 0,
+        createdAt: message.createdAt,
+    });
+}
+
+/**
+ * `message.sent` automation trigger. Metadata only (the text is end-to-end
+ * encrypted): ids, channel name, sender username, type and attachment info.
+ * Public channels only, like the webhook, so private and direct conversations
+ * never feed automations. Messages an automation posted itself are skipped so
+ * an automation cannot trigger itself in a loop.
+ */
+async function emitMessageSentAutomation(message, { channel, workspace, sender, type, parentId, fromAutomation }, io) {
+    if (!channel || type === 'system' || fromAutomation) return;
+    const channelId = String(channel?._id || channel);
+    if (!/^[a-f0-9]{24}$/i.test(channelId)) return;
+    const Channel = require('../../features/channels/channel.model.js');
+    const ch = await Channel.findById(channelId).select('workspace isPrivate name').lean();
+    if (!ch || ch.isPrivate) return;
+    const workspaceId = workspace || ch.workspace;
+    if (!workspaceId) return;
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+    require('../notifications/notificationEventEmitter').emit('message.sent', {
+        io,
+        automationOnly: true,
+        workspaceId: String(workspaceId),
+        messageId: String(message._id),
+        channelId,
+        channelName: ch.name || null,
+        senderId: String(sender?._id || sender),
+        senderUsername: message.sender?.username || null,
+        type: message.type,
+        isThreadReply: Boolean(parentId),
+        parentId: parentId ? String(parentId) : null,
+        hasAttachments: attachments.length > 0,
+        attachmentCount: attachments.length,
+        attachmentTypes: [...new Set(attachments.map((a) => a.type).filter(Boolean))],
         createdAt: message.createdAt,
     });
 }
@@ -1278,6 +1335,7 @@ async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
 module.exports = {
     createMessage,
     _fireMessageSentWebhook: fireMessageSentWebhook,
+    _emitMessageSentAutomation: emitMessageSentAutomation,
     fetchMessages,
     findOrCreateDMSession,
     getUserDMSessions,
