@@ -5,7 +5,8 @@
  *
  * Two small APIs; the page never gets ipcRenderer or Node:
  *  - window.electronAPI: what the web client's desktop integration expects
- *    (client/src/desktop/bridge.js): native notifications, unread badge, notification clicks.
+ *    (client/src/desktop/bridge.js): native notifications, unread badge, notification clicks,
+ *    notification quick replies (client/src/desktop/quickReply.js).
  *  - window.oruinwanDesktop: platform facts and links, used to detect the desktop app
  *    (client/src/appMode/env.js) and by the in-app update check.
  */
@@ -49,4 +50,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('oruinwan:notification-clicked', handler);
     return () => ipcRenderer.removeListener('oruinwan:notification-clicked', handler);
   },
+  /** True where native notifications have an inline Reply field (macOS, Windows). */
+  supportsQuickReply: process.platform === 'darwin' || process.platform === 'win32',
+  /**
+   * Called with { workspaceId, channelId | dmSessionId, text } when the person replies from a
+   * notification. Ids and length are validated in the main process; the page encrypts and sends.
+   */
+  onQuickReply: (callback) => {
+    const handler = (_event, reply) => callback(reply);
+    ipcRenderer.on('oruinwan:quick-reply', handler);
+    return () => ipcRenderer.removeListener('oruinwan:quick-reply', handler);
+  },
+  /** The page could not send a quick reply: open that conversation so it can be retried. */
+  quickReplyFailed: (target) => ipcRenderer.send('oruinwan:quick-reply-failed', {
+    workspaceId: String((target && target.workspaceId) || ''),
+    channelId: String((target && target.channelId) || ''),
+    dmSessionId: String((target && target.dmSessionId) || ''),
+  }),
 });

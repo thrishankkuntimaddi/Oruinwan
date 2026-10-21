@@ -50,7 +50,7 @@ async function disconnectProvider({ workspaceId, provider }) {
 }
 
 async function getActiveProvider(workspaceId) {
-  const fallbackOrder = ['gemini', 'openai', 'anthropic', 'claude', 'local_llm'];
+  const fallbackOrder = ['gemini', 'openai', 'anthropic', 'claude', 'xai', 'local_llm'];
   let provider = await AIProvider.findOne({ workspaceId, isDefault: true, status: 'active' }).lean();
   if (provider) return provider;
   for (const name of fallbackOrder) {

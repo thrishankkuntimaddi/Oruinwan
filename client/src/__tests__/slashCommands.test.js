@@ -28,7 +28,7 @@ describe('slash commands', () => {
         expect(parseSlashCommand('/task Write the release notes')).toEqual({ name: 'task', args: 'Write the release notes' });
         expect(filterSlashCommands('/re', on).map(c => c.command)).toContain('/review');
         expect(availableSlashCommands(on).filter(c => c.flag === 'integrations').map(c => c.command).sort())
-            .toEqual(['/github', '/jira', '/review', '/zoom']);
+            .toEqual(['/bitbucket', '/confluence', '/drive', '/dropbox', '/github', '/gitlab', '/gmeet', '/jira', '/linear', '/notion', '/onedrive', '/review', '/zoom']);
     });
     it('filters by prefix', () => {
         expect(filterSlashCommands('/vi').map(c => c.command)).toEqual(['/video']);

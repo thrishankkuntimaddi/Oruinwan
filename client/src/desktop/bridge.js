@@ -18,7 +18,10 @@
  * Handles:
  *   - notification clicks → navigate to the channel / DM
  *   - chttrix:// deep links → navigate to the validated in-app route
+ *   - notification quick replies → encrypted send (./quickReply.js)
  */
+
+import { installQuickReply } from './quickReply';
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -101,6 +104,8 @@ function install() {
     });
   }
 
+  if (api.supportsQuickReply) installQuickReply(api);
+
   if (typeof api.onDeepLink === 'function') {
     api.onDeepLink((link) => {
       if (link && typeof link.path === 'string') navigate(link.path);
@@ -110,4 +115,3 @@ function install() {
 
 install();
 
-export {};

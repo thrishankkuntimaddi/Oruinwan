@@ -15,7 +15,8 @@ const crypto = require('crypto');
 jest.mock('../../../shared/middleware/auth', () => (req, res, next) => { req.user = { sub: req.headers['x-user'] }; next(); });
 jest.mock('../../../shared/featureFlags', () => ({ requireFlag: () => (req, res, next) => next() }));
 jest.mock('../../ai/ai.access', () => ({ requireAIAccess: () => (req, res, next) => next() }));
-jest.mock('../integration.service', () => ({ handleWebhook: jest.fn(async () => ({ handled: true })) }));
+jest.mock('../integration.service', () => ({}));
+jest.mock('../integration.apply', () => ({ applyEffects: jest.fn(async () => ({ posted: [], tasks: [], createdTasks: [], automation: null, response: null })) }));
 jest.mock('../ai-provider.service', () => ({}));
 jest.mock('../webhook.trigger', () => ({ fire: jest.fn(), sendTest: jest.fn() }));
 jest.mock('../../automations/automation.service', () => ({ processEvent: jest.fn() }));
@@ -27,7 +28,7 @@ const Integration = require('../integration.model');
 const { captureRawBody } = require('../webhook.verify');
 const githubEvents = require('../github/github.events');
 const jiraEvents = require('../jira/jira.events');
-const integrationService = require('../integration.service');
+const { applyEffects } = require('../integration.apply');
 const router = require('../integrations.routes');
 
 const WS = '64b000000000000000000001';
@@ -39,7 +40,7 @@ beforeEach(() => {
   integrations = {
     github: { _id: 'i1', workspaceId: WS, type: 'github', status: 'connected', config: { webhookSecret: sealSecret(SECRET), routes: [] } },
     jira: { _id: 'i2', workspaceId: WS, type: 'jira', status: 'connected', config: { webhookToken: sealSecret(JIRA_TOKEN) } },
-    gitlab: { _id: 'i3', workspaceId: WS, type: 'gitlab', status: 'connected', config: { webhookSecret: 'gl-token' } },
+    gitlab: { _id: 'i3', workspaceId: WS, type: 'gitlab', status: 'connected', config: { webhookSecret: sealSecret('gl-token') } },
   };
   jest.spyOn(Integration, 'findOne').mockImplementation((q) => ({
     lean: async () => (String(q.workspaceId) === WS ? integrations[q.type] || null : null),
@@ -136,7 +137,8 @@ describe('GitLab token and other providers', () => {
     const body = '{"object_kind":"push"}';
     expect((await post(`/api/v2/integrations/webhook/gitlab?workspaceId=${WS}`, body, { 'x-gitlab-token': 'bad' })).status).toBe(401);
     expect((await post(`/api/v2/integrations/webhook/gitlab?workspaceId=${WS}`, body, { 'x-gitlab-token': 'gl-token' })).status).toBe(200);
-    expect(integrationService.handleWebhook).toHaveBeenCalledTimes(1);
+    expect(applyEffects).toHaveBeenCalledTimes(1);
+    expect(applyEffects.mock.calls[0][0].effects).toEqual([]);
   });
 
   it('rejects providers without a configured token', async () => {

@@ -3,7 +3,7 @@ import { MessageSquare } from 'lucide-react';
 import { useSocket } from '../../contexts/SocketContext';
 import { useDateFormatter } from '../../hooks/useUserPreferences';
 import IntegrationCard from './IntegrationCard';
-import { PROVIDER_AVATAR } from './ui';
+import { PROVIDER_AVATAR, PROVIDER_NAME } from './ui';
 
 /** The integration object on a message, wherever the event shape put it. */
 export function integrationOf(event) {
@@ -40,7 +40,7 @@ export default function IntegrationEvent({ event, onThreadOpen, threadCounts = {
     const integration = live || integrationOf(event) || {};
     const provider = integration.provider || 'github';
     const sender = event.sender || event.payload?.sender || {};
-    const name = sender.username || sender.name || { github: 'GitHub', gitlab: 'GitLab', jira: 'Jira' }[provider] || 'Integration';
+    const name = sender.username || sender.name || PROVIDER_NAME[provider] || 'Integration';
     const summary = event.decryptedContent || event.payload?.text || event.text || '';
     const createdAt = event.createdAt || event.payload?.createdAt;
     const channelId = idOf(event.payload?.channel || event.channelId || event.backend?.channel);

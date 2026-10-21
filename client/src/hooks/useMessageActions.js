@@ -236,6 +236,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 logger.warn('⚠️ [sendMessage] Socket not connected');
             }
 
+            // Slack/Teams outgoing bridge: only for channels an admin bridged out (no-op otherwise).
+            if (conversationType === 'channel' && !isChecklist && response?.data?.message?._id) {
+                import('../features/integrations/bridgeRelay').then(({ relayIfBridged }) => relayIfBridged({
+                    workspaceId: workspaceId || window.location.pathname.match(/\/workspace\/([^/]+)/)?.[1] || null,
+                    channelId: conversationId, messageId: response.data.message._id, text,
+                })).catch(() => {});
+            }
+
             return {
                 success: true,
                 tempId,

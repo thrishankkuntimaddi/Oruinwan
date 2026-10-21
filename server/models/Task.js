@@ -124,8 +124,8 @@ const TaskSchema = new mongoose.Schema({
     // url by the integrations feature. `kind` and `state` mirror the integration card.
     externalLinks: [{
         _id: false,
-        provider: { type: String, enum: ['github', 'gitlab', 'jira'], required: true },
-        kind: { type: String, enum: ['pull_request', 'issue', 'jira_issue'], required: true },
+        provider: { type: String, enum: ['github', 'gitlab', 'jira', 'bitbucket', 'linear', 'google_drive', 'onedrive', 'dropbox', 'notion', 'confluence'], required: true },
+        kind: { type: String, enum: ['pull_request', 'issue', 'jira_issue', 'file', 'page'], required: true },
         url: { type: String, required: true },
         repo: { type: String, default: null },
         number: { type: Number, default: null },

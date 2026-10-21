@@ -13,24 +13,24 @@ import './setup.css';
 
 /* ── Shared shell ──────────────────────────────────────────────────────── */
 
-function StatusBadge({ data }) {
+export function StatusBadge({ data }) {
     if (!data) return null;
     if (data.connected) return <Badge tone="success">Connected</Badge>;
     if (data.status === 'error') return <Badge tone="danger">Needs attention</Badge>;
     return <Badge>Not connected</Badge>;
 }
 
-const MASK = '••••';
-const isMasked = (v) => typeof v === 'string' && v.includes(MASK);
+export const MASK = '••••';
+export const isMasked = (v) => typeof v === 'string' && v.includes(MASK);
 
-function LastEvent({ at }) {
+export function LastEvent({ at }) {
     if (!at) return <span className="oi-muted">No events received yet</span>;
     const d = new Date(at);
     if (Number.isNaN(d.getTime())) return null;
     return <span className="oi-muted">Last event {d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>;
 }
 
-const FIRST_MESSAGE_HINT = 'Cards appear in a channel only after someone has sent at least one message there (Oruinwan needs that channel’s encryption key). Say hi in a new channel before routing events to it.';
+export const FIRST_MESSAGE_HINT = 'Cards appear in a channel only after someone has sent at least one message there (Oruinwan needs that channel’s encryption key). Say hi in a new channel before routing events to it.';
 
 function ProviderShell({ provider, title, description, cfg, isAdmin, children, onConnectClick, connectOpen }) {
     const { data, loading, error, reload } = cfg;
@@ -56,7 +56,7 @@ function ProviderShell({ provider, title, description, cfg, isAdmin, children, o
     );
 }
 
-function TestResult({ result }) {
+export function TestResult({ result }) {
     if (!result) return null;
     return (
         <div className="oi-test" role="status" data-ok={result.ok ? 'true' : 'false'}>
@@ -66,7 +66,7 @@ function TestResult({ result }) {
     );
 }
 
-function useTester(type, workspaceId) {
+export function useTester(type, workspaceId) {
     const [testing, setTesting] = useState(false);
     const [result, setResult] = useState(null);
     const run = async (overrides) => {
@@ -88,7 +88,7 @@ function useTester(type, workspaceId) {
     return { testing, result, run, setResult };
 }
 
-function DisconnectButton({ type, label, workspaceId, onDone }) {
+export function DisconnectButton({ type, label, workspaceId, onDone }) {
     const { showToast } = useToast();
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -117,7 +117,7 @@ function DisconnectButton({ type, label, workspaceId, onDone }) {
 }
 
 /** Toggle rows that save immediately. */
-function SettingToggles({ items, config, onSave, disabled }) {
+export function SettingToggles({ items, config, onSave, disabled }) {
     const { showToast } = useToast();
     const [pending, setPending] = useState(null);
     const flip = async (key, value) => {
@@ -136,7 +136,7 @@ function SettingToggles({ items, config, onSave, disabled }) {
 }
 
 /** Routes with a Save/Discard bar. */
-function RoutesBlock({ cfg, isAdmin, channels, editorProps, normalise, validate }) {
+export function RoutesBlock({ cfg, isAdmin, channels, editorProps, normalise, validate }) {
     const { showToast } = useToast();
     const saved = cfg.data?.config?.routes || [];
     const [routes, setRoutes] = useState(saved);

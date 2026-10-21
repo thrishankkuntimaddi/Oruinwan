@@ -13,6 +13,7 @@ import { StatusBadge, PriorityIcon, UserAvatar, IssueTypeIcon, fmtDate, tint, FO
 import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
 import { SubtasksSection, DependenciesSection, TimeTrackingSection, RepeatSection, MilestoneSection } from './TaskDetailSections';
 import { RepeatBadge } from './RepeatPicker';
+import { AttachFromApps, usePickerTypes } from '../../features/integrations/CloudPicker';
 
 const Section = ({ label, icon, action, children }) => (
     <section>
@@ -143,6 +144,7 @@ export default function WorkspaceTaskDetailPanel({
 }) {
     const { activeWorkspace } = useWorkspace();
     const aiWorkspaceId = activeWorkspace?.id || activeWorkspace?._id || null;
+    const pickerTypes = usePickerTypes(aiWorkspaceId);
     const aiCtx = useAIContext();
     const setAITask = aiCtx?.setTask;
     const { showToast } = useToast();
@@ -414,10 +416,11 @@ export default function WorkspaceTaskDetailPanel({
                         <DependenciesSection task={task} candidates={allTasks} lookup={allTasks} canAdd={!!can.dependency} disabled={deleted}
                             onAdded={(dependencies) => onPatchLocal?.(task.id, { dependencies })} />
 
-                        {/* Pull requests / issues linked by the GitHub and Jira integrations */}
-                        {task.externalLinks?.length > 0 && (
-                            <Section label={`Linked pull requests (${task.externalLinks.length})`} icon={<GitPullRequest size={10} />}>
-                                <LinkedPullRequests links={task.externalLinks} workspaceId={aiWorkspaceId} />
+                        {/* Pull requests, issues, files and pages linked by integrations */}
+                        {(task.externalLinks?.length > 0 || pickerTypes.length > 0) && (
+                            <Section label={`Linked items${task.externalLinks?.length ? ` (${task.externalLinks.length})` : ''}`} icon={<GitPullRequest size={10} />}>
+                                <LinkedPullRequests links={task.externalLinks || []} workspaceId={aiWorkspaceId} />
+                                <AttachFromApps workspaceId={aiWorkspaceId} taskId={task._id || task.id} types={pickerTypes} />
                             </Section>
                         )}
 

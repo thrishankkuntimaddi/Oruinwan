@@ -11,14 +11,19 @@
  *  2. Server access like Android's native HTTP: CORS answered here, so any server works
  *  3. Security: sandboxed renderer, navigation locked to the app, links open in the browser
  *  4. Window state, single instance, menu, native notifications, dock/taskbar badge
+ *  5. Tray icon (unread dot, Do Not Disturb, launch at login); closing hides to the tray so the
+ *     page — and its socket — keeps syncing; notification quick reply (macOS, Windows)
  */
 
-const { app, BrowserWindow, Menu, Notification, ipcMain, net, protocol, screen, session, shell } = require('electron');
+const {
+  app, BrowserWindow, Menu, Notification, Tray, ipcMain, nativeImage, net, powerMonitor, protocol, screen, session, shell,
+} = require('electron');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { googleSignIn } = require('./googleSignIn');
+const trayState = require('./trayState');
 
 /**
  * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
@@ -55,6 +60,13 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let mainWindow = null;
+let tray = null;
+let unreadCount = 0;
+// Set by every real quit (tray Quit, Cmd+Q, the app menu, OS shutdown): only then may the
+// window close instead of hiding.
+let isQuitting = false;
+const IS_MAC = process.platform === 'darwin';
+const TRAY_DIR = path.join(__dirname, '..', 'assets', 'tray');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -116,6 +128,28 @@ function saveWindowState(win) {
     fs.writeFileSync(stateFile(), JSON.stringify(state));
   } catch (err) {
     console.warn('[window] could not save state:', err.message);
+  }
+}
+
+// ─── Desktop settings (Do Not Disturb) ────────────────────────────────────────
+
+const settingsFile = () => path.join(app.getPath('userData'), 'desktop-settings.json');
+let settings = { doNotDisturb: false };
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
+    settings = { doNotDisturb: saved.doNotDisturb === true };
+  } catch {
+    /* first run */
+  }
+}
+
+function saveSettings() {
+  try {
+    fs.writeFileSync(settingsFile(), JSON.stringify(settings));
+  } catch (err) {
+    console.warn('[settings] could not save:', err.message);
   }
 }
 
@@ -272,6 +306,9 @@ function createWindow() {
       nodeIntegration: false,
       webSecurity: true,
       spellcheck: true,
+      // Hidden in the tray, the page keeps its socket and timers running at full speed, so
+      // messages, notifications and the unread count stay live.
+      backgroundThrottling: false,
       additionalArguments: [`--oruinwan-version=${app.getVersion()}`],
     },
   });
@@ -290,7 +327,22 @@ function createWindow() {
   };
   win.on('resize', queueSave);
   win.on('move', queueSave);
-  win.on('close', () => saveWindowState(win));
+  win.on('close', (event) => {
+    saveWindowState(win);
+    if (trayState.closeAction({ platform: process.platform, isQuitting, hasTray: Boolean(tray) }) === 'hide') {
+      event.preventDefault();
+      // macOS: leave full screen first, or hiding leaves an empty full-screen space behind.
+      if (IS_MAC && win.isFullScreen()) {
+        win.once('leave-full-screen', () => win.hide());
+        win.setFullScreen(false);
+      } else {
+        win.hide();
+      }
+    }
+  });
+  win.on('session-end', () => { // Windows log off / shut down
+    isQuitting = true;
+  });
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null;
   });
@@ -353,7 +405,11 @@ ipcMain.on('oruinwan:notify', (event, payload) => {
     || (p.type === 'task' ? 'Task reminder' : p.senderName ? `${clip(p.senderName, 100)}${where}` : 'Oruinwan');
   const body = clip(p.body, 500) || clip(p.preview, 500) || clip(p.taskTitle, 200);
   const target = { workspaceId: clip(p.workspaceId, 64), channelId: clip(p.channelId, 64), dmSessionId: clip(p.dmSessionId, 64) };
-  const notification = new Notification({ title, body });
+  const options = trayState.notificationOptions({
+    platform: process.platform, title, body, target, doNotDisturb: settings.doNotDisturb,
+  });
+  if (!options) return; // Do Not Disturb
+  const notification = new Notification(options);
   shownNotifications.add(notification);
   const forget = () => shownNotifications.delete(notification);
   notification.on('click', () => {
@@ -361,13 +417,38 @@ ipcMain.on('oruinwan:notify', (event, payload) => {
     showWindow();
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('oruinwan:notification-clicked', target);
   });
+  // Inline reply (macOS, Windows): the page encrypts and sends it (client/src/desktop/quickReply.js).
+  notification.on('reply', (details, legacyReply) => {
+    forget();
+    const reply = trayState.quickReplyPayload(target, trayState.replyText(details, legacyReply));
+    if (!reply) return;
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      // No page to encrypt with: open the conversation instead.
+      showWindow();
+      return;
+    }
+    mainWindow.webContents.send('oruinwan:quick-reply', reply);
+  });
   notification.on('close', forget);
   notification.show();
 });
 
+// The page reports a quick reply it could not send (keys locked, offline): open the
+// conversation so the person can retry there.
+ipcMain.on('oruinwan:quick-reply-failed', (event, target) => {
+  if (!fromAppPage(event)) return;
+  const conversation = trayState.conversationTarget(target);
+  showWindow();
+  if (conversation && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('oruinwan:notification-clicked', conversation);
+  }
+});
+
 ipcMain.on('oruinwan:badge', (event, count) => {
   if (!fromAppPage(event)) return;
-  const n = Number.isFinite(count) ? Math.max(0, Math.min(9999, Math.floor(count))) : 0;
+  const n = trayState.clampUnread(count);
+  unreadCount = n;
+  updateTray();
   try {
     app.setBadgeCount(n); // dock (macOS) and Unity launchers (Linux); a no-op elsewhere
   } catch {
@@ -377,6 +458,77 @@ ipcMain.on('oruinwan:badge', (event, count) => {
     mainWindow.setTitle(n ? `Oruinwan (${n})` : 'Oruinwan');
   }
 });
+
+// ─── Tray ─────────────────────────────────────────────────────────────────────
+
+function trayImage() {
+  const image = nativeImage.createFromPath(path.join(TRAY_DIR, trayState.trayIconFile(process.platform, unreadCount)));
+  if (IS_MAC) image.setTemplateImage(true);
+  return image;
+}
+
+function launchAtLogin() {
+  try {
+    return app.getLoginItemSettings().openAtLogin;
+  } catch {
+    return false;
+  }
+}
+
+function trayMenu() {
+  return Menu.buildFromTemplate([
+    { label: 'Open Oruinwan', click: () => showWindow() },
+    { type: 'separator' },
+    {
+      label: 'Do Not Disturb',
+      type: 'checkbox',
+      checked: settings.doNotDisturb,
+      click: (item) => {
+        settings.doNotDisturb = item.checked;
+        saveSettings();
+        updateTray();
+      },
+    },
+    // setLoginItemSettings is macOS/Windows only; Linux desktops use their own autostart settings.
+    ...(trayState.supportsLaunchAtLogin(process.platform) ? [{
+      label: 'Launch at Login',
+      type: 'checkbox',
+      checked: launchAtLogin(),
+      click: (item) => {
+        try {
+          app.setLoginItemSettings({ openAtLogin: item.checked });
+        } catch (err) {
+          console.warn('[tray] could not change launch at login:', err.message);
+        }
+        updateTray();
+      },
+    }] : []),
+    { type: 'separator' },
+    { label: 'Quit Oruinwan', click: () => { isQuitting = true; app.quit(); } },
+  ]);
+}
+
+function updateTray() {
+  if (!tray || tray.isDestroyed()) return;
+  tray.setImage(trayImage());
+  tray.setToolTip(trayState.trayTooltip(unreadCount));
+  // macOS opens the menu on right-click only (left-click opens the window, below).
+  if (!IS_MAC) tray.setContextMenu(trayMenu());
+}
+
+function createTray() {
+  try {
+    tray = new Tray(trayImage());
+  } catch (err) {
+    // Some Linux desktops have no tray; closing the window then quits (trayState.closeAction).
+    console.warn('[tray] unavailable:', err.message);
+    tray = null;
+    return;
+  }
+  tray.on('click', () => showWindow());
+  if (IS_MAC) tray.on('right-click', () => tray.popUpContextMenu(trayMenu()));
+  updateTray();
+}
 
 // ─── Menu ─────────────────────────────────────────────────────────────────────
 
@@ -403,14 +555,24 @@ function buildMenu() {
 
 if (process.platform === 'win32') app.setAppUserModelId('com.oruinwan.desktop');
 
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.whenReady().then(() => {
+  loadSettings();
   registerAppScheme();
   answerCors(session.defaultSession);
   lockDownPermissions(session.defaultSession);
   buildMenu();
   createWindow();
+  createTray();
 
-  app.on('activate', () => showWindow()); // macOS: dock icon click with no window open
+  app.on('activate', () => showWindow()); // macOS: dock icon click shows the hidden window
+  // Logging out / shutting down must not be held up by hide-to-tray (macOS, Linux).
+  powerMonitor.on('shutdown', () => {
+    isQuitting = true;
+  });
 });
 
 app.on('window-all-closed', () => {

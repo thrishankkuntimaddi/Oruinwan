@@ -14,6 +14,7 @@ import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu
 import { parseSlashCommand } from "../../../../components/chat/slash/slashCommands";
 import { useFeatureFlags } from "../../../../contexts/FeatureFlagsContext";
 import { INTEGRATION_COMMANDS, runIntegrationCommand } from "../../../../features/integrations/slashActions";
+import { BridgeNotice } from "../../../../features/integrations/bridgeRelay";
 import { useToast } from "../../../../contexts/ToastContext";
 import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
 import SmartReplySuggestions from "./SmartReplySuggestions";
@@ -507,6 +508,9 @@ export default function FooterInput({
       flexShrink: 0,
       position: 'relative',
     }}>
+      {conversationType === 'channel' && (
+        <BridgeNotice workspaceId={workspaceId || window.location.pathname.match(/\/workspace\/([^/]+)/)?.[1] || null} channelId={conversationId} />
+      )}
       {dropZone && (
         <div data-testid="drop-overlay" aria-hidden
           style={{

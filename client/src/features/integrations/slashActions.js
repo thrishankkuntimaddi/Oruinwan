@@ -1,14 +1,35 @@
 import api from '../../services/api';
 import { parseGithubArgs, parseJiraArgs, parsePrRef, defaultRepoForChannel } from './prRefs';
 import {
-    isConnected, notConnectedMessage, createGithubIssue, getPullRequest, createJiraIssue, createZoomMeeting,
+    isConnected, notConnectedMessage, createGithubIssue, getPullRequest, createJiraIssue, createZoomMeeting, connectorAction,
 } from './integrationsApi';
+import { openCloudPicker, itemMarkdown, PICKER_TYPES } from './CloudPicker';
 import { openCodeReview } from './codeReviewBus';
 
 // Slash commands that talk to integrations (and /task). The composer calls
 // runIntegrationCommand() and shows `error` if it throws.
 
-export const INTEGRATION_COMMANDS = new Set(['github', 'jira', 'zoom', 'review', 'task']);
+// /drive etc. map to their connector type.
+const PICKER_COMMANDS = { drive: 'google_drive', onedrive: 'onedrive', dropbox: 'dropbox', notion: 'notion', confluence: 'confluence' };
+const ISSUE_COMMANDS = {
+    gitlab: { label: 'GitLab', field: 'project', re: /^[\w.-]+(\/[\w.-]+)+$/, usage: '/gitlab issue group/project <title>' },
+    bitbucket: { label: 'Bitbucket', field: 'repo', re: /^[\w.-]+\/[\w.-]+$/, usage: '/bitbucket issue workspace/repo <title>' },
+    linear: { label: 'Linear', field: 'team', re: /^[A-Za-z][A-Za-z0-9]{0,9}$/, usage: '/linear issue TEAM <title>' },
+};
+const MEET_LINK = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?\S*)?$/;
+
+export const INTEGRATION_COMMANDS = new Set(['github', 'jira', 'zoom', 'review', 'task', 'gmeet', ...Object.keys(PICKER_COMMANDS), ...Object.keys(ISSUE_COMMANDS)]);
+
+/** "issue group/project Fix login" → { target, title }. */
+export function parseIssueArgs(name, args) {
+    const spec = ISSUE_COMMANDS[name];
+    const words = String(args || '').trim().split(/\s+/).filter(Boolean);
+    if (words[0]?.toLowerCase() === 'issue') words.shift();
+    const [target, ...rest] = words;
+    const title = rest.join(' ').trim();
+    if (!target || !title || !spec.re.test(target)) return { error: `Usage: ${spec.usage}` };
+    return { target: name === 'linear' ? target.toUpperCase() : target, title };
+}
 
 const esc = (s) => String(s || '').replace(/([[\]])/g, '\\$1');
 
@@ -102,7 +123,48 @@ export async function runIntegrationCommand(name, args, ctx) {
             return;
         }
 
-        default:
-            fail('Unknown command.');
+        case 'gmeet': {
+            const link = String(args || '').trim();
+            // A pasted Meet link is checked and shared as is; otherwise a real one is created.
+            if (/^https?:\/\//.test(link)) {
+                if (!MEET_LINK.test(link)) fail('That is not a Google Meet link (https://meet.google.com/abc-defg-hij).');
+                await send(`🎥 **Google Meet**\n[Join the meeting](${link})`);
+                return;
+            }
+            if (!workspaceId) fail('Open a workspace first.');
+            const status = await isConnected('google_meet', workspaceId);
+            if (!status.connected) fail('Google Meet isn’t connected, so Oruinwan can’t create a link. Paste one instead: /gmeet https://meet.google.com/abc-defg-hij');
+            const res = await connectorAction('google_meet', 'meeting', workspaceId, { title: link || 'Quick sync' }, 'POST');
+            const m = res?.meeting || {};
+            if (!m.joinUrl) fail('Google did not return a Meet link.');
+            await send(`🎥 **Google Meet — ${esc(m.title || link || 'Quick sync')}**\n[Join the meeting](${m.joinUrl})`);
+            return;
+        }
+
+        case 'gitlab':
+        case 'bitbucket':
+        case 'linear': {
+            const spec = ISSUE_COMMANDS[name];
+            const cmd = parseIssueArgs(name, args);
+            if (cmd.error) fail(cmd.error);
+            await requireConnected(name, workspaceId);
+            const res = await connectorAction(name, 'issue', workspaceId, { [spec.field]: cmd.target, title: cmd.title }, 'POST');
+            const issue = res?.issue || {};
+            const ref = issue.key || `${issue.repo || cmd.target}${issue.number ? `#${issue.number}` : ''}`;
+            await send(`🎫 Opened ${spec.label} issue ${issue.url ? `[${ref}](${issue.url})` : ref}: **${esc(issue.title || cmd.title)}**`);
+            notify?.(`${ref} created`, 'success');
+            return;
+        }
+
+        default: {
+            const type = PICKER_COMMANDS[name];
+            if (!type || !PICKER_TYPES.includes(type)) fail('Unknown command.');
+            await requireConnected(type, workspaceId);
+            const item = await openCloudPicker({ type, workspaceId, initialQuery: String(args || '').trim(), mode: 'message' });
+            if (!item) return;
+            if (!item.url) fail('That item has no link to share.');
+            await send(itemMarkdown(type, item));
+            return;
+        }
     }
 }
