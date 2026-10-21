@@ -4,6 +4,7 @@ const DMSession = require("../../models/DMSession");
 const identity = require("../identity");
 const logger = require("../../utils/logger");
 const messagesService = require("../modules/messages/messages.service");
+const { isDuplicateSend } = require("../modules/messages/clientMessageId");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
 const privacyService = require("../features/auth/privacy.service");
@@ -427,7 +428,15 @@ module.exports = function registerChatHandlers(io, socket) {
         quotedMessageId,
         ciphertext,
         messageIv,
+        clientMessageId: data.clientMessageId,
       });
+
+      // Offline-queue resend of a message already stored: confirm it to the
+      // sender only; the conversation already received it the first time.
+      if (isDuplicateSend(saved)) {
+        socket.emit("message-sent", { message: saved, clientTempId, clientMessageId: saved.clientMessageId, duplicate: true });
+        return;
+      }
 
       let updatedParent = null;
       if (parentId) {

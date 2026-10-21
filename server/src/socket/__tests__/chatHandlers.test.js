@@ -101,4 +101,16 @@ describe('socket send-message authorization', () => {
     expect(socket.emit).toHaveBeenCalledWith('message-sent', expect.objectContaining({ clientTempId: 't4' }));
     expect(roomEmit).toHaveBeenCalledWith('new-message', expect.objectContaining({ clientTempId: 't4' }));
   });
+
+  it('passes clientMessageId through and only confirms a duplicate resend to the sender', async () => {
+    Channel.findById.mockReturnValue(q({ _id: 'ch1', workspace: 'wsReal', company: 'co1', members: [{ user: USER }] }));
+    const { markDuplicate } = require('../../modules/messages/clientMessageId');
+    messagesService.createMessage.mockResolvedValue(markDuplicate({ _id: 'm1', clientMessageId: 'queued-0001' }));
+
+    await handlers['send-message']({ channelId: 'ch1', ciphertext: 'x', messageIv: 'y', clientTempId: 't5', clientMessageId: 'queued-0001' });
+
+    expect(messagesService.createMessage).toHaveBeenCalledWith(expect.objectContaining({ clientMessageId: 'queued-0001' }));
+    expect(socket.emit).toHaveBeenCalledWith('message-sent', expect.objectContaining({ clientTempId: 't5', duplicate: true, clientMessageId: 'queued-0001' }));
+    expect(roomEmit).not.toHaveBeenCalledWith('new-message', expect.anything());
+  });
 });

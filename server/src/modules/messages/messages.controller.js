@@ -25,6 +25,14 @@ async function cleanAttachmentsOrRespond(res, attachments, senderId) {
     }
 }
 
+// 201 for a new message; 200 + duplicate:true when an offline-queue resend
+// (same clientMessageId) matched a message that was already stored.
+function sentResponse(res, message) {
+    const { isDuplicateSend } = require('./clientMessageId');
+    if (isDuplicateSend(message)) return res.status(200).json({ message, duplicate: true });
+    return res.status(201).json({ message });
+}
+
 function sendError(res, err, label) {
     if (err && err.status && err.status < 500) {
         return res.status(err.status).json({ message: err.message });
@@ -45,7 +53,7 @@ exports.sendDirectMessage = async (req, res) => {
             ciphertext,
             messageIv,
             isEncrypted,
-            clientTempId,
+            clientTempId, clientMessageId,
             mentionText = '',   
             
             type = 'message',
@@ -160,7 +168,7 @@ exports.sendDirectMessage = async (req, res) => {
                 ciphertext,
                 messageIv,
                 isEncrypted,
-                clientTempId,
+                clientTempId, clientMessageId,
                 mentionText,
                 
                 poll,
@@ -172,7 +180,7 @@ exports.sendDirectMessage = async (req, res) => {
             req.io
         );
 
-        return res.status(201).json({ message });
+        return sentResponse(res, message);
     } catch (err) {
         return handleError(res, err, 'SEND DM ERROR');
     }
@@ -406,7 +414,7 @@ exports.sendChannelMessage = async (req, res) => {
             ciphertext,
             messageIv,
             isEncrypted,
-            clientTempId,
+            clientTempId, clientMessageId,
             mentionText = '',   
             
             type = 'message',
@@ -470,7 +478,7 @@ exports.sendChannelMessage = async (req, res) => {
                 ciphertext,
                 messageIv,
                 isEncrypted,
-                clientTempId,
+                clientTempId, clientMessageId,
                 mentionText,
                 
                 poll,
@@ -482,7 +490,7 @@ exports.sendChannelMessage = async (req, res) => {
             req.io
         );
 
-        return res.status(201).json({ message });
+        return sentResponse(res, message);
     } catch (err) {
         return handleError(res, err, 'SEND CHANNEL ERROR');
     }
