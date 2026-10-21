@@ -24,6 +24,23 @@ echo "Oruinwan local services"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
 if [ "$NODE_MAJOR" -ge 20 ]; then ok "Node $(node -v)"; else fail "Node 20+ is required (found $(node -v 2>/dev/null || echo none))"; fi
 
+# ── Postgres, Redis, S3 storage (docker compose) ─────────────────────────
+if listening 15432 && listening 16379 && listening 19100; then
+  ok "Postgres :15432, Redis :16379 and S3 storage :19100 are running"
+elif ! command -v docker >/dev/null 2>&1; then
+  fail "Docker is not installed — brew install colima docker docker-compose"
+else
+  if ! docker info >/dev/null 2>&1 && command -v colima >/dev/null 2>&1; then
+    colima start >"$LOG_DIR/colima.log" 2>&1 || fail "Colima did not start — see $LOG_DIR/colima.log"
+  fi
+  # Containers already created keep their names; start them, then create anything missing.
+  docker start oruinwan-postgres oruinwan-redis oruinwan-s3 >/dev/null 2>&1
+  (cd "$ROOT" && docker compose up -d postgres redis s3 >"$LOG_DIR/compose.log" 2>&1)
+  for _ in $(seq 1 30); do listening 15432 && listening 16379 && break; sleep 1; done
+  if listening 15432 && listening 16379; then ok "Postgres, Redis and S3 storage started (docker)"
+  else fail "Postgres/Redis did not start — see $LOG_DIR/compose.log"; fi
+fi
+
 # ── MongoDB ───────────────────────────────────────────────────────────────
 if [ ! -f "$ROOT/server/.env" ]; then
   fail "server/.env is missing — copy server/.env.example to server/.env and fill it in"
