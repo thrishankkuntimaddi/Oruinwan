@@ -136,9 +136,11 @@ and captions, and an AI recap from the transcript (`server/src/features/meetings
 Calls are **peer-to-peer (WebRTC mesh)**: every person sends their audio/video to every other
 person. That is fine up to about 5–8 people; bigger calls need a media server (SFU).
 
-Gaps (the next build phase, see [5](#5-gaps-ranked)): during a call the UI is a thin bar, not a
-dedicated call screen; no switching a live call between your own devices; nothing stops one person
-from being in two huddles at once.
+Since 2.2: every call opens a full call screen that minimises to a floating mini call (and to its
+own always-on-top window in the desktop app); one call per person (a second one asks Stay/Switch);
+"Move here" moves a live call between your own devices with a short pause; Android has video, a
+background call notification and permission prompts. Protocol: [api/calls.md](api/calls.md).
+Remaining gaps: screen sharing from an Android phone; seamless moves and big calls need an SFU.
 
 ### 2.5 AI agents
 
@@ -209,11 +211,13 @@ Sync", "Slack Mirror"…) are demo entries that do nothing.
 | Email (Brevo) | Security emails (new-device sign-in, password changed, signed out everywhere) always; daily digest on by default; offline mention/DM email and task/meeting emails only when turned on |
 | Preferences | Per workspace (messages, threads, tasks, meetings, AI, email, push), account (digest, mentions only, DMs, sound), per-conversation mute. "Do not disturb" is only a status; nothing obeys it. |
 
-Why it floods today: the server never checks whether you're already reading the chat, so every
-message from the person you're talking to still becomes a stored notification; reading a chat
-doesn't mark its notifications read, so they pile up in Activity on other devices; the phone app
-never reports which chat is open, so it also gets push; and each sign-out creates a new device ID,
-so the next sign-in sends a "new device" email.
+Since 2.2: nothing is created for a conversation you're reading on any device (web, desktop, phone,
+split pane, open thread); one rolling notification per conversation counts up ("Ben · 5 new
+messages") with push at most every 30 s; reading a chat clears its notifications everywhere; no
+synthetic daily digest item; Do not disturb silences push and sounds. Email: sign-out keeps the
+device id, so "new sign-in" emails are only for new devices (and can be turned off); the digest
+defaults to Smart (daily only when something waited for you, otherwise weekly). Details:
+[api/notifications.md](api/notifications.md).
 
 ---
 
@@ -313,7 +317,7 @@ cross-database writes non-atomic.
 
 Ranked by how much they hurt a real team, not by size.
 
-### Next phase (already planned)
+### Done in 2.2
 
 | # | Gap | Why it matters |
 |---|---|---|

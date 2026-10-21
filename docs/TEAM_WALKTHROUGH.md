@@ -247,9 +247,12 @@ Notes, Transcript, Summary, Whiteboard, Brainstorm, Chat**.
 Asha ends the call. The **Summary** tab fills with an AI recap from the transcript, and the huddle
 note stays in **Notes** shared with everyone who joined.
 
-> **Watch out (being fixed in the next phase):** in a channel the call shows as a thin bar at the top
-> of the chat, not a full call screen. Joining another call silently leaves the current one, and
-> joining from your phone cuts the laptop off instead of handing over smoothly.
+**Since 2.2:** the call opens a full call screen; minimise it (Esc or the chevron) to a floating
+mini call and keep working. On the desktop app the call floats in its own small window above other
+apps. Trying to join a second call asks **Stay** or **Switch**. Asha leaves her desk mid-call: her
+phone shows **In a call on MacBook · Move here** → tap → the call continues on the phone after a
+1–2 second pause, mute and camera kept. On Android the call keeps running in the background with
+**Mute** and **Leave** in the notification.
 
 ### 12. Build the sprint in Tasks
 
@@ -440,12 +443,10 @@ From this walkthrough, in the order you hit them:
 1. Integrations need a first message in a channel before they can post there.
 2. No GitHub repo picker / automatic webhook; AI reviews don't go back to GitHub.
 3. Jira is one-way.
-4. The call is a thin bar in channels; no device hand-off; you can end up in two calls.
-5. Notifications for the chat you're already reading; bursts from one person aren't grouped on the
-   server; new-device emails after every sign-in.
-6. The message ↔ task link is one-way; split copies aren't grouped.
-7. Files and Knowledge aren't on the rail; chat files aren't in Files.
-8. No Google Calendar or Gmail; no group DMs.
+4. Screen sharing from an Android phone (you can watch others' screens).
+5. The message ↔ task link is one-way; split copies aren't grouped.
+6. Files and Knowledge aren't on the rail; chat files aren't in Files.
+7. No Google Calendar or Gmail; no group DMs.
 
-Items 4 and 5 are the next build phase. The rest are ranked in
+Calls and notifications were reworked in 2.2. The rest are ranked in
 [PRODUCT_MAP.md → Gaps](PRODUCT_MAP.md#5-gaps-ranked).

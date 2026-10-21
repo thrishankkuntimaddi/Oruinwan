@@ -17,6 +17,7 @@ import { callFullText, timeLimitEndedText } from '../plan/planText.js';
 import { keepScreenOn, nativeDeviceName, onCallAction, setSpeaker, startCallSession, stopCallSession, updateCallSession } from '../../native/callSession.js';
 import { cameraConstraints, deviceLabel, elsewhereCall, endedMessage, promptForError, scopeOf, switchPrompt } from './callLogic.js';
 import { ensureAllowed } from './callPermissions.js';
+import { prefs } from '../../native/storage.js';
 
 const FALLBACK_ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
 
@@ -36,6 +37,9 @@ const isTabletScreen = () =>
 /** How the server and my other devices name this one: { label, platform }. */
 const device = { label: deviceLabel({ userAgent: globalThis.navigator?.userAgent, tablet: isTabletScreen() }), platform: Capacitor.getPlatform() };
 let deviceNamed = false;
+// The stable install id lets the server tell "another device" from "this device reconnecting".
+// Same id the API client sends as X-Device-Id (data/live/http.js deviceId).
+const callDevice = () => { let id = null; try { id = prefs.get('device.id'); } catch { /* storage not ready */ } return typeof id === 'string' && id ? { ...device, id } : { ...device }; };
 function nameDevice() {
   if (deviceNamed) return;
   deviceNamed = true;
@@ -517,7 +521,7 @@ export function bindHuddles() {
     const { call, muted, cameraOn } = useHuddle.getState();
     if (call) {
       Object.keys(peers).forEach(closePeer);
-      emit('huddle:join', { ...scopePayload(call.scope), huddleId: call.huddleId, audioEnabled: !muted, videoEnabled: cameraOn, device: { ...device }, transfer: true });
+      emit('huddle:join', { ...scopePayload(call.scope), huddleId: call.huddleId, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice(), transfer: true });
     }
   });
   // The notification's Mute and Leave buttons.
@@ -541,7 +545,7 @@ const getUserMedia = (c) => navigator.mediaDevices.getUserMedia(c);
 function currentCallInfo() {
   const { call } = useHuddle.getState();
   if (!call) return null;
-  return { huddleId: call.huddleId, ...call.scope, channelName: call.title?.startsWith('#') ? call.title.slice(1).trim() : null, meetingId: call.meetingId, device: { ...device } };
+  return { huddleId: call.huddleId, ...call.scope, channelName: call.title?.startsWith('#') ? call.title.slice(1).trim() : null, meetingId: call.meetingId, device: callDevice() };
 }
 
 /**
@@ -608,7 +612,7 @@ async function enter({ huddleId, scope, title, start, meetingId = null, video = 
   });
   lastRequest = request;
   const where = scopePayload(scope);
-  const extra = { device: { ...device }, ...(intent === 'switch' ? { switch: true } : {}), ...(intent === 'transfer' ? { transfer: true } : {}) };
+  const extra = { device: callDevice(), ...(intent === 'switch' ? { switch: true } : {}), ...(intent === 'transfer' ? { transfer: true } : {}) };
   if (start) {
     // Join once the server has created the huddle (or pointed us at the one already running).
     pendingStart = { huddleId, where, extra, timer: setTimeout(() => joinPendingStart(useHuddle.getState().call?.huddleId), 1500) };
