@@ -144,7 +144,8 @@ router.post('/:companyId/acs', express.urlencoded({ extended: false, limit: '2mb
       return res.redirect(await ssoApp.appRedirectWithCode({ userId: user._id, deviceId: relay.deviceId, method: 'sso_saml', challenge: relay.challenge }));
     }
     // (see deviceIdFrom for the allowed device id format)
-    const { accessToken } = await startSsoSession(req, res, user._id, { method: 'sso_saml', deviceId: relay.deviceId });
+    const { accessToken, pending } = await startSsoSession(req, res, user._id, { method: 'sso_saml', deviceId: relay.deviceId });
+    if (pending) return res.redirect(`${FRONTEND_URL()}/oauth-success#pending=${pending.pendingToken}`);
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${accessToken}`);
   } catch (err) {
     const code = err instanceof saml.SamlError ? err.code : 'invalid_response';

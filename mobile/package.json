@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",
@@ -39,6 +40,7 @@
     "@firebase/analytics": "^0.10.25",
     "@firebase/app": "^0.16.3",
     "@firebase/remote-config": "^0.9.3",
+    "barcode-detector": "3.2.2",
     "highlight.js": "^11.11.1",
     "lib0": "^0.2.119",
     "lucide-react": "^1.55.0",

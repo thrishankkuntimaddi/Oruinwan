@@ -1,6 +1,7 @@
 import axios from 'axios';
 import sdkApiClient from '@platform/sdk/api/apiClient.js';
 import logger from '../utils/logger';
+import { getDeviceId } from '../utils/deviceId';
 
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -21,6 +22,16 @@ export const setOnTokenRefreshed = (callback) => {
 
 const REFRESH_TIMEOUT_MS = 10000;
 
+/** This browser's device id (X-Device-Id): the server lists it under Devices and counts it for the device limit. */
+export function deviceIdHeader() {
+    try {
+        const id = getDeviceId();
+        return id ? { 'X-Device-Id': id } : {};
+    } catch {
+        return {};
+    }
+}
+
 // Single in-flight refresh shared by the axios interceptor, AuthContext and
 // SocketContext. Web refresh relies solely on the httpOnly `jwt` cookie.
 let refreshPromise = null;
@@ -31,7 +42,7 @@ export function refreshAccessToken() {
         const response = await axios.post(
             `${API_BASE}/api/auth/refresh`,
             {},
-            { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }
+            { withCredentials: true, timeout: REFRESH_TIMEOUT_MS, headers: deviceIdHeader() }
         );
         const accessToken = response?.data?.accessToken;
         if (!accessToken) {
@@ -61,6 +72,9 @@ const NO_REFRESH_AUTH_PATHS = [
     '/api/auth/google/desktop-token',
     '/api/auth/resend-verification',
     '/api/auth/passkeys/login',
+    // Pending sign-ins (two-step verification, device limit) and QR sign-in answer 401s of their own.
+    '/api/auth/signin/',
+    '/api/auth/qr/',
 ];
 
 // 401 bodies emitted by server/src/shared/middleware/auth.js (requireAuth).
@@ -117,6 +131,10 @@ api.interceptors.request.use((config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+    }
+    const device = deviceIdHeader();
+    if (device['X-Device-Id'] && config.headers && !config.headers['X-Device-Id']) {
+        config.headers['X-Device-Id'] = device['X-Device-Id'];
     }
     if (config.data instanceof FormData) {
         delete config.headers['Content-Type'];

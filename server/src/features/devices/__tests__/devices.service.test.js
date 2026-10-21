@@ -136,7 +136,9 @@ describe('sign-in registration', () => {
     const deviceSessions = { createOrUpdateSession: jest.fn(async (x) => x) };
     await devices.recordSignIn(req({ 'x-client-platform': 'ios' }), USER, { deviceId: 'phone-device-1', reactivate: false }, { ...s, deviceSessions });
     expect(deviceSessions.createOrUpdateSession).toHaveBeenCalledWith(expect.objectContaining({ deviceId: 'phone-device-1', platform: 'ios' }));
-    expect(s.query).not.toHaveBeenCalled();
+    // No reactivation; only the sign-in history is written to the device row.
+    expect(s.query.mock.calls.some(([sql]) => /SET revoked = false/.test(sql))).toBe(false);
+    expect(s.query.mock.calls.some(([sql]) => /meta = meta \|\|/.test(sql))).toBe(true);
   });
 
   test('no or malformed device id: nothing recorded; failures never throw', async () => {

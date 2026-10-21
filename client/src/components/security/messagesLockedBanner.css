@@ -1,0 +1,16 @@
+/* Non-blocking "messages are locked" card, bottom-left, over content (liquid glass layer). */
+.mlb {
+    position: fixed; left: 16px; bottom: 16px; z-index: 60;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    max-width: min(560px, calc(100vw - 32px));
+    padding: 12px 12px 12px 14px;
+    border-radius: var(--gl-radius-lg);
+    color: var(--text-primary);
+}
+.mlb__mark { width: 30px; height: 30px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--gl-accent-line); background: var(--gl-accent-soft); color: var(--accent); border-radius: var(--gl-radius); }
+.mlb__text { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); }
+.mlb__text strong { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.mlb__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 520px) {
+    .mlb { left: 8px; right: 8px; bottom: 8px; max-width: none; }
+}

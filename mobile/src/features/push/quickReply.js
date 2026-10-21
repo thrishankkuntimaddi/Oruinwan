@@ -5,7 +5,7 @@
 import { nav, useNav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
 import { invalidate } from '../../data/query.js';
-import { toast } from '../../lib/bus.js';
+import { emit, toast } from '../../lib/bus.js';
 import { openPush } from '../home/openTarget.js';
 import { MESSAGE_ACTIONS, repostWithActions } from '../../native/push.js';
 
@@ -41,6 +41,11 @@ export async function handleNotification(data = {}, action = null) {
   const plan = quickReplyPlan(data, action);
   const session = useSession.getState();
   if (session.status !== 'signed-in') return;
+  // "Sign-in request from … — Approve / Deny": the approval sheet (features/auth/ApprovalHost.jsx).
+  if (data?.type === 'signin_approval' || data?.type === 'unlock_approval') {
+    emit('approvals:check');
+    return;
+  }
   if (plan.kind === 'read') {
     try {
       await api().markConversationRead(plan.conv);
@@ -81,6 +86,11 @@ function openConversationId() {
 
 /** A push while the app runs: Android re-posts it with the actions, unless it's on screen. */
 export function handleReceived(notification) {
+  const type = notification?.data?.type;
+  if (type === 'signin_approval' || type === 'unlock_approval') {
+    emit('approvals:check');
+    return;
+  }
   const conv = conversationOf(notification?.data);
   if (!conv || !isMessagePush(notification?.data)) return;
   repostWithActions(notification, { show: openConversationId() !== conv.id });

@@ -93,7 +93,7 @@ export const ARTICLES = [
             { steps: [
                 'Choose **Get started**, pick a username, and enter your email, date of birth and a password.',
                 'Open the verification link we email you (it works for 24 hours). You can sign in once your email is verified.',
-                'Sign in with your email and password. If you turned on two-factor sign-in, enter the 6-digit code from your authenticator app.',
+                'Sign in with your email and password, Google, a passkey or a QR code from your phone. If you turned on two-factor sign-in, approve on another device or enter a code from your authenticator app or email.',
             ] },
             { list: [
                 '**Continue with Google** (on the web and in the phone apps) signs you in, or creates an account after you choose a username. Google has already verified your email.',
@@ -509,9 +509,10 @@ export const ARTICLES = [
         keywords: 'encryption e2ee end-to-end encrypted aes security keys unlock password escrow recovery reset agents tls at rest',
         body: [
             'Messages are encrypted on your device with AES-256-GCM before they leave it, using a key for each conversation. They travel over encrypted connections (TLS) and are stored encrypted at rest. Message content is never shown to admins.',
-            'Your copy of each conversation key is protected by your own keys, which your password unlocks. On a new browser you may be asked for your password to unlock your messages.',
+            'Messages are encrypted in transit and at rest. Oruinwan’s server keeps a sealed copy of your key so your devices unlock automatically: signing in on a new browser, phone or the desktop app opens your messages without asking for your password.',
+            'Accounts set up before automatic unlock may be asked once, on one device, for the password (or to approve from another signed-in device). After that it never asks again.',
             'Your Oruinwan server also keeps an escrowed copy of each conversation key, protected by a server master key. It lets AI agents answer in encrypted conversations, lets you get your conversations back after a password reset, and lets new members read a conversation they join.',
-            { note: 'Because of the escrowed keys, this is not zero-knowledge messaging. Attachments are stored on the server and are not end-to-end encrypted.' },
+            { note: 'Because of the escrowed and sealed keys, this is not zero-knowledge messaging. Attachments are stored on the server and are not end-to-end encrypted.' },
         ],
     },
     {
@@ -540,8 +541,8 @@ export const ARTICLES = [
                 'Under two-factor authentication choose **Turn on**, then add Oruinwan to an authenticator app (Google Authenticator, 1Password, Authy…) by scanning the QR code, entering the setup key, or using **Open in authenticator app** on this device.',
                 'Enter the 6-digit code from the app to confirm.',
             ] },
-            'From then on, after your password Oruinwan asks for the 6-digit code from your authenticator app.',
-            { note: 'Oruinwan supports authenticator apps only; codes are not sent by SMS.' },
+            'From then on, after your password (or Google) Oruinwan asks for a second step, any one of: **Approve** on a device where you are already signed in (a sign-in request pops up there, and as a notification on your phone), the 6-digit code from your authenticator app, or a 6-digit code sent to your email (valid 10 minutes).',
+            { note: 'Codes are not sent by SMS. Passkeys and QR sign-in from a signed-in phone already count as two steps.' },
         ],
     },
     {
@@ -567,11 +568,13 @@ export const ARTICLES = [
         topic: 'security',
         title: 'See where you are signed in',
         summary: 'Review devices and sign out of any of them.',
-        keywords: 'devices sessions sign out logout other devices browser lost',
+        keywords: 'devices sessions sign out logout other devices browser lost device limit qr code scan sign in phone',
         appPath: '/settings?tab=sessions',
         appLabel: 'Open Devices',
         body: [
-            '**Settings → Devices** lists your active sessions, with **This device** marked. **Sign out** ends one session; **Sign out others** ends every session except the one you are using.',
+            '**Settings → Devices** lists your signed-in devices, with **This device** marked, where each signed in from and how (for example a QR code approved by your phone). **Rename** a device, **Sign out** of one, or **Sign out others** to end every session except the one you are using.',
+            'You can be signed in on up to 4 devices at once (browsers, the desktop app, phones and tablets). Signing in on a fifth asks you to sign out of one first, or to sign out everywhere and sign in there.',
+            '**Sign in with QR**: on the sign-in page choose **Sign in with QR** and scan the code with your phone (**Settings → Scan to sign in**), then tap Approve. To sign in a phone, open **Settings → Devices → Sign in a phone** here and choose **Scan QR code** on the phone’s start screen. Either way no password is needed and messages unlock straight away.',
         ],
     },
     {

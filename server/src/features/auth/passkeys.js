@@ -278,7 +278,11 @@ async function loginVerify(req, res) {
     if (stop) return res.status(stop.status).json(stop.body);
 
     const needsPasswordSetup = Boolean(user.googleAccount && !user.passwordHash);
-    return issueSignInSession(req, res, user, { message: 'Signed in with a passkey', isNewUser: false, needsPasswordSetup });
+    const extras = { message: 'Signed in with a passkey', isNewUser: false, needsPasswordSetup };
+    // The device limit applies to passkeys too; the passkey itself is the second factor.
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'oauth', method: 'passkey', mfaSatisfiedBy: 'passkey', extras });
+    if (blocked) return res.status(blocked.status).json(blocked.body);
+    return issueSignInSession(req, res, user, { ...extras, method: 'passkey' });
   } catch (err) {
     logger.error({ err }, 'PASSKEY LOGIN ERROR');
     return res.status(500).json({ message: 'Passkey sign-in failed' });

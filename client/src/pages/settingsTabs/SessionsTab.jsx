@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, LogOut, Monitor, MonitorSmartphone, Pencil, RefreshCw, Smartphone, X } from 'lucide-react';
+import { Check, Laptop, LogOut, Monitor, MonitorSmartphone, Pencil, QrCode, RefreshCw, Smartphone, X } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,9 +9,20 @@ import {
     Badge, Button, ConfirmDialog, EmptyState, ErrorState, IconButton, Input, LoadingState, Notice, PageIntro, Row, Section, errorMessage,
 } from './settingsUi';
 import './account/account.css';
+import SignInPhoneDialog from '../../components/security/SignInPhoneDialog';
 
-const ICONS = { ios: Smartphone, android: Smartphone, web: Monitor };
-const PLATFORM_LABEL = { ios: 'iOS', android: 'Android', web: 'Web', unknown: null };
+const ICONS = { ios: Smartphone, android: Smartphone, web: Monitor, desktop: Laptop };
+const PLATFORM_LABEL = { ios: 'iOS', android: 'Android', web: 'Web', desktop: 'Desktop app', unknown: null };
+const SIGN_IN_LABEL = { qr: 'QR code', password: 'password', google: 'Google', oauth: 'Google', passkey: 'a passkey' };
+
+/** "Signed in with a QR code · approved by iPhone" from device.signIn. */
+export function signInText(device) {
+    const s = device?.signIn;
+    if (!s?.method) return null;
+    const how = SIGN_IN_LABEL[s.method] || (String(s.method).startsWith('sso') ? 'single sign-on' : null);
+    const by = s.approvedBy?.deviceName ? `approved by ${s.approvedBy.deviceName}` : null;
+    return [how ? `Signed in with ${how}` : null, by].filter(Boolean).join(' · ') || null;
+}
 export const DEVICE_NAME_MAX = 64;
 
 /** The X-Device-Id header so the server can tell which device is this one. */
@@ -58,6 +69,7 @@ export function deviceMeta(device) {
     return [
         PLATFORM_LABEL[device.platform] || null,
         known(device.reportedName) && device.customName && !title.includes(device.reportedName) ? device.reportedName : null,
+        device.location || null,
         known(device.ipAddress) ? device.ipAddress : null,
         device.isCurrent ? 'Active now' : when ? `Last active ${when}` : null,
         since ? `First seen ${since}` : null,
@@ -110,6 +122,7 @@ function DeviceRow({ device, busy, onRevoke, onSignOut, onRename }) {
                     </div>
                 )}
                 {meta && <div className="stg-acc-item-meta">{meta}</div>}
+                {signInText(device) && <div className="stg-acc-item-meta">{signInText(device)}</div>}
             </div>
             <div className="stg-acc-item-actions">
                 {!editing && !device.revoked && (
@@ -119,8 +132,8 @@ function DeviceRow({ device, busy, onRevoke, onSignOut, onRename }) {
                     <Button size="sm" icon={LogOut} onClick={onSignOut} loading={busy}>Sign out</Button>
                 ) : !device.revoked && (
                     <Button size="sm" variant="danger-soft" onClick={() => onRevoke(device)} loading={busy}
-                        aria-label={`Revoke ${title}`}>
-                        Revoke
+                        aria-label={`Sign out ${title}`}>
+                        Sign out
                     </Button>
                 )}
             </div>
@@ -146,6 +159,7 @@ const SessionsTab = () => {
     const [confirmOthers, setConfirmOthers] = useState(false);
     const [pendingRevoke, setPendingRevoke] = useState(null);
     const [signingOutOthers, setSigningOutOthers] = useState(false);
+    const [phoneQr, setPhoneQr] = useState(false);
 
     const load = useCallback(async ({ quiet = false } = {}) => {
         if (quiet) setRefreshing(true);
@@ -224,7 +238,11 @@ const SessionsTab = () => {
 
     return (
         <>
-            <PageIntro title="Devices" description="Phones, computers and browsers signed in to your account." />
+            <PageIntro
+                title="Devices"
+                description="Phones, computers and browsers signed in to your account."
+                action={<Button size="sm" variant="primary" icon={QrCode} onClick={() => setPhoneQr(true)}>Sign in a phone</Button>}
+            />
 
             <Section
                 title="Your devices"
@@ -262,7 +280,7 @@ const SessionsTab = () => {
                     <Row
                         stack
                         label="Sign out all other devices"
-                        description={`Revokes ${others.length} other ${others.length === 1 ? 'device' : 'devices'} and removes their push notifications. This device stays signed in.`}
+                        description={`Signs out ${others.length} other ${others.length === 1 ? 'device' : 'devices'} and removes their push notifications. This device stays signed in.`}
                     >
                         <Button size="sm" variant="danger-soft" icon={LogOut} onClick={() => setConfirmOthers(true)}>Sign out others</Button>
                     </Row>
@@ -270,8 +288,10 @@ const SessionsTab = () => {
             )}
 
             <Notice tone="warning">
-                <strong>Unrecognised device?</strong> Revoke it, then <Link to="/settings?tab=security" className="stg-acc-link">change your password</Link> and turn on two-factor authentication.
+                <strong>Unrecognised device?</strong> Sign it out, then <Link to="/settings?tab=security" className="stg-acc-link">change your password</Link> and turn on two-factor authentication.
             </Notice>
+
+            <SignInPhoneDialog open={phoneQr} onClose={() => { setPhoneQr(false); load({ quiet: true }); }} />
 
             <ConfirmDialog
                 open={!!pendingRevoke}

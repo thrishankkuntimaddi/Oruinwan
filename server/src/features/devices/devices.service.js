@@ -54,6 +54,13 @@ function toDevice(row) {
     lastActiveAt: row.last_activity_at,
     revoked: !!row.revoked,
     revokedAt: row.revoked ? (row.revoked_at || null) : null,
+    location: meta.location || null,
+    // How this device last signed in, and which signed-in device approved it (QR / approval).
+    signIn: meta.signInMethod ? {
+      method: meta.signInMethod,
+      at: meta.signInAt || null,
+      approvedBy: meta.approvedByDeviceId ? { deviceId: meta.approvedByDeviceId, deviceName: meta.approvedByDeviceName || null } : null,
+    } : null,
   };
 }
 
@@ -185,13 +192,39 @@ function deviceIdFrom(req, explicit) {
   return typeof raw === 'string' && DEVICE_ID_RE.test(raw) ? raw : null;
 }
 
+/**
+ * Rough location from the CDN / proxy in front of the server, when it adds one
+ * (CloudFront, Cloudflare, Vercel). Null when nothing tells us; we never look IPs up elsewhere.
+ */
+function approxLocation(req) {
+  const h = req?.headers || {};
+  const pick = (...names) => {
+    for (const n of names) {
+      const v = h[n];
+      if (typeof v === 'string' && v.trim()) {
+        try { return decodeURIComponent(v.trim()).slice(0, 80); } catch { return v.trim().slice(0, 80); }
+      }
+    }
+    return null;
+  };
+  const city = pick('cloudfront-viewer-city', 'cf-ipcity', 'x-vercel-ip-city', 'x-geo-city');
+  const country = pick('cloudfront-viewer-country-name', 'cloudfront-viewer-country', 'cf-ipcountry', 'x-vercel-ip-country', 'x-geo-country');
+  if (!city && !country) return null;
+  return [city, country && country !== 'XX' ? country : null].filter(Boolean).join(', ') || null;
+}
+
 function describeClient(req) {
   const ua = (req?.get ? req.get('User-Agent') : req?.headers?.['user-agent']) || null;
   const native = String(req?.headers?.['x-client-platform'] || '').trim().toLowerCase();
   const { parseDeviceInfo } = require('../../../utils/deviceParser');
   const info = parseDeviceInfo(ua);
   const platform = ['ios', 'android'].includes(native) ? native : (native === 'desktop' ? 'desktop' : 'web');
-  const name = info.formattedString && info.formattedString !== 'Unknown Device' ? info.formattedString : (info.device !== 'Unknown' ? info.device : 'Unknown Device');
+  const os = info.os && info.os !== 'Unknown OS' && info.os !== 'Unknown' ? info.os : null;
+  const browser = info.browser && !/^Unknown/.test(info.browser) ? info.browser : null;
+  let name;
+  if (platform === 'desktop') name = `Oruinwan desktop${os ? ` on ${os}` : ''}`;
+  else if (platform === 'web' && browser) name = `${browser}${os ? ` on ${os}` : ''}`; // "Chrome on macOS"
+  else name = info.formattedString && info.formattedString !== 'Unknown Device' ? info.formattedString : (info.device && info.device !== 'Unknown' ? info.device : 'Unknown Device');
   return { userAgent: ua, platform, deviceName: String(name).slice(0, 120) };
 }
 
@@ -200,7 +233,7 @@ function describeClient(req) {
  * previously revoked device makes it active again — the user just re-authenticated.
  * Never throws: device bookkeeping must not block signing in.
  */
-async function recordSignIn(req, userId, { deviceId, reactivate = true } = {}, overrides) {
+async function recordSignIn(req, userId, { deviceId, reactivate = true, signIn = null } = {}, overrides) {
   const id = deviceIdFrom(req, deviceId);
   if (!id || !userId) return null;
   try {
@@ -214,10 +247,121 @@ async function recordSignIn(req, userId, { deviceId, reactivate = true } = {}, o
     if (reactivate) {
       await d.query('UPDATE user_device_sessions SET revoked = false, revoked_at = NULL WHERE user_id = $1 AND device_id = $2 AND revoked = true', [String(userId), id]);
     }
+    // Sign-in history on the device row: how it signed in, where from, and who approved it.
+    const extra = {
+      signInMethod: signIn?.method || null,
+      signInAt: new Date().toISOString(),
+      approvedByDeviceId: signIn?.approvedBy?.deviceId || null,
+      approvedByDeviceName: signIn?.approvedBy?.deviceName || null,
+      location: approxLocation(req),
+    };
+    await d.query('UPDATE user_device_sessions SET meta = meta || $3::jsonb WHERE user_id = $1 AND device_id = $2', [String(userId), id, JSON.stringify(extra)]);
     return session;
   } catch (err) {
     require('../../../utils/logger').warn({ err: err.message }, '[devices] could not record sign-in');
     return null;
+  }
+}
+
+/**
+ * Refresh keeps a device's "last active" fresh but never creates a device: only a sign-in
+ * (which passes the device limit) does.
+ */
+async function touchDevice(req, userId, overrides) {
+  const id = deviceIdFrom(req);
+  if (!id || !userId) return false;
+  try {
+    const d = deps(overrides);
+    const { rowCount } = await d.query(
+      'UPDATE user_device_sessions SET last_activity_at = now() WHERE user_id = $1 AND device_id = $2 AND revoked = false',
+      [String(userId), id],
+    );
+    return rowCount > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Signing out on a device frees its place: the device row is marked signed out (revoked). */
+async function signOutDevice(req, userId, overrides) {
+  const id = deviceIdFrom(req);
+  if (!id || !userId) return false;
+  try {
+    const d = deps(overrides);
+    const { rowCount } = await d.query(
+      'UPDATE user_device_sessions SET revoked = true, revoked_at = now() WHERE user_id = $1 AND device_id = $2 AND revoked = false',
+      [String(userId), id],
+    );
+    return rowCount > 0;
+  } catch {
+    return false;
+  }
+}
+
+// ── Device limit ─────────────────────────────────────────────────────────
+
+const DEFAULT_DEVICE_LIMIT = 4;
+
+function parseLimit(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+/**
+ * How many devices may be signed in at once. DEVICE_LIMIT (default 4; 0 = no limit).
+ * Company accounts use COMPANY_DEVICE_LIMIT when set, otherwise the same number.
+ */
+function deviceLimitFor(user, env = process.env) {
+  const base = parseLimit(env.DEVICE_LIMIT) ?? DEFAULT_DEVICE_LIMIT;
+  const isCompany = user && (user.userType === 'company' || user.companyId);
+  if (isCompany) {
+    const company = parseLimit(env.COMPANY_DEVICE_LIMIT);
+    if (company !== null) return company;
+  }
+  return base;
+}
+
+// A device that has not been seen for longer than a refresh token lives is signed out anyway.
+const idleDays = (env = process.env) => parseInt(env.REFRESH_TOKEN_DAYS || '7', 10) || 7;
+
+/** Devices that hold a place: not signed out, and seen within the refresh-token lifetime. */
+async function activeDevices(userId, overrides, env = process.env) {
+  const d = deps(overrides);
+  const { rows } = await d.query(
+    `SELECT * FROM user_device_sessions WHERE user_id = $1 AND revoked = false
+       AND last_activity_at > now() - ($2::int * interval '1 day')
+     ORDER BY last_activity_at DESC`,
+    [String(userId), idleDays(env)],
+  );
+  return rows.map(toDevice);
+}
+
+/** What the "sign out of one to continue" screen shows for each device. */
+const limitView = (dev) => ({
+  id: dev.deviceId,
+  name: dev.deviceName,
+  platform: dev.platform,
+  lastActiveAt: dev.lastActiveAt,
+  location: dev.location || null,
+});
+
+/**
+ * May this sign-in take a device place? The device signing in again (same X-Device-Id, still
+ * signed in) always may. Returns { over, limit, devices }. Never throws: when the device
+ * table can't be read (no database), the sign-in is not blocked.
+ */
+async function checkDeviceLimit(req, user, { deviceId } = {}, overrides, env = process.env) {
+  const limit = deviceLimitFor(user, env);
+  if (!limit) return { over: false, limit: 0, devices: [] };
+  try {
+    const id = deviceIdFrom(req, deviceId);
+    const list = await activeDevices(user._id || user.id, overrides, env);
+    if (id && list.some((dev) => dev.deviceId === id)) return { over: false, limit, devices: [] };
+    return { over: list.length >= limit, limit, devices: list.length >= limit ? list.map(limitView) : [] };
+  } catch (err) {
+    require('../../../utils/logger').warn({ err: err.message }, '[devices] device limit check skipped');
+    return { over: false, limit, devices: [] };
   }
 }
 
@@ -232,5 +376,6 @@ async function isRequestDeviceRevoked(req, userId, overrides) {
 
 module.exports = {
   DeviceError, listDevices, renameDevice, revokeDevice, revokeOtherDevices, MAX_NAME,
-  recordSignIn, isRequestDeviceRevoked, deviceIdFrom,
+  recordSignIn, isRequestDeviceRevoked, deviceIdFrom, describeClient, approxLocation,
+  touchDevice, signOutDevice, deviceLimitFor, activeDevices, checkDeviceLimit, DEFAULT_DEVICE_LIMIT,
 };

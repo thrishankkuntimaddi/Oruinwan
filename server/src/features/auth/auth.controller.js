@@ -413,8 +413,6 @@ exports.login = async (req, res) => {
     
     const matchDomain = email.match(/@(.+)$/);
     const domain = matchDomain ? matchDomain[1].toLowerCase() : null;
-    let isCompanyAccount = false;
-    let targetCompanyId = null;
 
 
     
@@ -427,8 +425,6 @@ exports.login = async (req, res) => {
         if (company.verificationStatus === 'rejected') {
           return res.status(403).json({ message: `Company domain ${domain} is rejected. Contact support.` });
         }
-        isCompanyAccount = true;
-        targetCompanyId = company._id;
       }
     }
 
@@ -544,38 +540,30 @@ exports.login = async (req, res) => {
       return res.status(403).json({ message: "Account Suspended." });
     }
 
-    // Two-factor: the password was right, now the authenticator code is required too.
-    // Wrong codes count as failed attempts, so the usual lockout also stops code guessing.
-    if (user.twoFactorEnabled) {
-      const otp = String(req.body.otp || '').replace(/\s+/g, '');
-      if (!otp) {
-        return res.status(401).json({ requires2FA: true, message: "Enter the 6-digit code from your authenticator app." });
-      }
-      const withSecret = user;
-      const { verifyUserTotp } = require('../security/totp');
-      if (!(await verifyUserTotp(withSecret?.twoFactorSecret, otp))) {
-        user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-        if (user.failedLoginAttempts >= 5) {
-          user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-          user.failedLoginAttempts = 0;
-          logger.warn({ email: user.email }, '[LOGIN] Account locked after 5 failed 2FA codes');
-        }
-        await user.save();
-        return res.status(401).json({ requires2FA: true, invalidCode: true, message: "That code didn't work. Check your authenticator app and try again." });
-      }
-    }
+    // Two-step verification and the device limit (signInFlow.js). Wrong authenticator codes
+    // count as failed attempts there, so the usual lockout also stops code guessing.
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'password', method: 'password', otp: req.body.otp });
+    if (blocked) return res.status(blocked.status).json(blocked.body);
 
+    return finishPasswordLogin(req, res, user);
+  } catch (_err) {
+    return handleError(res, _err, "LOGIN ERROR");
+  }
+};
+
+/**
+ * Issues the session for a password sign-in that passed every check (also used when a pending
+ * sign-in finishes, see signInFlow.js). signIn: { method, approvedBy } for the device history.
+ */
+async function finishPasswordLogin(req, res, user, { signIn = null } = {}) {
+  try {
+    // A pending sign-in reloads the user by id: read the company like login does.
+    if (user.companyId && !user.companyId._id) user.companyId = (await identity.companies.findById(user.companyId)) || user.companyId;
+    const isCompanyAccount = Boolean(user.companyId && user.companyId._id);
     let redirectTo = "/workspaces";
     let isAdmin = false;
 
     if (isCompanyAccount) {
-      
-      if (!user.companyId || user.companyId._id.toString() !== targetCompanyId.toString()) {
-        
-        
-        
-        
-      }
 
       
       const role = user.companyRole; 
@@ -627,13 +615,7 @@ exports.login = async (req, res) => {
     const refreshHash = sha256(refreshToken);
 
     
-    if (user.refreshTokens.length >= 3) {
-      user.refreshTokens.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      while (user.refreshTokens.length >= 3) {
-        user.refreshTokens.shift();
-      }
-    }
-
+    // No cap on sessions here: how many devices may be signed in is the device limit's job.
     user.refreshTokens.push({
       tokenHash: refreshHash,
       expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
@@ -658,7 +640,7 @@ exports.login = async (req, res) => {
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
-    await recordDeviceSignIn(req, user._id);
+    await recordDeviceSignIn(req, user._id, { signIn: signIn || { method: 'password' } });
 
     
     if (user.companyId) {
@@ -740,7 +722,8 @@ exports.login = async (req, res) => {
   } catch (_err) {
     return handleError(res, _err, "LOGIN ERROR");
   }
-};
+}
+exports.finishPasswordLogin = finishPasswordLogin;
 
 exports.refresh = async (req, res) => {
   logger.debug('refresh invoked');
@@ -815,7 +798,8 @@ exports.refresh = async (req, res) => {
 
       
       setRefreshTokenCookie(res, newRefresh);
-      await recordDeviceSignIn(req, user._id, { reactivate: false });
+      // Refresh only keeps a known device "active"; it never adds a device (the limit applies at sign-in).
+      await require('../devices/devices.service').touchDevice(req, user._id);
 
       logger.debug('[REFRESH] Token refresh completed successfully');
       const refreshResponse = { accessToken: newAccess };
@@ -843,7 +827,10 @@ exports.logout = async (req, res) => {
 
     const hash = sha256(token);
 
+    // Signing out frees this device's place under the device limit.
+    const owner = await identity.users.findByRefreshTokenHash(hash).catch(() => null);
     await identity.users.deleteRefreshToken(hash);
+    if (owner) await require('../devices/devices.service').signOutDevice(req, owner._id);
 
     clearRefreshTokenCookie(res);
 
@@ -880,6 +867,11 @@ exports.logoutAll = async (req, res) => {
     }
 
     await identity.users.deleteAllRefreshTokens(decoded.sub);
+    // Every device is signed out, so none of them holds a place under the device limit.
+    try {
+      await require('../../shared/postgres').query(
+        'UPDATE user_device_sessions SET revoked = true, revoked_at = now() WHERE user_id = $1 AND revoked = false', [String(decoded.sub)]);
+    } catch (_e) { /* device table unavailable */ }
 
     clearRefreshTokenCookie(res);
 
@@ -1597,11 +1589,14 @@ exports.googleLogin = async (req, res) => {
 
     const needsPasswordSetup = Boolean(user.googleAccount && !user.passwordHash);
 
-    // Same gates as password login: Google must not bypass suspension, deactivation or 2FA.
-    const stop = await signInGates(user, req.body.otp);
+    // Same gates as password login: Google must not bypass suspension, deactivation, 2FA or the device limit.
+    const stop = await signInGates(user, null, { skipTotp: true });
     if (stop) return res.status(stop.status).json(stop.body);
+    const extras = { message: "Google login success", isNewUser: false, needsPasswordSetup };
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'oauth', method: 'google', otp: req.body.otp, extras });
+    if (blocked) return res.status(blocked.status).json(blocked.body);
 
-    return issueSignInSession(req, res, user, { message: "Google login success", isNewUser: false, needsPasswordSetup });
+    return issueSignInSession(req, res, user, { ...extras, method: 'google' });
 
   } catch (_err) {
     logger.error("GOOGLE LOGIN ERROR:", _err);
@@ -1667,7 +1662,10 @@ exports.googleSignup = async (req, res) => {
       await saveWithRetry(user);
     }
 
-    return issueSignInSession(req, res, user, { message: "Welcome to Oruinwan", isNewUser: true, needsPasswordSetup: true });
+    const extras = { message: "Welcome to Oruinwan", isNewUser: true, needsPasswordSetup: true };
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'oauth', method: 'google', extras });
+    if (blocked) return res.status(blocked.status).json(blocked.body);
+    return issueSignInSession(req, res, user, { ...extras, method: 'google' });
   } catch (_err) {
     logger.error("GOOGLE SIGNUP ERROR:", _err);
     return res.status(500).json({ message: "Sign-up failed" });
@@ -1757,33 +1755,41 @@ async function signInGates(user, otpInput, { skipTotp = false } = {}) {
   return null;
 }
 
-/** Issues an access and a refresh token, records the session (visible under Devices) and answers. */
-async function issueSignInSession(req, res, user, { message, isNewUser, needsPasswordSetup }) {
+/**
+ * Issues an access and a refresh token, records the session (visible under Devices) and answers.
+ *   method   recorded sign-in method (google, passkey, qr, ...)
+ *   signIn   { method, approvedBy } for the device history
+ *   extra    more fields for the answer (QR sign-in adds the wrapped message key)
+ */
+async function issueSignInSession(req, res, user, { message, isNewUser, needsPasswordSetup, method = 'oauth', signIn = null, extra = null }) {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
   user.refreshTokens.push({
     tokenHash: sha256(refreshToken),
-    expiresAt: new Date(Date.now() + 7 * 86400000),
+    expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
     deviceInfo: req.get('User-Agent') || 'Unknown',
     ip: getClientIP(req),
     startedAt: new Date(),
   });
   user.failedLoginAttempts = 0;
-  user.lastLoginMethod = 'oauth';
+  user.lastLoginAt = new Date();
+  user.lastLoginMethod = method === 'google' ? 'oauth' : method;
   user.lastLoginMethodAt = new Date();
 
   await saveWithRetry(user);
   setRefreshTokenCookie(res, refreshToken);
-  await recordDeviceSignIn(req, user._id);
+  await recordDeviceSignIn(req, user._id, { signIn: signIn || { method } });
 
   return res.json({
+    ...(extra || {}),
     message,
     accessToken,
     ...(isNativeClient(req) ? { refreshToken } : {}),
     isFirstLogin: Boolean(isNewUser),
     requiresPasswordSetup: Boolean(needsPasswordSetup),
     user: {
+      id: String(user._id),
       username: user.username,
       email: user.email,
       profilePicture: user.profilePicture,
@@ -2481,9 +2487,15 @@ exports.issueSignInSession = issueSignInSession;
  * A full session for redirect-based sign-ins (OIDC / SAML SSO): refresh token row +
  * refresh cookie + device row, like password and Google sign-in. Returns { accessToken, refreshToken }.
  */
-async function startSsoSession(req, res, userId, { method = 'sso', deviceId } = {}) {
+async function startSsoSession(req, res, userId, { method = 'sso', deviceId, signIn = null } = {}) {
   const user = await userDocs.findById(userId);
   if (!user) throw new Error('User not found');
+  // The identity provider did the second factor; the device limit still applies. Over the limit
+  // the caller gets { pending } (the DEVICE_LIMIT answer) instead of a session.
+  if (!signIn) {
+    const blocked = await require('./signInFlow').gate(req, user, { kind: 'sso', method, mfaSatisfiedBy: 'sso', deviceId });
+    if (blocked) return { pending: blocked.body, status: blocked.status };
+  }
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
   user.refreshTokens.push({
@@ -2499,7 +2511,20 @@ async function startSsoSession(req, res, userId, { method = 'sso', deviceId } = 
   user.lastLoginMethodAt = new Date();
   await saveWithRetry(user);
   setRefreshTokenCookie(res, refreshToken);
-  await recordDeviceSignIn(req, user._id, { deviceId });
-  return { accessToken, refreshToken };
+  await recordDeviceSignIn(req, user._id, { deviceId, signIn: signIn || { method } });
+  return { accessToken, refreshToken, user };
 }
 exports.startSsoSession = startSsoSession;
+
+/** Finishes an SSO sign-in that waited on the device limit: the session as JSON. */
+async function finishSsoJson(req, res, user, { method = 'sso', signIn = null } = {}) {
+  const session = await startSsoSession(req, res, user._id, { method, signIn: signIn || { method } });
+  return res.json({
+    message: 'SSO login success',
+    accessToken: session.accessToken,
+    ...(isNativeClient(req) ? { refreshToken: session.refreshToken } : {}),
+    requiresPasswordSetup: false,
+    user: { id: String(user._id), username: user.username, email: user.email, profilePicture: user.profilePicture || null },
+  });
+}
+exports.finishSsoJson = finishSsoJson;

@@ -120,6 +120,30 @@ async function loadCachedPrivateKey(userId, algorithm) {
     return null;
 }
 
+/**
+ * Opens a UMEK the server wrapped for this device's one-time ECDH P-256 key: shared secret →
+ * PBKDF2-SHA256 ('umek-wrap-v1', 10 000) → AES-GCM over iv(12) | tag(16) | data.
+ * Same scheme as the server's umekEnvelope.wrapForDevice.
+ */
+export async function unwrapWithEphemeral(ephemeralPrivateKey, serverEphemeralPublicKey, rewrappedUmek) {
+    const serverPublicKey = await crypto.subtle.importKey(
+        'raw', Uint8Array.from(atob(serverEphemeralPublicKey), c => c.charCodeAt(0)),
+        { name: 'ECDH', namedCurve: 'P-256' }, false, []
+    );
+    const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: serverPublicKey }, ephemeralPrivateKey, 256);
+    const material = await crypto.subtle.importKey('raw', new Uint8Array(bits), 'PBKDF2', false, ['deriveKey']);
+    const wrappingKey = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: new TextEncoder().encode('umek-wrap-v1'), iterations: 10000, hash: 'SHA-256' },
+        material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+    );
+    const blob = Uint8Array.from(atob(rewrappedUmek), c => c.charCodeAt(0));
+    const combined = new Uint8Array(blob.length - 12);
+    combined.set(blob.slice(28));
+    combined.set(blob.slice(12, 28), blob.length - 28);
+    const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: blob.slice(0, 12), tagLength: 128 }, wrappingKey, combined);
+    return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
 class IdentityKeyService {
     constructor() {
         this.publicKeysCache = new Map(); 
@@ -161,7 +185,14 @@ class IdentityKeyService {
     }
 
     
-    async initializeIdentityKeys(userId, password = null) {
+    /**
+     * Opens this account's identity key on this device.
+     *   password   when the person just typed it: password-protected keys open with it and are
+     *              then moved to automatic unlock (sealed on the server, see sealUmek).
+     *   opts.wrappedUmek + opts.ephemeralPrivateKey   a QR sign-in handed the key over already
+     *              wrapped for this device's one-time key.
+     */
+    async initializeIdentityKeys(userId, password = null, opts = {}) {
         const support = checkCryptoSupport();
         if (!support.indexedDB) {
             throw new Error('IndexedDB not available - cannot use E2EE');
@@ -185,6 +216,11 @@ class IdentityKeyService {
                 if (cached && !cachedIdentity) await deleteIdentityKeyPair(userId).catch(() => { });
                 if (cachedIdentity) {
                     logger.debug('✅ [PHASE 1] Using cached identity key (no password needed)');
+                    // Already unlocked here, but the account still needs the password elsewhere:
+                    // with the password at hand, move it to automatic unlock.
+                    if (password && cryptoState.umekProtectionType === 'PASSWORD') {
+                        this._sealWithPassword(cryptoState, password).catch(() => { });
+                    }
 
                     
                     const { identityPublicKey, algorithm } = cryptoState;
@@ -225,7 +261,15 @@ class IdentityKeyService {
                     umek = await deriveUMEKFromPassword(password, new Uint8Array(salt));
                 } else if (umekProtectionType === 'SERVER_KEK') {
                     logger.debug('🔑 [PHASE 1] Unwrapping UMEK from server KEK...');
-                    umek = await this._unwrapUMEKFromServer(umekEnvelope);
+                    umek = null;
+                    if (opts.wrappedUmek && opts.ephemeralPrivateKey) {
+                        try {
+                            umek = await unwrapWithEphemeral(opts.ephemeralPrivateKey, opts.wrappedUmek.serverEphemeralPublicKey, opts.wrappedUmek.rewrappedUmek);
+                        } catch (err) {
+                            logger.warn('⚠️ [PHASE 1] Key from QR sign-in did not open; asking the server', err?.message);
+                        }
+                    }
+                    if (!umek) umek = await this._unwrapUMEKFromServer(umekEnvelope);
                 } else {
                     throw new Error('Unknown UMEK protection type: ' + umekProtectionType);
                 }
@@ -238,6 +282,12 @@ class IdentityKeyService {
                     identityPrivateKeyIv,
                     umek
                 );
+
+                // The password opened it: keep a sealed copy on the server so every other
+                // device (and Google sign-in) unlocks automatically from now on.
+                if (umekProtectionType === 'PASSWORD') {
+                    this._sealUmek(umek).catch((err) => logger.warn('⚠️ Could not move to automatic unlock (will retry next time):', err?.message));
+                }
 
                 
                 this.myPrivateKey = await importPrivateKeyJWK(JSON.parse(privateKeyJWK), algorithm, false);
@@ -296,7 +346,7 @@ class IdentityKeyService {
      * for accounts without one), uploads it and caches it on this device.
      * serverExtras go to /identity/init as is, e.g. { allowOverwrite, currentPassword }.
      */
-    async _createIdentity(userId, password, serverExtras = {}) {
+    async _createIdentity(userId, _password, serverExtras = {}) {
 
         
         const keyPair = await generateIdentityKeyPair();
@@ -304,34 +354,17 @@ class IdentityKeyService {
         const publicKeyPEM = await exportPublicKeyPEM(keyPair.publicKey, keyPair.algorithm);
 
         
-        const { generateUMEK, deriveUMEKFromPassword, generateSalt, encryptIdentityPrivateKey, arrayBufferToBase64, exportKey } = await import('../utils/crypto.js');
+        const { generateUMEK, encryptIdentityPrivateKey, arrayBufferToBase64, exportKey } = await import('../utils/crypto.js');
 
-        let umek;
-        let umekProtectionType;
-        let umekEnvelope;
-        let umekEnvelopeIv = null;
-        let umekSalt = null;
-
-        if (password) {
-            
-            logger.debug('🔑 [PHASE 1] Deriving UMEK from password...');
-            const salt = generateSalt();
-            umek = await deriveUMEKFromPassword(password, salt);
-            umekProtectionType = 'PASSWORD';
-            umekSalt = arrayBufferToBase64(salt);
-
-            // The password re-derives the UMEK on any device, so the server only gets a marker.
-            umekEnvelope = 'password-derived';
-        } else {
-
-            logger.debug('🔑 [PHASE 1] Generating random UMEK...');
-            umek = await generateUMEK();
-            umekProtectionType = 'SERVER_KEK';
-
-            // Sent once over TLS; the server stores it sealed under its KEK.
-            const umekBytes = await exportKey(umek);
-            umekEnvelope = arrayBufferToBase64(umekBytes);
-        }
+        // Every new identity unlocks automatically: a random UMEK the server keeps sealed under
+        // its KEK and hands to each signed-in device (wrapped for that device). The password is
+        // not part of it, so changing or resetting the password never locks messages.
+        const umek = await generateUMEK();
+        const umekProtectionType = 'SERVER_KEK';
+        const umekEnvelopeIv = null;
+        const umekSalt = null;
+        // Sent once over TLS; the server stores it sealed under its KEK.
+        const umekEnvelope = arrayBufferToBase64(await exportKey(umek));
 
         
         logger.debug('🔒 [PHASE 1] Encrypting identity private key with UMEK...');
@@ -511,6 +544,58 @@ class IdentityKeyService {
     }
 
     
+    /** Sends the UMEK once (over TLS) so the server keeps it sealed: automatic unlock everywhere. */
+    async _sealUmek(umek) {
+        const { exportKey, arrayBufferToBase64 } = await import('../utils/crypto.js');
+        const raw = await exportKey(umek);
+        const { getDeviceId } = await import('../utils/deviceId.js');
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/crypto/identity/seal-umek`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                'Content-Type': 'application/json',
+                'X-Device-ID': getDeviceId()
+            },
+            credentials: 'include',
+            body: JSON.stringify({ umek: arrayBufferToBase64(raw) })
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || `Sealing the key failed: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    /** Opens a password-protected key with the password and seals it. Throws on a wrong password. */
+    async _sealWithPassword(cryptoState, password) {
+        const { deriveUMEKFromPassword, base64ToArrayBuffer, decryptIdentityPrivateKey } = await import('../utils/crypto.js');
+        const umek = await deriveUMEKFromPassword(password, new Uint8Array(base64ToArrayBuffer(cryptoState.umekSalt)));
+        try {
+            await decryptIdentityPrivateKey(cryptoState.encryptedIdentityPrivateKey, cryptoState.identityPrivateKeyIv, umek);
+        } catch {
+            throw new Error('Incorrect password');
+        }
+        return this._sealUmek(umek);
+    }
+
+    /** 'PASSWORD' | 'SERVER_KEK' | null: how this account's key is protected right now. */
+    async getProtectionType() {
+        const state = await this._fetchCryptoStateFromServer();
+        return state?.umekProtectionType || null;
+    }
+
+    /**
+     * Moves the account to automatic unlock with the password (used when approving another
+     * device's unlock request). Returns 'SERVER_KEK' when done.
+     */
+    async sealWithPassword(password) {
+        const state = await this._fetchCryptoStateFromServer();
+        if (!state) throw new Error('No encryption keys yet');
+        if (state.umekProtectionType === 'SERVER_KEK') return 'SERVER_KEK';
+        await this._sealWithPassword(state, password);
+        return 'SERVER_KEK';
+    }
+
     async _unwrapUMEKFromServer(umekEnvelope) {
         try {
             

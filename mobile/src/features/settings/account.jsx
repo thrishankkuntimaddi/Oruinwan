@@ -147,7 +147,7 @@ export function AccountDataSettings() {
       <Header title="Your data" />
       <Body>
         <Section title="Download a copy">
-          <RowGroup footer="Your profile, settings, workspaces, tasks, notes and recent account activity, as JSON. Messages are end-to-end encrypted, so the server can't include their text.">
+          <RowGroup footer="Your profile, settings, workspaces, tasks, notes and recent account activity, as JSON. Messages are encrypted, so their text isn't part of this export.">
             <Row icon={Download} tile="accent" title="Export my data" trailing={busy ? <span className="text-xs text-text-3">Preparing…</span> : null} onClick={exportData} />
           </RowGroup>
         </Section>

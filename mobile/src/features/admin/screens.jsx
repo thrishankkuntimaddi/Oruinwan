@@ -834,7 +834,7 @@ export function AdminDataScreen() {
           </div>
         </Section>
         <Section title="Export">
-          <RowGroup footer="The structure only: settings, channels and feature switches. Messages are end-to-end encrypted and never exported.">
+          <RowGroup footer="The structure only: settings, channels and feature switches. Messages are encrypted and never exported.">
             <Row icon={Download} tile="accent" title="Export this workspace" subtitle="A JSON file you can import elsewhere" trailing={busy === 'export' ? <span className="text-xs text-text-3">Exporting…</span> : null} onClick={doExport} />
           </RowGroup>
         </Section>

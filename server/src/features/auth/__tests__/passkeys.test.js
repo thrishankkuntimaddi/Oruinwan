@@ -137,6 +137,17 @@ describe('sign-in', () => {
     }));
   });
 
+  test('the device limit applies to passkey sign-in too', async () => {
+    await register();
+    const devices = require('../../devices/devices.service');
+    const spy = jest.spyOn(devices, 'checkDeviceLimit').mockResolvedValue({ over: true, limit: 4, devices: [] });
+    const res = await signIn();
+    spy.mockRestore();
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('DEVICE_LIMIT');
+    expect(res.body.accessToken).toBeUndefined();
+  });
+
   test('an unknown credential is refused', async () => {
     const res = await signIn('nobody');
     expect(res.statusCode).toBe(401);

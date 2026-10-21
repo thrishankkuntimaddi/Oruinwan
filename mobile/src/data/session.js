@@ -64,6 +64,9 @@ export const useSession = create((set, get) => ({
   joinToken: prefs.get('invite.pending') || null,
   // A company SSO sign-in is being finished (after the browser came back to the app).
   ssoBusy: false,
+  // A sign-in the server paused for two-step verification or the device limit
+  // ({ code: 'MFA_REQUIRED' | 'DEVICE_LIMIT', pendingToken, …, ctx }). In memory only.
+  challenge: null,
 
   persist() {
     const { mode, server, workspaceId, needsPassword } = get();
@@ -108,10 +111,19 @@ export const useSession = create((set, get) => ({
     await live.resendVerification({ server, email });
   },
 
-  /** Throws { code: '2FA_REQUIRED' } when a one-time code is needed. */
+  /**
+   * Throws { code: '2FA_REQUIRED' } on servers that still want the code inline. When the server
+   * pauses the sign-in (two-step verification, device limit) the challenge screen takes over.
+   */
   async signIn({ server, email, password, otp }) {
     const live = await loadLive();
-    const { user } = await live.signIn({ server, email, password, otp });
+    let user;
+    try {
+      ({ user } = await live.signIn({ server, email, password, otp }));
+    } catch (err) {
+      if (get().takeChallenge(err)) return;
+      throw err;
+    }
     adapter = live;
     clearQueries();
     startCache(cacheScope(live.serverUrl(), user.id)).catch(() => {});
@@ -130,7 +142,13 @@ export const useSession = create((set, get) => ({
    */
   async signInWithProvider(kind, params) {
     const live = await loadLive();
-    const result = await live.googleSignIn(params);
+    let result;
+    try {
+      result = await live.googleSignIn(params);
+    } catch (err) {
+      if (get().takeChallenge(err)) return { challenge: true };
+      throw err;
+    }
     if (result.needsSignup) return result;
     await get().finishLiveSignIn(live, result, kind);
     return {};
@@ -176,6 +194,7 @@ export const useSession = create((set, get) => ({
         const result = await live.ssoSignIn({ server: pending.server, code: parsed.code, verifier: pending.verifier });
         await get().finishLiveSignIn(live, result, 'sso');
       } catch (err) {
+        if (get().takeChallenge(err)) return;
         toast(err.message || "Single sign-on didn't finish. Try again.", 'danger');
       } finally {
         set({ ssoBusy: false });
@@ -190,6 +209,74 @@ export const useSession = create((set, get) => ({
     const result = await live.googleSignUp(params);
     await get().finishLiveSignIn(live, result, 'google');
     logEvent('sign_up', { method: 'google' });
+  },
+
+  /** Shows the challenge screen for a paused sign-in. Returns false when `err` is something else. */
+  takeChallenge(err) {
+    if (err?.code !== 'SIGNIN_CHALLENGE' || !err.challenge) return false;
+    set({ challenge: err.challenge });
+    return true;
+  },
+
+  cancelChallenge() {
+    set({ challenge: null });
+  },
+
+  /**
+   * Finishes a paused sign-in (body: { otp } | { emailCode } | { signOutDeviceIds } |
+   * { signOutAll } | {} after approval). A next step (device limit after the code) replaces the
+   * challenge; errors are thrown for the screen to show.
+   */
+  async continueChallenge(body) {
+    const challenge = get().challenge;
+    if (!challenge) return;
+    const live = await loadLive();
+    try {
+      const result = await live.signinContinue(challenge, body);
+      set({ challenge: null });
+      await get().finishLiveSignIn(live, result, challenge.ctx?.kind || 'password');
+    } catch (err) {
+      if (err?.code === 'SIGNIN_CHALLENGE') {
+        set({ challenge: err.challenge });
+        return;
+      }
+      throw err;
+    }
+  },
+
+  async challengeStatus() {
+    const challenge = get().challenge;
+    if (!challenge) return null;
+    return (await loadLive()).signinStatus(challenge.pendingToken);
+  },
+
+  async challengeEmailCode() {
+    const challenge = get().challenge;
+    if (!challenge) return null;
+    return (await loadLive()).signinEmailCode(challenge.pendingToken);
+  },
+
+  /** QR sign-in from the start screen: claims the code shown on a signed-in computer. */
+  async qrClaim({ server, code }) {
+    return (await loadLive()).qrClaim({ server, code });
+  },
+
+  /** → { status } while waiting; signs in (or shows the device-limit screen) once allowed. */
+  async qrPoll({ code, secret }) {
+    const live = await loadLive();
+    try {
+      const result = await live.qrPoll({ code, secret });
+      if (!result.done) return result;
+      await get().finishLiveSignIn(live, result, 'qr');
+      return { status: 'done' };
+    } catch (err) {
+      if (get().takeChallenge(err)) return { status: 'challenge' };
+      throw err;
+    }
+  },
+
+  async qrForget(code) {
+    (await loadLive()).forgetQrClaim(code);
   },
 
   async finishLiveSignIn(live, { user, requiresPasswordSetup }, kind) {
@@ -329,7 +416,7 @@ export const useSession = create((set, get) => ({
     clearQueries();
     prefs.set('workspaces.cache', null);
     if (wipe) await wipeDevice();
-    set({ status: 'signed-out', mode: null, user: null, workspaces: [], workspaceId: null, needsPassword: false, pickingWorkspace: false, creatingWorkspace: false });
+    set({ status: 'signed-out', mode: null, user: null, workspaces: [], workspaceId: null, needsPassword: false, pickingWorkspace: false, creatingWorkspace: false, challenge: null });
     get().persist();
     emit('session:ended');
   },

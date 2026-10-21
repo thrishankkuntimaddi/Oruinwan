@@ -94,9 +94,6 @@ exports.initIdentityCryptoState = async (req, res) => {
             if (!passwordOk) {
                 return res.status(401).json({ message: 'Enter your current account password to set up encryption again.' });
             }
-            if (umekProtectionType !== 'PASSWORD') {
-                return res.status(400).json({ message: 'Encryption can only be set up again with a password.' });
-            }
 
             logger.info(`⚠️ Overwriting crypto state for user ${userId} (explicit recovery/rotation)`);
 
@@ -330,6 +327,17 @@ exports.rotateUMEK = async (req, res) => {
         const oldProtectionType = cryptoState.umekProtectionType;
         const hadServerKEK = oldProtectionType === 'SERVER_KEK';
 
+        // Messages unlock automatically on every device: a key the server holds sealed stays that
+        // way. Older apps ask to re-lock it with a new password; keep it as it is and say so.
+        if (hadServerKEK && umekProtectionType === 'PASSWORD') {
+            return res.json({
+                success: true,
+                newVersion: cryptoState.version,
+                kept: 'SERVER_KEK',
+                message: 'Your message key stays sealed on the server so your devices unlock automatically.'
+            });
+        }
+
         
         cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
         cryptoState.identityPrivateKeyIv = identityPrivateKeyIv;
@@ -419,5 +427,142 @@ exports.rotateUMEK = async (req, res) => {
         return res.status(500).json({
             message: 'Failed to rotate UMEK protection'
         });
+    }
+};
+
+
+/**
+ * POST /api/v2/crypto/identity/seal-umek { umek }
+ *
+ * Moves a password-protected account to automatic unlock: a device that just opened the key with
+ * the password sends the UMEK (32 bytes, base64, over TLS). The server checks it really opens the
+ * stored private key, keeps it sealed under its KEK (like Google accounts) and from then on any
+ * signed-in device gets it without a password. The identity key pair is unchanged.
+ */
+exports.sealUmek = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        let umekBytes;
+        try {
+            umekBytes = decodeUmek(req.body?.umek);
+        } catch {
+            return res.status(400).json({ message: 'umek must be the 32-byte key (base64)' });
+        }
+        const cryptoState = await UserCryptoState.findOne({ userId });
+        if (!cryptoState) return res.status(404).json({ message: 'No crypto state found' });
+        if (cryptoState.umekProtectionType === 'SERVER_KEK') {
+            return res.json({ success: true, umekProtectionType: 'SERVER_KEK', alreadySealed: true, version: cryptoState.version });
+        }
+        if (!opensPrivateKey(cryptoState, umekBytes)) {
+            return res.status(400).json({ message: 'That key does not open your identity key.', code: 'UMEK_MISMATCH' });
+        }
+        const { envelope, kekVersion } = sealUmek(umekBytes);
+        cryptoState.umekEnvelope = envelope;
+        cryptoState.umekEnvelopeIv = null;
+        cryptoState.kekVersion = kekVersion;
+        cryptoState.umekSalt = null;
+        cryptoState.umekProtectionType = 'SERVER_KEK';
+        cryptoState.version = (cryptoState.version || 1) + 1;
+        cryptoState.updatedAt = new Date();
+        await cryptoState.save();
+        try {
+            require('../../services/securityAudit.service').logSecurityEvent({
+                userId, eventType: 'UMEK_SEALED_FOR_AUTO_UNLOCK', req, metadata: { newVersion: cryptoState.version },
+            });
+        } catch (_auditError) { /* best effort */ }
+        // Devices waiting on "unlock from another device" can now unwrap it themselves.
+        try {
+            require('../../socket/getIO').getIO()?.to(`user:${userId}`).emit('crypto:umek-sealed', { version: cryptoState.version });
+        } catch (_e) { /* no sockets */ }
+        logger.info(`🔐 [CRYPTO] Account ${userId} moved to automatic unlock (sealed UMEK, v${cryptoState.version})`);
+        return res.json({ success: true, umekProtectionType: 'SERVER_KEK', version: cryptoState.version });
+    } catch (err) {
+        logger.error('❌ [sealUmek] Error:', err);
+        return res.status(500).json({ message: 'Failed to seal key' });
+    }
+};
+
+/** Does `umekBytes` decrypt the stored identity private key (AES-256-GCM, ciphertext || tag)? */
+function opensPrivateKey(state, umekBytes) {
+    try {
+        const crypto = require('crypto');
+        const data = Buffer.from(String(state.encryptedIdentityPrivateKey || ''), 'base64');
+        const iv = Buffer.from(String(state.identityPrivateKeyIv || ''), 'base64');
+        if (data.length < 17 || iv.length < 12) return false;
+        const decipher = crypto.createDecipheriv('aes-256-gcm', umekBytes, iv);
+        decipher.setAuthTag(data.subarray(data.length - 16));
+        const plain = Buffer.concat([decipher.update(data.subarray(0, data.length - 16)), decipher.final()]);
+        JSON.parse(plain.toString('utf8'));
+        return true;
+    } catch {
+        return false;
+    }
+}
+exports._opensPrivateKey = opensPrivateKey;
+
+// ── Unlock from another device ─────────────────────────────────────────────
+// A device whose account key is still password-protected asks another signed-in device to
+// unlock it. That device enters the password once (it seals the key, see sealUmek) and approves;
+// the asking device then unwraps the key from the server like any other.
+
+function deviceOf(req) {
+    const devices = require('../devices/devices.service');
+    const c = devices.describeClient(req);
+    return { deviceId: devices.deviceIdFrom(req), deviceName: c.deviceName, platform: c.platform, location: devices.approxLocation(req), ip: req.ip || null, method: 'unlock' };
+}
+
+/** POST /api/v2/crypto/unlock-requests -> { id, expiresAt } */
+exports.createUnlockRequest = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const n = await require('../../shared/services/otpStore').incr(`unlock-req:${userId}`, 10 * 60 * 1000);
+        if (n > 5) return res.status(429).json({ message: 'Too many requests. Try again in a few minutes.' });
+        const approvals = require('../auth/approvals');
+        const a = await approvals.create({ userId, kind: 'unlock', requester: deviceOf(req) });
+        return res.json({ id: a.id, expiresAt: new Date(a.expiresAt).toISOString() });
+    } catch (err) {
+        logger.error('❌ [createUnlockRequest] Error:', err);
+        return res.status(500).json({ message: 'Failed to ask your other devices' });
+    }
+};
+
+/** GET /api/v2/crypto/unlock-requests/:id -> { status, umekProtectionType } (polled by the asking device) */
+exports.getUnlockRequest = async (req, res) => {
+    try {
+        const approvals = require('../auth/approvals');
+        const a = await approvals.get(req.params.id);
+        const state = await UserCryptoState.findOne({ userId: req.user.sub });
+        if (!a || a.userId !== String(req.user.sub)) {
+            return res.json({ status: 'expired', umekProtectionType: state?.umekProtectionType || null });
+        }
+        return res.json({ status: a.status, umekProtectionType: state?.umekProtectionType || null });
+    } catch (err) {
+        logger.error('❌ [getUnlockRequest] Error:', err);
+        return res.status(500).json({ message: 'Failed to read the request' });
+    }
+};
+
+/**
+ * POST /api/v2/crypto/unlock-requests/:id/decision { approve }
+ * Approving needs the key to be sealed already (the approving device calls seal-umek first).
+ */
+exports.decideUnlockRequest = async (req, res) => {
+    try {
+        const approvals = require('../auth/approvals');
+        const approve = req.body?.approve === true;
+        if (approve) {
+            const state = await UserCryptoState.findOne({ userId: req.user.sub });
+            if (state?.umekProtectionType !== 'SERVER_KEK') {
+                return res.status(409).json({ code: 'UMEK_NOT_SEALED', message: 'Enter your password on this device first.' });
+            }
+        }
+        const devices = require('../devices/devices.service');
+        const approver = { userId: String(req.user.sub), deviceId: devices.deviceIdFrom(req), deviceName: devices.describeClient(req).deviceName };
+        const a = await approvals.decide(req.params.id, approver, approve, undefined, { allowKinds: ['unlock'] });
+        return res.json({ approval: approvals.publicView(a) });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ code: err.code, message: err.message });
+        logger.error('❌ [decideUnlockRequest] Error:', err);
+        return res.status(500).json({ message: 'Failed to answer the request' });
     }
 };

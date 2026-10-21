@@ -48,6 +48,9 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Sign-in QR codes are scanned with Google's code scanner (@capacitor-mlkit/barcode-scanning). -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
     </application>
 
     <!-- Permissions -->
@@ -59,7 +62,7 @@
     <!-- In-app updates hand the downloaded APK to the system installer; the user confirms each install. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Huddles, voice and video messages (the web client on tablets): the WebView asks for these at runtime
-         when a call starts. Phones without a camera can still install the app. -->
+         when a call starts; the camera also scans sign-in QR codes. Phones without a camera can still install the app. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CAMERA" />

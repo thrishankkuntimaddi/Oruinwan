@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowRight, AtSign, Building2, CalendarDays, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, RotateCw, Sparkles, ShieldCheck, TriangleAlert, CircleCheck,
+  ArrowRight, AtSign, Building2, CalendarDays, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck, QrCode, RotateCw, Sparkles, ShieldCheck, TriangleAlert, CircleCheck,
 } from 'lucide-react';
 import { cx } from '../../ui/cx.js';
 import { useSession } from '../../data/session.js';
@@ -11,10 +11,12 @@ import { Icon } from '../../ui/Icon.jsx';
 import { prefs } from '../../native/storage.js';
 import { SERVER_URL } from '../../config/env.js';
 import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
-import { deviceNoun, openExternal } from '../../native/index.js';
+import { openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 import { googleSignInToken, googleSupported } from '../../data/live/google.js';
 import { Intro } from './Intro.jsx';
+import { QrSignIn } from './QrSignIn.jsx';
+import { SignInChallenge } from './SignInChallenge.jsx';
 
 /**
  * The server is fixed for this build (config/env.js SERVER_URL). This only checks it answers,
@@ -256,7 +258,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>
-            Your password also unlocks your encryption keys on this {deviceNoun}. It is never stored.
+            Messages are encrypted in transit and at rest. Oruinwan's server keeps a sealed copy of your key so your devices unlock automatically.
             {base && (
               <>
                 {' '}
@@ -346,10 +348,10 @@ export function ProtectAccount() {
         <span className="grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
           <Icon as={ShieldCheck} />
         </span>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight">Protect your messages</h1>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">Add a password</h1>
         <p className="mt-2 text-sm text-text-2">
-          Set a password and your encryption keys are locked with it, so not even the server can read your messages.
-          You'll also be able to sign in with your email.
+          Set a password so you can also sign in with your email. Your messages stay encrypted in transit and at rest, and unlock
+          automatically on your devices either way.
         </p>
         <div className="mt-6">
           <Field
@@ -375,7 +377,7 @@ export function ProtectAccount() {
           Skip for now
         </Button>
         <p className="mt-3 text-center text-[13px] text-text-3">
-          If you skip, messages stay encrypted and the server keeps your key sealed. You can set a password later from the web app.
+          If you skip, you keep signing in with Google. You can set a password later from the web app.
         </p>
         <p className="mt-6 text-center text-sm text-text-2">
           <button type="button" className="font-medium text-accent-ink underline" onClick={() => signOut()}>
@@ -618,7 +620,7 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
         </p>
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
-          <span>Your password also protects your encryption keys. Oruinwan can't reset it for you, so keep it somewhere safe.</span>
+          <span>Messages are encrypted in transit and at rest. Oruinwan's server keeps a sealed copy of your key, so your messages unlock automatically on every device you sign in on.</span>
         </div>
       </form>
     </div>
@@ -691,7 +693,7 @@ function GoogleSignUp({ ticket, onBack }) {
  * "Get started": one email field. Existing accounts go on to sign in, new ones to create an
  * account, with the email filled in. Google works from here too.
  */
-function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa }) {
+function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa, onQr }) {
   const signInWithProvider = useSession((s) => s.signInWithProvider);
   const addr = useServerAddress();
   const providers = useProviders(addr.known ? addr.base : '');
@@ -778,6 +780,10 @@ function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa }) 
             </Button>
           </>
         )}
+        <Button type="button" block size="lg" variant="secondary" className="mt-3" icon={QrCode} onClick={onQr} disabled={busy} data-testid="scan-qr">
+          Scan QR code
+        </Button>
+        <p className="mt-2 text-center text-[13px] text-text-3">Signed in on a computer? Show its code under Settings → Devices → Sign in a phone.</p>
         <p className="mt-6 text-center text-[13px] text-text-3">
           By continuing you agree to the{' '}
           <button type="button" className="underline" onClick={() => openExternal(`${addr.base || ''}/terms`)} disabled={!addr.base}>
@@ -806,7 +812,7 @@ export function AuthFlow() {
   const go = setStep;
   // Back from Sign in or Create account returns to "Enter your email"; from the steps after them, to Sign in.
   const back = () =>
-    setStep(step === 'signin' || step === 'signup' ? 'start' : step === 'google-signup' || step === 'check-email' ? 'signin' : 'welcome');
+    setStep(step === 'signin' || step === 'signup' || step === 'qr' ? 'start' : step === 'google-signup' || step === 'check-email' ? 'signin' : 'welcome');
   // Android back on a form does the same.
   useEffect(() => {
     if (step === 'welcome') return undefined;
@@ -823,6 +829,10 @@ export function AuthFlow() {
     setCheckEmail(info);
     go('check-email');
   };
+  // A paused sign-in (two-step verification, device limit) from any path takes over.
+  const challenge = useSession((s) => s.challenge);
+  if (challenge) return <SignInChallenge />;
+  if (step === 'qr') return <QrSignIn onBack={() => setStep('start')} />;
   if (step === 'google-signup' && googleTicket) return <GoogleSignUp ticket={googleTicket} onBack={back} />;
   if (step === 'check-email' && checkEmail) {
     return <CheckEmail {...checkEmail} onBack={back} onSignIn={() => setStep('signin')} />;
@@ -844,6 +854,7 @@ export function AuthFlow() {
           setPendingGoogle(token);
           go('signin');
         }}
+        onQr={() => go('qr')}
       />
     );
   }

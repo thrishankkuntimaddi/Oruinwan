@@ -120,6 +120,8 @@ router.post('/app/exchange', exchangeLimiter, async (req, res) => {
       method: found.method || 'sso',
       deviceId: found.deviceId || deviceIdFrom(req),
     });
+    // Over the device limit: the app shows "sign out of one to continue" (POST /api/auth/signin/continue).
+    if (session.pending) return res.status(session.status).json(session.pending);
     return res.json({
       message: 'SSO login success',
       accessToken: session.accessToken,
@@ -291,6 +293,8 @@ router.get('/:provider/callback', async (req, res) => {
       return res.redirect(await ssoApp.appRedirectWithCode({ userId: user._id, deviceId, method: `sso_${provider}`, challenge: appChallenge }));
     }
     const session = await startSsoSession(req, res, user._id, { method: `sso_${provider}`, deviceId });
+    // Over the device limit: the web app finishes with the pending token (fragment only, never sent to a server).
+    if (session.pending) return res.redirect(`${FRONTEND_URL()}/oauth-success#pending=${session.pending.pendingToken}`);
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${session.accessToken}`);
   } catch (err) {
     logger.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
