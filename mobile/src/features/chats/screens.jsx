@@ -100,7 +100,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
   return { actions, onLongPress, editing, setEditing, openTask: () => setTaskFrom({ text: '' }) };
 }
 
-export function ConversationScreen({ kind, id }) {
+export function ConversationScreen({ kind, id, draft = '' }) {
   const conv = useMemo(() => ({ kind, id }), [kind, id]);
   const meta = useConversationMeta(kind, id);
   const me = useSession((s) => s.user?.id);
@@ -214,7 +214,7 @@ export function ConversationScreen({ kind, id }) {
           assistants={assistants}
           disabled={readOnly}
           disabledReason="Only admins can post in this channel."
-          initial={tools.editing?.text || ''}
+          initial={tools.editing?.text || draft}
           editing={Boolean(tools.editing)}
           onCancelEdit={() => tools.setEditing(null)}
           onPlus={() => setPlus(true)}
@@ -239,7 +239,7 @@ export function ConversationScreen({ kind, id }) {
   );
 }
 
-export function ThreadScreen({ kind, convId, messageId }) {
+export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const conv = useMemo(() => ({ kind, id: convId }), [kind, convId]);
   const meta = useConversationMeta(kind, convId);
   const me = useSession((s) => s.user?.id);
@@ -292,7 +292,7 @@ export function ThreadScreen({ kind, convId, messageId }) {
         onPlus={() => setAttach(true)}
         aiMentions={aiOn}
         assistants={assistants}
-        initial={tools.editing?.text || ''}
+        initial={tools.editing?.text || draft}
         editing={Boolean(tools.editing)}
         onCancelEdit={() => tools.setEditing(null)}
         onSend={(text) => {

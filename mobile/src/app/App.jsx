@@ -14,8 +14,8 @@ import { checkForUpdate } from '../update/updater.js';
 import { refreshRemoteConfig, logEvent } from '../config/remote.js';
 import { on } from '../lib/bus.js';
 import { watchKeyboard } from '../native/keyboard.js';
-import { onPushTap } from '../native/push.js';
-import { openPush } from '../features/home/openTarget.js';
+import { onPushReceived, onPushTap } from '../native/push.js';
+import { handleNotification, handleReceived } from '../features/push/quickReply.js';
 import { MediaHost } from '../features/media/MediaHost.jsx';
 import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 
@@ -87,10 +87,16 @@ export function App() {
     return () => off();
   }, []);
 
-  // Tapping a push notification opens its conversation (once the session has loaded).
+  // Tapping a push notification opens its conversation (once the session has loaded); its
+  // Reply and Mark as read actions are handled too (features/push/quickReply.js).
   useEffect(() => {
     if (status !== 'signed-in') return undefined;
-    return onPushTap(openPush);
+    const offTap = onPushTap(handleNotification);
+    const offReceived = onPushReceived(handleReceived);
+    return () => {
+      offTap();
+      offReceived();
+    };
   }, [status]);
 
   // Escape: close the top sheet or dialog, leave a text field, then go back a screen.

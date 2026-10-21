@@ -263,6 +263,11 @@ export const workAdapter = {
     const data = await api.post(prepared.path, prepared.body);
     return data?.message || data?.reply || data;
   },
+  /** Marks a conversation read without opening it (a notification's "Mark as read"). */
+  async markConversationRead(conv) {
+    socketEmit('mark-chat-read', { type: conv.kind, id: conv.id });
+    await api.post('/chat/reset-unread', { type: conv.kind, id: conv.id });
+  },
   /** The text of a queued message (after a restart, the queue keeps only the ciphertext). */
   async readPrepared(conv, prepared) {
     const key = await conversationKey(conv);
