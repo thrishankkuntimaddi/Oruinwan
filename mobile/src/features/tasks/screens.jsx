@@ -30,13 +30,78 @@ import { TemplatePickerSheet } from './PlanningScreen.jsx';
 import { TaskEditorSheet, PeoplePicker, toDateInput, fromDateInput } from './TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
 
-const VIEWS = [
+// The same views, in the same order and words, as the web's Tasks panel.
+export const VIEWS = [
   { value: 'mine', label: 'My tasks' },
   { value: 'incoming', label: 'Incoming' },
   { value: 'given', label: 'Given' },
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All tasks' },
   { value: 'done', label: 'Completed' },
+  { value: 'trash', label: 'Trash' },
 ];
+
+/** Trashed tasks: restore them, or delete them for good. */
+function TrashView() {
+  const ws = useSession((s) => s.workspaceId);
+  const { data, loading } = useQuery(ws && `tasks.trash:${ws}`, () => api().trashedTasks(ws));
+  const [menu, setMenu] = useState(null);
+  const [purge, setPurge] = useState(null);
+  const restore = async (t) => {
+    try {
+      await api().restoreTask(t.id);
+      invalidate('tasks');
+      toast('Task restored');
+    } catch (err) {
+      toast(err.message || 'Could not restore the task', 'danger');
+    }
+  };
+  if (loading && !data) return <SkeletonRows count={4} avatar={false} />;
+  if (!data?.length) return <EmptyState icon={Trash2} title="Trash is empty" body="Tasks you delete appear here so you can restore them." />;
+  return (
+    <>
+      <RowGroup className="mt-3">
+        {data.map((t) => (
+          <Row
+            key={t.id}
+            leading={<StatusIcon status={t.status} size={18} />}
+            title={t.title}
+            subtitle={[t.issueKey, t.deletedAt && `Deleted ${shortAgo(t.deletedAt)}`].filter(Boolean).join(' · ')}
+            onClick={() => setMenu(t)}
+            trailing={<span className="text-[13px] font-medium text-accent-ink">Restore</span>}
+          />
+        ))}
+      </RowGroup>
+      <ActionSheet
+        open={Boolean(menu)}
+        onClose={() => setMenu(null)}
+        title={menu?.title}
+        actions={[
+          { label: 'Restore', onSelect: () => restore(menu) },
+          { label: 'Delete forever', danger: true, onSelect: () => setPurge(menu) },
+        ]}
+      />
+      <Dialog
+        open={Boolean(purge)}
+        onClose={() => setPurge(null)}
+        title="Delete this task for good?"
+        body="It can't be restored afterwards."
+        confirmLabel="Delete forever"
+        danger
+        onConfirm={async () => {
+          const t = purge;
+          setPurge(null);
+          try {
+            await api().purgeTask(t.id);
+            invalidate('tasks');
+            toast('Task deleted');
+          } catch (err) {
+            toast(err.message || 'Could not delete the task', 'danger');
+          }
+        }}
+      />
+    </>
+  );
+}
 
 const OPEN_ORDER = ['in_progress', 'review', 'blocked', 'todo', 'backlog'];
 const SORTS = {
@@ -115,7 +180,7 @@ export function TasksScreen() {
         title="Tasks"
         actions={
           <>
-            <IconButton icon={CalendarRange} label="Planning: sprints, milestones, timeline" onClick={() => nav.push('planning')} />
+            <IconButton icon={CalendarRange} label="Planning: sprints, milestones, time report, design reviews" onClick={() => nav.push('planning')} />
             <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} onClick={() => setSortSheet(true)} />
             <IconButton
               icon={layout === 'list' ? LayoutGrid : List}
@@ -128,7 +193,9 @@ export function TasksScreen() {
         <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="pb-3" />
       </TabHeader>
       <Body tab="tasks" onRefresh={() => invalidate('tasks')}>
-        {loading ? (
+        {view === 'trash' ? (
+          <TrashView />
+        ) : loading ? (
           <SkeletonRows count={7} avatar={false} />
         ) : !tasks.length ? (
           <EmptyState
@@ -438,7 +505,7 @@ export function TaskScreen({ id }) {
         open={trash}
         onClose={() => setTrash(false)}
         title="Move this task to trash?"
-        body="You can restore it later from Trash in the web app."
+        body="You can restore it later from Trash in Tasks."
         confirmLabel="Move to trash"
         danger
         onConfirm={async () => {

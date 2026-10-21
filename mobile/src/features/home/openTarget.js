@@ -35,7 +35,8 @@ export function openTarget(t) {
     nav.open('chats', 'conversation', { kind: t.convKind || 'channel', id: t.conv });
     nav.push('thread', { kind: t.convKind || 'channel', convId: t.conv, messageId: t.id });
   } else if (t.kind === 'meeting') nav.push('meeting', { id: t.id });
-  else if (t.kind === 'designReview') nav.push('designReview', { id: t.id });
+  // Design reviews live in Tasks → Planning, so a review opens in the Tasks tab.
+  else if (t.kind === 'designReview') nav.push('designReview', { id: t.id }, { tab: 'tasks' });
   else if (t.kind === 'task') nav.push('task', { id: t.id });
   else if (t.kind === 'tasks') nav.setTab('tasks');
   else if (t.kind === 'note') nav.push('note', { id: t.id });

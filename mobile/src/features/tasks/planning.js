@@ -111,3 +111,34 @@ export function workloadBars(list) {
   const max = Math.max(1, ...(list || []).map((w) => w.count || 0));
   return (list || []).map((w) => ({ ...w, percent: Math.round(((w.count || 0) / max) * 100) }));
 }
+
+// ---------------------------------------------------------------- time report
+
+/** Periods of the time report; the same presets as the web's Time report. */
+export const REPORT_RANGES = [
+  { value: 'week', label: 'This week' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: 'month', label: 'This month' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: 'all', label: 'All time' },
+];
+
+/** { from, to } ISO strings for a report period, relative to `now` ('all' → no bounds). */
+export function reportRange(preset, now = new Date()) {
+  if (preset === 'all') return {};
+  const s = new Date(now);
+  s.setHours(0, 0, 0, 0);
+  if (preset === 'week') s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+  else if (preset === 'month') s.setDate(1);
+  else s.setDate(s.getDate() - ((preset === '30d' ? 30 : 7) - 1));
+  return { from: s.toISOString(), to: new Date(now).toISOString() };
+}
+
+/** Rows sorted by time (largest first), each with its share of the total in percent. */
+export function reportRows(rows, totalSeconds) {
+  const list = rows || [];
+  const total = totalSeconds || list.reduce((n, r) => n + (r.seconds || 0), 0);
+  return [...list]
+    .sort((a, b) => (b.seconds || 0) - (a.seconds || 0))
+    .map((r) => ({ ...r, share: total ? Math.round(((r.seconds || 0) / total) * 100) : 0 }));
+}

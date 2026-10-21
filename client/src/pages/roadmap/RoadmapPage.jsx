@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Map as MapIcon, Plus, RefreshCcw, CalendarOff } from 'lucide-react';
 import {
     DashPage, PageHead, Section, Panel, Toolbar, FilterTabs, Btn, IconBtn, Chip, EmptyState, LoadingState, ErrorState, useAsync, errorMessage,
@@ -119,6 +119,25 @@ export default function RoadmapPage() {
     // Keep the open drawer's item fresh after live refetches.
     const drawerItem = drawer?.item ? items.find((i) => i._id === drawer.item._id) || drawer.item : null;
 
+    // ?item=<id> (the Notes panel's Roadmap tab, shared links) opens that item's drawer.
+    const location = useLocation();
+    const navigate = useNavigate();
+    const itemParam = new URLSearchParams(location.search).get('item');
+    const openedParam = useRef(null);
+    useEffect(() => {
+        if (!itemParam) { openedParam.current = null; return; }
+        if (openedParam.current === itemParam) return;
+        const found = items.find((i) => i._id === itemParam);
+        if (!found) return;
+        openedParam.current = itemParam;
+        setDrawer({ item: found });
+        loadLinkables();
+    }, [itemParam, items, loadLinkables]);
+    const closeDrawer = () => {
+        setDrawer(null);
+        if (itemParam) navigate(location.pathname, { replace: true });
+    };
+
     const range = useMemo(() => buildRange(items), [items]);
     const lanes = useMemo(() => groupItems(items.filter((i) => itemSpan(i)), groupBy), [items, groupBy]);
     const unscheduled = items.filter((i) => !itemSpan(i));
@@ -147,13 +166,13 @@ export default function RoadmapPage() {
             setData((d) => ({ ...d, items: [...(d?.items || []), created] }));
             showToast('Roadmap item created', 'success');
         }
-        setDrawer(null);
+        closeDrawer();
     };
 
     const onDelete = async () => {
         await roadmapService.remove(drawer.item._id);
         setData((d) => ({ ...d, items: d.items.filter((i) => i._id !== drawer.item._id) }));
-        setDrawer(null);
+        closeDrawer();
         showToast('Roadmap item deleted', 'success');
     };
 
@@ -266,7 +285,7 @@ export default function RoadmapPage() {
                 tasks={linkables.tasks}
                 onSave={onSave}
                 onDelete={onDelete}
-                onClose={() => setDrawer(null)}
+                onClose={closeDrawer}
             />
         </DashPage>
     );

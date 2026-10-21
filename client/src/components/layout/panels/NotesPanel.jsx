@@ -4,29 +4,27 @@ import {
     Plus, Search, Star, Archive, MoreHorizontal,
     ChevronRight, ChevronDown, ArchiveRestore,
     ArrowUpDown, BookOpen, Layers, Hash,
-    FileText, Trash2, FolderPlus, Lightbulb,
-    FolderOpen, Move, Users, ClipboardList,
-    FolderKanban, Cpu, Megaphone, StickyNote,
+    FileText, Trash2, FolderPlus,
+    FolderOpen, Move, Users, StickyNote,
     Check, X
 } from "lucide-react";
 import api from '@services/api';
 import { useNotes, noteContentToText } from "../../../contexts/NotesContext";
 import NoteTemplateModal, { templateToNote } from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
+import { NOTE_TYPE_LIST, noteTypeOf, noteTypeGroup } from "../../../pages/SidebarComp/notesComponents/noteTypes";
 import logger from '../../../utils/logger';
 import { formatDate as formatUserDate } from '../../../utils/userDateFormat';
 import { getUserPreferences } from '../../../hooks/useUserPreferences';
+import { useWorkspaceFeatures } from '../../../hooks/useWorkspaceFeatures';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
+import RoadmapPanelList from './RoadmapPanelList';
 import '../../../styles/gloss-x-panels.css';
 
-const NOTE_TYPES = [
-    { id: "note", Icon: FileText, label: "Document" },
-    { id: "documentation", Icon: BookOpen, label: "Documentation" },
-    { id: "brainstorm", Icon: Lightbulb, label: "Brainstorm" },
-    { id: "meeting", Icon: Users, label: "Meeting notes" },
-    { id: "sop", Icon: ClipboardList, label: "SOP" },
-    { id: "projectspec", Icon: FolderKanban, label: "Project spec" },
-    { id: "techdesign", Icon: Cpu, label: "Tech design" },
-    { id: "announcement", Icon: Megaphone, label: "Announcement" },
+/** The Notes panel's tabs: workspace notes, channel canvases and the quarterly roadmap. */
+export const notesPanelTabs = ({ roadmap = true } = {}) => [
+    { id: 'workspace', label: 'Workspace' },
+    { id: 'canvas', label: 'Canvases' },
+    ...(roadmap ? [{ id: 'roadmap', label: 'Roadmap' }] : []),
 ];
 
 function useCanvasByChannel(workspaceId) {
@@ -135,7 +133,18 @@ const NotesPanel = ({ title }) => {
     const { channels: canvasChannels } = useCanvasByChannel(workspaceId);
 
     
-    const [activeTab, setActiveTab] = useState("workspace");
+    const [noteTab, setNoteTab] = useState("workspace");
+    // The roadmap lives in Notes: /workspace/:id/roadmap shows it with this panel beside it.
+    // It rolls up milestones and tasks, so it follows the Tasks switch like it always has.
+    const features = useWorkspaceFeatures(workspaceId);
+    const roadmapOn = features.tasks !== false;
+    const onRoadmap = /\/roadmap(\/|$)/.test(location.pathname);
+    const activeTab = onRoadmap ? 'roadmap' : noteTab;
+    const selectTab = (id) => {
+        if (id === 'roadmap') { if (!onRoadmap) navigate(`/workspace/${workspaceId}/roadmap`); return; }
+        setNoteTab(id);
+        if (onRoadmap) navigate(`/workspace/${workspaceId}/notes`);
+    };
 
     
     const [wsFilter, setWsFilter] = useState("all");
@@ -225,7 +234,7 @@ const NotesPanel = ({ title }) => {
 
     const notesByType = (typeId) =>
         activeNotes
-            .filter(n => n.type === typeId && matchesSearch(n, searchQuery))
+            .filter(n => noteTypeGroup(n.type) === typeId && matchesSearch(n, searchQuery))
             .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
     const displayArchived = searchQuery
@@ -290,7 +299,7 @@ const NotesPanel = ({ title }) => {
 
     
     const renderNoteRow = (note) => {
-        const typeConf = NOTE_TYPES.find(t => t.id === note.type) || NOTE_TYPES[0];
+        const typeConf = noteTypeOf(note.type);
         const isActive = activeId === note.id;
         const preview = getPreview(note.content);
         const noteGroup_ = (note.tags || []).find(t => groups.includes(t)) || null;
@@ -361,18 +370,18 @@ const NotesPanel = ({ title }) => {
     const tools = (
         <>
             <div className="gl-tabs" role="tablist" aria-label="Notes source">
-                {[
-                    { id: 'workspace', label: 'Workspace', count: activeNotes.length },
-                    { id: 'canvas', label: 'Canvases', count: totalCanvas },
-                ].map(tab => (
-                    <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className="gl-tab" onClick={() => setActiveTab(tab.id)}>
-                        {tab.label}<span className="gl-count">{tab.count}</span>
-                    </button>
-                ))}
+                {notesPanelTabs({ roadmap: roadmapOn }).map(tab => {
+                    const count = tab.id === 'workspace' ? activeNotes.length : tab.id === 'canvas' ? totalCanvas : null;
+                    return (
+                        <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className="gl-tab" onClick={() => selectTab(tab.id)}>
+                            {tab.label}{count !== null && <span className="gl-count">{count}</span>}
+                        </button>
+                    );
+                })}
             </div>
             <div className="gl-search">
                 <Search size={12} />
-                <input type="text" className="gl-input" placeholder="Search…" aria-label="Search notes" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                <input type="text" className="gl-input" placeholder="Search…" aria-label={activeTab === 'roadmap' ? 'Search roadmap' : 'Search notes'} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                     style={{ paddingRight: searchQuery ? '30px' : undefined }} />
                 {searchQuery && (
                     <button type="button" className="gl-icon-btn gl-x-xs" onClick={() => setSearchQuery('')} aria-label="Clear search"
@@ -425,8 +434,8 @@ const NotesPanel = ({ title }) => {
                 isOpen={byTypeOpen}
                 onToggle={() => { setByTypeOpen(v => !v); if (!byTypeOpen) setArchiveOpen(false); }}
             >
-                {NOTE_TYPES.map(t => {
-                    const cnt = activeNotes.filter(n => n.type === t.id).length;
+                {NOTE_TYPE_LIST.map(t => {
+                    const cnt = activeNotes.filter(n => noteTypeGroup(n.type) === t.id).length;
                     const isOpen = activeTypeId === t.id;
                     const tNotes = notesByType(t.id);
                     return (
@@ -450,7 +459,7 @@ const NotesPanel = ({ title }) => {
             </FooterSection>
 
             <FooterSection
-                label="Archive" icon={Archive}
+                label="Archived" icon={Archive}
                 count={archivedNotes.length}
                 isOpen={archiveOpen}
                 onToggle={() => { setArchiveOpen(v => !v); if (!archiveOpen) setByTypeOpen(false); }}
@@ -459,7 +468,7 @@ const NotesPanel = ({ title }) => {
                     <p className="gl-x-item-sub" style={{ padding: '12px 14px', textAlign: 'center' }}>Archive is empty</p>
                 ) : (
                     displayArchived.map(note => {
-                        const typeConf = NOTE_TYPES.find(t => t.id === note.type) || NOTE_TYPES[0];
+                        const typeConf = noteTypeOf(note.type);
                         const open = () => navigate(`/workspace/${workspaceId}/notes/${note.id}`);
                         return (
                             <div key={note.id} role="button" tabIndex={0} className="gl-item" onClick={open}
@@ -488,10 +497,12 @@ const NotesPanel = ({ title }) => {
                 subtitle={title}
                 actions={headerActions}
                 tools={tools}
-                footer={footer}
+                footer={activeTab === 'roadmap' ? null : footer}
                 className="gl-x-flushfoot"
             >
-                {activeTab === "workspace" ? (
+                {activeTab === 'roadmap' ? (
+                    <RoadmapPanelList workspaceId={workspaceId} query={searchQuery} />
+                ) : activeTab === "workspace" ? (
                     <PanelSection label={activeGroup || 'Workspace Notes'} icon={activeGroup ? FolderOpen : undefined}>
                         {displayNotes.length === 0 ? (
                             <PanelEmpty

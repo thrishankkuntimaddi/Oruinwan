@@ -80,6 +80,16 @@ describe('RoadmapPage', () => {
         expect(body).toMatchObject({ title: 'Mobile app', quarter: '2026-Q4', taskIds: ['t1'], milestoneIds: [] });
     });
 
+    it('opens the item named by ?item= (links from the Notes panel Roadmap tab)', async () => {
+        roadmapService.list.mockResolvedValue({ items, canCreate: true });
+        render(
+            <MemoryRouter initialEntries={[`/workspace/${WS}/roadmap?item=r1`]}>
+                <Routes><Route path="/workspace/:workspaceId/roadmap" element={<RoadmapPage />} /></Routes>
+            </MemoryRouter>,
+        );
+        expect(await screen.findByRole('dialog', { name: 'Edit Self-serve onboarding' })).toBeTruthy();
+    });
+
     it('refetches on roadmap:updated for this workspace', async () => {
         roadmapService.list.mockResolvedValue({ items, canCreate: true });
         renderPage();

@@ -27,6 +27,41 @@ const { workAdapter: a, blockersOf, mapTaskTime, mapPlanningTask } = await impor
 
 beforeEach(() => vi.clearAllMocks());
 
+describe('trash and time report (Tasks parity with the web)', () => {
+  it('lists only trashed top-level tasks, restores and deletes for good', async () => {
+    mockApi.get.mockResolvedValue({
+      tasks: [
+        { _id: 't1', title: 'Old plan', deleted: true, status: 'todo', issueKey: 'OR-1', deletedAt: '2026-10-01T00:00:00Z' },
+        { _id: 't2', title: 'Live', deleted: false },
+        { _id: 't3', title: 'Sub', deleted: true, isSubtask: true },
+      ],
+    });
+    expect(await a.trashedTasks('w1')).toEqual([
+      { id: 't1', title: 'Old plan', status: 'todo', priority: 'medium', issueKey: 'OR-1', deletedAt: '2026-10-01T00:00:00Z' },
+    ]);
+    expect(mockApi.get).toHaveBeenCalledWith('/v2/tasks', { workspaceId: 'w1', includeDeleted: 'true' });
+    await a.restoreTask('t1');
+    expect(mockApi.post).toHaveBeenCalledWith('/v2/tasks/t1/restore');
+    await a.purgeTask('t1');
+    expect(mockApi.del).toHaveBeenCalledWith('/v2/tasks/t1/permanent');
+  });
+
+  it('reads the time report for a period', async () => {
+    mockApi.get.mockResolvedValue({
+      totalSeconds: 5400,
+      byUser: [{ userId: 'u1', seconds: 5400, tasks: 2, running: true, user: { _id: 'u1', username: 'ana' } }],
+      byTask: [{ taskId: 't1', title: 'Ship', issueKey: 'OR-1', estimatedHours: 2, seconds: 5400 }],
+    });
+    const r = await a.timeReport('w1', { from: '2026-10-01T00:00:00.000Z', to: '2026-10-07T00:00:00.000Z' });
+    expect(mockApi.get).toHaveBeenCalledWith('/v2/tasks/time/report', { workspaceId: 'w1', from: '2026-10-01T00:00:00.000Z', to: '2026-10-07T00:00:00.000Z' });
+    expect(r.totalSeconds).toBe(5400);
+    expect(r.byUser[0]).toMatchObject({ userId: 'u1', seconds: 5400, tasks: 2, running: true, user: { id: 'u1', name: 'ana' } });
+    expect(r.byTask[0]).toEqual({ taskId: 't1', title: 'Ship', issueKey: 'OR-1', estimatedHours: 2, seconds: 5400 });
+    await a.timeReport('w1', {});
+    expect(mockApi.get).toHaveBeenLastCalledWith('/v2/tasks/time/report', { workspaceId: 'w1' });
+  });
+});
+
 describe('blockers', () => {
   it('reads the blockers of a 409 TASK_BLOCKED and nothing else', () => {
     const err = new MockApiError('Blocked', 409, { code: 'TASK_BLOCKED', blockers: [{ _id: 'b1', title: 'API', issueKey: 'OR-2', status: 'in_progress' }] });

@@ -7,7 +7,7 @@ import { nav, useIsOpen } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
 import { useDirectory, useMembers, useNotes } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
-import { NOTE_TYPES } from '../../data/constants.js';
+import { NOTE_TYPES, NOTE_TYPE_OPTIONS } from '../../data/constants.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { IconButton, Button } from '../../ui/Button.jsx';
 import { Chips, SearchField, Segmented } from '../../ui/Controls.jsx';
@@ -23,18 +23,42 @@ import { useFlag } from '../../config/flags.js';
 import { useKeyboard } from '../../native/keyboard.js';
 import { askAiAbout } from '../ai/aiUi.js';
 import { TEMPLATES } from './templates.js';
+import { prefs } from '../../native/storage.js';
+import { RoadmapScreen } from '../roadmap/screens.jsx';
 import { useLiveDocument } from '../../lib/collab/useCollab.js';
 import { useNoteBinding } from '../../lib/collab/useEditorBinding.js';
 import { collabView } from '../../lib/collab/state.js';
 import { CollabBanner, PresenceAvatars } from '../../lib/collab/CollabUi.jsx';
 
-const FILTERS = [
+// Same words as the web's Notes panel (All · Starred chips, the Archived section).
+export const FILTERS = [
   { value: 'all', label: 'All' },
-  { value: 'favorites', label: 'Favorites' },
+  { value: 'favorites', label: 'Starred' },
   { value: 'mine', label: 'Mine' },
   { value: 'shared', label: 'Shared with me' },
   { value: 'archived', label: 'Archived' },
 ];
+
+/** The Notes tab's two sections, like the web's Notes panel tabs. */
+export const NOTES_SECTIONS = [
+  { value: 'notes', label: 'Notes' },
+  { value: 'roadmap', label: 'Roadmap' },
+];
+
+/** Notes tab root: a Notes · Roadmap control on top; roadmap items open in this tab's stack. */
+export function NotesScreen() {
+  const [section, setSection] = useState(() => (prefs.get('notes.section', 'notes') === 'roadmap' ? 'roadmap' : 'notes'));
+  const pick = (v) => {
+    prefs.set('notes.section', v);
+    setSection(v);
+  };
+  const control = (
+    <div className="px-4">
+      <Segmented size="sm" options={NOTES_SECTIONS} value={section} onChange={pick} />
+    </div>
+  );
+  return section === 'roadmap' ? <RoadmapScreen section={control} /> : <NotesList section={control} />;
+}
 
 function NoteRow({ note, directory }) {
   const shared = (note.sharedWith || []).map((id) => directory[id]).filter(Boolean);
@@ -47,8 +71,8 @@ function NoteRow({ note, directory }) {
       className={cx('flex w-full flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
     >
       <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">
-        {NOTE_TYPES[note.type] || 'Note'}
-        {note.pinned && <Icon as={Star} size={12} className="fill-current" aria-label="Favorite" />}
+        {NOTE_TYPES[note.type] || 'Document'}
+        {note.pinned && <Icon as={Star} size={12} className="fill-current" aria-label="Starred" />}
       </span>
       <span className="truncate text-[16px] font-semibold">{note.title || 'Untitled'}</span>
       <span className="line-clamp-2 text-[13px] leading-relaxed text-text-2">{htmlToText(note.content, 160) || 'Empty note'}</span>
@@ -64,7 +88,7 @@ function NoteRow({ note, directory }) {
   );
 }
 
-export function NotesScreen() {
+function NotesList({ section }) {
   const me = useSession((s) => s.user?.id);
   const ws = useSession((s) => s.workspaceId);
   const { data, loading } = useNotes();
@@ -99,6 +123,7 @@ export function NotesScreen() {
     <Screen>
       <TabHeader title="Notes">
         <div className="space-y-2.5 pb-3">
+          {section}
           <div className="px-4">
             <SearchField value={query} onChange={setQuery} placeholder="Search notes" />
           </div>
@@ -366,7 +391,7 @@ export function NoteScreen({ id, fresh }) {
       />
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-10">
         <button type="button" onClick={() => canEdit && setTypeSheet(true)} className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">
-          {NOTE_TYPES[note.type] || 'Note'}
+          {NOTE_TYPES[note.type] || 'Document'}
         </button>
         <input
           value={title}
@@ -434,8 +459,8 @@ export function NoteScreen({ id, fresh }) {
         open={typeSheet}
         onClose={() => setTypeSheet(false)}
         title="Note type"
-        actions={Object.entries(NOTE_TYPES).map(([value, label]) => ({
-          label: `${label}${value === note.type ? '  ✓' : ''}`,
+        actions={NOTE_TYPE_OPTIONS.map(([value, label]) => ({
+          label: `${label}${value === (note.type === 'documentation' ? 'note' : note.type) ? '  ✓' : ''}`,
           onSelect: async () => {
             setQueryData(`note:${id}`, { ...note, type: value });
             await save({ type: value });

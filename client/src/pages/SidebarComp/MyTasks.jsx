@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Search, CheckCircle2, Circle, Trash2, RotateCcw, Activity, LayoutGrid, List,
-  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare, Flag, LayoutTemplate, Clock,
+  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare, Flag, LayoutTemplate, Clock, PenTool,
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -43,10 +43,11 @@ const EMPTY = {
 };
 
 const VIEWS = [
-  { key: 'my-tasks', label: 'My Issues', desc: 'Tasks you created for yourself.', Icon: Circle, scope: (t, me) => isCreator(t, me) && isAssignee(t, me) },
+  // Labels match the phone app's chips (mobile/src/features/tasks/screens.jsx VIEWS).
+  { key: 'my-tasks', label: 'My tasks', desc: 'Tasks you created for yourself.', Icon: Circle, scope: (t, me) => isCreator(t, me) && isAssignee(t, me) },
   { key: 'shared-tasks', label: 'Incoming', desc: 'Tasks assigned to you by others.', Icon: Inbox, scope: (t, me) => isAssignee(t, me) && !isCreator(t, me) },
   { key: 'assigned-tasks', label: 'Given', desc: 'Tasks you created for other people.', Icon: Send, scope: (t, me) => isCreator(t, me) && !isAssignee(t, me) },
-  { key: 'all-tasks', label: 'All Issues', desc: 'Every workspace task you can see.', Icon: Eye, scope: () => true },
+  { key: 'all-tasks', label: 'All tasks', desc: 'Every workspace task you can see.', Icon: Eye, scope: () => true },
   null,
   { key: 'completed-tasks', label: 'Completed', desc: 'Done and cancelled tasks.', Icon: CheckCircle2, scope: () => true, closed: true },
   { key: 'deleted-tasks', label: 'Trash', desc: 'Restore tasks or delete them for good.', Icon: Trash2, trash: true },
@@ -75,14 +76,21 @@ const SORT_OPTIONS = [
 const PRIORITY_RANK = Object.fromEntries(PRIORITIES.map((p, i) => [p, PRIORITIES.length - i]));
 const STATUS_RANK = Object.fromEntries(STATUSES.map((s, i) => [s, i]));
 
+/** Layouts of the task list (the header strip). Milestones and Time report open from Planning. */
 const VIEW_MODES = [
   { key: 'list', Icon: List, label: 'List' },
   { key: 'board', Icon: LayoutGrid, label: 'Board' },
   { key: 'sprint', Icon: Activity, label: 'Sprint' },
   { key: 'timeline', Icon: GitBranch, label: 'Timeline' },
   { key: 'workload', Icon: Users, label: 'Workload' },
-  { key: 'milestones', Icon: Flag, label: 'Milestones' },
 ];
+const PLANNING_MODES = ['milestones', 'time'];
+
+/** ?view= → the layout or planning view to show (unknown or missing → list). Exported for tests. */
+export function viewModeFromSearch(search) {
+  const v = new URLSearchParams(search || '').get('view');
+  return VIEW_MODES.some((m) => m.key === v) || PLANNING_MODES.includes(v) ? v : 'list';
+}
 
 const channelKey = (t) => t.channel?.id || 'none';
 
@@ -156,11 +164,19 @@ function ListRow({ task, view, selected, can, milestoneName, onOpen, onDelete, o
   );
 }
 
-export default function MyTasks() {
+/**
+ * Tasks: views on the left (Views · Planning · By channel), the list on the right.
+ * `section="reviews"` (the /reviews routes) shows `children` — design reviews — in the main
+ * area with Planning → Design reviews selected.
+ */
+export default function MyTasks({ section, children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const reviewsMode = section === 'reviews';
   const requestedView = new URLSearchParams(location.search).get('tab');
   const activeView = VIEW_BY_KEY[requestedView] ? requestedView : 'my-tasks';
+  // The layout lives in the URL (?view=) so back and refresh keep it.
+  const viewMode = reviewsMode ? null : viewModeFromSearch(location.search);
 
   const {
     tasks, loading, refreshing, workspaceId, createTask, updateTask, patchTaskLocal, deleteTask, restoreTask,
@@ -176,13 +192,12 @@ export default function MyTasks() {
   const permCtx = useMemo(() => ({ userId: currentUserId, role: activeWorkspace?.role }), [currentUserId, activeWorkspace?.role]);
   const abilitiesOf = useCallback((t) => taskAbilities(t, permCtx), [permCtx]);
 
-  const [viewMode, setViewMode] = useState('list');
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('priority');
   const [channelFilter, setChannelFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
-  const [mobileShowList, setMobileShowList] = useState(false);
+  const [mobileShowList, setMobileShowList] = useState(reviewsMode);
   const [selectedId, setSelectedId] = useState(null);
   const [confirm, setConfirm] = useState(null); // { mode, task, to? }
   const [transferTask, setTransferTask] = useState(null);
@@ -288,10 +303,19 @@ export default function MyTasks() {
     }
   };
 
-  const setView = (key) => {
-    const params = new URLSearchParams(location.search);
-    params.set('tab', key);
-    navigate(`?${params.toString()}`, { replace: true });
+  // Views and layouts are query params of /tasks; from the reviews pages they lead back to it.
+  const goTasks = (changes) => {
+    const params = new URLSearchParams(reviewsMode ? '' : location.search);
+    Object.entries(changes).forEach(([k, v]) => (v ? params.set(k, v) : params.delete(k)));
+    const qs = params.toString();
+    if (reviewsMode) navigate(`/workspace/${workspaceId}/tasks${qs ? `?${qs}` : ''}`);
+    else navigate(`${location.pathname}${qs ? `?${qs}` : ''}`, { replace: true });
+    if (isMobile) setMobileShowList(true);
+  };
+  const setView = (key) => goTasks({ tab: key });
+  const setViewMode = (mode) => goTasks({ view: mode === 'list' ? null : mode });
+  const openReviews = () => {
+    navigate(`/workspace/${workspaceId}/reviews`);
     if (isMobile) setMobileShowList(true);
   };
 
@@ -299,7 +323,7 @@ export default function MyTasks() {
   const canCreate = !view.trash && !view.closed;
 
   /* ── First load only: skeleton. Later refreshes happen silently. ── */
-  if (loading) {
+  if (loading && !reviewsMode) {
     return (
       <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)' }}>
         {!isMobile && (
@@ -350,8 +374,8 @@ export default function MyTasks() {
             {VIEWS.map((v, i) => (v === null
               ? <div key={`sep-${i}`} style={{ height: '1px', background: 'var(--border-subtle)', margin: '6px 14px' }} />
               : (
-                <button key={v.key} type="button" onClick={() => setView(v.key)} aria-current={activeView === v.key ? 'page' : undefined}
-                  className={`gl-item${activeView === v.key ? ' is-active' : ''}`}>
+                <button key={v.key} type="button" onClick={() => setView(v.key)} aria-current={!reviewsMode && activeView === v.key ? 'page' : undefined}
+                  className={`gl-item${!reviewsMode && activeView === v.key ? ' is-active' : ''}`}>
                   <v.Icon size={14} className="gl-x-item-icon" />
                   <span className="gl-x-item-title">{v.label}</span>
                   <span className="gl-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{counts[v.key] || 0}</span>
@@ -360,14 +384,18 @@ export default function MyTasks() {
           </PanelSection>
 
           <PanelSection label="Planning">
-            <button type="button" className={`gl-item${viewMode === 'milestones' ? ' is-active' : ''}`} onClick={() => { setViewMode('milestones'); if (isMobile) setMobileShowList(true); }}>
+            <button type="button" className={`gl-item${viewMode === 'milestones' ? ' is-active' : ''}`} aria-current={viewMode === 'milestones' ? 'page' : undefined} onClick={() => setViewMode('milestones')}>
               <Flag size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Milestones</span>
               <span className="gl-count">{planning.milestones.length}</span>
             </button>
-            <button type="button" className={`gl-item${viewMode === 'time' ? ' is-active' : ''}`} onClick={() => { setViewMode('time'); if (isMobile) setMobileShowList(true); }}>
+            <button type="button" className={`gl-item${viewMode === 'time' ? ' is-active' : ''}`} aria-current={viewMode === 'time' ? 'page' : undefined} onClick={() => setViewMode('time')}>
               <Clock size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Time report</span>
+            </button>
+            <button type="button" className={`gl-item${reviewsMode ? ' is-active' : ''}`} aria-current={reviewsMode ? 'page' : undefined} onClick={openReviews}>
+              <PenTool size={14} className="gl-x-item-icon" />
+              <span className="gl-x-item-title">Design reviews</span>
             </button>
             <button type="button" className="gl-item" onClick={() => setTemplatesOpen('manage')}>
               <LayoutTemplate size={14} className="gl-x-item-icon" />
@@ -375,7 +403,7 @@ export default function MyTasks() {
             </button>
           </PanelSection>
 
-          {channelGroups.length > 0 && !isMobile && (
+          {channelGroups.length > 0 && !isMobile && !reviewsMode && (
             <PanelSection label="By channel">
               {[{ key: 'all', name: 'All channels', count: channelTotal }, ...channelGroups].map((g) => (
                 <button key={g.key} type="button" onClick={() => setChannelFilter(g.key)} aria-pressed={channelFilter === g.key}
@@ -390,7 +418,16 @@ export default function MyTasks() {
         </WorkspacePanel>
       </nav>
 
+      {/* ── Main: design reviews (Planning → Design reviews) ── */}
+      {reviewsMode && (
+        <main aria-label="Design reviews"
+          style={{ flex: 1, minWidth: 0, display: (isMobile && !mobileShowList) ? 'none' : 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {children}
+        </main>
+      )}
+
       {/* ── Main ── */}
+      {!reviewsMode && (
       <div style={{ flex: 1, minWidth: 0, display: (isMobile && !mobileShowList) ? 'none' : 'flex', overflow: 'hidden' }}>
         <div className="tasks-main" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -537,6 +574,7 @@ export default function MyTasks() {
           />
         )}
       </div>
+      )}
 
       {showModal && (
         <TaskModal
