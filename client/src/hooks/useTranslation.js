@@ -1,5 +1,6 @@
 import { useReducer, useRef, useCallback } from 'react';
 import api from '@services/api';
+import { useOptionalWorkspace } from '../contexts/WorkspaceContext';
 
 const INITIAL_STATE = { translationMap: new Map() };
 
@@ -35,6 +36,10 @@ function reducer(state, action) {
 
 export function useTranslation() {
     const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+    // The workspace's own AI provider and its admin "AI off" switch apply only
+    // when the request names the workspace.
+    const ws = useOptionalWorkspace()?.activeWorkspace;
+    const workspaceId = ws?.id || ws?._id || null;
 
     const cacheRef = useRef(sessionCache);
     
@@ -70,6 +75,7 @@ export function useTranslation() {
                 text,
                 targetLang: langCode,
                 messageId: msgId,
+                ...(workspaceId ? { workspaceId: String(workspaceId) } : {}),
             });
 
             const translatedText = res.data?.translated;
@@ -88,7 +94,7 @@ export function useTranslation() {
         } finally {
             pendingRef.current.delete(pendingKey);
         }
-    }, []);
+    }, [workspaceId]);
 
     
     const clearTranslation = useCallback((msgId) => {

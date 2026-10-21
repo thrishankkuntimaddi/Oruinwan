@@ -54,6 +54,7 @@ const CentralContentView = ({
     onCreatePoll,          
     onCreateChecklist,
     features,
+    broadcastMentionsAllowed = true,
     
     linkPreview,
     linkPreviewLoading,
@@ -181,6 +182,7 @@ const CentralContentView = ({
                             linkPreviewLoading={linkPreviewLoading}
                             onDismissPreview={onDismissPreview}
                             members={channelMembers || []}
+                            broadcastMentionsAllowed={broadcastMentionsAllowed}
                             showSmartReply={showSmartReply}
                             showScreenRecord={showScreenRecord}
                             workspaceId={workspaceId}

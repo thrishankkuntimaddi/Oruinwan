@@ -92,6 +92,7 @@ export default function FooterInput({
   showSmartReply = false,
   workspaceId = null,
   showScreenRecord = false,
+  broadcastMentionsAllowed = true,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
@@ -109,7 +110,7 @@ export default function FooterInput({
     selectSuggestion,
     extractMentionText,
     closeSuggestions,
-  } = useMentionAutocomplete(members, { includeBroadcast: conversationType === 'channel', assistants: connectedAssistants });
+  } = useMentionAutocomplete(members, { includeBroadcast: conversationType === 'channel' && broadcastMentionsAllowed, assistants: connectedAssistants });
 
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");

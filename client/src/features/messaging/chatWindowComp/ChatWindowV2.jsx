@@ -36,7 +36,7 @@ import MessageDiffViewer from '../MessageDiffViewer.jsx';
 import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.jsx';
 import { encryptMessageForSending } from '../../../services/messageEncryptionService';
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
-import { getMessageText, toggleBookmarkedBy, formatReminderTime } from '../../../utils/messageActionUtils';
+import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
 import useCanvasActions from './hooks/useCanvasActions.js';
@@ -276,8 +276,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [blocked, setBlocked] = useState(false);
     const [blockedByOther, setBlockedByOther] = useState(false);
     // Announcement channels: only channel admins may start messages.
-    const [channelPolicy, setChannelPolicy] = useState({ postingPolicy: 'everyone', canManage: true });
+    const [channelPolicy, setChannelPolicy] = useState({ postingPolicy: 'everyone', broadcastMentions: 'everyone', canManage: true });
     const postingLocked = chat?.type === 'channel' && channelPolicy.postingPolicy === 'admins' && !channelPolicy.canManage;
+    // @channel / @here may be limited to channel admins; don't offer them to others.
+    const broadcastMentionsAllowed = canUseBroadcastMentions(chat?.type, channelPolicy);
     React.useEffect(() => {
         if (!rawSocket || chat?.type !== 'channel') return undefined;
         const onPolicy = ({ channelId, postingPolicy }) => {
@@ -290,7 +292,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     // Saved mute/block state for this conversation (both are enforced by the server).
     React.useEffect(() => {
         setMuted(false); setBlocked(false); setBlockedByOther(false);
-        setChannelPolicy({ postingPolicy: 'everyone', canManage: true });
+        setChannelPolicy({ postingPolicy: 'everyone', broadcastMentions: 'everyone', canManage: true });
         if (!chat?.id) return;
         if (chat.type === 'dm') {
             api.get(`/api/v2/dm/${chat.id}/status`)
@@ -304,7 +306,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             api.get(`/api/channels/${chat.id}/mute`)
                 .then(({ data }) => {
                     setMuted(data.isMuted || false);
-                    setChannelPolicy({ postingPolicy: data.postingPolicy || 'everyone', canManage: data.canManage !== false });
+                    setChannelPolicy({
+                        postingPolicy: data.postingPolicy || 'everyone',
+                        broadcastMentions: data.broadcastMentions || 'everyone',
+                        canManage: data.canManage !== false,
+                    });
                 })
                 .catch(() => { });
         }
@@ -1760,6 +1766,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 recording={recording}
                 setRecording={setRecording}
                 blocked={blocked || blockedByOther || postingLocked}
+                broadcastMentionsAllowed={broadcastMentionsAllowed}
                 blockedNotice={blocked
                     ? 'You blocked this person. Unblock them from the ⋮ menu to send messages.'
                     : blockedByOther ? "You can't send messages to this person."

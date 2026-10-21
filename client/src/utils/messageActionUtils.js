@@ -76,3 +76,12 @@ export function formatReminderTime(date, now = new Date()) {
     if (days === 1) return `tomorrow at ${time}`;
     return `${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at ${time}`;
 }
+
+/**
+ * Whether @channel / @here may be offered in the composer. Channels can limit
+ * them to channel admins (broadcastMentions: 'admins'); DMs never offer them.
+ */
+export function canUseBroadcastMentions(conversationType, policy = {}) {
+    if (conversationType !== 'channel') return false;
+    return policy.broadcastMentions !== 'admins' || !!policy.canManage;
+}

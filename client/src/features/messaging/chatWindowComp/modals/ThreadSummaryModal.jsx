@@ -5,6 +5,7 @@ import ToolbarModalShell, { PrimaryButton, SecondaryButton } from './ToolbarModa
 import { batchDecryptMessages } from '../../../../services/messageEncryptionService';
 import { getMessageText } from '../../../../utils/messageActionUtils';
 import logger from '../../../../utils/logger';
+import { useOptionalWorkspace } from '../../../../contexts/WorkspaceContext';
 
 /**
  * Fetches a thread, decrypts its replies client-side (same conversation key the
@@ -14,6 +15,8 @@ export default function ThreadSummaryModal({ msg, conversationId, conversationTy
     const [state, setState] = useState({ status: 'loading', summary: '', error: null, replyCount: 0 });
     const [copied, setCopied] = useState(false);
     const messageId = msg._id || msg.id;
+    const ws = useOptionalWorkspace()?.activeWorkspace;
+    const workspaceId = ws?.id || ws?._id || null;
 
     const run = useCallback(async () => {
         setState({ status: 'loading', summary: '', error: null, replyCount: 0 });
@@ -36,6 +39,7 @@ export default function ThreadSummaryModal({ msg, conversationId, conversationTy
                 parentMessageId: messageId,
                 parentText: getMessageText(msg),
                 replies,
+                ...(workspaceId ? { workspaceId: String(workspaceId) } : {}),
             });
             const summary = sum.data?.summary;
             if (!summary) throw new Error('Empty summary');
@@ -50,7 +54,7 @@ export default function ThreadSummaryModal({ msg, conversationId, conversationTy
                 replyCount: 0,
             });
         }
-    }, [messageId, conversationId, conversationType, msg]);
+    }, [messageId, conversationId, conversationType, msg, workspaceId]);
 
     // Runs once per opened message.
     useEffect(() => { run(); }, [messageId]);
