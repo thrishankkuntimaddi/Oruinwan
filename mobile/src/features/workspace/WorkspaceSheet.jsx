@@ -8,12 +8,14 @@ import { Icon } from '../../ui/Icon.jsx';
 import { WorkspaceTile } from './WorkspaceTile.jsx';
 import { toast } from '../../lib/bus.js';
 import { JoinWithLinkSheet } from './JoinWorkspace.jsx';
+import { usePlanBlock } from '../plan/plan.js';
 
 export function WorkspaceSheet({ open, onClose }) {
   const workspaces = useSession((s) => s.workspaces);
   const current = useSession((s) => s.workspaceId);
   const switchWorkspace = useSession((s) => s.switchWorkspace);
   const server = useSession((s) => s.server);
+  const { blocked: createBlocked } = usePlanBlock(current, 'workspaces.create');
   const openCreate = useSession((s) => s.openCreateWorkspace);
   const [joinLink, setJoinLink] = useState(false);
 
@@ -71,7 +73,10 @@ export function WorkspaceSheet({ open, onClose }) {
             className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
           >
             <Icon as={Plus} size="sm" className="text-text-2" />
-            <span className="text-[15px]">Create a workspace</span>
+            <span className="min-w-0">
+              <span className="block text-[15px]">Create a workspace</span>
+              {createBlocked && <span className="block text-[13px] text-warning">Free plan limit reached</span>}
+            </span>
           </button>
           <button
             type="button"

@@ -34,6 +34,7 @@ function sentResponse(res, message) {
 }
 
 function sendError(res, err, label) {
+    if (require('../../shared/plans').sendPlanLimit(res, err)) return res;
     if (err && err.status && err.status < 500) {
         return res.status(err.status).json({ message: err.message });
     }
@@ -1354,6 +1355,7 @@ exports.translateMessage = async (req, res) => {
         const result = await aiMessagingService.translateMessage(text, targetLang.trim(), aiGatewayContext(req));
         return res.json(result);
     } catch (err) {
+        if (require('../../shared/plans').sendPlanLimit(res, err)) return;
         logger.warn('[AI translate] failed:', err.message);
         return res.status(503).json({ message: 'Translation unavailable', error: err.message });
     }

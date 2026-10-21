@@ -564,6 +564,10 @@ async function convertActionItem(meetingId, itemId, userId, { io, req, body = {}
     }
     const assignee = item.assignedTo ? idOf(item.assignedTo) : null;
     const individual = assignee && assignee !== String(userId);
+    if (m.workspaceId) {
+        const plansSvc = require('../../shared/plans/planService');
+        await plansSvc.enforce(plansSvc.assertCanCreateTasks(idOf(m.workspaceId), userId, individual ? { self: 0, others: 1 } : { self: 1, others: 0 }));
+    }
     const result = await lazy.tasks().createTask(userId, {
         workspaceId: idOf(m.workspaceId),
         title: item.text.slice(0, 200),

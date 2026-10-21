@@ -6,7 +6,8 @@
 // `huddles` helpers), and huddle events arrive on the bus as { event, payload }.
 import { create } from 'zustand';
 import { api, useSession } from '../../data/session.js';
-import { on, toast } from '../../lib/bus.js';
+import { emit as busEmit, on, toast } from '../../lib/bus.js';
+import { CALL_FULL, TIME_LIMIT_ENDED } from '../plan/planText.js';
 
 const FALLBACK_ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
 
@@ -30,6 +31,12 @@ export const useHuddle = create(() => ({
   live: {},
   /** A DM call ringing for me. */
   ring: null,
+  /** The free plan's cap on this call (huddle:roster): { maxMinutes, startedAt, endsAt } or null. */
+  timeLimit: null,
+  /** The last huddle:time_warning for my call: { minutesLeft, endsAt, maxMinutes, message } or null. */
+  timeWarning: null,
+  /** Why my last call ended, when worth a message (the free plan's time limit): { message, meetingId } or null. */
+  endedNotice: null,
 }));
 
 const set = (patch) => useHuddle.setState(typeof patch === 'function' ? patch(useHuddle.getState()) : patch);
@@ -106,7 +113,7 @@ function teardown() {
   Object.keys(peers).forEach(closePeer);
   localStream?.getTracks().forEach((t) => t.stop());
   localStream = null;
-  set({ call: null, participants: [], muted: false, peerStates: {}, connecting: false });
+  set({ call: null, participants: [], muted: false, peerStates: {}, connecting: false, timeLimit: null, timeWarning: null });
 }
 
 function peerFor(userId, polite) {
@@ -213,7 +220,9 @@ const handlers = {
     });
     if (isMine(p.huddleId)) {
       if (p.reason === 'joined_elsewhere') toast('You joined this huddle on another device.');
+      const meetingId = useHuddle.getState().call?.meetingId || (p.meetingId ? String(p.meetingId) : null);
       teardown();
+      if (p.reason === 'time_limit') set({ endedNotice: { message: p.message || TIME_LIMIT_ENDED, meetingId } });
     }
   },
   'huddle:existing'(p) {
@@ -225,7 +234,7 @@ const handlers = {
   },
   'huddle:roster'(p) {
     if (!isMine(p.huddleId)) return;
-    set({ connecting: false });
+    set({ connecting: false, ...(p.timeLimit !== undefined ? { timeLimit: p.timeLimit || null } : {}) });
     (p.participants || []).filter((x) => String(x.userId) !== myId()).forEach((x) => upsert({ userId: String(x.userId), username: x.username, audioEnabled: x.audioEnabled !== false }));
   },
   async 'huddle:joined'(p) {
@@ -290,8 +299,19 @@ const handlers = {
   'huddle:participant_left'(p) {
     refreshLive(p.huddleId);
   },
+  'huddle:time_warning'(p) {
+    if (!isMine(p.huddleId)) return;
+    set({ timeWarning: { minutesLeft: Number(p.minutesLeft) || 0, endsAt: p.endsAt || null, maxMinutes: Number(p.maxMinutes) || 30, message: p.message || '' } });
+  },
   'huddle:error'(p) {
     if (!isMine(p.huddleId)) return;
+    // The free plan's 10 people per call: the upgrade sheet explains it (features/plan/UpgradeSheet.jsx).
+    if (p.code === 'PLAN_LIMIT') {
+      busEmit('plan:limit', { ...p, message: p.message || CALL_FULL });
+      emit('huddle:leave', { huddleId: p.huddleId });
+      teardown();
+      return;
+    }
     toast(p.message || 'Huddle error', 'danger');
     if (['HUDDLE_FULL', 'FORBIDDEN', 'HUDDLE_SCOPE_MISMATCH'].includes(p.code)) {
       emit('huddle:leave', { huddleId: p.huddleId });
@@ -475,9 +495,11 @@ export async function checkConversation(scope) {
 }
 
 export const dismissRing = () => set({ ring: null });
+export const dismissTimeWarning = () => set({ timeWarning: null });
+export const dismissEndedNotice = () => set({ endedNotice: null });
 
 /** For tests. */
 export function __resetHuddles() {
   teardown();
-  set({ live: {}, ring: null });
+  set({ live: {}, ring: null, endedNotice: null });
 }

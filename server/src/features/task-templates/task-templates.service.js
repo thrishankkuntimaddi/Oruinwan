@@ -98,6 +98,8 @@ async function applyTemplate(userId, templateId, body = {}, io, req) {
     }
     if (typeof taskData.title !== 'string' || !taskData.title.trim()) { const e = new Error('Template has no task title'); e.statusCode = 400; throw e; }
 
+    const plansSvc = require('../../shared/plans/planService');
+    await plansSvc.enforce(plansSvc.assertCanCreateTasks(taskData.workspaceId, userId, plansSvc.taskAddsForBody(taskData, userId)));
     const created = await tasksService.createTask(userId, taskData, io, req);
     const titles = cleanTitles(template.subtaskTitles);
     const subtasks = [];

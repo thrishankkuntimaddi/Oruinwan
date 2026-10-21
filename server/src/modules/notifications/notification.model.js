@@ -23,6 +23,7 @@ const NOTIFICATION_TYPES = [
     'integration_alert', 
     'ai_suggestion',     
     'digest',            
+    'plan_limit',        // a free-plan limit stopped something (e.g. an invitee could not join)
 ];
 
 const notificationSchema = new mongoose.Schema(

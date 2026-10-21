@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    ArrowLeft, Bell, CloudUpload, Database, Globe, Info, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
+    ArrowLeft, Bell, CloudUpload, Database, Gauge, Globe, Info, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
@@ -22,6 +22,7 @@ import IntegrationsTab from './settingsTabs/IntegrationsTab';
 import DataTab from './settingsTabs/DataTab';
 import BackupTab from './settingsTabs/BackupTab';
 import UpdatesTab from './settingsTabs/UpdatesTab';
+import PlanUsageSection from '../features/plan/PlanUsageSection';
 import { Field, Select, IconButton } from './settingsTabs/settingsUi';
 import './settingsTabs/settings.css';
 
@@ -36,6 +37,7 @@ const GROUPS = [
             { id: 'profile', label: 'Profile', icon: User, description: 'Name, photo, contact', keywords: 'name display avatar photo picture bio about phone email emails' },
             { id: 'security', label: 'Password & security', icon: KeyRound, description: 'Password, two-factor', keywords: 'password 2fa two-factor authenticator otp totp security' },
             { id: 'sessions', label: 'Devices', icon: Laptop, description: 'Where you are signed in', keywords: 'sessions devices sign out log out logout browsers' },
+            { id: 'plan', label: 'Plan & usage', icon: Gauge, description: 'Free plan limits, what you use', keywords: 'plan usage limits free pro enterprise upgrade pricing billing quota', workspace: true },
         ],
     },
     {
@@ -76,7 +78,7 @@ const GROUPS = [
 
 const ALL_ITEMS = GROUPS.flatMap((g) => g.items);
 // Old tab ids (bookmarks, links from elsewhere) → current ones.
-const ALIASES = { advanced: 'data', compliance: 'data', account: 'profile', password: 'security', devices: 'sessions', language: 'region', about: 'updates', version: 'updates' };
+const ALIASES = { billing: 'plan', usage: 'plan', advanced: 'data', compliance: 'data', account: 'profile', password: 'security', devices: 'sessions', language: 'region', about: 'updates', version: 'updates' };
 const resolveTab = (id) => (ALL_ITEMS.some((i) => i.id === id) ? id : ALIASES[id] || 'profile');
 
 const Settings = () => {
@@ -169,6 +171,7 @@ const Settings = () => {
             case 'data': return <DataTab user={user} />;
             case 'backup': return <BackupTab />;
             case 'updates': return <UpdatesTab />;
+            case 'plan': return <PlanUsageSection workspaceId={workspaceId} workspaceName={workspaceName} workspacePicker={workspacePicker} />;
             default: return null;
         }
     };

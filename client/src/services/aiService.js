@@ -1,5 +1,6 @@
 import api, { API_BASE, refreshAccessToken } from './api';
 import logger from '../utils/logger';
+import { handlePlanLimitResponse } from '../features/plan/planLimit';
 
 /**
  * Oruinwan Intelligence client. Every call goes to /api/ai/* which runs
@@ -82,7 +83,11 @@ async function openStream(path, body, signal, retried = false) {
         await refreshAccessToken();
         return openStream(path, body, signal, true);
     }
-    if (!res.ok) throw streamFailure(res.status, await res.json().catch(() => ({})));
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        handlePlanLimitResponse(res.status, data);
+        throw streamFailure(res.status, data);
+    }
     return res;
 }
 

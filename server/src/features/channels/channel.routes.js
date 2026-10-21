@@ -4,7 +4,7 @@ const router = express.Router();
 const requireAuth = require("../../shared/middleware/auth");
 const channelCtrl = require("./channel.controller");
 
-router.post("/", requireAuth, requireCompanyPermission("createChannel"), channelCtrl.createChannel);
+router.post("/", requireAuth, requireCompanyPermission("createChannel"), require("../../shared/plans/planGuards").channelCreate, channelCtrl.createChannel);
 
 router.get("/public", channelCtrl.getPublicChannelList);
 

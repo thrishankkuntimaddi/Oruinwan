@@ -14,7 +14,8 @@
  * because the Socket.IO Redis adapter routes `io.to(socketId)` fleet-wide.
  */
 
-const DEFAULT_MAX_PARTICIPANTS = 6;
+// The free plan allows 10 people in a call (src/shared/plans); HUDDLE_MAX_PARTICIPANTS lowers or raises the server's own cap.
+const DEFAULT_MAX_PARTICIPANTS = 10;
 
 function maxParticipantsFromEnv(env = process.env) {
   const n = Number(env.HUDDLE_MAX_PARTICIPANTS);

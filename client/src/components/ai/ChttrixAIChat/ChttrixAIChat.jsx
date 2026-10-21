@@ -8,6 +8,9 @@ import { useAIContext } from "../../../contexts/AIContext";
 import { useToast } from "../../../contexts/ToastContext";
 import { Rnd } from "react-rnd";
 import AIMarkdown from "../AIMarkdown";
+import AIUsageLine from "../../../features/plan/AIUsageLine";
+import { useAIUsage } from "../../../features/plan/usePlan";
+import { aiRemaining } from "../../../features/plan/planLimit";
 import {
   Send, X, Plus, History, Info, Copy, Edit2, CornerUpLeft, Sparkles, List,
   MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square,
@@ -43,6 +46,9 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const { showToast } = useToast();
   const navigate = useNavigate();
   const workspaceId = activeWorkspace?.id || activeWorkspace?._id || null;
+  // Free plan: AI requests left today (hidden for company plans).
+  const aiUsage = useAIUsage(workspaceId);
+  const aiOut = aiRemaining(aiUsage) === 0;
 
   const [messages, setMessages] = useState([WELCOME()]);
   const { user } = useAuth() || {};
@@ -147,7 +153,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const patchMsg = (id, patch) => setMessages(p => p.map(m => (m.id === id ? { ...m, ...(typeof patch === 'function' ? patch(m) : patch) } : m)));
 
   const handleSend = async (text = input) => {
-    if (!text.trim() || busy) return;
+    if (!text.trim() || busy || aiOut) return;
     const userMsg = pushUser(text);
     const next = [...messages, userMsg];
     setInput(""); setIsTyping(true);
@@ -600,12 +606,13 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
               <Square size={14} fill="currentColor" />
             </button>
           ) : (
-            <button onClick={() => handleSend()} disabled={!input.trim()} aria-label="Send"
+            <button onClick={() => handleSend()} disabled={!input.trim() || aiOut} aria-label="Send" title={aiOut ? "No AI requests left today on the free plan" : undefined}
               style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: '2px', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}>
               <Send size={14} />
             </button>
           )}
         </div>
+        <AIUsageLine usage={aiUsage} />
         <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>AI can make mistakes. Check important info.</p>
       </div>
     </div>

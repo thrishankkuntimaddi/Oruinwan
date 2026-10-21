@@ -15,6 +15,7 @@ import { bindCallExtras, useCallExtras } from './callExtras.js';
 import { CallMenu, CaptionStrip, RecordingConsentBanner, useActiveRecorder } from './CallExtras.jsx';
 import { nav } from '../../app/nav.js';
 import { bindRecap, dismissRecap, useRecap } from '../meetings/recap.js';
+import { CallEndedNotice, CallTimeBanner } from '../plan/CallLimitNotice.jsx';
 
 // The call's meeting page, loaded when first opened (it brings the meeting tabs with it).
 const MeetingCallPanel = lazy(() => import('./MeetingCallPanel.jsx'));
@@ -230,6 +231,8 @@ export function HuddleLayer() {
       <Ring />
       <CallBar />
       <RecapBanner />
+      <CallTimeBanner />
+      <CallEndedNotice />
       <CaptionStrip />
       <RecordingConsentBanner />
     </>

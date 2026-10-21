@@ -16,6 +16,9 @@ import ErrorState from "./workspaceSelectComponents/ErrorState.jsx";
 import EmptyState from "./workspaceSelectComponents/EmptyState.jsx";
 import JoinInviteDialog from "./workspaceSelectComponents/JoinInviteDialog.jsx";
 import { getCreatePolicy } from "./workspaceSelectComponents/createPolicy";
+import { usePlan } from "../features/plan/usePlan";
+import { emitPlanLimit } from "../features/plan/planLimit";
+import "../features/plan/plan.css";
 import "./workspaceSelectComponents/workspaceSelect.css";
 import logger from '../utils/logger';
 
@@ -109,7 +112,8 @@ const WorkspaceSelect = () => {
 
     
     const firstName = user?.username?.split(' ')[0];
-    const policy = getCreatePolicy(user, workspaces);
+    const { plan } = usePlan(null);
+    const policy = getCreatePolicy(user, workspaces, plan);
     const openCreate = () => setIsCreateModalOpen(true);
     const showSearch = workspaces.length > 6;
     const q = showSearch ? query.trim().toLowerCase() : '';
@@ -175,8 +179,11 @@ const WorkspaceSelect = () => {
                                 <Lock size={15} /> New workspace
                             </button>
                         ) : (
-                            <button type="button" className="gl-btn gl-btn--primary gl-btn--lg" onClick={openCreate} disabled={policy.isLimitReached}
-                                title={policy.isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : undefined}>
+                            <button type="button" className="gl-btn gl-btn--primary gl-btn--lg"
+                                onClick={policy.isLimitReached ? () => emitPlanLimit({ limit: 'workspaces.create', message: policy.limitMessage }) : openCreate}
+                                aria-disabled={policy.isLimitReached ? 'true' : undefined}
+                                data-plan-blocked={policy.isLimitReached ? 'true' : undefined}
+                                title={policy.isLimitReached ? policy.limitMessage : undefined}>
                                 <Plus size={16} /> New workspace
                             </button>
                         )}
@@ -184,6 +191,12 @@ const WorkspaceSelect = () => {
                             <Link2 size={15} /> Join with invite
                         </button>
                     </div>
+                    {policy.isLimitReached && !policy.isCompanyMember && (
+                        <p className="pl-hint" data-testid="workspace-create-limit">
+                            {policy.limitMessage}{' '}
+                            <button type="button" className="pl-link" onClick={() => navigate('/pricing')}>See plans</button>
+                        </p>
+                    )}
                 </section>
 
                 {isLoadingWorkspaces ? (
@@ -194,7 +207,7 @@ const WorkspaceSelect = () => {
                 ) : loadError ? (
                     <ErrorState error={loadError} onRetry={loadWorkspaces} />
                 ) : workspaces.length === 0 ? (
-                    <EmptyState {...policy} onCreateClick={openCreate} onJoinClick={() => setShowJoin(true)} />
+                    <EmptyState {...policy} onSeePlans={() => navigate('/pricing')} onCreateClick={openCreate} onJoinClick={() => setShowJoin(true)} />
                 ) : (
                     <>
                         <div className="gl-wsp-section-head">
@@ -225,6 +238,7 @@ const WorkspaceSelect = () => {
                             onCreateClick={openCreate}
                             onClearSearch={() => setQuery('')}
                             user={user}
+                            plan={plan}
                         />
                     </>
                 )}

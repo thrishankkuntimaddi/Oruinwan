@@ -21,6 +21,7 @@ import { designAdapter } from './adapter.design.js';
 import { callsAdapter } from './adapter.calls.js';
 import { opsAdapter } from './adapter.ops.js';
 import { backupAdapter } from './adapter.backup.js';
+import { planAdapter } from './adapter.plan.js';
 import { notificationKind, targetOf } from './notificationTarget.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
@@ -267,7 +268,12 @@ async function streamAi(body, { onToken, onTool, signal }) {
     await refreshSession();
     res = await open();
   }
-  if (!res.ok || !res.body) throw new ApiError('stream unavailable', res.status, null);
+  if (!res.ok || !res.body) {
+    // Keep the server's refusal (e.g. a free-plan AI limit: 403 PLAN_LIMIT) instead of a bare status.
+    let data = null;
+    if (!res.ok) data = await Promise.resolve().then(() => res.json()).catch(() => null);
+    throw new ApiError(data?.message || 'stream unavailable', res.status, data);
+  }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -372,6 +378,7 @@ export const liveAdapter = {
   ...callsAdapter, // meeting recording, transcripts, captions, meeting AI (adapter.calls.js)
   ...opsAdapter, // automations, devices, notification settings, SSO (adapter.ops.js)
   ...backupAdapter, // Google Drive backup and restore (adapter.backup.js)
+  ...planAdapter, // free-plan limits and usage (adapter.plan.js)
   kind: 'live',
   serverUrl,
   ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),
@@ -782,8 +789,10 @@ export const liveAdapter = {
     const data = await api.get(`/v2/notes/${id}`);
     return mapNote(data.note || data);
   },
-  async createNote(ws, { title, type, content }) {
-    const data = await api.post('/v2/notes', { title: title || 'Untitled', type, content, workspaceId: ws });
+  async createNote(ws, { title, type, content, templateId }) {
+    // templateId: the template it was made from ('meeting', 'projectspec', …); the free plan counts
+    // notes per template. None for a blank note.
+    const data = await api.post('/v2/notes', { title: title || 'Untitled', type, content, workspaceId: ws, ...(templateId && templateId !== 'blank' ? { templateId } : {}) });
     return mapNote(data.note);
   },
   async updateNote(id, patch) {

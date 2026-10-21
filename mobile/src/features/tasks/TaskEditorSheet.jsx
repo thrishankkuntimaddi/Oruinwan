@@ -11,6 +11,9 @@ import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
+import { usePlan } from '../plan/plan.js';
+import { blockedNote, isPlanLimit, taskLimitKey } from '../plan/planText.js';
+import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 
 export function toDateInput(iso) {
   if (!iso) return '';
@@ -104,10 +107,14 @@ export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
     setAssignees(initial?.assigneeIds || (me ? [me.id] : []));
   }, [open, initial, me]);
 
+  // The free plan's active-task limits (the workspace's, mine for myself, mine for others).
+  const { data: plan } = usePlan(ws);
+  const limitKey = taskLimitKey(plan, assignees, me?.id);
+
   const names = assignees.map((id) => (id === me?.id ? 'You' : members?.find((m) => m.id === id)?.name?.split(' ')[0])).filter(Boolean);
 
   const submit = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || limitKey) return;
     setBusy(true);
     try {
       const task = await api().createTask(ws, {
@@ -123,7 +130,7 @@ export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
       onClose();
       onCreated?.(task);
     } catch (err) {
-      toast(err.message || 'Could not create the task', 'danger');
+      if (!isPlanLimit(err)) toast(err.message || 'Could not create the task', 'danger');
     } finally {
       setBusy(false);
     }
@@ -136,12 +143,13 @@ export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
         onClose={onClose}
         title="New task"
         footer={
-          <Button block onClick={submit} loading={busy} disabled={!title.trim()}>
+          <Button block onClick={submit} loading={busy} disabled={!title.trim() || Boolean(limitKey)}>
             Create task
           </Button>
         }
       >
         <div className="space-y-4 px-5 pb-4">
+          {limitKey && <PlanLimitNote>{blockedNote(plan, limitKey)}</PlanLimitNote>}
           <Field label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs to be done?" autoFocus={!initial?.title} />
           <Field label="Description" multiline value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add details (optional)" />
           <div>

@@ -8,6 +8,9 @@ import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase,
 import { Avatar } from "../../shared/components/ui";
 import { WorkspaceIcon } from "../../utils/workspaceIcons";
 import "./shell.css";
+import { usePlan } from "../../features/plan/usePlan";
+import { planBlock, blockedButtonProps, guardAction } from "../../features/plan/planLimit";
+import "../../features/plan/plan.css";
 
 /** Owner of the user's company, or its co-owner (coOwnerOf === companyId), as the server decides. */
 export const isCompanyOwner = (user) => {
@@ -24,6 +27,9 @@ const IconSidebar = ({ onProfileClick }) => {
 
     const workspaceId = activeWorkspace?.id;
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+    // Free plan: workspaces you created (loaded when the switcher opens).
+    const { plan: userPlan } = usePlan(showWorkspaceMenu ? null : false);
+    const createBlock = planBlock(userPlan, 'workspaces.create');
     const menuRef = useRef(null);
     const unreadTotals = useNotifications()?.unreadTotals || { dm: 0, channel: 0 };
     const badgeFor = (path) => (path === '/messages' ? unreadTotals.dm : path === '/channels' ? unreadTotals.channel : 0);
@@ -137,8 +143,8 @@ const IconSidebar = ({ onProfileClick }) => {
                             })}
                         </div>
                         <div className="gl-shell-menu">
-                            <button type="button" role="menuitem" className="gl-shell-menu-item"
-                                onClick={() => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); }}
+                            <button type="button" role="menuitem" className="gl-shell-menu-item" {...blockedButtonProps(createBlock)}
+                                onClick={guardAction(createBlock, () => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); })}
                             >
                                 <span style={{ width: '22px', height: '22px', borderRadius: '2px', border: '1px dashed var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={12} /></span>
                                 Create workspace

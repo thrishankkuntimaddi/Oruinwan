@@ -86,6 +86,10 @@ export function connectRealtime(base) {
     socket.on(ev, () => emit('data:changed', ['notifications']));
   }
   socket.on('workspace-updated', () => emit('data:changed', ['workspaces']));
+  // Free-plan limits (features/plan): today's AI count after each request, and an invitee who
+  // couldn't join my workspace because they reached their own limit.
+  socket.on('plan:ai_usage', (p) => emit('plan:ai_usage', p));
+  socket.on('plan:limit_reached', (p) => emit('plan:limit_reached', p));
   for (const ev of ['user:online', 'user:offline', 'user:idle', 'user-status-changed']) socket.on(ev, () => emit('data:changed', ['members']));
 }
 

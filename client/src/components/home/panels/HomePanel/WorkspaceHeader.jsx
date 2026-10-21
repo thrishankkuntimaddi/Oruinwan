@@ -5,6 +5,9 @@ import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 import { WorkspaceIcon } from '../../../../utils/workspaceIcons';
 import '../../../layout/shell.css';
+import { usePlan } from '../../../../features/plan/usePlan';
+import { planBlock, blockedButtonProps, guardAction } from '../../../../features/plan/planLimit';
+import '../../../../features/plan/plan.css';
 
 /**
  * The workspace menu that drops from the Home panel's title (invite, settings,
@@ -19,6 +22,9 @@ const WorkspaceHeader = ({
     const { activeWorkspace, workspaces = [], setActiveWorkspace } = useWorkspace();
     const { showToast } = useToast();
     const [showSwitch, setShowSwitch] = useState(false);
+    // Free plan: loaded when the menu opens.
+    const { plan } = usePlan(showWorkspaceMenu ? (activeWorkspace?.id || null) : false);
+    const createBlock = planBlock(plan, 'workspaces.create');
     const otherWorkspaces = workspaces.filter(ws => String(ws.id) !== String(activeWorkspace?.id) && (ws.membershipStatus || 'active') === 'active');
 
     // Esc closes the menu; it always reopens with the switcher folded.
@@ -108,8 +114,8 @@ const WorkspaceHeader = ({
                             ))}
                         </div>
                     )}
-                    <button type="button" role="menuitem" className="gl-shell-menu-item"
-                        onClick={() => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); }}
+                    <button type="button" role="menuitem" className="gl-shell-menu-item" {...blockedButtonProps(createBlock)}
+                        onClick={guardAction(createBlock, () => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); })}
                     >
                         <Plus size={14} />
                         Create workspace

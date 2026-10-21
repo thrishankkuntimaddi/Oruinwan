@@ -65,6 +65,7 @@ function ctxFor(req, extra = {}) {
 
 function sendError(res, err, label) {
   const code = err?.code;
+  if (require('../../shared/plans').sendPlanLimit(res, err)) return res;
   if (code === 'AI_NOT_CONFIGURED') {
     return res.status(503).json({ message: 'AI is not configured for this workspace yet. Ask an admin to connect a provider.', code });
   }
@@ -379,10 +380,18 @@ exports.extractTasks = async (req, res) => {
     if (!str(text, 1)) return res.status(400).json({ message: 'text is required' });
     const result = await gateway.extractTasks({ text: str(text, 20_000), max: Number(max) || 10 }, ctxFor(req));
     let created = [];
+    let planLimit = null;
     if (create === true && result.tasks.length && req.aiWorkspace) {
       const tasksService = require('../tasks/tasks.service');
       const io = req.app?.get('io');
+      const plansSvc = require('../../shared/plans/planService');
       for (const t of result.tasks) {
+        try {
+          await plansSvc.enforce(plansSvc.assertCanCreateTasks(req.aiWorkspace.id, req.user.sub, { self: 1, others: 0 }));
+        } catch (err) {
+          planLimit = err.body || null;
+          break;
+        }
         try {
           const out = await tasksService.createTask(req.user.sub, {
             workspaceId: req.aiWorkspace.id, title: t.title, description: t.description, priority: t.priority,
@@ -396,7 +405,7 @@ exports.extractTasks = async (req, res) => {
       }
     }
     emitActivity(req, 'task_generated', { count: result.tasks.length, created: created.length });
-    return res.json({ tasks: result.tasks, created });
+    return res.json({ tasks: result.tasks, created, ...(planLimit ? { planLimit } : {}) });
   } catch (err) {
     return sendError(res, err, 'extractTasks');
   }

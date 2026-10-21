@@ -10,6 +10,9 @@ import { startingChannels } from '../../lib/channelName.js';
 import { copyText, shareLink, tap } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 import { WorkspaceTile } from './WorkspaceTile.jsx';
+import { usePlanBlock } from '../plan/plan.js';
+import { blockedNote } from '../plan/planText.js';
+import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 
 const COLORS = ['#b8956a', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#5c5852', '#14b8a6', '#f43f5e'];
 const PROJECT_IDEAS = ['Website', 'Product launch', 'Marketing', 'Hiring', 'Customer support'];
@@ -33,6 +36,10 @@ export function CreateWorkspaceFlow() {
   const [link, setLink] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // The free plan's workspaces-you-create limit: explain it up front instead of failing at the end.
+  const currentWs = useSession((s) => s.workspaceId);
+  const { plan, blocked } = usePlanBlock(currentWs, 'workspaces.create');
+  const atLimit = blocked && !created;
 
   // Android back: a step back, or close before anything exists.
   useEffect(() => {
@@ -88,6 +95,7 @@ export function CreateWorkspaceFlow() {
   const next = (e) => {
     e?.preventDefault();
     setError('');
+    if (atLimit && step < 3) return;
     if (step === 1) {
       if (!name.trim()) return setError('Give your workspace a name.');
       setStep(2);
@@ -238,6 +246,8 @@ export function CreateWorkspaceFlow() {
             </>
           )}
 
+          {atLimit && <PlanLimitNote className="mt-5">{blockedNote(plan, 'workspaces.create')}</PlanLimitNote>}
+
           {error && (
             <p role="alert" className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
               {error}
@@ -246,14 +256,14 @@ export function CreateWorkspaceFlow() {
         </div>
 
         <div className="mx-auto w-full max-w-lg shrink-0 space-y-2 border-t border-line-soft bg-bg px-5 pb-safe pt-3">
-          <Button type="submit" block size="lg" loading={busy} icon={step === 2 ? Rocket : undefined} iconRight={step === 1 ? ArrowRight : undefined} data-testid="wizard-next">
+          <Button type="submit" block size="lg" loading={busy} disabled={atLimit && step < 3} icon={step === 2 ? Rocket : undefined} iconRight={step === 1 ? ArrowRight : undefined} data-testid="wizard-next">
             {step === 1 ? 'Next' : step === 2 ? 'Create workspace' : emails.trim() ? 'Send invites and open' : 'Open workspace'}
           </Button>
           {step === 2 && (
             <Button
               variant="ghost"
               block
-              disabled={busy}
+              disabled={busy || atLimit}
               onClick={() => {
                 setProject('');
                 create('');

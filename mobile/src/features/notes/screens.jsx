@@ -23,6 +23,8 @@ import { useFlag } from '../../config/flags.js';
 import { useKeyboard } from '../../native/keyboard.js';
 import { askAiAbout } from '../ai/aiUi.js';
 import { TEMPLATES } from './templates.js';
+import { usePlan } from '../plan/plan.js';
+import { isPlanLimit, templateKey, templateUsage } from '../plan/planText.js';
 import { prefs } from '../../native/storage.js';
 import { RoadmapScreen } from '../roadmap/screens.jsx';
 import { useLiveDocument } from '../../lib/collab/useCollab.js';
@@ -108,14 +110,24 @@ function NotesList({ section }) {
     });
   }, [data, filter, query, me]);
 
+  // The free plan counts notes per template (blank notes are unlimited).
+  const { data: plan } = usePlan(ws);
+
   const create = async (tpl) => {
     setTemplates(false);
     try {
-      const note = await api().createNote(ws, { title: tpl.id === 'blank' ? '' : tpl.title, type: tpl.type, content: tpl.content });
+      const templateId = templateKey(tpl);
+      const note = await api().createNote(ws, {
+        title: tpl.id === 'blank' ? '' : tpl.title,
+        type: tpl.type,
+        content: tpl.content,
+        ...(templateId ? { templateId } : {}),
+      });
       invalidate('notes');
+      if (templateId) invalidate('plan:');
       nav.push('note', { id: note.id, fresh: true });
     } catch (err) {
-      toast(err.message || 'Could not create the note', 'danger');
+      if (!isPlanLimit(err)) toast(err.message || 'Could not create the note', 'danger');
     }
   };
 
@@ -159,20 +171,28 @@ function NotesList({ section }) {
       </button>
       <Sheet open={templates} onClose={() => setTemplates(false)} title="New note">
         <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => create(t)}
-              className="pressable flex flex-col items-start rounded-card border border-line bg-surface-2 p-3.5 text-left"
-            >
-              <span className="text-xl" aria-hidden>
-                {t.emoji}
-              </span>
-              <span className="mt-2 text-[14px] font-medium">{t.label}</span>
-              <span className="text-xs text-text-2">{t.hint}</span>
-            </button>
-          ))}
+          {TEMPLATES.map((t) => {
+            const usage = templateUsage(plan, templateKey(t));
+            const full = Boolean(usage?.atLimit);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => create(t)}
+                disabled={full}
+                data-testid={`note-template-${t.id}`}
+                className="pressable flex flex-col items-start rounded-card border border-line bg-surface-2 p-3.5 text-left disabled:opacity-55 disabled:active:scale-100"
+              >
+                <span className="text-xl" aria-hidden>
+                  {t.emoji}
+                </span>
+                <span className="mt-2 text-[14px] font-medium">{t.label}</span>
+                <span className={cx('text-xs', full ? 'text-warning' : 'text-text-2')}>
+                  {full ? `${usage.used} of ${usage.max} used on the free plan` : t.hint}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Sheet>
     </Screen>

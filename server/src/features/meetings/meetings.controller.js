@@ -14,6 +14,7 @@ const { loadMeetingForUser } = require('./meetingAccess');
 const ACTION_STATUSES = ['pending', 'in_progress', 'done'];
 
 function fail(res, err, fallback) {
+    if (require('../../shared/plans').sendPlanLimit(res, err)) return res;
     const status = err?.status || err?.statusCode;
     if (status && status < 500) return res.status(status).json({ message: err.message });
     if (err && err.name === 'ValidationError') return res.status(400).json({ message: err.message });

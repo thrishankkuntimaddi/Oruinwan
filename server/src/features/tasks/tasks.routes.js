@@ -24,7 +24,7 @@ router.param('id', (req, res, next, id) => {
 
 router.get('/:id', tasksController.getTask);
 
-router.post('/', requireWorkspaceFeature('tasks'), requireCompanyPermission('createTasks'), tasksController.createTask);
+router.post('/', requireWorkspaceFeature('tasks'), requireCompanyPermission('createTasks'), require('../../shared/plans/planGuards').taskCreate, tasksController.createTask);
 
 router.get('/:id/activity', tasksController.getTaskActivity);
 
@@ -46,7 +46,7 @@ router.post('/:id/transfer/:action', tasksController.handleTransferRequest);
 
 router.post('/:id/transfer-request/:action', tasksController.handleTransferRequest);
 
-router.post('/:id/subtasks', tasksController.createSubtask);
+router.post('/:id/subtasks', require('../../shared/plans/planGuards').subtaskCreate, tasksController.createSubtask);
 
 router.post('/:id/links', tasksController.addLink);
 
