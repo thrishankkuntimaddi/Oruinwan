@@ -52,7 +52,7 @@ const Landing = () => {
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         const prevTitle = document.title;
-        document.title = `${BRAND.name} · Free, open-source workspace for teams`;
+        document.title = `${BRAND.name} · Team chat, tasks and AI in one workspace`;
         if (!window.location.hash) window.scrollTo(0, 0);
         return () => {
             document.documentElement.classList.remove('public-scroll');
@@ -94,8 +94,8 @@ const Landing = () => {
                         <div>
                             <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Free · Open source · MIT licence</span>
                             <h1 className="orw-hero__title" id="orw-hero-title" data-reveal style={{ '--d': '80ms' }}>
-                                <span>The free, open-source</span>
-                                <span className="orw-gloss-text">workspace for teams.</span>
+                                <span>One workspace.</span>
+                                <span className="orw-gloss-text">Every conversation.</span>
                             </h1>
                             <p className="orw-hero__sub" data-reveal style={{ '--d': '160ms' }}>
                                 Chat, tasks, notes, huddles and AI in one place with <strong>{BRAND.name}</strong>, on the web,
