@@ -1,4 +1,6 @@
 // Planning helpers, free of React: time totals, sprint boards, milestones and the timeline.
+import { describeRecurring } from './recurrence.js';
+
 const DAY = 86_400_000;
 
 /** 3725 → "1h 2m", 59 → "59s", 0 → "0m". */
@@ -21,9 +23,29 @@ export function formatClock(seconds) {
 
 export function recurrenceLabel(r) {
   if (!r) return 'Does not repeat';
-  if (r.pattern === 'daily') return r.interval > 1 ? `Every ${r.interval} days` : 'Every day';
-  if (r.pattern === 'weekly') return 'Every week';
-  return `Every ${r.interval || 1} day${(r.interval || 1) > 1 ? 's' : ''}`;
+  return describeRecurring({ isRecurring: true, ...r });
+}
+
+/**
+ * The open timer session of this person (every member runs their own timer). Older sessions
+ * without a `user` count as the caller's only when nobody else's is open.
+ */
+export function myOpenSession(timeTracking, me) {
+  const open = (timeTracking?.sessions || []).filter((s) => s && s.start && !s.end);
+  const userOf = (s) => (s.user && typeof s.user === 'object' ? String(s.user._id || s.user.id || '') : s.user ? String(s.user) : null);
+  return open.find((s) => me && userOf(s) === String(me)) || (open.length === 1 && !userOf(open[0]) ? open[0] : null);
+}
+
+/** Hours + minutes typed in the "Log time" sheet → whole minutes (null when out of 1 min … 24 h). */
+export function minutesFrom(hours, minutes) {
+  const total = Math.round((Number(hours) || 0) * 60 + (Number(minutes) || 0));
+  return total >= 1 && total <= 24 * 60 ? total : null;
+}
+
+/** Sprints a task can move into: not finished ones, active first. */
+export function openSprints(sprints) {
+  const order = { active: 0, planning: 1 };
+  return (sprints || []).filter((s) => s.status in order).sort((a, b) => order[a.status] - order[b.status] || String(a.start).localeCompare(String(b.start)));
 }
 
 export const BOARD_STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'];

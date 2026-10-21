@@ -300,7 +300,8 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           onVoice={canPost ? (file) => convo.sendFiles([file]) : null}
           disabled={readOnly}
           disabledReason="Only admins can post in this channel."
-          initial={tools.editing?.text || draft}
+          initial={draft}
+          editText={tools.editing?.text || ''}
           editing={Boolean(tools.editing)}
           onCancelEdit={() => tools.setEditing(null)}
           onPlus={() => setPlus(true)}
@@ -457,14 +458,15 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         assistants={assistants}
         mentions={mentions.composer}
         onVoice={(file) => convo.sendFiles([file])}
-        initial={tools.editing?.text || draft}
+        initial={draft}
+        editText={tools.editing?.text || ''}
         editing={Boolean(tools.editing)}
         onCancelEdit={() => tools.setEditing(null)}
         onSend={(text) => {
           if (tools.editing) {
             convo.edit(tools.editing.id, text);
             tools.setEditing(null);
-          } else convo.send(text);
+          } else convo.send(text, { mentionText: mentions.textFor(text) });
         }}
       />
       {tools.actions}

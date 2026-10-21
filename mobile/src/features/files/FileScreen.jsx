@@ -1,8 +1,8 @@
 // One file from the workspace library: open it, tags, versions (upload a new one, restore an
 // old one), comments and who it is shared with.
 import { useRef, useState } from 'react';
-import { ExternalLink, File, MessageSquare, RotateCcw, Send, Tag, Upload, X } from 'lucide-react';
-import { api, useSession } from '../../data/session.js';
+import { ExternalLink, File, Globe, Lock, MessageSquare, RotateCcw, Send, Tag, Upload, UserMinus, X } from 'lucide-react';
+import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useDirectory } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { toast } from '../../lib/bus.js';
@@ -203,19 +203,27 @@ function Comments({ file }) {
 
 function Sharing({ file }) {
   const me = useSession((s) => s.user?.id);
+  const workspace = useWorkspace();
   const directory = useDirectory();
-  const owner = file.owner === me;
+  // Sharing is changed by the file's owner or a workspace owner/admin.
+  const owner = file.owner === me || file.myRole === 'owner' || ['owner', 'admin'].includes(workspace?.role);
   const [picking, setPicking] = useState(false);
-  const [rolePick, setRolePick] = useState(null); // { userIds }
-  const share = async (userIds, role) => {
+  const [rolePick, setRolePick] = useState(null); // { userIds, existing }
+  const [accessPick, setAccessPick] = useState(false);
+  const save = async (run, message) => {
     try {
-      const saved = await api().shareFile(file.id, userIds.map((userId) => ({ userId, role })));
+      const saved = await run();
       setQueryData(`file:${file.id}`, saved);
-      toast('Sharing updated', 'success');
+      invalidate('files');
+      toast(message, 'success');
     } catch (err) {
       toast(err.message || "Couldn't update sharing", 'danger');
     }
   };
+  const share = (userIds, role) => save(() => api().shareFile(file.id, userIds.map((userId) => ({ userId, role }))), 'Sharing updated');
+  const revoke = (userIds) => save(() => api().revokeFileAccess(file.id, userIds), 'Access removed');
+  const setAccess = (access) => save(() => api().shareFile(file.id, [], { access }), access === 'restricted' ? 'Only people added can see it now' : 'Everyone in the workspace can see it now');
+  const restricted = file.access === 'restricted';
   return (
     <Section
       title="Shared with"
@@ -227,7 +235,22 @@ function Sharing({ file }) {
         )
       }
     >
-      <RowGroup footer={owner ? 'Everyone in the workspace can see and comment on files. People added here can also edit or download it.' : 'Only the person who uploaded a file can change who it is shared with.'}>
+      <RowGroup
+        footer={
+          owner
+            ? restricted
+              ? 'Only the people listed here (and workspace admins) can see this file. Tap someone to change or remove their access.'
+              : 'Everyone in the workspace can see and comment on this file. Tap someone to change or remove their access.'
+            : 'Only the file’s owner or a workspace admin can change who it is shared with.'
+        }
+      >
+        <Row
+          icon={restricted ? Lock : Globe}
+          tile="accent"
+          title="Who can see it"
+          value={restricted ? 'People added' : 'Everyone in the workspace'}
+          onClick={owner ? () => setAccessPick(true) : undefined}
+        />
         <Row leading={<Avatar name={directory[file.owner]?.name || file.ownerName} src={directory[file.owner]?.avatarUrl} size="sm" />} title={directory[file.owner]?.name || file.ownerName || 'Owner'} value="Owner" />
         {file.permissions.map((p) => (
           <Row
@@ -235,7 +258,7 @@ function Sharing({ file }) {
             leading={<Avatar name={directory[p.userId]?.name} src={directory[p.userId]?.avatarUrl} size="sm" />}
             title={directory[p.userId]?.name || 'Someone'}
             value={ROLES[p.role] || p.role}
-            onClick={owner ? () => setRolePick({ userIds: [p.userId] }) : undefined}
+            onClick={owner ? () => setRolePick({ userIds: [p.userId], existing: true }) : undefined}
           />
         ))}
       </RowGroup>
@@ -256,7 +279,19 @@ function Sharing({ file }) {
         open={Boolean(rolePick)}
         onClose={() => setRolePick(null)}
         title="Access"
-        actions={Object.entries(ROLES).map(([role, label]) => ({ label, onSelect: () => share(rolePick.userIds, role) }))}
+        actions={[
+          ...Object.entries(ROLES).map(([role, label]) => ({ label, onSelect: () => share(rolePick.userIds, role) })),
+          rolePick?.existing && { label: 'Remove access', icon: UserMinus, danger: true, onSelect: () => revoke(rolePick.userIds) },
+        ].filter(Boolean)}
+      />
+      <ActionSheet
+        open={accessPick}
+        onClose={() => setAccessPick(false)}
+        title="Who can see this file"
+        actions={[
+          { label: `Everyone in the workspace${restricted ? '' : '  ✓'}`, icon: Globe, onSelect: () => !restricted || setAccess('workspace') },
+          { label: `Only people added${restricted ? '  ✓' : ''}`, icon: Lock, hint: 'Plus the owner and workspace admins', onSelect: () => restricted || setAccess('restricted') },
+        ]}
       />
     </Section>
   );

@@ -449,7 +449,7 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
 }
 
 export function Composer({
-  placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, onCancelEdit, aiMentions = false, assistants,
+  placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, editText = '', onCancelEdit, aiMentions = false, assistants,
   mentions = null, recent = null, onVoice = null,
 }) {
   const [text, setText] = useState(initial);
@@ -486,10 +486,29 @@ export function Composer({
   };
   const voice = useVoiceRecorder((file) => onVoice?.(file));
 
+  // `initial` is a prefilled draft (a notification's quick reply): applied when it changes, never
+  // again after it is sent. Editing a message swaps the composer to that message's text and puts
+  // back what was being typed before when the edit ends (saved or cancelled) — not the draft.
   useEffect(() => {
     setText(initial);
     if (initial) setTimeout(() => ref.current?.focus(), 50);
   }, [initial]);
+  const beforeEdit = useRef(null);
+  const latest = useRef(text);
+  latest.current = text;
+  useEffect(() => {
+    if (editing) {
+      if (beforeEdit.current == null) beforeEdit.current = latest.current;
+      setText(editText || '');
+      setCaret((editText || '').length);
+      setTimeout(() => ref.current?.focus(), 50);
+    } else if (beforeEdit.current != null) {
+      const restore = beforeEdit.current;
+      beforeEdit.current = null;
+      setText(restore);
+      setCaret(restore.length);
+    }
+  }, [editing, editText]);
 
   useLayoutEffect(() => {
     const el = ref.current;

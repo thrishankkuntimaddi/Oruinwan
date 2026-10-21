@@ -79,9 +79,39 @@ export function mapPlanningTask(t) {
     time: { totalSeconds: Number(tt.totalTime) || 0, runningSince: running ? running.start : null, sessions: (tt.sessions || []).length },
     timeTracking: tt,
     recurring: t.recurring?.isRecurring
-      ? { pattern: t.recurring.pattern || 'daily', interval: t.recurring.interval || 1, nextDue: t.recurring.nextDue || null }
+      ? {
+          isRecurring: true,
+          pattern: t.recurring.pattern || 'daily',
+          interval: t.recurring.interval || 1,
+          daysOfWeek: Array.isArray(t.recurring.daysOfWeek) ? t.recurring.daysOfWeek : [],
+          dayOfMonth: t.recurring.dayOfMonth ?? null,
+          endDate: t.recurring.endDate || null,
+          nextDue: t.recurring.nextDue || null,
+        }
       : null,
   };
+}
+
+/** GET /v2/tasks/:id/time → each person's tracked time on a task (their own timers + logged time). */
+export function mapTaskTime(d) {
+  return {
+    estimatedHours: d?.estimatedHours ?? null,
+    totalSeconds: Number(d?.totalSeconds) || 0,
+    runningSeconds: Number(d?.runningSeconds) || 0,
+    byUser: (d?.byUser || []).map((u) => ({
+      userId: idOf(u.userId),
+      seconds: Number(u.seconds) || 0,
+      running: Boolean(u.running),
+      sessions: Number(u.sessions) || 0,
+      user: u.user ? person(u.user) : null,
+    })),
+  };
+}
+
+/** The open blockers of a 409 TASK_BLOCKED answer, or null for any other error. */
+export function blockersOf(err) {
+  if (!err || err.code !== 'TASK_BLOCKED') return null;
+  return (err.data?.blockers || []).map((b) => ({ id: idOf(b), title: b.title || 'A task', issueKey: b.issueKey || null, status: b.status || 'todo' }));
 }
 
 function mapSprint(s) {
@@ -192,6 +222,8 @@ function mapFile(f) {
     tags: f.tags || [],
     permissions: (f.permissions || []).map((p) => ({ userId: idOf(p.user), role: p.role })),
     version: f.currentVersion || 1,
+    access: f.access || 'workspace',
+    myRole: f.myRole || null,
   };
 }
 
@@ -289,13 +321,39 @@ export const workAdapter = {
     const data = await api.post(`/v2/tasks/${parentId}/subtasks`, { title, ...(priority ? { priority } : {}), ...(assigneeIds?.length ? { assignedTo: assigneeIds } : {}) });
     return mapPlanningTask(data.subtask);
   },
-  async setTaskStatus(id, status, blockedReason) {
-    const data = await api.put(`/v2/tasks/${id}`, { status, ...(blockedReason ? { blockedReason } : {}) });
+  /**
+   * Completing a task with open blockers answers 409 (err.code 'TASK_BLOCKED', blockersOf(err)
+   * lists them); pass { ignoreBlockers: true } to complete it anyway.
+   */
+  async setTaskStatus(id, status, blockedReason, { ignoreBlockers = false } = {}) {
+    const data = await api.put(`/v2/tasks/${id}`, { status, ...(blockedReason ? { blockedReason } : {}), ...(ignoreBlockers ? { ignoreBlockers: true } : {}) });
+    return mapPlanningTask(data.task || data);
+  },
+  /** { blocked, blockers: [{ id, title, issueKey, status }] } — only open blockers. */
+  async taskBlockers(id) {
+    const data = await api.get(`/v2/tasks/${id}/blockers`);
+    return { blocked: Boolean(data.blocked), blockers: blockersOf({ code: 'TASK_BLOCKED', data }) };
+  },
+  /** Puts a task in a sprint and/or milestone; null takes it out. Only the keys given change. */
+  async setTaskPlanning(id, { sprintId, milestoneId } = {}) {
+    const body = {};
+    if (sprintId !== undefined) body.sprintId = sprintId || null;
+    if (milestoneId !== undefined) body.milestoneId = milestoneId || null;
+    const data = await api.put(`/v2/tasks/${id}`, body);
+    return mapPlanningTask(data.task || data);
+  },
+  /** The repeat rule ({ isRecurring, pattern, interval, daysOfWeek, endDate, nextDue }); null stops repeating. */
+  async setTaskRecurring(id, recurring) {
+    const data = await api.put(`/v2/tasks/${id}`, { recurring: recurring && recurring.isRecurring ? recurring : null });
     return mapPlanningTask(data.task || data);
   },
   async addDependency(id, dependencyTaskId) {
     const data = await api.post(`/v2/tasks/${id}/dependency`, { dependencyTaskId });
     return (data.dependencies || []).map(idOf);
+  },
+  async removeDependency(id, dependencyId) {
+    const data = await api.del(`/v2/tasks/${id}/dependency/${dependencyId}`);
+    return (data?.dependencies || []).map(idOf);
   },
   /** linkType: blocks | is_blocked_by | relates_to | duplicates | is_duplicated_by. */
   async linkTask(id, linkedTaskId, linkType) {
@@ -312,6 +370,15 @@ export const workAdapter = {
   async stopTimer(id) {
     const data = await api.post(`/v2/tasks/${id}/time/stop`);
     return { timeTracking: data.timeTracking || null, elapsed: data.elapsed || 0 };
+  },
+  /** Everyone's time on the task: { totalSeconds, runningSeconds, byUser: [{ userId, seconds, running, user }] }. */
+  async taskTime(id) {
+    return mapTaskTime(await api.get(`/v2/tasks/${id}/time`));
+  },
+  /** Logs time without the timer (1 minute … 24 hours), ending now unless `start` is given. */
+  async logTime(id, { minutes, note, start } = {}) {
+    const data = await api.post(`/v2/tasks/${id}/time/log`, { minutes, ...(note ? { note } : {}), ...(start ? { start } : {}) });
+    return data.timeTracking || null;
   },
   async setHours(id, { estimatedHours, actualHours }) {
     const body = {};
@@ -526,9 +593,17 @@ export const workAdapter = {
     return { id: idOf(c), text: c.content, author: person(c.author), at: c.createdAt, parentId: null };
   },
   /** permissions: [{ userId, role: 'view' | 'edit' | 'download' }] (adds or changes; the owner only). */
-  async shareFile(id, permissions) {
-    const data = await api.post(`/v2/files/${id}/share`, { permissions: permissions.map((p) => ({ user: p.userId, role: p.role })) });
+  /** Grants roles ([{ userId, role }]), removes people ({ remove: [userId] }) and/or sets { access: 'workspace' | 'restricted' }. */
+  async shareFile(id, permissions = [], { remove, access } = {}) {
+    const body = {};
+    if (permissions?.length) body.permissions = permissions.map((p) => ({ user: p.userId, role: p.role }));
+    if (remove?.length) body.remove = remove;
+    if (access) body.access = access;
+    const data = await api.post(`/v2/files/${id}/share`, body);
     return mapFile(data.file);
+  },
+  async revokeFileAccess(id, userIds) {
+    return workAdapter.shareFile(id, [], { remove: userIds });
   },
 
   // ---- knowledge
