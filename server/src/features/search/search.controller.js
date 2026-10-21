@@ -4,6 +4,7 @@ const logger     = require('../../../utils/logger');
 const searchSvc  = require('./search.service');
 const { safeRegex } = require('../../shared/utils/escapeRegex');
 const { isValidId } = require('../../shared/utils/workspaceAccess');
+const { parseQuery } = require('./queryParser');
 
 // Workspace membership (active member, 400 on malformed id, 403 otherwise) is
 // enforced by requireWorkspaceAccess in search.routes.js before these run.
@@ -13,7 +14,8 @@ const { isValidId } = require('../../shared/utils/workspaceAccess');
 /**
  * GET /api/search
  * Query params:
- *   q           - search term (required)
+ *   q           - search query; supports operators (from:, in:, before:, after:, on:,
+ *                 has:, is:, type:, "phrases") — see queryParser.js / docs/api/search.md
  *   workspaceId - workspace to scope the search (required)
  *   type        - filter to one type: message | file | user | channel | task | note | knowledge | all (default: all)
  *   from        - ISO date filter (createdAt >= from)
@@ -100,22 +102,21 @@ exports.universalSearch = async (req, res) => {
             return res.json({ channels: [], contacts: [], messages: [] });
         }
 
-        const searchTerm  = query.trim();
-        const searchRegex = safeRegex(searchTerm);
-        const scopes      = await searchSvc.accessibleScopes(workspaceId, userId);
-        const opts        = { limit: 10, offset: 0, scopes };
+        const searchTerm = query.trim();
+        const parsed     = parseQuery(searchTerm);
+        if (!parsed.text && !parsed.hasFilters) {
+            return res.json({ channels: [], contacts: [], messages: [], query: searchTerm, syntax: searchSvc.syntaxSummary(parsed) });
+        }
 
-        const [channels, contacts, messages, tasks, notes, files, knowledge] = await Promise.all([
-            searchSvc.searchChannels(workspaceId, userId, searchRegex, opts),
-            searchSvc.searchContacts(workspaceId, userId, searchRegex, opts),
-            searchSvc.searchMessages(workspaceId, userId, searchRegex, { ...opts, limit: 3 }),
-            searchSvc.searchTasks(workspaceId, userId, searchRegex, opts),
-            searchSvc.searchNotes(workspaceId, userId, searchRegex, opts),
-            searchSvc.searchFiles(workspaceId, searchRegex, opts),
-            searchSvc.searchKnowledge(workspaceId, searchRegex, opts),
-        ]);
+        const { buckets } = await searchSvc.runStructured(parsed, {
+            workspaceId, userId, limit: 10, offset: 0, limits: { message: 3 },
+        });
+        const { channels, users: contacts, messages, tasks, notes, files, knowledge } = buckets;
 
-        return res.json({ channels, contacts, messages, tasks, notes, files, knowledge, query: searchTerm });
+        return res.json({
+            channels, contacts, messages, tasks, notes, files, knowledge,
+            query: searchTerm, syntax: searchSvc.syntaxSummary(parsed),
+        });
     } catch (err) {
         logger.error('UNIVERSAL SEARCH ERROR:', err);
         return res.status(500).json({ message: 'Server error' });

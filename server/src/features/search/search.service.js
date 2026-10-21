@@ -11,7 +11,8 @@ const WorkspaceFile = require('../files/WorkspaceFile');
 const KnowledgePage = require('../knowledge/KnowledgePage');
 const DMSession    = require('../../../models/DMSession');
 const logger       = require('../../../utils/logger');
-const { safeRegex } = require('../../shared/utils/escapeRegex');
+const { safeRegex, escapeRegex } = require('../../shared/utils/escapeRegex');
+const syntax       = require('./queryParser');
 
 const gateway = require('../ai/ai.gatewayResolver');
 
@@ -26,6 +27,30 @@ function buildDateFilter(from, to) {
     return filter;
 }
 exports.buildDateFilter = buildDateFilter;
+
+/**
+ * Structured (operator) filters resolved to ids, passed to each search as
+ * opts.meta: { fromIds, channelIds, dateRange, has, is }. Each field is
+ * null/empty when its operator was not used.
+ */
+function addAnd(query, clause) {
+    if (!clause) return;
+    query.$and = [...(query.$and || []), clause];
+}
+
+function applyCommonMeta(query, meta, { fromField, channelField, dateField = 'createdAt' } = {}) {
+    if (!meta) return;
+    if (meta.fromIds && fromField) addAnd(query, { [fromField]: { $in: meta.fromIds } });
+    if (meta.channelIds && channelField) addAnd(query, { [channelField]: { $in: meta.channelIds } });
+    const range = syntax.dateRangeToMongo(meta.dateRange);
+    if (range) addAnd(query, { [dateField]: range });
+}
+
+/** Text clause: $or of the fields matching the regex; nothing when there is no free text. */
+function addText(query, searchRegex, fields) {
+    if (!searchRegex) return;
+    query.$or = fields.map(f => ({ [f]: searchRegex }));
+}
 
 function truncateText(text, maxLength) {
     if (!text || text.length <= maxLength) return text || '';
@@ -119,14 +144,15 @@ exports.semanticRerank = semanticRerank;
 
 // ─── Individual Search Functions ─────────────────────────────────────────────
 
-async function searchChannels(workspaceId, userId, searchRegex, { dateFilter, limit, offset } = {}) {
+async function searchChannels(workspaceId, userId, searchRegex, { dateFilter, limit, offset, meta } = {}) {
     try {
         const query = {
             workspace: workspaceId,
-            $or: [{ name: searchRegex }, { description: searchRegex }],
             $and: [{ $or: [{ isPrivate: false }, { 'members.user': userId }] }],
         };
+        addText(query, searchRegex, ['name', 'description']);
         if (dateFilter) query.createdAt = dateFilter;
+        applyCommonMeta(query, meta, { fromField: 'createdBy' });
 
         const channels = await Channel.find(query)
             .select('name description isPrivate isDefault members createdAt')
@@ -158,7 +184,9 @@ async function searchContacts(workspaceId, userId, searchRegex, { limit, offset 
         if (!workspace) return [];
 
         // safeRegex() escaped the term for MongoDB; PostgreSQL gets the plain text back.
-        const text = searchRegex instanceof RegExp ? searchRegex.source.replace(/\\(.)/g, '$1') : String(searchRegex || '');
+        const text = searchRegex instanceof RegExp
+            ? (searchRegex.source === '(?:)' ? '' : searchRegex.source.replace(/\\(.)/g, '$1'))
+            : String(searchRegex || '');
         const contacts = await wsQueries.searchPeople(workspace, userId, text, { limit: limit || 10, offset: offset || 0 });
 
         return contacts.map(user => ({
@@ -193,26 +221,43 @@ async function accessibleScopes(workspaceId, userId) {
 }
 exports.accessibleScopes = accessibleScopes;
 
-async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, channelId, limit, offset, scopes } = {}) {
+async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, channelId, limit, offset, scopes, meta } = {}) {
     try {
         const { channelIds, dmIds } = scopes || await accessibleScopes(workspaceId, userId);
         let channelScope = channelIds;
         if (channelId) {
             channelScope = channelIds.filter(id => String(id) === String(channelId));
         }
+        // in:#channel narrows to those channels (DMs drop out); still only ones the caller is in.
+        if (meta?.channelIds) {
+            const wanted = new Set(meta.channelIds.map(String));
+            channelScope = channelScope.filter(id => wanted.has(String(id)));
+        }
         const parentScope = [{ channel: { $in: channelScope } }];
-        if (!channelId) parentScope.push({ dm: { $in: dmIds } });
+        if (!channelId && !meta?.channelIds) parentScope.push({ dm: { $in: dmIds } });
 
         const query = {
             workspace: workspaceId,
-            text: searchRegex,
             isDeleted: { $ne: true },
             isDeletedUniversally: { $ne: true },
             hiddenFor: { $ne: userId },
             deletedFor: { $ne: userId },
             $or: parentScope,
         };
+        // Message bodies are end-to-end encrypted: free text only ever matches
+        // plaintext (system/bot) messages; operators match metadata.
+        if (searchRegex) query.text = searchRegex;
         if (dateFilter) query.createdAt = dateFilter;
+        applyCommonMeta(query, meta, { fromField: 'sender' });
+        for (const h of meta?.has || []) {
+            if (h === 'file') addAnd(query, { 'attachments.0': { $exists: true } });
+            if (h === 'image') addAnd(query, { 'attachments.type': 'image' });
+            if (h === 'link') addAnd(query, { 'linkPreview.url': { $exists: true, $nin: [null, ''] } });
+        }
+        for (const v of meta?.is || []) {
+            if (v === 'pinned') addAnd(query, { isPinned: true });
+            if (v === 'thread') addAnd(query, { $or: [{ parentId: { $ne: null } }, { replyCount: { $gt: 0 } }] });
+        }
 
         const messages = await Message.find(query)
             .sort({ createdAt: -1 })
@@ -241,6 +286,11 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
                     type: isChannel ? 'channel' : 'dm',
                     name: parentName,
                 },
+                isEncrypted: !!msg.payload?.isEncrypted,
+                isPinned: !!msg.isPinned,
+                parentId: msg.parentId || null,
+                replyCount: msg.replyCount || 0,
+                attachmentCount: (msg.attachments || []).length,
                 createdAt: msg.createdAt,
             };
         });
@@ -250,14 +300,13 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
     }
 }
 
-async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset, scopes } = {}) {
+async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset, scopes, meta } = {}) {
     try {
         const { channelIds } = scopes || await accessibleScopes(workspaceId, userId);
         const query = {
             workspace: workspaceId,
             deleted: { $ne: true },
             deletedFor: { $ne: userId },
-            $or: [{ title: searchRegex }, { description: searchRegex }, { tags: searchRegex }],
             $and: [{ $or: [
                 { visibility: 'workspace' },
                 { visibility: 'channel', channel: { $in: channelIds } },
@@ -265,8 +314,10 @@ async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags,
                 { assignedTo: userId },
             ] }],
         };
+        addText(query, searchRegex, ['title', 'description', 'tags']);
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
+        applyCommonMeta(query, meta, { fromField: 'createdBy', channelField: 'channel' });
 
         const tasks = await Tasks.find(query, {
             select: 'title description status priority dueDate visibility createdBy assignedTo tags createdAt',
@@ -298,16 +349,22 @@ async function searchTasks(workspaceId, userId, searchRegex, { dateFilter, tags,
     }
 }
 
-async function searchNotes(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset } = {}) {
+async function searchNotes(workspaceId, userId, searchRegex, { dateFilter, tags, limit, offset, meta } = {}) {
     try {
         const query = {
             workspace: workspaceId,
             isArchived: false,
-            $or: [{ title: searchRegex }, { content: searchRegex }, { tags: searchRegex }],
             $and: [{ $or: [{ owner: userId }, { isPublic: true }, { sharedWith: userId }] }],
         };
+        addText(query, searchRegex, ['title', 'content', 'tags']);
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
+        applyCommonMeta(query, meta, { fromField: 'owner', channelField: 'channel' });
+        for (const h of meta?.has || []) {
+            if (h === 'file') addAnd(query, { 'attachments.0': { $exists: true } });
+            if (h === 'image') addAnd(query, { 'attachments.category': 'image' });
+        }
+        if ((meta?.is || []).includes('pinned')) addAnd(query, { isPinned: true });
 
         const notes = await Note.find(query)
             .select('title content type isPublic owner tags createdAt isPinned')
@@ -337,15 +394,17 @@ async function searchNotes(workspaceId, userId, searchRegex, { dateFilter, tags,
     }
 }
 
-async function searchFiles(workspaceId, searchRegex, { dateFilter, tags, limit, offset } = {}) {
+async function searchFiles(workspaceId, searchRegex, { dateFilter, tags, limit, offset, meta } = {}) {
     try {
         const query = {
             workspaceId,
             isDeleted: false,
-            $or: [{ name: searchRegex }, { description: searchRegex }, { tags: searchRegex }],
         };
+        addText(query, searchRegex, ['name', 'description', 'tags']);
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
+        applyCommonMeta(query, meta, { fromField: 'createdBy' });
+        if ((meta?.has || []).includes('image')) addAnd(query, { mimeType: /^image\// });
 
         const files = await WorkspaceFile.find(query)
             .select('name description mimeType size url tags createdBy createdAt')
@@ -375,15 +434,16 @@ async function searchFiles(workspaceId, searchRegex, { dateFilter, tags, limit, 
     }
 }
 
-async function searchKnowledge(workspaceId, searchRegex, { dateFilter, tags, limit, offset } = {}) {
+async function searchKnowledge(workspaceId, searchRegex, { dateFilter, tags, limit, offset, meta } = {}) {
     try {
         const query = {
             workspaceId,
             isDeleted: false,
-            $or: [{ title: searchRegex }, { content: searchRegex }, { tags: searchRegex }],
         };
+        addText(query, searchRegex, ['title', 'content', 'tags']);
         if (dateFilter) query.createdAt = dateFilter;
         if (tags && tags.length > 0) query.tags = { $in: tags };
+        applyCommonMeta(query, meta, { fromField: 'createdBy' });
 
         const pages = await KnowledgePage.find(query)
             .select('title icon content tags summary createdBy createdAt')
@@ -411,62 +471,102 @@ async function searchKnowledge(workspaceId, searchRegex, { dateFilter, tags, lim
     }
 }
 
-async function searchAll(params) {
-    const {
-        query,
-        workspaceId,
-        userId,
-        type,
-        from,
-        to,
-        channelId,
-        tags,
-        limit = 10,
-        offset = 0,
-        semantic = true,
-    } = params;
+const EMPTY_BUCKETS = () => ({ messages: [], files: [], users: [], channels: [], tasks: [], notes: [], knowledge: [] });
 
-    if (!query || query.trim().length === 0) {
-        return { messages: [], files: [], users: [], channels: [], tasks: [], notes: [], knowledge: [], query: '', total: 0 };
+/** The `syntax` block echoed in responses so clients can show chips/warnings. */
+function syntaxSummary(parsed) {
+    return { text: parsed.text, filters: parsed.filters, warnings: parsed.warnings };
+}
+exports.syntaxSummary = syntaxSummary;
+
+/**
+ * Resolve operator values to ids. from:me → caller; from:@name → that user
+ * (unknown names resolve to no ids, so nothing matches). in:#name → channels
+ * of that name the caller can see (public or member).
+ */
+async function resolveMeta(workspaceId, userId, parsed) {
+    const f = parsed.filters;
+    const meta = { fromIds: null, channelIds: null, dateRange: parsed.dateRange, has: f.has, is: f.is };
+
+    if (f.from.length) {
+        const ids = await Promise.all(f.from.map(async (name) => {
+            if (name === 'me') return String(userId);
+            try {
+                const u = await identity.users.findByUsername(name);
+                return u ? String(u._id || u.id) : null;
+            } catch (err) {
+                logger.warn('[SearchService] from: lookup failed:', err.message);
+                return null;
+            }
+        }));
+        meta.fromIds = ids.filter(Boolean);
     }
 
-    const searchTerm  = query.trim();
-    const searchRegex = safeRegex(searchTerm);
+    if (f.in.length) {
+        const channels = await Channel.find({
+            workspace: workspaceId,
+            $or: f.in.map(name => ({ name: new RegExp(`^${escapeRegex(name)}$`, 'i') })),
+            $and: [{ $or: [{ isPrivate: false }, { 'members.user': userId }] }],
+        }).select('_id').lean();
+        meta.channelIds = (channels || []).map(c => c._id);
+    }
+    return meta;
+}
+exports.resolveMeta = resolveMeta;
+
+const PARAM_TYPE_TO_KIND = { message: 'message', file: 'file', user: 'user', contact: 'user', channel: 'channel', task: 'task', note: 'note', knowledge: 'knowledge', page: 'knowledge' };
+
+/**
+ * Run the per-kind searches for a parsed query.
+ * params: { workspaceId, userId, type, from, to, channelId, tags, limit, offset, limits: { [kind]: n } }
+ */
+async function runStructured(parsed, { workspaceId, userId, type, from, to, channelId, tags, limit = 10, offset = 0, limits = {} }) {
+    let kinds = syntax.applicableKinds(parsed);
+    if (type && type !== 'all') {
+        const k = PARAM_TYPE_TO_KIND[type];
+        kinds = k ? kinds.filter(x => x === k) : [];
+    }
+    const searchRegex = syntax.textRegex(parsed);
     const dateFilter  = buildDateFilter(from, to);
     const pagination  = { limit: Math.min(limit, 50), offset: Math.max(offset, 0) };
     const tagList     = Array.isArray(tags) ? tags : (tags ? [tags] : []);
-    const needsScopes = !type || type === 'all' || type === 'message' || type === 'task';
-    const scopes      = needsScopes ? await accessibleScopes(workspaceId, userId) : null;
-    const opts        = { dateFilter, channelId, tags: tagList, scopes, ...pagination };
-
-
-    const runAll      = !type || type === 'all';
-    const runMessages = runAll || type === 'message';
-    const runFiles    = runAll || type === 'file';
-    const runUsers    = runAll || type === 'user' || type === 'contact';
-    const runChannels = runAll || type === 'channel';
-    const runTasks    = runAll || type === 'task';
-    const runNotes    = runAll || type === 'note';
-    const runKnowledge= runAll || type === 'knowledge';
+    const run = (k) => kinds.includes(k);
+    const scopes      = (run('message') || run('task')) ? await accessibleScopes(workspaceId, userId) : null;
+    const meta        = parsed.hasFilters ? await resolveMeta(workspaceId, userId, parsed) : null;
+    const opts        = { dateFilter, channelId, tags: tagList, scopes, meta, ...pagination };
+    const o = (k) => (limits[k] ? { ...opts, limit: limits[k] } : opts);
+    // People search needs a name, unless the query explicitly asks for type:person.
+    const peopleRegex = parsed.text ? safeRegex(parsed.text) : (parsed.filters.types.includes('user') ? safeRegex('') : null);
 
     const [messages, files, users, channels, tasks, notes, knowledge] = await Promise.all([
-        runMessages  ? searchMessages(workspaceId, userId, searchRegex, opts) : Promise.resolve([]),
-        runFiles     ? searchFiles(workspaceId, searchRegex, opts)            : Promise.resolve([]),
-        runUsers     ? searchContacts(workspaceId, userId, searchRegex, opts) : Promise.resolve([]),
-        runChannels  ? searchChannels(workspaceId, userId, searchRegex, opts) : Promise.resolve([]),
-        runTasks     ? searchTasks(workspaceId, userId, searchRegex, opts)    : Promise.resolve([]),
-        runNotes     ? searchNotes(workspaceId, userId, searchRegex, opts)    : Promise.resolve([]),
-        runKnowledge ? searchKnowledge(workspaceId, searchRegex, opts)        : Promise.resolve([]),
+        run('message')   ? searchMessages(workspaceId, userId, searchRegex, o('message')) : [],
+        run('file')      ? searchFiles(workspaceId, searchRegex, o('file'))               : [],
+        run('user') && peopleRegex ? searchContacts(workspaceId, userId, peopleRegex, o('user')) : [],
+        run('channel')   ? searchChannels(workspaceId, userId, searchRegex, o('channel')) : [],
+        run('task')      ? searchTasks(workspaceId, userId, searchRegex, o('task'))       : [],
+        run('note')      ? searchNotes(workspaceId, userId, searchRegex, o('note'))       : [],
+        run('knowledge') ? searchKnowledge(workspaceId, searchRegex, o('knowledge'))      : [],
     ]);
+    return { buckets: { messages, files, users, channels, tasks, notes, knowledge }, kinds };
+}
+exports.runStructured = runStructured;
 
-    
-    let allResults = { messages, files, users, channels, tasks, notes, knowledge };
+async function searchAll(params) {
+    const { query, semantic = true, type } = params;
+    const raw = typeof query === 'string' ? query.trim() : '';
 
-    if (semantic && runAll) {
-        const combined = [...messages, ...files, ...users, ...channels, ...tasks, ...notes, ...knowledge];
-        const reranked  = await semanticRerank(searchTerm, combined);
+    const parsed = syntax.parseQuery(raw);
+    if (!parsed.text && !parsed.hasFilters) {
+        return { ...EMPTY_BUCKETS(), query: '', total: 0, syntax: syntaxSummary(parsed) };
+    }
 
-        
+    const { buckets } = await runStructured(parsed, params);
+    let allResults = buckets;
+
+    const runAll = (!type || type === 'all') && parsed.filters.types.length !== 1;
+    if (semantic && runAll && parsed.text) {
+        const combined = Object.values(buckets).flat();
+        const reranked  = await semanticRerank(parsed.text, combined);
         const bucket = (typeName) => reranked.filter(r => r.type === typeName);
         allResults = {
             messages:  bucket('message'),
@@ -480,8 +580,7 @@ async function searchAll(params) {
     }
 
     const total = Object.values(allResults).reduce((s, arr) => s + arr.length, 0);
-
-    return { ...allResults, query: searchTerm, total };
+    return { ...allResults, query: raw, total, syntax: syntaxSummary(parsed) };
 }
 exports.searchAll = searchAll;
 
