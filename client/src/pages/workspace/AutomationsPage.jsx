@@ -198,11 +198,12 @@ export default function AutomationsPage() {
                             When {trig.label.charAt(0).toLowerCase() + trig.label.slice(1)}
                             {a.conditions?.length ? ` (and ${a.conditions.length} condition${a.conditions.length > 1 ? 's' : ''})` : ''}
                             {' → '}
-                            {(a.actions || []).map((x) => actionOf(x.type).label.toLowerCase()).join(', ') || 'no steps yet'}
+                            {(a.actions || []).map((x) => (x.name || actionOf(x.type).label).toLowerCase()).join(' → ') || 'no steps yet'}
                           </span>
                           <span style={{ display: 'block', marginTop: 3, fontSize: 11.5, color: 'var(--text-muted)' }}>
                             {a.runCount ? `Ran ${a.runCount} time${a.runCount === 1 ? '' : 's'}` : 'Hasn’t run yet'}
                             {a.lastRunAt ? ` · last ${timeAgo(a.lastRunAt)}` : ''}
+                            {a.isActive && a.nextRunAt ? ` · next ${new Date(a.nextRunAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
                             {a.createdBy?.username ? ` · by ${a.createdBy.username}` : ''}
                           </span>
                         </span>
