@@ -1,7 +1,8 @@
-// Planning: sprints (with a board), milestones, a timeline of due dates, everyone's workload and
-// task templates. One screen with a view picker; sprints open their own board.
-import { useMemo, useState } from 'react';
-import { CalendarRange, Flag, GanttChart, LayoutTemplate, Milestone, Plus, Rocket, Trash2, Users, X } from 'lucide-react';
+// Planning: sprints (with a board), milestones, a timeline of due dates, everyone's workload, the
+// time report, design reviews and task templates — the same Planning section as the web's Tasks
+// panel. One screen with a view picker; sprints and reviews open their own screens in this tab.
+import { Suspense, lazy, useMemo, useState } from 'react';
+import { CalendarRange, Clock, Flag, GanttChart, LayoutTemplate, ListChecks, Milestone, Plus, Rocket, Trash2, Users, X } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
 import { api, useSession } from '../../data/session.js';
@@ -20,16 +21,24 @@ import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
 import { StatusIcon } from './TaskRow.jsx';
 import { PriorityPicker, fromDateInput, toDateInput } from './TaskEditorSheet.jsx';
-import { milestoneProgress, openSprints, sprintBoard, timelineRows, workloadBars } from './planning.js';
+import {
+  REPORT_RANGES, formatDuration, milestoneProgress, openSprints, reportRange, reportRows, sprintBoard, timelineRows, workloadBars,
+} from './planning.js';
 import { useBlockerGuard } from './BlockersSheet.jsx';
 
-const VIEWS = [
+// Design reviews load with their own code (pdf.js and all) only when the view is opened.
+const DesignReviewsView = lazy(() => import('../design/screens.jsx').then((m) => ({ default: m.DesignReviewsView })));
+
+export const PLANNING_VIEWS = [
   { value: 'sprints', label: 'Sprints' },
   { value: 'milestones', label: 'Milestones' },
   { value: 'timeline', label: 'Timeline' },
   { value: 'workload', label: 'Workload' },
+  { value: 'time', label: 'Time report' },
+  { value: 'reviews', label: 'Design reviews' },
   { value: 'templates', label: 'Templates' },
 ];
+const VIEWS = PLANNING_VIEWS;
 
 const SPRINT_STATUS = { planning: 'Planning', active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const MILESTONE_STATUS = { not_started: 'Not started', in_progress: 'In progress', at_risk: 'At risk', completed: 'Completed' };
@@ -540,6 +549,81 @@ function WorkloadView() {
   );
 }
 
+// ---------------------------------------------------------------- time report
+
+function TimeReportView() {
+  const ws = useSession((s) => s.workspaceId);
+  const directory = useDirectory();
+  const [range, setRange] = useState(() => prefs.get('tasks.timeRange', 'week'));
+  const { data, loading, error, refetch } = useQuery(ws && `timereport:${ws}:${range}`, () => api().timeReport(ws, reportRange(range)), { staleMs: 30_000 });
+  const people = reportRows(data?.byUser, data?.totalSeconds);
+  const tasks = reportRows(data?.byTask, data?.totalSeconds);
+  const pick = (v) => {
+    prefs.set('tasks.timeRange', v);
+    setRange(v);
+  };
+  let body;
+  if (loading && !data) body = <SkeletonRows count={4} />;
+  else if (error && !data) {
+    body = <EmptyState icon={Clock} title="Couldn't load the time report" body={error.message} action={<Button variant="secondary" onClick={refetch}>Try again</Button>} />;
+  } else if (!people.length && !tasks.length) {
+    body = <EmptyState icon={Clock} title="No time logged in this period" body="Start a timer or log time on a task and it shows up here, per person and per task." />;
+  } else {
+    body = (
+      <>
+        <Section title="People">
+          <RowGroup>
+            {people.map((p) => {
+              const u = directory[p.userId] || p.user || { name: 'Someone' };
+              return (
+                <div key={p.userId || 'none'} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar name={u.name} src={u.avatarUrl} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[15px]">
+                        {u.name}
+                        {p.running && <span className="text-[12px] text-success"> · tracking</span>}
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">{formatDuration(p.seconds)}</span>
+                    </div>
+                    <div className="mt-1.5">
+                      <Progress percent={p.share} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </RowGroup>
+        </Section>
+        <Section title="Tasks">
+          <RowGroup>
+            {tasks.map((t) => (
+              <Row
+                key={t.taskId}
+                icon={ListChecks}
+                title={t.title}
+                subtitle={[t.issueKey, t.estimatedHours && `Estimate ${t.estimatedHours}h`].filter(Boolean).join(' · ') || undefined}
+                value={formatDuration(t.seconds)}
+                onClick={() => nav.push('task', { id: t.taskId })}
+              />
+            ))}
+          </RowGroup>
+        </Section>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1">
+        <span className="text-[13px] text-text-2">Total</span>
+        <span className="text-[17px] font-semibold tabular-nums">{formatDuration(data?.totalSeconds || 0)}</span>
+      </div>
+      <Chips className="pb-1" options={REPORT_RANGES} value={range} onChange={pick} />
+      {body}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------- templates
 
 function NewTemplateSheet({ open, onClose }) {
@@ -722,7 +806,10 @@ function TemplatesView() {
 // ---------------------------------------------------------------- screen
 
 export function PlanningScreen({ initial }) {
-  const [view, setView] = useState(() => initial || prefs.get('tasks.planning', 'sprints'));
+  const [view, setView] = useState(() => {
+    const v = initial || prefs.get('tasks.planning', 'sprints');
+    return VIEWS.some((x) => x.value === v) ? v : 'sprints';
+  });
   const { data: tasks } = usePlanningTasks();
   const pick = (v) => {
     prefs.set('tasks.planning', v);
@@ -730,10 +817,10 @@ export function PlanningScreen({ initial }) {
   };
   return (
     <Screen>
-      <Header title="Planning" subtitle="Sprints, milestones, timeline and workload">
+      <Header title="Planning" subtitle="Sprints, milestones, time and design reviews">
         <Chips options={VIEWS} value={view} onChange={pick} className="pb-3" />
       </Header>
-      <Body fluid={view === 'timeline'} onRefresh={() => invalidate('planning', 'sprints', 'milestones', 'workload', 'templates')}>
+      <Body fluid={view === 'timeline'} onRefresh={() => invalidate('planning', 'sprints', 'milestones', 'workload', 'templates', 'timereport', 'designReviews')}>
         {view === 'sprints' && <SprintsView tasks={tasks || []} />}
         {view === 'milestones' && <MilestonesView tasks={tasks || []} />}
         {view === 'timeline' && (
@@ -742,6 +829,12 @@ export function PlanningScreen({ initial }) {
           </Section>
         )}
         {view === 'workload' && <WorkloadView />}
+        {view === 'time' && <TimeReportView />}
+        {view === 'reviews' && (
+          <Suspense fallback={<SkeletonRows count={4} />}>
+            <DesignReviewsView />
+          </Suspense>
+        )}
         {view === 'templates' && <TemplatesView />}
       </Body>
     </Screen>

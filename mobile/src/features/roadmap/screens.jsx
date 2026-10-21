@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Flag, GanttChart, List as ListIcon, Map as MapIcon, MoreHorizontal, Pencil, Plus, SquareCheckBig, Trash2, User } from 'lucide-react';
 import { nav, useIsOpen } from '../../app/nav.js';
-import { useWide } from '../../app/layout.js';
+import { useSplit, useWide } from '../../app/layout.js';
+import { TabHeader } from '../../app/TabHeader.jsx';
 import { api, useSession } from '../../data/session.js';
 import { useDirectory, useMembers, useTasks } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
@@ -169,35 +170,57 @@ function Timeline({ items }) {
   );
 }
 
-export function RoadmapScreen() {
+/**
+ * The roadmap. As its own screen (pushed in the Notes tab) wide windows get the timeline; as the
+ * Notes tab's "Roadmap" section (`section` = the Notes · Roadmap control) it is the list by
+ * quarter, with the timeline a tap away on split and wide windows.
+ */
+export function RoadmapScreen({ section }) {
   useRoadmapLive();
   const wide = useWide();
+  const split = useSplit();
   const directory = useDirectory();
   const { data, loading, error, refetch } = useRoadmap();
   const [status, setStatus] = useState('all');
   const [view, setView] = useState(null);
   const [creating, setCreating] = useState(false);
-  const shown = view || (wide ? 'timeline' : 'list');
+  const embedded = Boolean(section);
+  const shown = embedded ? 'list' : view || (wide ? 'timeline' : 'list');
   const items = useMemo(() => (data?.items || []).filter((i) => status === 'all' || i.status === status), [data, status]);
+  const add = data?.canCreate ? <IconButton icon={Plus} label="New roadmap item" onClick={() => setCreating(true)} /> : null;
+  const filters = <Chips className="min-w-0 flex-1" options={[{ value: 'all', label: 'All' }, ...STATUS_OPTIONS]} value={status} onChange={setStatus} />;
 
   return (
     <Screen>
-      <Header
-        title="Roadmap"
-        subtitle="What's planned, by quarter"
-        actions={data?.canCreate ? <IconButton icon={Plus} label="New roadmap item" onClick={() => setCreating(true)} /> : null}
-      >
-        <div className="flex items-center gap-2 pb-2">
-          <Chips className="min-w-0 flex-1" options={[{ value: 'all', label: 'All' }, ...STATUS_OPTIONS]} value={status} onChange={setStatus} />
-          {wide && (
-            <div className="mr-4 flex shrink-0 gap-1">
-              <IconButton icon={GanttChart} label="Timeline" active={shown === 'timeline'} onClick={() => setView('timeline')} />
-              <IconButton icon={ListIcon} label="List by quarter" active={shown === 'list'} onClick={() => setView('list')} />
-            </div>
-          )}
-        </div>
-      </Header>
-      <Body fluid={shown === 'timeline'} onRefresh={() => invalidate('roadmap')}>
+      {embedded ? (
+        <TabHeader
+          title="Notes"
+          actions={
+            <>
+              {split && <IconButton icon={GanttChart} label="Open the timeline" onClick={() => nav.push('roadmap')} />}
+              {add}
+            </>
+          }
+        >
+          <div className="space-y-2.5 pb-3">
+            {section}
+            {filters}
+          </div>
+        </TabHeader>
+      ) : (
+        <Header title="Roadmap" subtitle="What's planned, by quarter" actions={add}>
+          <div className="flex items-center gap-2 pb-2">
+            {filters}
+            {wide && (
+              <div className="mr-4 flex shrink-0 gap-1">
+                <IconButton icon={GanttChart} label="Timeline" active={shown === 'timeline'} onClick={() => setView('timeline')} />
+                <IconButton icon={ListIcon} label="List by quarter" active={shown === 'list'} onClick={() => setView('list')} />
+              </div>
+            )}
+          </div>
+        </Header>
+      )}
+      <Body tab={embedded ? 'notes' : undefined} fluid={shown === 'timeline'} onRefresh={() => invalidate('roadmap')}>
         {loading && !data ? (
           <SkeletonRows count={5} avatar={false} />
         ) : error && !data ? (

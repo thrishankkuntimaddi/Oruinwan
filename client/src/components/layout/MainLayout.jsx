@@ -252,7 +252,10 @@ const MainLayout = ({ children, sidePanel }) => {
         currentPath.includes('/apps') ||
         currentPath.includes('/automations') ||
         currentPath.includes('/templates') ||
-        currentPath.includes('/developer')
+        currentPath.includes('/developer') ||
+        // Roadmap (opened from the Notes panel) and design reviews (Tasks → Planning).
+        currentPath.startsWith(`/workspace/${workspaceId}/roadmap`) ||
+        currentPath.startsWith(`/workspace/${workspaceId}/reviews`)
     );
 
 
@@ -289,6 +292,9 @@ const MainLayout = ({ children, sidePanel }) => {
         if (currentPath.includes('/task/'))     return `${base}/tasks`;
         if (currentPath.includes('/note/'))     return `${base}/notes`;
         if (currentPath.includes('/thread/'))   return -1;
+        if (currentPath.startsWith(`${base}/roadmap`)) return `${base}/notes`;
+        if (currentPath.startsWith(`${base}/reviews/`)) return `${base}/reviews`;
+        if (currentPath.startsWith(`${base}/reviews`)) return `${base}/tasks`;
         return `${base}/home`;
     };
 

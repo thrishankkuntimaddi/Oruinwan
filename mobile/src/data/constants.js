@@ -33,15 +33,20 @@ export const PRIORITY_META = {
   highest: { label: 'Highest', color: '#e05252' },
 };
 
+// Note type labels: the same words as the web (client/src/pages/SidebarComp/notesComponents/
+// noteTypes.js, checked by constants.test.js). `documentation` is an older alias of `note`.
 export const NOTE_TYPES = {
-  note: 'Note',
-  meeting: 'Meeting',
-  documentation: 'Docs',
+  note: 'Document',
+  documentation: 'Document',
   brainstorm: 'Brainstorm',
+  meeting: 'Meeting',
   sop: 'SOP',
   projectspec: 'Project spec',
   techdesign: 'Tech design',
   announcement: 'Announcement',
 };
+
+/** Types to pick from (no aliases), in the web's order. */
+export const NOTE_TYPE_OPTIONS = Object.entries(NOTE_TYPES).filter(([value]) => value !== 'documentation');
 
 export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];

@@ -108,6 +108,38 @@ export function mapTaskTime(d) {
   };
 }
 
+/** GET /v2/tasks/time/report → { totalSeconds, byUser: [{ userId, seconds, tasks, running, user }], byTask: [...] }. */
+export function mapTimeReport(d) {
+  return {
+    totalSeconds: Number(d?.totalSeconds) || 0,
+    byUser: (d?.byUser || []).map((u) => ({
+      userId: idOf(u.userId),
+      seconds: Number(u.seconds) || 0,
+      tasks: Number(u.tasks) || 0,
+      running: Boolean(u.running),
+      user: u.user ? person(u.user) : null,
+    })),
+    byTask: (d?.byTask || []).map((t) => ({
+      taskId: idOf(t.taskId),
+      title: t.title || 'Untitled',
+      issueKey: t.issueKey || null,
+      estimatedHours: Number(t.estimatedHours) || null,
+      seconds: Number(t.seconds) || 0,
+    })),
+  };
+}
+
+function mapTrashedTask(t) {
+  return {
+    id: idOf(t),
+    title: t.title || 'Untitled',
+    status: t.status || 'todo',
+    priority: t.priority || 'medium',
+    issueKey: t.issueKey || null,
+    deletedAt: t.deletedAt || t.updatedAt || null,
+  };
+}
+
 /** The open blockers of a 409 TASK_BLOCKED answer, or null for any other error. */
 export function blockersOf(err) {
   if (!err || err.code !== 'TASK_BLOCKED') return null;
@@ -390,6 +422,23 @@ export const workAdapter = {
   async workload(ws) {
     const data = await api.get('/v2/tasks/workload', { workspaceId: ws }).catch(softly({ workload: [] }));
     return (data.workload || []).map((w) => ({ userId: idOf(w.userId), count: w.count || 0, user: w.user ? person(w.user) : null }));
+  },
+  /** GET /v2/tasks/time/report → hours per person and per task (from/to keep sessions started in the range). */
+  async timeReport(ws, { from, to } = {}) {
+    const data = await api.get('/v2/tasks/time/report', { workspaceId: ws, ...(from ? { from, to } : {}) }).catch(softly({}));
+    return mapTimeReport(data);
+  },
+  /** The caller's trashed tasks (the web's Trash view): GET /v2/tasks?includeDeleted=true, deleted ones only. */
+  async trashedTasks(ws) {
+    const data = await api.get('/v2/tasks', { workspaceId: ws, includeDeleted: 'true' });
+    return (data.tasks || []).filter((t) => t.deleted && !t.isSubtask).map(mapTrashedTask);
+  },
+  async restoreTask(id) {
+    await api.post(`/v2/tasks/${id}/restore`);
+  },
+  /** Deletes a trashed task for good (DELETE /v2/tasks/:id/permanent). */
+  async purgeTask(id) {
+    await api.del(`/v2/tasks/${id}/permanent`);
   },
 
   // ---- planning

@@ -408,14 +408,14 @@ function App() {
                             }
                           />
 
-                          {/* Roadmap and design reviews */}
+                          {/* Roadmap: the Notes panel's Roadmap tab. Design reviews: Tasks → Planning. */}
                           <Route
                             path="/workspace/:workspaceId/roadmap"
                             element={
                               <RequireAuth>
                                 <WorkspaceScope>
                                   <RequireWorkspace>
-                                    <MainLayout>
+                                    <MainLayout sidePanel={<NotesPanel />}>
                                       <RoadmapPage />
                                     </MainLayout>
                                   </RequireWorkspace>
@@ -430,7 +430,9 @@ function App() {
                                 <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout>
-                                      <DesignReviewsPage />
+                                      <MyTasks section="reviews">
+                                        <DesignReviewsPage />
+                                      </MyTasks>
                                     </MainLayout>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
@@ -444,7 +446,9 @@ function App() {
                                 <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout>
-                                      <DesignReviewPage />
+                                      <MyTasks section="reviews">
+                                        <DesignReviewPage />
+                                      </MyTasks>
                                     </MainLayout>
                                   </RequireWorkspace>
                                 </WorkspaceScope>

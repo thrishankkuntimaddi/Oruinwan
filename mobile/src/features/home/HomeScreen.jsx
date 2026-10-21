@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   AtSign, Bell, BookOpen, ChevronRight, FolderOpen, Hash, Megaphone, MessageCircle, Plug, Search, SquareCheckBig,
-  Sparkles, Download, Headphones, Map as MapIcon, PenTool, Workflow,
+  Sparkles, Download, Headphones, Workflow,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -235,8 +235,6 @@ export function HomeScreen() {
             {flags.knowledge && <QuickTile icon={BookOpen} label="Knowledge" detail="Pages and handbook" onClick={() => nav.push('knowledge')} />}
             {flags.integrations && <QuickTile icon={Plug} label="Integrations" detail="Apps and webhooks" onClick={() => nav.push('integrations')} />}
             {huddlesOn && <QuickTile icon={Headphones} label="Huddles" detail={liveCount ? `${liveCount} live now` : 'Voice calls and meetings'} onClick={() => nav.push('huddles')} />}
-            <QuickTile icon={MapIcon} label="Roadmap" detail="What's planned, by quarter" onClick={() => nav.push('roadmap')} />
-            <QuickTile icon={PenTool} label="Design reviews" detail="Mockups, pins and approvals" onClick={() => nav.push('designReviews')} />
             <QuickTile icon={Workflow} label="Automations" detail="Rules, runs and history" onClick={() => nav.push('automations')} />
             {flags.ai && <QuickTile icon={Sparkles} label="Ask AI" detail="Summaries and drafts" onClick={() => nav.setTab('ai')} />}
           </div>
@@ -262,7 +260,7 @@ export function HomeScreen() {
                     onClick={() => nav.push('note', { id: n.id })}
                     className="pressable flex h-36 w-44 shrink-0 snap-start flex-col overflow-hidden rounded-card border border-line-soft bg-surface p-3.5 text-left"
                   >
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-accent-ink">{NOTE_TYPES[n.type] || 'Note'}</span>
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-accent-ink">{NOTE_TYPES[n.type] || 'Document'}</span>
                     <span className="mt-1 line-clamp-2 shrink-0 text-[14px] font-semibold leading-snug">{n.title}</span>
                     <span className="mt-1 line-clamp-2 min-h-0 text-xs text-text-2">{htmlToText(n.content, 90)}</span>
                     <span className="mt-auto shrink-0 pt-1 text-[11px] text-text-3">{shortAgo(n.updatedAt)}</span>

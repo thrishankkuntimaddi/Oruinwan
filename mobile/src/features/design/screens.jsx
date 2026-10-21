@@ -84,14 +84,10 @@ function ReviewRow({ review, directory }) {
   );
 }
 
-export function DesignReviewsScreen() {
+function useReviewList(filter) {
   const ws = useSession((s) => s.workspaceId);
-  const directory = useDirectory();
-  const [filter, setFilter] = useState('all');
-  const [creating, setCreating] = useState(false);
   const query = filter === 'mine' ? { mine: true } : filter === 'all' ? {} : { status: filter };
-  const { data, loading, error, refetch } = useQuery(ws && `designReviews:${ws}:${filter}`, () => api().designReviews(ws, query), { staleMs: 20_000 });
-
+  const result = useQuery(ws && `designReviews:${ws}:${filter}`, () => api().designReviews(ws, query), { staleMs: 20_000 });
   useEffect(
     () =>
       on('socket', ({ event }) => {
@@ -99,33 +95,66 @@ export function DesignReviewsScreen() {
       }),
     [],
   );
+  return result;
+}
 
+function ReviewList({ filter, onCreate }) {
+  const directory = useDirectory();
+  const { data, loading, error, refetch } = useReviewList(filter);
+  if (loading && !data) return <SkeletonRows count={5} />;
+  if (error && !data) {
+    return <EmptyState icon={PenTool} title="Couldn't load reviews" body={error.message} action={<Button variant="secondary" onClick={refetch}>Try again</Button>} />;
+  }
+  if (!data?.length) {
+    return (
+      <EmptyState
+        icon={PenTool}
+        title={filter === 'all' ? 'No design reviews yet' : 'Nothing here'}
+        body="Share an image, PDF or video from Files, ask people to review it and collect pinned comments and approvals."
+        action={filter === 'all' ? <Button icon={Plus} onClick={onCreate}>New review</Button> : null}
+      />
+    );
+  }
+  return (
+    <Section>
+      <RowGroup>
+        {data.map((r) => (
+          <ReviewRow key={r.id} review={r} directory={directory} />
+        ))}
+      </RowGroup>
+    </Section>
+  );
+}
+
+/**
+ * Design reviews inside Tasks → Planning (the "Reviews" view): filters, the list and "New
+ * review". Reviews opened from here stack in the Tasks tab.
+ */
+export function DesignReviewsView() {
+  const [filter, setFilter] = useState('all');
+  const [creating, setCreating] = useState(false);
+  return (
+    <>
+      <div className="flex items-center gap-1 pt-2 pr-2">
+        <Chips className="min-w-0 flex-1" options={FILTERS} value={filter} onChange={setFilter} />
+        <IconButton icon={Plus} label="New review" onClick={() => setCreating(true)} />
+      </div>
+      <ReviewList filter={filter} onCreate={() => setCreating(true)} />
+      <NewReviewSheet open={creating} onClose={() => setCreating(false)} />
+    </>
+  );
+}
+
+export function DesignReviewsScreen() {
+  const [filter, setFilter] = useState('all');
+  const [creating, setCreating] = useState(false);
   return (
     <Screen>
       <Header title="Design reviews" subtitle="Mockups, pinned comments and approvals" actions={<IconButton icon={Plus} label="New review" onClick={() => setCreating(true)} />}>
         <Chips className="pb-2" options={FILTERS} value={filter} onChange={setFilter} />
       </Header>
       <Body onRefresh={() => invalidate('designReviews')}>
-        {loading && !data ? (
-          <SkeletonRows count={5} />
-        ) : error && !data ? (
-          <EmptyState icon={PenTool} title="Couldn't load reviews" body={error.message} action={<Button variant="secondary" onClick={refetch}>Try again</Button>} />
-        ) : !data?.length ? (
-          <EmptyState
-            icon={PenTool}
-            title={filter === 'all' ? 'No design reviews yet' : 'Nothing here'}
-            body="Share an image, PDF or video from Files, ask people to review it and collect pinned comments and approvals."
-            action={filter === 'all' ? <Button icon={Plus} onClick={() => setCreating(true)}>New review</Button> : null}
-          />
-        ) : (
-          <Section>
-            <RowGroup>
-              {data.map((r) => (
-                <ReviewRow key={r.id} review={r} directory={directory} />
-              ))}
-            </RowGroup>
-          </Section>
-        )}
+        <ReviewList filter={filter} onCreate={() => setCreating(true)} />
       </Body>
       <NewReviewSheet open={creating} onClose={() => setCreating(false)} />
     </Screen>
