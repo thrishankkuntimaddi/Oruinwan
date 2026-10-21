@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Platform console (/api/admin, chttrix_admin only): approve/reject survive an
+ * Platform console (/api/admin, oruinwan_admin only): approve/reject survive an
  * email failure, approval provisions a company once, broadcasts store `body`,
  * active-user stats ignore null companies, active companies hide secrets.
  */
@@ -51,7 +51,7 @@ function app() {
 const company = () => store.state.companies.get(C1);
 beforeEach(() => {
     store.reset();
-    store.addUser({ _id: STAFF, companyId: null, roles: ['user', 'chttrix_admin'] });
+    store.addUser({ _id: STAFF, companyId: null, roles: ['user', 'oruinwan_admin'] });
     store.addUser({ _id: USER, companyId: null, roles: ['user'] });
     store.addCompany({ _id: C1, name: 'Acme', verificationStatus: 'pending', defaultWorkspace: null,
         phone: { otp: '123456' }, domainVerification: { token: 'secret' } }, { admins: [{ user: OWNER, role: 'owner' }] });

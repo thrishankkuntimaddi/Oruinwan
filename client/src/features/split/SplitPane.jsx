@@ -13,13 +13,13 @@ const ThreadPage = lazy(() => import('../../pages/thread/ThreadPage'));
 const AgentsPage = lazy(() => import('../../pages/agents/AgentsPage'));
 const AutomationsPage = lazy(() => import('../../pages/workspace/AutomationsPage'));
 const Meetings = lazy(() => import('../../pages/SidebarComp/Meetings'));
-const ChttrixAIChat = lazy(() => import('../../components/ai/ChttrixAIChat/ChttrixAIChat'));
+const OruinwanAIChat = lazy(() => import('../../components/ai/OruinwanAIChat/OruinwanAIChat'));
 
 /** Oruinwan AI as a page in the pane. */
 function AIPane() {
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ChttrixAIChat isSidebar onClose={() => split.close()} />
+            <OruinwanAIChat isSidebar onClose={() => split.close()} />
         </div>
     );
 }

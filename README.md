@@ -7,12 +7,12 @@
 **The free, open-source workspace for teams: chat, tasks, notes, huddles and AI, on web, desktop, phone and tablet.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Oruniwan/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/thrishankkuntimaddi/Oruniwan)](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest)
+[![CI](https://github.com/thrishankkuntimaddi/Oruinwan/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Oruinwan/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/thrishankkuntimaddi/Oruinwan)](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 
-[Website](https://thrishankkuntimaddi.github.io/Oruniwan/) · [Pricing](https://thrishankkuntimaddi.github.io/Oruniwan/pricing) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruniwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
+[Website](https://thrishankkuntimaddi.github.io/Oruinwan/) · [Pricing](https://thrishankkuntimaddi.github.io/Oruinwan/pricing) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruinwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
 
 <img src="mobile/play-store/feature-graphic.png" alt="Oruinwan: one workspace, every conversation" width="720" />
 
@@ -115,12 +115,12 @@ Every release has the same file names, so these links always fetch the newest ve
 
 | Platform | Download |
 |---|---|
-| Mac (Apple Silicon) | [Oruinwan-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Mac-AppleSilicon.dmg) |
-| Mac (Intel) | [Oruinwan-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Mac-Intel.dmg) |
-| Windows 10 / 11 | [Oruinwan-Windows-Setup.exe](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Windows-Setup.exe) |
-| Linux (any distribution) | [Oruinwan-Linux.AppImage](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Linux.AppImage) |
-| Linux (Debian, Ubuntu) | [Oruinwan-Linux.deb](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Linux.deb) |
-| Android phones and tablets | [Oruinwan-Android.apk](https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/Oruinwan-Android.apk) |
+| Mac (Apple Silicon) | [Oruinwan-Mac-AppleSilicon.dmg](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Mac-AppleSilicon.dmg) |
+| Mac (Intel) | [Oruinwan-Mac-Intel.dmg](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Mac-Intel.dmg) |
+| Windows 10 / 11 | [Oruinwan-Windows-Setup.exe](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Windows-Setup.exe) |
+| Linux (any distribution) | [Oruinwan-Linux.AppImage](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Linux.AppImage) |
+| Linux (Debian, Ubuntu) | [Oruinwan-Linux.deb](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Linux.deb) |
+| Android phones and tablets | [Oruinwan-Android.apk](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Android.apk) |
 | iPhone and iPad | Use the web app in Safari |
 
 The release page lists SHA-256 checksums and install notes (the Mac and Windows builds aren't notarized or code-signed yet). Once installed, the apps tell you when an update is ready ([Updates](#updates)).
@@ -132,8 +132,8 @@ The release page lists SHA-256 checksums and install notes (the Mac and Windows 
 The root `Dockerfile` builds one image with the API, the AI module, the migrations and the web app. `docker-compose.yml` runs it next to PostgreSQL (with pgvector), Redis, S3-compatible storage and MongoDB.
 
 ```bash
-git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
-cd Oruniwan
+git clone https://github.com/thrishankkuntimaddi/Oruinwan.git
+cd Oruinwan
 cp server/.env.example server/.env      # then fill in the secrets below
 docker compose --profile mongo --profile app up -d --build
 ```
@@ -147,7 +147,7 @@ Oruinwan is then on **http://localhost:8080**.
 2. In a `.env` next to `docker-compose.yml`, set `APP_URL` (the public `https://` address; sign-in cookies need HTTPS anywhere but localhost), `POSTGRES_PASSWORD` and `S3_SECRET_KEY`. Use `APP_MONGO_URI` for a hosted MongoDB instead of the `mongo` service.
 3. Configure email (`BREVO_API_KEY` or `SMTP_*`; `DEV_MAIL=console` prints codes to the log while testing).
 4. Optional: `VITE_GOOGLE_CLIENT_ID` as a build argument for Google sign-in on the web, a TURN server for huddles behind strict firewalls, and an AI provider (`AI_PROVIDER`; the default is a local model through Ollama).
-5. Create the first platform admin: `docker compose exec app node scripts/createChttrixAdmin.js`.
+5. Create the first platform admin: `docker compose exec app node scripts/createOruinwanAdmin.js`.
 
 Without Docker: `yarn install && yarn build`, then `NODE_ENV=production node server.js` in `server/`. The server serves the API and the web app from one origin.
 
@@ -191,8 +191,8 @@ Workspaces that were already over a limit when it was introduced keep working; t
 ### Run everything
 
 ```bash
-git clone https://github.com/thrishankkuntimaddi/Oruniwan.git
-cd Oruniwan
+git clone https://github.com/thrishankkuntimaddi/Oruinwan.git
+cd Oruinwan
 yarn install                         # client, server and e2e workspaces
 cp server/.env.example server/.env   # generate the secrets as in Self-hosting
 cp client/.env.example client/.env
@@ -370,7 +370,7 @@ Every `VITE_` value is bundled into the browser build, so never put secrets here
 - **Accounts.** Passwords are hashed; accounts can add passkeys and two-factor authentication.
 - **Updates.** App UI bundles are verified against an Ed25519 key built into the apps before they are loaded.
 
-Found a vulnerability? Please report it privately through [GitHub security advisories](https://github.com/thrishankkuntimaddi/Oruniwan/security/advisories/new) rather than in a public issue.
+Found a vulnerability? Please report it privately through [GitHub security advisories](https://github.com/thrishankkuntimaddi/Oruinwan/security/advisories/new) rather than in a public issue.
 
 ---
 

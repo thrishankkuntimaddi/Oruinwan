@@ -18,11 +18,11 @@ function requirePlatformAdmin(req, res, next) {
 
     
     users.findById(req.user.sub).then(user => {
-        if (!user || !user.roles || !user.roles.includes('chttrix_admin')) {
+        if (!user || !user.roles || !user.roles.includes('oruinwan_admin')) {
             logger.error(`🚫 [AUDIT][PHASE2][AUTH] Non-admin access attempt`);
             logger.error(`   ├─ User: ${req.user.sub}`);
             logger.error(`   ├─ Roles: ${user?.roles || 'unknown'}`);
-            logger.error(`   └─ Required: chttrix_admin`);
+            logger.error(`   └─ Required: oruinwan_admin`);
             return res.status(403).json({
                 success: false,
                 error: 'Platform admin authorization required'

@@ -20,7 +20,7 @@ async function isPlatformAdmin(req) {
     const payload = jwt.verify(header.slice(7), process.env.ACCESS_TOKEN_SECRET);
     const identity = require('../../identity');
     const user = await identity.users.findById(payload.sub);
-    return Boolean(user && Array.isArray(user.roles) && user.roles.includes('chttrix_admin'));
+    return Boolean(user && Array.isArray(user.roles) && user.roles.includes('oruinwan_admin'));
   } catch {
     return false;
   }

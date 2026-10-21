@@ -72,7 +72,7 @@ function registerSocketConnection(io) {
         logger.error({ err }, 'Error setting user online (presence)');
       }
 
-      if (dbUser?.roles?.includes('platform-admin') || dbUser?.roles?.includes('chttrix_admin')) {
+      if (dbUser?.roles?.includes('platform-admin') || dbUser?.roles?.includes('oruinwan_admin')) {
         socket.join('platform-admins');
         logger.debug(`[SUPPORT] Platform admin ${socketUserId} joined platform-admins room`);
       }

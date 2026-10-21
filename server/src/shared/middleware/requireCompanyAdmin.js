@@ -2,7 +2,7 @@
 
 const identity = require('../../identity');
 
-const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+const PLATFORM_ADMIN_ROLES = ['oruinwan_admin', 'platform-admin'];
 const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
 
 /**

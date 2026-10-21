@@ -119,7 +119,7 @@ export function HomeLanding() {
                 lead={summary || 'You’re all caught up.'}
                 actions={(
                     <>
-                        <Btn variant="ghost" icon={Sparkles} onClick={() => window.dispatchEvent(new CustomEvent('chttrix-ai:open'))}>Ask AI</Btn>
+                        <Btn variant="ghost" icon={Sparkles} onClick={() => window.dispatchEvent(new CustomEvent('oruinwan-ai:open'))}>Ask AI</Btn>
                         {isAdmin && <Btn variant="primary" icon={UserPlus} onClick={() => setInviting(true)}>Invite people</Btn>}
                     </>
                 )}

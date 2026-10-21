@@ -145,7 +145,7 @@ npm run test:e2e              # Playwright browser tests (see below)
 
 **End-to-end tests** use their own servers and a throwaway local database, so they never touch your data.
 
-- They start the API on **8095** and the web app on **3095**, using database `chttrix_e2e` on your local MongoDB. That database is dropped on every run.
+- They start the API on **8095** and the web app on **3095**, using database `oruinwan_e2e` on your local MongoDB. That database is dropped on every run.
 - They need MongoDB running locally on 27017: `brew services start mongodb-community@7.0`.
 - On an 8 GB Mac, unload the AI models first (`ollama stop qwen2.5:3b`). Otherwise memory pressure makes timing-sensitive tests flaky.
 - Report: `cd e2e && npm run report`.

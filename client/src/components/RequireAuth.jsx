@@ -14,7 +14,7 @@ export default function RequireAuth({ children }) {
   
   
   
-  if (user.roles?.includes('chttrix_admin')) {
+  if (user.roles?.includes('oruinwan_admin')) {
     return <Navigate to="/platform-admin" replace />;
   }
 

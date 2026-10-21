@@ -5,19 +5,19 @@
  * desktop/electron/preload.js). In a normal browser this module is a no-op.
  *
  * Exposes:
- *   window.chttrixDesktop.notify(payload)
+ *   window.oruinwanDesktopBridge.notify(payload)
  *     payload: { type: 'message'|'mention'|'task'|'system', title?, body?,
  *                senderName?, preview?, channelName?, taskTitle?, dueDate?,
  *                workspaceId?, channelId?, dmSessionId? }
- *   window.chttrixDesktop.setUnreadCount(n)
+ *   window.oruinwanDesktopBridge.setUnreadCount(n)
  *
- * Also listens for the DOM event `chttrix:notification` (detail = payload),
- * so code that cannot reach window.chttrixDesktop can simply do:
- *   document.dispatchEvent(new CustomEvent('chttrix:notification', { detail }))
+ * Also listens for the DOM event `oruinwan:notification` (detail = payload),
+ * so code that cannot reach window.oruinwanDesktopBridge can simply do:
+ *   document.dispatchEvent(new CustomEvent('oruinwan:notification', { detail }))
  *
  * Handles:
  *   - notification clicks → navigate to the channel / DM
- *   - chttrix:// deep links → navigate to the validated in-app route
+ *   - oruinwan:// deep links → navigate to the validated in-app route
  *   - notification quick replies → encrypted send (./quickReply.js)
  */
 
@@ -56,7 +56,7 @@ function toStr(v, max) {
 function install() {
   if (typeof window === 'undefined') return;
   const api = window.electronAPI;
-  if (!api || !api.isDesktop || window.chttrixDesktop) return;
+  if (!api || !api.isDesktop || window.oruinwanDesktopBridge) return;
 
   const notify = (payload = {}) => {
     try {
@@ -87,15 +87,15 @@ function install() {
     try { api.setUnreadCount(count); } catch { /* ignore */ }
   };
 
-  window.chttrixDesktop = Object.freeze({
+  window.oruinwanDesktopBridge = Object.freeze({
     isDesktop: true,
     platform: api.platform,
     notify,
     setUnreadCount,
   });
 
-  document.addEventListener('chttrix:notification', (e) => notify(e && e.detail));
-  document.addEventListener('chttrix:unread-count', (e) => setUnreadCount(e && e.detail));
+  document.addEventListener('oruinwan:notification', (e) => notify(e && e.detail));
+  document.addEventListener('oruinwan:unread-count', (e) => setUnreadCount(e && e.detail));
 
   if (typeof api.onNotificationClicked === 'function') {
     api.onNotificationClicked((payload) => {

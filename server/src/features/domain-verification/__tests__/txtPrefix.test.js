@@ -1,8 +1,7 @@
 'use strict';
 
 /**
- * Domain ownership TXT records: new records use `oruinwan-verification=`; records published
- * before the rename (`chttrix-verification=`) still verify. Anything else does not.
+ * Domain ownership TXT records use `oruinwan-verification=`. Anything else does not verify.
  */
 
 jest.mock('dns', () => ({ promises: { resolveTxt: jest.fn() } }));
@@ -22,7 +21,6 @@ describe('domain verification TXT prefix', () => {
 
     test.each([
         ['oruinwan-verification=tok', true],
-        ['chttrix-verification=tok', true],
         ['oruinwan-verification=other', false],
         ['something-else=tok', false],
         ['tok', false],

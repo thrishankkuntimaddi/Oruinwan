@@ -11,10 +11,10 @@ const { requireCompanyRole } = require("../../shared/utils/companyRole");
 const companyAdminGuard = [requireAuth, requireCompanyMember, requireOwnCompany("id"), requireCompanyRole("admin")];
 
 // Platform (Oruinwan) admin only — same rule as requireSuperAdmin in admin.routes.js.
-async function requireChttrixAdmin(req, res, next) {
+async function requireOruinwanAdmin(req, res, next) {
     try {
         const user = await identity.users.findById(req.user.sub);
-        if (user && Array.isArray(user.roles) && user.roles.includes("chttrix_admin")) return next();
+        if (user && Array.isArray(user.roles) && user.roles.includes("oruinwan_admin")) return next();
         return res.status(403).json({ message: "Access denied: Super Admin only" });
     } catch (err) {
         return res.status(500).json({ message: "Auth Error" });
@@ -23,7 +23,7 @@ async function requireChttrixAdmin(req, res, next) {
 
 router.post("/register", registrationController.registerCompany);
 
-router.post("/:id/verify", requireAuth, requireChttrixAdmin, registrationController.verifyCompany);
+router.post("/:id/verify", requireAuth, requireOruinwanAdmin, registrationController.verifyCompany);
 
 router.post("/:id/start-setup", ...companyAdminGuard, registrationController.startSetup);
 

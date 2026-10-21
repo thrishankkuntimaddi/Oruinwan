@@ -12,7 +12,7 @@ export const SERVER_URL = (env.VITE_SERVER_URL || env.VITE_DEFAULT_SERVER_URL ||
 /** @deprecated kept for older imports; the same as SERVER_URL. */
 export const DEFAULT_SERVER_URL = SERVER_URL;
 
-export const REPO = 'thrishankkuntimaddi/Oruniwan';
+export const REPO = 'thrishankkuntimaddi/Oruinwan';
 export const UPDATE_MANIFEST_URL =
   (env.VITE_UPDATE_MANIFEST_URL || '').trim() ||
   `https://github.com/${REPO}/releases/latest/download/latest.json`;

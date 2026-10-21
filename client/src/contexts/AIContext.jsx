@@ -41,11 +41,11 @@ export function AIProvider({ children }) {
     }, []);
     const topComposer = () => composersRef.current[composersRef.current.length - 1] || null;
 
-    // `chttrix:composer:insert` events (aiService.insertIntoComposer) go to the top composer only.
+    // `oruinwan:composer:insert` events (aiService.insertIntoComposer) go to the top composer only.
     useEffect(() => {
         const onInsert = (e) => topComposer()?.insert(e?.detail?.text);
-        document.addEventListener('chttrix:composer:insert', onInsert);
-        return () => document.removeEventListener('chttrix:composer:insert', onInsert);
+        document.addEventListener('oruinwan:composer:insert', onInsert);
+        return () => document.removeEventListener('oruinwan:composer:insert', onInsert);
     }, []);
 
     /** Plain-data snapshot for /api/ai/chat. */

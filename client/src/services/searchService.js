@@ -1,7 +1,7 @@
 import api from './api';
 import { searchLocalMessages } from '../utils/localMessageIndex';
 
-const RECENT_SEARCHES_KEY = 'chttrix_recent_searches';
+const RECENT_SEARCHES_KEY = 'oruinwan_recent_searches';
 const MAX_RECENT = 8;
 
 const EMPTY = () => ({ messages: [], files: [], users: [], channels: [], tasks: [], notes: [], knowledge: [], total: 0, query: '' });

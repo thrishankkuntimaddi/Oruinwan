@@ -30,7 +30,7 @@ describe('webhook.trigger', () => {
     const [url, body, opts] = axios.post.mock.calls[0];
     expect(url).toBe('https://x.test');
     const expected = 'sha256=' + crypto.createHmac('sha256', 'k').update(body).digest('hex');
-    expect(opts.headers['X-Chttrix-Signature']).toBe(expected);
+    expect(opts.headers['X-Oruinwan-Signature']).toBe(expected);
     expect(JSON.parse(body).event).toBe('webhook.test');
 
     axios.post.mockRejectedValue(new Error('ECONNREFUSED'));

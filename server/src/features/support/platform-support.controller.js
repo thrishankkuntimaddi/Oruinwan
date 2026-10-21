@@ -16,7 +16,7 @@ async function expand(docs, paths) {
     return out;
 }
 
-const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+const PLATFORM_ADMIN_ROLES = ['oruinwan_admin', 'platform-admin'];
 
 // Resolve the caller from the DB (JWT claims are not trusted for roles/company).
 async function getCaller(req) {

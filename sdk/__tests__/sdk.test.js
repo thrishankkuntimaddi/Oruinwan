@@ -105,23 +105,20 @@ describe('OruinwanSDK', () => {
   });
 });
 
-describe('deprecated Chttrix aliases', () => {
+describe('module exports and headers', () => {
   const mod = require('../js/oruinwan-sdk');
 
-  test('ChttrixSDK / ChttrixError point at the Oruinwan classes', () => {
-    expect(mod.ChttrixSDK).toBe(OruinwanSDK);
-    expect(mod.ChttrixError).toBe(OruinwanError);
+  test('exports OruinwanSDK, OruinwanError and a default', () => {
+    expect(mod.OruinwanSDK).toBe(OruinwanSDK);
+    expect(mod.OruinwanError).toBe(OruinwanError);
     expect(mod.default).toBe(OruinwanSDK);
-    const sdk = new mod.ChttrixSDK({ baseUrl: 'https://api.test', fetch: jest.fn() });
-    expect(sdk).toBeInstanceOf(OruinwanSDK);
-    expect(new mod.ChttrixError('x')).toBeInstanceOf(OruinwanError);
   });
 
-  test('still sends the legacy X-Chttrix-SDK header', async () => {
+  test('sends the X-Oruinwan-SDK header', async () => {
     const { fetchImpl, calls } = mockFetch([{ match: '/api/public/v1/tasks', respond: () => ({ status: 200, body: { tasks: [] } }) }]);
-    const sdk = new mod.ChttrixSDK({ baseUrl: 'https://api.test', apiKey: 'k', fetch: fetchImpl });
+    const sdk = new mod.OruinwanSDK({ baseUrl: 'https://api.test', apiKey: 'k', fetch: fetchImpl });
     await sdk.tasks.list();
-    expect(calls[0].init.headers['X-Chttrix-SDK']).toMatch(/^js\//);
+    expect(calls[0].init.headers['X-Oruinwan-SDK']).toMatch(/^js\//);
   });
 
   test('public resources use /api/public/v1; me() and openapi()', async () => {
@@ -141,12 +138,11 @@ describe('deprecated Chttrix aliases', () => {
     expect(OruinwanSDK.version).toBe('1.1.0');
   });
 
-  test('browser build exposes both globals', () => {
+  test('browser build exposes window.OruinwanSDK', () => {
     const fs = require('fs');
     const src = fs.readFileSync(require.resolve('../js/oruinwan-sdk'), 'utf8');
     const root = {};
     new Function('self', 'module', 'define', src)(root, undefined, undefined);
     expect(typeof root.OruinwanSDK).toBe('function');
-    expect(root.ChttrixSDK).toBe(root.OruinwanSDK);
   });
 });

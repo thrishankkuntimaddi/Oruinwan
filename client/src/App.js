@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
 
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import ContactsProvider from "./contexts/ContactsContext";
@@ -58,7 +58,7 @@ import Landing from "./pages/landing/Landing";
 import { IS_APP, IS_SITE } from "./appMode/env";
 import OpenWebApp from "./appMode/OpenWebApp";
 
-// The product website lives under a path on GitHub Pages (vite `base`, e.g. /Oruniwan/).
+// The product website lives under a path on GitHub Pages (vite `base`, e.g. /Oruinwan/).
 const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/";
 
 import LoginPage from "./pages/LoginPageComp/LoginPage";
@@ -77,7 +77,7 @@ import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
 
 // The docs site is its own chunk (content + highlighter), loaded on first visit.
-const ChttrixDocs = lazy(() => import("./pages/ChttrixDocs"));
+const OruinwanDocs = lazy(() => import("./pages/OruinwanDocs"));
 // Plans and pricing: public, and reachable from the app (Settings, upgrade prompts).
 const Pricing = lazy(() => import("./pages/pricing/Pricing"));
 import Careers from "./pages/Careers";
@@ -143,7 +143,7 @@ import TeamAllocation from "./components/manager/TeamAllocation";
 import UnassignedMembers from "./components/manager/UnassignedMembers"; 
 import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; 
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
-import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
+import OruinwanAdminDashboard from "./pages/dashboards/OruinwanAdminDashboard";
 import AIInsightsDashboard from "./pages/dashboards/AIInsightsDashboard";
 import InsightsDashboard from "./pages/dashboards/InsightsDashboard";
 
@@ -155,7 +155,7 @@ import RequireAuth from "./components/RequireAuth";
 import RequireWorkspace from "./components/RequireWorkspace";
 import RequireAdmin from "./components/RequireAdmin";
 import RequireOwner from "./components/RequireOwner";
-import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
+import RequireOruinwanAdmin from "./components/RequireOruinwanAdmin";
 import RequireDepartmentManager from "./components/RequireDepartmentManager"; 
 import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; 
 import ScrollToTop from "./components/ScrollToTop"; 
@@ -163,12 +163,6 @@ import ScrollToTop from "./components/ScrollToTop";
 import MessagesLockedBanner from "./components/security/MessagesLockedBanner";
 import ApprovalPrompt from "./components/security/ApprovalPrompt";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
-
-// Old Oruinwan-era URLs (bookmarks, emails) keep working after the rename.
-function LegacyRedirect({ from, to }) {
-  const { pathname, search, hash } = useLocation();
-  return <Navigate to={`${to}${pathname.slice(from.length)}${search}${hash}`} replace />;
-}
 
 // Shown for a moment while the docs chunk loads (same dark backdrop as the docs).
 function DocsFallback() {
@@ -794,8 +788,7 @@ function App() {
                           <Route path="/" element={IS_APP ? <Navigate to="/login" replace /> : <Landing />} />
                           <Route path="/features" element={<Landing />} />
                           {/* /docs, /docs/:section and /docs/:section/:page (one route so the shell stays mounted) */}
-                          <Route path="/docs/*" element={<Suspense fallback={<DocsFallback />}><ChttrixDocs /></Suspense>} />
-                          <Route path="/chttrix-docs/*" element={<LegacyRedirect from="/chttrix-docs" to="/docs" />} />
+                          <Route path="/docs/*" element={<Suspense fallback={<DocsFallback />}><OruinwanDocs /></Suspense>} />
 
                           {}
                           <Route path="/about" element={<About />} />
@@ -1018,12 +1011,11 @@ function App() {
                           <Route
                             path="/platform-admin/*"
                             element={
-                              <RequireChttrixAdmin>
-                                <ChttrixAdminDashboard />
-                              </RequireChttrixAdmin>
+                              <RequireOruinwanAdmin>
+                                <OruinwanAdminDashboard />
+                              </RequireOruinwanAdmin>
                             }
                           />
-                          <Route path="/chttrix-admin/*" element={<LegacyRedirect from="/chttrix-admin" to="/platform-admin" />} />
                           {/* Unknown addresses go home instead of rendering an empty page */}
                           <Route path="*" element={<Navigate to="/" replace />} />
 

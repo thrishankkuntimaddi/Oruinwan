@@ -40,7 +40,7 @@ describe('write-manifest.mjs', () => {
       ORUINWAN_UPDATE_SIGNING_KEY: privateKey.export({ format: 'pem', type: 'pkcs8' }),
       ORUINWAN_UPDATE_PUBLIC_KEY: pub,
     });
-    expect(raw.bundles.phone.url).toBe('https://github.com/thrishankkuntimaddi/Oruniwan/releases/download/v9.1.0/Oruinwan-UI-phone.zip');
+    expect(raw.bundles.phone.url).toBe('https://github.com/thrishankkuntimaddi/Oruinwan/releases/download/v9.1.0/Oruinwan-UI-phone.zip');
     const m = normalizeManifest(raw);
     for (const target of ['phone', 'desktop']) {
       const b = m.bundles[target];

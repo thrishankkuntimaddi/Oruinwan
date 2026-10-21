@@ -4,7 +4,7 @@ name: Deploy web app
 # built with `vite --mode site`, with download links to the latest release. "Log in" and "Get
 # started" open the web app at VITE_WEB_APP_URL in a new tab (repository variable; unset, they
 # stay on the site and /login explains where to go).
-# Live at https://thrishankkuntimaddi.github.io/Oruniwan/
+# Live at https://thrishankkuntimaddi.github.io/Oruinwan/
 # One-time setup (done 2026-10-12): Settings → Pages → Build and deployment → Source: GitHub Actions.
 on:
   push:

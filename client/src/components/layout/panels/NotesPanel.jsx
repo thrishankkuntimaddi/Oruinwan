@@ -150,7 +150,7 @@ const NotesPanel = ({ title }) => {
     const [wsFilter, setWsFilter] = useState("all");
 
     
-    const GROUPS_KEY = `chttrix_note_groups_${workspaceId}`;
+    const GROUPS_KEY = `oruinwan_note_groups_${workspaceId}`;
     const [groups, setGroups] = useState(() => {
         try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); } catch { return []; }
     });

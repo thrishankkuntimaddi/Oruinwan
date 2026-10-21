@@ -7,10 +7,8 @@ const { logAction } = require('../../../utils/historyLogger');
 // Errors carry an HTTP status so the controller never turns them into a 500.
 const fail = (message, status) => Object.assign(new Error(message), { status });
 
-// New records use the Oruinwan prefix. The old Chttrix prefix is still accepted so domains
-// verified (or records published) before the rename keep working.
 const TXT_PREFIX = 'oruinwan-verification=';
-const ACCEPTED_PREFIXES = [TXT_PREFIX, 'chttrix-verification='];
+const ACCEPTED_PREFIXES = [TXT_PREFIX];
 
 function generateDomainVerificationToken() {
     const token = crypto.randomBytes(32).toString('hex');

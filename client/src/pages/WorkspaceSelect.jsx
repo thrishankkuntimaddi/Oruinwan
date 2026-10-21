@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import api from '@services/api';
 import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
-import ChttrixAIChat from "../components/ai/ChttrixAIChat/ChttrixAIChat";
+import OruinwanAIChat from "../components/ai/OruinwanAIChat/OruinwanAIChat";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 
 import Header from './workspaceSelectComponents/Header.jsx';
@@ -30,7 +30,7 @@ const WorkspaceSelect = () => {
 
     
     React.useEffect(() => {
-        if (user?.roles?.includes('chttrix_admin')) {
+        if (user?.roles?.includes('oruinwan_admin')) {
             navigate('/platform-admin', { replace: true });
         }
     }, [user, navigate]);
@@ -259,7 +259,7 @@ const WorkspaceSelect = () => {
             {showAI && (
                 <div className="gl-wsp-ai">
                     <WorkspaceProvider>
-                        <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
+                        <OruinwanAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                     </WorkspaceProvider>
                 </div>
             )}

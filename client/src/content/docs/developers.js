@@ -52,7 +52,7 @@ app.post('/oruinwan-webhook', express.raw({ type: 'application/json' }), (req, r
     .createHmac('sha256', process.env.ORUINWAN_WEBHOOK_SECRET)
     .update(req.body)                       // Buffer of the raw body
     .digest('hex');
-  const got = req.get('X-Chttrix-Signature') || '';
+  const got = req.get('X-Oruinwan-Signature') || '';
   const ok = got.length === expected.length &&
     crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected));
   if (!ok) return res.status(401).send('bad signature');
@@ -74,7 +74,7 @@ SECRET = os.environ["ORUINWAN_WEBHOOK_SECRET"].encode()
 def hook():
     raw = request.get_data()  # raw bytes
     expected = "sha256=" + hmac.new(SECRET, raw, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, request.headers.get("X-Chttrix-Signature", "")):
+    if not hmac.compare_digest(expected, request.headers.get("X-Oruinwan-Signature", "")):
         abort(401)
     payload = json.loads(raw)
     print(payload["event"], payload["data"])
@@ -248,14 +248,14 @@ oruinwan.realtime.on('new-message', (msg) => console.log(msg)); // encrypted pay
                     ['Raw', '`request(path, { method, body, params, auth: "auto" | "apiKey" | "bearer" | "none" })`'],
                     ['Errors', 'Every failure throws `OruinwanError` with `status`, `code` and `response`. GET requests retry on 408/425/429/5xx, honouring `Retry-After`.'],
                 ] } },
-                { callout: 'note', text: 'The SDK sends `X-Chttrix-SDK: js/1.1.0` with each request. Older code can keep using the `ChttrixSDK` alias.' },
+                { callout: 'note', text: 'The SDK sends `X-Oruinwan-SDK: js/1.1.0` with each request.' },
             ],
         },
         {
             id: 'webhooks',
             title: 'Webhooks: payloads and signatures',
-            summary: 'Signed JSON POSTs with X-Chttrix-Signature (HMAC-SHA256); how to verify them and how retries work.',
-            keywords: 'webhook webhooks signature verify hmac sha256 x-chttrix-signature payload retries events secret',
+            summary: 'Signed JSON POSTs with X-Oruinwan-Signature (HMAC-SHA256); how to verify them and how retries work.',
+            keywords: 'webhook webhooks signature verify hmac sha256 x-oruinwan-signature payload retries events secret',
             blocks: [
                 { figure: 'webhook-flow' },
                 { h: 'Subscribe' },
@@ -263,9 +263,9 @@ oruinwan.realtime.on('new-message', (msg) => console.log(msg)); // encrypted pay
                 { h: 'The request Oruinwan sends' },
                 { code: `POST /your/endpoint HTTP/1.1
 Content-Type: application/json
-X-Chttrix-Event: task.created
-X-Chttrix-Signature: sha256=5d7f…c1
-X-Chttrix-Delivery: 66f1…   (the webhook subscription id)
+X-Oruinwan-Event: task.created
+X-Oruinwan-Signature: sha256=5d7f…c1
+X-Oruinwan-Delivery: 66f1…   (the webhook subscription id)
 
 {
   "event": "task.created",
@@ -282,12 +282,12 @@ X-Chttrix-Delivery: 66f1…   (the webhook subscription id)
                     ['`webhook.test`', '`{ webhookId, message, triggeredBy }`'],
                 ] } },
                 { h: 'Verify the signature' },
-                '`X-Chttrix-Signature` is `sha256=` followed by the hex HMAC-SHA256 of the request body, keyed with your secret. Compute it over the **raw** body and compare in constant time:',
+                '`X-Oruinwan-Signature` is `sha256=` followed by the hex HMAC-SHA256 of the request body, keyed with your secret. Compute it over the **raw** body and compare in constant time:',
                 { codeTabs: [
                     { label: 'Node (Express)', lang: 'js', code: VERIFY_NODE },
                     { label: 'Python (Flask)', lang: 'python', code: VERIFY_PY },
                 ] },
-                { callout: 'note', text: 'The `X-Chttrix-*` header names (and the `chx_` key prefix) predate the product’s current name. They are part of the wire format and stay as they are.' },
+                { callout: 'note', text: 'API keys start with `chx_`. The prefix is part of the key format and stays as it is.' },
                 { h: 'Delivery and retries' },
                 { list: [
                     'Each delivery waits up to **8 seconds** for your response. Answer `2xx` quickly and do slow work afterwards.',

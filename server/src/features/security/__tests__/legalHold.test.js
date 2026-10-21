@@ -22,7 +22,7 @@ const mockUsers = {
   [ID.memberA]: { _id: ID.memberA, username: 'memberA', companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: { enabled: false } },
   [ID.targetA]: { _id: ID.targetA, username: 'targetA', companyId: 'A', companyRole: 'member', roles: ['user'], legalHold: { enabled: true, reason: 'Litigation' } },
   [ID.targetB]: { _id: ID.targetB, username: 'targetB', companyId: 'B', companyRole: 'member', roles: ['user'], legalHold: { enabled: false } },
-  [ID.staff]: { _id: ID.staff, username: 'staff', companyId: null, companyRole: 'member', roles: ['chttrix_admin'] },
+  [ID.staff]: { _id: ID.staff, username: 'staff', companyId: null, companyRole: 'member', roles: ['oruinwan_admin'] },
 };
 
 // Every identity repository resolves users through users.repo, so mocking it covers them all.

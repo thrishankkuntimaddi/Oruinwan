@@ -6,7 +6,7 @@ import { PageHero, Block } from '../../components/public/PublicKit';
 import BRAND from '../../shared/brand';
 
 // Stored user data: keep this key and the { analytics, preferences } shape.
-const STORAGE_KEY = 'chttrix_cookie_prefs';
+const STORAGE_KEY = 'oruinwan_cookie_prefs';
 const DEFAULT_PREFS = { analytics: true, preferences: true };
 
 const COOKIE_TYPES = [

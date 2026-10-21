@@ -42,7 +42,7 @@ const requireSuperAdmin = async (req, res, next) => {
   try {
     const user = await identity.users.findById(req.user.sub);
 
-    if (user && user.roles.includes('chttrix_admin')) {
+    if (user && user.roles.includes('oruinwan_admin')) {
       next();
     } else {
       res.status(403).json({ message: "Access denied: Super Admin only" });

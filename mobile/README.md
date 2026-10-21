@@ -127,7 +127,7 @@ permanent key, or phones will refuse to update.
    | `Oruinwan-Windows-Setup.exe` | Windows 10 and 11 |
    | `Oruinwan-Linux.AppImage`, `Oruinwan-Linux.deb` | Linux |
 
-   The names never change, so `https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/<file>`
+   The names never change, so `https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/<file>`
    always points at the newest build.
 5. Installed apps see the update the next time they open (or from Settings → Updates).
 

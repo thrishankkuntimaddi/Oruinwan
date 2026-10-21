@@ -744,12 +744,12 @@ const { task } = await client.tasks.create({ title: 'New task' });`}</code></pre
       content: (
         <div>
           <p>When an event occurs, Oruinwan POSTs a JSON payload to your endpoint with these headers:</p>
-          <pre><code>{`X-Chttrix-Event: task.created
-X-Chttrix-Signature: sha256=<hmac>
-X-Chttrix-Delivery: <webhook-id>`}</code></pre>
+          <pre><code>{`X-Oruinwan-Event: task.created
+X-Oruinwan-Signature: sha256=<hmac>
+X-Oruinwan-Delivery: <webhook-id>`}</code></pre>
           <p className="dp-docs-note">
             These are legacy header names kept for compatibility with existing receivers; they are the wire contract and will not change.
-            Verify <code>X-Chttrix-Signature</code> as an HMAC-SHA256 of the raw request body using the signing secret shown when the webhook was created.
+            Verify <code>X-Oruinwan-Signature</code> as an HMAC-SHA256 of the raw request body using the signing secret shown when the webhook was created.
           </p>
           <h4>Payload shape</h4>
           <pre><code>{`{

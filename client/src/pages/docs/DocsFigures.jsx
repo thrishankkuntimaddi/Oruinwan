@@ -240,7 +240,7 @@ const FLOWS = {
     'webhook-flow': [
         { nodes: [{ icon: CheckSquare, title: 'Something happens', sub: 'task.created, message.sent…' }] },
         { link: 'POST, HMAC-SHA256' },
-        { nodes: [{ icon: Send, title: 'Your endpoint', sub: 'checks X-Chttrix-Signature' }] },
+        { nodes: [{ icon: Send, title: 'Your endpoint', sub: 'checks X-Oruinwan-Signature' }] },
         { link: '2xx' },
         { nodes: [{ icon: ShieldCheck, title: 'Delivered', sub: 'else retried (3 attempts)' }] },
     ],

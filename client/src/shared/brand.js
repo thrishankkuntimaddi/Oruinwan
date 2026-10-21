@@ -1,7 +1,4 @@
 // Single source of truth for user-facing brand strings.
-// Some internal identifiers keep a legacy `chttrix` prefix (roles like `chttrix_admin`, storage
-// keys, webhook headers) because renaming them would break existing data and integrations.
-// Old `/chttrix-admin` and `/chttrix-docs` URLs redirect.
 export const BRAND = {
     name: 'Oruinwan',
     company: 'Oruinwan Inc.',

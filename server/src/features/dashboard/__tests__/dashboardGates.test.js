@@ -78,7 +78,7 @@ beforeEach(() => {
     store.addUser({ _id: GUEST, companyId: C1, companyRole: 'guest' });
     store.addUser({ _id: ADMIN_B, companyId: C2, companyRole: 'admin' });
     store.addUser({ _id: CO_OWNER, companyId: C1, companyRole: 'member', coOwnerOf: C1 });
-    store.addUser({ _id: STAFF, companyId: null, companyRole: 'member', roles: ['user', 'chttrix_admin'] });
+    store.addUser({ _id: STAFF, companyId: null, companyRole: 'member', roles: ['user', 'oruinwan_admin'] });
     Task.find.mockImplementation(() => h.query([{ title: 't' }]));
     Note.find.mockImplementation(() => h.query([]));
     Update.find.mockImplementation(() => h.query([]));

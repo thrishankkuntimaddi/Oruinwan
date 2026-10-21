@@ -13,7 +13,7 @@ const E2E = {
   webPort,
   apiUrl: `http://localhost:${apiPort}`,
   webUrl: `http://localhost:${webPort}`,
-  mongoUri: process.env.E2E_MONGO_URI || 'mongodb://127.0.0.1:27017/chttrix_e2e',
+  mongoUri: process.env.E2E_MONGO_URI || 'mongodb://127.0.0.1:27017/oruinwan_e2e',
   // Identity lives in PostgreSQL. Defaults match docker-compose.yml; the database is created per run.
   databaseUrl: process.env.E2E_DATABASE_URL || 'postgres://oruinwan:oruinwan-dev@127.0.0.1:5432/oruinwan_e2e',
   accessTokenSecret: 'e2e-access-token-secret-not-for-production',

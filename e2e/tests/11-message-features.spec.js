@@ -124,8 +124,8 @@ test.describe('message features', () => {
       contentType: 'application/json', body: JSON.stringify({ translated: 'Hola desde Alice', detectedLang: 'en' }),
     }));
     await bob.evaluate(() => {
-      localStorage.setItem('chttrix.autoTranslateLang', 'es');
-      window.dispatchEvent(new CustomEvent('chttrix:auto-translate-changed', { detail: 'es' }));
+      localStorage.setItem('oruinwan.autoTranslateLang', 'es');
+      window.dispatchEvent(new CustomEvent('oruinwan:auto-translate-changed', { detail: 'es' }));
     });
     const text = `hello from alice ${Date.now()}`;
     await sendLines(alice, [text]);
@@ -133,8 +133,8 @@ test.describe('message features', () => {
     // Alice's own copy is never auto-translated.
     await expect(alice.locator('[id^="msg-"]').filter({ hasText: text })).not.toContainText('Hola');
     await bob.evaluate(() => {
-      localStorage.removeItem('chttrix.autoTranslateLang');
-      window.dispatchEvent(new CustomEvent('chttrix:auto-translate-changed', { detail: '' }));
+      localStorage.removeItem('oruinwan.autoTranslateLang');
+      window.dispatchEvent(new CustomEvent('oruinwan:auto-translate-changed', { detail: '' }));
     });
     await bob.unroute('**/api/v2/messages/ai/translate');
   });

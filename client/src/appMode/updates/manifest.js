@@ -3,7 +3,7 @@
 import { compareVersions, parseVersion } from './version.js';
 import { normalizeBundles } from './bundle.js';
 
-export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
+export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan';
 export const RELEASES_URL = `${REPO_URL}/releases/latest`;
 export const MANIFEST_URL = `${REPO_URL}/releases/latest/download/latest.json`;
 

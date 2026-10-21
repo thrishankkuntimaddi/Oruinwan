@@ -41,7 +41,7 @@ export default function AICommandBox({ workspaceId, isOpen, onClose }) {
     const handleSubmit = async (text = command) => {
         if (!text.trim() || loading) return;
         if (!workspaceId) { setError('Open a workspace first, then try again.'); return; }
-        window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt: text.trim() } }));
+        window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt: text.trim() } }));
         onClose?.();
     };
 

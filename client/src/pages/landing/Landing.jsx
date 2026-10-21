@@ -20,7 +20,7 @@ import './landing.css';
 
 // Release files keep the same names in every release (.github/workflows/apps.yml), so these
 // links always fetch the newest version.
-const RELEASE_DOWNLOADS = 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest/download/';
+const RELEASE_DOWNLOADS = 'https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/';
 const DESKTOP_DOWNLOADS = [
     { label: 'Mac · Apple Silicon', file: 'Oruinwan-Mac-AppleSilicon.dmg', primary: true },
     { label: 'Mac · Intel', file: 'Oruinwan-Mac-Intel.dmg' },

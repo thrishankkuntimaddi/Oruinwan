@@ -62,7 +62,7 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     if (gcsPath.startsWith('verification_docs/')) {
         const requester = await require('../../identity').users.findById(userId);
         const roles = requester?.roles || [];
-        return roles.includes('platform-admin') || roles.includes('chttrix_admin');
+        return roles.includes('platform-admin') || roles.includes('oruinwan_admin');
     }
 
     // Workspace file library (current content or any version): active members, and

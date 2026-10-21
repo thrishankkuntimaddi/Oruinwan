@@ -14,7 +14,7 @@ export const NAV_LINKS = [
     { id: 'pricing', label: 'Pricing', to: '/pricing' },
 ];
 
-export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
+export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan';
 
 // ── Hero product mock ──────────────────────────────────────────────────
 // Example teammates are roles, not people.

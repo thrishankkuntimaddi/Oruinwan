@@ -606,7 +606,7 @@ async function finishPasswordLogin(req, res, user, { signIn = null } = {}) {
     }
 
     
-    if (user.roles && user.roles.includes('chttrix_admin')) {
+    if (user.roles && user.roles.includes('oruinwan_admin')) {
       redirectTo = "/platform-admin";
     }
 

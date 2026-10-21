@@ -7,7 +7,7 @@ import { useWorkspace } from '../../../contexts/WorkspaceContext';
 import logger from '../../../utils/logger';
 import InvitePeopleModal from '../../../components/InvitePeopleModal';
 
-const APPS_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan/releases/latest';
+const APPS_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest';
 
 const hasOwnPhoto = (user) => Boolean(user?.profilePicture) && !/api\.dicebear\.com/.test(user.profilePicture);
 
@@ -57,7 +57,7 @@ export default function GettingStarted({ workspaceId, compact = false, variant }
         },
         { key: 'message', Icon: Hash, title: 'Say hello in #general', sub: 'Send your first message', run: openGeneral },
         { key: 'profile', Icon: Camera, title: 'Add a profile photo', sub: 'Help your team recognise you', auto: hasOwnPhoto(user), run: () => navigate('/settings') },
-        { key: 'ai', Icon: Sparkles, title: 'Ask Oruinwan AI anything', sub: 'Summaries, drafts and answers', run: () => window.dispatchEvent(new CustomEvent('chttrix-ai:open')) },
+        { key: 'ai', Icon: Sparkles, title: 'Ask Oruinwan AI anything', sub: 'Summaries, drafts and answers', run: () => window.dispatchEvent(new CustomEvent('oruinwan-ai:open')) },
         { key: 'note', Icon: NotebookPen, title: 'Write your first note', sub: 'Plans, docs and meeting notes', run: () => navigate(`/workspace/${workspaceId}/notes`) },
         { key: 'apps', Icon: Download, title: 'Get the desktop and phone apps', sub: 'Stay in touch on the go', run: () => window.open(APPS_URL, '_blank', 'noopener') },
         // eslint-disable-next-line react-hooks/exhaustive-deps

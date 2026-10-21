@@ -59,9 +59,9 @@ async function _sendWithRetry(hook, payload, attempt = 0) {
       timeout: 8000,
       headers: {
         'Content-Type': 'application/json',
-        'X-Chttrix-Event': payload.event,
-        'X-Chttrix-Signature': signature,
-        'X-Chttrix-Delivery': hook._id.toString()
+        'X-Oruinwan-Event': payload.event,
+        'X-Oruinwan-Signature': signature,
+        'X-Oruinwan-Delivery': hook._id.toString()
       }
     });
 
@@ -121,9 +121,9 @@ function _sleep(ms) {
 function _headers(event, signature, deliveryId) {
   return {
     'Content-Type': 'application/json',
-    'X-Chttrix-Event': event,
-    'X-Chttrix-Signature': signature,
-    'X-Chttrix-Delivery': deliveryId
+    'X-Oruinwan-Event': event,
+    'X-Oruinwan-Signature': signature,
+    'X-Oruinwan-Delivery': deliveryId
   };
 }
 

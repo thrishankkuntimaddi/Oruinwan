@@ -40,7 +40,7 @@ const TOOL_PROGRESS = {
   remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 
-const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPromptConsumed }) => {
+const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPromptConsumed }) => {
   const { activeWorkspace } = useWorkspace();
   const aiCtx = useAIContext();
   const { showToast } = useToast();
@@ -627,4 +627,4 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   );
 };
 
-export default ChttrixAIChat;
+export default OruinwanAIChat;

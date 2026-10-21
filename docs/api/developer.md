@@ -1,7 +1,7 @@
 # Developer platform: app marketplace
 
 Developers build apps for every Oruinwan workspace. An app goes through review by a platform admin
-(role `chttrix_admin`, the Platform admin console at `/platform-admin/marketplace`) before it is listed.
+(role `oruinwan_admin`, the Platform admin console at `/platform-admin/marketplace`) before it is listed.
 Installing an app gives it a workspace-scoped **app token** for the [public API](public-api.md).
 
 Server: `server/src/features/developer/` (`app.model.js`, `appInstall.service.js`, `myApps.routes.js`,

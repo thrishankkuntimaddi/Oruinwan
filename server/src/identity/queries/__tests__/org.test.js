@@ -38,7 +38,7 @@ describe('toWhere', () => {
 
     test('jsonb paths, array columns, null and ObjectId-like values', () => {
         expect(org.toWhere('users', { 'profile.name': 'Ada' }).where).toBe("(users.profile #>> '{name}') = $1");
-        expect(org.toWhere('users', { roles: 'chttrix_admin' }).where).toBe('$1 = ANY(users.roles)');
+        expect(org.toWhere('users', { roles: 'oruinwan_admin' }).where).toBe('$1 = ANY(users.roles)');
         expect(org.toWhere('users', { companyId: null }).where).toBe('users.company_id IS NULL');
         expect(org.toWhere('users', { companyId: { $ne: null } }).where).toBe('users.company_id IS NOT NULL');
         expect(org.toWhere('users', { companyId: { toHexString: () => 'x', toString: () => 'abc' } }).params).toEqual(['abc']);

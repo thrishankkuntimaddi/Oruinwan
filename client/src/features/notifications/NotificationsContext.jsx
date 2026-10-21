@@ -130,7 +130,7 @@ export function NotificationsProvider({ children }) {
         [conversationUnread]
     );
     useEffect(() => {
-        window.chttrixDesktop?.setUnreadCount(unreadCount + totalConversationUnread);
+        window.oruinwanDesktopBridge?.setUnreadCount(unreadCount + totalConversationUnread);
     }, [unreadCount, totalConversationUnread]);
 
     // Decrypt the E2EE preview stored on dm/mention notifications so the bell

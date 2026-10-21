@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "desktopName": "oruinwan.desktop",
   "private": true,
-  "homepage": "https://github.com/thrishankkuntimaddi/Oruniwan",
+  "homepage": "https://github.com/thrishankkuntimaddi/Oruinwan",
   "author": "Oruinwan Inc.",
   "license": "MIT",
   "scripts": {

@@ -3,7 +3,7 @@
 // with PLAN_LIMITS_JSON / DEVICE_LIMIT, or turn them off with ORUINWAN_UNLIMITED).
 
 export const NOTIFY_EMAIL = 'admin@poelys.com';
-export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
+export const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan';
 
 /** What the Free plan includes, as short label/value rows. */
 export const FREE_LIMITS = [

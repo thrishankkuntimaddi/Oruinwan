@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 // Per-user, per-browser preference: translate incoming messages into this language
 // automatically ('' = off). Stored locally; translation itself runs on demand.
-const KEY = 'chttrix.autoTranslateLang';
-const EVENT = 'chttrix:auto-translate-changed';
+const KEY = 'oruinwan.autoTranslateLang';
+const EVENT = 'oruinwan:auto-translate-changed';
 
 export function getAutoTranslateLang() {
     try { return localStorage.getItem(KEY) || ''; } catch { return ''; }

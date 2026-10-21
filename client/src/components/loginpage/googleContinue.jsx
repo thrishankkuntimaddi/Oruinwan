@@ -41,7 +41,7 @@ export function finishGoogleSession(data, { setUser, navigate, adoptSession }) {
     const pendingInvite = localStorage.getItem('pendingInvite');
     if (pendingInvite) { navigate(`/join-workspace?token=${pendingInvite}`); return; }
     if (data.redirectTo) { navigate(data.redirectTo); return; }
-    if (data.user?.roles?.includes('chttrix_admin')) navigate('/platform-admin');
+    if (data.user?.roles?.includes('oruinwan_admin')) navigate('/platform-admin');
     else if (data.user?.companyRole === 'owner') navigate('/owner/dashboard');
     else navigate('/workspaces');
 }

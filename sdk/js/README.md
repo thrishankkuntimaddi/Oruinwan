@@ -66,8 +66,4 @@ await oruinwan.request('/api/v2/tasks', { params: { workspaceId }, auth: 'bearer
 
 ## Webhook and SDK headers
 
-Requests carry an `X-Chttrix-SDK: js/<version>` header, and webhook deliveries use `X-Chttrix-*` headers. These names predate the rename to Oruinwan and are kept as-is because they are part of the wire contract with the server.
-
-## Deprecated names
-
-`ChttrixSDK`, `ChttrixError` (and the `ChttrixSDKOptions` type) are still exported as deprecated aliases of `OruinwanSDK`, `OruinwanError` and `OruinwanSDKOptions`. In the browser build both `window.OruinwanSDK` and `window.ChttrixSDK` are set. New code should use the Oruinwan names.
+Requests carry an `X-Oruinwan-SDK: js/<version>` header, and webhook deliveries use `X-Oruinwan-*` headers.

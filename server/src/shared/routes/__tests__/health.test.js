@@ -4,7 +4,7 @@
 process.env.ACCESS_TOKEN_SECRET = 'health-test-secret';
 const jwt = require('jsonwebtoken');
 
-const mockUsers = { admin: { roles: ['user', 'chttrix_admin'] }, member: { roles: ['user'] } };
+const mockUsers = { admin: { roles: ['user', 'oruinwan_admin'] }, member: { roles: ['user'] } };
 jest.mock('mongoose', () => ({ connection: { readyState: 1 } }));
 jest.mock('../../postgres', () => ({ postgresStatus: async () => 'ok' }));
 jest.mock('../../jobs/scheduler', () => ({ scheduledJobs: () => ['reminders'] }));

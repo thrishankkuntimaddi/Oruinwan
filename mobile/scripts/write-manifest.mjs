@@ -25,7 +25,7 @@ const opt = (name) => {
 };
 const all = (name) => rest.flatMap((v, i) => (rest[i - 1] === `--${name}` ? [v] : []));
 const version = opt('version') || JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
-const repo = process.env.GITHUB_REPOSITORY || 'thrishankkuntimaddi/Oruniwan';
+const repo = process.env.GITHUB_REPOSITORY || 'thrishankkuntimaddi/Oruinwan';
 const tag = process.env.RELEASE_TAG || `v${version}`;
 const asset = (name) => `https://github.com/${repo}/releases/download/${tag}/${name}`;
 // Stable names (see .github/workflows/apps.yml), so releases/latest/download/<name> links never change.

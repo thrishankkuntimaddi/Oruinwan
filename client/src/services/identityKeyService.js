@@ -7,12 +7,15 @@ import {
     checkCryptoSupport
 } from '../utils/cryptoIdentity';
 import logger from '../utils/logger';
+import { migrateLegacyIndexedDbOnce } from '../utils/legacyStorage';
 
-const DB_NAME = 'ChttrixE2EE';
+const DB_NAME = 'OruinwanE2EE';
 const DB_VERSION = 1;
 const STORE_NAME = 'identityKeys';
 
-function openDatabase() {
+async function openDatabase() {
+    // Keys saved before the rename live in the old ChttrixE2EE database.
+    await migrateLegacyIndexedDbOnce('ChttrixE2EE', DB_NAME, STORE_NAME);
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 

@@ -22,8 +22,8 @@ const apiProxyTarget = loadEnv(process.env.NODE_ENV === 'production' ? 'producti
 // worker). App and site bundles ship without them, which keeps the Android/iOS app small; the
 // server-hosted client keeps them.
 const NOT_IN_APPS = [
-  'assets/Background.jpg', 'assets/ChttrixAI-logo.png', 'assets/ChttrixFavico.png',
-  'ChttrixAI-animation.mp4', 'hover-animation.mp4', 'chttrix-logo.jpg',
+  'assets/Background.jpg', 'assets/OruinwanAI-logo.png', 'assets/OruinwanFavico.png',
+  'OruinwanAI-animation.mp4', 'hover-animation.mp4', 'oruinwan-logo.jpg',
   'icons/Oruinwan.png', 'sw.js',
 ];
 // Both post-build plugins use the resolved outDir, so `vite build --outDir …` works too.

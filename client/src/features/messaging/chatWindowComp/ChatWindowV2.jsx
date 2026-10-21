@@ -229,7 +229,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             case 'poll':
                 if (!features.polls) { showToast('Polls are turned off in this workspace.', 'info'); return true; }
                 setShowPollModal(true); return true;
-            case 'ai': window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt: args || null } })); return true;
+            case 'ai': window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt: args || null } })); return true;
             default: return false;
         }
     };

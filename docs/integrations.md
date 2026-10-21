@@ -329,7 +329,7 @@ request**, POST, body Raw/JSON. n8n — **HTTP Request** node, POST, JSON body.
 **Outbound** (Oruinwan → the tool) uses **Outgoing webhooks** on the same page: add the tool's
 catch-hook URL (Zapier "Catch Hook", Make "Custom webhook", n8n "Webhook" node) and pick events
 (`task.created`, `task.completed`, `message.sent` metadata, …). Requests are signed with
-`X-Chttrix-Signature: sha256=<HMAC of the body>`.
+`X-Oruinwan-Signature: sha256=<HMAC of the body>`.
 
 ### Incoming webhooks (Slack-compatible)
 

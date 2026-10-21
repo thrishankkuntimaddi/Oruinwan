@@ -47,9 +47,9 @@ const NAV = [
 /**
  * Oruinwan staff console (/platform-admin/*). Same frame as the company
  * consoles (cd-shell): grouped sidebar, glass top bar, drawer below 900px.
- * Access is guarded by RequireChttrixAdmin in App.js.
+ * Access is guarded by RequireOruinwanAdmin in App.js.
  */
-const ChttrixAdminDashboard = () => {
+const OruinwanAdminDashboard = () => {
     const { user, logout } = useAuth();
     const { resolvedTheme, toggleTheme } = useTheme() || {};
     const navigate = useNavigate();
@@ -178,4 +178,4 @@ const ChttrixAdminDashboard = () => {
     );
 };
 
-export default ChttrixAdminDashboard;
+export default OruinwanAdminDashboard;

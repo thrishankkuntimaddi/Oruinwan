@@ -8,8 +8,7 @@
  *   import { OruinwanSDK } from '@oruinwan/sdk';                 // ESM (via bundler)
  *   <script src="oruinwan-sdk.js"></script> → window.OruinwanSDK // Browser
  *
- *   ChttrixSDK / ChttrixError (and window.ChttrixSDK) remain as deprecated aliases.
- *   Requests carry the legacy-named `X-Chttrix-SDK` header (wire contract, unchanged).
+ *   Requests carry an `X-Oruinwan-SDK: js/<version>` header.
  *
  *   // Server-to-server with an API key (Developer Portal → API keys)
  *   const oruinwan = new OruinwanSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
@@ -29,8 +28,6 @@
   } else {
     const api = factory();
     root.OruinwanSDK = api.OruinwanSDK;
-    /** @deprecated use window.OruinwanSDK */
-    root.ChttrixSDK = api.OruinwanSDK;
   }
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
@@ -131,7 +128,7 @@
       const { method = 'GET', body, params, auth = 'auto', headers = {}, raw = false, _retried = false } = opts;
       const url = `${this.baseUrl}${path}${buildQuery(params)}`;
 
-      const reqHeaders = { Accept: 'application/json', 'X-Chttrix-SDK': `js/${VERSION}`, ...headers };
+      const reqHeaders = { Accept: 'application/json', 'X-Oruinwan-SDK': `js/${VERSION}`, ...headers };
       if (body !== undefined && !(typeof FormData !== 'undefined' && body instanceof FormData)) {
         reqHeaders['Content-Type'] = 'application/json';
       }
@@ -345,9 +342,5 @@
     OruinwanSDK,
     OruinwanError,
     VERSION,
-    /** @deprecated use OruinwanSDK */
-    ChttrixSDK: OruinwanSDK,
-    /** @deprecated use OruinwanError */
-    ChttrixError: OruinwanError,
   };
 }));

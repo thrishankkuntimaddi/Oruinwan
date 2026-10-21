@@ -54,7 +54,7 @@ const BUNDLED_APP_DIR = path.join(__dirname, '..', 'app');
 let appUi = { dir: BUNDLED_APP_DIR, version: '', source: 'bundled', pending: false };
 // A downloaded UI must confirm it started within this time, or the app goes back (ota.js).
 const BOOT_WATCHDOG_MS = 45_000;
-const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruniwan';
+const REPO_URL = 'https://github.com/thrishankkuntimaddi/Oruinwan';
 
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:']);
 const GRANTABLE = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write', 'media', 'fullscreen']);

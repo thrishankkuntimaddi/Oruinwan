@@ -83,7 +83,7 @@ describe('create-workspace wizard', () => {
 describe('getting started checklist', () => {
     it('ticks a step when opened, saves it, and can be hidden', async () => {
         const opened = vi.fn();
-        window.addEventListener('chttrix-ai:open', opened);
+        window.addEventListener('oruinwan-ai:open', opened);
         render(<MemoryRouter><GettingStarted workspaceId="ws1" /></MemoryRouter>);
 
         expect(screen.getByText('0 of 6 done')).toBeTruthy();
@@ -95,7 +95,7 @@ describe('getting started checklist', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Hide getting started' }));
         expect(screen.queryByTestId('getting-started')).toBeNull();
         expect(api.put).toHaveBeenLastCalledWith('/api/auth/me', { preferences: { gettingStarted: { hidden: true } } });
-        window.removeEventListener('chttrix-ai:open', opened);
+        window.removeEventListener('oruinwan-ai:open', opened);
     });
 
     it('opens the invite window from "Invite your teammates"', () => {

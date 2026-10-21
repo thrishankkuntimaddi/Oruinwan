@@ -370,7 +370,7 @@ function NotFound({ searchRef }) {
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────
-export default function ChttrixDocs() {
+export default function OruinwanDocs() {
     // Mounted at /docs/*: the rest of the path is "section/page".
     const [sectionId, pageId, extra] = (useParams()['*'] || '').split('/').filter(Boolean);
     const { pathname } = useLocation();

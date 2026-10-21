@@ -234,7 +234,7 @@ export async function decryptMessage(ciphertext, messageIv, sharedSecret) {
 }
 
 export async function storeKeys(userId, privateKey) {
-    const dbName = 'ChttrixEncryption';
+    const dbName = 'OruinwanEncryption';
     const storeName = 'keys';
 
     return new Promise((resolve, reject) => {
@@ -272,7 +272,7 @@ export async function storeKeys(userId, privateKey) {
 }
 
 export async function getStoredKeys(userId) {
-    const dbName = 'ChttrixEncryption';
+    const dbName = 'OruinwanEncryption';
     const storeName = 'keys';
 
     return new Promise((resolve, reject) => {
@@ -314,7 +314,7 @@ export async function getStoredKeys(userId) {
 }
 
 export async function clearKeys(userId) {
-    const dbName = 'ChttrixEncryption';
+    const dbName = 'OruinwanEncryption';
     const storeName = 'keys';
 
     return new Promise((resolve, reject) => {

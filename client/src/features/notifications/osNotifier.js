@@ -9,7 +9,7 @@ const open = new Map(); // tag -> Notification
 
 export function osNotificationsAvailable() {
     if (typeof window === 'undefined') return false;
-    if (window.chttrixDesktop?.notify) return true;
+    if (window.oruinwanDesktopBridge?.notify) return true;
     return typeof window.Notification !== 'undefined' && window.Notification.permission === 'granted';
 }
 
@@ -20,9 +20,9 @@ export function osNotificationsAvailable() {
 export function showOsNotification({ title, body, tag, silent = false, onClick, route = {} }) {
     if (typeof window === 'undefined') return false;
     try {
-        if (window.chttrixDesktop?.notify) {
+        if (window.oruinwanDesktopBridge?.notify) {
             // The desktop app formats 'message'/'mention' from senderName/preview/channelName.
-            window.chttrixDesktop.notify({
+            window.oruinwanDesktopBridge.notify({
                 type: route.type || 'system',
                 title,
                 body,

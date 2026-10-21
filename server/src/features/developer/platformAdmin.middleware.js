@@ -6,7 +6,7 @@
  * requireAuth. Sets req.platformAdmin = { id }.
  */
 
-const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+const PLATFORM_ADMIN_ROLES = ['oruinwan_admin', 'platform-admin'];
 
 async function isPlatformAdmin(userId) {
     if (!userId) return false;

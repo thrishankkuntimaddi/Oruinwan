@@ -18,7 +18,7 @@ const Message = require("../src/modules/messages/message.model.js"); // Import M
 // Load environment variables
 require('dotenv').config();
 
-const MONGODB_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chttrix';
+const MONGODB_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/oruinwan';
 
 async function runMigration() {
     const command = process.argv[2];

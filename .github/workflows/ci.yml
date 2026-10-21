@@ -79,7 +79,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      E2E_MONGO_URI: mongodb://127.0.0.1:27017/chttrix_e2e
+      E2E_MONGO_URI: mongodb://127.0.0.1:27017/oruinwan_e2e
       # The E2E stack drops, recreates and migrates this database on every run.
       E2E_DATABASE_URL: postgres://oruinwan:oruinwan-dev@127.0.0.1:5432/oruinwan_e2e
     steps:

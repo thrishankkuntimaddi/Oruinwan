@@ -1,5 +1,5 @@
 // Per-user storage for OruinwanAI chat history (cleared on logout).
-export const AI_HISTORY_KEY_PREFIX = 'chttrixai_chat_history';
+export const AI_HISTORY_KEY_PREFIX = 'oruinwanai_chat_history';
 const LEGACY_GLOBAL_KEY = AI_HISTORY_KEY_PREFIX;
 
 export const aiHistoryKey = (userId) => (userId ? `${AI_HISTORY_KEY_PREFIX}:${userId}` : null);

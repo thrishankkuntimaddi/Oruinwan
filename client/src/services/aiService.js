@@ -138,7 +138,7 @@ export async function chatStream({ message, history = [], workspaceId = null, co
 /** Ask the open composer to insert text (handled by footerInput). */
 export function insertIntoComposer(text) {
     if (!text) return false;
-    document.dispatchEvent(new CustomEvent('chttrix:composer:insert', { detail: { text } }));
+    document.dispatchEvent(new CustomEvent('oruinwan:composer:insert', { detail: { text } }));
     return true;
 }
 

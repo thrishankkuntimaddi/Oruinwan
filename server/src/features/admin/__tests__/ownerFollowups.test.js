@@ -130,7 +130,7 @@ describe('POST /api/companies/:id/domain/verify', () => {
     it('answers 400 when the record is missing, 200 when it matches', async () => {
         dns.resolveTxt.mockResolvedValue([['something-else']]);
         expect((await h.call(app(), 'POST', `/api/companies/${C1}/domain/verify`, ADMIN)).status).toBe(400);
-        dns.resolveTxt.mockResolvedValue([['chttrix-verification=tok']]);
+        dns.resolveTxt.mockResolvedValue([['oruinwan-verification=tok']]);
         expect((await h.call(app(), 'POST', `/api/companies/${C1}/domain/verify`, ADMIN)).status).toBe(200);
         expect(store.state.companies.get(C1).domainVerified).toBe(true);
     });

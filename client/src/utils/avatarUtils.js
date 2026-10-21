@@ -65,9 +65,9 @@ function knownPicture(user) {
  * caller has (some only get a name), so the same person always gets the same face.
  */
 export function getAvatarSeed(user) {
-  if (!user) return 'chttrix';
+  if (!user) return 'oruinwan';
   if (typeof user === 'string') return user.trim().toLowerCase();
-  const seed = user.username || user.email?.split('@')[0] || userId(user) || 'chttrix';
+  const seed = user.username || user.email?.split('@')[0] || userId(user) || 'oruinwan';
   return String(seed).trim().toLowerCase();
 }
 

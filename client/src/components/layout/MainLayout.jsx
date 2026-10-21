@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
-import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
+import OruinwanAIChat from "../ai/OruinwanAIChat/OruinwanAIChat";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications, notificationHref } from "../../features/notifications/NotificationsContext";
 import { notificationTypeMeta, timeAgo } from "../../features/notifications/notificationTypes";
@@ -219,8 +219,8 @@ const MainLayout = ({ children, sidePanel }) => {
     // The composer's AI button and /ai command open the assistant (optionally with a question).
     useEffect(() => {
         const open = (e) => { setShowAI(true); if (e.detail?.prompt) setAIPrompt(e.detail.prompt); };
-        window.addEventListener('chttrix-ai:open', open);
-        return () => window.removeEventListener('chttrix-ai:open', open);
+        window.addEventListener('oruinwan-ai:open', open);
+        return () => window.removeEventListener('oruinwan-ai:open', open);
     }, []);
     const [aiWidth, setAiWidth] = useState(350);
     // One width for every side panel (Home, Channels, Messages, Notes…): the
@@ -544,7 +544,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                     paddingBottom: isMobile ? '54px' : 0,
                                 }}
                             >
-                                <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} initialPrompt={aiPrompt} onPromptConsumed={() => setAIPrompt(null)} />
+                                <OruinwanAIChat onClose={() => setShowAI(false)} isSidebar={true} initialPrompt={aiPrompt} onPromptConsumed={() => setAIPrompt(null)} />
                             </div>
                         </>
                     )}

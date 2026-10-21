@@ -48,9 +48,9 @@ const LoginPage = () => {
             const needsPasswordSetup = localStorage.getItem('oauthPasswordSetupRequired') === 'true';
             if (needsPasswordSetup) return;
             if (user.isTemporaryPassword === true && user.passwordInitialized === false) return;
-            const isChttrixAdmin = user.roles?.includes('chttrix_admin');
+            const isOruinwanAdmin = user.roles?.includes('oruinwan_admin');
             const isOwner = user.companyRole === 'owner';
-            if (isChttrixAdmin) navigate('/platform-admin', { replace: true });
+            if (isOruinwanAdmin) navigate('/platform-admin', { replace: true });
             else if (isOwner) navigate('/owner/dashboard', { replace: true });
             else navigate('/workspaces', { replace: true });
         }

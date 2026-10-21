@@ -27,7 +27,7 @@ jest.mock('../../../identity/workspaces.repo', () => ({
 }));
 jest.mock('../../../identity/users.repo', () => ({
   ...jest.requireActual('../../../identity/users.repo'),
-  findById: jest.fn(async (id) => ({ _id: String(id), roles: String(id) === '64b0000000000000000000ee' ? ['chttrix_admin'] : [] })),
+  findById: jest.fn(async (id) => ({ _id: String(id), roles: String(id) === '64b0000000000000000000ee' ? ['oruinwan_admin'] : [] })),
   findManyByIds: jest.fn(async (ids) => new Map(ids.map((id) => [id, { _id: id, username: `user-${id.slice(-2)}` }]))),
 }));
 jest.mock('../../../identity/orgs.repo', () => ({

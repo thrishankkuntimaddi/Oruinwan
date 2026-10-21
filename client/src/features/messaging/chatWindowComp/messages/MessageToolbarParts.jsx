@@ -234,7 +234,7 @@ const CODE_IN_MESSAGE = /```[\s\S]*?```|`[^`\n]*(?:\(|\)|=|;|=>|\{|\})[^`\n]*`/;
 /** Ask Oruinwan AI (side panel) to review the code in a message. */
 function reviewCodeWithAI(text) {
     const prompt = `Review this code. Point out bugs, security risks and edge cases, and suggest improvements:\n\n${text}`;
-    window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt } }));
+    window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt } }));
 }
 
 export function useMessageToolbar({

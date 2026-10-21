@@ -19,7 +19,7 @@ export function routeAfterPasswordLogin(response, navigate) {
     if (pendingInvite) { navigate(`/join-workspace?token=${pendingInvite}`); return; }
     if (response?.redirectTo) { navigate(response.redirectTo); return; }
     if (response?.user?.companyStatus === 'pending' || response?.user?.companyStatus === 'pending_verification') { navigate('/pending-verification'); return; }
-    if (response?.user?.roles?.includes('chttrix_admin')) { navigate('/platform-admin'); return; }
+    if (response?.user?.roles?.includes('oruinwan_admin')) { navigate('/platform-admin'); return; }
     const companyRole = response?.user?.companyRole;
     if (companyRole === 'owner') { navigate('/owner/dashboard'); return; }
     if (companyRole === 'admin') { navigate('/admin/dashboard'); return; }

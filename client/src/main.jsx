@@ -1,5 +1,7 @@
 // Must stay the first import: app builds read the chosen server before anything else loads.
 import './appMode/preboot';
+// Moves settings saved under the old Chttrix names before anything reads them.
+import './utils/legacyStorageBoot';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';

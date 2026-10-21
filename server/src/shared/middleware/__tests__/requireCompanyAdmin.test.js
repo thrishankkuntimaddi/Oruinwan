@@ -4,7 +4,7 @@ const users = {
   adminA: { companyId: 'A', companyRole: 'admin', roles: ['user'] },
   memberA: { companyId: 'A', companyRole: 'member', roles: ['user'] },
   coOwnerA: { companyId: 'A', companyRole: 'member', coOwnerOf: 'A', roles: ['user'] },
-  staff: { companyId: null, companyRole: null, roles: ['chttrix_admin'] },
+  staff: { companyId: null, companyRole: null, roles: ['oruinwan_admin'] },
   personal: { companyId: null, companyRole: 'member', roles: ['user'] },
 };
 jest.mock('../../../identity', () => ({

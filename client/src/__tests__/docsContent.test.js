@@ -87,7 +87,7 @@ describe('docs search', () => {
     it('finds pages by title, keyword and body text', () => {
         expect(searchDocs('threads')[0].page.id).toBe('threads');
         expect(searchDocs('2FA').some((r) => r.page.id === 'password-security')).toBe(true);
-        expect(searchDocs('X-Chttrix-Signature').some((r) => r.section.id === 'developers' && r.page.id === 'webhooks')).toBe(true);
+        expect(searchDocs('X-Oruinwan-Signature').some((r) => r.section.id === 'developers' && r.page.id === 'webhooks')).toBe(true);
         expect(searchDocs('ollama').some((r) => r.page.id === 'local-engine')).toBe(true);
         expect(searchDocs('TXT record').some((r) => r.page.id === 'domain-verification')).toBe(true);
     });

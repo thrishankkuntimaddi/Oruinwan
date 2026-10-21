@@ -84,7 +84,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     // Slash commands in the thread composer.
     const handleThreadSlash = (name, args) => {
         if (name === 'ai') {
-            window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: { prompt: args || null } }));
+            window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt: args || null } }));
             return true;
         }
         return false;

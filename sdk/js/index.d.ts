@@ -139,15 +139,4 @@ export declare class OruinwanSDK {
 
 export declare const VERSION: string;
 
-/** @deprecated use OruinwanSDK */
-export declare const ChttrixSDK: typeof OruinwanSDK;
-/** @deprecated use OruinwanSDK */
-export type ChttrixSDK = OruinwanSDK;
-/** @deprecated use OruinwanError */
-export declare const ChttrixError: typeof OruinwanError;
-/** @deprecated use OruinwanError */
-export type ChttrixError = OruinwanError;
-/** @deprecated use OruinwanSDKOptions */
-export type ChttrixSDKOptions = OruinwanSDKOptions;
-
 export default OruinwanSDK;

@@ -225,8 +225,8 @@ export default function FooterInput({
     if (registerComposer) return registerComposer(handle);
     // Outside the AI provider: listen for insert events directly.
     const onInsert = (e) => handle.insert(e?.detail?.text);
-    document.addEventListener('chttrix:composer:insert', onInsert);
-    return () => document.removeEventListener('chttrix:composer:insert', onInsert);
+    document.addEventListener('oruinwan:composer:insert', onInsert);
+    return () => document.removeEventListener('oruinwan:composer:insert', onInsert);
   }, [registerComposer]);
 
   const prevMessageRef = useRef(newMessage);

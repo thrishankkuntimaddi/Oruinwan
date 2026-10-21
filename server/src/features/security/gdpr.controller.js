@@ -9,7 +9,7 @@ const { clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
 const { isValidId, assertWorkspaceMember, sendAccessError } = require('../../shared/utils/workspaceAccess');
 const { eraseAccount, ErasureError } = require('./accountErasure');
 
-const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+const PLATFORM_ADMIN_ROLES = ['oruinwan_admin', 'platform-admin'];
 const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
 const SECRET_FIELDS = ['passwordHash', 'twoFactorSecret', 'tokens', 'deviceTokens', 'refreshToken'];
 

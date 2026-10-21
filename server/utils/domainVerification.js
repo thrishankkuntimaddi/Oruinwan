@@ -26,8 +26,7 @@ exports.verifyDomainTXT = async (domain, expectedToken) => {
             const txtValue = Array.isArray(record) ? record.join("") : record;
             logger.info(`   - ${txtValue}`);
 
-            // Old Chttrix-era records are still accepted.
-            if (txtValue === `oruinwan-verification=${expectedToken}` || txtValue === `chttrix-verification=${expectedToken}`) {
+            if (txtValue === `oruinwan-verification=${expectedToken}`) {
                 logger.info(`✅ Domain verified successfully!`);
                 return true;
             }
