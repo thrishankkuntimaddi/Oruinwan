@@ -313,6 +313,7 @@ app.use("/api/activity", require("./src/features/activity/activity.routes"));
 
 app.use("/api/sprints", require("./src/features/sprints/sprints.routes"));
 app.use("/api/milestones", require("./src/features/milestones/milestones.routes"));
+app.use("/api/v2/roadmap", require("./src/features/roadmap/roadmap.routes"));
 app.use("/api/task-templates", require("./src/features/task-templates/task-templates.routes"));
 
 // Domains that have moved to src/modules/<name> mount themselves (see src/modules/index.js).
@@ -359,6 +360,7 @@ app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
 app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
 
 app.use("/api/v2/files", require("./src/features/files/files.routes"));
+app.use("/api/v2/design-reviews", require("./src/features/design-review/designReview.routes"));
 app.use("/api/v2/knowledge", require("./src/features/knowledge/knowledge.routes"));
 
 app.use("/api/v2/meetings", require("./src/features/meetings/meetings.routes"));

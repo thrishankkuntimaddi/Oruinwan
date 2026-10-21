@@ -11,6 +11,8 @@ module.exports = {
     register() {},
     registerSocket(io, socket) {
         require('./collab.socket')(io, socket);
+        // Live annotations on design reviews (docs/api/design-review.md).
+        require('../../features/design-review/designReview.socket').registerDesignReviewSocket(io, socket);
     },
     /** With REDIS_URL, share live documents with the other server instances. */
     start() {
