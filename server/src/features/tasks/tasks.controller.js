@@ -29,6 +29,8 @@ function handleError(res, error) {
     if (error.errors) {
         response.errors = error.errors;
     }
+    if (error.code && statusCode < 500) response.code = error.code;
+    if (error.blockers) response.blockers = error.blockers;
 
     return res.status(statusCode).json(response);
 }
@@ -371,6 +373,38 @@ async function stopTimer(req, res) {
     } catch (error) { return handleError(res, error); }
 }
 
+async function removeDependency(req, res) {
+    try {
+        const result = await tasksService.removeDependency(req.user.sub, req.params.id, req.params.dependencyId);
+        return res.json(result);
+    } catch (error) { return handleError(res, error); }
+}
+
+async function getBlockers(req, res) {
+    try {
+        return res.json(await tasksService.getBlockers(req.user.sub, req.params.id));
+    } catch (error) { return handleError(res, error); }
+}
+
+async function logTime(req, res) {
+    try {
+        return res.status(201).json(await tasksService.logTime(req.user.sub, req.params.id, req.body || {}));
+    } catch (error) { return handleError(res, error); }
+}
+
+async function getTaskTime(req, res) {
+    try {
+        return res.json(await tasksService.getTaskTime(req.user.sub, req.params.id));
+    } catch (error) { return handleError(res, error); }
+}
+
+async function getTimeReport(req, res) {
+    try {
+        const { workspaceId, from, to } = req.query;
+        return res.json(await tasksService.getTimeReport(req.user.sub, workspaceId, { from, to }));
+    } catch (error) { return handleError(res, error); }
+}
+
 async function getWorkload(req, res) {
     try {
         const result = await tasksService.getWorkload(req.user.sub, req.query.workspaceId);
@@ -399,5 +433,10 @@ module.exports = {
     addDependency,
     startTimer,
     stopTimer,
+    logTime,
+    getTaskTime,
+    getTimeReport,
+    removeDependency,
+    getBlockers,
     getWorkload
 };

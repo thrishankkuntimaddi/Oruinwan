@@ -18,6 +18,8 @@ const Channel = require('../channels/channel.model.js');
 const Message = require('../../modules/messages/message.model.js');
 const repo = require('./tasks.repository');
 const policy = require('./tasks.policy');
+const planning = require('./tasks.planning');
+const timeTracking = require('./tasks.timeTracking');
 const { normalizeAttachments } = require('./tasks.validator');
 const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
 const { logAction } = require('../../../utils/historyLogger');
@@ -37,11 +39,6 @@ function transferForClient(tr) {
     if (!tr) return tr;
     return { ...tr, note: tr.reason || '' };
 }
-
-const freshTimeTracking = (tt) => ({
-    totalTime: Number(tt?.totalTime || 0),
-    sessions: (tt?.sessions || []).map((x) => ({ start: x.start ? new Date(x.start) : null, end: x.end ? new Date(x.end) : null })),
-});
 
 /** Populated + serialized task for clients and socket payloads. */
 async function loadForClient(taskId) {
@@ -203,11 +200,13 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
 
         const company = resolveTaskCompany(workspace, user);
         const storedAttachments = normalizeAttachments(Array.isArray(attachments) ? attachments : [], userId);
+        const planningFields = await planning.planningFieldsForCreate(taskData, workspace._id);
         const createdTasks = [];
 
         for (const def of taskDefinitions) {
             const issueKey = await repo.nextIssueKey(workspace._id, workspace.name);
             const task = await repo.insert({
+                ...planningFields,
                 company,
                 workspace: workspace._id,
                 title: String(title).trim(),
@@ -302,6 +301,7 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
                 const validation = validateBlocked(updates.status, typeof updates.blockedReason === 'string' ? updates.blockedReason.trim() : '');
                 if (!validation.valid) throw httpError(400, validation.error);
             }
+            if (updates.status === 'done' && updates.ignoreBlockers !== true) await planning.assertNoOpenBlockers(task);
             changes.push({ action: 'status_changed', field: 'status', from: previousStatus, to: updates.status, metadata: updates.status === 'blocked' ? { reason: updates.blockedReason.trim() } : {} });
             patch.previousStatus = previousStatus;
             patch.status = updates.status;
@@ -350,6 +350,13 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
                 ? { action: 'updated', field, from: (current || []).map((a) => a.name), to: value.map((a) => a.name) }
                 : { action: 'updated', field, from: current, to: value });
             patch[field] = value;
+        }
+
+        const planned = await planning.planningPatchForUpdate(task, updates);
+        if (planned.changes.length) {
+            if (!policy.canEditTask(task, userId, isManager)) throw httpError(403, 'Only task creator or workspace managers can edit task details');
+            Object.assign(patch, planned.patch);
+            changes.push(...planned.changes);
         }
 
         const saved = Object.keys(patch).length ? await repo.update(task._id, patch) : task;
@@ -586,7 +593,11 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
         const users = await identity.users.findManyByIds(result.map((r) => r.userId));
         const userMap = {};
         users.forEach((u) => { userMap[String(u._id)] = { _id: String(u._id), username: u.username, profilePicture: u.profilePicture || null }; });
-        return { workload: result.map((r) => ({ userId: r.userId, count: r.count, user: userMap[r.userId] || null })) };
+        return {
+            workload: result.map((r) => ({
+                userId: r.userId, count: r.count, estimatedHours: Number(r.estimatedHours || 0), unestimated: Number(r.unestimated || 0), user: userMap[r.userId] || null,
+            })),
+        };
     }
 
     // ── Revoke / transfer ──
@@ -711,24 +722,55 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
 
     async function startTimer(userId, taskId) {
         const { task } = await loadTaskForUser(userId, taskId);
-        const timeTracking = freshTimeTracking(task.timeTracking);
-        if (timeTracking.sessions.some((x) => x.start && !x.end)) throw httpError(400, 'A timer session is already running. Stop it first.');
-        timeTracking.sessions.push({ start: new Date(), end: null });
-        const saved = await repo.update(task._id, { timeTracking });
+        const next = timeTracking.start(task.timeTracking, userId);
+        const saved = await repo.update(task._id, { timeTracking: next });
         return { message: 'Timer started', timeTracking: saved.timeTracking };
     }
 
     async function stopTimer(userId, taskId) {
         const { task } = await loadTaskForUser(userId, taskId);
-        const timeTracking = freshTimeTracking(task.timeTracking);
-        const open = timeTracking.sessions.slice().reverse().find((x) => x.start && !x.end);
-        if (!open) throw httpError(400, 'No active timer session found');
-        const now = new Date();
-        open.end = now;
-        const elapsed = Math.floor((now - new Date(open.start)) / 1000);
-        timeTracking.totalTime += elapsed;
-        const saved = await repo.update(task._id, { timeTracking });
+        const { timeTracking: next, elapsed } = timeTracking.stop(task.timeTracking, userId);
+        const saved = await repo.update(task._id, { timeTracking: next });
         return { message: 'Timer stopped', elapsed, timeTracking: saved.timeTracking };
+    }
+
+    async function logTime(userId, taskId, entry) {
+        const { task } = await loadTaskForUser(userId, taskId);
+        const next = timeTracking.logManual(task.timeTracking, userId, entry);
+        const saved = await repo.update(task._id, { timeTracking: next });
+        return { message: 'Time logged', timeTracking: saved.timeTracking };
+    }
+
+    async function getTaskTime(userId, taskId) {
+        const { task } = await loadTaskForUser(userId, taskId, { allowDeleted: true });
+        const t = timeTracking.totals(task.timeTracking);
+        await timeTracking.attachUsers(t.byUser, identity);
+        return { taskId: String(task._id), estimatedHours: task.estimatedHours ?? null, ...t };
+    }
+
+    async function getTimeReport(userId, workspaceId, range = {}) {
+        if (!workspaceId || typeof workspaceId !== 'string') throw httpError(400, 'workspaceId required');
+        const { from, to } = timeTracking.parseRange(range);
+        await validateWorkspaceMember(userId, workspaceId);
+        const userChannels = await getUserChannels(userId, workspaceId);
+        const tasks = await repo.findMany({ workspace: workspaceId, userId, channelIds: userChannels, deleted: false, deletedForNot: userId });
+        const out = timeTracking.report(tasks, { from, to });
+        await timeTracking.attachUsers(out.byUser, identity);
+        return { workspaceId, from, to, ...out };
+    }
+
+    async function getBlockers(userId, taskId) {
+        const { task } = await loadTaskForUser(userId, taskId, { allowDeleted: true });
+        const blockers = await planning.openBlockers(task);
+        return { blocked: blockers.length > 0, blockers };
+    }
+
+    async function removeDependency(userId, taskId, dependencyTaskId) {
+        const { task, isManager } = await loadTaskForUser(userId, taskId);
+        const isAllowed = isManager || String(task.createdBy) === String(userId) || task.assignedTo.some((id) => String(id) === String(userId));
+        if (!isAllowed) throw httpError(403, 'Only the creator, assignees or workspace managers can remove dependencies');
+        await repo.removeDependency(task._id, dependencyTaskId);
+        return { dependencies: await repo.listDependencies(task._id) };
     }
 
     // ── Integrations (GitHub / Jira) ──
@@ -779,7 +821,7 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
     return {
         getTasks, getTask, getMyTasks, createTask, updateTask, deleteTask, restoreTask, permanentDeleteTask,
         createSubtask, getTaskActivity, addLink, removeLink, addWatcher, removeWatcher, addDependency, getWorkload,
-        revokeTask, requestTransfer, handleTransferRequest, startTimer, stopTimer, applyExternalUpdate,
+        revokeTask, requestTransfer, handleTransferRequest, startTimer, stopTimer, logTime, removeDependency, getTaskTime, getTimeReport, getBlockers, applyExternalUpdate,
         loadForClient, loadTaskForUser,
     };
 }

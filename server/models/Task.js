@@ -170,17 +170,25 @@ const TaskSchema = new mongoose.Schema({
     
     timeTracking: {
         totalTime: { type: Number, default: 0 }, 
+        // One open session per user; `source` is 'timer' or 'manual' (logged time).
         sessions: [{
             start: { type: Date },
-            end: { type: Date }
+            end: { type: Date },
+            user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+            source: { type: String, enum: ['timer', 'manual'], default: 'timer' },
+            note: { type: String, default: undefined }
         }]
     },
 
     
     recurring: {
         isRecurring: { type: Boolean, default: false },
-        pattern: { type: String, enum: ['daily', 'weekly', 'custom'], default: null },
-        interval: { type: Number, default: 1 }, 
+        // Rules: src/features/tasks/tasks.recurrence.js
+        pattern: { type: String, enum: ['daily', 'weekly', 'monthly', 'custom', null], default: null },
+        interval: { type: Number, default: 1 },
+        daysOfWeek: [{ type: Number, min: 0, max: 6 }],
+        dayOfMonth: { type: Number, min: 1, max: 31, default: null },
+        endDate: { type: Date, default: null },
         nextDue: { type: Date, default: null }
     },
 

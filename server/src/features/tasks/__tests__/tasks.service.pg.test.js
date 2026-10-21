@@ -187,3 +187,38 @@ describe('applyExternalUpdate (pg)', () => {
         expect(repo.update).not.toHaveBeenCalled();
     });
 });
+
+describe('per-user time tracking (pg)', () => {
+    test('each user runs their own timer; manual entries and totals per user', async () => {
+        seed({ visibility: 'workspace' });
+        await service.startTimer(BOB, TASK);
+        await service.startTimer(CAROL, TASK);
+        mockTasks.get(TASK).timeTracking.sessions.forEach((s) => { s.start = new Date(Date.now() - 10000); });
+        const stopped = await service.stopTimer(CAROL, TASK);
+        expect(stopped.timeTracking.sessions.find((s) => s.user === CAROL).end).toBeInstanceOf(Date);
+        expect(stopped.timeTracking.sessions.find((s) => s.user === BOB).end).toBeNull();
+
+        await service.logTime(BOB, TASK, { seconds: 600 });
+        const t = await service.getTaskTime(ALICE, TASK);
+        expect(t.byUser.find((r) => r.userId === BOB)).toMatchObject({ running: true, sessions: 2 });
+        expect(t.byUser.find((r) => r.userId === CAROL)).toMatchObject({ running: false, sessions: 1 });
+        expect(t.totalSeconds).toBe(mockTasks.get(TASK).timeTracking.totalTime);
+    });
+});
+
+describe('dependencies and workload (pg)', () => {
+    test('removeDependency needs creator / assignee / manager and returns the remaining list', async () => {
+        seed({ visibility: 'workspace' });
+        repo.removeDependency = jest.fn(async () => {});
+        repo.listDependencies = jest.fn(async () => []);
+        await expect(service.removeDependency(CAROL, TASK, oid(101))).rejects.toMatchObject({ statusCode: 403 });
+        await expect(service.removeDependency(BOB, TASK, oid(101))).resolves.toEqual({ dependencies: [] });
+        expect(repo.removeDependency).toHaveBeenCalledWith(TASK, oid(101));
+    });
+
+    test('workload returns estimated hours per assignee', async () => {
+        repo.workload = jest.fn(async () => [{ userId: BOB, count: 2, estimatedHours: '4.5', unestimated: 1 }]);
+        const { workload } = await service.getWorkload(ALICE, WS);
+        expect(workload).toEqual([expect.objectContaining({ userId: BOB, count: 2, estimatedHours: 4.5, unestimated: 1 })]);
+    });
+});

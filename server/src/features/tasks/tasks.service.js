@@ -19,6 +19,8 @@ const policy = require('./tasks.policy');
 const { normalizeAttachments } = require('./tasks.validator');
 const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
 const { tasksStore } = require('./tasks.store');
+const planning = require('./tasks.planning');
+const timeTracking = require('./tasks.timeTracking');
 const {
     httpError,
     isObjectId,
@@ -352,12 +354,14 @@ async function createTask(userId, taskData, io, req) {
 
     const company = resolveTaskCompany(workspace, user);
     const storedAttachments = normalizeAttachments(Array.isArray(attachments) ? attachments : [], userId);
+    const planningFields = await planning.planningFieldsForCreate(taskData, workspace._id);
     const createdTasks = [];
 
     for (const def of taskDefinitions) {
         const issueKey = await nextIssueKey(workspace._id, workspace.name);
 
         const task = new Task({
+            ...planningFields,
             company,
             workspace: workspace._id,
             title: String(title).trim(),
@@ -486,6 +490,7 @@ async function updateTask(userId, taskId, updates, io, req) {
             const validation = validateBlocked(updates.status, typeof updates.blockedReason === 'string' ? updates.blockedReason.trim() : '');
             if (!validation.valid) throw httpError(400, validation.error);
         }
+        if (updates.status === 'done' && updates.ignoreBlockers !== true) await planning.assertNoOpenBlockers(task);
 
         changes.push({
             action: 'status_changed',
@@ -565,6 +570,16 @@ async function updateTask(userId, taskId, updates, io, req) {
             ? { action: 'updated', field, from: (current || []).map(a => a.name), to: value.map(a => a.name) }
             : { action: 'updated', field, from: current, to: value });
         task[field] = value;
+    }
+
+    // Planning: milestone link, start date, recurrence rule.
+    const planned = await planning.planningPatchForUpdate(task, updates);
+    if (planned.changes.length) {
+        if (!policy.canEditTask(task, userId, isManager)) {
+            throw httpError(403, 'Only task creator or workspace managers can edit task details');
+        }
+        Object.assign(task, planned.patch);
+        changes.push(...planned.changes);
     }
 
     await task.save();
@@ -1309,14 +1324,16 @@ async function addDependency(userId, taskId, dependencyTaskId) {
     return { dependencies: task.dependencies };
 }
 
+/** Store timeTracking on a Mongo task document (sessions are rebuilt as a whole). */
+function _setTimeTracking(task, next) {
+    task.timeTracking = next;
+    if (typeof task.markModified === 'function') task.markModified('timeTracking');
+}
+
 async function startTimer(userId, taskId) {
     if (onPg()) return pg().startTimer(userId, taskId);
     const { task } = await _loadTaskForUser(userId, taskId);
-
-    const hasOpenSession = task.timeTracking.sessions.some(s => s.start && !s.end);
-    if (hasOpenSession) throw httpError(400, 'A timer session is already running. Stop it first.');
-
-    task.timeTracking.sessions.push({ start: new Date(), end: null });
+    _setTimeTracking(task, timeTracking.start(task.timeTracking, userId));
     await task.save();
     return { message: 'Timer started', timeTracking: task.timeTracking };
 }
@@ -1324,17 +1341,67 @@ async function startTimer(userId, taskId) {
 async function stopTimer(userId, taskId) {
     if (onPg()) return pg().stopTimer(userId, taskId);
     const { task } = await _loadTaskForUser(userId, taskId);
-
-    const openSession = task.timeTracking.sessions.slice().reverse().find(s => s.start && !s.end);
-    if (!openSession) throw httpError(400, 'No active timer session found');
-
-    const now = new Date();
-    openSession.end = now;
-    const elapsed = Math.floor((now - new Date(openSession.start)) / 1000);
-    task.timeTracking.totalTime = (task.timeTracking.totalTime || 0) + elapsed;
-
+    const { timeTracking: next, elapsed } = timeTracking.stop(task.timeTracking, userId);
+    _setTimeTracking(task, next);
     await task.save();
     return { message: 'Timer stopped', elapsed, timeTracking: task.timeTracking };
+}
+
+/** Log time worked without the timer: { seconds | minutes, start?, note? }. */
+async function logTime(userId, taskId, entry = {}) {
+    if (onPg()) return pg().logTime(userId, taskId, entry);
+    const { task } = await _loadTaskForUser(userId, taskId);
+    _setTimeTracking(task, timeTracking.logManual(task.timeTracking, userId, entry));
+    await task.save();
+    return { message: 'Time logged', timeTracking: task.timeTracking };
+}
+
+/** Time totals for one task: overall and per user (running timers count up to now). */
+async function getTaskTime(userId, taskId) {
+    if (onPg()) return pg().getTaskTime(userId, taskId);
+    const { task } = await _loadTaskForUser(userId, taskId, { allowDeleted: true });
+    const t = timeTracking.totals(task.timeTracking);
+    await timeTracking.attachUsers(t.byUser, identity());
+    return { taskId: String(task._id), estimatedHours: task.estimatedHours ?? null, ...t };
+}
+
+/**
+ * Tracked time per user across the workspace tasks the caller can see.
+ * Optional `from` / `to` (dates) keep only sessions that started in the range.
+ */
+async function getTimeReport(userId, workspaceId, range = {}) {
+    if (onPg()) return pg().getTimeReport(userId, workspaceId, range);
+    if (!workspaceId || typeof workspaceId !== 'string') throw httpError(400, 'workspaceId required');
+    const { from, to } = timeTracking.parseRange(range);
+    await _validateWorkspaceMember(userId, workspaceId);
+    const userChannels = await _getUserChannels(userId, workspaceId);
+    const q = _buildVisibilityQuery(userId, workspaceId, userChannels, { includeSubtasks: true });
+    q['timeTracking.sessions.0'] = { $exists: true };
+    const tasks = await Task.find(q).select('title issueKey estimatedHours timeTracking').lean();
+    const out = timeTracking.report(tasks, { from, to });
+    await timeTracking.attachUsers(out.byUser, identity());
+    return { workspaceId, from, to, ...out };
+}
+
+async function removeDependency(userId, taskId, dependencyTaskId) {
+    if (!isObjectId(String(dependencyTaskId))) throw httpError(400, 'Invalid dependencyTaskId');
+    if (onPg()) return pg().removeDependency(userId, taskId, dependencyTaskId);
+    const { task, isManager } = await _loadTaskForUser(userId, taskId);
+    const isAllowed = isManager || task.createdBy.toString() === String(userId) ||
+        task.assignedTo.some(id => id.toString() === String(userId));
+    if (!isAllowed) throw httpError(403, 'Only the creator, assignees or workspace managers can remove dependencies');
+    const before = task.dependencies.length;
+    task.dependencies = task.dependencies.filter(id => id.toString() !== String(dependencyTaskId));
+    if (task.dependencies.length !== before) await task.save();
+    return { dependencies: task.dependencies };
+}
+
+/** Open blockers of a task (dependencies and "is blocked by" links that are not done/cancelled). */
+async function getBlockers(userId, taskId) {
+    if (onPg()) return pg().getBlockers(userId, taskId);
+    const { task } = await _loadTaskForUser(userId, taskId, { allowDeleted: true });
+    const blockers = await planning.openBlockers(task);
+    return { blocked: blockers.length > 0, blockers };
 }
 
 /** Open tasks per assignee, counting only tasks the caller can see. */
@@ -1351,7 +1418,14 @@ async function getWorkload(userId, workspaceId) {
         { $match: match },
         { $unwind: '$assignedTo' },
         { $match: { $expr: { $not: [{ $in: ['$assignedTo', { $ifNull: ['$deletedFor', []] }] }] } } },
-        { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        {
+            $group: {
+                _id: '$assignedTo',
+                count: { $sum: 1 },
+                estimatedHours: { $sum: { $ifNull: ['$estimatedHours', 0] } },
+                unestimated: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$estimatedHours', null] }, null] }, 1, 0] } }
+            }
+        },
         { $sort: { count: -1 } }
     ]);
 
@@ -1363,6 +1437,8 @@ async function getWorkload(userId, workspaceId) {
     const workload = result.map(r => ({
         userId: r._id,
         count: r.count,
+        estimatedHours: Number(r.estimatedHours || 0),
+        unestimated: Number(r.unestimated || 0),
         user: userMap[r._id.toString()] || null
     }));
 
@@ -1472,6 +1548,11 @@ module.exports = {
     addDependency,
     startTimer,
     stopTimer,
+    logTime,
+    getTaskTime,
+    getTimeReport,
+    removeDependency,
+    getBlockers,
     getWorkload,
     applyExternalUpdate,
     // exported for tests

@@ -124,6 +124,26 @@ function validateCreateTask(data) {
         errors.push('Blocked status requires a blockedReason');
     }
 
+
+    if (data.milestoneId !== undefined && data.milestoneId !== null && data.milestoneId !== '' &&
+        (typeof data.milestoneId !== 'string' || !OBJECT_ID.test(data.milestoneId))) {
+        errors.push('milestoneId must be a valid id');
+    }
+
+    if (data.sprintId !== undefined && data.sprintId !== null && data.sprintId !== '' &&
+        (typeof data.sprintId !== 'string' || !OBJECT_ID.test(data.sprintId))) {
+        errors.push('sprintId must be a valid id');
+    }
+
+    if (data.recurring !== undefined && data.recurring !== null && data.recurring !== false &&
+        (typeof data.recurring !== 'object' || Array.isArray(data.recurring))) {
+        errors.push('recurring must be an object');
+    }
+
+    if (data.startDate && isNaN(new Date(data.startDate).getTime())) {
+        errors.push('Invalid start date format');
+    }
+
     errors.push(...validateAttachments(data.attachments));
 
     return {
@@ -199,6 +219,30 @@ function validateUpdateTask(data) {
     if (data.completionNote !== undefined && data.completionNote !== null &&
         (typeof data.completionNote !== 'string' || data.completionNote.length > 2000)) {
         errors.push('completionNote must be a string of at most 2000 characters');
+    }
+
+
+    if (data.milestoneId !== undefined && data.milestoneId !== null && data.milestoneId !== '' &&
+        (typeof data.milestoneId !== 'string' || !OBJECT_ID.test(data.milestoneId))) {
+        errors.push('milestoneId must be a valid id');
+    }
+
+    if (data.sprintId !== undefined && data.sprintId !== null && data.sprintId !== '' &&
+        (typeof data.sprintId !== 'string' || !OBJECT_ID.test(data.sprintId))) {
+        errors.push('sprintId must be a valid id');
+    }
+
+    if (data.recurring !== undefined && data.recurring !== null && data.recurring !== false &&
+        (typeof data.recurring !== 'object' || Array.isArray(data.recurring))) {
+        errors.push('recurring must be an object');
+    }
+
+    if (data.startDate && isNaN(new Date(data.startDate).getTime())) {
+        errors.push('Invalid start date format');
+    }
+
+    if (data.ignoreBlockers !== undefined && typeof data.ignoreBlockers !== 'boolean') {
+        errors.push('ignoreBlockers must be a boolean');
     }
 
     errors.push(...validateAttachments(data.attachments));
