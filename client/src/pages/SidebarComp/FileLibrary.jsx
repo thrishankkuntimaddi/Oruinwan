@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Upload, LayoutGrid, List, Download, Trash2, FolderOpen, Loader2,
 } from 'lucide-react';
@@ -73,6 +73,12 @@ const FileLibrary = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
+    const [searchParams] = useSearchParams();
+    const reviewParam = searchParams.get('review');
+    // Design review notifications link here with ?review=: open the review page.
+    useEffect(() => {
+        if (reviewParam && workspaceId) navigate(`/workspace/${workspaceId}/reviews/${reviewParam}`, { replace: true });
+    }, [reviewParam, workspaceId, navigate]);
     const { activeWorkspace } = useWorkspace();
     const filesApi = useFiles();
     const { files, loading, error, listFiles, uploadFile, deleteFile, patchFile } = filesApi;

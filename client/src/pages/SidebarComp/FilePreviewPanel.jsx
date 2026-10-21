@@ -1,13 +1,56 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Download, Trash2, MessageSquare, History, Send, Share2, Upload, RotateCcw, Tag } from 'lucide-react';
+import { X, Download, Trash2, MessageSquare, History, Send, Share2, Upload, RotateCcw, Tag, PenTool } from 'lucide-react';
+import { useNavigate, useInRouterContext } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Btn, IconBtn, Chip, EmptyState, LoadingState, Dialog, Confirm, Field, errorMessage, timeAgo } from '../../components/ui/page';
 import { fileKind, formatSize, announceFilesChanged } from './fileKinds';
 import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
 import FileShareDialog, { FILE_SHARE_CSS } from './FileShareDialog';
+import StartReviewDialog from '../designReview/StartReviewDialog';
+import designReviewService from '../../services/designReviewService';
+import { reviewKind, REVIEW_STATUS } from '../designReview/reviewGeometry';
 
 const idOf = (u) => (typeof u === 'string' ? u : String(u?._id || u?.id || u?.sub || u || ''));
+
+/** Design reviews of this file + "Start review" (images, PDFs and videos). Needs a router. */
+function FileReviews({ file, workspaceId }) {
+    const navigate = useNavigate();
+    const [reviews, setReviews] = useState([]);
+    const [starting, setStarting] = useState(false);
+    const ws = workspaceId || file.workspaceId;
+
+    useEffect(() => {
+        let cancelled = false;
+        Promise.resolve()
+            .then(() => designReviewService.list({ fileId: file._id }))
+            .then((list) => { if (!cancelled) setReviews(Array.isArray(list) ? list : []); })
+            .catch(() => { if (!cancelled) setReviews([]); });
+        return () => { cancelled = true; };
+    }, [file._id]);
+
+    const go = (r) => navigate(`/workspace/${ws}/reviews/${r._id}`);
+    return (
+        <div>
+            <div className="fl-subhead"><PenTool size={12} /> Design reviews</div>
+            {reviews.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+                    {reviews.slice(0, 4).map((r) => {
+                        const st = REVIEW_STATUS[r.status] || REVIEW_STATUS.open;
+                        return (
+                            <button key={r._id} type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => go(r)} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                <span className="fl-name" style={{ minWidth: 0 }}>{r.title} · v{r.versionNumber}</span>
+                                <Chip tone={st.tone}>{st.label}</Chip>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+            <Btn icon={PenTool} onClick={() => setStarting(true)}>Start review</Btn>
+            <StartReviewDialog open={starting} workspaceId={ws} file={file} onClose={() => setStarting(false)} onCreated={(r) => { setStarting(false); go(r); }} />
+        </div>
+    );
+}
 
 /** Owner, or someone the owner gave edit access to (the server's own rule for edits). */
 export function canEditFile(file, userId) {
@@ -28,6 +71,7 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
     const isOwner = Boolean(userId) && idOf(file.createdBy) === userId;
     const canEdit = canEditFile(file, userId);
     const { showToast } = useToast();
+    const inRouter = useInRouterContext();
 
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
@@ -196,6 +240,8 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
                                 <span className="fl-meta">No tags. The owner or an editor can add them.</span>
                             )}
                         </div>
+
+                        {inRouter && reviewKind(file.mimeType) && <FileReviews file={file} workspaceId={workspaceId} />}
 
                         <div style={{ display: 'flex', gap: 8 }}>
                             <a href={file.url} target="_blank" rel="noopener noreferrer" className="gl-btn gl-btn--primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>

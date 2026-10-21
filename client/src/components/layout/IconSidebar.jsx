@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight, Map as MapIcon, PenTool } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 import { WorkspaceIcon } from "../../utils/workspaceIcons";
 import "./shell.css";
@@ -63,7 +63,11 @@ const IconSidebar = ({ onProfileClick }) => {
         { icon: <MessageSquare size={19} strokeWidth={2} />, path: "/messages", label: "Messages" },
         // Tasks, Notes and Huddles disappear when the workspace admins switch them off.
         ...(features.tasks ? [{ icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" }] : []),
+        // Planning next to Tasks: the quarterly roadmap (items roll up milestones and tasks).
+        ...(features.tasks ? [{ icon: <MapIcon size={19} strokeWidth={2} />, path: "/roadmap", label: "Roadmap" }] : []),
         ...(features.notes ? [{ icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" }] : []),
+        // Design reviews of images, PDFs and videos from the file library.
+        { icon: <PenTool size={19} strokeWidth={2} />, path: "/reviews", label: "Design reviews" },
         ...(features.huddles ? [{ icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" }] : []),
         // Agents & tools: AI agents (Claude, ChatGPT…), workflows and apps.
         { icon: <Bot size={19} strokeWidth={2} />, path: "/agents", label: "Agents & tools", also: ["/apps", "/automations"] },

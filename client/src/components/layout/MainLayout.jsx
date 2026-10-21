@@ -267,6 +267,8 @@ const MainLayout = ({ children, sidePanel }) => {
         if (p.includes('/channels') || p.includes('/channel/')) return 'Channels';
         if (p.includes('/messages') || p.includes('/dm/'))      return 'Messages';
         if (p.includes('/tasks')    || p.includes('/task/'))    return 'Tasks';
+        if (p.includes('/roadmap'))                             return 'Roadmap';
+        if (p.includes('/reviews'))                             return 'Reviews';
         if (p.includes('/notes')    || p.includes('/note/'))    return 'Notes';
         if (p.includes('/files'))                               return 'Files';
         if (p.includes('/knowledge'))                           return 'Knowledge';

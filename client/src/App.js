@@ -35,6 +35,9 @@ import NotificationsPage from "./pages/NotificationsPage";
 import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
+import RoadmapPage from "./pages/roadmap/RoadmapPage";
+import DesignReviewsPage from "./pages/designReview/DesignReviewsPage";
+import DesignReviewPage from "./pages/designReview/DesignReviewPage";
 import Notes from "./pages/SidebarComp/Notes";
 import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
@@ -398,6 +401,50 @@ function App() {
                                   <RequireWorkspace>
                                     <MainLayout>
                                       <MyTasks />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Roadmap and design reviews */}
+                          <Route
+                            path="/workspace/:workspaceId/roadmap"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <RoadmapPage />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/workspace/:workspaceId/reviews"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <DesignReviewsPage />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/workspace/:workspaceId/reviews/:reviewId"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <MainLayout>
+                                      <DesignReviewPage />
                                     </MainLayout>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
