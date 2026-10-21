@@ -18,5 +18,9 @@ router.get('/search', ctrl.searchKnowledge);
 router.post('/pages/:id/summarize', ctrl.summarizePage);
 router.get('/categories', ctrl.getCategories);
 router.post('/categories', ctrl.createCategory);
+router.put('/categories/reorder', ctrl.reorderCategories);
+router.put('/categories/:id', ctrl.updateCategory);
+router.patch('/categories/:id', ctrl.updateCategory);
+router.delete('/categories/:id', ctrl.deleteCategory);
 
 module.exports = router;

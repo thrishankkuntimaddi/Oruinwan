@@ -232,3 +232,26 @@ describe('NO5 content sanitising', () => {
         expect(sanitizeNoteContent('<p onclick="x">a</p><iframe src="//e"></iframe>')).toBe('<p>a</p>');
     });
 });
+
+describe('NO6 live collaboration hooks', () => {
+    const collab = require('../../../modules/collab/collab.service');
+
+    test('a REST content change is pushed into the live document; title-only changes are not', async () => {
+        const spy = jest.spyOn(collab, 'contentChanged').mockResolvedValue();
+        const n = withNote(makeNote());
+        await service.updateNote(ALICE, String(n._id), { title: 'New' }, null);
+        expect(spy).not.toHaveBeenCalled();
+        await service.updateNote(ALICE, String(n._id), { content: '<script>x</script>hi' }, null);
+        expect(spy).toHaveBeenCalledWith('note', n._id, 'hi', { workspaceId: WS });
+    });
+
+    test('permanent delete closes the live document', async () => {
+        const spy = jest.spyOn(collab, 'documentDeleted').mockResolvedValue();
+        const n = withNote(makeNote());
+        jest.spyOn(Note, 'findByIdAndDelete').mockResolvedValue(n);
+        await service.deleteNote(ALICE, String(n._id), false, null);
+        expect(spy).not.toHaveBeenCalled();
+        await service.deleteNote(ALICE, String(n._id), true, null);
+        expect(spy).toHaveBeenCalledWith('note', n._id);
+    });
+});

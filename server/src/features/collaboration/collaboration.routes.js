@@ -50,6 +50,8 @@ router.post('/whiteboard/:meetingId', async (req, res) => {
             { meetingId: req.params.meetingId, workspaceId, strokes },
             { upsert: true, new: true }
         );
+        // Live boards (collab:* sockets) pick the replacement up as an ordinary update.
+        await require('../../modules/collab/collab.service').contentChanged('whiteboard', req.params.meetingId, wb.strokes, { workspaceId: String(workspaceId) });
         res.json({ strokes: wb.strokes });
     } catch (err) {
         if (badRequest(err, res)) return;

@@ -9,6 +9,9 @@ router.use(requireAuth);
 
 router.get('/workload', tasksController.getWorkload);
 
+// Tracked time per user across the caller's visible tasks (?workspaceId&from&to).
+router.get('/time/report', tasksController.getTimeReport);
+
 router.get('/', tasksController.getTasks);
 
 router.get('/my', tasksController.getMyTasks);
@@ -55,8 +58,16 @@ router.delete('/:id/watchers', tasksController.removeWatcher);
 
 router.post('/:id/dependency', tasksController.addDependency);
 
+router.delete('/:id/dependency/:dependencyId', tasksController.removeDependency);
+
+router.get('/:id/blockers', tasksController.getBlockers);
+
 router.post('/:id/time/start', tasksController.startTimer);
 
 router.post('/:id/time/stop', tasksController.stopTimer);
+
+router.post('/:id/time/log', tasksController.logTime);
+
+router.get('/:id/time', tasksController.getTaskTime);
 
 module.exports = router;

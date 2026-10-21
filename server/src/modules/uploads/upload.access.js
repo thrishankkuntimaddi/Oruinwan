@@ -65,6 +65,16 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
         return roles.includes('platform-admin') || roles.includes('chttrix_admin');
     }
 
+    // Workspace file library (current content or any version): active members, and
+    // for restricted files only the people it is shared with. Checked before the
+    // uploader rule so a revoked grant or a removal applies to uploaders too.
+    const library = await require('../../features/files/files.service').canReadLibraryObject(gcsPath, userId);
+    if (library === true) return true;
+    if (library === false) {
+        logger.warn({ gcsPath, userId }, '[UploadAccess] Denied library file access');
+        return false;
+    }
+
     // The uploader can always read their own file.
     if (idEq(objectMeta.uploadedBy, userId)) return true;
 
@@ -82,16 +92,6 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     for (const msg of messages) {
         if (await canAccessMessage(msg, userId)) return true;
     }
-
-    // Workspace file library.
-    const WorkspaceFile = require('../../features/files/WorkspaceFile');
-    const FileVersion = require('../../features/files/FileVersion');
-    let wsFile = await WorkspaceFile.findOne({ gcsPath }).select('workspaceId').lean();
-    if (!wsFile) {
-        const version = await FileVersion.findOne({ gcsPath }).select('fileId').lean();
-        if (version) wsFile = await WorkspaceFile.findById(version.fileId).select('workspaceId').lean();
-    }
-    if (wsFile && await isWorkspaceMember(wsFile.workspaceId, userId)) return true;
 
     // Same-company fallback for attachments on tasks/updates/tickets (uploaded with company metadata).
     // Not for files shared in a chat: those follow the conversation's membership, so a

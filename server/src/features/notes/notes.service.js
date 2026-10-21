@@ -16,6 +16,8 @@ const policy = require('./notes.policy');
 const notify = require('./notes.notifications');
 const { sanitizeNoteContent } = require('./notes.sanitize');
 
+const collab = () => require('../../modules/collab/collab.service');
+
 const NOTE_TYPES = ['note', 'meeting', 'documentation', 'brainstorm', 'sop', 'projectspec', 'techdesign', 'announcement'];
 const UNTITLED = 'Untitled';
 
@@ -196,6 +198,8 @@ async function updateNote(userId, noteId, updates, io, _req) {
     }
 
     await note.save();
+    // Keep an open live editor (and its stored Yjs state) in step with this write.
+    if (updates.content !== undefined) await collab().contentChanged('note', note._id, note.content, { workspaceId: idOf(note.workspace) });
 
     const populatedNote = await withUsers(Note.findById(note._id).lean());
     const nowShared = new Set((note.sharedWith || []).map(idOf));
@@ -225,6 +229,7 @@ async function deleteNote(userId, noteId, permanent, io, _req) {
 
     if (permanent) {
         await Note.findByIdAndDelete(note._id);
+        await collab().documentDeleted('note', note._id);
         await Promise.all((note.attachments || []).map(a => deleteObjectForAttachment(note, a)));
         notify.notifyNoteDeleted(note._id, note, io, { permanent: true });
         return { message: 'Note permanently deleted', permanent: true };

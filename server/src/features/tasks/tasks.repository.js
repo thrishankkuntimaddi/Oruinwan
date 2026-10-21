@@ -90,9 +90,9 @@ function rowToTask(r) {
         let v = r[col];
         if (NUM_FIELDS.has(field)) v = num(v);
         if (DATE_FIELDS.has(field)) v = v ? new Date(v) : null;
-        if (field === 'recurring' && v && v.nextDue) v = { ...v, nextDue: new Date(v.nextDue) };
+        if (field === 'recurring' && v) v = { ...v, nextDue: date(v.nextDue), ...(v.endDate !== undefined ? { endDate: date(v.endDate) } : {}) };
         if (field === 'timeTracking' && v && Array.isArray(v.sessions)) {
-            v = { ...v, sessions: v.sessions.map((s) => ({ start: date(s.start), end: date(s.end) })) };
+            v = { ...v, sessions: v.sessions.map((s) => ({ ...s, start: date(s.start), end: date(s.end) })) };
         }
         if (field === 'transferRequest' && v && v.requestedAt) v = { ...v, requestedAt: new Date(v.requestedAt) };
         if (field === 'attachments' && Array.isArray(v)) v = v.map((a) => ({ ...a, uploadedAt: date(a.uploadedAt) }));
@@ -479,11 +479,33 @@ async function claimDueSoon(taskId, dueDate, now = new Date()) {
     return rowCount === 1;
 }
 
-/** Open tasks per assignee among the tasks `userId` can see (excluding tasks hidden by that assignee). */
+/**
+ * Claim one run of a recurring task: store `recurring` only if nextDue is still
+ * `expectedNextDue` (another instance has not already generated it). True when claimed.
+ */
+async function claimRecurring(taskId, expectedNextDue, recurring) {
+    const { rowCount } = await query(
+        'UPDATE tasks SET recurring = $1, recurring_next_due = $2, updated_at = now() WHERE id = $3 AND recurring_next_due = $4',
+        [json(recurring), recurringNextDue(recurring), String(taskId), date(expectedNextDue)]
+    );
+    return rowCount > 0;
+}
+
+async function removeDependency(taskId, dependsOnId) {
+    await query('DELETE FROM task_dependencies WHERE task_id = $1 AND depends_on_id = $2', [String(taskId), String(dependsOnId)]);
+}
+
+/**
+ * Open tasks per assignee among the tasks `userId` can see (excluding tasks
+ * hidden by that assignee), with the sum of their estimated hours and how many
+ * of them have no estimate.
+ */
 async function workload({ workspace, userId, channelIds }) {
     const { where, params } = buildWhere({ workspace, userId, channelIds, deleted: false, statusNotIn: ['done', 'cancelled'] });
     const { rows } = await query(
-        `SELECT a.user_id AS "userId", count(*)::int AS count
+        `SELECT a.user_id AS "userId", count(*)::int AS count,
+                COALESCE(sum(t.estimated_hours), 0)::float AS "estimatedHours",
+                count(*) FILTER (WHERE t.estimated_hours IS NULL)::int AS "unestimated"
          FROM tasks t JOIN task_assignees a ON a.task_id = t.id
          ${where} AND NOT (a.user_id = ANY(t.deleted_for))
          GROUP BY a.user_id ORDER BY count DESC`,
@@ -825,11 +847,11 @@ module.exports = {
     newId, rowToTask, withTaskMethods, buildWhere, orderBy, COLUMNS,
     findById, findByIds, findMany, count,
     insert, update, updateWhere, setAssignees, addAssignee, removeAssignee, addWatcher, removeWatcher, listWatchers,
-    addLink, findLink, removeLink, removeLinkBetween, addDependency, listDependencies,
+    addLink, findLink, removeLink, removeLinkBetween, addDependency, removeDependency, listDependencies,
     softDelete, restore, hardDelete, hideFor,
     appendActivity, listActivity,
     nextIssueKey, issuePrefix,
-    findRecurringDue, findDueSoon, claimDueSoon, workload,
+    findRecurringDue, claimRecurring, findDueSoon, claimDueSoon, workload,
     hydrateUsers, hydrateChannels, hydrateWorkspaces, hydrateSubtasks, hydrateForClient,
     // reports (Mongo-style filters)
     whereFromFilter, project, countWhere, findWhere, findOneWhere, deleteWhere, groupCount, totals, avgCompletionHours, countBuckets,

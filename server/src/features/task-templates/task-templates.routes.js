@@ -6,7 +6,10 @@ const service = require('./task-templates.service');
 router.use(requireAuth);
 
 function handleError(res, err) {
-    return res.status(err.statusCode || 500).json({ message: err.message || 'Internal server error' });
+    const status = err.statusCode || (err.name === 'ValidationError' || err.name === 'CastError' ? 400 : 500);
+    const body = { message: status >= 500 ? 'Internal server error' : err.message };
+    if (err.errors && Array.isArray(err.errors)) body.errors = err.errors;
+    return res.status(status).json(body);
 }
 
 router.get('/', async (req, res) => {
@@ -18,6 +21,13 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         return res.status(201).json(await service.createTemplate(req.user.sub, req.body));
+    } catch (err) { return handleError(res, err); }
+});
+
+// Create a task (plus its checklist subtasks) from the template.
+router.post('/:id/apply', async (req, res) => {
+    try {
+        return res.status(201).json(await service.applyTemplate(req.user.sub, req.params.id, req.body || {}, req.io, req));
     } catch (err) { return handleError(res, err); }
 });
 

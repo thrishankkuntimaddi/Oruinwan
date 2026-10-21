@@ -11,6 +11,7 @@ const NOTIFICATION_TYPES = [
     'task_removed',
     'task_transfer',
     'note_shared',
+    'design_review',     // features/design-review: requests, decisions, comments
     'member_joined',     
     'channel_pinned',    
     'huddle_started',    
