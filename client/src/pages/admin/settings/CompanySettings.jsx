@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Settings } from 'lucide-react';
 import CompanyProfile from './sections/CompanyProfile';
 import DomainSSO from './sections/DomainSSO';
+import SamlSSO from './sections/SamlSSO';
+import Backups from './sections/Backups';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { DashPage, PageHead, FilterTabs, LoadingState, ErrorState } from '../../../components/company-dash/dashUi';
 
@@ -13,6 +15,8 @@ import { DashPage, PageHead, FilterTabs, LoadingState, ErrorState } from '../../
 const SECTIONS = [
     { value: 'profile', label: 'Profile', component: CompanyProfile },
     { value: 'domain', label: 'Domain', component: DomainSSO },
+    { value: 'sso', label: 'Single sign-on', component: SamlSSO },
+    { value: 'backups', label: 'Backups', component: Backups },
 ];
 
 const CompanySettings = () => {
@@ -27,7 +31,7 @@ const CompanySettings = () => {
                     eyebrow="Owner console"
                     icon={Settings}
                     title="Company settings"
-                    lead="Your company's profile and email domain"
+                    lead="Your company's profile, email domain, single sign-on and backups"
                     actions={<FilterTabs label="Settings section" value={active} onChange={setActive} options={SECTIONS} />}
                 />
             )}

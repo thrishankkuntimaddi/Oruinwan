@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building, ShieldCheck, Bell, Check, X, UserRound, Settings } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
-import { DashPage, PageHead, Grid, Panel, Btn, Chip, LoadingState } from '../../components/company-dash/dashUi';
+import { DashPage, PageHead, Grid, Panel, Btn, Chip, LoadingState, Section } from '../../components/company-dash/dashUi';
+import Backups from './settings/sections/Backups';
 import './admin.css';
 
 // Unset settings mean the product default, so show that instead of a dash.
@@ -90,6 +91,10 @@ const AdminSettingsLimited = () => {
                     </div>
                 </Panel>
             </Grid>
+
+            <Section title="Backups" lead="Encrypted company backups. Restores only re-create records that were deleted; chat messages are never in a backup.">
+                <Backups />
+            </Section>
         </DashPage>
     );
 };

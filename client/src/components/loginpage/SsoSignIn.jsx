@@ -3,16 +3,13 @@ import { ArrowLeft, ArrowRight, Building2 } from 'lucide-react';
 import api from '@services/api';
 import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { IS_APP } from '../../appMode/env';
+import { getDeviceId } from '../../utils/deviceId';
 
-// The identity providers server/src/features/security/sso.routes.js knows.
-export const SSO_PROVIDERS = [
-    { id: 'google', label: 'Google Workspace' },
-    { id: 'microsoft', label: 'Microsoft Entra ID' },
-    { id: 'okta', label: 'Okta' },
-];
-
-const apiBase = () => api?.defaults?.baseURL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-export const ssoStartUrl = (provider) => `${apiBase().replace(/\/$/, '')}/api/auth/sso/${provider}`;
+/** A full work email ("ada@acme.com"), trimmed and lower-cased, or null. Discovery needs the whole address. */
+export function workEmail(value) {
+    const v = String(value || '').trim().toLowerCase();
+    return /^[^\s@]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v) ? v : null;
+}
 
 /** "ada@acme.com" or "acme.com" → "acme.com"; null when neither. */
 export function workDomain(value) {
@@ -21,27 +18,30 @@ export function workDomain(value) {
     return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain) ? domain : null;
 }
 
-/** Providers a company on this domain most likely uses, first. */
-export function rankProviders(providers, domain) {
-    const hint = /(gmail|googlemail|google)\./.test(domain || '') ? 'google'
-        : /(outlook|hotmail|live|microsoft|onmicrosoft)\./.test(domain || '') ? 'microsoft' : null;
-    return hint ? [...providers].sort((a, b) => (b.id === hint) - (a.id === hint)) : providers;
+/**
+ * Where to send the browser for an SSO start URL: the server's startUrl plus the
+ * device id, so the sign-in appears under Settings → Devices.
+ */
+export function ssoStartWithDevice(startUrl, deviceId) {
+    if (!startUrl) return null;
+    if (!deviceId) return startUrl;
+    const sep = startUrl.includes('?') ? '&' : '?';
+    return `${startUrl}${sep}deviceId=${encodeURIComponent(deviceId)}`;
 }
 
 /**
- * Ask the server whether a provider is set up, without leaving the page: a configured
- * provider answers with a redirect to the identity provider, an unconfigured one with
- * 501 and a disabled SSO feature with 404.
- * -> 'ready' | 'unconfigured' | 'disabled' | 'error'
+ * GET /api/auth/sso/discover?email= → 'disabled' (SSO feature off: 404), 'none'
+ * (no SSO for this domain), 'error', or { protocol, startUrl }.
  */
-export async function probeSsoProvider(provider, fetchImpl = globalThis.fetch) {
+export async function discoverSso(email, client = api) {
     try {
-        const res = await fetchImpl(ssoStartUrl(provider), { method: 'GET', redirect: 'manual', credentials: 'include' });
-        if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) return 'ready';
-        if (res.status === 404) return 'disabled';
-        if (res.status === 501 || res.status === 400) return 'unconfigured';
-        return res.ok ? 'ready' : 'error';
-    } catch {
+        const { data } = await client.get('/api/auth/sso/discover', { params: { email } });
+        if (data?.enabled && typeof data.startUrl === 'string' && /^https?:\/\//.test(data.startUrl)) {
+            return { protocol: data.protocol === 'saml' ? 'saml' : 'oidc', startUrl: data.startUrl };
+        }
+        return 'none';
+    } catch (err) {
+        if (err?.response?.status === 404) return 'disabled';
         return 'error';
     }
 }
@@ -50,6 +50,14 @@ const ERRORS = {
     sso_state_mismatch: 'Your SSO sign-in expired before it finished. Please try again.',
     sso_no_email: 'Your identity provider did not share an email address, so we could not sign you in.',
     unknown_provider: 'That SSO provider is not supported.',
+    sso_saml_not_configured: 'Single sign-on isn’t set up for your company yet. Ask your admin.',
+    sso_saml_no_email: 'Your identity provider did not share an email address, so we could not sign you in.',
+    sso_saml_no_name_id: 'Your identity provider did not identify you, so we could not sign you in.',
+    sso_saml_wrong_issuer: 'The sign-in came from an identity provider your company hasn’t configured. Ask your admin.',
+    sso_saml_wrong_company: 'Your account belongs to a different company on Oruinwan.',
+    sso_saml_no_account: 'There is no Oruinwan account for you in this company yet. Ask your admin to invite you.',
+    sso_saml_account_disabled: 'Your Oruinwan account is disabled. Ask your admin.',
+    sso_saml_invalid_response: 'Your identity provider’s answer could not be verified. Please try again.',
 };
 
 /** Message for ?error= on /login after an SSO round trip, or null for other errors. */
@@ -58,34 +66,49 @@ export function ssoErrorMessage(code) {
     return ERRORS[code] || 'Single sign-on did not complete. Try again, or sign in with your email and password.';
 }
 
+const PROTOCOL_LABEL = { saml: 'SAML', oidc: 'OpenID Connect' };
+
 /**
  * "Sign in with your company SSO" on the login page. Only shown when the server has the
  * `sso` feature on (and never in the desktop/Android apps, where the round trip would
- * land in a browser). Enter a work email or domain, then the providers set up on this
- * server are offered; picking one starts /api/auth/sso/:provider.
+ * land in a browser). The user enters a work email; the server says whether that
+ * company uses SSO (SAML or OIDC) and where to start, and the browser goes there as a
+ * full page navigation.
  */
-export default function SsoSignIn({ initialEmail = '', navigateTo = (url) => window.location.assign(url), probe = probeSsoProvider }) {
+export default function SsoSignIn({
+    initialEmail = '',
+    navigateTo = (url) => window.location.assign(url),
+    discover = discoverSso,
+    deviceId = getDeviceId,
+}) {
     const enabled = useFlag('sso');
     const uid = useId();
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState(initialEmail);
-    const [state, setState] = useState({ status: 'idle', providers: [], domain: null }); // idle | checking | ready | none | hidden
+    const [state, setState] = useState({ status: 'idle', protocol: null }); // idle | checking | redirecting | none | hidden
     const [error, setError] = useState('');
 
     if (!enabled || IS_APP || state.status === 'hidden') return null;
 
     const check = async (e) => {
         e.preventDefault();
-        const domain = workDomain(email);
-        if (!domain) { setError('Enter your work email, like you@company.com, or your company domain.'); return; }
+        const addr = workEmail(email);
+        if (!addr) { setError('Enter your full work email, like you@company.com.'); return; }
         setError('');
-        setState({ status: 'checking', providers: [], domain });
-        const results = await Promise.all(SSO_PROVIDERS.map(async (p) => ({ ...p, status: await probe(p.id) })));
-        if (results.every(r => r.status === 'disabled')) { setState({ status: 'hidden', providers: [], domain }); return; }
-        const ready = rankProviders(results.filter(r => r.status === 'ready'), domain);
-        try { sessionStorage.setItem('ssoEmailHint', email.trim()); } catch { /* private mode */ }
-        if (ready.length === 1) { navigateTo(ssoStartUrl(ready[0].id)); setState({ status: 'ready', providers: ready, domain }); return; }
-        setState({ status: ready.length ? 'ready' : 'none', providers: ready, domain });
+        setState({ status: 'checking', protocol: null });
+        const found = await discover(addr);
+        if (found === 'disabled') { setState({ status: 'hidden', protocol: null }); return; }
+        if (found === 'error') {
+            setState({ status: 'idle', protocol: null });
+            setError('We couldn’t check single sign-on right now. Try again in a moment.');
+            return;
+        }
+        if (found === 'none') { setState({ status: 'none', protocol: null }); return; }
+        try { sessionStorage.setItem('ssoEmailHint', addr); } catch { /* private mode */ }
+        let id = null;
+        try { id = typeof deviceId === 'function' ? deviceId() : deviceId; } catch { /* storage blocked */ }
+        setState({ status: 'redirecting', protocol: found.protocol });
+        navigateTo(ssoStartWithDevice(found.startUrl, id));
     };
 
     if (!open) {
@@ -97,40 +120,32 @@ export default function SsoSignIn({ initialEmail = '', navigateTo = (url) => win
         );
     }
 
+    const busy = state.status === 'checking' || state.status === 'redirecting';
+    const hint = error || (state.status === 'none'
+        ? 'Single sign-on isn’t set up for your company on Oruinwan yet. Ask your admin, or sign in with your email and password.'
+        : state.status === 'redirecting'
+            ? `Taking you to your company’s sign-in page (${PROTOCOL_LABEL[state.protocol] || 'SSO'})…`
+            : 'We’ll send you to your company’s sign-in page.');
+    const isAlert = !!error || state.status === 'none';
+
     return (
         <div data-testid="sso-panel" style={{ marginTop: 14 }}>
-            {state.status !== 'ready' ? (
-                <form onSubmit={check} className="orw-form">
-                    <div className="orw-field">
-                        <label className="orw-label" htmlFor={`${uid}-sso`}>Work email or company domain</label>
-                        <input id={`${uid}-sso`} className="orw-input" value={email} autoFocus autoComplete="email"
-                            placeholder="you@company.com" onChange={e => { setEmail(e.target.value); setError(''); }}
-                            aria-invalid={error ? 'true' : undefined} aria-describedby={`${uid}-sso-help`} />
-                        <div id={`${uid}-sso-help`} className={error || state.status === 'none' ? 'orw-error-text' : 'orw-hint'}
-                            role={error || state.status === 'none' ? 'alert' : undefined}>
-                            {error || (state.status === 'none'
-                                ? 'Single sign-on isn’t set up for your company on Oruinwan yet. Ask your admin, or sign in with your email and password.'
-                                : 'We’ll send you to your company’s sign-in page.')}
-                        </div>
+            <form onSubmit={check} className="orw-form" noValidate>
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor={`${uid}-sso`}>Work email</label>
+                    <input id={`${uid}-sso`} className="orw-input" type="email" value={email} autoFocus autoComplete="email"
+                        placeholder="you@company.com" onChange={e => { setEmail(e.target.value); setError(''); if (state.status === 'none') setState({ status: 'idle', protocol: null }); }}
+                        aria-invalid={error ? 'true' : undefined} aria-describedby={`${uid}-sso-help`} />
+                    <div id={`${uid}-sso-help`} className={isAlert ? 'orw-error-text' : 'orw-hint'} role={isAlert ? 'alert' : (state.status === 'redirecting' ? 'status' : undefined)}>
+                        {hint}
                     </div>
-                    <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block"
-                        disabled={state.status === 'checking'} aria-busy={state.status === 'checking'}>
-                        {state.status === 'checking' ? 'Checking…' : <>Continue with SSO <ArrowRight size={15} /></>}
-                    </button>
-                </form>
-            ) : (
-                <div className="orw-form" role="group" aria-label="Choose your identity provider">
-                    <p className="orw-hint" style={{ margin: 0 }}>Choose how <strong>{state.domain}</strong> signs in:</p>
-                    {state.providers.map(p => (
-                        <button key={p.id} type="button" className="orw-btn orw-btn--ghost orw-btn--lg orw-btn--block"
-                            onClick={() => navigateTo(ssoStartUrl(p.id))}>
-                            {p.label}
-                        </button>
-                    ))}
                 </div>
-            )}
+                <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={busy} aria-busy={busy}>
+                    {busy ? (state.status === 'redirecting' ? 'Redirecting…' : 'Checking…') : <>Continue with SSO <ArrowRight size={15} /></>}
+                </button>
+            </form>
             <button type="button" className="orw-link" style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                onClick={() => { setOpen(false); setState({ status: 'idle', providers: [], domain: null }); setError(''); }}>
+                onClick={() => { setOpen(false); setState({ status: 'idle', protocol: null }); setError(''); }}>
                 <ArrowLeft size={13} /> Back to other sign-in options
             </button>
         </div>
