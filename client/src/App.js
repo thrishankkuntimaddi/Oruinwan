@@ -60,6 +60,7 @@ const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/";
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
+import SsoCallback from "./pages/LoginPageComp/SsoCallback";
 
 import VerifyEmail from "./pages/VerifyEmail";
 import SetPassword from "./pages/SetPassword";
@@ -781,6 +782,7 @@ function App() {
                           {}
                           {/* On the product website these open the visitor's own server. */}
                           <Route path="/login" element={IS_SITE ? <OpenWebApp /> : <LoginPage />} />
+                          <Route path="/oauth-success" element={<SsoCallback />} />
                           <Route path="/register-company" element={IS_SITE ? <OpenWebApp /> : <RegisterCompany />} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
                           <Route path="/join-workspace" element={<JoinWorkspace />} />

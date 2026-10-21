@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { X, Video, Calendar, Clock, Link, Users, UserPlus, Check } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
+import FindTimeSlots from '../../../../components/meetingsComp/FindTimeSlots';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -97,6 +98,21 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
 
     const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const mins  = ['00', '15', '30', '45'];
+    if (!mins.includes(startMin)) mins.push(startMin);
+    mins.sort();
+    const durations = [15, 30, 45, 60, 90, 120];
+    if (!durations.includes(Number(duration))) durations.push(Number(duration));
+    durations.sort((a, b) => a - b);
+
+    // A slot from "Find a time" fills in the date, time and length.
+    const pickSlot = ({ start, end }) => {
+        setStartDate(localDate(start));
+        setStartHour(pad(start.getHours()));
+        setStartMin(pad(start.getMinutes()));
+        const length = Math.round((end - start) / 60000);
+        if (length > 0 && length <= 480) setDuration(length);
+        setError('');
+    };
 
     return (
         <div
@@ -186,12 +202,14 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         <FormField label="Duration (min)">
                             <select value={duration} onChange={e => setDuration(e.target.value)}
                                 style={inputStyle}>
-                                {[15, 30, 45, 60, 90, 120].map(d => (
+                                {durations.map(d => (
                                     <option key={d} value={d}>{d} min</option>
                                 ))}
                             </select>
                         </FormField>
                     </div>
+
+                    <FindTimeSlots participantIds={invited} durationMinutes={Number(duration)} onPick={pickSlot} />
 
                     {}
                     <FormField label="Meeting link (optional)" icon={<Link size={11} />}>

@@ -9,6 +9,7 @@ import { IS_APP } from '../../appMode/env';
 import { appGoogleAvailable, appGoogleToken } from '../../appMode/appGoogle';
 import { useGoogleSignIn, googleAvailable, ContinueWithGoogle, finishGoogleSession } from './googleContinue';
 import CheckEmailPanel from './CheckEmailPanel';
+import SsoSignIn from './SsoSignIn';
 
 const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     const [formData, setFormData] = useState({ email: initialEmail, password: '' });
@@ -257,6 +258,7 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
                     <KeyRound size={15} /> {passkeyBusy ? 'Waiting for your passkey…' : 'Sign in with a passkey'}
                 </button>
             )}
+            <SsoSignIn initialEmail={formData.email} />
         </div>
     );
 };

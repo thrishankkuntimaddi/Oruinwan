@@ -25,16 +25,27 @@ const relativeTime = (value) => {
     return new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const known = (v) => v && !/^unknown$/i.test(String(v).trim());
+const known = (v) => v && !/^unknown( device)?$/i.test(String(v).trim());
+
+export const sessionTitle = (session) => [session.device, session.browser].filter(known).join(' · ') || 'Unknown device';
+
+const signedInSince = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 function SessionRow({ session, busy, onRevoke, onSignOut }) {
     const Icon = ICONS[session.os] || Monitor;
-    const title = [session.device, session.browser].filter(known).join(' · ') || 'Unknown device';
+    const title = sessionTitle(session);
     const when = relativeTime(session.lastActive || session.createdAt);
+    const since = signedInSince(session.createdAt);
     const meta = [
+        known(session.osName) && !title.includes(session.osName) ? session.osName : null,
         known(session.location) ? session.location : null,
         known(session.ip) ? session.ip : null,
         session.current ? 'Active now' : when ? `Last active ${when}` : null,
+        since ? `Signed in ${since}` : null,
     ].filter(Boolean).join(' · ');
 
     return (
@@ -74,6 +85,8 @@ const SessionsTab = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [busyId, setBusyId] = useState(null);
     const [confirmOthers, setConfirmOthers] = useState(false);
+    // The session waiting for "Sign out this device?" to be confirmed.
+    const [pendingRevoke, setPendingRevoke] = useState(null);
     const [signingOutOthers, setSigningOutOthers] = useState(false);
 
     const load = useCallback(async ({ quiet = false } = {}) => {
@@ -104,6 +117,7 @@ const SessionsTab = () => {
             showToast(errorMessage(err, 'Could not sign out that device'), 'error');
         } finally {
             setBusyId(null);
+            setPendingRevoke(null);
         }
     };
 
@@ -159,7 +173,7 @@ const SessionsTab = () => {
                                 key={s.id}
                                 session={s}
                                 busy={busyId === s.id}
-                                onRevoke={revoke}
+                                onRevoke={setPendingRevoke}
                                 onSignOut={() => signOutHere(s)}
                             />
                         ))}
@@ -182,6 +196,18 @@ const SessionsTab = () => {
             <Notice tone="warning">
                 <strong>Unrecognised device?</strong> Revoke it, then <Link to="/settings?tab=security" className="stg-acc-link">change your password</Link> and turn on two-factor authentication.
             </Notice>
+
+            <ConfirmDialog
+                open={!!pendingRevoke}
+                title="Sign out this device?"
+                confirmLabel="Sign out device"
+                tone="danger"
+                loading={!!pendingRevoke && busyId === pendingRevoke.id}
+                onConfirm={() => revoke(pendingRevoke)}
+                onCancel={() => setPendingRevoke(null)}
+            >
+                {pendingRevoke ? `${sessionTitle(pendingRevoke)} will need to sign in again.` : null}
+            </ConfirmDialog>
 
             <ConfirmDialog
                 open={confirmOthers}

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from '../../components/loginpage/LoginForm';
 import SignupForm from '../../components/loginpage/SignupForm';
 import GoogleSignupStep from '../../components/loginpage/GoogleSignupStep';
 import { finishGoogleSession } from '../../components/loginpage/googleContinue';
+import { ssoErrorMessage } from '../../components/loginpage/SsoSignIn';
 import AuthShell from '../../components/public/AuthShell';
 import BrandMark from '../../shared/components/ui/BrandMark';
 
@@ -20,6 +21,8 @@ const LoginPage = () => {
     const location = useLocation();
     const registrationMessage = location.state?.message;
     const prefilledEmail = location.state?.email;
+    // Back from /api/auth/sso/:provider with ?error=sso_… when the round trip failed.
+    const ssoError = ssoErrorMessage(searchParams.get('error'));
 
     useEffect(() => {
         setIsSignup(mode === 'signup');
@@ -79,6 +82,13 @@ const LoginPage = () => {
                         {registrationMessage}
                         {prefilledEmail && <div className="orw-code" style={{ display: 'inline-block', marginTop: 6 }}>{prefilledEmail}</div>}
                     </div>
+                </div>
+            )}
+
+            {ssoError && (
+                <div className="orw-auth__alert" role="alert" style={{ marginBottom: 22 }} data-testid="sso-error">
+                    <AlertTriangle size={16} aria-hidden="true" />
+                    <div>{ssoError}</div>
                 </div>
             )}
 

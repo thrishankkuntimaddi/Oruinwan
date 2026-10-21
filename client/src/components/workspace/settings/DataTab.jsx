@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@services/api';
 import WorkspaceExportImport from '../../workspace-os/WorkspaceExportImport';
+import ComplianceExportCard from './ComplianceExportCard';
 
 /** Export/import a workspace bundle, or clone it. Admins only (the server checks too). */
 export default function DataTab({ workspaceId, workspaceName }) {
@@ -24,6 +25,7 @@ export default function DataTab({ workspaceId, workspaceName }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <WorkspaceExportImport workspaceId={workspaceId} workspaceName={workspaceName} />
+            <ComplianceExportCard workspaceId={workspaceId} workspaceName={workspaceName} />
             <div style={box} data-testid="clone-workspace">
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Clone workspace</div>
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 10px' }}>Copies the channels (not their messages) into a new workspace you own.</p>

@@ -4,6 +4,15 @@ import { useSocket } from '../contexts/SocketContext';
 
 const API = '/api/v2/meetings';
 
+/**
+ * POST /api/v2/meetings/suggest-time. Needs no meeting (or socket), so the schedule
+ * dialog calls it directly; the raw answer goes through utils/meetingSlots.
+ */
+export async function suggestMeetingTime(participantIds = [], durationMinutes = 30) {
+    const { data } = await api.post(`${API}/suggest-time`, { participantIds, durationMinutes });
+    return data;
+}
+
 export function useMeeting(meetingId, _workspaceId) {
     const { socket } = useSocket();
     const [meeting, setMeeting] = useState(null);
@@ -90,13 +99,7 @@ export function useMeeting(meetingId, _workspaceId) {
     }, [meetingId]);
 
     
-    const suggestTime = useCallback(async (participantIds = [], durationMinutes = 30) => {
-        const { data } = await api.post(
-            `${API}/suggest-time`,
-            { participantIds, durationMinutes }
-        );
-        return data;
-    }, []);
+    const suggestTime = useCallback((participantIds = [], durationMinutes = 30) => suggestMeetingTime(participantIds, durationMinutes), []);
 
     
     // Join the meeting's socket room while the page is open. The ack carries the
