@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   AtSign, Bell, BookOpen, ChevronRight, FolderOpen, Hash, Megaphone, MessageCircle, Plug, Search, SquareCheckBig,
-  Sparkles, Download, Headphones,
+  Sparkles, Download, Headphones, Map as MapIcon, PenTool, Workflow,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -235,6 +235,9 @@ export function HomeScreen() {
             {flags.knowledge && <QuickTile icon={BookOpen} label="Knowledge" detail="Pages and handbook" onClick={() => nav.push('knowledge')} />}
             {flags.integrations && <QuickTile icon={Plug} label="Integrations" detail="Apps and webhooks" onClick={() => nav.push('integrations')} />}
             {huddlesOn && <QuickTile icon={Headphones} label="Huddles" detail={liveCount ? `${liveCount} live now` : 'Voice calls and meetings'} onClick={() => nav.push('huddles')} />}
+            <QuickTile icon={MapIcon} label="Roadmap" detail="What's planned, by quarter" onClick={() => nav.push('roadmap')} />
+            <QuickTile icon={PenTool} label="Design reviews" detail="Mockups, pins and approvals" onClick={() => nav.push('designReviews')} />
+            <QuickTile icon={Workflow} label="Automations" detail="Rules, runs and history" onClick={() => nav.push('automations')} />
             {flags.ai && <QuickTile icon={Sparkles} label="Ask AI" detail="Summaries and drafts" onClick={() => nav.setTab('ai')} />}
           </div>
         </Section>

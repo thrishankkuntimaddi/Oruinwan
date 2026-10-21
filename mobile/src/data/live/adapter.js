@@ -16,6 +16,10 @@ import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, m
 import { fileIconKind } from '../../lib/files.js';
 import { chatsAdapter, messageExtras } from './adapter.chats.js';
 import { workAdapter } from './adapter.work.js';
+import { roadmapAdapter } from './adapter.roadmap.js';
+import { designAdapter } from './adapter.design.js';
+import { callsAdapter } from './adapter.calls.js';
+import { opsAdapter } from './adapter.ops.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -388,6 +392,10 @@ async function finishProviderSignIn(path, body) {
 
 export const liveAdapter = {
   ...workAdapter, // planning, meetings, files, knowledge links, admin, security (adapter.work.js)
+  ...roadmapAdapter, // roadmap items (adapter.roadmap.js)
+  ...designAdapter, // design reviews (adapter.design.js)
+  ...callsAdapter, // meeting recording, transcripts, captions, meeting AI (adapter.calls.js)
+  ...opsAdapter, // automations, devices, notification settings, SSO (adapter.ops.js)
   kind: 'live',
   serverUrl,
   ...chatsAdapter({ mapMessage, me: () => me, ws: () => currentWs, dm: (id) => dmCache.get(id) }),
