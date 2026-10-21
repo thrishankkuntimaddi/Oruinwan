@@ -20,8 +20,10 @@ test('module endpoints respond for a signed-in user', async ({ page }) => {
   expect(iceBody.turn).toBe(false); // no TURN configured in the test stack
 
   const flags = await (await get('/api/flags')).json();
-  expect(flags.flags).toEqual({ billing: false, sso: false, integrations: false, community: false });
+  expect(flags.flags).toEqual({ billing: false, sso: true, integrations: true, community: false });
 
-  const sso = await get('/api/auth/sso/google');
-  expect(sso.status()).toBe(404);
+  // No company in the test stack has configured SSO, so discovery says it's off.
+  const sso = await get('/api/auth/sso/discover?email=someone%40example.com');
+  expect(sso.status()).toBe(200);
+  expect((await sso.json()).enabled).toBe(false);
 });

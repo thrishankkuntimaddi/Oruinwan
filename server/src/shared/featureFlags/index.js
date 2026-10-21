@@ -24,7 +24,9 @@ const FLAGS = Object.freeze({
 const FLAG_NAMES = Object.freeze(Object.keys(FLAGS));
 
 // Launched: GitHub, Jira, Zoom and the token-based connectors are real (docs/integrations.md).
-const DEFAULT_ON = Object.freeze(['integrations']);
+// SSO: company sign-in (OIDC/SAML) only starts for companies that configured it; /discover
+// answers { enabled: false } for everyone else (docs/api/security.md).
+const DEFAULT_ON = Object.freeze(['integrations', 'sso']);
 
 function parseEnabled(raw) {
   const list = String(raw || '')

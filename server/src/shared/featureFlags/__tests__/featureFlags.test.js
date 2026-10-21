@@ -28,10 +28,10 @@ describe('feature flags', () => {
     else process.env.FEATURES_ENABLED = original;
   });
 
-  test('every flag is off by default except launched ones (integrations)', () => {
+  test('every flag is off by default except launched ones (integrations, sso)', () => {
     const flags = getFlags({});
     expect(Object.keys(flags).sort()).toEqual([...FLAG_NAMES].sort());
-    expect(DEFAULT_ON).toEqual(['integrations']);
+    expect(DEFAULT_ON).toEqual(['integrations', 'sso']);
     for (const name of FLAG_NAMES) expect(flags[name]).toBe(DEFAULT_ON.includes(name));
   });
 
