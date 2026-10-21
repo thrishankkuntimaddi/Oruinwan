@@ -6,8 +6,12 @@
 let lib = null;
 async function pdfjs() {
   if (!lib) {
-    lib = Promise.all([import('pdfjs-dist/legacy/build/pdf.mjs'), import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')]).then(([m, worker]) => {
-      m.GlobalWorkerOptions.workerSrc = worker.default;
+    lib = import('pdfjs-dist/legacy/build/pdf.mjs').then((m) => {
+      // Vite bundles the worker as a .js chunk (a .mjs URL may be served with the wrong type by
+      // the native WebView's asset loader). Without Worker support pdf.js runs on the main thread.
+      if (typeof Worker !== 'undefined' && !m.GlobalWorkerOptions.workerPort) {
+        m.GlobalWorkerOptions.workerPort = new Worker(new URL('pdfjs-dist/legacy/build/pdf.worker.mjs', import.meta.url), { type: 'module' });
+      }
       return m;
     });
     lib.catch(() => {
