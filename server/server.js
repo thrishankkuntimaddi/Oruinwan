@@ -341,7 +341,7 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 
-app.use('/api/public', require('./src/features/developer/publicApi.routes'));
+app.use('/api/public', require('./src/features/developer/publicApi.versioning')); // /v1/* + deprecated unversioned alias
 
 // No blanket requireAuth here: every reminders route applies requireAuth itself, and a
 // blanket middleware on "/api" would force auth on every later /api/* route.
