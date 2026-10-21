@@ -1,16 +1,14 @@
 // Account security and data, natively: two-factor authentication (QR + code), a copy of your
-// data, message retention, and the encryption devices registered to your account.
+// data and message retention. (Devices, including their encryption keys, are under Settings → Devices.)
 import { useState } from 'react';
-import { Copy, Download, ExternalLink, Fingerprint, Gavel, KeyRound, ShieldCheck, Smartphone } from 'lucide-react';
+import { Copy, Download, ExternalLink, Fingerprint, Gavel, ShieldCheck } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { toast } from '../../lib/bus.js';
-import { shortAgo } from '../../lib/time.js';
-import { copyText, deviceNoun, isNative, openExternal, saveJson } from '../../native/index.js';
+import { copyText, isNative, openExternal, saveJson } from '../../native/index.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Field, Segmented } from '../../ui/Controls.jsx';
-import { Dialog } from '../../ui/Overlay.jsx';
 import { SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Icon } from '../../ui/Icon.jsx';
@@ -176,46 +174,5 @@ export function AccountDataSettings() {
         )}
       </Body>
     </Screen>
-  );
-}
-
-/** Encryption devices (each holds keys for your messages), shown under Devices. */
-export function EncryptionDevices() {
-  const { data, loading } = useQuery('e2eedevices', () => api().devices?.() ?? []);
-  const [revoke, setRevoke] = useState(null);
-  if (loading) return <SkeletonRows count={2} />;
-  if (!data?.length) return null;
-  const run = async () => {
-    const d = revoke;
-    setRevoke(null);
-    try {
-      await api().revokeDevice(d.id);
-      invalidate('e2eedevices');
-      toast('Device removed', 'success');
-    } catch (err) {
-      toast(err.message || "Couldn't remove the device", 'danger');
-    }
-  };
-  return (
-    <Section title="Encryption devices">
-      <RowGroup footer="Devices that hold keys to read your messages. Remove one you no longer use.">
-        {data.map((d) => (
-          <Row
-            key={d.id}
-            icon={d.current ? Smartphone : KeyRound}
-            tile={d.current ? 'success' : 'neutral'}
-            title={d.name}
-            subtitle={[d.platform, d.current ? `This ${deviceNoun}` : d.at && `Active ${shortAgo(d.at)}`].filter(Boolean).join(' · ')}
-            chevron={false}
-            trailing={!d.current && (
-              <Button size="sm" variant="ghost" className="text-danger" onClick={() => setRevoke(d)}>
-                Remove
-              </Button>
-            )}
-          />
-        ))}
-      </RowGroup>
-      <Dialog open={Boolean(revoke)} onClose={() => setRevoke(null)} title={`Remove ${revoke?.name}?`} body="That device loses its keys and is signed out. It can be set up again by signing in." confirmLabel="Remove" danger onConfirm={run} />
-    </Section>
   );
 }

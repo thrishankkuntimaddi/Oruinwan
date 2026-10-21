@@ -3,6 +3,7 @@ import { nav } from '../../app/nav.js';
 import { api } from '../../data/session.js';
 import { setQueryData } from '../../data/query.js';
 import { useSession } from '../../data/session.js';
+import { pushTarget } from '../../data/live/notificationTarget.js';
 
 /**
  * A tapped push notification: switch to its workspace if needed, then open its conversation
@@ -20,7 +21,26 @@ export function openPush(data = {}) {
     nav.open('chats', 'conversation', conv);
     // A thread reply opens its thread on top of the conversation.
     if (data.parentMessageId) nav.push('thread', { kind: conv.kind, convId: conv.id, messageId: data.parentMessageId });
-  } else nav.push('notifications');
+    return;
+  }
+  // Meeting reminders, design reviews, AI suggestions… open what they're about.
+  if (!openTarget(pushTarget(data))) nav.push('notifications');
+}
+
+/** Opens a notification target; false when there's nothing to open. */
+export function openTarget(t) {
+  if (!t) return false;
+  if (t.kind === 'channel' || t.kind === 'dm') nav.open('chats', 'conversation', { kind: t.kind, id: t.id });
+  else if (t.kind === 'thread') {
+    nav.open('chats', 'conversation', { kind: t.convKind || 'channel', id: t.conv });
+    nav.push('thread', { kind: t.convKind || 'channel', convId: t.conv, messageId: t.id });
+  } else if (t.kind === 'meeting') nav.push('meeting', { id: t.id });
+  else if (t.kind === 'designReview') nav.push('designReview', { id: t.id });
+  else if (t.kind === 'task') nav.push('task', { id: t.id });
+  else if (t.kind === 'tasks') nav.setTab('tasks');
+  else if (t.kind === 'note') nav.push('note', { id: t.id });
+  else return false;
+  return true;
 }
 
 export function openNotification(n) {
@@ -29,13 +49,5 @@ export function openNotification(n) {
     setQueryData(`notifications:${ws}`, (list) => list?.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
     api().markNotificationRead(n.id).catch(() => {});
   }
-  const t = n.target;
-  if (!t) return;
-  if (t.kind === 'channel' || t.kind === 'dm') nav.open('chats', 'conversation', { kind: t.kind, id: t.id });
-  else if (t.kind === 'thread') {
-    nav.open('chats', 'conversation', { kind: t.convKind || 'channel', id: t.conv });
-    nav.push('thread', { kind: t.convKind || 'channel', convId: t.conv, messageId: t.id });
-  } else if (t.kind === 'meeting') nav.push('meeting', { id: t.id });
-  else if (t.kind === 'task') nav.push('task', { id: t.id });
-  else if (t.kind === 'note') nav.push('note', { id: t.id });
+  openTarget(n.target);
 }

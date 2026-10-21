@@ -7,6 +7,7 @@ import { collabReducer, initialCollabState, peersFrom } from './state.js';
 import { toneFor } from '../../ui/Avatar.jsx';
 import { api, useSession } from '../../data/session.js';
 import { realtimeSocket } from '../../data/live/realtime.js';
+import { on } from '../bus.js';
 
 const JOIN_TIMEOUT_MS = 8000;
 const entries = new Map(); // key → { provider, refs, dirty, release }
@@ -61,6 +62,9 @@ export function closeAllCollab() {
     entry.provider.destroy();
   }
 }
+
+// Signing out drops every live document, including ones kept open for unsent offline edits.
+on('session:ended', closeAllCollab);
 
 /**
  * @param socket  the app's Socket.IO socket (null: live editing unavailable → mode 'rest')

@@ -1,15 +1,15 @@
 // Secondary screens reached from Home, the header and Settings.
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Bell, CheckCheck, FileText, File, FolderOpen, Hash, Plug, Search,
+  Bell, CheckCheck, File, FolderOpen, Plug,
   SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import {
-  useChannels, useDirectory, useFiles, useIntegrations, useMembers, useNotes, useNotifications, useTasks,
+  useChannels, useDirectory, useFiles, useIntegrations, useMembers, useNotifications,
 } from '../../data/hooks.js';
-import { invalidate, setQueryData, useQuery } from '../../data/query.js';
+import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Chips, SearchField } from '../../ui/Controls.jsx';
@@ -18,17 +18,13 @@ import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { plainPreview } from '../../ui/Markdown.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
-import { htmlToText } from '../../ui/sanitize.js';
 import { openExternal, shareLink } from '../../native/index.js';
 import { formatBytes } from '../../lib/files.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
-import { TaskRow } from '../tasks/TaskRow.jsx';
-import { openConversation } from '../chats/chatsUi.js';
 import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
 import githubLogo from '../../assets/integrations/github.svg';
 import gitlabLogo from '../../assets/integrations/gitlab.svg';
@@ -43,6 +39,8 @@ const NOTIF_FILTERS = [
   { value: 'mentions', label: 'Mentions' },
   { value: 'messages', label: 'Messages' },
   { value: 'tasks', label: 'Tasks' },
+  { value: 'meetings', label: 'Meetings' },
+  { value: 'reviews', label: 'Reviews' },
 ];
 
 export function NotificationsScreen({ initial = 'all' }) {
@@ -61,6 +59,10 @@ export function NotificationsScreen({ initial = 'all' }) {
         return all.filter((n) => ['dm', 'thread', 'reaction', 'mention'].includes(n.type));
       case 'tasks':
         return all.filter((n) => n.type.startsWith('task'));
+      case 'meetings':
+        return all.filter((n) => n.type === 'meeting');
+      case 'reviews':
+        return all.filter((n) => n.type === 'design');
       default:
         return all;
     }
@@ -97,143 +99,13 @@ export function NotificationsScreen({ initial = 'all' }) {
             ))}
           </div>
         ) : (
-          <EmptyState icon={Bell} title="Nothing here" body="Mentions, direct messages and task updates show up here." />
+          <EmptyState icon={Bell} title="Nothing here" body="Mentions, direct messages, tasks, meetings and design reviews show up here." />
         )}
         <div className="mt-6 px-4">
           <Button variant="secondary" size="sm" icon={Settings2} onClick={() => nav.push('settings.notifications')}>
             Notification settings
           </Button>
         </div>
-      </Body>
-    </Screen>
-  );
-}
-
-// ---------------------------------------------------------------- Search
-
-const SEARCH_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'messages', label: 'Messages' },
-  { value: 'channels', label: 'Channels' },
-  { value: 'people', label: 'People' },
-  { value: 'tasks', label: 'Tasks' },
-  { value: 'notes', label: 'Notes' },
-];
-
-export function SearchScreen() {
-  const ws = useSession((s) => s.workspaceId);
-  const [query, setQuery] = useState('');
-  const [debounced, setDebounced] = useState('');
-  const [tab, setTab] = useState('all');
-  const { data: channels } = useChannels();
-  const { data: members } = useMembers();
-  const { data: tasks } = useTasks();
-  const { data: notes } = useNotes();
-  const directory = useDirectory();
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(query.trim()), 250);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  const q = debounced.toLowerCase();
-  const messages = useQuery(q.length >= 2 && `search:${ws}:${q}`, () => api().searchMessages?.(ws, q) ?? []);
-  const results = useMemo(() => {
-    if (!q) return null;
-    return {
-      channels: (channels || []).filter((c) => c.name.includes(q) || c.topic?.toLowerCase().includes(q)),
-      people: (members || []).filter((u) => u.name.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)),
-      tasks: (tasks || []).filter((t) => t.title.toLowerCase().includes(q)),
-      notes: (notes || []).filter((n) => !n.archived && (n.title.toLowerCase().includes(q) || htmlToText(n.content, 3000).toLowerCase().includes(q))),
-      messages: messages.data || [],
-    };
-  }, [q, channels, members, tasks, notes, messages.data]);
-
-  const show = (key) => tab === 'all' || tab === key;
-  const limit = tab === 'all' ? 3 : 50;
-  const total = results ? Object.values(results).reduce((a, l) => a + l.length, 0) : 0;
-
-  return (
-    <Screen>
-      <Header title="Search">
-        <div className="space-y-2.5 pb-3">
-          <div className="px-4">
-            <SearchField value={query} onChange={setQuery} placeholder="Messages, channels, people, tasks, notes" autoFocus />
-          </div>
-          <Chips options={SEARCH_TABS} value={tab} onChange={setTab} />
-        </div>
-      </Header>
-      <Body>
-        {!results ? (
-          <EmptyState icon={Search} title="Search your workspace" body="Find messages, channels, people, tasks and notes." />
-        ) : total === 0 && !messages.loading ? (
-          <EmptyState icon={Search} title="No results" body={`Nothing matches “${debounced}”.`} />
-        ) : (
-          <>
-            {show('messages') && (results.messages.length > 0 || messages.loading) && (
-              <Section title="Messages">
-                <RowGroup>
-                  {messages.loading && !results.messages.length ? (
-                    <SkeletonRows count={2} />
-                  ) : (
-                    results.messages.slice(0, limit).map((m) => (
-                      <Row
-                        key={m.id}
-                        leading={<Avatar name={directory[m.authorId]?.name} size="sm" />}
-                        title={plainPreview(m.text, 140)}
-                        subtitle={`${directory[m.authorId]?.name || 'Someone'} in ${m.convName} · ${shortAgo(m.at)}`}
-                        multiline
-                        onClick={() => openConversation(m.convKind, m.convId)}
-                      />
-                    ))
-                  )}
-                </RowGroup>
-              </Section>
-            )}
-            {show('channels') && results.channels.length > 0 && (
-              <Section title="Channels">
-                <RowGroup>
-                  {results.channels.slice(0, limit).map((c) => (
-                    <Row key={c.id} icon={Hash} title={c.name} subtitle={c.topic} onClick={() => openConversation('channel', c.id)} />
-                  ))}
-                </RowGroup>
-              </Section>
-            )}
-            {show('people') && results.people.length > 0 && (
-              <Section title="People">
-                <RowGroup>
-                  {results.people.slice(0, limit).map((u) => (
-                    <Row
-                      key={u.id}
-                      leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
-                      title={u.name}
-                      subtitle={u.title || u.email}
-                      onClick={() => nav.push('profile', { userId: u.id })}
-                    />
-                  ))}
-                </RowGroup>
-              </Section>
-            )}
-            {show('tasks') && results.tasks.length > 0 && (
-              <Section title="Tasks">
-                <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
-                  {results.tasks.slice(0, limit).map((t) => (
-                    <TaskRow key={t.id} task={t} directory={directory} compact />
-                  ))}
-                </div>
-              </Section>
-            )}
-            {show('notes') && results.notes.length > 0 && (
-              <Section title="Notes">
-                <RowGroup>
-                  {results.notes.slice(0, limit).map((n) => (
-                    <Row key={n.id} icon={FileText} title={n.title} subtitle={htmlToText(n.content, 90)} onClick={() => nav.push('note', { id: n.id })} />
-                  ))}
-                </RowGroup>
-              </Section>
-            )}
-          </>
-        )}
       </Body>
     </Screen>
   );

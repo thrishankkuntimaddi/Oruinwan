@@ -20,6 +20,7 @@ import { roadmapAdapter } from './adapter.roadmap.js';
 import { designAdapter } from './adapter.design.js';
 import { callsAdapter } from './adapter.calls.js';
 import { opsAdapter } from './adapter.ops.js';
+import { notificationKind, targetOf } from './notificationTarget.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -202,37 +203,10 @@ function mapNote(n) {
   };
 }
 
-const NOTIF_TYPE = {
-  mention: 'mention', dm: 'dm', direct_message: 'dm', thread_reply: 'thread', reaction: 'reaction',
-  meeting_reminder: 'meeting', schedule_created: 'meeting', huddle_started: 'meeting', note_shared: 'note',
-};
-
-function targetOf(n) {
-  const meta = n.meta || {};
-  if (meta.taskId) return { kind: 'task', id: String(meta.taskId) };
-  if (meta.noteId) return { kind: 'note', id: String(meta.noteId) };
-  // A thread reply opens its thread (in a channel or a DM).
-  const parent = meta.parentMessageId || meta.parentId;
-  if (parent && (meta.channelId || meta.dmSessionId)) {
-    return meta.channelId
-      ? { kind: 'thread', id: String(parent), conv: String(meta.channelId), convKind: 'channel' }
-      : { kind: 'thread', id: String(parent), conv: String(meta.dmSessionId), convKind: 'dm' };
-  }
-  if (meta.scheduledMeetingId) return { kind: 'meeting', id: String(meta.scheduledMeetingId) };
-  if (meta.dmSessionId) return { kind: 'dm', id: String(meta.dmSessionId) };
-  if (meta.channelId) return { kind: 'channel', id: String(meta.channelId) };
-  const link = n.link || '';
-  const ch = link.match(/channels?\/([0-9a-f]{24})/i);
-  if (ch) return { kind: 'channel', id: ch[1] };
-  const dm = link.match(/dm\/([0-9a-f]{24})/i);
-  if (dm) return { kind: 'dm', id: dm[1] };
-  return null;
-}
-
 function mapNotification(n) {
   return {
     id: idOf(n),
-    type: n.type?.startsWith('task') ? 'task' : NOTIF_TYPE[n.type] || 'note',
+    type: notificationKind(n.type),
     actorId: idOf(n.actor || n.sender || n.meta?.actorId || n.meta?.senderId),
     actorName: n.meta?.assignerUsername || n.meta?.senderUsername || n.meta?.senderName || n.meta?.actorName
       || (typeof n.meta?.startedBy === 'string' ? n.meta.startedBy : n.meta?.startedBy?.username) // huddles
@@ -454,6 +428,15 @@ export const liveAdapter = {
     // accessToken: Google's pop-up in a browser. credential: an ID token from the Android app.
     const token = credential ? { credential } : { accessToken };
     return finishProviderSignIn('/auth/google-login', { ...token, ...(otp ? { otp } : {}) });
+  },
+
+  /**
+   * Finishes company SSO (data/live/sso.js): trades the one-time code from oruinwan://sso and
+   * the PKCE verifier for a session.
+   */
+  async ssoSignIn({ server, code, verifier }) {
+    configure(normalizeServerUrl(server));
+    return finishProviderSignIn('/auth/sso/app/exchange', { code, verifier });
   },
 
   /** Creates the account a Google sign-in asked to create (`ticket` from googleSignIn), then signs in. */
@@ -913,10 +896,13 @@ export const liveAdapter = {
 
   async notificationPrefs(ws) {
     const { preferences: p = {} } = await api.get('/notifications/preferences', { workspaceId: ws });
-    return { messages: p.message !== false, threads: p.threadReply !== false, tasks: p.task !== false, meetings: p.meeting !== false, email: Boolean(p.email) };
+    return {
+      messages: p.message !== false, threads: p.threadReply !== false, tasks: p.task !== false, meetings: p.meeting !== false,
+      aiSuggestions: p.aiSuggestions !== false, email: Boolean(p.email),
+    };
   },
   async saveNotificationPrefs(ws, patch) {
-    const map = { messages: 'message', threads: 'threadReply', tasks: 'task', meetings: 'meeting', email: 'email' };
+    const map = { messages: 'message', threads: 'threadReply', tasks: 'task', meetings: 'meeting', aiSuggestions: 'aiSuggestions', email: 'email' };
     const body = Object.fromEntries(Object.entries(patch).map(([k, v]) => [map[k] || k, v]));
     await api.patch('/notifications/preferences', body, { workspaceId: ws });
   },

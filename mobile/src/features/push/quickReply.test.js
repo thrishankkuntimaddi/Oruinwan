@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conversationOf, quickReplyPlan } from './quickReply.js';
+import { conversationOf, isMessagePush, quickReplyPlan } from './quickReply.js';
 import { actionOf, notificationIdFor } from '../../native/push.js';
 
 describe('notification actions', () => {
@@ -27,5 +27,13 @@ describe('notification actions', () => {
     expect(notificationIdFor('abc')).toBe(notificationIdFor('abc'));
     expect(notificationIdFor('abc')).not.toBe(notificationIdFor('abd'));
     expect(notificationIdFor('64f0c0ffee0000000000abcd')).toBeGreaterThan(0);
+  });
+
+  it('only message pushes get the reply actions', () => {
+    expect(isMessagePush({ type: 'dm', dmSessionId: 'd1', category: 'oru.message' })).toBe(true);
+    expect(isMessagePush({ type: 'mention', channelId: 'c1' })).toBe(true); // older server: no category
+    expect(isMessagePush({ type: 'huddle_started', channelId: 'c1' })).toBe(false);
+    expect(isMessagePush({ type: 'design_review' })).toBe(false);
+    expect(isMessagePush({ channelId: 'c1', category: 'other' })).toBe(false);
   });
 });
