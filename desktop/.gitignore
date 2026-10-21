@@ -2,3 +2,4 @@ node_modules/
 dist/
 app/
 .DS_Store
+electron/update-public-key.txt

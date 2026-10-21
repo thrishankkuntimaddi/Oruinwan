@@ -12,6 +12,10 @@ public class MainActivity extends BridgeActivity {
         // Capacitor.isPluginAvailable('AppUpdater') to tell the two apart.
         if (BuildConfig.IN_APP_UPDATES) registerPlugin(AppUpdaterPlugin.class);
         registerPlugin(AppWindowPlugin.class);
+        // Over-the-air UI updates (both flavors: the UI is JavaScript in the WebView). The
+        // boot guard rolls back a downloaded UI that failed to start, before the WebView loads.
+        OtaBundleStore.beforeBridge(this);
+        registerPlugin(OtaBundlePlugin.class);
         registerPlugin(GoogleSignInPlugin.class);
         super.onCreate(savedInstanceState);
     }

@@ -5,7 +5,9 @@
 //     "notes": "What changed", "minVersion": "1.0.0", "publishedAt": "2026-10-10T…Z",
 //     "downloads": { "mac-arm64": "https://…/Oruinwan-Mac-AppleSilicon.dmg", "mac-x64": "…",
 //                    "win-x64": "…", "linux-appimage": "…", "linux-deb": "…" } }
+//   "bundles": { "phone": {…}, "desktop": {…} }  signed UI zips, see ./bundle.js
 import { compareVersions, parseVersion } from '../lib/version.js';
+import { normalizeBundles } from './bundle.js';
 
 const httpsUrl = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
 
@@ -29,6 +31,7 @@ export function normalizeManifest(raw) {
     publishedAt: raw.publishedAt || null,
     pageUrl: httpsUrl(raw.pageUrl),
     downloads,
+    bundles: normalizeBundles(raw.bundles),
   };
 }
 

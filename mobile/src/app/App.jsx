@@ -10,7 +10,7 @@ import { CreateWorkspaceFlow } from '../features/workspace/CreateWorkspaceFlow.j
 import { UpdateGate } from '../features/update/UpdateGate.jsx';
 import { hideSplash, onAppState, onAppUrl, onBackButton, openExternal } from '../native/index.js';
 import { JoinWorkspaceFlow } from '../features/workspace/JoinWorkspace.jsx';
-import { checkForUpdate } from '../update/updater.js';
+import { checkForUpdate, confirmRunningBundle } from '../update/updater.js';
 import { refreshRemoteConfig, logEvent } from '../config/remote.js';
 import { on } from '../lib/bus.js';
 import { watchKeyboard } from '../native/keyboard.js';
@@ -49,6 +49,8 @@ export function App() {
       .boot()
       .finally(() => {
         hideSplash();
+        // A quick (over-the-air) update that got this far started fine: keep it.
+        confirmRunningBundle();
         logEvent('app_open', { version: __APP_VERSION__ });
         // Remote config and the update check run after first paint, never before it.
         setTimeout(() => {

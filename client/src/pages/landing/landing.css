@@ -506,6 +506,17 @@
 .orw-footer__bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--o-line); font-size: 12px; color: var(--o-text-3); }
 .orw-footer__wordmark { margin-top: 56px; font-size: clamp(64px, 17vw, 232px); font-weight: 800; letter-spacing: -0.06em; line-height: 0.8; text-align: center; user-select: none; background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* ── Bento: wide tiles fill the last row of four ────────────────────── */
+.orw-feat--wide { grid-column: span 2; }
+
+/* ── Open source call-out ─────────────────────────────────────────────── */
+.orw-oss { position: relative; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 56px; align-items: center; padding: 64px 56px; overflow: hidden; border-color: rgba(200, 162, 116, 0.3); }
+.orw-oss::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 60% 90% at 0% 0%, rgba(200, 162, 116, 0.16), transparent 70%); }
+.orw-oss__ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.orw-oss__points { display: flex; flex-direction: column; gap: 1px; background: var(--o-line); border: 1px solid var(--o-line); }
+.orw-oss__points li { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px; background: var(--o-bg-2); font-size: 14px; line-height: 1.55; color: var(--o-text-2); }
+.orw-oss__points li svg { flex-shrink: 0; margin-top: 2px; color: var(--o-accent); }
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
     .orw-float--a { left: -12px; }
@@ -531,6 +542,7 @@
     .orw-tab::before { top: auto; right: 0; bottom: 0; width: auto; height: 2px; transform: scaleX(0); }
     .orw-tab[aria-selected='true']::before { transform: scaleX(1); }
     .orw-plans, .orw-dl { grid-template-columns: minmax(0, 1fr); }
+    .orw-oss { grid-template-columns: minmax(0, 1fr); gap: 36px; padding: 48px 32px; }
     .orw-steps { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .orw-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .orw-footer__brand { grid-column: 1 / -1; }
@@ -546,6 +558,9 @@
     .orw-mock__switch { display: flex !important; }
     .orw-float { display: none; }
     .orw-bento, .orw-sec { grid-template-columns: minmax(0, 1fr); }
+    .orw-feat--wide { grid-column: auto; }
+    .orw-oss { padding: 36px 20px; }
+    .orw-oss__ctas .orw-btn { flex: 1 1 100%; }
     .orw-panel { padding: 24px 18px; min-height: 0; }
     .orw-panel__visual { padding: 12px; min-height: 0; }
     .orw-v-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }

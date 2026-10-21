@@ -1,0 +1,107 @@
+/* Pricing — plan cards on the public site (.orw, always dark) and in the app (gl tokens,
+   light and dark). Cards read the --prc-* tokens, which default to the app theme and are
+   pointed at the landing tokens inside .orw. */
+
+.prc-root {
+    --prc-surface: var(--bg-surface);
+    --prc-surface-2: var(--bg-active);
+    --prc-glass: var(--gl-glass);
+    --prc-line: var(--border-default);
+    --prc-line-2: var(--border-accent);
+    --prc-text: var(--text-primary);
+    --prc-text-2: var(--text-secondary);
+    --prc-text-3: var(--text-muted);
+    --prc-accent: var(--accent);
+    --prc-accent-soft: var(--gl-accent-soft);
+    --prc-accent-line: var(--gl-accent-line);
+    --prc-spec: var(--gl-spec);
+    --prc-good: #3fa877;
+}
+.orw .prc-root {
+    --prc-surface: var(--o-slab);
+    --prc-surface-2: var(--o-slab-2);
+    --prc-glass: var(--o-glass);
+    --prc-line: var(--o-line-2);
+    --prc-line-2: var(--o-line-3);
+    --prc-text: var(--o-text);
+    --prc-text-2: var(--o-text-2);
+    --prc-text-3: var(--o-text-3);
+    --prc-accent: var(--o-accent);
+    --prc-accent-soft: var(--o-accent-dim);
+    --prc-accent-line: rgba(200, 162, 116, 0.45);
+    --prc-spec: var(--o-spec);
+    --prc-good: #8fe0b8;
+}
+
+.prc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+
+.prc-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 32px 28px;
+    color: var(--prc-text);
+    background: var(--prc-surface);
+    background-image: var(--prc-glass);
+    border: 1px solid var(--prc-line);
+    border-radius: var(--gl-radius, 3px);
+    box-shadow: var(--prc-spec);
+}
+.prc-card--featured {
+    border-color: var(--prc-accent-line);
+    background-image: linear-gradient(180deg, var(--prc-accent-soft), transparent 45%), var(--prc-glass);
+    box-shadow: var(--prc-spec), 0 30px 80px -40px rgba(200, 162, 116, 0.4);
+}
+.prc-card__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prc-card__icon {
+    width: 42px; height: 42px; display: grid; place-items: center;
+    border: 1px solid var(--prc-line); background: var(--prc-surface-2); box-shadow: var(--prc-spec); color: var(--prc-text);
+}
+.prc-card--featured .prc-card__icon { color: var(--prc-accent); border-color: var(--prc-accent-line); background: var(--prc-accent-soft); }
+.prc-card__name { margin: 22px 0 0; font-size: 24px; font-weight: 750; letter-spacing: -0.025em; }
+.prc-card__tagline { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--prc-text-2); }
+.prc-card__price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 22px 0 20px; padding-bottom: 20px; border-bottom: 1px solid var(--prc-line); }
+.prc-card__price b { font-size: 30px; font-weight: 750; letter-spacing: -0.035em; }
+.prc-card__price span { font-size: 12.5px; color: var(--prc-text-3); }
+.prc-card__list { display: flex; flex-direction: column; gap: 10px; flex: 1; margin: 0 0 28px; padding: 0; list-style: none; }
+.prc-card__list li { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--prc-text-2); }
+.prc-card__list li svg { flex-shrink: 0; margin-top: 3px; color: var(--prc-accent); }
+.prc-card__cta { display: flex; flex-direction: column; gap: 8px; }
+.prc-card__cta a { text-decoration: none; }
+
+.prc-tag {
+    display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+    font-size: 11px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--prc-text-2); border: 1px solid var(--prc-line); background: var(--prc-surface-2);
+}
+.prc-tag--good { color: var(--prc-good); border-color: color-mix(in srgb, var(--prc-good) 40%, transparent); background: color-mix(in srgb, var(--prc-good) 10%, transparent); }
+
+/* Free plan limits table */
+.prc-limits { margin-top: 48px; border: 1px solid var(--prc-line); background: var(--prc-surface); background-image: var(--prc-glass); }
+.prc-limits__head { padding: 20px 24px; border-bottom: 1px solid var(--prc-line); }
+.prc-limits__head h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--prc-text); }
+.prc-limits__head p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--prc-text-2); }
+.prc-limits dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.prc-limits__row { display: flex; flex-direction: column; gap: 2px; padding: 14px 24px; border-bottom: 1px solid var(--prc-line); }
+.prc-limits__row:nth-child(odd) { border-right: 1px solid var(--prc-line); }
+.prc-limits dt { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--prc-text-3); }
+.prc-limits dd { margin: 0; font-size: 14px; color: var(--prc-text); }
+
+.prc-note { margin-top: 20px; font-size: 13px; line-height: 1.6; color: var(--prc-text-3); text-align: center; }
+.prc-note a { color: var(--prc-accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* In-app page */
+.prc-app { height: 100vh; height: 100dvh; overflow-y: auto; background: var(--gl-shell-bg, var(--bg-base)); color: var(--text-primary); }
+.prc-app__body { max-width: 1120px; margin: 0 auto; padding: 28px 28px 56px; }
+
+@media (max-width: 960px) {
+    .prc-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+    .prc-card { padding: 26px 20px; }
+    .prc-limits dl { grid-template-columns: minmax(0, 1fr); }
+    .prc-limits__row:nth-child(odd) { border-right: 0; }
+    .prc-limits__head, .prc-limits__row { padding-left: 16px; padding-right: 16px; }
+    .prc-app__body { padding: 20px 16px 40px; }
+}

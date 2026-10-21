@@ -40,6 +40,7 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/uploads/') ||
+    url.pathname === '/version.json' || // the "new version deployed" check must never be cached
     url.origin !== self.location.origin
   ) {
     return; // Fall through to the network

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    ArrowLeft, Bell, CloudUpload, Database, Globe, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
+    ArrowLeft, Bell, CloudUpload, Database, Globe, Info, KeyRound, Laptop, Lock, Menu, Palette, Plug, Search, Sparkles, User, X,
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
@@ -21,6 +21,7 @@ import AITab from './settingsTabs/AITab';
 import IntegrationsTab from './settingsTabs/IntegrationsTab';
 import DataTab from './settingsTabs/DataTab';
 import BackupTab from './settingsTabs/BackupTab';
+import UpdatesTab from './settingsTabs/UpdatesTab';
 import { Field, Select, IconButton } from './settingsTabs/settingsUi';
 import './settingsTabs/settings.css';
 
@@ -65,11 +66,17 @@ const GROUPS = [
             { id: 'backup', label: 'Backup', icon: CloudUpload, description: 'Google Drive backup, restore', keywords: 'backup restore google drive cloud copy encrypted' },
         ],
     },
+    {
+        label: 'About',
+        items: [
+            { id: 'updates', label: 'About & updates', icon: Info, description: 'Version, updates, plans', keywords: 'update updates version upgrade release new check reload restart about pricing plans pro enterprise open source github' },
+        ],
+    },
 ];
 
 const ALL_ITEMS = GROUPS.flatMap((g) => g.items);
 // Old tab ids (bookmarks, links from elsewhere) → current ones.
-const ALIASES = { advanced: 'data', compliance: 'data', account: 'profile', password: 'security', devices: 'sessions', language: 'region' };
+const ALIASES = { advanced: 'data', compliance: 'data', account: 'profile', password: 'security', devices: 'sessions', language: 'region', about: 'updates', version: 'updates' };
 const resolveTab = (id) => (ALL_ITEMS.some((i) => i.id === id) ? id : ALIASES[id] || 'profile');
 
 const Settings = () => {
@@ -161,6 +168,7 @@ const Settings = () => {
             case 'integrations': return <IntegrationsTab workspaceId={workspaceId} workspaceName={workspaceName} workspacePicker={workspacePicker} />;
             case 'data': return <DataTab user={user} />;
             case 'backup': return <BackupTab />;
+            case 'updates': return <UpdatesTab />;
             default: return null;
         }
     };

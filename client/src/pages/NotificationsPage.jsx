@@ -9,6 +9,7 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
 import { notificationTypeMeta, notificationBody, timeAgo, COUNT_BADGE_STYLE } from '../features/notifications/notificationTypes';
 import { PanelEmpty } from '../components/layout/WorkspacePanel';
+import UpdateCard from '../appMode/UpdateCard';
 import '../styles/gloss.css';
 import '../styles/gloss-x-panels.css';
 
@@ -203,6 +204,7 @@ export default function NotificationsPage() {
 
             <div className="gl-x-page-body">
                 <div className="gl-x-wrap gl-x-page-pad">
+                    {(activeTab === 'all' || activeTab === 'unread') && <UpdateCard />}
                     {activeTab === 'settings' ? (
                         <NotificationPreferences workspaceId={workspaceId} />
                     ) : loading && notifications.length === 0 ? (

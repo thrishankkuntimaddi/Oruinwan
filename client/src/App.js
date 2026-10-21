@@ -77,6 +77,8 @@ import JoinChannel from "./pages/JoinChannel";
 
 // The docs site is its own chunk (content + highlighter), loaded on first visit.
 const ChttrixDocs = lazy(() => import("./pages/ChttrixDocs"));
+// Plans and pricing: public, and reachable from the app (Settings, upgrade prompts).
+const Pricing = lazy(() => import("./pages/pricing/Pricing"));
 import Careers from "./pages/Careers";
 
 import About from "./pages/company/About";
@@ -800,6 +802,7 @@ function App() {
                           <Route path="/brand" element={<Brand />} />
                           <Route path="/blog" element={<Blog />} />
                           <Route path="/security" element={<Security />} />
+                          <Route path="/pricing" element={<Suspense fallback={null}><Pricing /></Suspense>} />
                           <Route path="/careers" element={<Careers />} />
 
                           <Route path="/help" element={<HelpCenter />} />

@@ -5,6 +5,7 @@ import BrandMark from '../../shared/components/ui/BrandMark';
 import BRAND from '../../shared/brand';
 import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { scrollToId } from './hooks';
+import { REPO_URL } from './data';
 
 const LandingFooter = () => {
     const navigate = useNavigate();
@@ -16,10 +17,11 @@ const LandingFooter = () => {
     const columns = [
         {
             title: 'Product', links: [
-                { label: 'Platform', section: 'platform' },
+                { label: 'Features', section: 'platform' },
                 { label: BRAND.ai, section: 'ai' },
-                { label: 'Plans', section: 'plans' },
+                { label: 'Pricing', to: '/pricing' },
                 { label: 'Download', section: 'download' },
+                { label: 'Open source', section: 'open-source' },
                 { label: 'Security', to: '/security' },
             ],
         },
@@ -35,6 +37,7 @@ const LandingFooter = () => {
         {
             title: 'Resources', links: [
                 { label: 'Documentation', to: '/docs' },
+                { label: 'GitHub', href: REPO_URL },
                 { label: 'Help center', to: '/help' },
                 ...(communityEnabled ? [{ label: 'Community', to: '/community' }] : []),
                 { label: 'Partners', to: '/partners' },
@@ -51,6 +54,7 @@ const LandingFooter = () => {
     ];
 
     const onLink = (l) => (e) => {
+        if (l.href) return; // external: the browser opens it
         e.preventDefault();
         if (l.section) toSection(l.section);
         else navigate(l.to);
@@ -65,7 +69,7 @@ const LandingFooter = () => {
                             <BrandMark size={28} />
                             <span className="orw-logo__word">{BRAND.name}</span>
                         </a>
-                        <p>{BRAND.tagline} Chat, huddles, tasks, notes and AI in one encrypted workspace.</p>
+                        <p>The free, open-source workspace for teams: chat, huddles, tasks, notes and AI, on every platform.</p>
                     </div>
                     {columns.map(col => (
                         <nav key={col.title} aria-label={col.title}>
@@ -73,7 +77,8 @@ const LandingFooter = () => {
                             <ul>
                                 {col.links.map(l => (
                                     <li key={l.label}>
-                                        <a className="orw-footer__link" href={l.to || (onHome ? `#${l.section}` : `/#${l.section}`)} onClick={onLink(l)}>{l.label}</a>
+                                        <a className="orw-footer__link" href={l.href || l.to || (onHome ? `#${l.section}` : `/#${l.section}`)} onClick={onLink(l)}
+                                            {...(l.href ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{l.label}</a>
                                     </li>
                                 ))}
                             </ul>
@@ -84,7 +89,7 @@ const LandingFooter = () => {
                 <div className="orw-footer__wordmark" aria-hidden="true">{BRAND.name.toLowerCase()}</div>
 
                 <div className="orw-footer__bottom">
-                    <span>© {BRAND.year} {BRAND.company} All rights reserved.</span>
+                    <span>© {BRAND.year} {BRAND.company} Open source under the MIT licence.</span>
                     <button type="button" className="orw-btn orw-btn--ghost" onClick={() => scrollToId('top')}>
                         Back to top <ArrowUp size={14} aria-hidden="true" />
                     </button>

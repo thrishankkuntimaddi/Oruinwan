@@ -34,11 +34,15 @@ root.render(
         {IS_APP && <UpdateNotice />}
       </>
     ) : (
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </GoogleOAuthProvider>
+      <>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </GoogleOAuthProvider>
+        {/* "A new version is available — Reload" after a deploy (appMode/updates/store.js). */}
+        <UpdateNotice />
+      </>
     )}
   </React.StrictMode>
 );

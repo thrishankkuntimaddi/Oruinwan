@@ -35,6 +35,34 @@ contextBridge.exposeInMainWorld('oruinwanDesktop', {
    * for the server to finish, or { error, code } ('CANCELLED' when the person backed out).
    */
   googleSignIn: (clientId) => ipcRenderer.invoke('oruinwan:google-sign-in', String(clientId || '')),
+  /**
+   * Quick updates (electron/ota.js): signed UI bundles installed without a reinstall. The main
+   * process checks the SHA-256 and Ed25519 signature itself.
+   */
+  updates: {
+    /** { shellVersion, uiVersion, source: 'bundled'|'downloaded', canApplyBundles, staged } */
+    info: () => ipcRenderer.invoke('oruinwan:update:info'),
+    /** bundle: { url, version, sha256, signature, minNativeVersion } → { ok, version } | { error, code } */
+    download: (bundle) => ipcRenderer.invoke('oruinwan:update:download', {
+      url: String((bundle && bundle.url) || ''),
+      version: String((bundle && bundle.version) || ''),
+      sha256: String((bundle && bundle.sha256) || ''),
+      signature: String((bundle && bundle.signature) || ''),
+      minNativeVersion: bundle && bundle.minNativeVersion ? String(bundle.minNativeVersion) : null,
+    }),
+    /** Restarts the app into the downloaded update. */
+    apply: () => ipcRenderer.invoke('oruinwan:update:apply'),
+    /** Back to the version that came with the app (restarts). */
+    reset: () => ipcRenderer.invoke('oruinwan:update:reset'),
+    /** The page started: keeps a just-installed update (the boot watchdog rolls back otherwise). */
+    confirmStarted: () => ipcRenderer.send('oruinwan:update:confirm'),
+    /** Called with { state, percent } while downloading. Returns an unsubscribe function. */
+    onProgress: (callback) => {
+      const handler = (_event, p) => callback(p);
+      ipcRenderer.on('oruinwan:update:progress', handler);
+      return () => ipcRenderer.removeListener('oruinwan:update:progress', handler);
+    },
+  },
 });
 
 contextBridge.exposeInMainWorld('electronAPI', {

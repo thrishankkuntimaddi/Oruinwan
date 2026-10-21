@@ -7,7 +7,7 @@ import { NAV_LINKS } from './data';
 import { scrollToId, useActiveSection, useScrollState } from './hooks';
 import AppLink from './AppLink';
 
-const SECTION_IDS = NAV_LINKS.map(l => l.id);
+const SECTION_IDS = NAV_LINKS.filter(l => !l.to).map(l => l.id);
 
 const LandingNav = () => {
     const navigate = useNavigate();
@@ -39,6 +39,11 @@ const LandingNav = () => {
         if (onHome) scrollToId(id);
         else navigate(id === 'top' ? '/' : `/#${id}`);
     };
+    // A nav entry: a section of the landing page, or another page (`to`).
+    const linkProps = (l) => (l.to
+        ? { href: l.to, onClick: (e) => { e.preventDefault(); setOpen(false); navigate(l.to); } }
+        : { href: onHome ? `#${l.id}` : `/#${l.id}`, onClick: go(l.id) });
+    const isActive = (l) => (l.to ? pathname === l.to : active === l.id);
 
     return (
         <>
@@ -51,9 +56,9 @@ const LandingNav = () => {
 
                     <nav className="orw-nav__links" aria-label="Primary">
                         {NAV_LINKS.map(l => (
-                            <a key={l.id} href={onHome ? `#${l.id}` : `/#${l.id}`} onClick={go(l.id)}
-                                className={`orw-nav__link${active === l.id ? ' is-active' : ''}`}
-                                aria-current={active === l.id ? 'true' : undefined}>
+                            <a key={l.id} {...linkProps(l)}
+                                className={`orw-nav__link${isActive(l) ? ' is-active' : ''}`}
+                                aria-current={isActive(l) ? (l.to ? 'page' : 'true') : undefined}>
                                 {l.label}
                             </a>
                         ))}
@@ -80,7 +85,7 @@ const LandingNav = () => {
 
             <div id="orw-drawer" className={`orw-drawer${open ? ' is-open' : ''}`} aria-hidden={!open} inert={!open}>
                 {NAV_LINKS.map(l => (
-                    <a key={l.id} href={onHome ? `#${l.id}` : `/#${l.id}`} onClick={go(l.id)} className="orw-drawer__link">
+                    <a key={l.id} {...linkProps(l)} className="orw-drawer__link">
                         {l.label} <ArrowRight size={16} />
                     </a>
                 ))}

@@ -1,0 +1,4 @@
+# Ed25519 public key for over-the-air UI bundle updates (base64, 32 bytes). Apps compile it in
+# and refuse any UI bundle not signed with the matching private key (the GitHub Actions secret
+# ORUINWAN_UPDATE_SIGNING_KEY). See docs/UPDATES.md. Lines starting with # are ignored.
+d13eY7/alhIMPftiKwFTX33IBY1b97ToZXPmK24knzg=

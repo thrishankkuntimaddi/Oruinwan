@@ -3,7 +3,7 @@
 // mobile/package.json, the one version number for every platform.
 // Set ORUINWAN_SKIP_WEB_BUILD=1 to copy an existing client/dist-app instead.
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,4 +26,9 @@ if (!existsSync(join(dist, 'index.html'))) {
 }
 rmSync(target, { recursive: true, force: true });
 cpSync(dist, target, { recursive: true });
+// The public key for signed quick updates (docs/UPDATES.md), shipped next to main.js.
+// ORUINWAN_UPDATE_PUBLIC_KEY overrides platform/update-public-key.txt (e.g. for a fork).
+const keyFile = join(root, '..', 'platform', 'update-public-key.txt');
+const key = process.env.ORUINWAN_UPDATE_PUBLIC_KEY || (existsSync(keyFile) ? readFileSync(keyFile, 'utf8') : '');
+writeFileSync(join(root, 'electron', 'update-public-key.txt'), key.endsWith('\n') ? key : `${key}\n`);
 console.log(`Bundled ${dist} → ${target} (version ${version})`);
