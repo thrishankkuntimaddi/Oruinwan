@@ -144,6 +144,7 @@ function sendApns(deviceToken, { title, body, data, badge }) {
         sound: 'default',
         ...(typeof badge === 'number' ? { badge } : {}),
         ...(data?.conversationId ? { 'thread-id': String(data.conversationId) } : {}),
+        ...(isMessagePush(data) ? { category: MESSAGE_CATEGORY } : {}),
       },
       ...stringData(data),
     });
@@ -179,6 +180,19 @@ function sendApns(deviceToken, { title, body, data, badge }) {
   });
 }
 
+// ── Message pushes (quick reply) ────────────────────────────────────────────
+
+// The phone app registers the notification category 'oru.message' with "Reply" (text input)
+// and "Mark as read" actions (mobile/src/native/push.js). iOS shows them on pushes whose
+// aps.category matches; Android re-posts message pushes with the same actions while the app
+// runs. Only notifications about a message in a conversation get it: a reply needs somewhere to go.
+const MESSAGE_CATEGORY = 'oru.message';
+const MESSAGE_PUSH_TYPES = new Set(['mention', 'dm', 'direct_message', 'thread_reply', 'message', 'channel_message']);
+
+function isMessagePush(data) {
+  return Boolean(data && MESSAGE_PUSH_TYPES.has(data.type) && (data.channelId || data.dmSessionId || data.conversationId));
+}
+
 // ── Sending ─────────────────────────────────────────────────────────────────
 
 function isConfigured() {
@@ -198,7 +212,10 @@ async function sendToUser(userId, title, body, data = {}) {
     const tokens = Array.isArray(user?.deviceTokens) ? user.deviceTokens : [];
     if (!tokens.length) return;
 
-    const message = { title, body, data: { ...data, conversationId: data.channelId || data.dmSessionId || undefined } };
+    const conversationId = data.channelId || data.dmSessionId || undefined;
+    const full = { ...data, conversationId };
+    // `category` in the data tells the Android app which pushes to re-post with the reply actions.
+    const message = { title, body, data: isMessagePush(full) ? { ...full, category: MESSAGE_CATEGORY } : full };
     const results = await Promise.all(
       tokens.map(async (entry) => {
         const service = serviceFor(entry);
@@ -218,4 +235,4 @@ async function sendToUser(userId, title, body, data = {}) {
   }
 }
 
-module.exports = { sendToUser, isConfigured, _internal: { fcmConfig, apnsConfig, stringData, serviceFor, sendFcm, sendApns } };
+module.exports = { sendToUser, isConfigured, _internal: { isMessagePush, MESSAGE_CATEGORY, fcmConfig, apnsConfig, stringData, serviceFor, sendFcm, sendApns } };
