@@ -32,6 +32,7 @@ export const ROUTES = {
   knowledge: pick(knowledge, 'KnowledgeScreen'),
   page: pick(knowledge, 'PageScreen'),
   files: pick(more, 'FilesScreen'),
+  file: pick(() => import('../features/files/FileScreen.jsx'), 'FileScreen'),
   notifications: pick(more, 'NotificationsScreen'),
   search: pick(more, 'SearchScreen'),
   integrations: pick(more, 'IntegrationsScreen'),

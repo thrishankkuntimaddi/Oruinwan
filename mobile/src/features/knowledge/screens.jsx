@@ -2,7 +2,8 @@
 // Members can read, create, edit and delete pages; edits save as you type (the server keeps
 // earlier versions).
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Pencil, Plus, Sparkles, Trash2, Users, Workflow } from 'lucide-react';
+import { PageExtras } from './PageExtras.jsx';
+import { BookOpen, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Pencil, Plus, Trash2, Users, Workflow } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
 import { useKnowledge } from '../../data/hooks.js';
@@ -17,8 +18,6 @@ import { Markdown } from '../../ui/Markdown.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
-import { useFlag } from '../../config/flags.js';
-import { askAiAbout } from '../ai/aiUi.js';
 
 // The same starter pages as the web (client/src/pages/SidebarComp/KnowledgePage.jsx).
 export const PAGE_TEMPLATES = [
@@ -339,7 +338,6 @@ function PageEditor({ page, fresh, onDone }) {
 export function PageScreen({ id, edit = false, fresh = false }) {
   const { data: page, loading } = useQuery(`page:${id}`, () => api().page(id), { staleMs: 0 });
   const { data: pages } = useKnowledge();
-  const aiOn = useFlag('ai');
   const [editing, setEditing] = useState(edit);
   const [menu, setMenu] = useState(false);
   const [subPage, setSubPage] = useState(false);
@@ -414,17 +412,7 @@ export function PageScreen({ id, edit = false, fresh = false }) {
               </div>
             </div>
           )}
-          {aiOn && page.content?.trim() && (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={Sparkles}
-              className="mt-6"
-              onClick={() => askAiAbout(`Summarize the knowledge page "${page.title}":\n\n${(page.content || '').slice(0, 3000)}`)}
-            >
-              Summarize with AI
-            </Button>
-          )}
+          <PageExtras page={page} />
         </article>
       </Body>
       <ActionSheet
