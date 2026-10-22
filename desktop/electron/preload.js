@@ -89,6 +89,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('oruinwan:quick-reply', handler);
     return () => ipcRenderer.removeListener('oruinwan:quick-reply', handler);
   },
+  /**
+   * Incoming calls: { kind: 'call', huddleId, title, body, video } asks for attention when the
+   * app isn't in front (tray, minimised, behind other apps); { kind: 'stop' } ends it.
+   */
+  attention: (payload) => {
+    const p = payload && typeof payload === 'object' ? payload : {};
+    ipcRenderer.send('oruinwan:attention', p.kind === 'call'
+      ? { kind: 'call', huddleId: String(p.huddleId || ''), title: String(p.title || ''), body: String(p.body || ''), video: Boolean(p.video) }
+      : { kind: 'stop' });
+  },
+  /** Called with { huddleId, action: 'accept' | 'decline' | 'open' } from the call notification. */
+  onCallAction: (callback) => {
+    const handler = (_event, detail) => callback(detail);
+    ipcRenderer.on('oruinwan:call-action', handler);
+    return () => ipcRenderer.removeListener('oruinwan:call-action', handler);
+  },
   /** The page could not send a quick reply: open that conversation so it can be retried. */
   quickReplyFailed: (target) => ipcRenderer.send('oruinwan:quick-reply-failed', {
     workspaceId: String((target && target.workspaceId) || ''),

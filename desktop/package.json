@@ -17,6 +17,7 @@
     "build:linux": "npm run bundle && electron-builder --linux --publish never",
     "pack": "npm run bundle && electron-builder --dir --publish never",
     "test": "node --test electron/__tests__/*.test.js",
+    "test:e2e": "playwright test --config test-e2e/playwright.config.js",
     "tray-icons": "node scripts/make-tray-icons.mjs"
   },
   "devDependencies": {
@@ -50,7 +51,14 @@
       "artifactName": "Oruinwan-Mac-${arch}.${ext}",
       "identity": "-",
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Oruinwan uses your microphone in huddles and calls, and for voice notes.",
+        "NSCameraUsageDescription": "Oruinwan uses your camera in video huddles and calls, and for video notes.",
+        "NSAudioCaptureUsageDescription": "Oruinwan shares your computer's sound when you share your screen in a call."
+      }
     },
     "dmg": {
       "title": "Oruinwan"

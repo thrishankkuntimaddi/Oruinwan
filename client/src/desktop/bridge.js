@@ -106,6 +106,28 @@ function install() {
 
   if (api.supportsQuickReply) installQuickReply(api);
 
+  // Incoming calls. The incoming-call screen announces a ring with the window event
+  // `oruinwan:ring` (detail { huddleId, title, body, video }) and its end with
+  // `oruinwan:ring-end`; the app then asks for attention when it isn't in front. Accept /
+  // Decline from the call notification come back as `oruinwan:ring-action`
+  // (detail { huddleId, action: 'accept' | 'decline' | 'open' }).
+  if (typeof api.attention === 'function') {
+    window.addEventListener('oruinwan:ring', (e) => {
+      const d = (e && e.detail) || {};
+      try {
+        api.attention({ kind: 'call', huddleId: toStr(d.huddleId, 128), title: toStr(d.title, 200), body: toStr(d.body, 300), video: !!d.video });
+      } catch { /* ignore */ }
+    });
+    window.addEventListener('oruinwan:ring-end', () => {
+      try { api.attention({ kind: 'stop' }); } catch { /* ignore */ }
+    });
+  }
+  if (typeof api.onCallAction === 'function') {
+    api.onCallAction((detail) => {
+      window.dispatchEvent(new CustomEvent('oruinwan:ring-action', { detail: detail || {} }));
+    });
+  }
+
   if (typeof api.onDeepLink === 'function') {
     api.onDeepLink((link) => {
       if (link && typeof link.path === 'string') navigate(link.path);

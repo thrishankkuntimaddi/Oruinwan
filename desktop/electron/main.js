@@ -18,6 +18,7 @@
 
 const {
   app, BrowserWindow, Menu, Notification, Tray, desktopCapturer, dialog, ipcMain, nativeImage, net, powerMonitor, protocol, screen, session, shell,
+  systemPreferences,
 } = require('electron');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -27,6 +28,8 @@ const { googleSignIn } = require('./googleSignIn');
 const trayState = require('./trayState');
 const ota = require('./ota');
 const { shareOptions } = require('./screenShare');
+const permissions = require('./permissions');
+const links = require('./links');
 
 /**
  * scheme://host[:port]. Not URL#origin: that is the opaque "null" for custom schemes such as
@@ -68,6 +71,14 @@ const CALL_WINDOW_NAME = 'oruinwan-call';
 protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
+
+// Automated tests of the unpackaged app (desktop/test-e2e): their own profile, and a fake
+// camera/microphone instead of the operating system's devices and prompts. Ignored in
+// installed builds.
+const TEST_MODE = !app.isPackaged && process.env.ORUINWAN_TEST_MODE === '1';
+if (!app.isPackaged && process.env.ORUINWAN_USER_DATA) app.setPath('userData', process.env.ORUINWAN_USER_DATA);
+// (Not --use-fake-ui-for-media-stream: it would answer screen sharing itself, skipping the app's handler.)
+if (TEST_MODE) app.commandLine.appendSwitch('use-fake-device-for-media-stream');
 
 let mainWindow = null;
 let tray = null;
@@ -294,11 +305,73 @@ function answerCors(ses) {
 function lockDownPermissions(ses) {
   ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const origin = originOf((details && details.requestingUrl) || webContents.getURL());
-    callback(GRANTABLE.has(permission) && origin === PAGE_ORIGIN);
+    if (!GRANTABLE.has(permission) || origin !== PAGE_ORIGIN) return callback(false);
+    if (permission !== 'media') return callback(true);
+    // Microphone/camera: the operating system has its own switch on top of Chromium's.
+    ensureMediaAccess(permissions.mediaKinds(details)).then(callback, () => callback(false));
   });
   ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) =>
     GRANTABLE.has(permission) && originOf(requestingOrigin) === PAGE_ORIGIN);
   allowScreenShare(ses);
+}
+
+/** The operating system's answer for one kind ('microphone' | 'camera' | 'screen'), or 'unknown'. */
+function mediaStatus(kind) {
+  if (TEST_MODE) return 'granted';
+  if (!IS_MAC && process.platform !== 'win32') return 'unknown';
+  try {
+    return systemPreferences.getMediaAccessStatus(kind);
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Makes sure the OS lets the app use each kind: asks macOS the first time (its own prompt),
+ * and explains how to turn it back on when it was refused. Resolves true when all may be used.
+ */
+async function ensureMediaAccess(kinds) {
+  for (const kind of kinds) {
+    const action = permissions.accessAction(mediaStatus(kind), process.platform);
+    if (action === 'ask') {
+      const ok = await systemPreferences.askForMediaAccess(kind).catch(() => false);
+      if (!ok) {
+        explainBlocked(kind);
+        return false;
+      }
+    } else if (action === 'blocked') {
+      explainBlocked(kind);
+      return false;
+    }
+  }
+  return true;
+}
+
+// One explanation per kind at a time: a call retrying getUserMedia must not stack dialogs.
+const explaining = new Set();
+async function explainBlocked(kind) {
+  if (explaining.has(kind)) return;
+  explaining.add(kind);
+  try {
+    const { message, detail } = permissions.blockedMessage(kind, process.platform);
+    const url = permissions.settingsUrl(kind, process.platform);
+    const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+    const { response } = await dialog.showMessageBox(parent, {
+      type: 'warning',
+      message,
+      detail,
+      buttons: url ? [IS_MAC ? 'Open System Settings' : 'Open Settings', 'Not now'] : ['OK'],
+      defaultId: 0,
+      cancelId: url ? 1 : 0,
+      noLink: true,
+    });
+    // A fixed settings address, not page input: open it directly.
+    if (url && response === 0) shell.openExternal(url).catch(() => {});
+  } catch (err) {
+    console.warn('[permissions] could not explain:', err.message);
+  } finally {
+    explaining.delete(kind);
+  }
 }
 
 /**
@@ -311,6 +384,17 @@ function allowScreenShare(ses) {
     try {
       const origin = originOf((request.frame && request.frame.url) || request.securityOrigin || '');
       if (origin !== PAGE_ORIGIN) return callback({});
+      // Tests count the request and cancel it: listing real screens would show system prompts.
+      if (TEST_MODE) {
+        global.__oruinwanScreenShareRequests = (global.__oruinwanScreenShareRequests || 0) + 1;
+        return callback({});
+      }
+      // macOS: screen recording refused earlier only comes back from System Settings.
+      // ('not-determined' is fine: listing the screens shows the system prompt.)
+      if (IS_MAC && permissions.accessAction(mediaStatus('screen'), 'darwin') === 'blocked') {
+        explainBlocked('screen');
+        return callback({});
+      }
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } });
       const choice = await pickScreenSource(sources);
       callback(choice ? { video: choice } : {});
@@ -318,7 +402,9 @@ function allowScreenShare(ses) {
       console.warn('[screen share] failed:', err.message);
       callback({});
     }
-  }, { useSystemPicker: true });
+  // macOS 15+: the system's own picker (no screen-recording permission needed); the handler
+  // above is the fallback. Tests use the handler so no system UI appears.
+  }, { useSystemPicker: !TEST_MODE });
 }
 
 /** Ask which screen or window to share. Resolves with the source, or null when cancelled. */
@@ -436,6 +522,10 @@ function createWindow() {
   };
   win.on('resize', queueSave);
   win.on('move', queueSave);
+  // Seen: stop flashing for a ringing call (the page's incoming-call screen is in front now).
+  win.on('focus', () => {
+    if (ringing) win.flashFrame(false);
+  });
   win.on('close', (event) => {
     saveWindowState(win);
     if (trayState.closeAction({ platform: process.platform, isQuitting, hasTray: Boolean(tray) }) === 'hide') {
@@ -488,6 +578,13 @@ function createWindow() {
           backgroundColor: '#0c0c0c',
         },
       };
+    }
+    // The app's own pages ("Open meeting page", task links) open here, without a reload,
+    // so a running call and the unlocked encryption keys stay as they are.
+    const inApp = links.inAppPath(url, PAGE_ORIGIN);
+    if (inApp) {
+      win.webContents.executeJavaScript(links.navigateScript(inApp)).catch(() => {});
+      return { action: 'deny' };
     }
     openExternalSafely(url);
     return { action: 'deny' };
@@ -710,6 +807,82 @@ ipcMain.on('oruinwan:badge', (event, count) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setTitle(n ? `Oruinwan (${n})` : 'Oruinwan');
   }
+});
+
+// ─── Incoming calls ───────────────────────────────────────────────────────────
+//
+// The page shows the incoming-call screen and plays the ringtone. When the app is not in
+// front, it asks for attention here: the window shows (without taking focus) if it was in
+// the tray, the dock bounces / the taskbar flashes, and a notification offers Accept and
+// Decline (buttons on macOS; a click opens the app elsewhere). The answer goes back to the
+// page as oruinwan:call-action, which accepts or declines like its own buttons.
+
+let ringing = null; // { huddleId, notification, bounceId }
+const SAFE_CALL_ID = /^[A-Za-z0-9_:.-]{1,128}$/;
+
+function sendCallAction(huddleId, action) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('oruinwan:call-action', { huddleId, action });
+}
+
+function stopRinging() {
+  if (!ringing) return;
+  const { notification, bounceId } = ringing;
+  ringing = null;
+  try { notification && notification.close(); } catch { /* already gone */ }
+  if (IS_MAC && bounceId !== undefined) app.dock.cancelBounce(bounceId);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.flashFrame(false);
+}
+
+function startRinging(p) {
+  stopRinging();
+  const huddleId = SAFE_CALL_ID.test(String(p.huddleId || '')) ? String(p.huddleId) : '';
+  const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  const inFront = win && win.isVisible() && !win.isMinimized() && win.isFocused();
+  ringing = { huddleId, notification: null, bounceId: undefined };
+  if (inFront) return; // the page's own incoming-call screen is enough
+  if (win && !win.isVisible()) win.showInactive(); // back from the tray, without stealing focus
+  if (win) win.flashFrame(true);
+  if (IS_MAC) ringing.bounceId = app.dock.bounce('critical');
+  if (settings.doNotDisturb || !Notification.isSupported()) return;
+  const title = clip(p.title, 200) || 'Incoming call';
+  const body = clip(p.body, 300) || (p.video ? 'Video call' : 'Voice call');
+  const notification = new Notification({
+    title,
+    body,
+    silent: true, // the page rings
+    urgency: 'critical',
+    timeoutType: 'never',
+    ...(IS_MAC ? { actions: [{ type: 'button', text: 'Accept' }, { type: 'button', text: 'Decline' }] } : {}),
+  });
+  ringing.notification = notification;
+  shownNotifications.add(notification);
+  const done = () => shownNotifications.delete(notification);
+  notification.on('click', () => {
+    done();
+    showWindow();
+    sendCallAction(huddleId, 'open');
+  });
+  notification.on('action', (_event, index) => {
+    done();
+    if (index === 0) {
+      showWindow();
+      sendCallAction(huddleId, 'accept');
+    } else {
+      sendCallAction(huddleId, 'decline');
+    }
+    stopRinging();
+  });
+  notification.on('close', done);
+  notification.show();
+}
+
+// { kind: 'call', huddleId, title, body, video } starts; { kind: 'stop' } ends (answered, declined, ended).
+ipcMain.on('oruinwan:attention', (event, payload) => {
+  if (!fromAppPage(event)) return;
+  const p = payload && typeof payload === 'object' ? payload : {};
+  if (p.kind === 'call') startRinging(p);
+  else if (p.kind === 'stop') stopRinging();
 });
 
 // ─── Tray ─────────────────────────────────────────────────────────────────────
