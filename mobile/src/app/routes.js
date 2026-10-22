@@ -80,4 +80,9 @@ export const ROUTES = {
   'settings.server': pick(settings, 'ServerSettings'),
   'settings.data': pick(settings, 'DataSettings'),
   'settings.about': pick(settings, 'AboutSettings'),
+  'settings.help': pick(settings, 'HelpCenterScreen'),
+  'settings.help.page': pick(settings, 'HelpPageScreen'),
+  'settings.support': pick(settings, 'SupportScreen'),
+  'settings.support.new': pick(settings, 'NewSupportRequestScreen'),
+  'settings.support.ticket': pick(settings, 'SupportTicketScreen'),
 };

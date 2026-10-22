@@ -301,6 +301,8 @@ app.use("/api/search", require("./src/features/search/search.routes"));
 app.use("/api/support", require("./src/features/support/support.routes"));
 app.use("/api/managers", require("./src/features/managers/managers.routes"));
 app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
+// AI panel history first: saving it must not count against the AI request limit.
+app.use("/api/ai/chats", require("./src/features/ai/aiChats.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
 // Agents & tools: install AI agents (Claude, ChatGPT…) and chat with them.
 app.use("/api/agents", require("./src/features/agents/agents.routes"));

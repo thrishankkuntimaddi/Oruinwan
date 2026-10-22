@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Sparkles, History, SquarePen, ArrowUp, Square, Copy, RotateCcw, Check, X, SquareCheckBig, Hash, FileText, MessageCircle, ListTodo, Megaphone, Sun,
-  BookOpen, CalendarDays, Compass, LifeBuoy,
+  BookOpen, CalendarDays, Compass, LifeBuoy, MoreHorizontal, Pencil, Trash2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -14,8 +14,9 @@ import { tap } from '../../native/index.js';
 import { IconButton } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Markdown } from '../../ui/Markdown.jsx';
-import { Sheet } from '../../ui/Overlay.jsx';
-import { Spinner } from '../../ui/Feedback.jsx';
+import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
+import { SkeletonRows, Spinner } from '../../ui/Feedback.jsx';
+import { Field } from '../../ui/Controls.jsx';
 import { cx } from '../../ui/cx.js';
 import { uid } from '../../lib/id.js';
 import { shortAgo } from '../../lib/time.js';
@@ -28,6 +29,7 @@ import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { openConversation } from '../chats/chatsUi.js';
 import { AiQuotaLine } from '../plan/AiQuotaLine.jsx';
 import { refreshAiQuota } from '../plan/plan.js';
+import { deleteConversation, listConversations, openConversation as openSaved, renameConversation, saveConversation } from './aiHistory.js';
 
 const SUGGESTIONS = [
   { icon: Sun, text: "What's on my plate this week?" },
@@ -45,21 +47,6 @@ const KNOWLEDGE_SUGGESTIONS = [
 ];
 
 const SOURCE_ICON = { task: SquareCheckBig, channel: Hash, note: FileText, dm: MessageCircle, page: BookOpen, meeting: CalendarDays };
-
-function historyKey(ws) {
-  return `ai.threads.${ws}`;
-}
-
-function loadThreads(ws) {
-  return prefs.get(historyKey(ws), []);
-}
-
-function saveThread(ws, thread) {
-  if (!thread.messages.length) return;
-  const all = loadThreads(ws).filter((t) => t.id !== thread.id);
-  // Keep the 30 most recent conversations on this device.
-  prefs.set(historyKey(ws), [{ ...thread, updatedAt: Date.now() }, ...all].slice(0, 30));
-}
 
 function openSource(s) {
   if (s.kind === 'task') nav.push('task', { id: s.id });
@@ -233,10 +220,51 @@ export function AiScreen() {
     }
   };
 
-  // Save the conversation to this device once an answer finishes.
+  // Save the conversation (this device and the server) once an answer finishes.
   useEffect(() => {
-    if (!busy) saveThread(ws, thread);
+    if (!busy) saveConversation(ws, { ...thread, assistant: current.id });
   }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Past conversations, loaded when the list opens.
+  const [history, setHistory] = useState(null);
+  const [menuFor, setMenuFor] = useState(null);
+  const [renaming, setRenaming] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  useEffect(() => {
+    if (!historyOpen) return undefined;
+    let alive = true;
+    setHistory(null);
+    listConversations(ws).then((list) => alive && setHistory(list)).catch(() => alive && setHistory([]));
+    return () => { alive = false; };
+  }, [historyOpen, ws]);
+
+  const openPast = async (item) => {
+    setHistoryOpen(false);
+    abortRef.current?.abort();
+    const saved = await openSaved(ws, item.id);
+    if (saved) setThread(saved);
+    else toast("That conversation couldn't be opened.");
+  };
+
+  const saveTitle = async () => {
+    const { id, title } = renaming;
+    setRenaming(null);
+    await renameConversation(ws, id, title);
+    setHistory((list) => (list || []).map((c) => (c.id === id ? { ...c, title } : c)));
+    if (thread.id === id) setThread((t) => ({ ...t, title }));
+  };
+
+  const removePast = async () => {
+    const item = deleting;
+    setDeleting(null);
+    try {
+      await deleteConversation(ws, item.id);
+      setHistory((list) => (list || []).filter((c) => c.id !== item.id));
+      if (thread.id === item.id) setThread({ id: uid('ai'), messages: [] });
+    } catch {
+      toast("Couldn't delete it. Check your connection and try again.");
+    }
+  };
 
   // A prompt handed over from another screen ("Break it down with AI").
   useEffect(() => {
@@ -253,7 +281,6 @@ export function AiScreen() {
   };
 
   const empty = thread.messages.length === 0;
-  const threads = historyOpen ? loadThreads(ws) : [];
 
   return (
     <div className="flex h-full flex-col bg-bg">
@@ -382,27 +409,66 @@ export function AiScreen() {
       <div aria-hidden style={{ height: keyboardOpen ? 0 : 'calc(72px + var(--sab))' }} className="shrink-0" />
       <Sheet open={historyOpen} onClose={() => setHistoryOpen(false)} title="Past conversations">
         <div className="px-2 pb-3">
-          {threads.length ? (
-            threads.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  setThread(t);
-                  setHistoryOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left active:bg-surface-2"
-              >
-                <Icon as={Sparkles} size="sm" className="shrink-0 text-accent-ink" />
-                <span className="min-w-0 flex-1 truncate text-[15px]">{t.title || 'Conversation'}</span>
-                <span className="shrink-0 text-xs text-text-3">{shortAgo(t.updatedAt)}</span>
-              </button>
+          {history === null ? (
+            <SkeletonRows count={4} avatar={false} />
+          ) : history.length ? (
+            history.map((t) => (
+              <div key={t.id} className={cx('flex items-center rounded-xl', t.id === thread.id && 'bg-surface-2')}>
+                <button
+                  type="button"
+                  onClick={() => openPast(t)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-3 text-left active:bg-surface-2"
+                >
+                  <Icon as={Sparkles} size="sm" className="shrink-0 text-accent-ink" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px]">{t.title || 'Conversation'}</span>
+                    {t.preview && <span className="block truncate text-xs text-text-2">{t.preview}</span>}
+                  </span>
+                  <span className="shrink-0 text-xs text-text-3">{shortAgo(t.updatedAt)}</span>
+                </button>
+                <IconButton icon={MoreHorizontal} label={`Options for ${t.title || 'conversation'}`} onClick={() => setMenuFor(t)} />
+              </div>
             ))
           ) : (
-            <p className="px-4 py-6 text-center text-sm text-text-2">Your conversations are kept on this device.</p>
+            <p className="px-4 py-6 text-center text-sm text-text-2">No conversations yet. They're saved here and on your other devices.</p>
           )}
         </div>
       </Sheet>
+      <ActionSheet
+        open={!!menuFor}
+        onClose={() => setMenuFor(null)}
+        title={menuFor?.title || 'Conversation'}
+        actions={[
+          { label: 'Rename', icon: Pencil, onSelect: () => setRenaming({ id: menuFor.id, title: menuFor.title || '' }) },
+          { label: 'Delete', icon: Trash2, danger: true, onSelect: () => setDeleting(menuFor) },
+        ]}
+      />
+      <Dialog
+        open={!!renaming}
+        onClose={() => setRenaming(null)}
+        title="Rename conversation"
+        confirmLabel="Save"
+        onConfirm={saveTitle}
+      >
+        {renaming && (
+          <Field
+            label="Name"
+            value={renaming.title}
+            autoFocus
+            maxLength={120}
+            onChange={(e) => setRenaming((r) => ({ ...r, title: e.target.value }))}
+          />
+        )}
+      </Dialog>
+      <Dialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete this conversation?"
+        body="It's removed from this device and your other devices."
+        confirmLabel="Delete"
+        danger
+        onConfirm={removePast}
+      />
     </div>
   );
 }

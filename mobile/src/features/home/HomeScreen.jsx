@@ -19,28 +19,29 @@ import { Icon } from '../../ui/Icon.jsx';
 import { Section } from '../../ui/List.jsx';
 import { Segmented } from '../../ui/Controls.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
-import { cx } from '../../ui/cx.js';
 import { greeting, shortAgo, dueLabel } from '../../lib/time.js';
 import { NOTE_TYPES } from '../../data/constants.js';
 import { htmlToText } from '../../ui/sanitize.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { ActivityRow } from './ActivityRow.jsx';
+import { groupActivity } from './activityGroups.js';
 import { openChats } from '../chats/chatsUi.js';
 import { PushPrompt } from '../push/PushPrompt.jsx';
 import { useHuddlesAvailable } from '../huddles/HuddlesScreen.jsx';
 import { useHuddle } from '../huddles/huddle.js';
 
-function StatTile({ value, label, tone, onClick, icon }) {
+// One small tappable count under the greeting ("3 unread"). Zero counts aren't shown.
+function CountChip({ icon, value, label, tone, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="pressable flex flex-1 flex-col items-start rounded-card border border-line-soft bg-surface p-3.5 text-left"
-      style={{ backgroundImage: 'var(--glass)', boxShadow: 'var(--spec)' }}
+      className="pressable inline-flex items-center gap-1.5 rounded-full border border-line-soft bg-surface px-3 py-1.5 text-[13px]"
+      style={{ backgroundImage: 'var(--glass)' }}
     >
-      <Icon as={icon} size="sm" className={cx('mb-3', tone || 'text-text-3')} />
-      <span className="text-[26px] font-bold leading-none tracking-tight tabular-nums">{value}</span>
-      <span className="mt-1.5 text-xs text-text-2">{label}</span>
+      <Icon as={icon} size={14} className={tone} />
+      <span className="font-semibold tabular-nums">{value}</span>
+      <span className="text-text-2">{label}</span>
     </button>
   );
 }
@@ -86,16 +87,15 @@ export function HomeScreen() {
 
   const activity = useMemo(() => {
     const list = notifications || [];
-    if (filter === 'mentions') return list.filter((n) => n.type === 'mention');
-    if (filter === 'dms') return list.filter((n) => n.type === 'dm');
-    return list;
+    const shown = filter === 'mentions' ? list.filter((n) => n.type === 'mention')
+      : filter === 'dms' ? list.filter((n) => n.type === 'dm')
+        : list;
+    return groupActivity(shown);
   }, [notifications, filter]);
 
   const firstName = (user?.name || '').split(' ')[0];
-  const summary = [
-    unread.channels + unread.dms ? `${unread.channels + unread.dms} unread` : null,
-    dueToday ? `${dueToday} ${dueToday === 1 ? 'task' : 'tasks'} due today` : null,
-  ].filter(Boolean);
+  const unreadChats = unread.channels + unread.dms;
+  const caughtUp = !unreadChats && !unread.mentions && !dueToday;
 
   const refresh = () => {
     invalidate('notifications', 'tasks', 'channels', 'dms', 'notes');
@@ -124,7 +124,27 @@ export function HomeScreen() {
             {greeting()}
             {firstName ? `, ${firstName}` : ''}
           </h2>
-          <p className="mt-1 text-sm text-text-2">{summary.length ? summary.join(' · ') : "You're all caught up."}</p>
+          {caughtUp ? (
+            <p className="mt-1 text-sm text-text-2">You're all caught up.</p>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {unreadChats > 0 && (
+                <CountChip icon={MessageCircle} value={unreadChats} label="unread" tone="text-accent-ink" onClick={() => nav.setTab('chats')} />
+              )}
+              {unread.mentions > 0 && (
+                <CountChip
+                  icon={AtSign}
+                  value={unread.mentions}
+                  label={unread.mentions === 1 ? 'mention' : 'mentions'}
+                  tone="text-danger"
+                  onClick={() => nav.push('notifications', { initial: 'mentions' })}
+                />
+              )}
+              {dueToday > 0 && (
+                <CountChip icon={SquareCheckBig} value={dueToday} label="due today" tone="text-warning" onClick={() => nav.setTab('tasks')} />
+              )}
+            </div>
+          )}
         </div>
 
         <PushPrompt className="mx-4 mt-3" />
@@ -152,30 +172,6 @@ export function HomeScreen() {
             <Icon as={ChevronRight} size="sm" className="text-text-3" />
           </button>
         )}
-
-        <div className="mt-4 flex gap-2.5 px-4">
-          <StatTile
-            icon={MessageCircle}
-            value={unread.channels + unread.dms}
-            label="Unread"
-            tone={unread.channels + unread.dms ? 'text-accent-ink' : undefined}
-            onClick={() => nav.setTab('chats')}
-          />
-          <StatTile
-            icon={AtSign}
-            value={unread.mentions}
-            label="Mentions"
-            tone={unread.mentions ? 'text-danger' : undefined}
-            onClick={() => nav.push('notifications', { initial: 'mentions' })}
-          />
-          <StatTile
-            icon={SquareCheckBig}
-            value={dueToday}
-            label="Due today"
-            tone={dueToday ? 'text-warning' : undefined}
-            onClick={() => nav.setTab('tasks')}
-          />
-        </div>
 
         <Section
           title="Activity"
@@ -249,7 +245,7 @@ export function HomeScreen() {
               </button>
             }
           >
-            <div className="no-scrollbar flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+            <div className="no-scrollbar flex snap-x scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1">
               {notes
                 .filter((n) => !n.archived)
                 .slice(0, 6)

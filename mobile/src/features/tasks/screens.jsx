@@ -131,7 +131,7 @@ export function filterView(tasks, view, me) {
 function Board({ tasks, directory }) {
   const columns = OPEN_ORDER.map((s) => ({ status: s, items: tasks.filter((t) => t.status === s) }));
   return (
-    <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-2 pb-4">
+    <div className="no-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-4">
       {columns.map((col) => (
         <section key={col.status} className="flex w-[82%] max-w-80 shrink-0 snap-center flex-col rounded-card border border-line-soft bg-surface">
           <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">

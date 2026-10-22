@@ -112,6 +112,7 @@ async function eraseAccount(userId, { req } = {}) {
     ));
 
     await step(results, 'aiMemoriesDeleted', () => AIMemory.deleteMany({ user: uid }));
+    await step(results, 'aiChatsDeleted', () => require('../ai/aiChat.model').deleteMany({ user: uid }));
 
     // Private notes only; notes shared with others or published to the workspace stay.
     await step(results, 'privateNotesDeleted', async () => {

@@ -8,6 +8,7 @@ const { role } = require('../processRole');
 const { getRedis, isRedisConfigured, INSTANCE_ID } = require('../redis');
 const { scheduledJobs } = require('../jobs/scheduler');
 const { postgresStatus } = require('../postgres');
+const { webAppUrl } = require('../utils/webAppUrl');
 const jwt = require('jsonwebtoken');
 
 // Instance name, job list, uptime and environment help an outsider map the system, so only a
@@ -63,6 +64,9 @@ router.get('/', async (req, res) => {
       mongodb: 'connected',
       redis: redisStatus(),
       postgres: await postgresStatus(),
+      // The web app's address (FRONTEND_URL, already public in every email). The phone app
+      // opens web pages there, since the API may live on another domain.
+      webUrl: webAppUrl() || null,
       ...details,
       timestamp: new Date().toISOString(),
     });

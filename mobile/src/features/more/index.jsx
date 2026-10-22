@@ -25,6 +25,7 @@ import { openExternal, shareLink } from '../../native/index.js';
 import { formatBytes } from '../../lib/files.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
+import { groupActivity } from '../home/activityGroups.js';
 import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
 import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote } from '../plan/planText.js';
@@ -53,22 +54,26 @@ export function NotificationsScreen({ initial = 'all' }) {
   const [filter, setFilter] = useState(initial);
   const list = useMemo(() => {
     const all = data || [];
-    switch (filter) {
-      case 'unread':
-        return all.filter((n) => !n.read);
-      case 'mentions':
-        return all.filter((n) => n.type === 'mention');
-      case 'messages':
-        return all.filter((n) => ['dm', 'thread', 'reaction', 'mention'].includes(n.type));
-      case 'tasks':
-        return all.filter((n) => n.type.startsWith('task'));
-      case 'meetings':
-        return all.filter((n) => n.type === 'meeting');
-      case 'reviews':
-        return all.filter((n) => n.type === 'design');
-      default:
-        return all;
-    }
+    const shown = (() => {
+      switch (filter) {
+        case 'unread':
+          return all.filter((n) => !n.read);
+        case 'mentions':
+          return all.filter((n) => n.type === 'mention');
+        case 'messages':
+          return all.filter((n) => ['dm', 'thread', 'reaction', 'mention'].includes(n.type));
+        case 'tasks':
+          return all.filter((n) => n.type.startsWith('task'));
+        case 'meetings':
+          return all.filter((n) => n.type === 'meeting');
+        case 'reviews':
+          return all.filter((n) => n.type === 'design');
+        default:
+          return all;
+      }
+    })();
+    // One row per chat ("Ben · 5 new messages"), like Home's Activity.
+    return groupActivity(shown);
   }, [data, filter]);
   const unread = (data || []).filter((n) => !n.read).length;
 

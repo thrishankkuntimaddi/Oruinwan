@@ -33,7 +33,8 @@ export default defineConfig({
     sourcemap: false,
     reportCompressedSize: false,
   },
-  server: { port: 5174 },
+  // The app bundles a few files from the web client (icons, help docs): let the dev server read them.
+  server: { port: 5174, fs: { allow: ['..'] } },
   preview: { port: 4174 },
   test: {
     environment: 'jsdom',

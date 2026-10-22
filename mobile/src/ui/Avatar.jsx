@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { initials } from '../lib/id.js';
 import { cx } from './cx.js';
 
@@ -20,13 +21,20 @@ const DOT = { xs: 'h-2 w-2', sm: 'h-2.5 w-2.5', md: 'h-3 w-3', lg: 'h-3.5 w-3.5'
 const PRESENCE = { active: 'bg-success', online: 'bg-success', away: 'bg-warning', dnd: 'bg-danger', offline: 'bg-text-3' };
 
 export function Avatar({ name, src, size = 'md', presence, square = false, className }) {
+  // A picture that fails to load (deleted, expired, offline) falls back to initials,
+  // never a broken-image icon. Remember which src failed so a new one is tried again.
+  const [failed, setFailed] = useState(null);
+  const showImage = src && failed !== src;
   return (
     <span className={cx('relative inline-flex shrink-0', className)}>
-      {src ? (
+      {showImage ? (
         <img
           src={src}
           alt=""
           loading="lazy"
+          // Google profile photos refuse requests that carry another site's referrer.
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(src)}
           className={cx(SIZE[size], square ? 'rounded-xl' : 'rounded-full', 'object-cover bg-surface-3')}
         />
       ) : (

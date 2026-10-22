@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { aiHistoryKey, readAiHistory, writeAiHistory } from "../../../utils/aiChatHistoryStorage";
+import { aiChats, fromServerMessages, newChatId, toServerMessages } from "./aiChatSync";
 import { aiService, aiErrorMessage } from "../../../services/aiService";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useAIContext } from "../../../contexts/AIContext";
@@ -13,7 +14,7 @@ import { useAIUsage } from "../../../features/plan/usePlan";
 import { aiRemaining } from "../../../features/plan/planLimit";
 import {
   Send, X, Plus, History, Info, Copy, Edit2, CornerUpLeft, Sparkles, List,
-  MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square,
+  MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square, Trash2,
 } from "lucide-react";
 
 const WELCOME = (name = "Oruinwan AI") => ({ id: 1, sender: "ai", text: `Hi, I'm ${name}. Ask me anything about your workspace, or use a quick action below.`, time: now() });
@@ -99,6 +100,25 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
   const [streamingId, setStreamingId] = useState(null);
   const abortRef = useRef(null);
   const busy = isTyping || streamingId !== null;
+
+  // History saved to the account: one id per conversation. A title the person typed wins;
+  // otherwise the server names it after the first question.
+  const [chatId, setChatId] = useState(newChatId);
+  const customTitle = useRef('');
+  const savedRemote = useRef(new Set());
+  const savedCount = useRef({});
+  useEffect(() => {
+    if (busy || !workspaceId) return;
+    const msgs = toServerMessages(messages);
+    if (!msgs.some((m) => m.role === 'user')) return;
+    const id = chatId;
+    // Opening a saved conversation changes nothing: don't re-save it (it would jump to the top).
+    if (savedCount.current[id] === msgs.length) return;
+    aiChats.save(workspaceId, id, { title: customTitle.current, assistant, messages: msgs })
+      .then(() => { savedRemote.current.add(id); savedCount.current[id] = msgs.length; })
+      .catch(() => { /* offline or older server: the local copy below keeps it */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, messages.length, workspaceId]);
 
   // Stop any in-flight answer when the panel closes.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -288,24 +308,115 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
     try { await navigator.clipboard.writeText(text); setCopiedId(id); setTimeout(() => setCopiedId(null), 1200); } catch { /* ignore */ }
   };
 
-  const handleNewChat = () => {
-    if (messages.length > 1)
+  // A conversation the server couldn't save stays in this browser's history instead.
+  const keepLocally = () => {
+    if (messages.length > 1 && !savedRemote.current.has(chatId))
       setChatHistory(p => [{ id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() }, ...p]);
-    setMessages([WELCOME(current.name)]); setChatTitle("Oruinwan AI"); setShowHistory(false);
+  };
+
+  const startFresh = () => {
+    setChatId(newChatId());
+    customTitle.current = '';
+  };
+
+  const handleNewChat = () => {
+    keepLocally();
+    setMessages([WELCOME(current.name)]); setChatTitle("Oruinwan AI"); setShowHistory(false); startFresh();
     aiService.clearMemory(workspaceId).catch(() => {});
   };
 
-  const loadChat = (chat) => {
-    if (messages.length > 1)
-      setChatHistory(p => [{ id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() }, ...p]);
-    setMessages(chat.messages); setChatTitle(chat.title); setShowHistory(false);
+  // Saved conversations (account) plus any kept only in this browser.
+  const [remoteHistory, setRemoteHistory] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameText, setRenameText] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
+  useEffect(() => {
+    if (!showHistory || !workspaceId) return undefined;
+    let live = true;
+    setRemoteHistory(null);
+    (async () => {
+      // Move conversations saved only in this browser to the account, once.
+      for (const item of chatHistory) {
+        const msgs = toServerMessages(item.messages);
+        if (!msgs.some((m) => m.role === 'user')) continue;
+        try {
+          await aiChats.save(workspaceId, newChatId(), { title: item.title === 'Oruinwan AI' ? '' : item.title, messages: msgs });
+          setChatHistory((p) => p.filter((h) => h.id !== item.id));
+        } catch { break; }
+      }
+      try {
+        const list = await aiChats.list(workspaceId);
+        if (live) setRemoteHistory(list);
+      } catch {
+        if (live) setRemoteHistory(false);
+      }
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHistory, workspaceId]);
+
+  const loadChat = async (chat) => {
+    keepLocally();
+    setShowHistory(false);
+    if (!chat.remote) {
+      setMessages(chat.messages); setChatTitle(chat.title); startFresh();
+      return;
+    }
+    try {
+      const full = await aiChats.get(workspaceId, chat.id);
+      setMessages([WELCOME(current.name), ...fromServerMessages(full)]);
+      setChatTitle(full.title || 'Oruinwan AI');
+      setChatId(full.id);
+      savedRemote.current.add(full.id);
+      savedCount.current[full.id] = toServerMessages(fromServerMessages(full)).length;
+      customTitle.current = '';
+    } catch (err) {
+      showToast(aiErrorMessage(err, 'Could not open that conversation'), 'error');
+    }
   };
 
-  const handleClose = () => {
-    if (messages.length > 1 && chatTitle !== "Oruinwan AI") {
-      const item = { id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() };
-      if (!chatHistory.find(h => h.title === chatTitle && h.date === item.date)) setChatHistory(p => [item, ...p]);
+  const saveRename = async (id) => {
+    const title = renameText.trim();
+    setRenamingId(null);
+    if (!title) return;
+    try {
+      await aiChats.rename(workspaceId, id, title);
+      setRemoteHistory((list) => (list || []).map((c) => (c.id === id ? { ...c, title } : c)));
+      if (id === chatId) { setChatTitle(title); customTitle.current = title; }
+    } catch (err) {
+      showToast(aiErrorMessage(err, 'Could not rename it'), 'error');
     }
+  };
+
+  const deleteRemote = async (id) => {
+    try {
+      await aiChats.remove(workspaceId, id);
+      setRemoteHistory((list) => (list || []).filter((c) => c.id !== id));
+      if (id === chatId) { setMessages([WELCOME(current.name)]); setChatTitle('Oruinwan AI'); startFresh(); }
+    } catch (err) {
+      showToast(aiErrorMessage(err, 'Could not delete it'), 'error');
+    }
+  };
+
+  const clearAll = async () => {
+    setConfirmClear(false);
+    setChatHistory([]);
+    if (historyKey) localStorage.removeItem(historyKey);
+    try {
+      await aiChats.clear(workspaceId);
+      setRemoteHistory([]);
+    } catch (err) {
+      showToast(aiErrorMessage(err, 'Could not clear the saved conversations'), 'error');
+    }
+  };
+
+  const historyItems = [
+    ...(remoteHistory || []).map((c) => ({ id: c.id, title: c.title || 'Conversation', date: new Date(c.updatedAt).toLocaleDateString(), remote: true })),
+    ...chatHistory,
+  ];
+
+  const handleClose = () => {
+    if (chatTitle !== "Oruinwan AI" && !chatHistory.find(h => h.title === chatTitle && h.date === new Date().toLocaleDateString())) keepLocally();
     onClose();
   };
 
@@ -361,26 +472,56 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>History</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {chatHistory.length > 0 && (
-                  <button onClick={() => { if (window.confirm('Clear all history?')) { setChatHistory([]); if (historyKey) localStorage.removeItem(historyKey); } }}
+                {historyItems.length > 0 && (confirmClear ? (
+                  <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 10 }}>
+                    <button onClick={clearAll} data-testid="ai-history-clear-confirm" style={{ fontSize: '10px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>Clear all</button>
+                    <button onClick={() => setConfirmClear(false)} style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Cancel</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmClear(true)} data-testid="ai-history-clear"
                     style={{ fontSize: '10px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Clear</button>
-                )}
-                <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={14} /></button>
+                ))}
+                <button onClick={() => setShowHistory(false)} aria-label="Close history" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={14} /></button>
               </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
-              {chatHistory.length === 0 ? (
-                <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No history yet</div>
-              ) : chatHistory.map(chat => (
-                <button key={chat.id} onClick={() => loadChat(chat)}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font)' }}>
-                  <MessageSquare size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{chat.title}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{chat.date}</div>
-                  </div>
-                  <ChevronRight size={11} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
-                </button>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }} data-testid="ai-history-list">
+              {remoteHistory === null && chatHistory.length === 0 ? (
+                <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</div>
+              ) : historyItems.length === 0 ? (
+                <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No history yet. Conversations are saved to your account.</div>
+              ) : historyItems.map(chat => (
+                <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 2, background: chat.id === chatId ? 'var(--bg-active)' : 'none' }}>
+                  {renamingId === chat.id ? (
+                    <input
+                      autoFocus
+                      value={renameText}
+                      maxLength={120}
+                      aria-label="Conversation name"
+                      onChange={(e) => setRenameText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveRename(chat.id); if (e.key === 'Escape') setRenamingId(null); }}
+                      onBlur={() => saveRename(chat.id)}
+                      style={{ flex: 1, minWidth: 0, margin: '4px 6px', padding: '4px 6px', fontSize: 12, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-base)', border: '1px solid var(--border-accent)', borderRadius: 2 }}
+                    />
+                  ) : (
+                    <button onClick={() => loadChat(chat)}
+                      style={{ flex: 1, minWidth: 0, textAlign: 'left', padding: '8px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font)' }}>
+                      <MessageSquare size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{chat.title}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{chat.date}{chat.remote ? '' : ' · this browser'}</div>
+                      </div>
+                      <ChevronRight size={11} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+                    </button>
+                  )}
+                  {chat.remote && renamingId !== chat.id && (
+                    <>
+                      <button title="Rename" aria-label={`Rename ${chat.title}`} onClick={() => { setRenamingId(chat.id); setRenameText(chat.title); }}
+                        style={{ padding: 4, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><Edit2 size={11} /></button>
+                      <button title="Delete" aria-label={`Delete ${chat.title}`} onClick={() => deleteRemote(chat.id)}
+                        style={{ padding: 4, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><Trash2 size={11} /></button>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
           </div>
