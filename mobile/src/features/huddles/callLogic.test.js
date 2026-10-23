@@ -4,9 +4,7 @@ import {
   deviceLabel,
   elsewhereCall,
   endedMessage,
-  gridColumns,
   modelFromUserAgent,
-  orderTiles,
   permissionStep,
   promptForError,
   scopeOf,
@@ -80,27 +78,5 @@ describe('permissions', () => {
     expect(permissionStep('prompt')).toBe('explain');
     expect(permissionStep('prompt-with-rationale')).toBe('explain');
     expect(permissionStep('denied')).toBe('settings');
-  });
-});
-
-describe('tiles', () => {
-  const people = [
-    { userId: 'me', isLocal: true },
-    { userId: 'a' },
-    { userId: 'b', videoEnabled: true },
-    { userId: 'c' },
-  ];
-  it('puts the pinned person first, video next, me last', () => {
-    expect(orderTiles(people).map((p) => p.userId)).toEqual(['b', 'a', 'c', 'me']);
-    expect(orderTiles(people, { pinned: 'c' })[0].userId).toBe('c');
-    expect(orderTiles(people, { speaking: { c: true } }).map((p) => p.userId)).toEqual(['b', 'c', 'a', 'me']);
-  });
-
-  it('uses one column for two people on a phone, more on wide screens', () => {
-    expect(gridColumns(1)).toBe(1);
-    expect(gridColumns(2)).toBe(1);
-    expect(gridColumns(4)).toBe(2);
-    expect(gridColumns(4, true)).toBe(2);
-    expect(gridColumns(6, true)).toBe(3);
   });
 });

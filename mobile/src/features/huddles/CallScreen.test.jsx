@@ -52,8 +52,21 @@ describe('the call screen', () => {
     expect(useHuddle.getState().view).toBe('full');
   });
 
-  it('pins a person large and goes back to everyone', () => {
+  it('a 1:1 call shows the other person full screen and me in a corner', () => {
     inCall();
+    render(<CallView title="# design" />);
+    expect(screen.getByTestId('huddle-call-screen').dataset.view).toBe('duo');
+    expect(screen.getByTestId('huddle-selfview').textContent).toContain('You');
+  });
+
+  it('pins a person large and goes back to everyone', () => {
+    inCall({
+      participants: [
+        { userId: 'me', username: 'Me', audioEnabled: true, videoEnabled: false, isLocal: true },
+        { userId: 'sam', username: 'Sam', audioEnabled: false, videoEnabled: false, handRaised: true },
+        { userId: 'ana', username: 'Ana', audioEnabled: true, videoEnabled: false },
+      ],
+    });
     render(<CallView title="# design" />);
     fireEvent.click(screen.getByLabelText('Sam, muted, hand raised'));
     expect(screen.getByLabelText('Back to everyone')).toBeTruthy();
