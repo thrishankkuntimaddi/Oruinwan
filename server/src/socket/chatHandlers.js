@@ -8,6 +8,7 @@ const { isDuplicateSend } = require("../modules/messages/clientMessageId");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
 const privacyService = require("../features/auth/privacy.service");
+const readReceipts = require("../modules/messages/readReceipts.service");
 
 
 const activityService = require("../features/activity/activity.service");
@@ -54,16 +55,7 @@ async function loadAuthorizedMessage(messageId, uid, select = "channel dm worksp
   return null;
 }
 
-/** False when the user turned read receipts off (their reads are not broadcast to others). */
-async function sharesReadReceipts(uid) {
-  try {
-    const privacy = await privacyService.getPrivacy(uid);
-    return privacy.readReceipts !== false;
-  } catch (err) {
-    logger.warn({ err: err.message }, "[PRIVACY] read-receipt preference lookup failed");
-    return true;
-  }
-}
+const { sharesReadReceipts } = readReceipts;
 
 /** False when the user turned typing indicators off. */
 async function sharesTyping(uid) {
@@ -491,42 +483,8 @@ module.exports = function registerChatHandlers(io, socket) {
   // for the reader's own unread counts, but does not tell anyone else.
   socket.on("mark-chat-read", async ({ type, id, receipts } = {}) => {
     try {
-      const readerId = userId;
-      if (!id) return;
-      const broadcastRead = receipts !== false && await sharesReadReceipts(readerId);
-
-      if (type === "dm") {
-        const dm = await DMSession.findById(id).select("participants").lean();
-        if (!isDMParticipant(dm, readerId)) return;
-
-        await Message.updateMany(
-          { dm: id, sender: { $ne: readerId }, readBy: { $ne: readerId } },
-          { $addToSet: { readBy: readerId } }
-        );
-
-        if (broadcastRead) {
-          io.to(`dm:${id}`).emit("read-update", { readerId, dmSessionId: id });
-        }
-        // Other tabs/devices of the reader drop their unread badge too.
-        io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "dm", conversationId: String(id) });
-        // ...and its DM and mention notifications clear everywhere.
-        await require("../modules/notifications/notificationService").markConversationRead(io, { userId: readerId, conversationType: "dm", conversationId: String(id) });
-
-      } else if (type === "channel") {
-        const channel = await Channel.findById(id).select("members").lean();
-        if (!isChannelMember(channel, readerId)) return;
-
-        await Message.updateMany(
-          { channel: id, sender: { $ne: readerId }, readBy: { $ne: readerId } },
-          { $addToSet: { readBy: readerId } }
-        );
-
-        if (broadcastRead) {
-          io.to(`channel:${id}`).emit("read-update", { readerId, channelId: id });
-        }
-        io.to(`user:${readerId}`).emit("conversation:read", { conversationType: "channel", conversationId: String(id) });
-        await require("../modules/notifications/notificationService").markConversationRead(io, { userId: readerId, conversationType: "channel", conversationId: String(id) });
-      }
+      // Same helper as POST /api/chat/reset-unread: access check, readBy + read time, events.
+      await readReceipts.markConversationRead(io, { readerId: userId, type, id, receipts });
     } catch (err) {
       logger.error("MARK READ ERROR:", err);
     }
@@ -539,7 +497,7 @@ module.exports = function registerChatHandlers(io, socket) {
       const ctx = await loadAuthorizedMessage(messageId, readerId);
       if (!ctx) return;
 
-      await Message.updateOne({ _id: messageId }, { $addToSet: { readBy: readerId } });
+      await Message.updateOne({ _id: messageId, readBy: { $ne: readerId } }, readReceipts.readUpdate(readerId));
 
       if (receipts !== false && await sharesReadReceipts(readerId)) {
         io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId] });

@@ -51,13 +51,14 @@ import './chatWindow.css';
 import { CODE_REVIEW_EVENT } from '../../integrations/codeReviewBus';
 import logger from '../../../utils/logger';
 import { getUserPreferences } from '../../../hooks/useUserPreferences';
+import { markReadKey, sendMarkRead } from './helpers/markRead';
 
 // Pull request viewer (loaded on first use; carries the syntax highlighter).
 const CodeReviewPanel = lazy(() => import('../../integrations/codeReview/CodeReviewPanel'));
 
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
-    const { socket: rawSocket } = useSocket();
+    const { socket: rawSocket, isConnected: socketConnected } = useSocket();
     const currentUserId = user?.sub || user?._id;
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -844,18 +845,28 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         const markRead = () => {
             if (document.visibilityState !== 'visible') return;
             clearConversationUnread?.(conversationType, String(conversationId));
-            if (rawSocket?.connected && latestEventId !== lastMessageIdRef.current) {
-                lastMessageIdRef.current = latestEventId;
-                // Always sent so our own unread counts clear; with read receipts off
-                // (Settings → Privacy) `receipts: false` asks the server not to tell others.
-                const receipts = getUserPreferences().privacy.readReceipts !== false;
-                rawSocket.emit('mark-chat-read', { type: conversationType, id: conversationId, receipts });
-            }
+            // Once per conversation, newest message and connection state: a read made before
+            // the socket connected goes over REST, and is sent again once it connects.
+            const connected = Boolean(rawSocket?.connected);
+            const key = markReadKey({ type: conversationType, id: conversationId, latestEventId, connected });
+            if (key === lastMessageIdRef.current) return;
+            lastMessageIdRef.current = key;
+            // Always sent so our own unread counts clear; with read receipts off
+            // (Settings → Privacy) `receipts: false` asks the server not to tell others.
+            const receipts = getUserPreferences().privacy.readReceipts !== false;
+            sendMarkRead({
+                socket: rawSocket,
+                post: (url, body) => api.post(url, body),
+                type: conversationType,
+                id: conversationId,
+                receipts,
+                onError: () => { if (lastMessageIdRef.current === key) lastMessageIdRef.current = null; },
+            });
         };
         markRead();
         document.addEventListener('visibilitychange', markRead);
         return () => document.removeEventListener('visibilitychange', markRead);
-    }, [conversationId, conversationType, conversation.loading, latestEventId, rawSocket, clearConversationUnread]);
+    }, [conversationId, conversationType, conversation.loading, latestEventId, rawSocket, socketConnected, clearConversationUnread]);
 
     useEffect(() => {
         if (conversationType !== 'dm') return;

@@ -811,8 +811,14 @@ export const liveAdapter = {
     const data = await api.post(`/v2/messages/${id}/pin`, {});
     return Boolean(data?.isPinned ?? data?.message?.isPinned ?? true);
   },
+  /**
+   * Records that I've read everything in the conversation (the server's readBy, which Message
+   * info and unread counts come from). Over the socket when it's connected; otherwise over HTTP,
+   * so a read is never silently dropped while the socket is still connecting.
+   */
   async markRead(conv) {
-    socketEmit('mark-chat-read', { type: conv.kind, id: conv.id });
+    if (realtimeConnected()) socketEmit('mark-chat-read', { type: conv.kind, id: conv.id });
+    else await api.post('/chat/reset-unread', { type: conv.kind, id: conv.id });
   },
 
   async tasks(ws) {

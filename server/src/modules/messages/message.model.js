@@ -179,6 +179,17 @@ const MessageSchema = new mongoose.Schema({
 
   reactions: [ReactionSchema],
   readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  // When each reader first read it (message info). Never sent with message lists: only
+  // GET /v2/messages/:id/info selects it, after privacy filtering (readReceipts.service.js).
+  readReceipts: {
+    type: [{
+      _id: false,
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      at: { type: Date },
+    }],
+    select: false,
+    default: undefined,
+  },
 
   
   

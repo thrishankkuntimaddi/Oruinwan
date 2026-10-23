@@ -185,7 +185,10 @@ function UserList({ users, muted }) {
             {users.map(u => (
                 <div key={idOf(u)} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <UserAvatar user={u} muted={muted} />
-                    <span style={{ fontSize: '13px', color: muted ? 'var(--text-muted)' : 'var(--text-secondary)' }}>{u.username || 'Unknown'}</span>
+                    <span style={{ fontSize: '13px', color: muted ? 'var(--text-muted)' : 'var(--text-secondary)', minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username || 'Unknown'}</span>
+                    {u.readAt && (
+                        <span title={`Read ${fmt(u.readAt)}`} style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{fmt(u.readAt)}</span>
+                    )}
                 </div>
             ))}
         </div>

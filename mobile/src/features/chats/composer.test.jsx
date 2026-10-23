@@ -115,3 +115,44 @@ describe('Composer drafts and editing', () => {
     expect(box.value).toBe('half a thought');
   });
 });
+
+describe('Composer formatting and emoji', () => {
+  it('shows the formatting row on demand and wraps the selection in Markdown', async () => {
+    const onSend = vi.fn();
+    render(<Composer placeholder="Message" onSend={onSend} />);
+    expect(screen.queryByRole('toolbar', { name: 'Formatting' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show formatting' }));
+    expect(screen.getByRole('toolbar', { name: 'Formatting' })).toBeTruthy();
+    const box = screen.getByPlaceholderText('Message');
+    fireEvent.change(box, { target: { value: 'ship it' } });
+    box.setSelectionRange(0, 4);
+    fireEvent.click(screen.getByRole('button', { name: 'Bold' }));
+    expect(box.value).toBe('**ship** it');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide formatting' }));
+    expect(screen.queryByRole('toolbar', { name: 'Formatting' })).toBeNull();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Send' })));
+    expect(onSend).toHaveBeenCalledWith('**ship** it');
+  });
+
+  it('adds a link from its own field', () => {
+    render(<Composer placeholder="Message" onSend={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show formatting' }));
+    const box = screen.getByPlaceholderText('Message');
+    fireEvent.change(box, { target: { value: 'see docs' } });
+    box.setSelectionRange(4, 8);
+    fireEvent.click(screen.getByRole('button', { name: 'Link' }));
+    fireEvent.change(screen.getByLabelText('Link address'), { target: { value: 'example.com/docs' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
+    expect(box.value).toBe('see [docs](https://example.com/docs)');
+  });
+
+  it('inserts an emoji from the web set at the caret', async () => {
+    render(<Composer placeholder="Message" onSend={() => {}} />);
+    const box = screen.getByPlaceholderText('Message');
+    fireEvent.change(box, { target: { value: 'great job' } });
+    box.setSelectionRange(5, 5);
+    fireEvent.click(screen.getByRole('button', { name: 'Emoji' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Insert 🎉' }));
+    expect(box.value).toBe('great🎉 job');
+  });
+});

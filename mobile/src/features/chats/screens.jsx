@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  Info, UserRound, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw,
+  Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -34,6 +34,9 @@ import { blockedNote, isPlanLimit } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
 import { GroupTile } from './groupScreens.jsx';
+import { MessageInfoSheet } from './MessageInfoSheet.jsx';
+import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
+import { EllipsisVertical } from 'lucide-react';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
 
@@ -52,6 +55,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
   const [remindOf, setRemindOf] = useState(null);
   const [translateOf, setTranslateOf] = useState(null);
   const [historyOf, setHistoryOf] = useState(null);
+  const [infoOf, setInfoOf] = useState(null);
   const threadsOn = useFlag('threads');
   const aiOn = useFlag('ai');
 
@@ -96,6 +100,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
         onRemind={api().remindMe ? () => setRemindOf(active) : null}
         onTranslate={api().translate && aiOn ? () => setTranslateOf(active) : null}
         onHistory={api().messageVersions ? () => setHistoryOf(active) : null}
+        onInfo={api().messageInfo ? () => setInfoOf(active) : null}
         onTask={() => (api().convertToTask ? setConvertFrom(active) : setTaskFrom(active))}
         onEdit={() => setEditing(active)}
         onDelete={() => convo.remove(active.id)}
@@ -117,6 +122,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
       <ReminderSheet message={remindOf} conv={conv} onClose={() => setRemindOf(null)} />
       <TranslateSheet message={translateOf} onClose={() => setTranslateOf(null)} />
       <EditHistorySheet message={historyOf} conv={conv} onClose={() => setHistoryOf(null)} />
+      <MessageInfoSheet message={infoOf} conv={conv} onClose={() => setInfoOf(null)} />
     </>
   );
 
@@ -174,7 +180,9 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const { data: assistants } = useAssistants();
   const [plus, setPlus] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [sheet, setSheet] = useState(null); // 'poll' | 'checklist' | 'summary'
+  const [sheet, setSheet] = useState(null); // 'poll' | 'checklist' | 'summary' | 'menu'
+  const [jumpTo, setJumpTo] = useState(null);
+  const status = useConversationStatus(kind, id, meta);
   const aiOn = useFlag('ai');
   // Unread when the conversation opened (opening marks it read), for "since you last read".
   const [unreadAtOpen] = useState(() => meta?.unread || 0);
@@ -189,7 +197,15 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const isAdmin = ['admin', 'owner'].includes(workspace?.role);
   const readOnly = kind === 'channel' && meta?.broadcast && !isAdmin;
   const notMember = kind === 'channel' && meta && !meta.isMember;
-  const canPost = !readOnly && !notMember;
+  const blocked = kind === 'dm' && (status.blocked || status.blockedByOther);
+  const canPost = !readOnly && !notMember && !blocked;
+
+  // A message picked from search, pinned, saved or reminders: show it here (or its thread).
+  const jump = (m) => {
+    if (m.parentId) nav.push('thread', { kind, convId: id, messageId: m.parentId });
+    else if (convo.items.some((x) => x.id === m.id)) setJumpTo(m.id);
+    else toast('That message is further back than this device has loaded.');
+  };
 
   const summaryOptions = useMemo(() => {
     const all = () => transcript(convo.items, directory, me);
@@ -273,13 +289,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           <>
             {aiOn && !meta?.agentId && api().summarizeConversation && <IconButton icon={Sparkles} label="Summarize with AI" onClick={() => setSheet('summary')} />}
             {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
-            {kind === 'channel' ? (
-              <IconButton icon={Info} label="Channel details" onClick={() => nav.push('channelInfo', { id })} />
-            ) : isGroup ? (
-              <IconButton icon={Users} label="Group info" onClick={() => nav.push('groupInfo', { id })} />
-            ) : (
-              <IconButton icon={UserRound} label="Profile" onClick={() => meta && nav.push('profile', { userId: meta.userId })} />
-            )}
+            <IconButton icon={EllipsisVertical} label="More options" data-testid="conversation-menu" onClick={() => setSheet('menu')} />
           </>
         }
       />
@@ -296,7 +306,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         onLongPress={tools.onLongPress}
         onOpenThread={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
-        highlightId={highlight}
+        highlightId={jumpTo || highlight}
       />
       <E2eeBanner className="mb-2" />
       {notMember ? (
@@ -314,8 +324,8 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           mentions={mentions.composer}
           recent={recent}
           onVoice={canPost ? (file) => convo.sendFiles([file]) : null}
-          disabled={readOnly}
-          disabledReason="Only admins can post in this channel."
+          disabled={readOnly || blocked}
+          disabledReason={blocked ? (status.blocked ? 'You blocked this person. Unblock them from the ⋮ menu to send messages.' : "You can't send messages to this person.") : 'Only admins can post in this channel.'}
           initial={draft}
           editText={tools.editing?.text || ''}
           editing={Boolean(tools.editing)}
@@ -339,6 +349,17 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         onChecklist={canPost && api().sendChecklist ? () => setSheet('checklist') : null}
         onAskAi={aiOn ? () => (api().summarizeConversation ? setSheet('summary') : askAiAbout(`Summarize the recent conversation in ${label} and list any action items for me.`)) : null}
         onTask={tools.openTask}
+      />
+      <ConversationMenu
+        open={sheet === 'menu'}
+        onClose={() => setSheet((s) => (s === 'menu' ? null : s))}
+        conv={conv}
+        meta={meta}
+        label={label}
+        status={status}
+        items={convo.items}
+        onJump={jump}
+        onPoll={canPost && api().createPoll ? () => setSheet('poll') : null}
       />
       <PollComposerSheet open={sheet === 'poll'} onClose={() => setSheet(null)} onCreate={createPoll} />
       <ChecklistComposerSheet open={sheet === 'checklist'} onClose={() => setSheet(null)} onCreate={createChecklist} />
