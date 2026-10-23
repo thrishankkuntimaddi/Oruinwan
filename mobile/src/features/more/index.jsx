@@ -1,13 +1,13 @@
 // Secondary screens reached from Home, the header and Settings.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Bell, CheckCheck, File, FolderOpen, Plug,
+  Bell, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug,
   SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import {
-  useChannels, useDirectory, useFiles, useIntegrations, useMembers, useNotifications,
+  useChannels, useDirectory, useIntegrations, useMembers, useNotifications, useSharedFiles,
 } from '../../data/hooks.js';
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
@@ -15,14 +15,16 @@ import { Button, IconButton } from '../../ui/Button.jsx';
 import { Chips, SearchField } from '../../ui/Controls.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
-import { Sheet } from '../../ui/Overlay.jsx';
+import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { openExternal, shareLink } from '../../native/index.js';
-import { formatBytes } from '../../lib/files.js';
+import { fileIconKind, formatBytes, previewKind } from '../../lib/files.js';
+import { downloadFile, openFile } from '../media/media.js';
+import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, messageTarget, whereLabel } from '../files/filesUi.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { groupActivity } from '../home/activityGroups.js';
@@ -122,39 +124,126 @@ export function NotificationsScreen({ initial = 'all' }) {
 // ---------------------------------------------------------------- Files
 
 
+const FILE_SOURCES = [
+  { value: 'all', label: 'Everywhere' },
+  { value: 'library', label: 'Uploads' },
+  { value: 'channels', label: 'Channels' },
+  { value: 'dms', label: 'Direct messages' },
+];
+
+/**
+ * Every file shared with the person in this workspace: attachments from their channels,
+ * DMs and group DMs, plus files uploaded to the workspace library. Chat files open in the
+ * same viewers as in the conversation; uploads open their details (tags, versions, sharing).
+ */
 export function FilesScreen() {
-  const { data, loading } = useFiles();
-  const directory = useDirectory();
   const [query, setQuery] = useState('');
-  const files = (data || []).filter((f) => !query || f.name.toLowerCase().includes(query.toLowerCase()));
+  const [q, setQ] = useState('');
+  const [kind, setKind] = useState('all');
+  const [source, setSource] = useState('all');
+  const [sort, setSort] = useState('newest');
+  const [limit, setLimit] = useState(50);
+  const [menu, setMenu] = useState(null);
+  useEffect(() => {
+    const t = setTimeout(() => setQ(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+  const { data, loading, error } = useSharedFiles({ kind, source, q, sort, limit });
+  const items = data?.items || [];
+  const filtering = Boolean(q) || kind !== 'all' || source !== 'all';
+  const media = items.filter((i) => ['image', 'video'].includes(previewKind(i)));
+
+  const open = (item) => {
+    if (item.source === 'library' && item.fileId) nav.push('file', { id: item.fileId });
+    else openFile(item, media.includes(item) ? media : undefined);
+  };
+  const goToMessage = (item) => {
+    const target = messageTarget(item);
+    if (target) nav.push(target.route, target.params, { tab: 'chats' });
+  };
+  const clear = () => { setQuery(''); setQ(''); setKind('all'); setSource('all'); };
+
   return (
     <Screen>
-      <Header title="Files">
-        <div className="px-4 pb-3">
-          <SearchField value={query} onChange={setQuery} placeholder="Search files" />
+      <Header title="Files" subtitle={data ? `${data.total} shared with you` : ''}>
+        <div className="px-4 pb-2">
+          <SearchField value={query} onChange={setQuery} placeholder="Find a file by name" />
+        </div>
+        <Chips options={KIND_CHIPS} value={kind} onChange={setKind} className="pb-2" />
+        <Chips options={FILE_SOURCES} value={source} onChange={setSource} className="pb-2" />
+        <div className="flex items-center justify-end gap-2 px-4 pb-3">
+          <label htmlFor="files-sort" className="text-[12px] text-text-2">Sort</label>
+          <select
+            id="files-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="h-8 rounded-lg border border-line bg-input px-2 text-[13px] text-text"
+          >
+            {SHARED_SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </div>
       </Header>
       <Body onRefresh={() => invalidate('files')}>
-        {loading ? (
+        {loading && !items.length ? (
           <SkeletonRows />
-        ) : files.length ? (
-          <RowGroup className="mt-1">
-            {files.map((f) => (
-              <Row
-                key={f.id}
-                icon={FILE_ICONS[f.kind] || File}
-                tile="accent"
-                title={f.name}
-                subtitle={[formatBytes(f.size), directory[f.owner]?.name, shortAgo(f.at)].filter(Boolean).join(' · ')}
-                // Details: tags, versions, comments and sharing; Open from there shows the file.
-                onClick={() => nav.push('file', { id: f.id })}
-              />
-            ))}
-          </RowGroup>
+        ) : error && !items.length ? (
+          <EmptyState
+            icon={FolderOpen}
+            title="Couldn't load files"
+            body={error.message || 'Check your connection and try again.'}
+            action={<Button variant="secondary" size="sm" onClick={() => invalidate('files')}>Try again</Button>}
+          />
+        ) : items.length ? (
+          <>
+            <RowGroup className="mt-1">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center pr-2">
+                  <Row
+                    className="flex-1"
+                    icon={FILE_ICONS[fileIconKind(item)] || File}
+                    tile="accent"
+                    title={item.name}
+                    subtitle={[formatBytes(item.size), item.byName, whereLabel(item), shortAgo(item.at)].filter(Boolean).join(' · ')}
+                    chevron={false}
+                    onClick={() => open(item)}
+                  />
+                  <IconButton icon={MoreHorizontal} label={`More for ${item.name}`} onClick={() => setMenu(item)} />
+                </div>
+              ))}
+            </RowGroup>
+            {data?.hasMore && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="secondary" size="sm" onClick={() => setLimit((n) => Math.min(100, n + 50))} disabled={limit >= 100}>
+                  {limit >= 100 ? 'Refine the search to see more' : 'Show more'}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : filtering ? (
+          <EmptyState
+            icon={FolderOpen}
+            title="No files match"
+            body="Try another name, type or place."
+            action={<Button variant="secondary" size="sm" onClick={clear}>Clear filters</Button>}
+          />
         ) : (
-          <EmptyState icon={FolderOpen} title={query ? 'No files match' : 'No files yet'} body="Files shared in this workspace show up here." />
+          <EmptyState
+            icon={FolderOpen}
+            title="Nothing shared yet"
+            body="Files sent in your channels, direct messages and group chats show up here automatically, with who shared them and where — along with files uploaded to the workspace."
+          />
         )}
       </Body>
+      <ActionSheet
+        open={Boolean(menu)}
+        onClose={() => setMenu(null)}
+        title={menu?.name}
+        actions={menu ? [
+          { label: 'Open', icon: ExternalLink, onSelect: () => open(menu) },
+          menu.messageId && { label: 'Go to message', hint: `In ${whereLabel(menu)}`, icon: MessageCircle, onSelect: () => goToMessage(menu) },
+          { label: 'Download', icon: Download, onSelect: () => downloadFile(menu) },
+        ] : []}
+      />
     </Screen>
   );
 }

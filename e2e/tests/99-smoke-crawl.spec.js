@@ -290,7 +290,7 @@ test.describe('smoke crawl', () => {
     });
     await step('workspace admin tabs', async () => {
       await goto(page, `/workspace/${w}/admin`);
-      for (const tab of ['General', 'Permissions', 'Members', 'Invitations', 'Agents & apps', 'Features', 'Analytics', 'Data', 'Advanced', 'Overview']) {
+      for (const tab of ['General', 'Permissions', 'Members', 'Invitations', 'Channels', 'Agents & apps', 'Features', 'AI', 'Integrations', 'Analytics', 'Data', 'Plan & usage', 'Danger zone', 'Overview']) {
         state.where = `workspace admin · ${tab}`;
         await page.getByRole('button', { name: tab, exact: true }).first().click();
         await checkPage(page, state, problems, 'dialogs');

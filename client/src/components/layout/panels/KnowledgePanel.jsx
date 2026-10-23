@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { BookOpen, Plus, ChevronRight, ChevronDown, Network, Search, Book, FileText } from 'lucide-react';
+import { BookOpen, Plus, ChevronRight, ChevronDown, Network, Search, Book, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useKnowledge } from '../../../hooks/useKnowledge';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
 import '../../../styles/gloss-x-panels.css';
@@ -54,7 +54,7 @@ const KnowledgePanel = ({ title }) => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { pages, loading, listPages, createPage } = useKnowledge();
+    const { pages, loading, error, listPages, createPage } = useKnowledge();
     const [search, setSearch] = useState('');
     const [creating, setCreating] = useState(false);
 
@@ -123,11 +123,23 @@ const KnowledgePanel = ({ title }) => {
 
             <PanelSection label={search ? 'Results' : 'Pages'}>
                 {loading && <div className="gl-x-center"><div className="gl-x-spinner" /></div>}
-                {!loading && filtered.length === 0 && (
+                {!loading && error && pages.length === 0 && (
+                    <PanelEmpty
+                        icon={AlertTriangle}
+                        title="Couldn’t load pages"
+                        text={error}
+                        action={(
+                            <button type="button" className="gl-btn gl-btn--sm" onClick={() => listPages(workspaceId)}>
+                                <RefreshCw size={12} /> Try again
+                            </button>
+                        )}
+                    />
+                )}
+                {!loading && !(error && pages.length === 0) && filtered.length === 0 && (
                     <PanelEmpty
                         icon={BookOpen}
                         title={search ? 'No matching pages' : 'No pages yet'}
-                        text={search ? 'Try a different title.' : 'Write down how your team works. Pages can nest inside each other.'}
+                        text={search ? 'Try a different title.' : 'Handbooks, how-tos and decisions your team can find later. Pages can nest and link to each other.'}
                         action={!search && (
                             <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={handleCreatePage} disabled={creating}>
                                 <Plus size={12} /> Write your first page

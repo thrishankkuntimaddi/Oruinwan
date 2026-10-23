@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight, BookOpen, FolderOpen } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 import { WorkspaceIcon } from "../../utils/workspaceIcons";
 import "./shell.css";
@@ -75,6 +75,11 @@ const IconSidebar = ({ onProfileClick }) => {
         ...(features.tasks ? [{ icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" }] : []),
         ...(features.notes ? [{ icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" }] : []),
         ...(features.huddles ? [{ icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" }] : []),
+        // Files: everything shared with you in channels and DMs, plus workspace uploads.
+        { icon: <FolderOpen size={19} strokeWidth={2} />, path: "/files", label: "Files" },
+        // Knowledge (pages, handbook, graph) had no entry on the desktop rail, so it was only
+        // reachable from search or a typed URL.
+        { icon: <BookOpen size={19} strokeWidth={2} />, path: "/knowledge", label: "Knowledge" },
         // Agents & tools: AI agents (Claude, ChatGPT…), workflows and apps.
         { icon: <Bot size={19} strokeWidth={2} />, path: "/agents", label: "Agents & tools", also: ["/apps", "/automations"] },
         ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates" }] : []),

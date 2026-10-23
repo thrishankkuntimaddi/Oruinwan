@@ -1,71 +1,113 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Upload, LayoutGrid, List, Download, Trash2, FolderOpen, Loader2,
+    Upload, LayoutGrid, List, Download, Trash2, FolderOpen, Loader2, MessageSquareText, Hash, MessagesSquare, Paperclip,
 } from 'lucide-react';
-import { useFiles, mergeFile } from '../../hooks/useFiles';
+import { useFiles, mergeFile, downloadLibraryFile } from '../../hooks/useFiles';
+import { useSharedFiles, KIND_OPTIONS, SORT_OPTIONS, whereLabel, messageLink, toAttachment } from '../../hooks/useSharedFiles';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
-    DashPage, PageHead, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Grid,
-    LoadingState, ErrorState, EmptyState, Confirm, Dialog, Field, timeAgo,
+    DashPage, PageHead, Panel, Toolbar, SearchBox, FilterTabs, SelectBox, Btn, IconBtn, Grid,
+    LoadingState, ErrorState, EmptyState, Confirm, Dialog, Field, timeAgo, errorMessage,
 } from '../../components/ui/page';
+import { useMediaUrl } from '../../utils/mediaUrl';
+import { downloadAttachment } from '../../utils/uploadFile';
 import { fileKind, formatSize, FILES_CHANGED, announceFilesChanged } from './fileKinds';
 import FilePreviewPanel from './FilePreviewPanel';
+import SharedFilePreview, { WhereIcon } from './SharedFilePreview';
 import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
 
 const SOURCE = 'library';
 
-/** Square mark with the file-kind icon (or a thumbnail for images in the grid). */
-function KindMark({ file, size = 16 }) {
-    const { Icon } = fileKind(file.mimeType);
+/** "PDF · 2.0 KB · Ben · #general · 2h ago" */
+function metaLine(item) {
+    const { label } = fileKind(item.mimeType);
+    return [label, formatSize(item.size), item.sharedBy?.username, whereLabel(item), timeAgo(item.sharedAt)].filter(Boolean).join(' · ');
+}
+
+function KindMark({ item, size = 16 }) {
+    const { Icon } = fileKind(item.mimeType);
     return <span className="gl-empty-mark" style={{ margin: 0, flexShrink: 0 }}><Icon size={size} /></span>;
 }
 
-function FileCard({ file, onOpen, onDelete }) {
-    const { Icon, label } = fileKind(file.mimeType);
+function ItemActions({ item, onDownload, onGoTo, onDelete }) {
+    return (
+        <span className="fl-actions">
+            <IconBtn label={`Download ${item.name}`} onClick={() => onDownload(item)}><Download size={14} /></IconBtn>
+            {item.messageId && <IconBtn label={`Go to the message with ${item.name}`} onClick={() => onGoTo(item)}><MessageSquareText size={14} /></IconBtn>}
+            {item.source === 'library' && <IconBtn label={`Delete ${item.name}`} onClick={() => onDelete(item)}><Trash2 size={14} /></IconBtn>}
+        </span>
+    );
+}
+
+function Thumb({ item }) {
+    const isImage = item.kind === 'image' || item.mimeType?.startsWith('image/');
+    const attachment = useMemo(() => (isImage ? toAttachment(item) : null), [isImage, item]);
+    const { url, refresh, attempt } = useMediaUrl(attachment);
     const [broken, setBroken] = useState(false);
-    const isImage = file.mimeType?.startsWith('image/') && !broken;
+    const { Icon } = fileKind(item.mimeType);
+    if (isImage && url && !broken) {
+        return <img src={url} alt="" loading="lazy" onError={() => (attempt < 1 ? refresh() : setBroken(true))} />;
+    }
+    return <Icon size={28} style={{ color: 'var(--accent)' }} />;
+}
+
+function ItemCard({ item, onOpen, ...actions }) {
     return (
         <div className="gl-card gl-card--interactive fl-card">
-            <button type="button" className="fl-card-main" onClick={() => onOpen(file)} aria-label={`Open ${file.name}`}>
-                <span className="fl-thumb">
-                    {isImage
-                        ? <img src={file.url} alt="" onError={() => setBroken(true)} />
-                        : <Icon size={28} style={{ color: 'var(--accent)' }} />}
-                </span>
+            <button type="button" className="fl-card-main" onClick={() => onOpen(item)} aria-label={`Open ${item.name}`}>
+                <span className="fl-thumb"><Thumb item={item} /></span>
                 <span className="fl-card-text">
-                    <strong className="fl-name">{file.name}</strong>
-                    <span className="fl-meta">{label} · {formatSize(file.size)} · {timeAgo(file.createdAt)}</span>
+                    <strong className="fl-name">{item.name}</strong>
+                    <span className="fl-meta">{formatSize(item.size)} · {timeAgo(item.sharedAt)}</span>
+                    <span className="fl-meta fl-meta--where"><WhereIcon item={item} size={11} />{item.sharedBy?.username ? `${item.sharedBy.username} · ` : ''}{whereLabel(item)}</span>
                 </span>
             </button>
-            <span className="fl-actions fl-card-actions">
-                <IconBtn label={`Download ${file.name}`} onClick={() => window.open(file.url, '_blank')}><Download size={14} /></IconBtn>
-                <IconBtn label={`Delete ${file.name}`} onClick={() => onDelete(file)}><Trash2 size={14} /></IconBtn>
-            </span>
+            <span className="fl-card-actions"><ItemActions item={item} {...actions} /></span>
         </div>
     );
 }
 
-function FileRow({ file, first, active, onOpen, onDelete }) {
-    const { label } = fileKind(file.mimeType);
+function ItemRow({ item, first, active, onOpen, ...actions }) {
     return (
         <li className="fl-row" data-active={active ? 'true' : undefined} style={{ borderTop: first ? 'none' : '1px solid var(--border-subtle)' }}>
-            <button type="button" className="fl-row-main" onClick={() => onOpen(file)}>
-                <KindMark file={file} />
+            <button type="button" className="fl-row-main" onClick={() => onOpen(item)}>
+                <KindMark item={item} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                    <strong className="fl-name" style={{ fontSize: 14 }}>{file.name}</strong>
+                    <strong className="fl-name" style={{ fontSize: 14 }}>{item.name}</strong>
                     <span className="fl-meta">
-                        {label} · {formatSize(file.size)} · {timeAgo(file.createdAt)}
-                        {file.tags?.length > 0 && ` · ${file.tags.map((t) => `#${t}`).join(' ')}`}
+                        {metaLine(item)}
+                        {item.tags?.length > 0 && ` · ${item.tags.map((t) => `#${t}`).join(' ')}`}
                     </span>
                 </span>
             </button>
-            <span className="fl-actions">
-                <IconBtn label={`Download ${file.name}`} onClick={() => window.open(file.url, '_blank')}><Download size={14} /></IconBtn>
-                <IconBtn label={`Delete ${file.name}`} onClick={() => onDelete(file)}><Trash2 size={14} /></IconBtn>
-            </span>
+            <ItemActions item={item} {...actions} />
         </li>
+    );
+}
+
+/** Source picker value: 'all' | 'library' | 'channels' | 'dms' | 'conv:<id>'. */
+function SourceSelect({ value, onChange, conversations }) {
+    const channels = conversations.filter((c) => c.type === 'channel');
+    const dms = conversations.filter((c) => c.type !== 'channel');
+    return (
+        <SelectBox value={value} onChange={onChange} label="Shared in" style={{ maxWidth: 220 }}>
+            <option value="all">Everywhere</option>
+            <option value="library">Uploaded to Files</option>
+            <option value="channels">All channels</option>
+            <option value="dms">All direct messages</option>
+            {channels.length > 0 && (
+                <optgroup label="Channels">
+                    {channels.map((c) => <option key={c.id} value={`conv:${c.id}`}>#{c.name}</option>)}
+                </optgroup>
+            )}
+            {dms.length > 0 && (
+                <optgroup label="Direct messages">
+                    {dms.map((c) => <option key={c.id} value={`conv:${c.id}`}>{c.name}</option>)}
+                </optgroup>
+            )}
+        </SelectBox>
     );
 }
 
@@ -75,49 +117,67 @@ const FileLibrary = () => {
     const { showToast } = useToast();
     const [searchParams] = useSearchParams();
     const reviewParam = searchParams.get('review');
+    const itemParam = searchParams.get('item');
     // Design review notifications link here with ?review=: open the review page.
     useEffect(() => {
         if (reviewParam && workspaceId) navigate(`/workspace/${workspaceId}/reviews/${reviewParam}`, { replace: true });
     }, [reviewParam, workspaceId, navigate]);
     const { activeWorkspace } = useWorkspace();
     const filesApi = useFiles();
-    const { files, loading, error, listFiles, uploadFile, deleteFile, patchFile } = filesApi;
+    const { files, listFiles, uploadFile, deleteFile, patchFile, getFile } = filesApi;
+
+    const [kind, setKind] = useState('all');
+    const [source, setSource] = useState('all');
+    const [sort, setSort] = useState('newest');
+    const [search, setSearch] = useState('');
+    const [q, setQ] = useState('');
+    const [tagFilter, setTagFilter] = useState('');
+    const shared = useSharedFiles(workspaceId, { kind, source, q, sort });
+    const { items, total, hasMore, conversations, loading, loadingMore, error, loaded, reload, loadMore, removeItem } = shared;
+
     const [pendingUploads, setPendingUploads] = useState(null);
     const [uploadTags, setUploadTags] = useState([]);
-    const [view, setView] = useState('grid');
-    const [search, setSearch] = useState('');
-    const [tagFilter, setTagFilter] = useState('');
+    const [view, setView] = useState('list');
     const [uploading, setUploading] = useState(0);
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [selected, setSelected] = useState(null); // { type: 'library', file } | { type: 'chat', item }
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [dragging, setDragging] = useState(false);
-    const [loaded, setLoaded] = useState(false);
     const dragDepth = useRef(0);
     const inputRef = useRef(null);
 
-    const reload = useCallback(async () => {
-        if (!workspaceId) return;
-        await listFiles(workspaceId, { folderId: 'root' });
-        setLoaded(true);
+    // Search the server by name, a moment after typing stops.
+    useEffect(() => {
+        const t = setTimeout(() => setQ(search.trim()), 250);
+        return () => clearTimeout(t);
+    }, [search]);
+
+    const reloadLibrary = useCallback(() => {
+        if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
     }, [workspaceId, listFiles]);
 
-    useEffect(() => { reload(); }, [reload]);
+    useEffect(() => { reloadLibrary(); }, [reloadLibrary]);
 
     // The side panel uploads too: reload when it changes the list.
     useEffect(() => {
-        const onChange = (e) => { if (e.detail?.source !== SOURCE) reload(); };
+        const onChange = (e) => { if (e.detail?.source !== SOURCE) { reloadLibrary(); reload(); } };
         window.addEventListener(FILES_CHANGED, onChange);
         return () => window.removeEventListener(FILES_CHANGED, onChange);
-    }, [reload]);
+    }, [reloadLibrary, reload]);
 
+    // /files/:id opens a library file; ?item= (from the side panel) opens a chat attachment.
     useEffect(() => {
-        if (!id) { setSelectedFile(null); return; }
-        if (files.length) {
-            const f = files.find((x) => x._id === id);
-            if (f) setSelectedFile(f);
-        }
+        if (!id) { setSelected((s) => (s?.type === 'library' ? null : s)); return; }
+        const f = files.find((x) => x._id === id);
+        if (f) setSelected({ type: 'library', file: f });
     }, [id, files]);
+    useEffect(() => {
+        if (!itemParam) return;
+        const it = items.find((x) => x.id === itemParam);
+        if (it && it.source !== 'library') setSelected({ type: 'chat', item: it });
+    }, [itemParam, items]);
+
+    const allTags = useMemo(() => [...new Set(files.flatMap((f) => f.tags || []))], [files]);
 
     // Picking or dropping files opens a short step to tag them before they upload.
     const queueUpload = (fileList) => {
@@ -136,7 +196,7 @@ const FileLibrary = () => {
 
     const handleFileChange = useCallback((next) => {
         patchFile(next);
-        setSelectedFile((prev) => (prev && prev._id === next._id ? mergeFile(prev, next) : prev));
+        setSelected((prev) => (prev?.type === 'library' && prev.file._id === next._id ? { type: 'library', file: mergeFile(prev.file, next) } : prev));
     }, [patchFile]);
 
     const handleUpload = async (fileList, tags = []) => {
@@ -148,45 +208,73 @@ const FileLibrary = () => {
             try {
                 await uploadFile(workspaceId, file, { tags });
                 successCount++;
-            } catch {
-                showToast(`Couldn’t upload ${file.name}`, 'error');
+            } catch (err) {
+                showToast(errorMessage(err, `Couldn’t upload ${file.name}`), 'error');
             }
         }
         setUploading(0);
         if (successCount > 0) {
             showToast(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`, 'success');
             announceFilesChanged(SOURCE);
+            reload();
         }
     };
 
     const pickFiles = () => inputRef.current?.click();
 
+    function closePreview() {
+        setSelected(null);
+        navigate(`/workspace/${workspaceId}/files`, { replace: true });
+    }
+
     const handleDelete = async () => {
-        const file = confirmDelete;
-        if (!file) return;
+        const target = confirmDelete;
+        if (!target) return;
         setDeleting(true);
         try {
-            await deleteFile(file._id);
-            showToast(`Deleted “${file.name}”`, 'success');
+            await deleteFile(target.fileId);
+            removeItem(target.id);
+            showToast(`Deleted “${target.name}”`, 'success');
             announceFilesChanged(SOURCE);
-            if (selectedFile?._id === file._id) closePreview();
+            if (selected?.type === 'library' && selected.file._id === target.fileId) closePreview();
             setConfirmDelete(null);
-        } catch {
-            showToast('Couldn’t delete the file', 'error');
+        } catch (err) {
+            showToast(errorMessage(err, 'Couldn’t delete the file'), 'error');
         } finally {
             setDeleting(false);
         }
     };
 
-    const handleFileClick = (file) => {
-        setSelectedFile(file);
-        navigate(`/workspace/${workspaceId}/files/${file._id}`, { replace: true });
+    const openItem = async (item) => {
+        if (item.source === 'library') {
+            let file = files.find((f) => f._id === item.fileId);
+            if (!file) {
+                try { file = await getFile(item.fileId); } catch (err) { showToast(errorMessage(err, 'Couldn’t open the file'), 'error'); return; }
+            }
+            setSelected({ type: 'library', file });
+            navigate(`/workspace/${workspaceId}/files/${item.fileId}`, { replace: true });
+            return;
+        }
+        setSelected({ type: 'chat', item });
+        if (id) navigate(`/workspace/${workspaceId}/files`, { replace: true });
     };
 
-    function closePreview() {
-        setSelectedFile(null);
-        navigate(`/workspace/${workspaceId}/files`, { replace: true });
-    }
+    const downloadItem = async (item) => {
+        try {
+            if (item.source === 'library') await downloadLibraryFile(item.fileId, { name: item.name });
+            else await downloadAttachment(toAttachment(item));
+        } catch (err) {
+            showToast(errorMessage(err, 'Couldn’t download the file'), 'error');
+        }
+    };
+
+    const goToMessage = (item) => {
+        const link = messageLink(item, workspaceId);
+        if (link) navigate(link);
+    };
+
+    const deleteItem = (item) => setConfirmDelete(item);
+    const libraryFileAsItem = (file) => ({ id: `lib:${file._id}`, fileId: file._id, name: file.name, source: 'library' });
 
     // Drop anywhere on the page to upload.
     const dropHandlers = {
@@ -202,14 +290,15 @@ const FileLibrary = () => {
         },
     };
 
-    const allTags = useMemo(() => [...new Set(files.flatMap((f) => f.tags || []))], [files]);
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return files.filter((f) => (!q || f.name.toLowerCase().includes(q)) && (!tagFilter || (f.tags || []).includes(tagFilter)));
-    }, [files, search, tagFilter]);
-
-    const hasAny = files.length > 0;
-    const firstLoad = loading && !loaded;
+    const filtering = kind !== 'all' || source !== 'all' || Boolean(q);
+    const visible = useMemo(
+        () => (tagFilter ? items.filter((i) => (i.tags || []).includes(tagFilter)) : items),
+        [items, tagFilter],
+    );
+    const nothingAtAll = loaded && !loading && !error && total === 0 && !filtering;
+    const firstLoad = !loaded;
+    const clearFilters = () => { setKind('all'); setSource('all'); setSearch(''); setQ(''); setTagFilter(''); };
+    const actions = { onOpen: openItem, onDownload: downloadItem, onGoTo: goToMessage, onDelete: deleteItem };
 
     return (
         <div className="fl-wrap" {...dropHandlers}>
@@ -222,8 +311,8 @@ const FileLibrary = () => {
                             eyebrow={activeWorkspace?.name ? `${activeWorkspace.name} · Files` : 'Files'}
                             title="Files"
                             icon={FolderOpen}
-                            lead="Documents, images and recordings the whole workspace can find, preview and discuss."
-                            actions={hasAny && (
+                            lead="Every file shared with you here — in your channels, direct messages and group chats — plus files uploaded straight to the workspace."
+                            actions={!nothingAtAll && (
                                 <Btn variant="primary" icon={Upload} loading={uploading > 0} onClick={pickFiles}>Upload files</Btn>
                             )}
                         />
@@ -231,71 +320,104 @@ const FileLibrary = () => {
                 >
                     {firstLoad ? (
                         <LoadingState label="Loading files…" />
-                    ) : error && !hasAny ? (
+                    ) : error && items.length === 0 ? (
                         <ErrorState message={error} onRetry={reload} />
-                    ) : !hasAny ? (
+                    ) : nothingAtAll ? (
                         <Panel className="fl-drop" style={dragging ? { borderColor: 'var(--accent)', background: 'var(--gl-accent-soft)' } : undefined}>
                             <EmptyState
                                 icon={uploading ? Loader2 : FolderOpen}
-                                title={uploading ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}…` : 'No files yet'}
-                                text="Keep specs, designs and recordings in one place so everyone works from the same copy. Drop files here or pick them from your device — up to 50 MB each."
-                                action={!uploading && <Btn variant="primary" icon={Upload} onClick={pickFiles}>Upload your first file</Btn>}
+                                title={uploading ? `Uploading ${uploading} file${uploading > 1 ? 's' : ''}…` : 'Nothing shared yet'}
+                                text="Files sent in your channels and direct messages appear here automatically, with who shared them and where. You can also upload specs, designs and recordings for the whole workspace — up to 100 MB each."
+                                action={!uploading && <Btn variant="primary" icon={Upload} onClick={pickFiles}>Upload a file</Btn>}
                             />
+                            <ul className="fl-howto" aria-label="How files get here">
+                                <li><Hash size={14} /> <span><strong>Channels</strong> — attachments from channels you’re in</span></li>
+                                <li><MessagesSquare size={14} /> <span><strong>Direct messages</strong> — files from your DMs and group chats</span></li>
+                                <li><Paperclip size={14} /> <span><strong>Uploads</strong> — files added here, with tags, versions and comments</span></li>
+                            </ul>
                         </Panel>
                     ) : (
                         <>
                             <Toolbar>
-                                <SearchBox value={search} onChange={setSearch} placeholder="Find a file" label="Find a file" />
-                                {allTags.length > 0 && (
+                                <SearchBox value={search} onChange={setSearch} placeholder="Find a file by name" label="Find a file" />
+                                <SourceSelect value={source} onChange={(v) => { setSource(v); setTagFilter(''); }} conversations={conversations} />
+                                <SelectBox value={sort} onChange={setSort} label="Sort files">
+                                    {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </SelectBox>
+                                <span className="cd-toolbar-spacer" />
+                                <div className="gl-tabs" role="tablist" aria-label="Layout">
+                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'list'} aria-label="List" title="List" onClick={() => setView('list')}><List size={14} /></button>
+                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'grid'} aria-label="Grid" title="Grid" onClick={() => setView('grid')}><LayoutGrid size={14} /></button>
+                                </div>
+                            </Toolbar>
+                            <div className="fl-filters">
+                                <FilterTabs value={kind} onChange={setKind} label="File type" options={KIND_OPTIONS} />
+                                {source === 'library' && allTags.length > 0 && (
                                     <FilterTabs value={tagFilter} onChange={setTagFilter} label="Tag" options={[
-                                        { value: '', label: 'All', count: files.length },
+                                        { value: '', label: 'Any tag' },
                                         ...allTags.map((t) => ({ value: t, label: `#${t}` })),
                                     ]} />
                                 )}
-                                <span className="cd-toolbar-spacer" />
-                                <div className="gl-tabs" role="tablist" aria-label="Layout">
-                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'grid'} aria-label="Grid" title="Grid" onClick={() => setView('grid')}><LayoutGrid size={14} /></button>
-                                    <button type="button" role="tab" className="gl-tab" aria-selected={view === 'list'} aria-label="List" title="List" onClick={() => setView('list')}><List size={14} /></button>
-                                </div>
-                            </Toolbar>
+                                <span className="fl-count" aria-live="polite">{loading ? 'Loading…' : `${total} file${total === 1 ? '' : 's'}`}</span>
+                            </div>
 
                             <button type="button" className="fl-strip" data-dragging={dragging ? 'true' : undefined} onClick={pickFiles} disabled={uploading > 0}>
                                 {uploading
                                     ? <><Loader2 size={14} className="cd-spin" /><span>Uploading {uploading} file{uploading > 1 ? 's' : ''}…</span></>
-                                    : <><Upload size={14} style={{ flexShrink: 0 }} /><span>{dragging ? 'Drop to upload' : <>Drop files anywhere here, or <span style={{ color: 'var(--accent)', fontWeight: 600 }}>browse</span> — up to 50 MB each</>}</span></>}
+                                    : <><Upload size={14} style={{ flexShrink: 0 }} /><span>{dragging ? 'Drop to upload' : <>Drop files anywhere here, or <span style={{ color: 'var(--accent)', fontWeight: 600 }}>browse</span> — up to 100 MB each</>}</span></>}
                             </button>
 
-                            {filtered.length === 0 ? (
-                                <Panel><EmptyState title="No files match" text="Try a different name or tag." /></Panel>
+                            {visible.length === 0 ? (
+                                <Panel>
+                                    <EmptyState
+                                        title={loading ? 'Loading…' : 'No files match'}
+                                        text="Try another name, file type or place."
+                                        action={!loading && <Btn variant="ghost" onClick={clearFilters}>Clear filters</Btn>}
+                                    />
+                                </Panel>
                             ) : view === 'grid' ? (
-                                <Grid min={170}>
-                                    {filtered.map((file) => <FileCard key={file._id} file={file} onOpen={handleFileClick} onDelete={setConfirmDelete} />)}
+                                <Grid min={180}>
+                                    {visible.map((item) => <ItemCard key={item.id} item={item} {...actions} />)}
                                 </Grid>
                             ) : (
                                 <Panel flush>
-                                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                                        {filtered.map((file, i) => (
-                                            <FileRow key={file._id} file={file} first={i === 0} active={selectedFile?._id === file._id} onOpen={handleFileClick} onDelete={setConfirmDelete} />
+                                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label="Files">
+                                        {visible.map((item, i) => (
+                                            <ItemRow
+                                                key={item.id}
+                                                item={item}
+                                                first={i === 0}
+                                                active={(selected?.type === 'chat' && selected.item.id === item.id) || (selected?.type === 'library' && selected.file._id === item.fileId)}
+                                                {...actions}
+                                            />
                                         ))}
                                     </ul>
                                 </Panel>
+                            )}
+                            {hasMore && (
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <Btn variant="ghost" loading={loadingMore} onClick={loadMore}>Load more</Btn>
+                                </div>
                             )}
                         </>
                     )}
                 </DashPage>
             </div>
 
-            {selectedFile && (
+            {selected?.type === 'library' && (
                 <FilePreviewPanel
-                    file={selectedFile}
+                    file={selected.file}
                     workspaceId={workspaceId}
                     api={filesApi}
                     allTags={allTags}
                     source={SOURCE}
                     onClose={closePreview}
-                    onDelete={() => setConfirmDelete(selectedFile)}
+                    onDelete={() => setConfirmDelete(libraryFileAsItem(selected.file))}
                     onFileChange={handleFileChange}
                 />
+            )}
+            {selected?.type === 'chat' && (
+                <SharedFilePreview item={selected.item} onClose={closePreview} onGoToMessage={goToMessage} />
             )}
 
             <Confirm
@@ -342,6 +464,17 @@ const FILES_CSS = `
 .fl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .fl-name { display: block; font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fl-meta { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-meta--where { display: flex; align-items: center; gap: 4px; }
+.fl-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.fl-count { margin-left: auto; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.fl-where { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+.fl-where strong { color: var(--text-primary); font-weight: 600; }
+.fl-media--viewer { padding: 12px; display: flex; justify-content: center; }
+.fl-media--viewer [data-testid='file-attachment'] > div:first-child { margin-top: 0; }
+.fl-howto { list-style: none; margin: 4px auto 8px; padding: 0; display: grid; gap: 8px; max-width: 460px; }
+.fl-howto li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 12.5px; color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); }
+.fl-howto li svg { color: var(--accent); flex-shrink: 0; }
+.fl-howto strong { color: var(--text-primary); font-weight: 600; }
 .fl-drop { border-style: dashed; transition: border-color 150ms ease, background 150ms ease; }
 .fl-strip { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; font: inherit; font-size: 12.5px; color: var(--text-secondary); background: transparent; border: 1px dashed var(--border-default); border-radius: var(--gl-radius); cursor: pointer; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; }
 .fl-strip:hover:not(:disabled), .fl-strip[data-dragging='true'] { border-color: var(--gl-accent-line); background: var(--gl-accent-soft); color: var(--text-primary); }

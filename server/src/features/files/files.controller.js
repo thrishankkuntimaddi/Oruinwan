@@ -57,6 +57,19 @@ async function getFiles(req, res) {
     } catch (err) { return handleError(res, err); }
 }
 
+async function getSharedFiles(req, res) {
+    try {
+        const { workspaceId, kind, source, conversationId, sharedBy, q, sort, limit, offset } = req.query;
+        if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+        const result = await require('./sharedFiles.service').listSharedFiles(
+            req.user.sub, workspaceId,
+            { kind, source, conversationId, sharedBy, q, sort, limit, offset },
+            { assertWorkspaceMember: filesService.assertWorkspaceMember },
+        );
+        return res.json(result);
+    } catch (err) { return handleError(res, err); }
+}
+
 async function getTags(req, res) {
     try {
         const { workspaceId } = req.query;
@@ -180,7 +193,7 @@ async function updateTags(req, res) {
 }
 
 module.exports = {
-    uploadFile, getFiles, getTags, getFile, updateFile, deleteFile, createVersion, getVersions, restoreVersion,
+    uploadFile, getFiles, getSharedFiles, getTags, getFile, updateFile, deleteFile, createVersion, getVersions, restoreVersion,
     getComments, addComment, updateComment, deleteComment, shareFile, updateTags, getDownload,
     _parseTags: parseTags,
 };

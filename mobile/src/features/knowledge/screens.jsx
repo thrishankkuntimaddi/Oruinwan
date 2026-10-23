@@ -3,7 +3,8 @@
 // earlier versions).
 import { useEffect, useRef, useState } from 'react';
 import { PageExtras } from './PageExtras.jsx';
-import { BookOpen, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Pencil, Plus, Trash2, Users, Workflow } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Link2, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, Upload, Users, Workflow } from 'lucide-react';
+import { IMPORT_ACCEPT, readImportFiles } from './importPages.js';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
 import { useKnowledge } from '../../data/hooks.js';
@@ -130,11 +131,109 @@ function PageRow({ page, depth, open, toggle, kidsOf }) {
   );
 }
 
+/** First visit: what Knowledge is for, with ways to start (write, a template, import). */
+function KnowledgeWelcome({ onWrite, onImport, importing }) {
+  const steps = [
+    { icon: FileText, title: 'Pages', text: 'Written in Markdown and saved as you type.' },
+    { icon: FilePlus2, title: 'Sub-pages', text: 'Nest pages to build a handbook or a how-to guide.' },
+    { icon: Link2, title: 'Links', text: 'Link related pages so readers can move between them.' },
+  ];
+  return (
+    <div className="px-4 pt-2 pb-6" data-testid="knowledge-welcome">
+      <div className="rounded-card border border-line-soft bg-surface px-5 py-6 text-center">
+        <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface-2 text-accent-ink">
+          <Icon as={BookOpen} size="lg" />
+        </span>
+        <h3 className="text-base font-semibold">Start your team’s knowledge base</h3>
+        <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed text-text-2">
+          How you work, decisions you made, onboarding and the handbook, written once and easy to find.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
+          <Button icon={Plus} block onClick={() => onWrite()}>
+            Write a page
+          </Button>
+          <Button variant="secondary" icon={Upload} block loading={importing} onClick={onImport}>
+            Import Markdown or text
+          </Button>
+        </div>
+      </div>
+      <p className="mt-6 mb-2 px-1 text-[12px] font-semibold tracking-wider text-text-3 uppercase">Start from a template</p>
+      <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+        {PAGE_TEMPLATES.filter((t) => t.content).map((t) => (
+          <button key={t.title} type="button" onClick={() => onWrite(t)} className="flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-2" data-testid="welcome-template">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink">
+              <Icon as={t.icon} size="sm" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px]">{t.title}</span>
+              <span className="block text-[13px] text-text-2">{t.text}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <ul className="mt-6 space-y-3 px-1">
+        {steps.map((st) => (
+          <li key={st.title} className="flex items-start gap-3 text-[13px] leading-relaxed text-text-2">
+            <Icon as={st.icon} size={14} className="mt-0.5 shrink-0 text-accent-ink" />
+            <span>
+              <span className="font-semibold text-text">{st.title}</span> {st.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Creates a page straight from a template (used by the welcome screen). */
+async function createFromTemplate(ws, t) {
+  const page = await api().createPage(ws, { title: t.title, content: t.content, icon: t.emoji });
+  invalidate('knowledge');
+  nav.push('page', { id: page.id, edit: true });
+}
+
 export function KnowledgeScreen() {
-  const { data, loading } = useKnowledge();
+  const ws = useSession((s) => s.workspaceId);
+  const { data, loading, error, refetch } = useKnowledge();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState({});
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importRef = useRef(null);
+  const write = async (t) => {
+    if (!t) return setCreating(true);
+    try {
+      await createFromTemplate(ws, t);
+    } catch (err) {
+      toast(err.message || "Couldn't create the page", 'danger');
+    }
+  };
+  const importFiles = async (fileList) => {
+    const files = [...(fileList || [])];
+    if (!files.length) return;
+    setImporting(true);
+    try {
+      const { pages: drafts, problems } = await readImportFiles(files);
+      problems.forEach((p) => toast(p, 'danger'));
+      let last = null;
+      let count = 0;
+      for (const d of drafts) {
+        try {
+          last = await api().createPage(ws, d);
+          count += 1;
+        } catch (err) {
+          toast(err.message || `Couldn't import “${d.title}”`, 'danger');
+        }
+      }
+      if (count) {
+        invalidate('knowledge');
+        toast(count === 1 ? `Imported “${last.title}”` : `Imported ${count} pages`);
+        if (count === 1 && last?.id) nav.push('page', { id: last.id });
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
   const pages = data || [];
   const ids = new Set(pages.map((p) => p.id));
   // A page whose parent was deleted shows at the top level instead of disappearing.
@@ -146,7 +245,15 @@ export function KnowledgeScreen() {
 
   return (
     <Screen>
-      <Header title="Knowledge" actions={<IconButton icon={Plus} label="New page" onClick={() => setCreating(true)} />}>
+      <Header
+        title="Knowledge"
+        actions={
+          <>
+            <IconButton icon={Upload} label="Import Markdown or text" onClick={() => importRef.current?.click()} />
+            <IconButton icon={Plus} label="New page" onClick={() => setCreating(true)} />
+          </>
+        }
+      >
         <div className="px-4 pb-3">
           <SearchField value={query} onChange={setQuery} placeholder="Find a page" />
         </div>
@@ -154,13 +261,15 @@ export function KnowledgeScreen() {
       <Body onRefresh={() => invalidate('knowledge')}>
         {loading ? (
           <SkeletonRows avatar={false} />
-        ) : !pages.length ? (
+        ) : !pages.length && error ? (
           <EmptyState
-            icon={BookOpen}
-            title="No pages yet"
-            body="Your team's handbook and how-tos live here, written in Markdown."
-            action={{ icon: Plus, label: 'Write the first page', onClick: () => setCreating(true) }}
+            icon={TriangleAlert}
+            title="Couldn’t load the knowledge base"
+            body={error.message || 'Check your connection and try again.'}
+            action={{ icon: RefreshCw, label: 'Try again', onClick: () => refetch() }}
           />
+        ) : !pages.length ? (
+          <KnowledgeWelcome onWrite={write} onImport={() => importRef.current?.click()} importing={importing} />
         ) : (
           <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
             {(matches || roots).map((p) => (
@@ -171,6 +280,18 @@ export function KnowledgeScreen() {
         )}
       </Body>
       <NewPageSheet open={creating} onClose={() => setCreating(false)} />
+      <input
+        ref={importRef}
+        type="file"
+        accept={IMPORT_ACCEPT}
+        multiple
+        hidden
+        data-testid="knowledge-import"
+        onChange={(e) => {
+          importFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
     </Screen>
   );
 }

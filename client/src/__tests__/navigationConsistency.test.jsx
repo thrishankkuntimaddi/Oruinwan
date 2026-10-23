@@ -32,6 +32,16 @@ describe('workspace rail', () => {
         expect(screen.queryByRole('button', { name: 'Design reviews' })).toBeNull();
     });
 
+    it('lists Knowledge on the desktop rail and highlights it on knowledge pages', () => {
+        rail(`/workspace/${WS}/knowledge/${'c'.repeat(24)}`);
+        expect(screen.getByRole('button', { name: 'Knowledge' }).getAttribute('aria-current')).toBe('page');
+    });
+
+    it('lists Files on the desktop rail and highlights it on file pages', () => {
+        rail(`/workspace/${WS}/files/${'d'.repeat(24)}`);
+        expect(screen.getByRole('button', { name: 'Files' }).getAttribute('aria-current')).toBe('page');
+    });
+
     it('highlights Tasks on design review pages', () => {
         rail(`/workspace/${WS}/reviews/${'b'.repeat(24)}`);
         expect(screen.getByRole('button', { name: 'Tasks' }).getAttribute('aria-current')).toBe('page');

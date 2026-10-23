@@ -268,4 +268,28 @@ describe('Messages Service', () => {
             expect(result.version).toBe(3);
         });
     });
+
+    describe('fetchMessages around an anchor ("Go to message")', () => {
+        const CH = 'a'.repeat(24);
+        const ANCHOR = 'b'.repeat(24);
+
+        it('only anchors on a message of the same conversation the reader can see', async () => {
+            const populate = jest.fn();
+            const chain = { populate };
+            populate.mockReturnValue(chain);
+            chain.then = (r) => Promise.resolve(null).then(r);
+            Message.findOne = jest.fn(() => chain);
+            const joined = new Date('2026-01-01T00:00:00Z');
+            const out = await messagesService.fetchMessages({ channel: CH }, { around: ANCHOR, userId: 'u1', userJoinedAt: joined });
+            expect(Message.findOne).toHaveBeenCalledWith(expect.objectContaining({ channel: CH, parentId: null, _id: ANCHOR, createdAt: { $gte: joined } }));
+            expect(out).toEqual({ messages: [], hasMore: false, hasMoreNewer: false });
+        });
+
+        it('ignores a malformed anchor id', async () => {
+            Message.findOne = jest.fn();
+            const out = await messagesService.fetchMessages({ channel: CH }, { around: 'nope' });
+            expect(Message.findOne).not.toHaveBeenCalled();
+            expect(out.messages).toEqual([]);
+        });
+    });
 });

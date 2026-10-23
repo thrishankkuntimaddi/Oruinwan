@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import api from '@services/api';
+import api, { API_BASE } from '@services/api';
 
 const API = '/api/v2/files';
 
@@ -20,6 +20,26 @@ export function mergeFile(prev, next) {
         merged.createdBy = prev.createdBy;
     }
     return merged;
+}
+
+/**
+ * Download a library file (or one of its versions) under its real name. The server checks
+ * access (restricted files need the download role) and answers a short-lived signed link.
+ */
+export async function downloadLibraryFile(fileId, { versionId, name } = {}) {
+    const { data } = await api.get(`${API}/${fileId}/download`, { params: versionId ? { versionId } : {} });
+    if (!data?.url) throw new Error('No file');
+    const href = data.url.startsWith('/') ? `${API_BASE}${data.url}` : data.url;
+    const res = await fetch(href);
+    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = name || data.name || 'download';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
 }
 
 export function useFiles() {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { emitPlanLimit } from '../../features/plan/planLimit';
-import { User, ArrowRight, Plus, Shield, Lock, Crown, Users, Bell, SearchX, PauseCircle } from 'lucide-react';
+import { User, ArrowRight, Plus, Shield, Lock, Crown, Users, Bell, SearchX, PauseCircle, Archive, RotateCcw } from 'lucide-react';
 import { WorkspaceIcon } from '../../utils/workspaceIcons';
 import { getCreatePolicy } from './createPolicy';
 
@@ -55,6 +55,30 @@ function WorkspaceCard({ ws, unread, onOpen }) {
     );
 }
 
+/** An archived workspace (only its owner sees it): can't be opened, only restored. */
+export function ArchivedCard({ ws, onRestore, restoring = false }) {
+    return (
+        <div className="gl-card gl-wsp-card is-suspended" data-testid="ws-archived" style={ws.color ? { '--wsp-tint': ws.color } : undefined}>
+            <div className="gl-wsp-card__top">
+                <span className={`gl-wsp-tile${ws.color ? '' : ' is-plain'}`} style={ws.color ? { background: ws.color } : undefined} aria-hidden="true">
+                    <WorkspaceIcon icon={ws.icon} size={20} />
+                </span>
+                <span className="gl-wsp-badges">
+                    <span className="gl-wsp-badge is-warn"><Archive size={11} /> Archived</span>
+                </span>
+            </div>
+            <h3 className="gl-wsp-card__name">{ws.name}</h3>
+            <p className="gl-wsp-card__desc">Hidden for everyone. Messages, files and tasks are kept.</p>
+            <div className="gl-wsp-card__foot">
+                <span>Only you can see this</span>
+                <button type="button" className="gl-btn gl-btn--sm" onClick={() => onRestore?.(ws)} disabled={restoring}>
+                    <RotateCcw size={12} /> {restoring ? 'Restoring…' : 'Restore'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export function CreateTile({ user, workspaces, onCreateClick, plan = null }) {
     const { isLimitReached, isCompanyMember, companyName, limitMessage } = getCreatePolicy(user, workspaces, plan);
 
@@ -84,10 +108,11 @@ export function CreateTile({ user, workspaces, onCreateClick, plan = null }) {
     );
 }
 
-const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unreadByWs = {}, onWorkspaceClick, onCreateClick, onClearSearch, user, plan = null }) => (
+const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unreadByWs = {}, onWorkspaceClick, onCreateClick, onClearSearch, user, plan = null, onRestore, restoringId = null }) => (
     <div className="gl-wsp-grid">
-        {workspaces.map(ws => (
-            <WorkspaceCard key={ws.id} ws={ws} unread={unreadByWs[String(ws.id)] || 0} onOpen={onWorkspaceClick} />
+        {workspaces.map(ws => (ws.isArchived
+            ? <ArchivedCard key={ws.id} ws={ws} onRestore={onRestore} restoring={restoringId === ws.id} />
+            : <WorkspaceCard key={ws.id} ws={ws} unread={unreadByWs[String(ws.id)] || 0} onOpen={onWorkspaceClick} />
         ))}
 
         {query && workspaces.length === 0 && (

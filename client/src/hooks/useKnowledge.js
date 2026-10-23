@@ -3,23 +3,36 @@ import api from '@services/api';
 
 const API = '/api/v2/knowledge';
 
+/** A readable reason the page list didn't load (shown instead of an empty "No pages yet"). */
+export function knowledgeLoadError(err) {
+    const status = err?.response?.status;
+    if (status === 403) return 'You are not an active member of this workspace, so its pages can’t be shown.';
+    if (!err?.response) return 'Couldn’t reach the server. Check your connection and try again.';
+    return err.response?.data?.message || 'Couldn’t load the pages.';
+}
+
 export function useKnowledge() {
     const [pages, setPages] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // True once a list request has answered (successfully or not): until then an empty
+    // list means "not loaded yet", not "no pages".
+    const [loaded, setLoaded] = useState(false);
 
     const listPages = useCallback(async (workspaceId, filters = {}) => {
         setLoading(true);
         try {
             const { data } = await api.get(`${API}/pages`, { params: { workspaceId, ...filters } });
             setPages(data.pages || []);
+            setError(null);
             return data.pages || [];
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load pages');
+            setError(knowledgeLoadError(err));
             return [];
         } finally {
             setLoading(false);
+            setLoaded(true);
         }
     }, []);
 
@@ -105,5 +118,5 @@ export function useKnowledge() {
         setPages(prev => prev.map(p => String(p.categoryId || '') === String(categoryId) ? { ...p, categoryId: null } : p));
     }, []);
 
-    return { pages, categories, loading, error, listPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, listCategories, createCategory, updateCategory, deleteCategory };
+    return { pages, categories, loading, loaded, error, listPages, createPage, getPage, updatePage, deletePage, linkPages, unlinkPages, getBacklinks, getGraph, searchKnowledge, summarizePage, listCategories, createCategory, updateCategory, deleteCategory };
 }

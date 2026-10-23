@@ -8,6 +8,8 @@ router.use(requireAuth);
 router.post('/', ...ctrl.uploadFile);
 router.get('/', ctrl.getFiles);
 router.get('/tags', ctrl.getTags);
+// Everything the caller can open in the workspace: chat attachments + library files.
+router.get('/shared', ctrl.getSharedFiles);
 router.get('/:id', ctrl.getFile);
 router.get('/:id/download', ctrl.getDownload);
 router.patch('/:id', ctrl.updateFile);

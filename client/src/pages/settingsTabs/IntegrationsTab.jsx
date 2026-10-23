@@ -319,12 +319,12 @@ function useIsAdminOf(workspaceId) {
     return role === 'owner' || role === 'admin';
 }
 
-const IntegrationsTab = ({ workspaceId, workspaceName, workspacePicker }) => {
+const IntegrationsTab = ({ workspaceId, workspaceName, workspacePicker, embedded = false }) => {
     const navigate = useNavigate();
     const providersEnabled = useFlag('integrations');
     const isAdmin = useIsAdminOf(workspaceId);
 
-    const intro = (
+    const intro = embedded ? null : (
         <PageIntro
             title="Integrations"
             description={`Connect ${workspaceName || 'this workspace'} with the tools your team uses: bring their events, messages and files in, and send Oruinwan events out with webhooks.`}

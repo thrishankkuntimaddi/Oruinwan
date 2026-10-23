@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Sparkles, Link2, Trash2, Tag, Plus, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Book, FileText,
-    Network, Check, Users, Workflow, GraduationCap, Folder,
+    Network, Check, Users, Workflow, GraduationCap, Folder, Upload,
 } from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -10,8 +10,9 @@ import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
     DashPage, PageHead, Section, Panel, Toolbar, SearchBox, FilterTabs, Btn, IconBtn, Chip, Grid,
-    LoadingState, EmptyState, Dialog, Confirm, SelectBox, timeAgo,
+    LoadingState, EmptyState, ErrorState, Dialog, Confirm, SelectBox, timeAgo,
 } from '../../components/ui/page';
+import { IMPORT_ACCEPT, readImportFiles } from './knowledgeImport';
 import KnowledgeCategoriesDialog, { KB_CATEGORY_CSS, categoryErrorMessage } from './KnowledgeCategoriesDialog';
 import { UNCATEGORISED, catKey, filterByCategory, countByCategory } from './knowledgeCategories';
 import useCollabDoc from '../../lib/collab/useCollabDoc';
@@ -114,7 +115,32 @@ const pageMeta = (p, childCount) => [
     childCount ? `${childCount} sub-page${childCount === 1 ? '' : 's'}` : null,
 ].filter(Boolean).join(' · ');
 
-function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, creating, openPage, openGraph, openHandbook, categories = [], category = '', setCategory, onManageCategories }) {
+/** First visit: what Knowledge is for and three ways to start (write, import, organise). */
+function KnowledgeWelcome({ onCreate, onImport, onManageCategories, creating, importing, categoryCount }) {
+    return (
+        <Panel className="kb-welcome">
+            <EmptyState
+                icon={BookOpen}
+                title="Start your team’s knowledge base"
+                text="Knowledge is where the answers live: how you work, decisions you made, onboarding and the handbook. Write it once, link pages together and find it from search or Oruinwan AI."
+                action={(
+                    <div className="kb-welcome-actions">
+                        <Btn variant="primary" icon={Plus} loading={creating} disabled={importing} onClick={onCreate}>Write a page</Btn>
+                        <Btn icon={Upload} loading={importing} disabled={creating} onClick={onImport}>Import Markdown or text</Btn>
+                        <Btn variant="ghost" icon={Folder} onClick={onManageCategories}>{categoryCount ? `Categories (${categoryCount})` : 'Set up categories'}</Btn>
+                    </div>
+                )}
+            />
+            <ul className="kb-welcome-steps" aria-label="How Knowledge works">
+                <li><FileText size={14} aria-hidden="true" /><span><strong>Pages</strong> are written in Markdown and save as you type. Teammates can edit together live.</span></li>
+                <li><Folder size={14} aria-hidden="true" /><span><strong>Categories</strong> group pages, like Engineering, People or Sales.</span></li>
+                <li><Link2 size={14} aria-hidden="true" /><span><strong>Links</strong> between pages build the knowledge graph, so nothing gets lost.</span></li>
+            </ul>
+        </Panel>
+    );
+}
+
+function KnowledgeHome({ pages, loading, loaded = true, error, onRetry, wsName, onCreate, onCreateTemplate, onImport, creating, importing, openPage, openGraph, openHandbook, categories = [], category = '', setCategory, onManageCategories }) {
     const [query, setQuery] = useState('');
     const catCounts = useMemo(() => countByCategory(pages), [pages]);
     const catNames = useMemo(() => Object.fromEntries(categories.map((c) => [String(c._id), c.name])), [categories]);
@@ -141,28 +167,33 @@ function KnowledgeHome({ pages, loading, wsName, onCreate, onCreateTemplate, cre
                     title="Knowledge"
                     icon={BookOpen}
                     lead="Your team’s shared pages: how you work, what you decided and where things live."
-                    actions={(
+                    actions={hasAny && (
                         <>
                             <Btn variant="ghost" icon={Folder} onClick={onManageCategories}>Categories</Btn>
                             <Btn variant="ghost" icon={Network} onClick={openGraph}>Graph</Btn>
-                            {hasAny && <Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>New page</Btn>}
+                            <Btn variant="ghost" icon={Upload} loading={importing} onClick={onImport}>Import</Btn>
+                            <Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>New page</Btn>
                         </>
                     )}
                 />
             )}
         >
-            {loading && !hasAny ? (
+            {!hasAny && (loading || !loaded) ? (
                 <LoadingState label="Loading pages…" />
+            ) : !hasAny && error ? (
+                <Panel>
+                    <ErrorState title="Couldn’t load the knowledge base" message={error} onRetry={onRetry} />
+                </Panel>
             ) : !hasAny ? (
                 <>
-                    <Panel>
-                        <EmptyState
-                            icon={BookOpen}
-                            title="No pages yet"
-                            text="Write down how your team works once, so nobody has to ask twice. Pages can nest and link to each other."
-                            action={<Btn variant="primary" icon={Plus} loading={creating} onClick={onCreate}>Write your first page</Btn>}
-                        />
-                    </Panel>
+                    <KnowledgeWelcome
+                        onCreate={onCreate}
+                        onImport={onImport}
+                        onManageCategories={onManageCategories}
+                        creating={creating}
+                        importing={importing}
+                        categoryCount={categories.length}
+                    />
                     <TemplateCards onPick={onCreateTemplate} creating={creating} />
                 </>
             ) : (
@@ -281,7 +312,7 @@ const KnowledgePage = () => {
     const { activeWorkspace } = useWorkspace();
     const wsName = activeWorkspace?.name;
     const {
-        pages, loading, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, summarizePage,
+        pages, loading, loaded, error: listError, listPages, createPage, getPage, updatePage, deletePage, linkPages, getBacklinks, summarizePage,
         categories, listCategories, createCategory, updateCategory, deleteCategory,
     } = useKnowledge();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -311,6 +342,8 @@ const KnowledgePage = () => {
     const [saving, setSaving] = useState(false);
     const [savedOnce, setSavedOnce] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const importRef = useRef(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const saveTimer = useRef(null);
@@ -469,6 +502,40 @@ const KnowledgePage = () => {
     const handleCreateTemplate = (t) => create({ title: t.title, content: t.content, tags: t.tags });
     const handleCreateHandbook = () => create({ title: 'Untitled handbook page', content: '', isHandbook: true });
 
+    // Import: each Markdown / text file becomes a page (in the category being viewed, if any).
+    const pickImport = () => importRef.current?.click();
+    const handleImport = async (fileList) => {
+        const files = [...(fileList || [])];
+        if (!files.length) return;
+        setImporting(true);
+        try {
+            const { pages: drafts, problems } = await readImportFiles(files);
+            problems.forEach((p) => showToast(p, 'error'));
+            const categoryId = category && category !== UNCATEGORISED ? category : undefined;
+            let created = 0;
+            let last = null;
+            for (const d of drafts) {
+                try {
+                    last = await createPage(workspaceId, { ...d, ...(categoryId ? { categoryId } : {}) });
+                    created += 1;
+                } catch {
+                    showToast(`Couldn’t import “${d.title}”`, 'error');
+                }
+            }
+            if (created) {
+                announceChange();
+                showToast(created === 1 ? `Imported “${last.title}”` : `Imported ${created} pages`, 'success');
+                if (created === 1 && last?._id) navigate(`/workspace/${workspaceId}/knowledge/${last._id}`);
+            }
+        } finally {
+            setImporting(false);
+        }
+    };
+    const importInput = (
+        <input ref={importRef} type="file" accept={IMPORT_ACCEPT} multiple hidden data-testid="kb-import-input"
+            onChange={(e) => { handleImport(e.target.files); e.target.value = ''; }} />
+    );
+
     const handleDelete = async () => {
         setDeleting(true);
         try {
@@ -555,7 +622,13 @@ const KnowledgePage = () => {
     if (!id) {
         return (
             <>
+                {importInput}
                 <KnowledgeHome
+                loaded={loaded}
+                error={listError}
+                onRetry={() => listPages(workspaceId)}
+                onImport={pickImport}
+                importing={importing}
                 categories={categories}
                 category={category}
                 setCategory={setCategory}
@@ -746,6 +819,12 @@ function KbStyles() {
         .kb-row:hover, .kb-row:focus-visible { background: var(--bg-hover); }
         .kb-row-title { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
         .kb-row-meta { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-secondary); }
+        .kb-welcome { padding-bottom: 8px; }
+        .kb-welcome-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+        .kb-welcome-steps { list-style: none; margin: 4px auto 8px; padding: 14px 16px 0; max-width: 560px; display: grid; gap: 10px; border-top: 1px solid var(--border-subtle); }
+        .kb-welcome-steps li { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+        .kb-welcome-steps li svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+        .kb-welcome-steps strong { color: var(--text-primary); font-weight: 600; }
         .kb-card { padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 8px; font-family: var(--font); }
         .kb-card strong { font-size: 14px; color: var(--text-primary); }
         .kb-card > span:last-child { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }

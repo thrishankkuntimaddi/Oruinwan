@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { actionLabel, exportFileName, flattenTree, isCompanyAdmin, isWorkspaceAdmin, parseBundle, toggleCell, treeSize } from './adminUi.js';
+import {
+  actionLabel, exportFileName, flattenTree, isCompanyAdmin, isWorkspaceAdmin, memberActions, ownerCandidates, parseBundle, toggleCell, treeSize, workspaceInfoChanges,
+} from './adminUi.js';
 import { normalizeTags } from '../files/filesUi.js';
 
 describe('admin helpers', () => {
@@ -37,5 +39,26 @@ describe('admin helpers', () => {
   });
   it('normalizes file tags', () => {
     expect(normalizeTags([' Design', 'design', '#Q3', '', null])).toEqual(['design', 'q3']);
+  });
+  it('follows the server hierarchy for member actions', () => {
+    const member = { role: 'member', status: 'active' };
+    const admin = { role: 'admin', status: 'active' };
+    expect(memberActions('admin', member)).toEqual({ role: 'admin', suspend: true, restore: false, remove: true });
+    expect(memberActions('admin', admin)).toEqual({ role: null, suspend: false, restore: false, remove: false });
+    expect(memberActions('owner', admin)).toEqual({ role: 'member', suspend: true, restore: false, remove: true });
+    expect(memberActions('owner', { role: 'owner' }).remove).toBe(false);
+    expect(memberActions('owner', { ...member, isMe: true }).remove).toBe(false);
+    expect(memberActions('member', member).remove).toBe(false);
+    expect(memberActions('admin', { role: 'member', status: 'suspended' })).toEqual({ role: null, suspend: false, restore: true, remove: true });
+  });
+  it('picks owner candidates', () => {
+    const list = [{ id: 'me', isMe: true, role: 'owner' }, { id: 'a', role: 'admin' }, { id: 'b', role: 'member', status: 'suspended' }, { id: 'c', role: 'member' }];
+    expect(ownerCandidates(list).map((m) => m.id)).toEqual(['a', 'c']);
+  });
+  it('saves only what changed on the General screen', () => {
+    const ws = { name: 'Acme', description: '', rules: 'Be kind' };
+    expect(workspaceInfoChanges(ws, { name: ' Acme ', description: '', rules: 'Be kind' })).toEqual({});
+    expect(workspaceInfoChanges(ws, { name: 'Acme Co', description: 'Hi', rules: 'Be kind' })).toEqual({ name: 'Acme Co', description: 'Hi' });
+    expect(workspaceInfoChanges(ws, { name: '  ', rules: '' })).toEqual({ rules: '' });
   });
 });

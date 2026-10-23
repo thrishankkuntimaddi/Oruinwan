@@ -542,6 +542,7 @@ module.exports = {
     // shared with other features (e.g. design reviews) and tests
     loadVisibleFile,
     loadFileForMember,
+    assertWorkspaceMember,
     assertAccess,
     roleOf,
     normaliseTags,

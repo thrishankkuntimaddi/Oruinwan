@@ -280,7 +280,10 @@ exports.listMyWorkspaces = async (req, res) => {
     }
 
     // Same shape the old user.workspaces array produced, from workspace_members.
-    const memberships = await wsQueries.membershipsForUser(userId);
+    // Archived workspaces are hidden; their owner sees them with ?includeArchived=1 (to restore them).
+    const includeArchived = ['1', 'true'].includes(String(req.query?.includeArchived || ''));
+    const memberships = (await wsQueries.membershipsForUser(userId))
+      .filter(({ workspace, role }) => !workspace.isArchived || (includeArchived && role === 'owner'));
     const creators = await identity.users.findManyByIds(memberships.map(m => m.workspace.createdBy));
     // Unread messages per workspace, for the workspace switcher's badges. A failure here
     // must not hide the list, so it just leaves the counts at 0.
@@ -308,6 +311,7 @@ exports.listMyWorkspaces = async (req, res) => {
         isPersonal: workspace.type === 'personal',
         ownerName: creator?.username || 'Unknown',
         isOwner: String(workspace.createdBy) === String(userId),
+        isArchived: !!workspace.isArchived,
         unreadCount: (unread instanceof Map && unread.get(String(workspace._id))) || 0
       };
     });

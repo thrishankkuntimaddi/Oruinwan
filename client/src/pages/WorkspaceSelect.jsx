@@ -68,7 +68,8 @@ const WorkspaceSelect = () => {
         try {
             setIsLoadingWorkspaces(true);
             setLoadError(null);
-            const response = await api.get('/api/workspaces/my');
+            // includeArchived: the owner also gets their archived workspaces, to restore them.
+            const response = await api.get('/api/workspaces/my', { params: { includeArchived: 1 } });
 
             if (response.data.workspaces && response.data.workspaces.length > 0) {
                 // Suspended memberships stay visible (with a badge); removed ones don't.
@@ -84,7 +85,8 @@ const WorkspaceSelect = () => {
                     role: ws.isOwner ? 'owner' : ws.role,
                     membershipStatus: ws.membershipStatus || 'active',
                     ownerName: ws.ownerName,
-                    isOwner: ws.isOwner
+                    isOwner: ws.isOwner,
+                    isArchived: !!ws.isArchived
                 })));
             } else {
                 setWorkspaces([]);
@@ -104,6 +106,20 @@ const WorkspaceSelect = () => {
     const handleLogout = async () => {
         await logout();
         window.location.replace("/");
+    };
+
+    const [restoringId, setRestoringId] = useState(null);
+    const handleRestore = async (ws) => {
+        setRestoringId(ws.id);
+        try {
+            await api.post(`/api/workspaces/${ws.id}/unarchive`);
+            showToast(`${ws.name} is back`, 'success');
+            await loadWorkspaces();
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not restore the workspace', 'error');
+        } finally {
+            setRestoringId(null);
+        }
     };
 
     const handleWorkspaceClick = (workspaceId) => {
@@ -239,6 +255,8 @@ const WorkspaceSelect = () => {
                             onClearSearch={() => setQuery('')}
                             user={user}
                             plan={plan}
+                            onRestore={handleRestore}
+                            restoringId={restoringId}
                         />
                     </>
                 )}
