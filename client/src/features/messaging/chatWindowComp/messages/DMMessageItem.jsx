@@ -110,6 +110,12 @@ function DMMessageItem({
             admin_assigned: () => `${name(sd.assignerId, sd.assignerName)} made ${isMeFn(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
             admin_demoted: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMeFn(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || 'someone'}'s`} admin role`,
             messages_cleared: () => `${name(sd.userId, sd.userName)} cleared the message history`,
+            // Group DMs
+            group_created: () => `${name(sd.userId, sd.userName)} created this group`,
+            group_member_added: () => `${name(sd.userId, sd.userName)} added ${isMeFn(sd.addedUserId) ? 'you' : (sd.addedUserName || 'someone')}`,
+            group_member_removed: () => `${name(sd.userId, sd.userName)} removed ${isMeFn(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
+            group_member_left: () => `${name(sd.userId, sd.userName)} left`,
+            group_renamed: () => (sd.name ? `${name(sd.userId, sd.userName)} named the group “${sd.name}”` : `${name(sd.userId, sd.userName)} removed the group name`),
         };
         const displayText = textMap[ev]?.() || msg.payload?.text || msg.text || 'System event';
         return (

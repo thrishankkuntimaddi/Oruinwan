@@ -17,6 +17,11 @@ const ICONS = {
     message_unpinned: <Pin size={14} />,
     
     dm_created: <MessageCircle size={14} />,
+    group_created: <MessageCircle size={14} />,
+    group_member_added: <UserPlus size={14} />,
+    group_member_removed: <UserMinus size={14} />,
+    group_member_left: <UserMinus size={14} />,
+    group_renamed: <Settings size={14} />,
     dm_message_pinned: <Pin size={14} />,
     dm_message_unpinned: <Pin size={14} />,
     dm_call_started: <Phone size={14} />,
@@ -76,6 +81,11 @@ function SystemEvent({ event, currentUserId }) {
         admin_demoted: () =>
             rawText || `${who(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || "someone"}'s`} admin role`,
         messages_cleared: () => `${who(sd.userId, sd.userName)} cleared the message history`,
+        group_created: () => `${who(sd.userId, sd.userName)} created this group`,
+        group_member_added: () => `${who(sd.userId, sd.userName)} added ${isMe(sd.addedUserId) ? 'you' : (sd.addedUserName || 'someone')}`,
+        group_member_removed: () => `${who(sd.userId, sd.userName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
+        group_member_left: () => `${who(sd.userId, sd.userName)} left`,
+        group_renamed: () => (sd.name ? `${who(sd.userId, sd.userName)} named the group “${sd.name}”` : `${who(sd.userId, sd.userName)} removed the group name`),
         message_pinned: () => {
             const snippet = sd.messageSnippet ? `: "${sd.messageSnippet}"` : '';
             return `${who(sd.userId, sd.userName)} pinned a message${snippet}`;

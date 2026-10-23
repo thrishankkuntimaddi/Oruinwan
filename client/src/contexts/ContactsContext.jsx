@@ -108,6 +108,24 @@ export default function ContactsProvider({ children }) {
           userStatus === 'away' ? 'yellow' :
             userStatus === 'dnd' ? 'red' : 'gray';
 
+        if (session.isGroup) {
+          return {
+            id: session.id,
+            userId: null,
+            type: 'dm',
+            isGroup: true,
+            label: session.displayName || otherUser?.username || 'Group',
+            memberCount: session.memberCount || (session.members || []).length,
+            members: session.members || [],
+            path: `/dm/${session.id}`,
+            isFavorite: favoriteItemIds.includes(String(session.id)),
+            lastMessage: session.lastMessage,
+            unreadCount: session.unreadCount || 0,
+            status: 'offline',
+            avatar: null,
+          };
+        }
+
         return {
           id: session.id, 
           userId: otherUserId, 

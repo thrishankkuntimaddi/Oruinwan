@@ -52,6 +52,21 @@ export default {
             ],
         },
         {
+            id: 'group-dms',
+            title: 'Group DMs',
+            summary: 'A private conversation with up to 10 people, without making a channel.',
+            keywords: 'group dm group message several people group chat add people remove leave rename group call',
+            blocks: [
+                { steps: [
+                    'Choose **New message**, then tick two or more people (the round tick next to each name).',
+                    'Give the group a name if you like, then choose **Start group**. Everyone you picked sees it in their direct messages.',
+                ] },
+                'Open **Group info** from the conversation header to rename the group, **Add people**, see who is in it, or **Leave group**. The person who started the group can also remove people.',
+                'People who are added see messages from the moment they join, not the earlier history. People who leave or are removed stop getting the group’s messages.',
+                'Start a voice or video call from the header; everyone in the group can join. A group can have up to 10 people, you included.',
+            ],
+        },
+        {
             id: 'threads',
             title: 'Threads',
             summary: 'Reply under a message to keep side conversations out of the main chat.',

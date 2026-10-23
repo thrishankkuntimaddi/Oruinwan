@@ -1,0 +1,192 @@
+'use strict';
+
+/**
+ * Group DMs (groupDM.service.js): create or reopen, add people (they get the key and only
+ * see messages from then on), remove/leave (their key copy goes), rename, and who may do what.
+ */
+
+const mockOid = (n) => n.toString(16).padStart(24, '0');
+const mockWS = mockOid(50);
+const mockASHA = mockOid(1);
+const mockBEN = mockOid(2);
+const mockCHEN = mockOid(3);
+const mockDIVYA = mockOid(4);
+const mockOUTSIDER = mockOid(9);
+const mockDM = mockOid(70);
+
+const mockStore = { sessions: [] };
+
+function mockMakeSession(fields) {
+    const doc = {
+        _id: mockDM, workspace: mockWS, company: null, hiddenFor: [], clearedAt: [], mutedBy: [], memberSince: [], name: null,
+        ...fields,
+        save: jest.fn(async function save() { return this; }),
+        toObject() { const { save: _save, toObject: _toObject, ...rest } = this; return { ...rest }; },
+    };
+    mockStore.sessions.push(doc);
+    return doc;
+}
+
+jest.mock('../../../../models/DMSession', () => {
+    const model = {
+        MAX_GROUP_DM_MEMBERS: 10,
+        findOne: jest.fn(async (q) => mockStore.sessions.find((s) => s.isGroup && q.isGroup
+            && s.participants.length === q.participants.$size
+            && q.participants.$all.every((p) => s.participants.map(String).includes(String(p)))) || null),
+        findById: jest.fn(async (id) => mockStore.sessions.find((s) => String(s._id) === String(id)) || null),
+        create: jest.fn(async (fields) => mockMakeSession(fields)),
+    };
+    return model;
+});
+jest.mock('../message.model.js', () => ({ create: jest.fn(async (doc) => ({ ...doc, _id: 'm1', toObject() { return { ...doc, _id: 'm1' }; } })) }));
+jest.mock('../../../identity', () => ({
+    workspaces: {
+        findById: jest.fn(async () => ({
+            _id: mockWS,
+            company: null,
+            members: [mockASHA, mockBEN, mockCHEN, mockDIVYA].map((user) => ({ user, status: 'active' })),
+        })),
+    },
+    users: { findById: jest.fn(async (id) => ({ _id: id, username: { [mockASHA]: 'asha', [mockBEN]: 'ben', [mockCHEN]: 'chen', [mockDIVYA]: 'divya' }[id] || 'someone' })) },
+}));
+jest.mock('../../../identity/hydrate', () => ({
+    hydrate: jest.fn(async (doc) => {
+        const names = { [mockOid(1)]: 'asha', [mockOid(2)]: 'ben', [mockOid(3)]: 'chen', [mockOid(4)]: 'divya' };
+        for (const d of Array.isArray(doc) ? doc : [doc]) {
+            d.participants = (d.participants || []).map((p) => ({ _id: String(p?._id || p), username: names[String(p?._id || p)] }));
+        }
+        return doc;
+    }),
+}));
+jest.mock('../../conversations/conversationKeys.service', () => ({
+    ensureDMConversationKey: jest.fn(async () => ({ status: 'OK' })),
+    removeParticipant: jest.fn(async () => true),
+}));
+
+const Message = require('../message.model.js');
+const keys = require('../../conversations/conversationKeys.service');
+const svc = require('../groupDM.service');
+
+function fakeIo() {
+    const events = [];
+    const rooms = { joined: [], left: [] };
+    return {
+        events, rooms,
+        to: (room) => ({ emit: (event, payload) => events.push({ room, event, payload }) }),
+        in: (room) => ({
+            socketsJoin: (target) => rooms.joined.push([room, target]),
+            socketsLeave: (target) => rooms.left.push([room, target]),
+        }),
+    };
+}
+
+beforeEach(() => {
+    mockStore.sessions.length = 0;
+    jest.clearAllMocks();
+});
+
+describe('create', () => {
+    test('makes a group with the creator, wraps the key for everyone and tells them', async () => {
+        const io = fakeIo();
+        const { session, created } = await svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN, mockCHEN], name: ' Launch ' }, io);
+
+        expect(created).toBe(true);
+        expect(session.isGroup).toBe(true);
+        expect(session.participants).toEqual([mockASHA, mockBEN, mockCHEN]);
+        expect(session.name).toBe('Launch');
+        expect(session.createdBy).toBe(mockASHA);
+        expect(session.memberSince.map((m) => m.user)).toEqual([mockASHA, mockBEN, mockCHEN]);
+        expect(keys.ensureDMConversationKey).toHaveBeenCalledWith(mockDM);
+        // Every member's devices join the room and reload their mockDM list.
+        expect(io.rooms.joined).toEqual(expect.arrayContaining([[`user:${mockBEN}`, `dm:${mockDM}`], [`user:${mockCHEN}`, `dm:${mockDM}`]]));
+        expect(io.events.filter((e) => e.event === 'new-dm-session').map((e) => e.room).sort()).toEqual([`user:${mockASHA}`, `user:${mockBEN}`, `user:${mockCHEN}`].sort());
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ type: 'system', systemEvent: 'group_created', text: 'asha created this group' }));
+    });
+
+    test('the same people again reopens the existing group', async () => {
+        const first = await svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN, mockCHEN] }, null);
+        first.session.hiddenFor = [{ user: mockASHA }];
+        const again = await svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockCHEN, mockBEN] }, null);
+        expect(again.created).toBe(false);
+        expect(again.session).toBe(first.session);
+        expect(again.session.hiddenFor).toEqual([]);
+    });
+
+    test('needs 2+ others, workspace members only, and at most 10 people', async () => {
+        await expect(svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN] }, null)).rejects.toMatchObject({ status: 400, code: 'TOO_FEW' });
+        await expect(svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN, mockOUTSIDER] }, null)).rejects.toMatchObject({ status: 403 });
+        const many = Array.from({ length: 10 }, (_, i) => mockOid(100 + i));
+        await expect(svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: many }, null)).rejects.toMatchObject({ code: 'GROUP_FULL' });
+    });
+});
+
+describe('members', () => {
+    async function group() {
+        return (await svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN, mockCHEN] }, null)).session;
+    }
+
+    test('adding someone shares the key and starts their history now', async () => {
+        await group();
+        jest.clearAllMocks();
+        const io = fakeIo();
+        const before = Date.now();
+        const { added, session } = await svc.addMembers({ dmId: mockDM, actorId: mockBEN, userIds: [mockDIVYA, mockBEN] }, io);
+
+        expect(added).toEqual([mockDIVYA]);
+        expect(session.participants).toContain(mockDIVYA);
+        const since = svc.memberSinceFor(session, mockDIVYA);
+        expect(new Date(since).getTime()).toBeGreaterThanOrEqual(before);
+        expect(keys.ensureDMConversationKey).toHaveBeenCalledWith(mockDM);
+        expect(io.rooms.joined).toEqual(expect.arrayContaining([[`user:${mockDIVYA}`, `dm:${mockDM}`]]));
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_member_added', text: 'ben added divya' }));
+        expect(io.events.some((e) => e.event === 'dm:members_updated' && e.room === `dm:${mockDM}`)).toBe(true);
+    });
+
+    test('outsiders and non-members cannot add people', async () => {
+        await group();
+        await expect(svc.addMembers({ dmId: mockDM, actorId: mockDIVYA, userIds: [mockOUTSIDER] }, null)).rejects.toMatchObject({ status: 403 });
+        await expect(svc.addMembers({ dmId: mockDM, actorId: mockASHA, userIds: [mockOUTSIDER] }, null)).rejects.toMatchObject({ status: 403 });
+    });
+
+    test('leaving removes my key copy and my devices from the room', async () => {
+        await group();
+        const io = fakeIo();
+        await svc.removeMember({ dmId: mockDM, actorId: mockCHEN, userId: mockCHEN }, io);
+        const session = mockStore.sessions[0];
+        expect(session.participants).toEqual([mockASHA, mockBEN]);
+        expect(session.isGroup).toBe(true);
+        expect(keys.removeParticipant).toHaveBeenCalledWith(mockDM, 'dm', mockCHEN);
+        expect(io.rooms.left).toEqual(expect.arrayContaining([[`user:${mockCHEN}`, `dm:${mockDM}`]]));
+        expect(io.events.some((e) => e.event === 'dm:removed' && e.room === `user:${mockCHEN}`)).toBe(true);
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_member_left', text: 'chen left' }));
+        // Once out, Chen can't act on the group any more.
+        await expect(svc.rename({ dmId: mockDM, actorId: mockCHEN, name: 'x' }, null)).rejects.toMatchObject({ status: 403 });
+    });
+
+    test('only the creator removes others', async () => {
+        await group();
+        await expect(svc.removeMember({ dmId: mockDM, actorId: mockBEN, userId: mockCHEN }, null)).rejects.toMatchObject({ status: 403, code: 'NOT_CREATOR' });
+        await svc.removeMember({ dmId: mockDM, actorId: mockASHA, userId: mockCHEN }, null);
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_member_removed', text: 'asha removed chen' }));
+    });
+
+    test('rename posts a line; a 1:1 mockDM is not a group', async () => {
+        await group();
+        await svc.rename({ dmId: mockDM, actorId: mockBEN, name: 'Ship it' }, null);
+        expect(mockStore.sessions[0].name).toBe('Ship it');
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_renamed' }));
+
+        mockStore.sessions.length = 0;
+        mockMakeSession({ participants: [mockASHA, mockBEN], isGroup: false });
+        await expect(svc.addMembers({ dmId: mockDM, actorId: mockASHA, userIds: [mockCHEN] }, null)).rejects.toMatchObject({ code: 'NOT_A_GROUP' });
+    });
+});
+
+test('display names', () => {
+    const p = (id, username) => ({ _id: id, username });
+    expect(svc.groupDisplayName({ name: 'Crew', participants: [] }, mockASHA)).toBe('Crew');
+    expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen')] }, mockASHA)).toBe('ben and chen');
+    expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen'), p(mockDIVYA, 'divya')] }, mockASHA)).toBe('ben, chen and divya');
+    expect(svc.groupDisplayName({ participants: [p(mockASHA), p(mockBEN, 'b'), p(mockCHEN, 'c'), p(mockDIVYA, 'd'), p(mockOUTSIDER, 'e')] }, mockASHA)).toBe('b, c and 2 others');
+    expect(svc.memberSinceFor({ isGroup: false }, mockASHA)).toBeNull();
+});

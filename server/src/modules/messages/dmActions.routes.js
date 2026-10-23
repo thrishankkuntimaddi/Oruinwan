@@ -5,6 +5,13 @@ const ctrl = require('./dmActions.controller');
 
 router.use(requireAuth);
 
+// Group DMs (3+ people).
+router.post('/group', ctrl.createGroupDM);
+router.get('/:dmId', ctrl.getDMDetails);
+router.patch('/:dmId', ctrl.renameGroupDM);
+router.post('/:dmId/members', ctrl.addGroupDMMembers);
+router.delete('/:dmId/members/:userId', ctrl.removeGroupDMMember);
+
 router.get('/:dmId/status', ctrl.getDMStatus);
 
 router.post('/:dmId/clear', ctrl.clearDMChat);

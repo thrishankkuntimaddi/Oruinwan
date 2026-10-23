@@ -33,6 +33,7 @@ import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote, isPlanLimit } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
+import { GroupTile } from './groupScreens.jsx';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
 
@@ -167,6 +168,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const workspace = useWorkspace();
   const directory = useDirectory();
   const label0 = kind === 'channel' ? `#${meta?.name || 'channel'}` : meta?.user?.name || 'Direct message';
+  const isGroup = kind === 'dm' && Boolean(meta?.isGroup);
   const convo = useConversation(conv, { name: label0, agentId: meta?.agentId || null });
   const aiReplies = useAiReplies(id);
   const { data: assistants } = useAssistants();
@@ -213,7 +215,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const subtitle =
     kind === 'channel'
       ? [meta?.memberCount && `${meta.memberCount} members`, meta?.topic].filter(Boolean).join(' · ')
-      : meta?.agentId ? 'AI agent · answers every message' : PRESENCE_TEXT[meta?.user?.presence] || '';
+      : meta?.agentId ? 'AI agent · answers every message' : isGroup ? `${meta.memberCount} people` : PRESENCE_TEXT[meta?.user?.presence] || '';
 
   const join = async () => {
     setJoining(true);
@@ -235,6 +237,12 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           <ChannelTile channel={meta} size={52} />
           <h2 className="mt-3 text-xl font-bold">#{meta?.name}</h2>
           <p className="mt-1 text-sm text-text-2">{meta?.topic || 'The start of this channel.'}</p>
+        </>
+      ) : isGroup ? (
+        <>
+          <GroupTile size={52} />
+          <h2 className="mt-3 text-xl font-bold">{meta?.name}</h2>
+          <p className="mt-1 text-sm text-text-2">The start of this group of {meta?.memberCount} people.</p>
         </>
       ) : (
         <>
@@ -267,6 +275,8 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
             {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
             {kind === 'channel' ? (
               <IconButton icon={Info} label="Channel details" onClick={() => nav.push('channelInfo', { id })} />
+            ) : isGroup ? (
+              <IconButton icon={Users} label="Group info" onClick={() => nav.push('groupInfo', { id })} />
             ) : (
               <IconButton icon={UserRound} label="Profile" onClick={() => meta && nav.push('profile', { userId: meta.userId })} />
             )}
@@ -678,6 +688,7 @@ export function NewMessageScreen() {
       </Header>
       <Body>
         <RowGroup className="mt-1">
+          <Row icon={Users} tile="accent" title="New group" subtitle="A conversation with several people" onClick={() => nav.replace('newGroup')} />
           <Row icon={Hash} tile="accent" title="Browse channels" onClick={() => nav.replace('browseChannels')} />
         </RowGroup>
         <Section title="People">

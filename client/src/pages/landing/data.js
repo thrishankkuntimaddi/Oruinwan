@@ -82,7 +82,7 @@ export const PLATFORM_TABS = [
         blurb: 'Channels, DMs, threads and huddles.',
         heading: 'Conversations with structure, not noise.',
         body: 'Channels keep work organised by team and topic. Threads keep side discussions out of the main feed, and a huddle starts in one click when typing gets slow.',
-        points: ['Public and private channels and direct messages, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
+        points: ['Public and private channels, direct messages and group DMs of up to 10 people, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
         visual: 'thread',
     },
     {
@@ -113,7 +113,7 @@ export const PLATFORM_TABS = [
 
 // ── Feature bento ──────────────────────────────────────────────────────
 export const FEATURES = [
-    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels and DMs with messages encrypted on your device, reactions, mentions, pins and files.' },
+    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels, DMs and group DMs with messages encrypted on your device, reactions, mentions, pins and files.' },
     { icon: GitBranch, color: '#7fd4e0', title: 'Threads', desc: 'Side discussions that stay out of the main feed, open beside the conversation in split view.' },
     { icon: Headphones, color: '#5cc995', title: 'Huddles & meetings', desc: 'Audio, video and screen share in one click. Record, follow live captions and get an AI recap after.' },
     { icon: ListChecks, color: '#f5c46b', title: 'Tasks & planning', desc: 'Tasks straight from chat, boards, planning and design reviews, with owners, due dates and progress.' },

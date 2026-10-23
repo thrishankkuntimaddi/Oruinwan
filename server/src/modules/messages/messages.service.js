@@ -560,7 +560,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
     
     let dmSession = await DMSession.findOne({
         workspace: workspaceId,
-        participants: { $all: sortedParticipants, $size: 2 }
+        participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
     });
 
     if (!dmSession) {
@@ -578,7 +578,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
             dmSession = await DMSession.findOneAndUpdate(
                 {
                     workspace: workspaceId,
-                    participants: { $all: sortedParticipants, $size: 2 }
+                    participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
                 },
                 {
                     $setOnInsert: {
@@ -595,7 +595,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
             if (upsertErr.code === 11000) {
                 dmSession = await DMSession.findOne({
                     workspace: workspaceId,
-                    participants: { $all: sortedParticipants, $size: 2 }
+                    participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
                 });
                 if (!dmSession) throw upsertErr;
             } else {
@@ -629,9 +629,12 @@ async function getUserDMSessions(userId, workspaceId) {
     await hydrate(sessions, { participants: { type: 'user', fields: ['username', 'email', 'profilePicture', 'isOnline', 'userStatus'] } });
 
     
+    const { groupDisplayName, memberSinceFor } = require('./groupDM.service');
     const sessionList = await Promise.all(
         sessions.map(async (session) => {
             const cleared = (session.clearedAt || []).find(c => String(c.user) === String(userId));
+            // A group member only sees messages from when they joined.
+            const since = latestDate(cleared?.clearedAt, memberSinceFor(session, userId));
             // The preview is the newest top-level message this user can still see
             // (not deleted for everyone, not hidden with "delete for me", not a system line).
             const lastMsg = await Message.findOne({
@@ -641,7 +644,7 @@ async function getUserDMSessions(userId, workspaceId) {
                 isDeleted: { $ne: true },
                 isDeletedUniversally: { $ne: true },
                 hiddenFor: { $ne: userId },
-                ...(cleared?.clearedAt ? { createdAt: { $gt: cleared.clearedAt } } : {}),
+                ...(since ? { createdAt: { $gt: since } } : {}),
             })
                 .sort({ createdAt: -1 })
                 .select('_id payload type text createdAt sender')
@@ -664,6 +667,7 @@ async function getUserDMSessions(userId, workspaceId) {
                 parentId: null,
                 type: { $ne: 'system' },
                 isDeleted: { $ne: true },
+                ...(since ? { createdAt: { $gt: since } } : {}),
             });
 
             
@@ -680,6 +684,43 @@ async function getUserDMSessions(userId, workspaceId) {
                 else if (lastMsg.text) lastMessageText = lastMsg.text; 
                 else if (lastMsg.payload?.isEncrypted || lastMsg.payload?.ciphertext) lastMessageText = '🔒 Encrypted message';
                 else lastMessageText = 'Message';
+            }
+
+            const preview = {
+                lastMessage: lastMessageText,
+                // Encrypted text can only be read by the participants: hand the client
+                // the ciphertext so it can show a real preview.
+                lastMessagePreview: lastMsg?.type === 'message' && lastMsg.payload?.ciphertext
+                    ? { ciphertext: lastMsg.payload.ciphertext, messageIv: lastMsg.payload.messageIv }
+                    : null,
+                lastMessageId: lastMsg?._id || null,
+                lastMessageAt: lastMsg?.createdAt || session.lastMessageAt || session.createdAt,
+                lastMessageSender: lastMsg?.sender ? { _id: String(lastMsg.sender._id || lastMsg.sender), username: lastMsg.sender.username || null } : null,
+                unreadCount,
+            };
+
+            if (session.isGroup) {
+                const title = groupDisplayName(session, userId);
+                const members = (session.participants || []).map(p => ({
+                    _id: String(p?._id || p),
+                    username: p?.username || null,
+                    profilePicture: p?.profilePicture || null,
+                    isOnline: !!p?.isOnline,
+                    userStatus: p?.userStatus || null,
+                }));
+                return {
+                    id: session._id,
+                    isGroup: true,
+                    name: session.name || null,
+                    displayName: title,
+                    createdBy: session.createdBy ? String(session.createdBy) : null,
+                    members,
+                    memberCount: members.length,
+                    // Older apps only know `otherUser`: they show the group's title.
+                    otherUser: { _id: null, username: title, profilePicture: null, isOnline: false },
+                    otherUserId: null,
+                    ...preview,
+                };
             }
 
             // A DM with an AI agent (Oruinwan AI, Claude, ChatGPT…): the apps list these under Agents.
@@ -757,14 +798,25 @@ async function getWorkspaceUnreadCounts(userId, workspaceIds) {
     for (const [channelId, n] of await getChannelUnreadCounts(userId, channels)) add(channelWorkspace.get(channelId), n);
 
     const sessions = await DMSession.find({ workspace: { $in: ids }, participants: userId, 'hiddenFor.user': { $ne: userId } })
-        .select('_id workspace')
+        .select('_id workspace isGroup memberSince')
         .lean();
     if (sessions.length) {
         const dmWorkspace = new Map(sessions.map(d => [String(d._id), d.workspace]));
+        const { memberSinceFor } = require('./groupDM.service');
+        const plain = [];
+        const late = [];
+        for (const d of sessions) {
+            const since = memberSinceFor(d, userId);
+            if (since) late.push({ dm: d._id, createdAt: { $gt: new Date(since) } });
+            else plain.push(d._id);
+        }
+        const scope = late.length === 0
+            ? { dm: { $in: plain } }
+            : { $or: [...(plain.length ? [{ dm: { $in: plain } }] : []), ...late] };
         const rows = await Message.aggregate([
             {
                 $match: {
-                    dm: { $in: sessions.map(d => d._id) },
+                    ...scope,
                     sender: { $ne: me },
                     readBy: { $ne: me },
                     parentId: null,
@@ -777,6 +829,12 @@ async function getWorkspaceUnreadCounts(userId, workspaceIds) {
         for (const row of rows) add(dmWorkspace.get(String(row._id)), row.n);
     }
     return totals;
+}
+
+/** The later of two optional dates (null when both are empty). */
+function latestDate(a, b) {
+    const times = [a, b].filter(Boolean).map(d => new Date(d).getTime());
+    return times.length ? new Date(Math.max(...times)) : null;
 }
 
 function httpError(status, message) {

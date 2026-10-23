@@ -52,3 +52,35 @@ ignored. Each mentioned person gets a `mention` notification ("X mentioned you i
 starts following the thread, and is left out of the generic `thread_reply` notification so they
 are notified once. The reply's `mentions` field lists their ids. `@here` / `@channel` are not
 expanded in threads.
+
+## Group DMs
+
+A group DM is a `DMSession` with `isGroup: true`: 3 to 10 people when created (`DMSession.MAX_GROUP_DM_MEMBERS`),
+it stays a group if people leave. 1:1 DM lookups always skip groups (`isGroup: { $ne: true }`), so a group that
+shrinks to two people is never reused as a 1:1 DM. Service: `server/src/modules/messages/groupDM.service.js`.
+
+| Method | Path | Body | Notes |
+|---|---|---|---|
+| POST | `/api/v2/dm/group` | `{ workspaceId, memberIds: [...], name? }` | Adds the creator. Same people and no name reopens the existing group (200), otherwise 201. 400 `TOO_FEW` / `GROUP_FULL`, 403 if someone isn't in the workspace. |
+| GET | `/api/v2/dm/:dmId` | | `{ dm: { id, isGroup, name, displayName, createdBy, workspaceId, participants: [...] } }` (also works for 1:1 DMs). |
+| PATCH | `/api/v2/dm/:dmId` | `{ name }` | Any member; an empty name clears it. |
+| POST | `/api/v2/dm/:dmId/members` | `{ userIds: [...] }` | Any member; workspace members only. |
+| DELETE | `/api/v2/dm/:dmId/members/:userId` | | `me` (or your own id) leaves; only the creator removes others (403 `NOT_CREATOR`). |
+
+The DM list (`GET /api/v2/messages/workspace/:id/dms`) marks groups with `isGroup`, `name`, `displayName`
+("Ben, Chen and 2 others" when unnamed), `members`, `memberCount` and `createdBy`. For older apps, `otherUser` is
+`{ _id: null, username: displayName }`. Blocking (`/block`) is refused for groups (`NOT_FOR_GROUPS`).
+
+**Encryption.** The conversation key is wrapped for every member (`ensureDMConversationKey`). Like channels, people
+who are added get the existing key but the server only returns messages from when they joined (`memberSince`); their
+unread counts start there too. People who leave or are removed lose their wrapped key copy and every server check
+(they are no longer in `participants`); the key itself is not rotated.
+
+**Socket.** Members' sockets join `dm:<id>` when added and leave it when removed. Events: `new-dm-session`
+`{ dmSessionId, isGroup: true }` (to `user:<id>`, for created/added/removed people), `dm:members_updated`
+`{ dmSessionId, name, participants }` (to `dm:<id>`), `dm:removed` `{ dmSessionId, left }` (to the removed person).
+System lines (`type: 'system'`, plain `text` for every app): `group_created`, `group_member_added`,
+`group_member_removed`, `group_member_left`, `group_renamed`.
+
+**Calls.** A group DM huddle uses the DM scope; every member may join. The huddle check returns
+`isGroup: true` and `channelName` (the group's name) for group DMs.

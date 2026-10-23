@@ -104,12 +104,14 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
     }
     if (dmId) {
         const DMSession = require('../../../models/DMSession');
-        const dm = await DMSession.findById(dmId).select('participants workspace blockedBy');
+        const dm = await DMSession.findById(dmId).select('participants workspace blockedBy isGroup name');
         const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
         if (!dm || !participants.includes(uid)) return { ok: false, message: 'Not a participant of this DM' };
-        if ((dm.blockedBy || []).length > 0) return { ok: false, message: "You can't call this person." };
+        if (!dm.isGroup && (dm.blockedBy || []).length > 0) return { ok: false, message: "You can't call this person." };
+        // Group DMs: every member may join; the call is named after the group.
+        const group = dm.isGroup ? { isGroup: true, channelName: dm.name || null } : {};
         if (dm.workspace) {
-            return { ok: true, scope: { dmId: String(dmId), workspaceId: String(dm.workspace), planWorkspaceId: String(dm.workspace) }, recipientIds: participants };
+            return { ok: true, scope: { dmId: String(dmId), workspaceId: String(dm.workspace), planWorkspaceId: String(dm.workspace) }, recipientIds: participants, ...group };
         }
         // A DM outside any workspace: the client's workspace id only groups the call (huddle:list,
         // notifications) and only when the caller belongs to it. It never decides the plan:
@@ -119,7 +121,7 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
             const access = await require('../../identity').workspaces.membership(workspaceId, uid).catch(() => null);
             if (access?.member) shownIn = String(workspaceId);
         }
-        return { ok: true, scope: { dmId: String(dmId), workspaceId: shownIn, planWorkspaceId: null }, recipientIds: participants };
+        return { ok: true, scope: { dmId: String(dmId), workspaceId: shownIn, planWorkspaceId: null }, recipientIds: participants, ...group };
     }
     if (workspaceId) {
         const access = await require('../../identity').workspaces.membership(workspaceId, uid);
