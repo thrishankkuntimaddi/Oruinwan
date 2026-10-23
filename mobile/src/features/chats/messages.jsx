@@ -21,6 +21,10 @@ import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.
 import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
 import { MentionSuggestions, MicButton, RecordingBar, SmartReplies, canRecordVoice, useVoiceRecorder } from './composerExtras.jsx';
 import { useTranslations } from './translate.js';
+import { Info } from 'lucide-react';
+import { Smile, Type } from 'lucide-react';
+import { applyFormat, insertAt, insertLink } from './composerFormat.js';
+import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -166,6 +170,7 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
   return (
     <div
       {...press}
+      data-mid={m.id}
       className={cx(
         'group relative flex gap-3 px-4 transition-colors select-none hover:bg-surface-2/40',
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
@@ -288,6 +293,14 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
     }
   }, [count]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A message to show (search result, pinned, saved or a notification): scroll it into view.
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    if (!highlightId || !hasItems) return;
+    const el = ref.current?.querySelector(`[data-mid="${String(highlightId).replace(/"/g, '')}"]`);
+    if (el?.scrollIntoView) el.scrollIntoView({ block: 'center' });
+  }, [highlightId, hasItems]);
+
   // Keep the newest message visible when the keyboard resizes the view, or when content grows
   // without new messages (a photo or file that finished sending, a reply streaming in).
   useEffect(() => {
@@ -366,7 +379,7 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
   );
 }
 
-export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, canThread = true }) {
+export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, onInfo, canThread = true }) {
   const [confirm, setConfirm] = useState(false);
   if (!message) return null;
   const mine = message.authorId === me;
@@ -392,6 +405,7 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
     readable && onTask && !message.linkedTaskId && { icon: ListTodo, label: 'Convert to task', run: onTask },
     mine && readable && onEdit && message.type !== 'checklist' && { icon: Pencil, label: 'Edit message', run: onEdit },
     readable && message.editCount > 0 && onHistory && { icon: History, label: 'Edit history', run: onHistory },
+    mine && onInfo && !message.pending && { icon: Info, label: 'Message info', run: onInfo },
     mine && onDelete && { icon: Trash2, label: 'Delete message', danger: true, run: () => setConfirm(true), keepOpen: true },
   ].filter(Boolean);
 
@@ -485,6 +499,37 @@ export function Composer({
     tap('select');
   };
   const voice = useVoiceRecorder((file) => onVoice?.(file));
+  // Formatting row (shown on demand, so the composer stays one line) and the emoji sheet.
+  const [formatting, setFormatting] = useState(false);
+  const [emoji, setEmoji] = useState(false);
+  // The selection when focus left the box (for a link typed in its own field, or an emoji).
+  const savedSel = useRef(null);
+  const selection = () => {
+    const el = ref.current;
+    if (savedSel.current) return savedSel.current;
+    return el ? [el.selectionStart ?? text.length, el.selectionEnd ?? text.length] : [text.length, text.length];
+  };
+  const rememberSelection = () => {
+    const el = ref.current;
+    savedSel.current = el ? [el.selectionStart ?? text.length, el.selectionEnd ?? text.length] : null;
+  };
+  const applyEdit = (next) => {
+    savedSel.current = null;
+    setText(next.text);
+    setCaret(next.end);
+    // Restore the selection once the new value is rendered.
+    requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(next.start, next.end);
+    });
+  };
+  const format = (kind) => {
+    const [s, e] = selection();
+    applyEdit(applyFormat(text, s, e, kind));
+    tap('select');
+  };
 
   // `initial` is a prefilled draft (a notification's quick reply): applied when it changes, never
   // again after it is sent. Editing a message swaps the composer to that message's text and puts
@@ -581,6 +626,16 @@ export function Composer({
           </button>
         </div>
       )}
+      {formatting && !voice.recording && (
+        <FormatToolbar
+          onFormat={format}
+          onLinkOpen={rememberSelection}
+          onLink={(url) => {
+            const [s, e] = selection();
+            applyEdit(insertLink(text, s, e, url));
+          }}
+        />
+      )}
       {voice.recording ? (
         <RecordingBar seconds={voice.seconds} onCancel={voice.cancel} onSend={voice.send} />
       ) : (
@@ -595,7 +650,18 @@ export function Composer({
               <Icon as={Plus} />
             </button>
           )}
-          <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input px-4 focus-within:border-accent/70">
+          <button
+            type="button"
+            aria-label={formatting ? 'Hide formatting' : 'Show formatting'}
+            aria-pressed={formatting}
+            title="Formatting"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => setFormatting((f) => !f)}
+            className={cx('pressable grid h-10 w-8 shrink-0 place-items-center rounded-full', formatting ? 'text-accent-ink' : 'text-text-2')}
+          >
+            <Icon as={Type} size={18} />
+          </button>
+          <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input pr-1 pl-4 focus-within:border-accent/70">
             <textarea
               ref={ref}
               rows={1}
@@ -611,6 +677,19 @@ export function Composer({
               enterKeyHint="enter"
               className="block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3"
             />
+            <button
+              type="button"
+              aria-label="Emoji"
+              title="Emoji"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                rememberSelection();
+                setEmoji(true);
+              }}
+              className="pressable mb-1 grid h-8 w-8 shrink-0 place-items-center self-end rounded-full text-text-2"
+            >
+              <Icon as={Smile} size={18} />
+            </button>
           </div>
           {showMic ? (
             <MicButton onClick={voice.start} />
@@ -631,6 +710,18 @@ export function Composer({
           )}
         </div>
       )}
+      <EmojiSheet
+        open={emoji}
+        onClose={() => {
+          savedSel.current = null;
+          setEmoji(false);
+        }}
+        onPick={(e) => {
+          const [s, end] = selection();
+          setEmoji(false);
+          applyEdit(insertAt(text, s, end, e));
+        }}
+      />
     </div>
   );
 }

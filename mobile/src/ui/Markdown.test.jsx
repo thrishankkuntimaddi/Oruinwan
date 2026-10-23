@@ -21,6 +21,12 @@ describe('Markdown', () => {
     expect(container.querySelector('a')).toBeNull();
   });
 
+  it('renders ~~strikethrough~~ (the composer toolbar writes it)', () => {
+    const { container } = render(<Markdown text={'done: ~~old **plan**~~ now'} />);
+    expect(container.querySelector('del').textContent).toBe('old plan');
+    expect(container.querySelector('del strong')).not.toBeNull();
+  });
+
   it('builds plain previews', () => {
     expect(plainPreview('**Hi** see [docs](https://x.y)\n```\nx\n```')).toBe('Hi see docs [code]');
   });

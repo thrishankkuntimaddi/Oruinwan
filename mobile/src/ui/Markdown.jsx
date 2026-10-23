@@ -5,7 +5,7 @@ import { cx } from './cx.js';
 import { CodeBlock } from './CodeBlock.jsx';
 
 const INLINE =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)/g;
+  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)|(~~[^~\n]+~~)/g;
 
 function inline(text, keyBase = 'i', { onLink } = {}) {
   const out = [];
@@ -38,7 +38,7 @@ function inline(text, keyBase = 'i', { onLink } = {}) {
           {tok}
         </span>,
       );
-    }
+    } else if (m[8]) out.push(<del key={key}>{inline(tok.slice(2, -2), key)}</del>);
     last = m.index + tok.length;
   }
   if (last < text.length) out.push(text.slice(last));
@@ -150,6 +150,7 @@ export function plainPreview(text, max = 120) {
   return String(text ?? '')
     .replace(/```[\s\S]*?```/g, '[code]')
     .replace(/[*_`>#]/g, '')
+    .replace(/~~/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim()

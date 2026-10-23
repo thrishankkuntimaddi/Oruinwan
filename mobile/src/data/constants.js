@@ -50,3 +50,12 @@ export const NOTE_TYPES = {
 export const NOTE_TYPE_OPTIONS = Object.entries(NOTE_TYPES).filter(([value]) => value !== 'documentation');
 
 export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+/** The composer's emoji picker: the same set as the web composer (footer/emojiPicker.jsx). */
+export const COMPOSER_EMOJIS = [
+  '😀', '😁', '😂', '🤣', '😅', '😊', '😍', '😘', '😎', '🤔', '🤩', '🙌',
+  '👍', '👎', '👏', '🙏', '🔥', '🎉', '😢', '😮', '😴', '🤯', '🤝', '💯',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓',
+  '💪', '🧠', '👀', '👁️', '👄', '💋', '👅', '👃', '👂', '🦶', '🦵',
+  '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙',
+];
