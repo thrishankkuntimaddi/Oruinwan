@@ -519,7 +519,7 @@ export function bindHuddles() {
     const { call, muted, cameraOn } = useHuddle.getState();
     if (call) {
       Object.keys(peers).forEach(closePeer);
-      emit('huddle:join', { ...scopePayload(call.scope), huddleId: call.huddleId, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice(), transfer: true });
+      emit('huddle:join', { ...scopePayload(call.scope), huddleId: call.huddleId, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice(), transfer: true, rejoin: true });
     }
   });
   // The notification's Mute and Leave buttons.
