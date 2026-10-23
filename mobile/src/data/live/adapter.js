@@ -25,6 +25,7 @@ import { opsAdapter } from './adapter.ops.js';
 import { backupAdapter } from './adapter.backup.js';
 import { planAdapter } from './adapter.plan.js';
 import { mapNotification } from './notificationLive.js';
+import { mapAiActions } from '../../lib/aiPeople.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
 
@@ -361,9 +362,7 @@ function aiError(err) {
   return err;
 }
 
-function mapActions(list) {
-  return (list || []).map((a) => ({ ok: a.success !== false && !a.error, label: a.summary || a.label || a.description || a.tool || a.name || 'Action' }));
-}
+const mapActions = mapAiActions;
 
 function mapSources(list) {
   return (list || [])
@@ -1056,9 +1055,35 @@ export const liveAdapter = {
     return (data.assistants || []).map((a) => ({ id: a.id, name: a.name, mention: a.mention, model: a.model || null }));
   },
 
-  async aiAsk(ws, history, { onToken, onTool, signal, assistant } = {}) {
+  /**
+   * Our recent messages with a person (their 1:1 DM), decrypted on this phone, for the
+   * assistant to search when they're @mentioned: [{ from, isMe, text, at }]. [] when there is
+   * no DM or it can't be read. Never throws.
+   */
+  async aiMentionTranscript(ws, personId) {
+    if (useE2ee.getState().status !== 'ready') return [];
+    try {
+      const dm = (await liveAdapter.dms(ws)).find((d) => !d.isGroup && !d.agentId && d.userId === personId);
+      if (!dm) return [];
+      const { items } = await liveAdapter.messages({ kind: 'dm', id: dm.id });
+      return items
+        .filter((m) => m.state === 'ok' && m.text?.trim())
+        .map((m) => {
+          const isMe = m.authorId === me?.id;
+          return { from: isMe ? 'You' : m.author?.name || dm.user?.name || 'Them', isMe, text: m.text.slice(0, 600), at: m.at || null };
+        });
+    } catch {
+      return [];
+    }
+  },
+
+  async aiAsk(ws, history, { onToken, onTool, signal, assistant, mentions } = {}) {
     const last = history[history.length - 1]?.content || '';
-    const body = { message: last, history: history.slice(0, -1).slice(-12), workspaceId: ws, ...(assistant && assistant !== 'default' ? { assistant } : {}) };
+    const body = {
+      message: last, history: history.slice(0, -1).slice(-12), workspaceId: ws,
+      ...(assistant && assistant !== 'default' ? { assistant } : {}),
+      ...(mentions?.length ? { mentions } : {}),
+    };
     let result;
     try {
       result = await streamAi(body, { onToken, onTool, signal });
@@ -1135,7 +1160,7 @@ export const liveAdapter = {
    * Asks Oruinwan AI to answer in this conversation (after a message that mentions @ai).
    * The answer streams over the socket ('ai:reply') and is then saved as a normal message.
    */
-  async askAiInConversation(conv, { prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant }) {
+  async askAiInConversation(conv, { prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant, mentions = [] }) {
     const data = await api.post('/ai/reply', {
       workspaceId: currentWs,
       conversationId: conv.id,
@@ -1146,6 +1171,7 @@ export const liveAdapter = {
       prompt,
       messages: messages.slice(-40),
       ...(assistant && assistant !== 'default' ? { assistant } : {}),
+      ...(mentions.length ? { mentions } : {}),
     });
     return data?.replyId || null;
   },

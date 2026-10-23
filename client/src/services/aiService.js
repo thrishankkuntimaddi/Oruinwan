@@ -96,8 +96,13 @@ async function openStream(path, body, signal, retried = false) {
  * as it is generated and `onTool({ name, status })` while tools run.
  * Resolves with `{ text, actionsExecuted }`; pass an AbortSignal to stop.
  */
-export async function chatStream({ message, history = [], workspaceId = null, context, onToken, onTool, signal, assistant }) {
-    const res = await openStream('/api/ai/chat/stream', { message, history, workspaceId, context, ...(assistant && assistant !== 'default' ? { assistant } : {}) }, signal);
+export async function chatStream({ message, history = [], workspaceId = null, context, onToken, onTool, signal, assistant, mentions }) {
+    const res = await openStream('/api/ai/chat/stream', {
+        message, history, workspaceId, context,
+        ...(assistant && assistant !== 'default' ? { assistant } : {}),
+        // People @mentioned: [{ id, name, transcript? }] (transcript = our DM with them, decrypted here).
+        ...(mentions?.length ? { mentions } : {}),
+    }, signal);
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';

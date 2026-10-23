@@ -30,6 +30,7 @@ const Channel = require('../channels/channel.model.js');
 const DMSession = require('../../../models/DMSession');
 const logger = require('../../../utils/logger');
 const knowledgeService = require('./ai.knowledge.service');
+const { resolveMentions } = require('./ai.mentions');
 
 const ASSISTANT_EMAIL = 'assistant@ai.oruinwan.internal';
 const ASSISTANT_NAME = 'Oruinwan AI';
@@ -85,12 +86,19 @@ async function startReply(input, ctx) {
   if (!access.ok) throw Object.assign(new Error(access.error), { status: access.status });
 
   const convo = isDm
-    ? await DMSession.findById(conversationId).select('workspace company').lean()
+    ? await DMSession.findById(conversationId).select('workspace company participants').lean()
     : await Channel.findById(conversationId).select('workspace company name').lean();
   if (!convo) throw Object.assign(new Error('Conversation not found'), { status: 404 });
   if (ctx.workspaceId && convo.workspace && String(convo.workspace) !== String(ctx.workspaceId)) {
     throw badRequest('That conversation belongs to a different workspace');
   }
+
+  // People @mentioned in the request. Their messages with the requester (decrypted on the
+  // requester's device) are only used in a private chat with an agent, never where others read the answer.
+  const privateWithAssistant = isDm && await isPrivateAgentChat(convo, ctx);
+  const mentions = Array.isArray(input.mentions) && input.mentions.length
+    ? await resolveMentions(input.mentions, { userId: ctx.userId, workspaceId: ctx.workspaceId || (convo.workspace && String(convo.workspace)), allowTranscripts: privateWithAssistant })
+    : [];
 
   let parent = null;
   if (parentId) {
@@ -112,7 +120,7 @@ async function startReply(input, ctx) {
 
   emit({ phase: 'start', requestedBy: String(ctx.userId) });
   const runCtx = { ...ctx, workspaceId: ctx.workspaceId || (convo.workspace && String(convo.workspace)), company: convo.company };
-  run({ ...input, prompt, parent, isDm, replyId, emit, conversationName: input.conversationName || convo.name }, runCtx)
+  run({ ...input, prompt, parent, isDm, replyId, emit, mentions, conversationName: input.conversationName || convo.name }, runCtx)
     .catch((err) => {
       logger.error({ err }, '[AI] in-conversation reply failed');
       emit({ phase: 'error', message: friendlyError(err, ctx.assistant, ctx.aiContext?.keySource) });
@@ -125,7 +133,19 @@ async function startReply(input, ctx) {
   return { replyId };
 }
 
-async function run({ conversationType, conversationId, parent, triggerMessageId, prompt, messages, conversationName, isDm, emit }, ctx) {
+/** A 1:1 DM between the requester and the assistant answering (their chat with an agent). */
+async function isPrivateAgentChat(dm, ctx) {
+  const people = (dm.participants || []).map(String);
+  if (people.length !== 2 || !people.includes(String(ctx.userId))) return false;
+  try {
+    const bot = await getAssistantUser(ctx.assistant);
+    return people.includes(String(bot._id));
+  } catch {
+    return false;
+  }
+}
+
+async function run({ conversationType, conversationId, parent, triggerMessageId, prompt, messages, mentions = [], conversationName, isDm, emit }, ctx) {
   let text = '';
   let lastSent = 0;
   let pending = null;
@@ -143,6 +163,7 @@ async function run({ conversationType, conversationId, parent, triggerMessageId,
     context: {
       workspaceName: ctx.workspaceName,
       conversation: { id: String(conversationId), type: isDm ? 'dm' : 'channel', name: conversationName, messages },
+      ...(mentions.length ? { mentions } : {}),
     },
   }, {
     userId: ctx.userId,

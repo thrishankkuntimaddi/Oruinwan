@@ -42,12 +42,12 @@ const DECLARATIONS = [
   },
   {
     name: 'send_direct_message',
-    description: 'Send a direct message to a workspace member on behalf of the user. Only when explicitly asked.',
+    description: 'Send a direct message to a workspace member on behalf of the user, starting the conversation if they have none yet. Only when the user explicitly asks to message, tell or ping someone. Afterwards tell the user exactly what was sent and to whom.',
     parameters: {
       type: 'object',
       properties: {
-        userId: { type: 'string', description: 'Recipient user id (from get_workspace_members)' },
-        message: { type: 'string', description: 'The message text' },
+        userId: { type: 'string', description: 'Recipient user id: from the people the user @mentioned, or from get_workspace_members' },
+        message: { type: 'string', description: 'The exact message text to send, written as the user (first person)' },
       },
       required: ['userId', 'message'],
     },
@@ -109,7 +109,7 @@ const DECLARATIONS = [
   },
   {
     name: 'search_workspace',
-    description: 'Search the current workspace\'s knowledge pages, notes and tasks by keywords (messages are end-to-end encrypted and not searchable).',
+    description: 'Search the current workspace\'s knowledge pages, notes and tasks by keywords (messages are end-to-end encrypted and not searchable here; for messages with a person the user @mentioned, use search_messages_with_person).',
     parameters: {
       type: 'object',
       properties: { query: { type: 'string', description: 'Keywords' } },

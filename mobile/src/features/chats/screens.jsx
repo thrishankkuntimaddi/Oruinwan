@@ -18,6 +18,7 @@ import { EmptyState, SkeletonRows, Spinner } from '../../ui/Feedback.jsx';
 import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
 import { canBroadcast, mentionTextFor } from '../../lib/mentions.js';
+import { peopleInText } from '../../lib/aiPeople.js';
 import {
   ChecklistComposerSheet, ConvertTaskSheet, EditHistorySheet, ParticipantsSheet, PollComposerSheet, ReminderSheet, SummarySheet, TranslateSheet,
 } from './sheets.jsx';
@@ -154,6 +155,8 @@ function useMentions({ kind, id, meta, me }) {
     return {
       composer: { people, channels: (channels || []).filter((c) => !c.private || c.isMember), me, inChannel, allowBroadcast },
       textFor: (text) => mentionTextFor(text, usernames, { allowBroadcast: inChannel && allowBroadcast }),
+      // The people named, as { id, name, username }, for the assistant when the message is for it.
+      peopleFor: (text) => peopleInText(text, { people: all, me }),
     };
   }, [members, channels, policy, workspace?.role, kind, meta?.memberIds, me]);
 }
@@ -325,7 +328,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
             if (tools.editing) {
               convo.edit(tools.editing.id, text);
               tools.setEditing(null);
-            } else convo.send(text, { mentionText: mentions.textFor(text) });
+            } else convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text) });
           }}
         />
       )}
@@ -483,7 +486,7 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
           if (tools.editing) {
             convo.edit(tools.editing.id, text);
             tools.setEditing(null);
-          } else convo.send(text, { mentionText: mentions.textFor(text) });
+          } else convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text) });
         }}
       />
       {tools.actions}

@@ -36,6 +36,7 @@ import MessageDiffViewer from '../MessageDiffViewer.jsx';
 import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.jsx';
 import { encryptMessageForSending } from '../../../services/messageEncryptionService';
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
+import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -62,7 +63,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const { showToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
-    const { refreshContacts } = useContacts();
+    const { refreshContacts, members: workspaceMembers = [], dms: contactDms = [] } = useContacts() || {};
 
     
     const huddle = useHuddle({
@@ -1046,7 +1047,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             // A DM with an agent (Claude, ChatGPT…): every message is for it, no mention needed.
             const agentDm = chat?.isAgent && chat?.agentId;
             if (agentDm || mentionsAI(markdown) || followUp) {
+                // People @mentioned go along as { id, name }, so the assistant can message them. In my
+                // own chat with an agent it also gets my DM with them, decrypted here, to search.
+                const people = peopleFromHandles(`${mentionText || ''} ${markdown}`, workspaceMembers);
+                const mentions = !people.length ? []
+                    : agentDm ? await withTranscripts(people, { workspaceId, dms: contactDms, me: currentUserId })
+                        : people.map(({ id, name }) => ({ id, name }));
                 conversationAI.ask({
+                    mentions,
                     assistant: agentDm ? chat.agentId : (followUp && !mentionsAI(markdown) ? conversationAI.followUpAssistantFor(null) : undefined),
                     prompt: markdown,
                     // In a chat with an agent the answer just follows; quoting each question is noise.
@@ -1061,7 +1069,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, user?.username]);
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1614,7 +1622,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     
     
-    const channelMembers = (chat?.members || []).map(m => {
+    // In a chat with an agent anyone in the workspace can be @mentioned ("tell @muzamil …").
+    const channelMembers = (chat?.isAgent ? workspaceMembers : (chat?.members || [])).map(m => {
         const user = m.user || m; 
         return {
             _id: user._id || user.userId || m.userId,

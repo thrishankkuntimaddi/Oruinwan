@@ -12,6 +12,10 @@ import AIMarkdown from "../AIMarkdown";
 import AIUsageLine from "../../../features/plan/AIUsageLine";
 import { useAIUsage } from "../../../features/plan/usePlan";
 import { aiRemaining } from "../../../features/plan/planLimit";
+import { useContacts } from "../../../contexts/ContactsContext";
+import { withTranscripts } from "../../../utils/aiMentions";
+import { useAIMentions } from "./useAIMentions";
+import { AIMentionMenu, MentionText, PersonChip } from "./AIMentionMenu";
 import {
   Send, X, Plus, History, Info, Copy, Edit2, CornerUpLeft, Sparkles, List,
   MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check, Square, Trash2,
@@ -29,6 +33,7 @@ const ACTION_LABELS = {
   send_message_to_channel: 'sent channel message', send_direct_message: 'sent direct message', create_task: 'created task',
   list_my_tasks: 'listed tasks', update_task_status: 'updated task', create_note: 'created note', list_recent_notes: 'listed notes',
   search_workspace: 'searched workspace', schedule_meeting: 'scheduled meeting',
+  search_messages_with_person: 'searched your messages',
   remember_about_user: 'saved to memory', forget_about_user: 'removed from memory',
 };
 
@@ -38,6 +43,7 @@ const TOOL_PROGRESS = {
   send_message_to_channel: 'Sending the message', send_direct_message: 'Sending the message', create_task: 'Creating the task',
   list_my_tasks: 'Reading your tasks', update_task_status: 'Updating the task', create_note: 'Creating the note', list_recent_notes: 'Reading your notes',
   search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling the meeting',
+  search_messages_with_person: 'Searching your messages',
   remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 
@@ -126,6 +132,12 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
   const endRef = useRef(null);
   const textRef = useRef(null);
 
+  // @mentions of workspace members: the assistant gets who they are (to message them or
+  // search our conversation with them), not just the text.
+  const { members = [], dms = [] } = useContacts() || {};
+  const meId = user?._id || user?.id || null;
+  const mention = useAIMentions({ value: input, setValue: setInput, members, me: meId, textRef });
+
   useEffect(() => {
     if (historyState.key !== historyKey) {
       setHistoryState({ key: historyKey, items: readAiHistory(historyKey) });
@@ -153,8 +165,8 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
     : note ? `Note: ${note.title || 'Untitled'}` : task ? `Task: ${task.title}` : null;
 
   const pushAI = (payload) => setMessages(p => [...p, { id: Date.now() + Math.random(), sender: "ai", time: now(), ...payload }]);
-  const pushUser = (text) => {
-    const userMsg = { id: Date.now(), sender: "user", text, replyTo: replyingTo, time: now() };
+  const pushUser = (text, people = []) => {
+    const userMsg = { id: Date.now(), sender: "user", text, replyTo: replyingTo, time: now(), ...(people.length ? { mentions: people } : {}) };
     setMessages(p => [...p, userMsg]);
     if (messages.length === 1) setChatTitle(text.slice(0, 28) + (text.length > 28 ? "…" : ""));
     setReplyingTo(null);
@@ -174,9 +186,10 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
 
   const handleSend = async (text = input) => {
     if (!text.trim() || busy || aiOut) return;
-    const userMsg = pushUser(text);
+    const people = mention.peopleFor(text);
+    const userMsg = pushUser(text, people);
     const next = [...messages, userMsg];
-    setInput(""); setIsTyping(true);
+    setInput(""); mention.reset(); setIsTyping(true);
     const history = next.filter(m => !(m.id === 1 && m.sender === "ai") && !m.isError && !m.kind && !m.stopped)
       .map(m => ({ sender: m.sender, text: m.text }));
     const wantsInsert = /\b(draft|write|reply|respond|compose|rephrase|reword|message)\b/i.test(text);
@@ -194,8 +207,11 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
     };
 
     try {
+      // Mentioned people go as { id, name } plus our DM with them, decrypted here (E2EE: the server can't read it).
+      const mentions = people.length ? await withTranscripts(people, { workspaceId, dms, me: meId }) : undefined;
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const data = await aiService.chatStream({
-        message: text, history: history.slice(0, -1), workspaceId, context: aiCtx?.snapshot?.(), signal: controller.signal, assistant,
+        message: text, history: history.slice(0, -1), workspaceId, context: aiCtx?.snapshot?.(), signal: controller.signal, assistant, mentions,
         onToken: (_t, full) => { start(); patchMsg(aiId, { text: full, status: null }); },
         onTool: ({ name, status }) => {
           start();
@@ -615,7 +631,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                   border: `1px solid ${msg.isError ? 'var(--state-danger)' : msg.sender === 'ai' ? 'var(--border-default)' : 'var(--border-accent)'}` }}>
                   {msg.sender === 'ai' && !msg.isError
                     ? <AIMarkdown text={msg.text} streaming={msg.streaming} />
-                    : msg.text}
+                    : msg.mentions?.length ? <MentionText text={msg.text} people={msg.mentions} /> : msg.text}
                   {msg.status && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: msg.text ? '6px' : 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
                       <span className="ai-status-dot" /> {msg.status}
@@ -686,12 +702,29 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                     return (
                       <span key={j} title={act.result?.error || JSON.stringify(act.parameters || {})}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', padding: '2px 8px', borderRadius: '99px', border: `1px solid ${ok ? 'rgba(90,186,138,0.35)' : 'rgba(224,82,82,0.4)'}`, color: ok ? 'var(--state-success)' : 'var(--state-danger)', background: ok ? 'rgba(90,186,138,0.08)' : 'rgba(224,82,82,0.08)' }}>
-                        {ok ? '✓' : '✕'} {ACTION_LABELS[act.function] || act.function.replace(/_/g, ' ')}
+                        {ok ? '✓' : '✕'} {act.function === 'send_direct_message' && ok && act.result?.to ? `sent to ${act.result.to}` : (ACTION_LABELS[act.function] || act.function.replace(/_/g, ' '))}
                       </span>
                     );
                   })}
                 </div>
               )}
+              {/* What the assistant sent on my behalf, word for word, with a way to the conversation. */}
+              {msg.actions?.filter((act) => act.function === 'send_direct_message' && act.result?.success !== false && act.result?.sent).map((act, j) => (
+                <div key={`sent-${j}`} data-testid="ai-sent-message"
+                  style={{ marginTop: '6px', padding: '8px 10px', borderLeft: '2px solid var(--accent)', background: 'var(--bg-active)', borderRadius: '0 2px 2px 0', maxWidth: '100%' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    Sent as you to {act.result.toUserId
+                      ? <PersonChip person={{ id: act.result.toUserId, username: act.result.username || act.result.to, name: act.result.to }}>{act.result.to}</PersonChip>
+                      : act.result.to}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{act.result.sent}</div>
+                  {act.result.dmSessionId && workspaceId && (
+                    <button onClick={() => navigate(`/workspace/${workspaceId}/messages/dm/${act.result.dmSessionId}`)} style={{ ...smallBtn, marginTop: '6px' }}>
+                      <MessageSquare size={11} /> Open conversation
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         ))}
@@ -734,13 +767,21 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
             <button onClick={() => setReplyingTo(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: '8px', display: 'flex' }}><X size={12} /></button>
           </div>
         )}
+        <AIMentionMenu {...mention.menu} />
+        {mention.active.length > 0 && (
+          <div data-testid="ai-mentioned-people" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginBottom: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+            <span>Mentioning</span>
+            {mention.active.map((p) => <PersonChip key={p.id} person={p}>{p.name || `@${p.username}`}</PersonChip>)}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '8px 10px', transition: '150ms ease' }}
           onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
           onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
-          <textarea ref={textRef} rows={1} value={input} onChange={e => setInput(e.target.value)}
-            placeholder={contextLabel ? `Ask ${current.name} about ${contextLabel}…` : `Message ${current.name}…`}
+          <textarea ref={textRef} rows={1} value={input} onChange={mention.onChange} onSelect={mention.onSelect}
+            placeholder={contextLabel ? `Ask ${current.name} about ${contextLabel}…` : `Message ${current.name}… (@ to mention someone)`}
+            aria-label={`Message ${current.name}`}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', resize: 'none', padding: '1px 0', maxHeight: '112px', fontFamily: 'var(--font)' }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!busy) handleSend(); } }} />
+            onKeyDown={e => { if (mention.onKeyDown(e)) return; if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!busy) handleSend(); } }} />
           {streamingId !== null || (isTyping && abortRef.current) ? (
             <button onClick={stopAnswer} aria-label="Stop generating" title="Stop generating"
               style={{ padding: '5px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', cursor: 'pointer', display: 'flex' }}>

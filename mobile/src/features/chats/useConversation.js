@@ -6,6 +6,7 @@ import { uid } from '../../lib/id.js';
 import { on, toast } from '../../lib/bus.js';
 import { mapChecklist, mapPoll } from '../../data/live/adapter.chats.js';
 import { mentionsAI } from '../../lib/aiMention.js';
+import { withTranscripts } from '../../lib/aiPeople.js';
 import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
 import { enqueue, isNetworkError, isOffline, retryQueued, useQueuedMessages } from '../../data/outbox.js';
 
@@ -66,7 +67,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const patch = useCallback((fn) => setQueryData(key, (d) => (d ? { ...d, items: fn(d.items) } : d)), [key]);
 
   const sendNow = useCallback(
-    async (text, { retryId, mentionText } = {}) => {
+    async (text, { retryId, mentionText, people = [] } = {}) => {
       const body = text.trim();
       if (!body) return;
       const tempId = retryId || uid('tmp');
@@ -99,15 +100,21 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
             text: m.text,
             isMe: m.authorId === me,
           }));
-          api()
-            .askAiInConversation(conv, {
+          // People @mentioned go along as { id, name } so the assistant can message them; in my own
+          // chat with an agent, with our DM with them (decrypted here) for it to search.
+          const transcriptOf = agentId && api().aiMentionTranscript
+            ? (p) => api().aiMentionTranscript(useSession.getState().workspaceId, p.id)
+            : null;
+          withTranscripts(people, transcriptOf)
+            .then((mentions) => api().askAiInConversation(conv, {
               prompt: body,
               triggerMessageId: agentId ? null : saved.id,
               parentId: threadOf || null,
               messages: recent,
               conversationName: name,
               ...(agentId ? { assistant: agentId } : {}),
-            })
+              ...(mentions.length ? { mentions } : {}),
+            }))
             .catch((err) => toast(err.message || 'Oruinwan AI could not answer right now.', 'danger'));
         }
       } catch (err) {

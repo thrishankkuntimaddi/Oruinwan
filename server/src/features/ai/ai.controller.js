@@ -113,14 +113,25 @@ function cleanChatContext(req, context) {
   };
 }
 
-function chatPayload(req) {
-  const { message, history, context } = req.body || {};
-  return { message: str(message, 8000), history: arr(history, 40), workspaceId: req.aiWorkspace?.id || null, context: cleanChatContext(req, context) };
+/**
+ * People @mentioned in the private assistant chat are resolved against the
+ * workspace (ai.mentions.js), so the assistant can message them or search the
+ * requester's own conversation with them (decrypted on the client).
+ */
+async function chatPayload(req) {
+  const { message, history, context, mentions } = req.body || {};
+  const workspaceId = req.aiWorkspace?.id || null;
+  let ctx = cleanChatContext(req, context);
+  const people = Array.isArray(mentions) && mentions.length
+    ? await require('./ai.mentions').resolveMentions(mentions, { userId: req.user.sub, workspaceId })
+    : [];
+  if (people.length) ctx = { ...(ctx || { workspaceName: req.aiWorkspace?.name }), mentions: people };
+  return { message: str(message, 8000), history: arr(history, 40), workspaceId, context: ctx };
 }
 
 exports.chat = async (req, res) => {
   try {
-    const payload = chatPayload(req);
+    const payload = await chatPayload(req);
     if (!payload.message) return res.status(400).json({ message: 'message is required' });
     const result = await gateway.chat(payload, ctxFor(req, await privateChatExtras(req, payload.message)));
     emitActivity(req, 'chat', { prompt: str(payload.message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
@@ -140,7 +151,7 @@ exports.chat = async (req, res) => {
  * Closing the connection (Stop button, panel closed) cancels generation.
  */
 exports.chatStream = async (req, res) => {
-  const payload = chatPayload(req);
+  const payload = await chatPayload(req);
   if (!payload.message) return res.status(400).json({ message: 'message is required' });
 
   res.status(200).set({
@@ -229,6 +240,7 @@ exports.reply = async (req, res) => {
       conversationName: str(b.conversationName, 100) || undefined,
       prompt: str(b.prompt, 4000),
       messages: cleanMessages(b.messages).slice(-40),
+      mentions: Array.isArray(b.mentions) ? b.mentions.slice(0, 10) : [],
     }, {
       userId: req.user.sub,
       workspaceId: req.aiWorkspace?.id || null,

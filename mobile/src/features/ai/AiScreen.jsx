@@ -24,7 +24,10 @@ import { toast } from '../../lib/bus.js';
 import { BrandMark } from '../../app/BrandMark.jsx';
 import { finePointer } from '../../app/layout.js';
 import { useAiUi } from './aiUi.js';
-import { useAssistants } from '../../data/hooks.js';
+import { useAssistants, useMembers } from '../../data/hooks.js';
+import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.js';
+import { mentionParts, peopleInText, withTranscripts } from '../../lib/aiPeople.js';
+import { MentionSuggestions } from '../chats/composerExtras.jsx';
 import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { openConversation } from '../chats/chatsUi.js';
 import { AiQuotaLine } from '../plan/AiQuotaLine.jsx';
@@ -85,6 +88,28 @@ function AssistantMessage({ m, onRetry }) {
             ))}
           </div>
         )}
+        {m.actions
+          ?.filter((a) => a.sent)
+          .map((a, i) => (
+            <div key={`sent-${i}`} data-testid="ai-sent-message" className="mt-2 rounded-xl border border-line-soft border-l-2 border-l-accent bg-surface-2 px-3 py-2.5">
+              <p className="text-xs text-text-2">
+                Sent as you to{' '}
+                {a.sent.toUserId ? (
+                  <button type="button" className="font-medium text-accent-ink" onClick={() => nav.push('profile', { userId: a.sent.toUserId })}>
+                    {a.sent.to}
+                  </button>
+                ) : (
+                  <span className="font-medium text-text">{a.sent.to}</span>
+                )}
+              </p>
+              <p className="selectable mt-1 whitespace-pre-wrap text-sm text-text">{a.sent.text}</p>
+              {a.sent.dmId && (
+                <button type="button" onClick={() => openConversation('dm', a.sent.dmId)} className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-accent-ink">
+                  <Icon as={MessageCircle} size={14} /> Open conversation
+                </button>
+              )}
+            </div>
+          ))}
         {m.sources?.length > 0 && (
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {m.sources.map((s) => (
@@ -130,6 +155,13 @@ export function AiScreen() {
   const [thread, setThread] = useState(() => ({ id: uid('ai'), messages: [] }));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  // @mentions of workspace members: the assistant gets who they are (to message them, or to
+  // search our DM with them, decrypted on this phone), not just the text.
+  const me = useSession((s) => s.user?.id);
+  const { data: members } = useMembers();
+  const [caret, setCaret] = useState(0);
+  const [picked, setPicked] = useState([]);
+  const pendingCaret = useRef(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const abortRef = useRef(null);
   const scrollRef = useRef(null);
@@ -169,7 +201,24 @@ export function AiScreen() {
     if (!el) return;
     el.style.height = '0px';
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+    if (pendingCaret.current != null) {
+      el.focus();
+      el.setSelectionRange(pendingCaret.current, pendingCaret.current);
+      pendingCaret.current = null;
+    }
   }, [input]);
+
+  // "@mu…" being typed: workspace members it could be.
+  const at = !knowledge ? mentionAt(input, caret) : null;
+  const suggestions = at?.trigger === '@' ? mentionSuggestions(at, { people: members || [], me }) : [];
+  const pickMention = (s) => {
+    const next = applyMention(input, at, s);
+    pendingCaret.current = next.caret;
+    setCaret(next.caret);
+    setPicked((list) => (list.some((p) => p.id === s.id) ? list : [...list, { id: s.id, name: s.item?.name || s.label, username: s.item?.username }]));
+    setInput(next.text);
+    tap('select');
+  };
 
   const patchLast = (fn) =>
     setThread((t) => {
@@ -182,11 +231,14 @@ export function AiScreen() {
     const question = text.trim();
     if (!question || busy) return;
     tap('light');
-    const userMsg = { id: uid('u'), role: 'user', content: question, at: Date.now() };
+    const people = knowledge ? [] : peopleInText(question, { picked, people: members || [], me });
+    const userMsg = { id: uid('u'), role: 'user', content: question, at: Date.now(), ...(people.length ? { mentions: people } : {}) };
     const answer = { id: uid('a'), role: 'assistant', text: '', at: Date.now() };
     const next = { ...base, title: base.title || question.slice(0, 60), messages: [...base.messages, userMsg, answer] };
     setThread(next);
     setInput('');
+    setPicked([]);
+    setCaret(0);
     setBusy(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -202,8 +254,13 @@ export function AiScreen() {
       const history = next.messages
         .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.text))
         .map((m) => ({ role: m.role, content: m.role === 'user' ? m.content : m.text }));
+      const mentions = people.length
+        ? await withTranscripts(people, api().aiMentionTranscript ? (p) => api().aiMentionTranscript(ws, p.id) : null)
+        : [];
+      if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const result = await api().aiAsk(ws, history, {
         assistant: current.id,
+        mentions,
         signal: ctrl.signal,
         onToken: (partial) => patchLast((m) => ({ ...m, text: partial })),
         onTool: (label) => patchLast((m) => ({ ...m, tool: label })),
@@ -355,7 +412,23 @@ export function AiScreen() {
             {thread.messages.map((m) =>
               m.role === 'user' ? (
                 <div key={m.id} className="flex justify-end px-4 py-2">
-                  <p className="selectable max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-surface-3 px-3.5 py-2.5 text-[15px]">{m.content}</p>
+                  <p className="selectable max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-surface-3 px-3.5 py-2.5 text-[15px]">
+                    {mentionParts(m.content, m.mentions || []).map((part, i) =>
+                      typeof part === 'string' ? (
+                        part
+                      ) : (
+                        <button
+                          key={i}
+                          type="button"
+                          data-testid="ai-person-chip"
+                          onClick={() => nav.push('profile', { userId: part.person.id })}
+                          className="rounded-md bg-accent/10 px-1 font-medium text-accent-ink"
+                        >
+                          {part.text}
+                        </button>
+                      ),
+                    )}
+                  </p>
                 </div>
               ) : (
                 <AssistantMessage key={m.id} m={m} onRetry={retry} />
@@ -365,20 +438,31 @@ export function AiScreen() {
         )}
       </div>
       <div className="shrink-0 px-3 pt-2 pb-2">
+        {suggestions.length > 0 && (
+          <div className="mb-2 overflow-hidden rounded-card border border-line-soft bg-surface" data-testid="ai-mention-suggestions">
+            <MentionSuggestions items={suggestions} onPick={pickMention} />
+          </div>
+        )}
         <div className="flex items-end gap-2 rounded-[22px] border border-line bg-input py-1.5 pr-1.5 pl-4 focus-within:border-accent/70">
           <textarea
             ref={inputRef}
             rows={1}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setCaret(e.target.selectionStart ?? e.target.value.length);
+            }}
+            onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? input.length)}
             onKeyDown={(e) => {
-              // With a physical keyboard, Enter sends and Shift+Enter starts a new line.
+              // With a physical keyboard, Enter sends (or completes a mention) and Shift+Enter starts a new line.
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
                 e.preventDefault();
-                if (!busy && input.trim()) ask(input);
+                if (suggestions.length) pickMention(suggestions[0]);
+                else if (!busy && input.trim()) ask(input);
               }
             }}
-            placeholder={knowledge ? 'Ask about your company…' : 'Message Oruinwan AI…'}
+            aria-label={knowledge ? 'Ask about your company' : `Message ${current.name}`}
+            placeholder={knowledge ? 'Ask about your company…' : 'Message Oruinwan AI… (@ to mention someone)'}
             className="block max-h-[132px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 outline-none placeholder:text-text-3"
           />
           {busy ? (
