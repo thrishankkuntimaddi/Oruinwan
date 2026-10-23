@@ -204,10 +204,12 @@ jobs:
           node scripts/assemble-native.mjs
           npx cap sync android
 
-      - name: Build a debug APK
+      # The unsigned release build runs R8 like a real release, so shrinking problems show up on
+      # every push to main instead of only when a version is tagged.
+      - name: Build a debug APK (and an unsigned, shrunk release to check R8)
         if: env.SIGNED_ANDROID != 'true'
         working-directory: mobile/android
-        run: ./gradlew --no-daemon assembleGithubDebug
+        run: ./gradlew --no-daemon assembleGithubDebug assembleGithubRelease
 
       - name: Debug APK artifact
         if: env.SIGNED_ANDROID != 'true'
@@ -262,6 +264,17 @@ jobs:
           export ANDROID_KEY_ALIAS
           # GitHub APK (updates itself) and the Google Play bundle (Play installs updates).
           ./gradlew --no-daemon assembleGithubRelease bundlePlayRelease
+
+      # Capacitor finds plugins' permissions through @CapacitorPlugin at runtime. If R8 renames it,
+      # every permission request crashes in release builds only (2.3.0). Fail the build instead.
+      - name: Check Capacitor survived shrinking
+        run: |
+          MAP=android/app/build/outputs/mapping/githubRelease/mapping.txt
+          if ! grep -q '^com.getcapacitor.annotation.CapacitorPlugin -> com.getcapacitor.annotation.CapacitorPlugin:' "$MAP"; then
+            echo "::error::R8 renamed or removed Capacitor's @CapacitorPlugin annotation (see mobile/android/app/proguard-rules.pro). Permission requests would crash."
+            exit 1
+          fi
+          echo "Capacitor annotations kept"
 
       - name: Verify the release signature
         if: env.SIGNED_ANDROID == 'true'
