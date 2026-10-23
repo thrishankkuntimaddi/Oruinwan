@@ -209,13 +209,19 @@ exports.updateSessionActivity = async (userId, deviceId) => {
         .catch((error) => logger.warn({ err: error.message, userId, deviceId }, 'Failed to update session activity'));
 };
 
-exports.isSessionRevoked = async (userId, deviceId) => {
+/**
+ * 'revoked', 'active', or 'unknown' when the database could not be asked. Callers must refuse
+ * the request on 'unknown' (fail closed) but must not treat it as a sign-out: a slow or
+ * restarting database would otherwise sign everyone out.
+ */
+exports.sessionStatus = async (userId, deviceId) => {
     try {
         const { rows } = await query('SELECT revoked FROM user_device_sessions WHERE user_id = $1 AND device_id = $2', [String(userId), String(deviceId)]);
-        return !!rows[0]?.revoked;
+        return rows[0]?.revoked ? 'revoked' : 'active';
     } catch (error) {
-        // Fail CLOSED: if we cannot prove the device session is still valid, treat it as revoked.
-        logger.error({ err: error, userId, deviceId }, '[SECURITY] Session revocation check failed — failing closed (treating as revoked)');
-        return true;
+        logger.error({ err: error.message, userId, deviceId }, '[SECURITY] Session revocation check failed — refusing the request');
+        return 'unknown';
     }
 };
+
+exports.isSessionRevoked = async (userId, deviceId) => (await exports.sessionStatus(userId, deviceId)) !== 'active';

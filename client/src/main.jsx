@@ -15,6 +15,7 @@ import { IS_APP, IS_SITE, appPlatform, getServer } from './appMode/env';
 import { installAppNetwork } from './appMode/network';
 import UpdateNotice from './appMode/UpdateNotice';
 import { prepareNativeShell } from './appMode/nativeShell';
+import AppErrorBoundary from './shared/components/ui/AppErrorBoundary';
 
 // Google sign-in is optional. The Google library throws while rendering the login
 // form when the client id is empty, so pass a placeholder; LoginForm hides the button.
@@ -30,18 +31,23 @@ root.render(
   <React.StrictMode>
     {IS_APP || IS_SITE ? (
       <>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        {/* Last line of defence: an error in a provider above the routes shows the error screen, not a blank page. */}
+        <AppErrorBoundary label="App">
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </AppErrorBoundary>
         {IS_APP && <UpdateNotice />}
       </>
     ) : (
       <>
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </GoogleOAuthProvider>
+        <AppErrorBoundary label="App">
+          <GoogleOAuthProvider clientId={googleClientId}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </GoogleOAuthProvider>
+        </AppErrorBoundary>
         {/* "A new version is available — Reload" after a deploy (appMode/updates/store.js). */}
         <UpdateNotice />
       </>

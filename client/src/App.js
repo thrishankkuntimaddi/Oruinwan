@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import ContactsProvider from "./contexts/ContactsContext";
@@ -165,6 +165,12 @@ import ApprovalPrompt from "./components/security/ApprovalPrompt";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 
 // Shown for a moment while the docs chunk loads (same dark backdrop as the docs).
+// The app-wide error screen clears itself when the person goes to another page.
+function RoutesErrorBoundary({ children }) {
+  const { pathname } = useLocation();
+  return <AppErrorBoundary label="App" resetKey={pathname}>{children}</AppErrorBoundary>;
+}
+
 function DocsFallback() {
   return <div role="status" aria-label="Loading documentation" style={{ minHeight: "100vh", background: "#08080a" }} />;
 }
@@ -191,7 +197,7 @@ function App() {
                       <UpdatesProvider>
                         {/* The huddle call lives above the routes: changing pages keeps you in it. */}
                         <GlobalHuddleProvider>
-                          <AppErrorBoundary label="App">
+                          <RoutesErrorBoundary>
                             <Routes>
 
                               {}
@@ -1020,7 +1026,7 @@ function App() {
                           <Route path="*" element={<Navigate to="/" replace />} />
 
                             </Routes>
-                          </AppErrorBoundary>
+                          </RoutesErrorBoundary>
                         </GlobalHuddleProvider>
 
                         {}
@@ -1079,8 +1085,7 @@ function MeetingDetailWrapper() {
 
 function AIInsightsDashboardWrapper() {
   const { workspaceId } = useParams();
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
-  return <AIInsightsDashboard workspaceId={workspaceId} token={token} />;
+  return <AIInsightsDashboard workspaceId={workspaceId} />;
 }
 
 /** Every workspace route: workspace context plus live notifications/unread badges. */

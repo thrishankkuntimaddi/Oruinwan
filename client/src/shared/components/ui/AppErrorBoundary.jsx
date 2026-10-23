@@ -22,6 +22,12 @@ class AppErrorBoundary extends React.Component {
         }
     }
 
+    // `resetKey` (e.g. the current path) clears the error when it changes, so moving to
+    // another page recovers without a reload.
+    componentDidUpdate(prevProps) {
+        if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) this.reset();
+    }
+
     reset() {
         this.setState({ hasError: false, error: null });
     }

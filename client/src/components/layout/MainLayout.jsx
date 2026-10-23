@@ -17,6 +17,7 @@ import SplitPicker from "../../features/split/SplitPicker";
 import { split, useSplit } from "../../features/split/splitStore";
 import FirstRunTour from "../tour/FirstRunTour";
 import "./shell.css";
+import AppErrorBoundary from "../../shared/components/ui/AppErrorBoundary";
 
 const WorkspaceNotificationPanel = () => {
     const [open, setOpen] = useState(false);
@@ -482,7 +483,9 @@ const MainLayout = ({ children, sidePanel }) => {
                     {sidePanel && !isMobile && (
                         <div style={{ display: 'flex', height: '100%' }}>
                             <div className="gl-shell-panel-col">
-                                {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
+                                <AppErrorBoundary label="This panel" resetKey={location.pathname}>
+                                    {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
+                                </AppErrorBoundary>
                             </div>
                             <div
                                 className={`gl-shell-resizer${isResizingPanel ? ' is-dragging' : ''}`}
@@ -506,7 +509,9 @@ const MainLayout = ({ children, sidePanel }) => {
 
                 {isMobile && sidePanel && !isDetailRoute && !isMobileHome && !showAI && (
                     <div style={{ flex: 1, background: 'var(--bg-base)', height: '100%', overflow: 'hidden' }}>
-                        {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...', isMobile: true })}
+                        <AppErrorBoundary label="This panel" resetKey={location.pathname}>
+                            {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...', isMobile: true })}
+                        </AppErrorBoundary>
                     </div>
                 )}
 
@@ -518,10 +523,17 @@ const MainLayout = ({ children, sidePanel }) => {
                     }}
                 >
                     <div style={{ flex: 1, minWidth: 0, overflow: 'clip', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
-                        {children}
+                        {/* A page that crashes shows an inline error; moving to another page clears it. */}
+                        <AppErrorBoundary label="This page" resetKey={location.pathname}>
+                            {children}
+                        </AppErrorBoundary>
                     </div>
 
-                    {canSplit && workspaceId && <SplitPane workspaceId={workspaceId} />}
+                    {canSplit && workspaceId && (
+                        <AppErrorBoundary label="The split view" resetKey={location.pathname}>
+                            <SplitPane workspaceId={workspaceId} />
+                        </AppErrorBoundary>
+                    )}
 
                     {showAI && (
                         <>
@@ -544,7 +556,9 @@ const MainLayout = ({ children, sidePanel }) => {
                                     paddingBottom: isMobile ? '54px' : 0,
                                 }}
                             >
-                                <OruinwanAIChat onClose={() => setShowAI(false)} isSidebar={true} initialPrompt={aiPrompt} onPromptConsumed={() => setAIPrompt(null)} />
+                                <AppErrorBoundary label="Oruinwan AI">
+                                    <OruinwanAIChat onClose={() => setShowAI(false)} isSidebar={true} initialPrompt={aiPrompt} onPromptConsumed={() => setAIPrompt(null)} />
+                                </AppErrorBoundary>
                             </div>
                         </>
                     )}

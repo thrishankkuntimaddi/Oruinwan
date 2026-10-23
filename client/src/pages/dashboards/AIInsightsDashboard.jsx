@@ -8,15 +8,10 @@ import {
     DashPage, PageHead, Panel, KpiGrid, Kpi, Toolbar, FilterTabs, Btn, ErrorState,
 } from '../../components/ui/page';
 import '../toolkit/toolkit.css';
+import api from '../../services/api';
 
-const apiFetch = async (path, token) => {
-    const res = await fetch(path, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
-    });
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
-};
+// The shared API client sends requests to the API server (not the web origin) and refreshes the sign-in.
+const apiGet = (path, params) => api.get(path, { params }).then((res) => res.data);
 
 /** Horizontal bars; lengths carry the data, colour is the theme accent. */
 
@@ -60,7 +55,7 @@ const PERIODS = [
     { value: 30, label: '30 days' },
 ];
 
-export default function AIInsightsDashboard({ workspaceId, token }) {
+export default function AIInsightsDashboard({ workspaceId }) {
     const ws = useOptionalWorkspace();
     const [days, setDays]           = useState(7);
     const [productivity, setProd]   = useState(null);
@@ -69,21 +64,20 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
     const [error, setError]         = useState(null);
 
     const loadAll = useCallback(async () => {
-        if (!workspaceId || !token) return;
+        if (!workspaceId) return;
         setLoading(true); setError(null);
-        const base = `/api/ai/insights`;
         try {
             // Work only: conversations are private, so nothing here counts or ranks messages.
             const [p, a] = await Promise.allSettled([
-                apiFetch(`${base}/productivity?workspaceId=${workspaceId}&days=${days}`, token),
-                apiFetch(`${base}/anomalies?workspaceId=${workspaceId}`, token),
+                apiGet('/api/ai/insights/productivity', { workspaceId, days }),
+                apiGet('/api/ai/insights/anomalies', { workspaceId }),
             ]);
             if (p.status==='fulfilled') setProd(p.value);
             if (a.status==='fulfilled') setAnomalies(a.value);
             if ([p, a].every((r) => r.status === 'rejected')) setError('Could not load insights for this workspace');
         } catch (err) { setError('Could not load insights for this workspace'); }
         finally { setLoading(false); }
-    }, [workspaceId, token, days]);
+    }, [workspaceId, days]);
 
     useEffect(() => { loadAll(); }, [loadAll]);
 
