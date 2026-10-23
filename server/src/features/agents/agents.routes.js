@@ -164,13 +164,13 @@ router.post('/:agentId/dm', member, async (req, res) => {
 
     const participants = [new mongoose.Types.ObjectId(String(req.user.sub)), new mongoose.Types.ObjectId(String(bot._id))]
       .sort((a, b) => a.toString().localeCompare(b.toString()));
-    let dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 } });
+    let dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 }, isGroup: { $ne: true } });
     if (!dm) {
       try {
         dm = await DMSession.create({ workspace: req.aiWorkspace.id, company: ws?.company || null, participants, createdAt: new Date() });
       } catch (err) {
         if (err.code !== 11000) throw err;
-        dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 } });
+        dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 }, isGroup: { $ne: true } });
       }
     }
     // The person holds the key; the server keeps its escrowed copy to encrypt the agent's answers.

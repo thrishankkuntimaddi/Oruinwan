@@ -58,6 +58,67 @@ export function mapUser(u) {
   };
 }
 
+/** A 1:1 DM row. */
+export function mapPersonDm(s, myId) {
+  const user = mapUser(s.otherUser) || { id: s.otherUserId ? String(s.otherUserId) : null, name: 'Unknown', presence: 'offline' };
+  return {
+    id: idOf(s),
+    isGroup: false,
+    userId: user.id,
+    user,
+    participantIds: [myId, user.id].filter(Boolean),
+    unread: s.unreadCount || 0,
+    lastAt: s.lastMessageAt || null,
+    lastText: null,
+    agentId: s.isAgent ? s.agentId || 'default' : null,
+  };
+}
+
+/** "Ben, Chen and 2 others" when a group has no name (the server's rule). */
+export function groupTitle(name, people, myId) {
+  if (name) return name;
+  const names = (people || []).filter((p) => p.id !== myId).map((p) => p.name || 'Someone');
+  if (names.length === 0) return 'Just you';
+  if (names.length <= 3) return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} others`;
+}
+
+/** A group DM row: `user` carries the group's title so screens that show one name keep working. */
+export function mapGroupDm(s, myId) {
+  const members = (s.members || []).map(mapUser).filter(Boolean);
+  const name = s.displayName || groupTitle(s.name, members, myId);
+  return {
+    id: idOf(s),
+    isGroup: true,
+    name,
+    groupName: s.name || null,
+    createdBy: s.createdBy ? String(s.createdBy) : null,
+    members,
+    memberCount: s.memberCount || members.length,
+    userId: null,
+    user: { id: null, name, presence: null, avatarUrl: null },
+    participantIds: members.map((m) => m.id),
+    unread: s.unreadCount || 0,
+    lastAt: s.lastMessageAt || null,
+    lastText: null,
+    agentId: null,
+  };
+}
+
+/** GET /v2/dm/:id: the group with its people. */
+export function mapGroupDetails(d, myId) {
+  if (!d) return null;
+  const members = (d.participants || []).map(mapUser).filter(Boolean);
+  return {
+    id: String(d.id),
+    isGroup: Boolean(d.isGroup),
+    groupName: d.name || null,
+    name: d.displayName || groupTitle(d.name, members, myId),
+    createdBy: d.createdBy || null,
+    members,
+  };
+}
+
 function mapWorkspace(w) {
   return {
     id: idOf(w),
@@ -627,8 +688,7 @@ export const liveAdapter = {
     const data = await api.get(`/v2/messages/workspace/${ws}/dms`);
     const list = await Promise.all(
       (data.sessions || []).map(async (s) => {
-        const user = mapUser(s.otherUser) || { id: s.otherUserId, name: 'Unknown', presence: 'offline' };
-        const dm = { id: idOf(s), userId: user.id, user, unread: s.unreadCount || 0, lastAt: s.lastMessageAt || null, lastText: null, agentId: s.isAgent ? s.agentId || 'default' : null };
+        const dm = s.isGroup ? mapGroupDm(s, me?.id) : mapPersonDm(s, me?.id);
         if (s.lastMessagePreview?.ciphertext && useE2ee.getState().status === 'ready') {
           try {
             const key = await conversationKey({ kind: 'dm', id: dm.id });
@@ -638,11 +698,34 @@ export const liveAdapter = {
           }
         }
         dmCache.set(dm.id, dm);
-        nameConversation(dm.id, { kind: 'dm', name: user.name, ws });
+        nameConversation(dm.id, { kind: 'dm', name: dm.user.name, ws });
         return dm;
       }),
     );
     return list.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
+  },
+  // Group DMs (3+ people). The server adds me to the group I create.
+  async createGroupDm(ws, memberIds, name) {
+    const data = await api.post('/v2/dm/group', { workspaceId: ws, memberIds, ...(name?.trim() ? { name: name.trim() } : {}) });
+    return mapGroupDetails(data.dm, me?.id);
+  },
+  async dmDetails(id) {
+    const data = await api.get(`/v2/dm/${id}`);
+    return mapGroupDetails(data.dm, me?.id);
+  },
+  async renameGroupDm(id, name) {
+    const data = await api.patch(`/v2/dm/${id}`, { name });
+    return mapGroupDetails(data.dm, me?.id);
+  },
+  async addGroupDmMembers(id, userIds) {
+    const data = await api.post(`/v2/dm/${id}/members`, { userIds });
+    return mapGroupDetails(data.dm, me?.id);
+  },
+  async removeGroupDmMember(id, userId) {
+    await api.del(`/v2/dm/${id}/members/${userId}`);
+  },
+  async leaveGroupDm(id) {
+    await api.del(`/v2/dm/${id}/members/me`);
   },
   async openDm(ws, userId) {
     const data = await api.get(`/v2/messages/workspace/${ws}/dm/resolve/${userId}`);
@@ -670,7 +753,7 @@ export const liveAdapter = {
     const dm = dmCache.get(conv.id);
     const key = await conversationKey(conv, {
       workspaceId: currentWs,
-      participantIds: dm ? [me.id, dm.userId] : undefined,
+      participantIds: dm ? dm.participantIds : undefined,
       create: conv.kind === 'dm',
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);

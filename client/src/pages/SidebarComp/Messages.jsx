@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ChatWindowV2 from "../../features/messaging/chatWindowComp/ChatWindowV2";
 import BroadcastChatWindow from "../../features/messaging/BroadcastChatWindow";
@@ -10,6 +10,9 @@ import NewDMModal from "../../features/messaging/NewDMModal";
 import { useParams } from "react-router-dom";
 import { MessagesLanding } from './landing/Landings';
 import logger from '../../utils/logger';
+import { useSocket } from "../../contexts/SocketContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { groupChatObject, useGroupDMLive } from "../../features/messaging/groupDm/groupChat";
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -20,6 +23,17 @@ export default function Messages() {
   const navigate = useNavigate();
   const { workspaceId } = useParams();
   const [searchParams] = useSearchParams();
+  const { socket } = useSocket() || {};
+  const { user: me } = useAuth() || {};
+  const myId = me?._id || me?.id || me?.sub || null;
+
+  // An open group DM follows renames and member changes, and closes if I'm removed.
+  const onGroupUpdate = useCallback((patch) => setSelectedChat((prev) => (prev?.isGroup ? { ...prev, ...patch } : prev)), []);
+  const onGroupRemoved = useCallback(() => {
+    setSelectedChat(null);
+    navigate(`/workspace/${workspaceId}/messages`, { replace: true });
+  }, [navigate, workspaceId]);
+  useGroupDMLive(socket, selectedChat, myId, { onUpdate: onGroupUpdate, onRemoved: onGroupRemoved });
 
   
   useEffect(() => {
@@ -82,6 +96,11 @@ export default function Messages() {
           const sessions = response.data.sessions || [];
           const dmSession = sessions.find(s => s.id === dmParam);
 
+          if (dmSession?.isGroup) {
+            setSelectedChat(groupChatObject(dmSession, workspaceId));
+            setCurrentBroadcast(null);
+            return;
+          }
           if (dmSession && dmSession.otherUser) {
             const username = dmSession.otherUser.username
               || dmSession.otherUser.name
@@ -215,6 +234,10 @@ export default function Messages() {
             }
           }
 
+          if (dmSession?.isGroup) {
+            setSelectedChat(groupChatObject(dmSession, workspaceId));
+            return;
+          }
           if (dmSession && dmSession.otherUser) {
             
             const username = dmSession.otherUser.username

@@ -1,5 +1,12 @@
 const mongoose = require("mongoose");
 
+// A group DM holds the creator plus up to this many people in total.
+const MAX_GROUP_DM_MEMBERS = 10;
+
+function distinctIds(v) {
+  return new Set(v.map((p) => String(p))).size === v.length;
+}
+
 const DMSessionSchema = new mongoose.Schema(
   {
     workspace: {
@@ -23,16 +30,26 @@ const DMSessionSchema = new mongoose.Schema(
         }
       ],
       validate: {
+        // A 1:1 DM has exactly 2 people. A group DM has up to MAX_GROUP_DM_MEMBERS
+        // (it can shrink to 1 as people leave).
         validator: function (v) {
-          return (
-            Array.isArray(v) &&
-            v.length === 2 &&
-            v[0].toString() !== v[1].toString()
-          );
+          if (!Array.isArray(v) || !distinctIds(v)) return false;
+          const group = typeof this.get === "function" ? this.get("isGroup") : this.isGroup;
+          return group ? v.length >= 1 && v.length <= MAX_GROUP_DM_MEMBERS : v.length === 2;
         },
-        message: "DMSession must have exactly 2 distinct participants"
+        message: "A DM has exactly 2 distinct participants; a group DM has 1 to 10"
       }
     },
+
+    // Group DMs: 3+ people when created. Stays a group even if people leave.
+    isGroup: { type: Boolean, default: false },
+    name: { type: String, trim: true, maxlength: 80, default: null },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // When each person joined a group DM; they only see messages from then on.
+    memberSince: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+      at: { type: Date, default: Date.now }
+    }],
 
     
     lastMessageAt: {
@@ -99,10 +116,14 @@ DMSessionSchema.index({ workspace: 1, participants: 1 });
 DMSessionSchema.index({ company: 1, participants: 1 });
 
 DMSessionSchema.pre("save", function (next) {
-  if (!this.workspace || !this.participants || this.participants.length !== 2) {
+  const count = this.participants ? this.participants.length : 0;
+  const ok = this.isGroup ? count >= 1 && count <= MAX_GROUP_DM_MEMBERS : count === 2;
+  if (!this.workspace || !ok) {
     return next(new Error("Invalid DM session"));
   }
   next();
 });
 
-module.exports = mongoose.model("DMSession", DMSessionSchema);
+const DMSession = mongoose.model("DMSession", DMSessionSchema);
+DMSession.MAX_GROUP_DM_MEMBERS = MAX_GROUP_DM_MEMBERS;
+module.exports = DMSession;

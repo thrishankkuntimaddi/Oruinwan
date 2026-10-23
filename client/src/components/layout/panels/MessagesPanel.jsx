@@ -15,6 +15,7 @@ import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from '@services/api';
 import logger from '../../../utils/logger';
 import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark';
+import GroupAvatar from '../../../features/messaging/groupDm/GroupAvatar';
 
 const MessagesPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -106,8 +107,9 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
                     return {
                         id: session.id,
-                        userId: session.otherUser?._id || session.otherUser?.id, 
-                        name: session.otherUser?.username || "User",
+                        isGroup: !!session.isGroup,
+                        userId: session.isGroup ? null : (session.otherUser?._id || session.otherUser?.id),
+                        name: session.isGroup ? (session.displayName || 'Group') : (session.otherUser?.username || "User"),
                         avatar: session.otherUser?.profilePicture,
                         status: initialStatus,
                         unread: session.unreadCount || 0,
@@ -248,8 +250,9 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
                 return {
                     id: session.id,
-                    userId: session.otherUser?._id || session.otherUser?.id,
-                    name: session.otherUser?.username || "User",
+                    isGroup: !!session.isGroup,
+                    userId: session.isGroup ? null : (session.otherUser?._id || session.otherUser?.id),
+                    name: session.isGroup ? (session.displayName || 'Group') : (session.otherUser?.username || "User"),
                     avatar: session.otherUser?.profilePicture,
                     status: initialStatus,
                     unread: session.unreadCount || 0,
@@ -331,6 +334,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         <span className="gl-shell-avatar-round" style={{ width: avatarSize, height: avatarSize }}>
                             <Megaphone size={isMobile ? 17 : 13} />
                         </span>
+                    ) : item.isGroup ? (
+                        <GroupAvatar size={avatarSize} active={isActive} />
                     ) : (
                         <UserAvatarImage
                             userId={item.userId}
@@ -344,7 +349,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                             }}
                         />
                     )}
-                    {!isBroadcast && <span className={`gl-shell-presence ${PRESENCE[item.status] || ''}`} aria-hidden="true" />}
+                    {!isBroadcast && !item.isGroup && <span className={`gl-shell-presence ${PRESENCE[item.status] || ''}`} aria-hidden="true" />}
                 </span>
                 <span className="gl-shell-row-text">
                     <span className="gl-shell-row-label">{item.name}</span>

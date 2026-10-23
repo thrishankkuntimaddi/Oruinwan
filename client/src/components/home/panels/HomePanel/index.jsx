@@ -7,6 +7,7 @@ import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModa
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 import api from '@services/api';
 import { useSocket } from "../../../../contexts/SocketContext";
 import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
@@ -29,6 +30,7 @@ const HomePanel = ({ title }) => {
     const { socket } = useSocket();
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
+    const { user: authUser } = useAuth() || {};
 
     
     const { meetings: scheduledMeetings, loading: meetingsLoading, createMeeting, cancelMeeting } = useScheduledMeetings(activeWorkspace?.id);
@@ -168,7 +170,7 @@ const HomePanel = ({ title }) => {
 
         
         const existingDM = items.find(i =>
-            i.type === 'dm' &&
+            i.type === 'dm' && !i.isGroup &&
             (i.userId === userId || i.label === userName)
         );
 
@@ -726,6 +728,7 @@ const HomePanel = ({ title }) => {
                 setShowNewDMModal={setShowNewDMModal}
                 workspaceMembers={workspaceMembers}
                 handleStartDM={handleStartDM}
+                currentUserId={authUser?._id || authUser?.id || authUser?.sub}
             />
         </WorkspacePanel>
     );

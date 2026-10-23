@@ -36,7 +36,8 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                     api.get(`/api/workspaces/${workspaceId}/channels`),
                     api.get(`/api/workspaces/${workspaceId}/members`)
                 ]);
-                const dms = (dmsRes.data.sessions || []).map(session => ({
+                // A broadcast goes to people one by one, so group DMs are left out.
+                const dms = (dmsRes.data.sessions || []).filter(session => !session.isGroup).map(session => ({
                     type: 'dm', id: session.otherUser?._id,
                     name: session.otherUser?.username || 'Unknown',
                     avatar: session.otherUser?.profilePicture,

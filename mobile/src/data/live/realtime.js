@@ -80,6 +80,9 @@ export function connectRealtime(base) {
     socket.on(ev, changeEvent);
   }
   socket.on('new-dm-session', () => emit('data:changed', ['dms']));
+  // Group DMs: renamed, people added or removed, or I was removed.
+  socket.on('dm:members_updated', () => emit('data:changed', ['dms']));
+  socket.on('dm:removed', () => emit('data:changed', ['dms']));
   for (const ev of ['channel-created', 'channel-updated', 'channel-deleted', 'channel-member-added']) socket.on(ev, () => emit('data:changed', ['channels']));
   for (const ev of ['task-created', 'task-updated', 'task-assigned', 'task-removed']) socket.on(ev, () => emit('data:changed', ['tasks', 'task:']));
   for (const ev of ['note-created', 'note-updated', 'note-deleted', 'note-shared']) socket.on(ev, () => emit('data:changed', ['notes', 'note:']));

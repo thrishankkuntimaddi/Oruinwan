@@ -2,6 +2,7 @@ import React from 'react';
 import UserAvatarImage from '../../../../shared/components/ui/UserAvatarImage';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Lock, Megaphone, Star, Check } from 'lucide-react';
+import GroupAvatar from '../../../../features/messaging/groupDm/GroupAvatar';
 import '../../../layout/shell.css';
 
 const PRESENCE = { active: 'is-online', online: 'is-online', away: 'is-away', dnd: 'is-busy', busy: 'is-busy' };
@@ -56,7 +57,11 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                 </span>
             )}
 
-            {item.type === 'dm' ? (
+            {item.type === 'dm' && item.isGroup ? (
+                <span className="gl-shell-avatar">
+                    <GroupAvatar size={24} active={isActive} />
+                </span>
+            ) : item.type === 'dm' ? (
                 <span className="gl-shell-avatar">
                     <UserAvatarImage
                         userId={item.userId}

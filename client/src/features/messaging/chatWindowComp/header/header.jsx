@@ -26,6 +26,8 @@ import { Pin, AlarmClock,
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { Avatar, Input } from "../../../../shared/components/ui";
+import GroupAvatar from "../../groupDm/GroupAvatar";
+import GroupInfoModal from "../../groupDm/GroupInfoModal";
 
 export default function Header({
   chat,
@@ -65,6 +67,8 @@ export default function Header({
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const isGroup = chat.type === 'dm' && !!chat.isGroup;
 
   const isDefaultChannel = chat.isDefault || ['general', 'announcements'].includes(chat.name?.toLowerCase().replace(/^#/, ''));
   const isWorkspaceAdmin = chat.workspaceRole === 'owner' || chat.workspaceRole === 'admin';
@@ -145,6 +149,11 @@ export default function Header({
                 )}
               </div>
             )
+          ) : isGroup ? (
+            <button type="button" onClick={() => setShowGroupInfo(true)} aria-label="Open group info"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
+              <GroupAvatar size={32} />
+            </button>
           ) : (
             <Avatar
               src={chat.image}
@@ -174,6 +183,8 @@ export default function Header({
             }}>
               {chat.isAgent ? (
                 'AI agent · answers every message'
+              ) : isGroup ? (
+                `${chat.memberCount || (chat.members || []).length} people · group`
               ) : chat.type === 'dm' ? (
                 chat.customStatus || presenceLabel(chat)
               ) : (
@@ -457,7 +468,13 @@ export default function Header({
                       </>
                     )}
 
-                    {chat.type === "dm" && (
+                    {isGroup && (
+                      <>
+                        <MenuButton icon={<Users size={14} />} label="Group info" onClick={() => { setShowGroupInfo(true); setShowMenu(false); }} />
+                        <div style={{ height: '1px', backgroundColor: 'var(--border-default)', margin: '4px 0' }} />
+                      </>
+                    )}
+                    {chat.type === "dm" && !isGroup && (
                       <>
                         <div style={{
                           padding: '6px 12px', fontSize: '9px', fontWeight: 700,
@@ -476,11 +493,11 @@ export default function Header({
                     />
                     {chat.type !== "channel" && (
                       <>
-                        <MenuButton
+                        {!isGroup && <MenuButton
                           icon={blocked ? <Circle size={14} /> : <Ban size={14} />}
                           label={blocked ? "Unblock User" : "Block User"}
                           onClick={() => { setShowMenu(false); setBlocked((b) => !b); }}
-                        />
+                        />}
                         <MenuButton
                           icon={<Trash2 size={14} />}
                           label="Clear Chat"
@@ -560,7 +577,15 @@ export default function Header({
         />
       </div>
 
-      {}
+      {showGroupInfo && isGroup && (
+        <GroupInfoModal
+          dmId={chat.id}
+          workspaceId={chat.workspaceId}
+          currentUserId={currentUserId}
+          onClose={() => setShowGroupInfo(false)}
+          onLeft={() => { setShowGroupInfo(false); onClose?.(); }}
+        />
+      )}
     </>
   );
 }

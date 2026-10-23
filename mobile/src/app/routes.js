@@ -27,6 +27,8 @@ export const ROUTES = {
   thread: pick(chats, 'ThreadScreen'),
   channelInfo: pick(chats, 'ChannelInfoScreen'),
   newMessage: pick(chats, 'NewMessageScreen'),
+  newGroup: pick(chats, 'NewGroupScreen'),
+  groupInfo: pick(chats, 'GroupInfoScreen'),
   browseChannels: pick(chats, 'BrowseChannelsScreen'),
   profile: pick(chats, 'ProfileScreen'),
   saved: pick(chats, 'SavedScreen'),

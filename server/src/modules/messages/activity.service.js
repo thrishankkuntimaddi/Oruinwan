@@ -97,19 +97,37 @@ async function assertActiveMember(userId, workspaceId) {
     if (!member || (member.status && member.status !== 'active')) throw httpError(403, 'Not a member of this workspace');
 }
 
+/**
+ * The DMs to count: `{ dm: { $in } }`, plus one clause per group DM this user joined later
+ * (they only count messages from when they joined).
+ */
+function dmScope(sessions, userId, memberSinceFor) {
+    const plain = [];
+    const late = [];
+    for (const s of sessions) {
+        const since = memberSinceFor(s, userId);
+        if (since) late.push({ dm: toObjectId(s._id), createdAt: { $gt: new Date(since) } });
+        else plain.push(toObjectId(s._id));
+    }
+    if (late.length === 0) return { dm: { $in: plain } };
+    return { $or: [...(plain.length ? [{ dm: { $in: plain } }] : []), ...late] };
+}
+
 async function dmActivity(userId, workspaceId) {
     const sessions = await DMSession.find({
         workspace: workspaceId,
         participants: { $in: [userId] },
         'hiddenFor.user': { $ne: userId },
     })
-        .select('participants mutedBy')
+        .select('participants mutedBy isGroup name memberSince')
         .lean();
     if (!sessions.length) return [];
     await hydrate(sessions, { participants: { type: 'user', fields: ['username', 'profilePicture', 'isOnline', 'userStatus'] } });
 
+    // A group member only counts messages from when they joined.
+    const { groupDisplayName, memberSinceFor } = require('./groupDM.service');
     const rows = await Message.aggregate(unreadPipeline(
-        { dm: { $in: sessions.map(s => toObjectId(s._id)) }, ...unreadMatch(userId) },
+        { ...dmScope(sessions, userId, memberSinceFor), ...unreadMatch(userId) },
         'dm',
         userId,
     ));
@@ -117,6 +135,21 @@ async function dmActivity(userId, workspaceId) {
     return rows.map((row) => {
         const session = byId.get(String(row._id));
         if (!session) return null;
+        if (session.isGroup) {
+            const title = groupDisplayName(session, userId);
+            return {
+                type: 'dm',
+                id: String(row._id),
+                isGroup: true,
+                name: title,
+                memberCount: (session.participants || []).length,
+                unread: row.unread,
+                mentioned: false,
+                muted: (session.mutedBy || []).some(m => idOf(m.user) === String(userId)),
+                otherUser: { id: null, username: title, profilePicture: null, status: 'offline' },
+                lastMessage: lastMessageOf(row, userId),
+            };
+        }
         const other = (session.participants || []).find(p => idOf(p) !== String(userId)) || null;
         return {
             type: 'dm',
@@ -184,13 +217,14 @@ async function getWorkspaceActivity(userId, workspaceId) {
         .sort((a, b) => new Date(b.lastMessage?.createdAt || 0) - new Date(a.lastMessage?.createdAt || 0))
         .slice(0, MAX_ITEMS);
 
-    // Channel previews name the sender.
-    const senderIds = [...new Set(items.filter(i => i.type === 'channel').map(i => i.lastMessage?.senderId).filter(Boolean))];
+    // Channel and group DM previews name the sender.
+    const named = (i) => i.type === 'channel' || i.isGroup;
+    const senderIds = [...new Set(items.filter(named).map(i => i.lastMessage?.senderId).filter(Boolean))];
     if (senderIds.length) {
         const users = [...(await identity.users.findManyByIds(senderIds)).values()];
         const names = new Map(users.map(u => [String(u._id), u]));
         for (const item of items) {
-            const u = item.type === 'channel' ? names.get(item.lastMessage?.senderId) : null;
+            const u = named(item) ? names.get(item.lastMessage?.senderId) : null;
             if (u && item.lastMessage) {
                 item.lastMessage.senderUsername = u.username || null;
                 item.lastMessage.senderAvatar = u.profilePicture || null;

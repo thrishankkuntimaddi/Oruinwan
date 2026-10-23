@@ -17,6 +17,7 @@ import { shortAgo } from '../../lib/time.js';
 import { plainPreview } from '../../ui/Markdown.jsx';
 import { useChatsUi, openConversation } from './chatsUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
+import { GroupTile } from './groupScreens.jsx';
 
 export function channelGlyph(c) {
   if (c?.broadcast) return Megaphone;
@@ -55,7 +56,7 @@ function ConversationRow({ kind, item }) {
       aria-current={selected ? 'true' : undefined}
       className={cx('flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
     >
-      {kind === 'channel' ? <ChannelTile channel={item} /> : <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="md" presence={item.user?.presence} className="m-0.5" />}
+      {kind === 'channel' ? <ChannelTile channel={item} /> : item.isGroup ? <GroupTile /> : <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="md" presence={item.user?.presence} className="m-0.5" />}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className={cx('min-w-0 flex-1 truncate text-[15px]', unread ? 'font-semibold text-text' : 'text-text')}>

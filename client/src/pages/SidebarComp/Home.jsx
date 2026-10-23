@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import ChatWindowV2 from "../../features/messaging/chatWindowComp/ChatWindowV2";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
@@ -6,6 +6,8 @@ import api from '@services/api';
 import { useSocket } from "../../contexts/SocketContext";
 import { ChannelsLanding, HomeLanding } from "./landing/Landings";
 import logger from '../../utils/logger';
+import { useAuth } from "../../contexts/AuthContext";
+import { groupChatObject, useGroupDMLive } from "../../features/messaging/groupDm/groupChat";
 
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
@@ -15,6 +17,16 @@ const Home = () => {
   const [activeChat, setActiveChat] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { socket } = useSocket();
+  const { user: me } = useAuth() || {};
+  const myId = me?._id || me?.id || me?.sub || null;
+
+  // An open group DM follows renames and member changes, and closes if I'm removed.
+  const onGroupUpdate = useCallback((patch) => setActiveChat((prev) => (prev?.isGroup ? { ...prev, ...patch } : prev)), []);
+  const onGroupRemoved = useCallback(() => {
+    setActiveChat(null);
+    navigate(`/workspace/${workspaceId}/home`, { replace: true });
+  }, [navigate, workspaceId]);
+  useGroupDMLive(socket, activeChat, myId, { onUpdate: onGroupUpdate, onRemoved: onGroupRemoved });
 
   useEffect(() => {
     const detectChat = async () => {
@@ -112,6 +124,11 @@ const Home = () => {
               const dmSessions = dmRes.data.sessions || [];
               const existingSession = dmSessions.find(s => String(s.id) === String(targetId));
 
+              if (existingSession?.isGroup) {
+                // A group DM: no single "other person" to look up.
+                setActiveChat(groupChatObject(existingSession, workspaceId, activeWorkspace?.role));
+                return;
+              }
               if (existingSession) {
                 resolvedDMSessionId = existingSession.id;
                 otherUserId = existingSession.otherUserId;

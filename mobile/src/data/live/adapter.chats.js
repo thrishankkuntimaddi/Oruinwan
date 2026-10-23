@@ -83,7 +83,7 @@ const SEARCH_EMPTY = { knowledge: [], files: [], tasks: [], notes: [] };
 export function chatsAdapter({ mapMessage, me, ws, dm }) {
   async function keyFor(conv) {
     const d = dm(conv.id);
-    return conversationKey(conv, { workspaceId: ws(), participantIds: d ? [me().id, d.userId] : undefined, create: conv.kind === 'dm' }).catch((err) => {
+    return conversationKey(conv, { workspaceId: ws(), participantIds: d ? d.participantIds || [me().id, d.userId] : undefined, create: conv.kind === 'dm' }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
   }

@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import CreateChannelModal from '../../../../features/messaging/CreateChannelModal';
+import GroupStartBar, { GroupPickToggle } from '../../../../features/messaging/groupDm/GroupStartBar';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import { X, Search, MessageSquare } from 'lucide-react';
 
-const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handleStartDM }) => {
+const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handleStartDM, currentUserId }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    // People ticked for a group DM; while any are ticked, clicking a row ticks it too.
+    const [picked, setPicked] = useState([]);
+    const navigate = useNavigate();
+    const { workspaceId } = useParams();
     if (!showNewDMModal) return null;
 
+    const pickedIds = new Set(picked.map(p => String(p._id || p.id)));
+    const togglePick = (member) => setPicked(prev => (
+        pickedIds.has(String(member._id || member.id))
+            ? prev.filter(p => String(p._id || p.id) !== String(member._id || member.id))
+            : [...prev, member]
+    ));
+    const close = () => { setPicked([]); setShowNewDMModal(false); };
+
     const filtered = (workspaceMembers || []).filter(m => {
+        if (currentUserId && String(m._id || m.id) === String(currentUserId)) return false;
         const q = searchQuery.toLowerCase();
         return (m.username || m.name || '').toLowerCase().includes(q)
             || (m.email || '').toLowerCase().includes(q);
@@ -29,7 +44,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
     return (
         <div
             style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
-            onClick={e => { if (e.target === e.currentTarget) setShowNewDMModal(false); }}
+            onClick={e => { if (e.target === e.currentTarget) close(); }}
         >
             <div role="dialog" aria-modal="true" aria-label="New message" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: 'min(460px, calc(100vw - 32px))', maxHeight: 'min(580px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -39,7 +54,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>New message</h3>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Start a direct conversation</p>
                     </div>
-                    <button aria-label="Close" onClick={() => setShowNewDMModal(false)}
+                    <button aria-label="Close" onClick={close}
                         style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -82,7 +97,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                 return (
                                     <div
                                         key={member._id}
-                                        onClick={() => handleStartDM(member)}
+                                        onClick={() => (picked.length ? togglePick(member) : handleStartDM(member))}
                                         style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' }}
                                         className="group"
                                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -122,7 +137,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                             )}
                                         </div>
 
-                                        {}
+                                        {!picked.length && (
                                         <button
                                             onClick={e => { e.stopPropagation(); handleStartDM(member); }}
                                             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', opacity: 0, transition: '150ms ease' }}
@@ -130,12 +145,20 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                         >
                                             <MessageSquare size={11} /> Message
                                         </button>
+                                        )}
+                                        <GroupPickToggle on={pickedIds.has(String(member._id || member.id))} name={displayName} onToggle={() => togglePick(member)} />
                                     </div>
                                 );
                             })}
                         </div>
                     )}
                 </div>
+                <GroupStartBar
+                    workspaceId={workspaceId}
+                    selected={picked}
+                    onClear={() => setPicked([])}
+                    onStarted={(dm) => { close(); navigate(`/workspace/${workspaceId}/home/dm/${dm.id}`); }}
+                />
             </div>
         </div>
     );

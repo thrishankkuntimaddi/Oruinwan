@@ -95,6 +95,8 @@ const MessageSchema = new mongoose.Schema({
       'message_pinned', 'message_unpinned',
       'dm_message_pinned', 'dm_message_unpinned',
       'messages_cleared',
+      // Group DMs (groupDM.service.js)
+      'group_created', 'group_member_added', 'group_member_removed', 'group_member_left', 'group_renamed',
       null
     ],
     default: null

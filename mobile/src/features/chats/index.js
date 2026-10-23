@@ -8,3 +8,4 @@ export {
   BrowseChannelsScreen,
 } from './screens.jsx';
 export { SavedScreen } from './SavedScreen.jsx';
+export { NewGroupScreen, GroupInfoScreen } from './groupScreens.jsx';

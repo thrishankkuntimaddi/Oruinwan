@@ -54,7 +54,7 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 ## Features
 
 ### Chat
-- Public and private channels and direct messages
+- Public and private channels, direct messages and group DMs (up to 10 people)
 - Messages encrypted on your device with a key for each conversation (see [Security and privacy](#security-and-privacy))
 - Threads, reactions, mentions, pins, polls, search and file sharing
 - Split view on desktop and tablet: two conversations, or a conversation and a thread, side by side

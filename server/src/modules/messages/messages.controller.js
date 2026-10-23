@@ -253,8 +253,11 @@ exports.getDMs = async (req, res) => {
         }
 
         
-        // "Clear chat" hides everything before this user's clear time, for them only.
+        // "Clear chat" hides everything before this user's clear time, for them only. A group
+        // member also only sees messages from when they joined.
         const cleared = (dmSession.clearedAt || []).find(c => String(c.user) === String(userId));
+        const joinedAt = require('./groupDM.service').memberSinceFor(dmSession, userId);
+        const hideBefore = [cleared?.clearedAt, joinedAt].filter(Boolean).map(d => new Date(d)).sort((a, b) => b - a)[0] || null;
 
         const result = await messagesService.fetchMessages(
             { dm: dmSession._id },  
@@ -265,7 +268,7 @@ exports.getDMs = async (req, res) => {
                 around,
                 populateReplies: true,
                 userId,
-                userJoinedAt: cleared?.clearedAt || null,
+                userJoinedAt: hideBefore,
             }
         );
         // Readers who turned read receipts off are hidden from everyone but themselves.
@@ -350,7 +353,8 @@ exports.resolveDMSession = async (req, res) => {
             participants: {
                 $all: sortedParticipants,
                 $size: 2
-            }
+            },
+            isGroup: { $ne: true }
         });
 
         let isNewSession = false;
@@ -370,7 +374,7 @@ exports.resolveDMSession = async (req, res) => {
                 if (createErr.code === 11000) {
                     dmSession = await DMSession.findOne({
                         workspace: workspaceId,
-                        participants: { $all: sortedParticipants, $size: 2 }
+                        participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
                     });
                     if (!dmSession) throw createErr; 
                     isNewSession = false;

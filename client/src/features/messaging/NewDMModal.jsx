@@ -1,10 +1,11 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from '@services/api';
 import { AuthContext } from "../../contexts/AuthContext";
 import { getErrorMessage } from "../../utils/apiHelpers";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { Search, X } from "lucide-react";
+import GroupStartBar, { GroupPickToggle } from "./groupDm/GroupStartBar";
 
 const T = {
   bg:      'var(--bg-surface)',
@@ -26,6 +27,14 @@ export default function NewDMModal({ onClose, onStart }) {
   const { workspaceId } = useParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  // People ticked for a group DM; while any are ticked, clicking a row ticks it too.
+  const [picked, setPicked] = useState([]);
+  const navigate = useNavigate();
+  const myId = String(user?._id || user?.id || user?.sub || '');
+  const pickedIds = new Set(picked.map(p => String(p._id)));
+  const togglePick = (u) => setPicked(prev => (
+    pickedIds.has(String(u._id)) ? prev.filter(p => String(p._id) !== String(u._id)) : [...prev, u]
+  ));
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -73,7 +82,7 @@ export default function NewDMModal({ onClose, onStart }) {
         <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: T.text, fontFamily: T.font, margin: 0 }}>New Message</h3>
-            <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font, marginTop: '2px' }}>Start a direct conversation</p>
+            <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font, marginTop: '2px' }}>Click a name to message one person, or tick two or more for a group</p>
           </div>
           <button
             onClick={onClose}
@@ -128,10 +137,10 @@ export default function NewDMModal({ onClose, onStart }) {
               <div style={{ padding: '4px 10px 6px', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font }}>
                 {searchQuery ? "Results" : "Workspace Members"}
               </div>
-              {users.map((u) => (
+              {users.filter((u) => String(u._id) !== myId).map((u) => (
                 <div
                   key={u._id}
-                  onClick={() => onStart(u)}
+                  onClick={() => (picked.length ? togglePick(u) : onStart(u))}
                   className="dm-row"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', cursor: 'pointer', transition: 'background 150ms ease' }}
                   onMouseEnter={e => e.currentTarget.style.background = T.accentBg}
@@ -171,7 +180,7 @@ export default function NewDMModal({ onClose, onStart }) {
                   </div>
 
                   {}
-                  <button
+                  {!picked.length && <button
                     onClick={(e) => { e.stopPropagation(); onStart(u); }}
                     style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: 'var(--bg-base)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
                     className="dm-msg-btn"
@@ -179,12 +188,19 @@ export default function NewDMModal({ onClose, onStart }) {
                     onMouseLeave={e => e.currentTarget.style.opacity = '0'}
                   >
                     Message
-                  </button>
+                  </button>}
+                  <GroupPickToggle on={pickedIds.has(String(u._id))} name={u.username} onToggle={() => togglePick(u)} />
                 </div>
               ))}
             </div>
           )}
         </div>
+        <GroupStartBar
+          workspaceId={workspaceId}
+          selected={picked}
+          onClear={() => setPicked([])}
+          onStarted={(dm) => { onClose?.(); navigate(`/workspace/${workspaceId}/messages/dm/${dm.id}`); }}
+        />
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } .dm-row:hover .dm-msg-btn { opacity: 1 !important; }`}</style>
     </div>

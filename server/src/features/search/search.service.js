@@ -272,7 +272,9 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
             const isChannel = !!msg.channel;
             const parentName = isChannel
                 ? msg.channel.name
-                : msg.dm?.participants?.find(p => p._id.toString() !== userId.toString())?.username || 'Unknown';
+                : msg.dm?.isGroup
+                    ? require('../../modules/messages/groupDM.service').groupDisplayName(msg.dm, userId)
+                    : msg.dm?.participants?.find(p => p._id.toString() !== userId.toString())?.username || 'Unknown';
             return {
                 id: msg._id,
                 type: 'message',
