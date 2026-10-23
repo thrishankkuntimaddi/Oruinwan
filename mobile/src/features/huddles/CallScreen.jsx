@@ -1,6 +1,9 @@
 // The call on the phone, like a WhatsApp call: a full screen with everyone's video (or avatar),
 // mute, camera, flip, hand, the meeting panel and leave; minimise it to a small floating window
 // and keep using the app while the call goes on. Android's back button minimises.
+// The people are laid out by CallStage.jsx / callLayout.js: a paged grid, the speaker or a pinned
+// person (or a shared screen) large with a filmstrip, or a 1:1 call with my camera in a corner.
+// The controls fade while there's video and come back with a tap.
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
@@ -8,13 +11,14 @@ import {
   Ear,
   Ellipsis,
   Hand,
+  LayoutGrid,
   Maximize2,
   Mic,
   MicOff,
   PhoneOff,
-  PinOff,
   ScreenShare,
   ScreenShareOff,
+  SquareUserRound,
   SwitchCamera,
   Video,
   VideoOff,
@@ -28,11 +32,10 @@ import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { CallMenu, useActiveRecorder } from './CallExtras.jsx';
 import { useCallExtras } from './callExtras.js';
-import { gridColumns, orderTiles } from './callLogic.js';
+import { clampPage, orderForGrid, pageCapacity, pageCount, pageOf, pickSpeaker, resolveView } from './callLayout.js';
+import { DuoView, GridView, PageDots, SoloView, StageView, VideoEl, liveVideo, resetSelfCorner, streamOf, useElementSize } from './CallStage.jsx';
 import {
   leave,
-  localMedia,
-  remoteMedia,
   screenShareSupported,
   setCallView,
   startScreenShare,
@@ -62,13 +65,6 @@ function useClock() {
     return () => clearInterval(t);
   }, []);
   return now;
-}
-
-const streamOf = (p) => (p.isLocal ? localMedia() : remoteMedia(p.userId));
-
-/** A live, unmuted video track in the stream, if any. */
-function liveVideo(stream) {
-  return stream?.getVideoTracks?.().find((t) => t.readyState === 'live' && !t.muted) || null;
 }
 
 /** Who is talking right now, from each voice's loudness (only while the call screen is open). */
@@ -117,90 +113,6 @@ function useSpeaking(participants, enabled) {
   return speaking;
 }
 
-function VideoEl({ stream, fit = 'cover', mirror = false, zoom = 1 }) {
-  const ref = useRef(null);
-  const tick = useHuddle((s) => s.mediaTick);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (el.srcObject !== stream) el.srcObject = stream || null;
-    el.play?.().catch(() => {});
-  }, [stream, tick]);
-  return (
-    <video
-      ref={ref}
-      muted
-      autoPlay
-      playsInline
-      className={cx('h-full w-full bg-black', fit === 'contain' ? 'object-contain' : 'object-cover', mirror && '-scale-x-100')}
-      style={zoom > 1 ? { width: `${zoom * 100}%`, height: `${zoom * 100}%`, maxWidth: 'none' } : undefined}
-    />
-  );
-}
-
-function Tile({ p, speaking, onTap, large = false, mirror = false }) {
-  useHuddle((s) => s.mediaTick); // re-render when a track arrives or ends
-  const stream = streamOf(p);
-  const showVideo = Boolean(p.videoEnabled && liveVideo(stream));
-  return (
-    <button
-      type="button"
-      onClick={onTap}
-      aria-label={`${p.isLocal ? 'You' : p.username}${p.audioEnabled === false ? ', muted' : ''}${p.handRaised ? ', hand raised' : ''}`}
-      data-testid="huddle-tile"
-      className={cx(
-        'relative grid h-full min-h-0 w-full place-items-center overflow-hidden rounded-2xl border bg-surface-2 transition-shadow',
-        speaking ? 'border-success shadow-[0_0_0_2px_rgb(var(--c-success))]' : 'border-line',
-      )}
-    >
-      {showVideo ? (
-        <VideoEl stream={stream} fit={large ? 'contain' : 'cover'} mirror={mirror} />
-      ) : (
-        <span className={cx('rounded-full transition-shadow', speaking && 'shadow-[0_0_0_4px_rgb(var(--c-success)/0.55)]')}>
-          <Avatar name={p.username || 'You'} size={large ? 'xl' : 'lg'} />
-        </span>
-      )}
-      <span className="glass absolute bottom-2 left-2 flex max-w-[85%] items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium">
-        {p.audioEnabled === false && <Icon as={MicOff} size={12} className="shrink-0 text-danger" />}
-        {p.handRaised && <Icon as={Hand} size={12} className="shrink-0 text-warning" />}
-        <span className="truncate">{p.isLocal ? 'You' : p.username || 'Someone'}</span>
-      </span>
-    </button>
-  );
-}
-
-/** One person large (a shared screen reads best here): double-tap zooms in, drag to look around. */
-function Focus({ p, onClose, mirror }) {
-  const [zoom, setZoom] = useState(1);
-  useHuddle((s) => s.mediaTick);
-  const stream = streamOf(p);
-  const video = p.videoEnabled && liveVideo(stream);
-  return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-line bg-black">
-      {video ? (
-        <div className="h-full w-full overflow-auto overscroll-contain" onDoubleClick={() => setZoom((z) => (z > 1 ? 1 : 2))}>
-          <VideoEl stream={stream} fit="contain" mirror={mirror} zoom={zoom} />
-        </div>
-      ) : (
-        <Tile p={p} large onTap={onClose} />
-      )}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Back to everyone"
-        className="glass absolute top-2 right-2 grid h-9 w-9 place-items-center rounded-full border"
-      >
-        <Icon as={PinOff} size={16} />
-      </button>
-      {video && (
-        <span className="glass absolute bottom-2 left-2 rounded-full border px-2 py-0.5 text-xs">
-          {p.isLocal ? 'You' : p.username} · double-tap to {zoom > 1 ? 'zoom out' : 'zoom in'}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function Control({ icon, label, onClick, on = false, danger = false, disabled = false, testId }) {
   return (
     <button
@@ -221,6 +133,34 @@ function Control({ icon, label, onClick, on = false, danger = false, disabled = 
   );
 }
 
+/** The person talking, held while they talk so the big tile doesn't flicker between voices. */
+function useActiveSpeaker(participants, speaking) {
+  const last = useRef(null);
+  return useMemo(() => {
+    last.current = pickSpeaker(participants, speaking, last.current);
+    return last.current;
+  }, [participants, speaking]);
+}
+
+// Controls hide after this long while there's video to watch; a tap brings them back.
+const AUTO_HIDE_MS = 5000;
+
+function HeaderButton({ icon, label, onClick, active = false, muted = false, testId, ...rest }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      data-testid={testId}
+      className={cx('pressable grid h-10 w-10 shrink-0 place-items-center rounded-full active:bg-surface-2', active ? 'text-accent-ink' : muted ? 'text-text-3' : 'text-text')}
+      {...rest}
+    >
+      <Icon as={icon} size={20} />
+    </button>
+  );
+}
+
 function FullCall({ title }) {
   const call = useHuddle((s) => s.call);
   const connecting = useHuddle((s) => s.connecting);
@@ -235,9 +175,16 @@ function FullCall({ title }) {
   const recorder = useActiveRecorder();
   const wide = useWide();
   const now = useClock();
+  const [mode, setMode] = useState(null); // null: automatic; 'grid' | 'speaker': the person's choice
   const [pinned, setPinned] = useState(null);
+  const [page, setPage] = useState(0);
+  const [shareDismissed, setShareDismissed] = useState(null);
+  const [shown, setShown] = useState(true);
+  const [poke, setPoke] = useState(0);
   const [menu, setMenu] = useState(false);
   const [panel, setPanel] = useState(false);
+  const stageRef = useRef(null);
+  const size = useElementSize(stageRef);
   const speaking = useSpeaking(participants, true);
   useOverlay(true, () => setCallView('mini'));
 
@@ -248,14 +195,79 @@ function FullCall({ title }) {
     return () => keepScreenOn(false);
   }, [anyVideo]);
 
-  const tiles = useMemo(() => orderTiles(participants, { pinned, speaking }), [participants, pinned, speaking]);
-  const focused = pinned && participants.find((p) => p.userId === pinned);
+  // My own tile knows when it shows my screen; others' tiles do when the server says so.
+  const people = useMemo(() => participants.map((p) => (p.isLocal ? { ...p, sharing } : p)), [participants, sharing]);
+  const me = people.find((p) => p.isLocal) || people[0];
+  const sharer = people.find((p) => p.sharing && !p.isLocal) || people.find((p) => p.sharing);
+  const sharingId = sharer && sharer.userId !== shareDismissed ? sharer.userId : null;
+  const pinnedId = pinned && people.some((p) => p.userId === pinned) ? pinned : null;
   useEffect(() => {
-    if (pinned && !focused) setPinned(null);
-  }, [pinned, focused]);
+    if (pinned && !pinnedId) setPinned(null); // they left
+  }, [pinned, pinnedId]);
+  useEffect(() => {
+    if (!sharer) setShareDismissed(null);
+  }, [sharer]);
+
+  const view = resolveView({ count: people.length, mode, pinnedId, sharingId });
+  const speakerId = useActiveSpeaker(people, speaking);
+  const capacity = pageCapacity(size);
+  const ordered = useMemo(() => orderForGrid(people, { capacity }), [people, capacity]);
+  const pages = view.kind === 'grid' ? pageCount(ordered.length, size) : 1;
+  const currentPage = clampPage(page, ordered.length, size);
+  const speakerPage = view.kind === 'grid' && speaking[speakerId] ? pageOf(ordered.findIndex((p) => p.userId === speakerId), size) : -1;
   const mirrorLocal = cameraOn && facing === 'user' && !sharing;
-  const cols = gridColumns(tiles.length, wide);
+  const mirrorId = mirrorLocal && me ? me.userId : null;
   const canShare = screenShareSupported();
+
+  // Controls fade away while there's video so they never sit on faces for long; any tap brings them back.
+  const canHide = anyVideo && !menu && !panel;
+  const controlsShown = shown || !canHide;
+  useEffect(() => {
+    if (!canHide || !shown) return undefined;
+    const t = setTimeout(() => setShown(false), AUTO_HIDE_MS);
+    return () => clearTimeout(t);
+  }, [canHide, shown, poke]);
+  const keepControls = () => setPoke((n) => n + 1);
+  const onStageTap = () => {
+    if (canHide) setShown(false);
+  };
+
+  const pin = (id) => setPinned((cur) => (cur === id ? null : id));
+  const unpin = () => {
+    if (pinnedId) setPinned(null);
+    else if (sharingId) setShareDismissed(sharingId);
+  };
+  const gridLike = view.kind === 'grid';
+  const switchLayout = () => {
+    setPinned(null);
+    if (sharingId) setShareDismissed(sharingId);
+    setMode(gridLike ? 'speaker' : 'grid');
+  };
+  const focus =
+    view.kind === 'stage' ? people.find((p) => p.userId === view.focusId) : view.kind === 'speaker' ? people.find((p) => p.userId === speakerId) : null;
+  const other = people.find((p) => !p.isLocal);
+  // More people than a phone page holds: keep room for the page dots under the grid.
+  const dots = pages > 1 || (view.kind === 'grid' && people.length > 6);
+  const right = panel && wide ? 440 : 0;
+
+  let body;
+  if (view.kind === 'solo' && me) body = <SoloView size={size} me={me} mirrorId={mirrorId} />;
+  else if (view.kind === 'duo' && me && other) body = <DuoView size={size} me={me} other={other} speaking={speaking} mirrorId={mirrorId} onStageTap={onStageTap} />;
+  else if (focus)
+    body = (
+      <StageView
+        size={size}
+        focus={focus}
+        others={ordered.filter((p) => p.userId !== focus.userId)}
+        speaking={speaking}
+        mirrorId={mirrorId}
+        pinned={view.kind === 'stage'}
+        onPin={pin}
+        onUnpin={unpin}
+        onStageTap={onStageTap}
+      />
+    );
+  else body = <GridView size={size} people={ordered} page={currentPage} onPage={setPage} speaking={speaking} mirrorId={mirrorId} onPin={pin} />;
 
   return (
     <div
@@ -263,20 +275,50 @@ function FullCall({ title }) {
       aria-modal="true"
       aria-label={`Call: ${title}`}
       data-testid="huddle-call-screen"
-      className="fixed inset-0 z-[45] flex flex-col bg-bg"
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingRight: panel && wide ? 440 : undefined }}
+      data-view={view.kind}
+      data-controls={controlsShown ? 'shown' : 'hidden'}
+      className="fixed inset-0 z-[45] overflow-hidden bg-bg"
+      onPointerDown={() => controlsShown && keepControls()}
+      onClickCapture={(e) => {
+        if (controlsShown) return;
+        // While the controls are hidden, the first tap only brings them back.
+        e.stopPropagation();
+        e.preventDefault();
+        setShown(true);
+      }}
     >
-      <div className="flex items-center gap-2 px-3 py-2">
-        <button
-          type="button"
-          onClick={() => setCallView('mini')}
-          aria-label="Minimise the call"
-          data-testid="huddle-minimise"
-          className="pressable grid h-10 w-10 place-items-center rounded-full text-text active:bg-surface-2"
+      <div
+        ref={stageRef}
+        className="absolute"
+        data-testid="huddle-stage-area"
+        style={{
+          top: `calc(env(safe-area-inset-top) + ${controlsShown ? 60 : 8}px)`,
+          bottom: `calc(env(safe-area-inset-bottom) + ${(controlsShown ? 84 : 8) + (dots ? 28 : 0)}px)`,
+          left: 'calc(env(safe-area-inset-left) + 12px)',
+          right: `calc(env(safe-area-inset-right) + ${12 + right}px)`,
+          transition: 'top 200ms ease-out, bottom 200ms ease-out',
+        }}
+      >
+        {body}
+      </div>
+
+      {dots && (
+        <div
+          className="absolute left-0 flex justify-center"
+          style={{ bottom: `calc(env(safe-area-inset-bottom) + ${controlsShown ? 84 : 8}px)`, right, transition: 'bottom 200ms ease-out' }}
         >
-          <Icon as={ChevronDown} size={22} />
-        </button>
-        <span className="min-w-0 flex-1">
+          <PageDots page={currentPage} pages={pages} onPage={setPage} speakerPage={speakerPage} />
+        </div>
+      )}
+
+      <div
+        className={cx('absolute top-0 left-0 flex items-center gap-1 px-3 pb-2 transition duration-200', !controlsShown && 'pointer-events-none -translate-y-3 opacity-0')}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)', right }}
+        aria-hidden={!controlsShown || undefined}
+        data-testid="huddle-topbar"
+      >
+        <HeaderButton icon={ChevronDown} label="Minimise the call" onClick={() => setCallView('mini')} testId="huddle-minimise" />
+        <span className="min-w-0 flex-1 pl-1">
           <span className="block truncate text-[16px] font-semibold">{title}</span>
           <span className="flex items-center gap-1.5 text-xs text-text-2 tabular-nums">
             {recorder && (
@@ -290,58 +332,34 @@ function FullCall({ title }) {
             </span>
           </span>
         </span>
-        {hasCallSession() && (
-          <button
-            type="button"
-            onClick={toggleSpeaker}
-            aria-label={speakerOn ? 'Use the earpiece' : 'Use the speaker'}
-            className="pressable grid h-10 w-10 place-items-center rounded-full text-text active:bg-surface-2"
-          >
-            <Icon as={speakerOn ? Volume2 : Ear} size={20} />
-          </button>
+        {people.length >= 2 && (
+          <HeaderButton
+            icon={gridLike ? SquareUserRound : LayoutGrid}
+            label={gridLike ? 'Switch to speaker view' : 'Switch to grid view'}
+            onClick={switchLayout}
+            testId="huddle-layout"
+          />
         )}
-        <button
-          type="button"
-          onClick={() => (sharing ? stopScreenShare() : startScreenShare())}
-          aria-label={sharing ? 'Stop sharing your screen' : canShare ? 'Share your screen' : 'Screen sharing from the phone isn’t available yet'}
+        {hasCallSession() && <HeaderButton icon={speakerOn ? Volume2 : Ear} label={speakerOn ? 'Use the earpiece' : 'Use the speaker'} onClick={toggleSpeaker} />}
+        <HeaderButton
+          icon={sharing ? ScreenShareOff : ScreenShare}
+          label={sharing ? 'Stop sharing your screen' : canShare ? 'Share your screen' : 'Screen sharing from the phone isn’t available yet'}
           aria-disabled={!canShare && !sharing}
-          className={cx('pressable grid h-10 w-10 place-items-center rounded-full active:bg-surface-2', sharing ? 'text-accent-ink' : canShare ? 'text-text' : 'text-text-3')}
-        >
-          <Icon as={sharing ? ScreenShareOff : ScreenShare} size={20} />
-        </button>
+          active={sharing}
+          muted={!canShare && !sharing}
+          onClick={() => (sharing ? stopScreenShare() : startScreenShare())}
+        />
       </div>
 
-      <div className="min-h-0 flex-1 px-3 pb-2">
-        {focused ? (
-          <div className="flex h-full flex-col gap-2">
-            <div className="min-h-0 flex-1">
-              <Focus p={focused} mirror={focused.isLocal && mirrorLocal} onClose={() => setPinned(null)} />
-            </div>
-            {tiles.length > 1 && (
-              <div className="flex h-24 shrink-0 gap-2 overflow-x-auto">
-                {tiles
-                  .filter((p) => p.userId !== focused.userId)
-                  .map((p) => (
-                    <div key={p.userId} className="h-full w-28 shrink-0">
-                      <Tile p={p} speaking={speaking[p.userId]} mirror={p.isLocal && mirrorLocal} onTap={() => setPinned(p.userId)} />
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div
-            className="grid h-full gap-2"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: `minmax(0, 1fr)` }}
-          >
-            {tiles.map((p) => (
-              <Tile key={p.userId} p={p} speaking={speaking[p.userId]} mirror={p.isLocal && mirrorLocal} onTap={() => setPinned(p.userId)} />
-            ))}
-          </div>
+      <div
+        className={cx(
+          'absolute bottom-0 left-0 flex items-center justify-center gap-2.5 px-3 pt-2 transition duration-200 md:gap-4',
+          !controlsShown && 'pointer-events-none translate-y-3 opacity-0',
         )}
-      </div>
-
-      <div className="flex items-center justify-center gap-2.5 px-3 pt-2 pb-3 md:gap-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)', right }}
+        aria-hidden={!controlsShown || undefined}
+        data-testid="huddle-controls"
+      >
         <Control icon={muted ? MicOff : Mic} label={muted ? 'Unmute' : 'Mute'} on={muted} onClick={toggleMute} testId="huddle-bar-mute" />
         <Control icon={cameraOn ? Video : VideoOff} label={cameraOn ? 'Turn the camera off' : 'Turn the camera on'} on={cameraOn} onClick={toggleCamera} testId="huddle-camera" />
         {cameraOn && <Control icon={SwitchCamera} label="Switch camera" onClick={switchCamera} testId="huddle-flip" />}
@@ -374,9 +392,10 @@ function MiniCall({ title }) {
   const [pos, setPos] = useState(miniPos);
   const drag = useRef(null);
   const box = useRef(null);
-  // Show whoever has video (someone else first), else the first other person.
-  const others = participants.filter((p) => !p.isLocal);
-  const star = others.find((p) => p.videoEnabled && liveVideo(remoteMedia(p.userId))) || others[0] || participants[0];
+  // Show the active speaker (held while they talk), else someone with video, else the first other person.
+  const speaking = useSpeaking(participants, true);
+  const starId = useActiveSpeaker(participants, speaking);
+  const star = participants.find((p) => p.userId === starId) || participants[0];
   const starVideo = star && star.videoEnabled ? liveVideo(streamOf(star)) : null;
 
   const onDown = (e) => {
@@ -440,7 +459,23 @@ function MiniCall({ title }) {
         data-testid="huddle-expand"
         aria-label="Back to the call"
       >
-        {starVideo ? <VideoEl stream={streamOf(star)} /> : <Avatar name={star?.username || title} size="lg" />}
+        {starVideo ? (
+          <VideoEl stream={streamOf(star)} />
+        ) : (
+          <span className={cx('rounded-full transition-shadow', star && speaking[star.userId] && 'shadow-[0_0_0_3px_rgb(var(--c-accent)/0.6)]')}>
+            <Avatar name={star?.username || title} size="lg" />
+          </span>
+        )}
+        {star && (
+          <span
+            className="glass absolute bottom-1 left-1 flex max-w-[calc(100%-8px)] items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium"
+            data-testid="huddle-bar-speaker"
+          >
+            {speaking[star.userId] && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />}
+            {star.audioEnabled === false && <Icon as={MicOff} size={11} className="shrink-0 text-danger" />}
+            <span className="truncate">{star.isLocal ? 'You' : star.username || 'Someone'}</span>
+          </span>
+        )}
         <span className="absolute top-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/40 text-white">
           <Icon as={Maximize2} size={12} />
         </span>
@@ -473,7 +508,10 @@ export function CallView({ title }) {
   const call = useHuddle((s) => s.call);
   const view = useHuddle((s) => s.view);
   useEffect(() => {
-    if (!call) miniPos = null;
+    if (!call) {
+      miniPos = null;
+      resetSelfCorner();
+    }
   }, [call]);
   if (!call) return null;
   return view === 'mini' ? <MiniCall title={title} /> : <FullCall title={title} />;

@@ -125,17 +125,3 @@ export const PERMISSION_COPY = {
 export function cameraConstraints(facing = 'user') {
   return { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 24 } };
 }
-
-/** Tiles to show: the person sharing (or a pinned one) first, then whoever has video, then the rest. */
-export function orderTiles(participants, { pinned = null, speaking = {} } = {}) {
-  const list = [...(participants || [])];
-  const rank = (p) => (p.userId === pinned ? 0 : p.isLocal ? 3 : p.videoEnabled ? 1 : speaking[p.userId] ? 1.5 : 2);
-  return list.sort((a, b) => rank(a) - rank(b));
-}
-
-/** Grid columns for n tiles on a phone (portrait) or a tablet/landscape screen. */
-export function gridColumns(n, wide = false) {
-  if (n <= 1) return 1;
-  if (wide) return n <= 4 ? 2 : 3;
-  return n <= 2 ? 1 : 2;
-}
