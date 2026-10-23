@@ -252,6 +252,12 @@ class IdentityKeyService {
                 if (umekProtectionType === 'PASSWORD') {
                     
                     if (!password) {
+                        // An account from before automatic unlock. Right after signing in (e.g.
+                        // with Google) move it to automatic unlock instead of asking for the
+                        // password; the server allows that only just after a real sign-in here
+                        // and gives the account its conversations back from its server copies.
+                        const upgraded = await this._autoUpgrade(userId);
+                        if (upgraded) return upgraded;
                         logger.warn('🔐 [PHASE 1] Password-protected identity cache missing - password required');
                         return {
                             status: 'PASSWORD_REQUIRED',
@@ -448,6 +454,20 @@ class IdentityKeyService {
         return this._createIdentity(userId, password, { allowOverwrite: true, currentPassword: password });
     }
     
+    /** Password-locked (pre-2.1) identity → automatic unlock, without the password. null if refused. */
+    async _autoUpgrade(userId) {
+        try {
+            await deleteIdentityKeyPair(userId).catch(() => { });
+            this.publicKeysCache.delete(userId);
+            const result = await this._createIdentity(userId, null, { allowOverwrite: true, autoUpgrade: true });
+            logger.debug('✅ [PHASE 1] Moved to automatic unlock (no password needed from now on)');
+            return result;
+        } catch (err) {
+            logger.warn('⚠️ [PHASE 1] Automatic unlock upgrade not allowed now:', err?.message);
+            return null;
+        }
+    }
+
     async _fetchCryptoStateFromServer() {
         const { getDeviceId } = await import('../utils/deviceId.js');
         const deviceId = getDeviceId();

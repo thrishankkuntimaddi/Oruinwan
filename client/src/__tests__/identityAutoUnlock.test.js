@@ -85,8 +85,21 @@ describe('automatic unlock', () => {
         expect(sealed).toBe(c.arrayBufferToBase64(await c.exportKey(umek)));
     });
 
-    it('without the password a password-protected key reports PASSWORD_REQUIRED (non-blocking banner)', async () => {
+    it('without the password a password-locked (pre-2.1) key moves to automatic unlock right after sign-in', async () => {
         serverState = { umekProtectionType: 'PASSWORD', umekSalt: 'AAAA', identityPublicKey: 'x', algorithm: 'RSA-2048' };
+        const svc = await freshService();
+        expect((await svc.initializeIdentityKeys('u1', null)).status).toBe('READY');
+        const init = calls.find((x) => x.path === '/api/v2/crypto/identity/init');
+        expect(init.body).toMatchObject({ allowOverwrite: true, autoUpgrade: true, umekProtectionType: 'SERVER_KEK' });
+        expect(init.body.currentPassword).toBeUndefined();
+    });
+
+    it('when the server refuses the upgrade (no recent sign-in) it reports PASSWORD_REQUIRED (non-blocking banner)', async () => {
+        serverState = { umekProtectionType: 'PASSWORD', umekSalt: 'AAAA', identityPublicKey: 'x', algorithm: 'RSA-2048' };
+        const base = globalThis.fetch;
+        vi.stubGlobal('fetch', vi.fn(async (url, opts = {}) => (String(url).endsWith('/crypto/identity/init')
+            ? respond(401, { message: 'Enter your current account password to set up encryption again.' })
+            : base(url, opts))));
         const svc = await freshService();
         expect((await svc.initializeIdentityKeys('u1', null)).status).toBe('PASSWORD_REQUIRED');
         expect(calls.some((x) => x.path.endsWith('seal-umek'))).toBe(false);

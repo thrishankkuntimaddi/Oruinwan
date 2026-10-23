@@ -134,8 +134,15 @@ export async function unlockIdentity(userId, password) {
   let umek;
   if (state.umekProtectionType === 'PASSWORD') {
     if (!password) {
-      setE2ee('password_required');
-      return 'password_required';
+      // An account from before automatic unlock: right after signing in, move it to automatic
+      // unlock instead of asking for the password (the server allows it only just after a real
+      // sign-in on this device, and gives the account its conversations back).
+      try {
+        return await createIdentity(userId, { allowOverwrite: true, autoUpgrade: true });
+      } catch {
+        setE2ee('password_required');
+        return 'password_required';
+      }
     }
     // Extractable once, so the opened key can be sealed on the server (automatic unlock from now on).
     umek = await deriveUmek(password, fromB64(state.umekSalt), true);
@@ -291,7 +298,7 @@ export async function unwrapUmek(privateKey, { serverEphemeralPublicKey, rewrapp
 }
 
 /** Creates keys for an account that has none yet (server-sealed UMEK, see below). */
-async function createIdentity(userId) {
+async function createIdentity(userId, serverExtras = {}) {
   const pair = await subtle.generateKey(
     { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
     true,
@@ -309,6 +316,7 @@ async function createIdentity(userId) {
 
   // Same payload as the web client's first sign-in, so either client can unlock it later.
   await api.post('/v2/crypto/identity/init', {
+    ...serverExtras,
     identityPublicKey: pem,
     encryptedIdentityPrivateKey: toB64(encrypted),
     identityPrivateKeyIv: toB64(iv),
@@ -317,7 +325,14 @@ async function createIdentity(userId) {
     algorithm: IDENTITY_ALGORITHM,
     version: 1,
   });
-  await uploadPublicKey(pem, IDENTITY_ALGORITHM, 1);
+  await uploadPublicKey(pem, IDENTITY_ALGORITHM, 1).catch((err) => {
+    // Setting up again: /identity/init has already published the key.
+    if (!serverExtras.allowOverwrite) throw err;
+  });
+  if (serverExtras.allowOverwrite) {
+    convKeys.clear();
+    wrapped.clear();
+  }
 
   const privateKey = await subtle.importKey('jwk', jwk, RSA, false, ['decrypt']);
   identity = { userId, privateKey, publicKeyPem: pem, algorithm: IDENTITY_ALGORITHM };
@@ -337,11 +352,25 @@ export async function forgetIdentity(userId) {
 
 // ---------------------------------------------------------------- conversation keys
 
-async function unwrap(entry) {
+async function unwrapRaw(entry) {
   if (!identity) throw Object.assign(new Error('Locked'), { code: 'LOCKED' });
   if (entry.algorithm === 'X25519') throw Object.assign(new Error('Unsupported key'), { code: 'UNSUPPORTED' });
-  const raw = await subtle.decrypt({ name: 'RSA-OAEP' }, identity.privateKey, fromB64(entry.encryptedKey));
-  return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  return subtle.decrypt({ name: 'RSA-OAEP' }, identity.privateKey, fromB64(entry.encryptedKey));
+}
+
+/**
+ * Opens a conversation key copy. A copy that doesn't open (wrapped for an identity key this
+ * account has since replaced) is swapped for a fresh one from the server copy, once.
+ */
+async function openEntry(conv, entry) {
+  try {
+    return { raw: await unwrapRaw(entry), entry };
+  } catch (err) {
+    if (err.code === 'LOCKED' || err.code === 'UNSUPPORTED') throw err;
+    await api.post(`/v2/conversations/${conv.id}/keys/rewrap`, { type: conv.kind }).catch(() => {});
+    const fresh = await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind });
+    return { raw: await unwrapRaw(fresh), entry: fresh };
+  }
 }
 
 /** One request for every key in the workspace; they are unwrapped only when needed. */
@@ -354,32 +383,7 @@ export async function prefetchWorkspaceKeys(workspaceId) {
   }
 }
 
-async function createDmKey(conv, workspaceId, participantIds) {
-  const data = await api.post('/v2/identity/public-keys', { userIds: participantIds });
-  const list = Array.isArray(data?.publicKeys) ? data.publicKeys : Object.entries(data?.publicKeys || {}).map(([userId, v]) => ({ userId, ...v }));
-  const raw = crypto.getRandomValues(new Uint8Array(32));
-  const encryptedKeys = [];
-  for (const pk of list) {
-    const pem = pk.publicKey || pk.identityPublicKey;
-    if (!pem || !isRsa(pk.algorithm)) continue;
-    const der = fromB64(pem.replace(/-----[A-Z0-9 ]+-----/g, ''));
-    const publicKey = await subtle.importKey('spki', der, RSA, false, ['encrypt']);
-    const encryptedKey = toB64(await subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, raw));
-    encryptedKeys.push({ userId: String(pk.userId), encryptedKey, ephemeralPublicKey: null, algorithm: pk.algorithm || IDENTITY_ALGORITHM });
-  }
-  if (encryptedKeys.length < participantIds.length) {
-    throw Object.assign(new Error('The other person has not opened Oruinwan yet, so this conversation cannot be encrypted for them.'), { code: 'NO_PEER_KEY' });
-  }
-  try {
-    await api.post(`/v2/conversations/${conv.id}/keys`, { conversationType: 'dm', workspaceId, encryptedKeys });
-  } catch (err) {
-    if (err.status === 409) return null; // created by the other side meanwhile
-    throw err;
-  }
-  return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-}
-
-export async function conversationKey(conv, { workspaceId, participantIds, create = false } = {}) {
+export async function conversationKey(conv, _opts = {}) {
   const id = `${conv.kind}:${conv.id}`;
   if (convKeys.has(id)) return convKeys.get(id);
   if (!identity) throw Object.assign(new Error('Locked'), { code: 'LOCKED' });
@@ -396,21 +400,35 @@ export async function conversationKey(conv, { workspaceId, participantIds, creat
         } catch {
           throw Object.assign(new Error('Your key for this conversation is not ready yet.'), { code: 'NOT_DISTRIBUTED' });
         }
-      } else if (err.status === 404 && create && conv.kind === 'dm' && participantIds?.length) {
-        const key = await createDmKey(conv, workspaceId, participantIds);
-        if (key) {
-          convKeys.set(id, key);
-          return key;
+      } else if (err.status === 404 && conv.kind === 'dm') {
+        // The server makes DM keys (with a server copy, so people who set up encryption later
+        // still get them). It does so on this request, so one retry picks it up.
+        try {
+          entry = await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind });
+        } catch {
+          throw Object.assign(new Error('This conversation has no encryption key yet.'), { code: 'NOT_INITIALIZED' });
         }
-        entry = await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind });
       } else if (err.status === 404) {
         throw Object.assign(new Error('This conversation has no encryption key yet.'), { code: 'NOT_INITIALIZED' });
       } else throw err;
     }
   }
-  const key = await unwrap(entry);
+  let opened;
+  try {
+    opened = await openEntry(conv, entry);
+  } catch (err) {
+    // A prefetched copy may be stale: try the live one before giving up.
+    if (!wrapped.has(id)) throw err;
+    wrapped.delete(id);
+    opened = await openEntry(conv, await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind }));
+  }
+  const key = await subtle.importKey('raw', opened.raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   convKeys.set(id, key);
   wrapped.delete(id);
+  // An older key without a server copy can't be given to people who join later: send it once.
+  if (opened.entry?.serverCopy === false) {
+    api.post(`/v2/conversations/${conv.id}/keys/escrow`, { type: conv.kind, key: toB64(opened.raw) }).catch(() => {});
+  }
   return key;
 }
 

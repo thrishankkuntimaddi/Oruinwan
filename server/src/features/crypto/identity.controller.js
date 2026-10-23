@@ -21,6 +21,37 @@ const UserCryptoState = {
     async create(data) { return cryptoStateDoc(await cryptoStateRepo.upsert(data.userId, data)); },
 };
 
+// How long after signing in on a device a password-locked account may move to automatic unlock.
+const AUTO_UPGRADE_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * May this request replace a password-locked identity with an automatically unlocked one
+ * without the password? Only when the old key is password-locked (pre-2.1), the new one is
+ * SERVER_KEK, and this device (X-Device-Id) signed in within the last 15 minutes and is not
+ * signed out — a real sign-in just happened here, not an old session token being replayed.
+ */
+async function autoUpgradeAllowed(req, userId, cryptoState, newProtectionType) {
+    if (cryptoState?.umekProtectionType !== 'PASSWORD' || newProtectionType !== 'SERVER_KEK') return false;
+    try {
+        const devices = require('../devices/devices.service');
+        const deviceId = devices.deviceIdFrom(req);
+        if (!deviceId) return false;
+        const { query } = require('../../shared/postgres');
+        const { rows } = await query(
+            'SELECT revoked, meta FROM user_device_sessions WHERE user_id = $1 AND device_id = $2 LIMIT 1',
+            [String(userId), deviceId]
+        );
+        const row = rows[0];
+        if (!row || row.revoked) return false;
+        const at = Date.parse(row.meta?.signInAt || '');
+        return Number.isFinite(at) && Date.now() - at <= AUTO_UPGRADE_WINDOW_MS;
+    } catch (err) {
+        logger.warn({ err: err.message }, '[identity] auto-upgrade check failed');
+        return false;
+    }
+}
+exports._autoUpgradeAllowed = autoUpgradeAllowed;
+
 exports.initIdentityCryptoState = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -34,7 +65,8 @@ exports.initIdentityCryptoState = async (req, res) => {
             algorithm,
             version,
             allowOverwrite,
-            currentPassword
+            currentPassword,
+            autoUpgrade
         } = req.body;
 
         
@@ -91,7 +123,13 @@ exports.initIdentityCryptoState = async (req, res) => {
             const account = await identity.users.findById(userId, { withSecrets: true });
             const passwordOk = Boolean(account?.passwordHash) && typeof currentPassword === 'string' && currentPassword.length > 0
                 && await bcrypt.compare(currentPassword, account.passwordHash);
-            if (!passwordOk) {
+            // Accounts from before automatic unlock (2.1) still have a password-locked key, so
+            // Google sign-in or a new device asked for the password. Right after a real sign-in
+            // on this device they move to automatic unlock without it (see autoUpgradeAllowed).
+            const upgradeOk = !passwordOk && autoUpgrade === true
+                && await autoUpgradeAllowed(req, userId, cryptoState, umekProtectionType);
+            if (upgradeOk) logger.info({ userId }, 'Password-locked encryption moved to automatic unlock after sign-in');
+            if (!passwordOk && !upgradeOk) {
                 return res.status(401).json({ message: 'Enter your current account password to set up encryption again.' });
             }
 

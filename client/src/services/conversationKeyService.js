@@ -167,31 +167,16 @@ class ConversationKeyService {
             }
 
             
-            if (conversationKey && conversationKey.status === 'MISSING_FOR_USER') {
-            }
-
-            
-
-            
-            try {
-                const result = await this.createAndStoreConversationKey(
-                    conversationId,
-                    conversationType,
-                    workspaceId,
-                    participantIds
-                );
-
-                return result.conversationKey;
-
-            } catch (keyError) {
-                
-                if (keyError.message && keyError.message.includes('already exist')) {
-                    const fetchedKey = await this.fetchAndDecryptConversationKey(conversationId, conversationType);
-                    return fetchedKey;
-                } else {
-                    throw keyError;
-                }
-            }
+            // The server makes DM keys (with a server copy, so people who set up encryption
+            // later still get one) and hands out missing copies on this same request, so a second
+            // fetch picks up a key made meanwhile. Never make a browser-only key here: people
+            // without a copy could never be given it.
+            this.conversationKeys.delete(`${conversationType}:${conversationId}`);
+            conversationKey = await this.getConversationKey(conversationId, conversationType);
+            if (conversationKey instanceof CryptoKey) return conversationKey;
+            const err = new Error(conversationKey?.message || 'Your key for this conversation is not ready yet. Please try again in a moment.');
+            err.code = conversationKey?.status || 'KEY_NOT_AVAILABLE';
+            throw err;
 
         } catch (error) {
             logger.error(`❌ [DM ONLY] Failed to ensure conversation key for dm:${conversationId}:`, error);
