@@ -9,7 +9,7 @@ import { useMeetingRecord, useHuddleMeetingId } from '../../meetings/useMeetingR
 import useMeetingTranscript from '../../meetings/useMeetingTranscript';
 import { MeetingTabBar, MeetingTabContent } from '../../meetings/MeetingTabs';
 import MeetingState from '../../meetings/MeetingStates';
-import { normaliseTab, meetingTitle, meetingPath, meetingConversation } from '../../meetings/meetingModel';
+import { normaliseTab, meetingTitle, meetingPath, meetingConversation, openMeetingPage } from '../../meetings/meetingModel';
 import './huddleWorkspace.css';
 import '../../meetings/meetings.css';
 
@@ -114,7 +114,8 @@ export default function HuddleWorkspacePanel() {
                         {pageHref && (
                             <>
                                 <span>·</span>
-                                <a href={pageHref} className="gl-x-link" onClick={go(pageHref)} data-testid="huddle-open-meeting-page">
+                                <a href={pageHref} className="gl-x-link" data-testid="huddle-open-meeting-page"
+                                    onClick={(e) => { e.preventDefault(); openMeetingPage(pageHref, { navigate, inApp: live ? ctx.minimiseCall : undefined }); }}>
                                     <ExternalLink size={10} /> Open meeting page
                                 </a>
                             </>

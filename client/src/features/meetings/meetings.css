@@ -1,9 +1,17 @@
 /* The meeting experience: one tab set on the meeting page and in the in-call panel.
    Theme tokens only (Monolith Gloss), so light and dark both work. */
 
-.mt-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.mt-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; overscroll-behavior-x: contain; }
 .mt-tabs::-webkit-scrollbar { display: none; }
-.mt-tabs .gl-tab { white-space: nowrap; }
+/* Tabs keep their natural width and the bar scrolls; they never squeeze into each other. */
+.mt-tabs .gl-tab { flex: 0 0 auto; min-width: max-content; overflow: visible; padding: 0 10px; white-space: nowrap; }
+/* Fade the edge that has more tabs past it. */
+.mt-tabs[data-more-start='true'] { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px); mask-image: linear-gradient(to right, transparent 0, #000 24px); }
+.mt-tabs[data-more-end='true'] { -webkit-mask-image: linear-gradient(to left, transparent 0, #000 24px); mask-image: linear-gradient(to left, transparent 0, #000 24px); }
+.mt-tabs[data-more-start='true'][data-more-end='true'] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
 
 .mt-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .mt-stack--wide { max-width: 860px; }

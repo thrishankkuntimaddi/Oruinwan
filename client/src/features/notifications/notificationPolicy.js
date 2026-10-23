@@ -182,6 +182,11 @@ export function decideStoredAlert(notification, ctx = {}, prefs = {}) {
     if (QUIET_TYPES.has(type)) return { ...NOTHING, count: true };
 
     const base = { ...NOTHING, count: true };
+    // A channel huddle shows its own "Join" banner in the app: no toast, an OS alert when away.
+    if (type === 'huddle_started') {
+        if (prefs.mentionsOnly) return base;
+        return { ...base, ...deliver(ctx, prefs, { toastAllowed: false }) };
+    }
     // "Only mentions and direct messages": everything else stays in the bell.
     if (prefs.mentionsOnly) return base;
     if (lookingAtIt && isViewingTarget(ctx.pathname, notification, ctx.href)) return base;

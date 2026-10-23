@@ -47,6 +47,8 @@ async function main() {
     // The flows sign the same seeded people in from many fresh browsers; the 4-device limit
     // has its own server tests (signInFlow, deviceLimit), so it is off here.
     DEVICE_LIMIT: '0',
+    // Calls ring for 8 seconds instead of 45, so "no answer" can be tested quickly.
+    HUDDLE_RING_TIMEOUT_MS: '8000',
     SERVER_KEK: E2E.serverKek,
     // Own 32-byte key-encryption key: never inherit CRYPTO_KEK_* from server/.env.
     CRYPTO_KEK_ACTIVE_VERSION: '1',

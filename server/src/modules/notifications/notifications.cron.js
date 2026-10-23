@@ -73,6 +73,12 @@ function startNotificationsCron(io) {
     logger.info('[NotifCron] Starting notification cron jobs...');
     // Old "You have N unread" digest items from before 2.2 no longer belong in the bell.
     try { require('./notification.model').deleteMany({ type: 'digest' })?.catch?.(() => {}); } catch { /* not critical */ }
+    // Unread "New message from …" rows from before grouping become one row per conversation.
+    try {
+        require('./notificationService').mergeLegacyChatNotifications()
+            .then((n) => { if (n) logger.info(`[NotifCron] Merged ${n} old chat notifications into grouped rows`); })
+            .catch((err) => logger.warn('[NotifCron] could not merge old chat notifications:', err.message));
+    } catch { /* not critical */ }
     const stops = [
         scheduleJob({ name: 'notifications-due-soon', intervalMs: DUE_SOON_INTERVAL_MS, initialDelayMs: DUE_SOON_INTERVAL_MS, run: () => checkDueSoonTasks(io) }),
         // notificationJobs.js: reminders, suggestions, offline emails, digest emails.

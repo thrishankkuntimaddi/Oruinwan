@@ -1,5 +1,6 @@
 const logger = require('../../../utils/logger');
 const { registry: defaultRegistry, planSourceOf } = require('./huddleRegistry');
+const ringing = require('./huddleRinging');
 
 /** Session history (MongoDB); required lazily so tests can inject a fake. */
 const defaultHistory = () => require('./huddleHistory.service').recorder;
@@ -104,12 +105,14 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
     }
     if (dmId) {
         const DMSession = require('../../../models/DMSession');
-        const dm = await DMSession.findById(dmId).select('participants workspace blockedBy');
+        const dm = await DMSession.findById(dmId).select('participants workspace blockedBy name isGroup');
         const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
         if (!dm || !participants.includes(uid)) return { ok: false, message: 'Not a participant of this DM' };
         if ((dm.blockedBy || []).length > 0) return { ok: false, message: "You can't call this person." };
+        // A group DM (3+ people) rings everyone else; a 1:1 DM rings the other person.
+        const group = { groupDm: !!dm.isGroup || participants.length > 2, dmName: typeof dm.name === 'string' && dm.name.trim() ? dm.name.trim() : null };
         if (dm.workspace) {
-            return { ok: true, scope: { dmId: String(dmId), workspaceId: String(dm.workspace), planWorkspaceId: String(dm.workspace) }, recipientIds: participants };
+            return { ok: true, scope: { dmId: String(dmId), workspaceId: String(dm.workspace), planWorkspaceId: String(dm.workspace) }, recipientIds: participants, ...group };
         }
         // A DM outside any workspace: the client's workspace id only groups the call (huddle:list,
         // notifications) and only when the caller belongs to it. It never decides the plan:
@@ -119,7 +122,7 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
             const access = await require('../../identity').workspaces.membership(workspaceId, uid).catch(() => null);
             if (access?.member) shownIn = String(workspaceId);
         }
-        return { ok: true, scope: { dmId: String(dmId), workspaceId: shownIn, planWorkspaceId: null }, recipientIds: participants };
+        return { ok: true, scope: { dmId: String(dmId), workspaceId: shownIn, planWorkspaceId: null }, recipientIds: participants, ...group };
     }
     if (workspaceId) {
         const access = await require('../../identity').workspaces.membership(workspaceId, uid);
@@ -154,6 +157,58 @@ async function displayName(socket) {
         socket.data.username = 'Unknown';
     }
     return socket.data.username;
+}
+
+/** Name and picture of the person calling, for the ring screen. */
+async function callerProfile(socket) {
+    if (socket.data.callerProfile) return socket.data.callerProfile;
+    let name = await displayName(socket);
+    let avatar = null;
+    try {
+        const user = await require('../../identity').users.findById(socket.user.id);
+        const pic = user?.profilePicture || user?.profile?.avatar || null;
+        avatar = typeof pic === 'string' && pic ? pic : null;
+        // The ring shows the full name when there is one.
+        if (typeof user?.profile?.name === 'string' && user.profile.name.trim()) name = user.profile.name.trim();
+    } catch { /* the ring shows initials */ }
+    socket.data.callerProfile = { id: String(socket.user.id), name, avatar };
+    return socket.data.callerProfile;
+}
+
+/**
+ * Ring the people a new call is for: everyone else in a DM / group DM (unless they are in a call
+ * already), or a "Join" banner for channel members. Never throws into the caller's start.
+ */
+async function ringForNewCall(io, socket, { registry, huddle, check, meetingId, onNoAnswer, timeoutMs }) {
+    try {
+        const isDm = !!check.scope.dmId;
+        const isChannel = !!check.scope.channelId;
+        if (!isDm && !isChannel) return;
+        const callerId = String(socket.user.id);
+        const callees = (check.recipientIds || []).filter(id => id !== callerId && !registry.callOf(id));
+        const from = await callerProfile(socket);
+        let title = null;
+        if (isChannel) title = check.channelName ? `#${check.channelName}` : null;
+        else if (check.groupDm) title = check.dmName || 'Group call';
+        else title = from.name;
+        ringing.start(io, {
+            huddleId: huddle.huddleId,
+            kind: isChannel ? 'channel' : check.groupDm ? 'group_dm' : 'dm',
+            callerId,
+            callees,
+            workspaceId: huddle.workspaceId || null,
+            dmId: check.scope.dmId || null,
+            channelId: check.scope.channelId || null,
+            title,
+            from,
+            video: !!huddle.video,
+            meetingId,
+            onNoAnswer,
+            timeoutMs,
+        });
+    } catch (err) {
+        logger.warn('[huddle] could not ring:', err.message);
+    }
 }
 
 /** Bus event for a huddle lifecycle change; a bus failure never affects the call. */
@@ -235,6 +290,7 @@ function announceEnded(io, huddle, reason, { history = defaultHistory(), meeting
         payload.message = TIME_LIMIT_MESSAGE(Math.round((Date.now() - new Date(huddle.startedAt).getTime()) / 60000) || 30);
     }
     io.to(`huddle:${huddle.huddleId}`).emit('huddle:ended', payload);
+    ringing.ended(io, huddle.huddleId);
     // Only the conversation's own room: a DM or private-channel huddle must not be announced workspace-wide.
     const room = scopeRoom(huddle);
     if (room) io.to(room).emit('huddle:ended', payload);
@@ -292,7 +348,27 @@ async function meetingIdFor(registry, huddleId) {
     return id || registry.get(huddleId)?.meetingId || null;
 }
 
-function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000, planLimits = defaultPlanLimits } = {}) {
+/**
+ * Someone declined a call ringing for them. A 1:1 call nobody else joined hangs up for the caller.
+ * Returns true when a ring was declined.
+ */
+async function declineCall(io, huddleId, userId, { registry = defaultRegistry, history = defaultHistory(), meetings = defaultMeetings, name = null } = {}) {
+    let who = name;
+    if (!who) {
+        try {
+            const user = await require('../../identity').users.findById(userId);
+            who = user?.profile?.name || user?.username || null;
+        } catch { /* the caller sees "Declined" without a name */ }
+    }
+    const { declined, endCall } = ringing.decline(io, huddleId, userId, who);
+    if (endCall) {
+        const h = registry.get(huddleId);
+        if (h && h.participants.size <= 1) endHuddle(io, huddleId, 'declined', { registry, history, meetings });
+    }
+    return declined;
+}
+
+function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000, planLimits = defaultPlanLimits, ringTimeoutMs = ringing.RING_MS } = {}) {
     const uid = () => String(socket.user.id);
 
     const announce = (huddle, reason) => announceEnded(io, huddle, reason, { history, meetings });
@@ -399,7 +475,19 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             };
             io.to(startedAudience({ ...scope, workspaceId: huddle.workspaceId }, check.recipientIds)).emit('huddle:started', payload);
 
-            if (check.recipientIds) {
+            if (!existed) {
+                await ringForNewCall(io, socket, {
+                    registry, huddle, check, meetingId, timeoutMs: ringTimeoutMs,
+                    // A 1:1 call nobody picked up hangs up by itself.
+                    onNoAnswer: (id) => {
+                        const h = registry.get(id);
+                        if (h && h.participants.size <= 1) endHuddle(io, id, 'no_answer', { registry, history, meetings });
+                    },
+                });
+            }
+
+            // DM calls ring (and leave a missed call); a channel huddle leaves a "huddle started" notification.
+            if (check.recipientIds && check.scope.channelId) {
                 notifyHuddle(io, socket, {
                     recipientIds: check.recipientIds,
                     workspaceId: huddle.workspaceId,
@@ -429,6 +517,11 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // One call per person: ask before switching calls or moving this call to this device.
             const conflict = callConflict(huddleId, data);
             if (conflict) return socket.emit('huddle:error', conflict);
+            // An app reconnecting to a call that ended while it was offline: don't bring it back.
+            if (data.rejoin === true && !registry.get(huddleId) && typeof history.hasEnded === 'function' && await history.hasEnded(huddleId)) {
+                socket.emit('huddle:ended', { huddleId, reason: 'ended' });
+                return;
+            }
             const current = registry.callOf(uid());
             if (current && current.huddle.huddleId !== huddleId) leaveOtherCall(current);
             const before = registry.participant(huddleId, uid());
@@ -484,11 +577,18 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
             const scoped = scopeRoom(registryScope(check.scope));
             if (scoped) io.to(scoped).emit('huddle:participant_joined', { huddleId, meetingId, userId: uid() });
+            ringing.answered(io, huddleId, uid());
             emitSelfActive(io, registry, uid());
         } catch (err) {
             logger.error('[huddle:join] failed:', err);
             huddleError(socket, huddleId, 'SERVER_ERROR', 'Failed to join huddle');
         }
+    });
+
+    // "Decline" on an incoming call (the phone's native button uses POST /api/v2/huddles/:id/decline).
+    socket.on('huddle:decline', async (data = {}) => {
+        if (!data.huddleId) return;
+        await declineCall(io, String(data.huddleId), uid(), { registry, history, meetings, name: await displayName(socket) });
     });
 
     socket.on('huddle:leave', (data = {}) => {
@@ -609,6 +709,7 @@ module.exports.verifyScope = verifyScope;
 module.exports.startedAudience = startedAudience;
 module.exports.scopeKind = scopeKind;
 module.exports.endHuddle = endHuddle;
+module.exports.declineCall = declineCall;
 module.exports.announceEnded = announceEnded;
 module.exports.defaultPlanLimits = defaultPlanLimits;
 module.exports.verifyScopeMembership = verifyScopeMembership;

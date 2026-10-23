@@ -177,6 +177,18 @@ function createRecorder({
             });
         },
 
+        /**
+         * Whether this huddle's last run is over: it was recorded and closed. A run that was never
+         * closed (the server restarted mid-call) is not over, so its people can rejoin it.
+         */
+        async hasEnded(huddleId) {
+            if (!isConnected()) return false;
+            await queue.idle(huddleId);
+            const S = model();
+            if (await S.exists({ huddleId, endedAt: null })) return false;
+            return !!(await S.exists({ huddleId }));
+        },
+
         /** Resolves once every queued write for this huddle has finished. */
         whenIdle: (huddleId) => queue.idle(huddleId),
     };

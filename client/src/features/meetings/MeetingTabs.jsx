@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutList, ListOrdered, NotebookPen, Captions, ListChecks, PenTool, StickyNote, MessageSquare } from 'lucide-react';
 import Whiteboard from '../../components/meetingsComp/Whiteboard';
 import BrainstormBoard from '../../components/meetingsComp/BrainstormBoard';
@@ -24,8 +24,34 @@ export function meetingTabs({ withChat = false } = {}) {
 /** The tab bar — the same on the meeting page and in the in-call panel. */
 export function MeetingTabBar({ active, onChange, meeting, withChat = false, testIdPrefix = 'meeting-tab' }) {
     const open = meeting ? normaliseActionItems(meeting.actionItems).filter((a) => !a.done).length : 0;
+    const barRef = useRef(null);
+    const [more, setMore] = useState({ start: false, end: false });
+
+    // In a narrow panel the bar scrolls: fade the side that has more tabs.
+    const measure = useCallback(() => {
+        const el = barRef.current;
+        if (!el) return;
+        const start = el.scrollLeft > 2;
+        const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+        setMore(prev => (prev.start === start && prev.end === end ? prev : { start, end }));
+    }, []);
+    useEffect(() => {
+        measure();
+        const el = barRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return undefined;
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [measure, withChat]);
+    // Keep the chosen tab in view.
+    useEffect(() => {
+        const tab = barRef.current?.querySelector('[aria-selected="true"]');
+        try { tab?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }); } catch { /* old browsers */ }
+    }, [active]);
+
     return (
-        <div className="gl-tabs mt-tabs" role="tablist" aria-label="Meeting">
+        <div ref={barRef} className="gl-tabs mt-tabs" role="tablist" aria-label="Meeting" onScroll={measure}
+            data-more-start={more.start} data-more-end={more.end}>
             {meetingTabs({ withChat }).map(({ id, label, Icon }) => (
                 <button key={id} type="button" role="tab" className="gl-tab" aria-selected={active === id}
                     onClick={() => onChange(id)} data-testid={`${testIdPrefix}-${id}`}>

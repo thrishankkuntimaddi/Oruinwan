@@ -163,3 +163,31 @@ describe('message pushes carry the quick-reply category', () => {
     expect(axios.post.mock.calls[0][1].message.android.notification.channel_id).toBe('messages');
   });
 });
+
+describe('call pushes', () => {
+  const call = { huddleId: 'h1', kind: 'dm', dmId: 'd1', from: { id: 'u2', name: 'Ben' }, video: true, ring: true };
+
+  test('Android: a ringing call is a high-priority data-only message that expires with the ring', async () => {
+    process.env.FIREBASE_SERVICE_ACCOUNT = serviceAccount;
+    mockUser.deviceTokens = [{ token: 'a'.repeat(40), platform: 'android' }];
+    axios.post.mockReset();
+    axios.post.mockResolvedValue({ data: {} });
+    await push.sendCallToUser('u1', 'call', call);
+    const message = axios.post.mock.calls[0][1].message;
+    expect(message.notification).toBeUndefined();
+    expect(message.android).toEqual({ priority: 'HIGH', ttl: '45s' });
+    expect(message.data.type).toBe('call');
+    expect(JSON.parse(message.data.call)).toMatchObject({ huddleId: 'h1', from: { name: 'Ben' }, video: true });
+  });
+
+  test('Android: a cancel is data-only too', async () => {
+    process.env.FIREBASE_SERVICE_ACCOUNT = serviceAccount;
+    mockUser.deviceTokens = [{ token: 'a'.repeat(40), platform: 'android' }];
+    axios.post.mockReset();
+    axios.post.mockResolvedValue({ data: {} });
+    await push.sendCallToUser('u1', 'call_cancel', { huddleId: 'h1', reason: 'answered_elsewhere' });
+    const message = axios.post.mock.calls[0][1].message;
+    expect(message.notification).toBeUndefined();
+    expect(message.data).toMatchObject({ type: 'call_cancel', huddleId: 'h1', reason: 'answered_elsewhere' });
+  });
+});

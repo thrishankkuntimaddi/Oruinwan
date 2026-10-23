@@ -611,7 +611,8 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
             const id = huddleIdRef.current;
             if (!id) return;
             cleanupPeers();
-            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice() });
+            // rejoin: the server won't bring back a call that ended while we were offline.
+            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice(), rejoin: true });
         };
 
         socket.on('huddle:roster', onRoster);

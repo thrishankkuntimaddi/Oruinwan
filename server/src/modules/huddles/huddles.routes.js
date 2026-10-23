@@ -39,6 +39,31 @@ router.param('huddleId', (req, res, next, id) => (
   /^[A-Za-z0-9_-]{1,80}$/.test(id) ? next() : res.status(400).json({ message: 'Invalid huddle id' })
 ));
 
+// Decline a call that is ringing for me (the phone's native Decline button, even with the app
+// closed). The same as the socket event huddle:decline; 404 when nothing is ringing.
+router.post('/:huddleId/decline', requireAuth, handle(async (req) => {
+  const { declineCall } = require('./huddles.socket');
+  const declined = await declineCall(req.io, req.params.huddleId, userId(req));
+  if (!declined) throw Object.assign(new Error('That call is no longer ringing.'), { status: 404 });
+  return { ok: true };
+}));
+
+// The same, without signing in: the signed link in each ring (`declineUrl`), for a phone's ring
+// notification while the app is closed. 401 for an expired link, 403 for a forged one.
+router.post('/:huddleId/decline-ring', handle(async (req) => {
+  const ringing = require('./huddleRinging');
+  const token = String(req.query?.token || req.body?.token || '');
+  const check = ringing.verifyDecline(req.params.huddleId, token);
+  if (!check.ok) {
+    throw Object.assign(new Error(check.error === 'expired' ? 'This call is no longer ringing.' : 'Invalid decline link.'),
+      { status: check.error === 'expired' ? 401 : 403 });
+  }
+  const { declineCall } = require('./huddles.socket');
+  const declined = await declineCall(req.io, req.params.huddleId, check.userId);
+  if (!declined) throw Object.assign(new Error('That call is no longer ringing.'), { status: 404 });
+  return { ok: true };
+}));
+
 // Past huddles in a workspace (survives reloads; live ones are in huddle:list).
 router.get('/history', requireAuth, handle(async (req) => {
   const { workspaceId, limit } = req.query;

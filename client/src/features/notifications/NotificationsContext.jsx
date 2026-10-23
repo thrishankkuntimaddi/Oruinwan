@@ -4,7 +4,7 @@ import api from '@services/api';
 import { useSocket } from '../../contexts/SocketContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useDesktopNotification } from './useDesktopNotification';
+import NotificationPermissionPrompt from './NotificationPermissionPrompt';
 import logger from '../../utils/logger';
 import { useToast } from '../../contexts/ToastContext';
 import { decryptTextOrNull } from '../../services/messageEncryptionService';
@@ -67,7 +67,6 @@ export function NotificationsProvider({ children }) {
     const { addNotificationListener, socket } = useSocket();
     const { activeWorkspace } = useWorkspace();
     const { accessToken, user } = useAuth();
-    useDesktopNotification(); // asks for OS notification permission once
     const { showToast } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
@@ -143,7 +142,7 @@ export function NotificationsProvider({ children }) {
     }, [unreadCount, totalConversationUnread]);
 
     // Decrypt the E2EE preview stored on dm/mention notifications so the bell
-    // shows the actual text instead of "Sent you a message".
+    // shows the actual text instead of "New message".
     const enrichPreview = useCallback(async (n) => {
         const p = n?.meta?.preview;
         const convType = n?.meta?.dmSessionId ? 'dm' : (n?.meta?.channelId ? 'channel' : null);
@@ -638,6 +637,8 @@ export function NotificationsProvider({ children }) {
     return (
         <NotificationsContext.Provider value={value}>
             {children}
+            {/* Browsers only ask for notification permission after a click, so we offer it. */}
+            <NotificationPermissionPrompt enabled={!!accessToken} />
         </NotificationsContext.Provider>
     );
 }
