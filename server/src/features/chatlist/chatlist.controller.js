@@ -2,6 +2,8 @@ const logger = require('../../../utils/logger');
 const Message = require("../../modules/messages/message.model.js");
 const identity = require("../../identity");
 const Channel = require("../channels/channel.model.js");
+const mongoose = require("mongoose");
+const readReceipts = require("../../modules/messages/readReceipts.service");
 
 exports.getChatList = async (req, res) => {
   try {
@@ -123,19 +125,26 @@ exports.getChatList = async (req, res) => {
   }
 };
 
+// The REST twin of the socket's `mark-chat-read` (used when the socket isn't connected):
+// same access check, read times and events.
 exports.resetUnread = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { type, id } = req.body;
+    const { type, id, receipts } = req.body || {};
 
     if (!type || !id)
       return res.status(400).json({ message: "type and id required" });
+    if (!mongoose.Types.ObjectId.isValid(String(id)))
+      return res.status(400).json({ message: "Invalid conversation id" });
 
-    const scope = type === "dm" ? { dm: id } : { channel: id };
-    await Message.updateMany(
-      { ...scope, sender: { $ne: userId }, readBy: { $ne: userId } },
-      { $addToSet: { readBy: userId } }
-    );
+    let io = null;
+    try { io = require("../../socket/getIO").getIO(); } catch { /* sockets optional */ }
+    const result = await readReceipts.markConversationRead(io, { readerId: userId, type, id, receipts });
+    if (!result.ok) {
+      return result.reason === "forbidden"
+        ? res.status(403).json({ message: "You are not in this conversation" })
+        : res.status(400).json({ message: "type must be dm or channel" });
+    }
 
     res.json({ success: true });
   } catch (err) {

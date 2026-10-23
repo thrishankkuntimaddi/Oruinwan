@@ -11,6 +11,7 @@ const mongoose = require('mongoose');
 const { canAccessMessage, loadAccessibleMessage } = require('./messageAccess');
 const { redactReadBy, readersHidingReceipts } = require('../../features/auth/privacy.service');
 const { sanitizeAttachments } = require('../uploads/attachmentSanitizer');
+const { withReadTimes } = require('./readReceipts.service');
 
 // Validated attachments, or null after answering the request with the error.
 async function cleanAttachmentsOrRespond(res, attachments, senderId) {
@@ -1138,7 +1139,7 @@ exports.getMessageInfo = async (req, res) => {
         const userId = req.user.sub;
         const { messageId } = req.params;
 
-        const message = await loadAccessibleMessage(Message, messageId, userId, { lean: true });
+        const message = await loadAccessibleMessage(Message, messageId, userId, { select: '+readReceipts', lean: true });
         const CARD = { type: 'user', fields: ['username', 'profilePicture'] };
         await hydrate(message, { sender: CARD, readBy: CARD, pinnedBy: CARD });
 
@@ -1179,7 +1180,9 @@ exports.getMessageInfo = async (req, res) => {
         } catch (err) {
             logger.warn({ err: err.message }, '[PRIVACY] read-receipt lookup failed');
         }
-        const readByIds = [...new Set(readByUsers.map(u => u._id))];
+        // Each reader once, with when they first read it (null for reads before read times were kept).
+        readByUsers = withReadTimes(readByUsers.filter((u, i, all) => all.findIndex(x => x._id === u._id) === i), message.readReceipts);
+        const readByIds = readByUsers.map(u => u._id);
 
         const editCount = (message.editHistory || []).length;
         const pinnedBy = message.pinnedBy
