@@ -89,3 +89,37 @@ export function actionLabel(action) {
   const s = String(action || 'event').replace(/[._:]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim().toLowerCase();
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+/**
+ * What I may do to a workspace member, mirroring the server's hierarchy: nobody acts on the
+ * owner or on themselves; only the owner acts on admins; admins and the owner act on members.
+ * → { role: 'admin' | 'member' | null, suspend, restore, remove } (role: the role I can switch them to).
+ */
+export function memberActions(myRole, person) {
+  const none = { role: null, suspend: false, restore: false, remove: false };
+  if (!person || person.isMe || person.role === 'owner') return none;
+  if (!['owner', 'admin'].includes(myRole)) return none;
+  if (person.role === 'admin' && myRole !== 'owner') return none;
+  const suspended = person.status === 'suspended';
+  return {
+    role: suspended ? null : person.role === 'admin' ? 'member' : 'admin',
+    suspend: !suspended,
+    restore: suspended,
+    remove: true,
+  };
+}
+
+/** Active members other than me who could become the owner. */
+export const ownerCandidates = (members = []) =>
+  members.filter((m) => !m.isMe && m.role !== 'owner' && (m.status || 'active') === 'active');
+
+/** The edits worth saving on the General screen (empty when nothing changed). */
+export function workspaceInfoChanges(current = {}, form = {}) {
+  const out = {};
+  const name = String(form.name ?? '').trim();
+  if (name && name !== (current.name || '')) out.name = name;
+  for (const k of ['description', 'rules']) {
+    if (typeof form[k] === 'string' && form[k] !== (current[k] || '')) out[k] = form[k];
+  }
+  return out;
+}

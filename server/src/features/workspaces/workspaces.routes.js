@@ -3,6 +3,7 @@ const { requireCompanyPermission } = require('../../shared/companyPermissions');
 const router = express.Router();
 const workspaceController = require('./workspace.controller');
 const workspaceAdminController = require('./workspace-admin.controller');
+const lifecycle = require('./workspace-lifecycle.controller');
 const planGuards = require('../../shared/plans/planGuards');
 
 const requireAuth = require('../../shared/middleware/auth');
@@ -74,9 +75,13 @@ router.post('/:workspaceId/channels', ...memberGatePersonal, requireCompanyPermi
 
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 
-router.post('/:workspaceId/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
+// Admins always; members too while settings.allowMemberInvite is on (their invites are 'member').
+router.post('/:workspaceId/invite', ...memberGatePersonal, lifecycle.requireInviteRight, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
 
-router.post('/:id/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
+router.post('/:id/invite', ...memberGatePersonal, lifecycle.requireInviteRight, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
+
+// New members join default channels automatically and can't leave them.
+router.put('/:workspaceId/channels/:channelId/default', ...adminGatePersonal, lifecycle.setDefaultChannel);
 
 router.get('/:workspaceId/invites', ...adminGatePersonal, workspaceAdminController.getWorkspaceInvites);
 router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGatePersonal, workspaceAdminController.revokeInvite);
@@ -112,6 +117,10 @@ const requireWorkspaceOwner = (req, res, next) => {
     next();
 };
 router.delete('/:id', ...memberGatePersonal, requireWorkspaceOwner, workspaceController.deleteWorkspace);
+router.post('/:id/transfer-ownership', ...memberGatePersonal, requireWorkspaceOwner, lifecycle.transferOwnership);
+router.post('/:id/archive', ...memberGatePersonal, requireWorkspaceOwner, lifecycle.archiveWorkspace);
+// An archived workspace fails requireWorkspaceMember, so restoring checks ownership itself.
+router.post('/:id/unarchive', requireAuth, lifecycle.unarchiveWorkspace);
 
 const workspacePermissionsRouter = require('../workspace-permissions/workspace-permissions.routes');
 router.use('/:id', workspacePermissionsRouter);

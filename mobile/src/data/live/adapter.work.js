@@ -851,16 +851,61 @@ export const workAdapter = {
     const a = data.analytics || {};
     return { summary: a.summary || {}, daily: a.charts?.dailyTasks || [], range: a.range || range, computedAt: a.computedAt || null };
   },
+  /**
+   * Who may invite people and create channels: 'member' (everyone) or 'admin' (admins and the owner).
+   * These are the workspace settings the server enforces (allowMemberInvite / allowMemberChannelCreation,
+   * on unless turned off), the same switches as the web's Workspace admin → Permissions.
+   */
   async workspacePermissions(ws) {
-    const data = await api.get(`/workspaces/${ws}/permissions`);
-    const p = data.permissions || {};
-    return { invite: p.invitePermission || 'admin', channelCreation: p.channelCreationPermission || 'member', features: p.featureToggles || {} };
+    const data = await api.get('/workspaces/my');
+    const w = (data.workspaces || []).find((x) => idOf(x) === String(ws));
+    const s = w?.settings || {};
+    return { invite: s.allowMemberInvite === false ? 'admin' : 'member', channelCreation: s.allowMemberChannelCreation === false ? 'admin' : 'member' };
   },
   async saveWorkspacePermissions(ws, { invite, channelCreation }) {
-    await api.put(`/workspaces/${ws}/permissions`, {
-      ...(invite ? { invitePermission: invite } : {}),
-      ...(channelCreation ? { channelCreationPermission: channelCreation } : {}),
-    });
+    const settings = {};
+    if (invite) settings.allowMemberInvite = invite === 'member';
+    if (channelCreation) settings.allowMemberChannelCreation = channelCreation === 'member';
+    await api.put(`/workspaces/${ws}`, { settings });
+  },
+  /** Name (renamed separately: names are unique per member), description and rules. */
+  async updateWorkspaceInfo(ws, { name, description, rules } = {}, current = {}) {
+    if (typeof name === 'string' && name.trim() && name.trim() !== current.name) {
+      await api.put(`/workspaces/${ws}/rename`, { name: name.trim() });
+    }
+    const body = {};
+    if (typeof description === 'string' && description !== (current.description || '')) body.description = description;
+    if (typeof rules === 'string' && rules !== (current.rules || '')) body.rules = rules;
+    if (Object.keys(body).length) await api.put(`/workspaces/${ws}`, body);
+  },
+  async changeMemberRole(ws, userId, role) {
+    await api.post(`/workspaces/${ws}/members/${userId}/change-role`, { newRole: role });
+  },
+  async suspendMember(ws, userId) {
+    await api.post(`/workspaces/${ws}/members/${userId}/suspend`);
+  },
+  async restoreMember(ws, userId) {
+    await api.post(`/workspaces/${ws}/members/${userId}/restore`);
+  },
+  async removeMember(ws, userId) {
+    await api.post(`/workspaces/${ws}/remove-member`, { userId });
+  },
+  /** Owner only: the new owner must be an active member; you stay on as an admin. */
+  async transferOwnership(ws, userId) {
+    return api.post(`/workspaces/${ws}/transfer-ownership`, { userId });
+  },
+  async archiveWorkspace(ws) {
+    await api.post(`/workspaces/${ws}/archive`);
+  },
+  async deleteWorkspace(ws) {
+    await api.del(`/workspaces/${ws}`);
+  },
+  async leaveWorkspace(ws) {
+    await api.post(`/workspaces/${ws}/leave`);
+  },
+  /** Default channels: new members join them automatically (turning one on adds everyone already here). */
+  async setDefaultChannel(ws, channelId, isDefault) {
+    return api.put(`/workspaces/${ws}/channels/${channelId}/default`, { isDefault: Boolean(isDefault) });
   },
   async workspaceFeatures(ws) {
     const data = await api.get(`/workspaces/${ws}/features`);
@@ -883,7 +928,7 @@ export const workAdapter = {
   /** Raw workspace members with roles (the directory). */
   async memberDirectory(ws) {
     const data = await api.get(`/workspaces/${ws}/members`);
-    return (data.members || []).map((m) => ({ ...person(m), role: m.role || 'member', title: m.jobTitle || m.profile?.title || null, phone: m.phone || null, joinedAt: m.joinedAt || null, online: Boolean(m.isOnline) }));
+    return (data.members || []).map((m) => ({ ...person(m), role: m.role || 'member', status: m.membershipStatus || 'active', isMe: Boolean(m.isCurrentUser), title: m.jobTitle || m.profile?.title || null, phone: m.phone || null, joinedAt: m.joinedAt || null, online: Boolean(m.isOnline) }));
   },
   async employees(companyId, { search = '', page = 1 } = {}) {
     const data = await api.get(`/companies/${companyId}/employees`, { search, page, limit: 50 });

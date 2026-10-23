@@ -10,12 +10,14 @@ import InvitationsTab from '../../../workspace/settings/InvitationsTab';
 import MembersTab from '../../../workspace/settings/MembersTab';
 import PermissionsTab from '../../../workspace/settings/PermissionsTab';
 import GeneralTab from '../../../workspace/settings/GeneralTab';
-import BillingTab from '../../../workspace/settings/BillingTab';
+import ChannelsTab from '../../../workspace/settings/ChannelsTab';
+import PlanUsageSection from '../../../../features/plan/PlanUsageSection';
+import AITab from '../../../../pages/settingsTabs/AITab';
+import IntegrationsTab from '../../../../pages/settingsTabs/IntegrationsTab';
 import AdvancedTab from '../../../workspace/settings/AdvancedTab';
 import FeaturesTab from '../../../workspace/settings/FeaturesTab';
 import DataTab from '../../../workspace/settings/DataTab';
 import WorkspaceAnalyticsDashboard from '../../../../pages/workspace-os/WorkspaceAnalyticsDashboard';
-import { useFlag } from '../../../../contexts/FeatureFlagsContext';
 import logger from '../../../../utils/logger';
 import { DEFAULT_WORKSPACE_COLOR } from '../../../../utils/workspaceIcons';
 
@@ -23,19 +25,23 @@ import { DEFAULT_WORKSPACE_COLOR } from '../../../../utils/workspaceIcons';
 const SECTION_LEADS = {
     Overview: 'How this workspace is doing, and the things admins do most.',
     General: 'Name, icon, colour and the rules people see when they join.',
-    Permissions: 'Who can invite people, create channels and find this workspace.',
+    Permissions: 'Whether members can invite people and create channels.',
+    Channels: 'Default channels everyone joins automatically.',
     Members: 'Everyone in this workspace: change roles, suspend or remove people.',
     Invitations: 'Invites waiting to be accepted, and team links. Revoke any of them here.',
     'Agents & apps': 'AI agents installed here, plus apps and workflows.',
     Features: 'Turn workspace features on or off for everyone.',
+    AI: 'Which AI engine answers in this workspace, smart replies, and usage.',
+    Integrations: 'Connect GitHub, Jira, Slack and more, and send events out with webhooks.',
     Analytics: 'Activity in this workspace over time.',
-    Data: 'Export this workspace’s data.',
-    Billing: 'Plan and usage.',
-    Advanced: 'Leave or delete the workspace.',
+    Data: 'Export, import, clone, retention and compliance exports.',
+    'Plan & usage': 'What this workspace’s plan includes and how much of it is used.',
+    'Danger zone': 'Transfer ownership, archive or delete the workspace.',
 };
 
-const PERMISSION_KEYS = ['allowMemberChannelCreation', 'allowMemberInvite', 'requireAdminApproval', 'isDiscoverable'];
-const permissionsFrom = (ws) => Object.fromEntries(PERMISSION_KEYS.map(k => [k, !!ws?.settings?.[k]]));
+const PERMISSION_KEYS = ['allowMemberChannelCreation', 'allowMemberInvite'];
+// Both are on unless turned off (the server and the invite button treat a missing value as on).
+export const permissionsFrom = (ws) => Object.fromEntries(PERMISSION_KEYS.map(k => [k, ws?.settings?.[k] !== false]));
 
 /**
  * Workspace settings. `variant="modal"` (default): the dialog from the workspace menu.
@@ -80,7 +86,6 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
 
     const isOwner = activeWorkspace?.role === 'owner' || !!activeWorkspace?.isOwner;
     const isAdmin = isOwner || activeWorkspace?.role === 'admin';
-    const billingEnabled = useFlag('billing');
     useEffect(() => {
         if (!showSettingsModal || isPage) return undefined;
         const onKey = (e) => { if (e.key === 'Escape') setShowSettingsModal(false); };
@@ -177,10 +182,22 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         }
     };
 
+    // After a transfer the role changed; after archiving the workspace is gone from the list.
+    const handleLifecycleChange = async (what) => {
+        if (what === 'archived') {
+            setShowSettingsModal(false);
+            navigate('/workspaces', { replace: true });
+            return;
+        }
+        await refreshWorkspace();
+        fetchMembers();
+        setActiveSettingsTab(isPage ? 'Overview' : 'General');
+    };
+
     if (!showSettingsModal) return null;
 
     const tabs = isAdmin
-        ? [...(isPage ? ["Overview"] : []), "General", "Permissions", "Members", "Invitations", ...(isPage ? ["Agents & apps"] : []), "Features", "Analytics", "Data", ...(billingEnabled ? ["Billing"] : []), "Advanced"]
+        ? [...(isPage ? ["Overview"] : []), "General", "Permissions", "Members", "Invitations", "Channels", ...(isPage ? ["Agents & apps"] : []), "Features", "AI", "Integrations", "Analytics", "Data", "Plan & usage", ...(isOwner ? ["Danger zone"] : [])]
         : [...(isPage ? ["Overview"] : []), "General", "Members"];
 
     return (
@@ -284,8 +301,17 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                         {activeSettingsTab === "Invitations" && (
                             <InvitationsTab activeWorkspace={activeWorkspace} isAdmin={isAdmin} />
                         )}
-                        {activeSettingsTab === "Billing" && (
-                            <BillingTab stats={stats} loadingStats={loadingStats} />
+                        {activeSettingsTab === "Channels" && (
+                            <ChannelsTab workspaceId={activeWorkspace?.id} isAdmin={isAdmin} />
+                        )}
+                        {activeSettingsTab === "AI" && (
+                            <div className="stg"><AITab embedded workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} /></div>
+                        )}
+                        {activeSettingsTab === "Integrations" && (
+                            <div className="stg"><IntegrationsTab embedded workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} /></div>
+                        )}
+                        {activeSettingsTab === "Plan & usage" && (
+                            <div className="stg"><PlanUsageSection embedded workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} /></div>
                         )}
                         {activeSettingsTab === "Features" && (
                             <FeaturesTab workspaceId={activeWorkspace?.id} isAdmin={isAdmin} />
@@ -296,8 +322,8 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                         {activeSettingsTab === "Data" && (
                             <DataTab workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} />
                         )}
-                        {activeSettingsTab === "Advanced" && (
-                            <AdvancedTab isOwner={isOwner} setShowDeleteConfirm={setShowDeleteConfirm} />
+                        {activeSettingsTab === "Danger zone" && (
+                            <AdvancedTab isOwner={isOwner} workspace={activeWorkspace} members={members} setShowDeleteConfirm={setShowDeleteConfirm} onChanged={handleLifecycleChange} />
                         )}
                     </div>
                 </div>

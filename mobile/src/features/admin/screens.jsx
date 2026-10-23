@@ -4,8 +4,8 @@
 // Privacy: analytics are counts only. Nothing here shows messages or who talks to whom.
 import { useMemo, useRef, useState } from 'react';
 import {
-  Activity, BarChart3, Building2, ClipboardCheck, Copy, Download, FileJson, Gavel, Hash, LayoutTemplate, Lock, Megaphone, Network, ScrollText,
-  ShieldCheck, SlidersHorizontal, ToggleRight, Upload, Users, UsersRound,
+  Activity, Archive, BarChart3, Building2, ClipboardCheck, Copy, Crown, Download, FileJson, Gauge, Gavel, Hash, LayoutTemplate, Lock, LogOut, Megaphone, Network,
+  ScrollText, Settings2, ShieldCheck, SlidersHorizontal, ToggleRight, Trash2, Upload, Users, UsersRound,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
@@ -24,7 +24,8 @@ import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import {
-  FEATURE_LABELS, MATRIX_ROLES, PERMISSION_LABELS, actionLabel, exportFileName, flattenTree, isCompanyAdmin, isWorkspaceAdmin, parseBundle, toggleCell,
+  FEATURE_LABELS, MATRIX_ROLES, PERMISSION_LABELS, actionLabel, exportFileName, flattenTree, isCompanyAdmin, isWorkspaceAdmin, memberActions, ownerCandidates,
+  parseBundle, toggleCell, workspaceInfoChanges,
 } from './adminUi.js';
 
 const useCompany = () => useQuery('company:ctx', () => api().companyContext(), { staleMs: 5 * 60_000 });
@@ -90,10 +91,12 @@ export function AdminScreen() {
       <Body>
         <Section title="Workspace">
           <RowGroup>
+            <Row icon={Settings2} tile="accent" title="General" subtitle={workspace.role === 'owner' ? 'Name, description, rules · transfer, archive or delete' : 'Name, description and rules'} onClick={() => nav.push('admin.workspace')} />
             <Row icon={BarChart3} tile="accent" title="Analytics" subtitle="Members, channels, tasks and files" onClick={() => nav.push('admin.analytics')} />
             <Row icon={ToggleRight} tile="accent" title="Features" subtitle="Turn tasks, AI, huddles and more on or off" onClick={() => nav.push('admin.features')} />
             <Row icon={SlidersHorizontal} tile="accent" title="Permissions" subtitle="Who can invite and create channels" onClick={() => nav.push('admin.permissions')} />
-            <Row icon={Megaphone} tile="accent" title="Channel settings" subtitle="Posting policy, @channel and @here" onClick={() => nav.push('admin.channels')} />
+            <Row icon={Megaphone} tile="accent" title="Channel settings" subtitle="Default channels, posting policy, @channel and @here" onClick={() => nav.push('admin.channels')} />
+            <Row icon={Gauge} tile="accent" title="Plan & usage" subtitle="What this workspace's plan includes" onClick={() => nav.push('settings.plan')} />
           </RowGroup>
         </Section>
         <Section title="People">
@@ -226,10 +229,10 @@ export function AdminFeaturesScreen() {
 
 // ---------------------------------------------------------------- permissions
 
+// The workspace settings the server enforces: everyone, or admins and the owner only.
 const WHO = [
-  { value: 'owner', label: 'Owners' },
-  { value: 'admin', label: 'Admins' },
   { value: 'member', label: 'Everyone' },
+  { value: 'admin', label: 'Admins only' },
 ];
 
 function MatrixEditor({ canEdit }) {
@@ -347,6 +350,19 @@ const POLICY = [
 ];
 
 function ChannelPolicySheet({ channel, onClose }) {
+  const workspace = useWorkspace();
+  const [isDefault, setIsDefault] = useState(Boolean(channel.isDefault));
+  const setDefault = async (on) => {
+    setIsDefault(on);
+    try {
+      const res = await api().setDefaultChannel(workspace.id, channel.id, on);
+      toast(on ? `Default channel${res?.added ? ` · ${res.added} added` : ''}` : 'No longer a default channel', 'success');
+      invalidate('channels');
+    } catch (err) {
+      setIsDefault(!on);
+      toast(err.message || "Couldn't save that", 'danger');
+    }
+  };
   const key = `chpolicy:${channel.id}`;
   const { data, loading } = useQuery(key, () => api().channelPolicy(channel.id), { staleMs: 0 });
   const save = async (field, value) => {
@@ -373,6 +389,13 @@ function ChannelPolicySheet({ channel, onClose }) {
           <div>
             <p className="mb-1.5 text-[13px] font-medium text-text-2">Who can use @channel and @here</p>
             <Segmented size="sm" options={POLICY} value={data.mentions} onChange={(v) => save('mentions', v)} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-text-2">Default channel</p>
+              <p className="text-xs text-text-3">{channel.private ? "Private channels can't be defaults." : 'New members join it automatically and can’t leave it.'}</p>
+            </div>
+            <Toggle label="Default channel" checked={isDefault} disabled={channel.private} onChange={setDefault} />
           </div>
           {!data.canManage && <p className="text-xs text-text-2">You can see these settings, but only channel admins and workspace admins can change them.</p>}
         </div>
@@ -401,7 +424,7 @@ export function AdminChannelsScreen() {
         ) : (
           <RowGroup className="mt-1">
             {list.map((c) => (
-              <Row key={c.id} icon={c.private ? Lock : Hash} title={c.name} subtitle={c.broadcast ? 'Admins post' : 'Everyone posts'} onClick={() => setOpen(c)} />
+              <Row key={c.id} icon={c.private ? Lock : Hash} title={c.name} subtitle={[c.isDefault && 'Default', c.broadcast ? 'Admins post' : 'Everyone posts'].filter(Boolean).join(' · ')} onClick={() => setOpen(c)} />
             ))}
           </RowGroup>
         )}
@@ -413,7 +436,59 @@ export function AdminChannelsScreen() {
 
 // ---------------------------------------------------------------- directory & legal holds
 
-function PersonSheet({ person, canHold, onClose }) {
+const ACTION_TEXT = {
+  suspend: ['Suspend', 'suspended', 'They keep their account but can’t open this workspace until restored.'],
+  restore: ['Restore', 'restored', null],
+  remove: ['Remove from workspace', 'removed', 'They lose access to this workspace and its channels.'],
+};
+
+function MemberActions({ person, onDone }) {
+  const workspace = useWorkspace();
+  const can = memberActions(workspace?.role, person);
+  const [confirm, setConfirm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  if (!can.role && !can.suspend && !can.restore && !can.remove) return null;
+  const run = async (what) => {
+    setBusy(true);
+    try {
+      if (what === 'role') await api().changeMemberRole(workspace.id, person.id, can.role);
+      else if (what === 'suspend') await api().suspendMember(workspace.id, person.id);
+      else if (what === 'restore') await api().restoreMember(workspace.id, person.id);
+      else await api().removeMember(workspace.id, person.id);
+      toast(what === 'role' ? `${person.name} is now ${can.role === 'admin' ? 'an admin' : 'a member'}` : `${person.name} ${ACTION_TEXT[what][1]}`, 'success');
+      invalidate('directory');
+      onDone?.();
+    } catch (err) {
+      toast(err.message || "Couldn't do that", 'danger');
+    } finally {
+      setBusy(false);
+      setConfirm(null);
+    }
+  };
+  return (
+    <div className="mt-5">
+      <p className="mb-1.5 text-[13px] font-medium text-text-2">In this workspace</p>
+      <RowGroup>
+        {can.role && <Row icon={Crown} title={can.role === 'admin' ? 'Make admin' : 'Make member'} disabled={busy} onClick={() => run('role')} chevron={false} />}
+        {can.restore && <Row icon={Users} title="Restore access" disabled={busy} onClick={() => run('restore')} chevron={false} />}
+        {can.suspend && <Row icon={Lock} title="Suspend" disabled={busy} onClick={() => setConfirm('suspend')} chevron={false} />}
+        {can.remove && <Row icon={Trash2} danger title="Remove from workspace" disabled={busy} onClick={() => setConfirm('remove')} chevron={false} />}
+      </RowGroup>
+      <Dialog
+        open={Boolean(confirm)}
+        onClose={() => setConfirm(null)}
+        title={confirm ? `${ACTION_TEXT[confirm][0]} ${person.name}?` : ''}
+        body={confirm ? ACTION_TEXT[confirm][2] : null}
+        confirmLabel={confirm ? ACTION_TEXT[confirm][0] : 'Confirm'}
+        danger
+        busy={busy}
+        onConfirm={() => run(confirm)}
+      />
+    </div>
+  );
+}
+
+function PersonSheet({ person, canHold, onClose, workspaceMember = false }) {
   const key = `legalhold:${person.id}`;
   const hold = useQuery(canHold && key, () => api().legalHold(person.id), { staleMs: 0 });
   const [reason, setReason] = useState('');
@@ -441,6 +516,7 @@ function PersonSheet({ person, canHold, onClose }) {
         <Button className="mt-4" variant="secondary" block onClick={() => { onClose(); nav.push('profile', { userId: person.id }); }}>
           Open profile
         </Button>
+        {workspaceMember && <MemberActions person={person} onDone={onClose} />}
         {canHold && (
           <div className="mt-5 rounded-card border border-line-soft bg-surface p-4">
             <p className="flex items-center gap-2 text-[15px] font-medium">
@@ -505,14 +581,14 @@ export function AdminDirectoryScreen({ holds = false }) {
         ) : list.length ? (
           <RowGroup className="mt-1" footer={scope === 'company' && employees.data?.total > list.length ? `Showing ${list.length} of ${employees.data.total}. Search to narrow it down.` : null}>
             {list.map((p) => (
-              <Row key={p.id} leading={<Avatar name={p.name} src={p.avatarUrl} size="sm" presence={p.online ? 'active' : undefined} />} title={p.name} subtitle={[p.title || p.email, roleLabel(p.role)].filter(Boolean).join(' · ')} onClick={() => setOpen(p)} />
+              <Row key={p.id} leading={<Avatar name={p.name} src={p.avatarUrl} size="sm" presence={p.online ? 'active' : undefined} />} title={p.name} subtitle={[p.title || p.email, roleLabel(p.role), p.status === 'suspended' && 'Suspended'].filter(Boolean).join(' · ')} onClick={() => setOpen(p)} />
             ))}
           </RowGroup>
         ) : (
           <EmptyState icon={Users} title={q ? 'Nobody matches' : 'Nobody here yet'} />
         )}
       </Body>
-      {open && <PersonSheet person={open} canHold={isCompanyAdmin(company)} onClose={() => setOpen(null)} />}
+      {open && <PersonSheet person={open} canHold={isCompanyAdmin(company)} workspaceMember={scope === 'workspace' && !holds} onClose={() => setOpen(null)} />}
     </Screen>
   );
 }
@@ -868,3 +944,135 @@ export function AdminDataScreen() {
   );
 }
 
+
+// ---------------------------------------------------------------- general & danger zone
+
+/** Name, description and rules (admins); transfer, archive and delete (owner); leave (admins). */
+export function AdminWorkspaceScreen() {
+  const { workspace, ok } = useAdminGuard();
+  const isOwner = workspace?.role === 'owner';
+  const [form, setForm] = useState(() => ({ name: workspace?.name || '', description: workspace?.description || '', rules: workspace?.rules || '' }));
+  const [saving, setSaving] = useState(false);
+  const [dialog, setDialog] = useState(null); // 'transfer' | 'archive' | 'delete' | 'leave'
+  const [newOwner, setNewOwner] = useState(null);
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const members = useQuery(ok && isOwner && `directory:${workspace.id}`, () => api().memberDirectory(workspace.id));
+  if (!ok) return <NotAdmin title="General" />;
+  const changes = workspaceInfoChanges(workspace, form);
+  const dirty = Object.keys(changes).length > 0;
+  const candidates = ownerCandidates(members.data || []);
+  const personal = workspace.isPersonal;
+  const reload = () => useSession.getState().loadWorkspaces();
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api().updateWorkspaceInfo(workspace.id, changes, workspace);
+      await reload();
+      toast('Saved', 'success');
+    } catch (err) {
+      toast(err.message || "Couldn't save that", 'danger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const act = async () => {
+    const what = dialog;
+    setBusy(true);
+    try {
+      if (what === 'transfer') {
+        await api().transferOwnership(workspace.id, newOwner.id);
+        toast(`${newOwner.name} now owns ${workspace.name}. You are an admin.`, 'success');
+      } else if (what === 'archive') {
+        await api().archiveWorkspace(workspace.id);
+        toast(`${workspace.name} is archived. You can restore it from the workspace list on the web.`, 'success');
+      } else if (what === 'delete') {
+        await api().deleteWorkspace(workspace.id);
+        toast(`${workspace.name} was deleted`, 'success');
+      } else if (what === 'leave') {
+        await api().leaveWorkspace(workspace.id);
+        toast(`You left ${workspace.name}`, 'success');
+      }
+      setDialog(null);
+      setNewOwner(null);
+      await reload();
+      if (what !== 'transfer') nav.pop();
+    } catch (err) {
+      toast(err.message || "Couldn't do that", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  return (
+    <Screen>
+      <Header title="General" subtitle={workspace.name} />
+      <Body>
+        <Section title="About this workspace">
+          <div className="space-y-3 px-4">
+            <Field label="Name" value={form.name} onChange={set('name')} maxLength={80} />
+            <Field label="Description" value={form.description} onChange={set('description')} multiline maxLength={500} />
+            <Field label="Rules" hint="Shown to people when they join." value={form.rules} onChange={set('rules')} multiline maxLength={5000} />
+            <Button block loading={saving} disabled={!dirty} onClick={save}>Save changes</Button>
+          </div>
+        </Section>
+        {isOwner ? (
+          <Section title="Danger zone">
+            <RowGroup footer="Only the owner can do these.">
+              <Row icon={Crown} title="Transfer ownership" subtitle={personal ? 'A personal workspace stays yours' : 'Give it to another member; you stay an admin'} disabled={personal} onClick={personal ? undefined : () => setDialog('transfer')} />
+              <Row icon={Archive} title="Archive workspace" subtitle={personal ? "Personal workspaces can't be archived" : 'Hide it for everyone; nothing is deleted'} disabled={personal} onClick={personal ? undefined : () => setDialog('archive')} />
+              <Row icon={Trash2} danger title="Delete workspace" subtitle="Every channel, message, file and task, for good" onClick={() => { setTyped(''); setDialog('delete'); }} />
+            </RowGroup>
+          </Section>
+        ) : (
+          <Section title="Leave">
+            <RowGroup>
+              <Row icon={LogOut} danger title={`Leave ${workspace.name}`} onClick={() => setDialog('leave')} chevron={false} />
+            </RowGroup>
+          </Section>
+        )}
+      </Body>
+
+      <Sheet open={dialog === 'transfer' && !newOwner} onClose={() => setDialog(null)} title="Choose the new owner">
+        {members.loading ? (
+          <SkeletonRows count={4} />
+        ) : candidates.length ? (
+          <RowGroup className="mb-4">
+            {candidates.map((m) => (
+              <Row key={m.id} leading={<Avatar name={m.name} src={m.avatarUrl} size="sm" />} title={m.name} subtitle={roleLabel(m.role)} onClick={() => setNewOwner(m)} />
+            ))}
+          </RowGroup>
+        ) : (
+          <EmptyState icon={Users} title="Nobody to hand it to" body="Invite someone first." />
+        )}
+      </Sheet>
+      <Dialog
+        open={dialog === 'transfer' && Boolean(newOwner)}
+        onClose={() => { setNewOwner(null); setDialog(null); }}
+        title={`Make ${newOwner?.name || 'them'} the owner?`}
+        body="You become an admin. Only the new owner can give it back."
+        confirmLabel="Transfer"
+        danger
+        busy={busy}
+        onConfirm={act}
+      />
+      <Dialog open={dialog === 'archive'} onClose={() => setDialog(null)} title={`Archive ${workspace.name}?`} body="Members lose access until you restore it. Messages, files and tasks are kept." confirmLabel="Archive" danger busy={busy} onConfirm={act} />
+      <Dialog open={dialog === 'leave'} onClose={() => setDialog(null)} title={`Leave ${workspace.name}?`} body="You'll need a new invite to come back." confirmLabel="Leave" danger busy={busy} onConfirm={act} />
+      <Dialog
+        open={dialog === 'delete'}
+        onClose={() => setDialog(null)}
+        title={`Delete ${workspace.name}?`}
+        body="This can't be undone. Type the workspace name to confirm."
+        confirmLabel="Delete"
+        danger
+        busy={busy}
+        onConfirm={typed.trim() === workspace.name ? act : () => toast('Type the workspace name exactly', 'warning')}
+      >
+        <Field className="mt-3" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={workspace.name} aria-label="Workspace name" />
+      </Dialog>
+    </Screen>
+  );
+}

@@ -127,17 +127,19 @@ export function PlanUsageView({ plan, workspaceName, onSeePlans }) {
 }
 
 /** Settings → Plan & usage. */
-export default function PlanUsageSection({ workspaceId, workspaceName, workspacePicker }) {
+export default function PlanUsageSection({ workspaceId, workspaceName, workspacePicker, embedded = false }) {
     const navigate = useNavigate();
     const { plan, loading, error, refresh } = usePlan(workspaceId || null);
     const seePlans = () => navigate(plan?.upgradeUrl && plan.upgradeUrl.startsWith('/') ? plan.upgradeUrl : UPGRADE_URL);
 
     return (
         <>
-            <PageIntro
-                title="Plan & usage"
-                description="What your plan includes and how much of it you are using."
-            />
+            {!embedded && (
+                <PageIntro
+                    title="Plan & usage"
+                    description="What your plan includes and how much of it you are using."
+                />
+            )}
             {workspacePicker}
             {loading && !plan ? (
                 <LoadingState label="Loading your plan…" />

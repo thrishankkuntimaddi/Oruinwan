@@ -35,7 +35,8 @@ const isHttpUrl = (value) => {
 };
 
 /** Settings → Oruinwan AI: status, personal memory, workspace features, engine, usage. */
-export default function AITab({ workspaceId, workspaceName, workspacePicker }) {
+// `embedded`: shown inside Workspace admin, which has its own heading; personal memory stays in Settings.
+export default function AITab({ workspaceId, workspaceName, workspacePicker, embedded = false }) {
     const { showToast } = useToast();
     const [settings, setSettings] = useState(null);
     const [canManage, setCanManage] = useState(false);
@@ -126,7 +127,7 @@ export default function AITab({ workspaceId, workspaceName, workspacePicker }) {
 
     const useDefault = () => patch('default', { provider: 'default', model: null }, 'Back on the Oruinwan Engine');
 
-    const intro = (
+    const intro = embedded ? null : (
         <PageIntro
             title="Oruinwan AI"
             description="Your assistant: what it remembers about you, which features are on, and how much it is used."
@@ -215,7 +216,7 @@ export default function AITab({ workspaceId, workspaceName, workspacePicker }) {
                 )
             )}
 
-            <AIMemorySection workspaceId={workspaceId} />
+            {!embedded && <AIMemorySection workspaceId={workspaceId} />}
 
             {settings && (
                 <Section title="Features" description="Applies to everyone in this workspace.">

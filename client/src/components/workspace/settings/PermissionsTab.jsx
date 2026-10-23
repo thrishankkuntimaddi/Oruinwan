@@ -2,17 +2,16 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import SettingSwitch from '../../ui/SettingSwitch';
 
-const TOGGLES = [
-    { key: 'allowMemberChannelCreation', label: 'Channel Creation',        sub: 'Allow members to create new channels' },
-    { key: 'allowMemberInvite',          label: 'Invite Members',          sub: 'Allow members to invite new people' },
-    { key: 'requireAdminApproval',       label: 'Admin Approval Required', sub: 'Require admin approval for new members' },
-    { key: 'isDiscoverable',             label: 'Workspace Discoverable',  sub: 'Make workspace visible in search' },
+// Only settings the server enforces (admins and the owner can always do both).
+export const TOGGLES = [
+    { key: 'allowMemberChannelCreation', label: 'Members can create channels', sub: 'When off, only admins and the owner create channels' },
+    { key: 'allowMemberInvite',          label: 'Members can invite people',   sub: 'When off, only admins and the owner send invites and team links. Members always invite as members.' },
 ];
 
 const PermissionsTab = ({ isAdmin, permissions, savingPermissions, handlePermissionChange }) => (
     <div style={{ fontFamily: 'var(--font)' }}>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Control what members can do in this workspace.
+            Control what members can do in this workspace. Roles are changed under Members.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
