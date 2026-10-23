@@ -16,6 +16,7 @@ import { clientPlatform } from '../../native/index.js';
 import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, searchIndex, unloaded } from './messageIndex.js';
 import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
 import { fileIconKind } from '../../lib/files.js';
+import { mapSharedFile, sharedQuery } from '../../features/files/filesUi.js';
 import { chatsAdapter, messageExtras } from './adapter.chats.js';
 import { workAdapter } from './adapter.work.js';
 import { roadmapAdapter } from './adapter.roadmap.js';
@@ -129,6 +130,9 @@ function mapWorkspace(w) {
     memberCount: w.memberCount,
     role: w.role,
     isPersonal: Boolean(w.isPersonal),
+    isOwner: Boolean(w.isOwner) || w.role === 'owner',
+    rules: w.rules || '',
+    settings: w.settings || {},
     unread: w.unreadCount || 0,
   };
 }
@@ -141,6 +145,7 @@ function mapChannel(c) {
     topic: c.description || '',
     isMember: c.isMember !== false,
     private: Boolean(c.isPrivate),
+    isDefault: Boolean(c.isDefault),
     broadcast: Boolean(c.isBroadcast || c.postingPolicy === 'admins' || c.name === 'announcements'),
     muted: Boolean(c.isMuted || c.muted),
     unread: c.unreadCount || 0,
@@ -915,6 +920,17 @@ export const liveAdapter = {
   },
   async deletePage(id) {
     await api.del(`/v2/knowledge/pages/${id}`);
+  },
+
+  /** Everything shared with the person in a workspace (chat attachments + uploads). */
+  async sharedFiles(ws, filters = {}) {
+    const data = await api.get('/v2/files/shared', sharedQuery(ws, filters));
+    return {
+      items: (data.items || []).map(mapSharedFile),
+      total: data.total || 0,
+      hasMore: !!data.hasMore,
+      conversations: (data.conversations || []).map((c) => ({ id: String(c.id), kind: c.type === 'channel' ? 'channel' : 'dm', name: c.name || '' })),
+    };
   },
 
   async files(ws) {

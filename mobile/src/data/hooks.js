@@ -58,6 +58,15 @@ export function useFiles() {
   const ws = useWs();
   return useQuery(ws && `files:${ws}`, () => api().files(ws), { staleMs: 60_000 });
 }
+/** Files shared with the person: filters { kind, source, q, sort, limit } (features/files/filesUi.js). */
+export function useSharedFiles({ kind = 'all', source = 'all', q = '', sort = 'newest', limit = 50 } = {}) {
+  const ws = useWs();
+  return useQuery(
+    ws && `files:${ws}:shared:${kind}:${source}:${q}:${sort}:${limit}`,
+    () => api().sharedFiles(ws, { kind, source, q, sort, limit }),
+    { staleMs: 30_000 },
+  );
+}
 export function useIntegrations() {
   const ws = useWs();
   return useQuery(ws && `integrations:${ws}`, () => api().integrations(ws), { staleMs: 60_000 });
