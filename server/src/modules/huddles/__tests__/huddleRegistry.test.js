@@ -16,6 +16,16 @@ describe('HuddleRegistry', () => {
     expect(second.others[0]).not.toHaveProperty('socketId');
   });
 
+  test('unlimited workspaces get the higher cap (still a cap)', () => {
+    const u = new HuddleRegistry({ maxParticipants: 3, unlimitedMaxParticipants: 5 });
+    u.ensure('h2', { channelId: 'c2' }, { channelName: 'big' });
+    for (const id of ['a', 'b', 'c']) expect(u.join('h2', { userId: id, socketId: `s-${id}`, unlimited: true }).error).toBeUndefined();
+    expect(u.join('h2', { userId: 'x', socketId: 's-x' }).error).toBe('HUDDLE_FULL');
+    expect(u.join('h2', { userId: 'd', socketId: 's-d', unlimited: true }).error).toBeUndefined();
+    expect(u.join('h2', { userId: 'e', socketId: 's-e', unlimited: true }).error).toBeUndefined();
+    expect(u.join('h2', { userId: 'f', socketId: 's-f', unlimited: true }).error).toBe('HUDDLE_FULL');
+  });
+
   test('enforces the participant cap but lets an existing member rejoin', () => {
     r.join('h1', { userId: 'a', socketId: 's1' });
     r.join('h1', { userId: 'b', socketId: 's2' });

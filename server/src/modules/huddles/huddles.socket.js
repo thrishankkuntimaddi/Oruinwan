@@ -559,7 +559,8 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // The registry checks it in the same step that adds the person (no await in between).
             const source = planSourceOf(ensured.huddle);
             const limits = await planLimits(source.workspaceId, { userId: source.userId });
-            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device });
+            const unlimited = !!limits?.exempt;
+            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device, unlimited });
             if (joined.error === 'PLAN_LIMIT') {
                 const { planLimitBody } = require('../../shared/plans/plans');
                 const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
@@ -567,7 +568,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                     message: `This call is full: the free plan allows ${limits.participants} people in a call at once. Pro and Enterprise are coming soon.` });
             }
             if (joined.error === 'HUDDLE_FULL') {
-                return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.maxParticipants} people).`);
+                return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.capFor(unlimited)} people).`);
             }
             if (joined.error) return huddleError(socket, huddleId, joined.error, 'Could not join huddle');
             history.joined(huddleId, { userId: uid(), username });
@@ -592,7 +593,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                 const start = new Date(joined.huddle.startedAt).getTime();
                 timeLimit = { maxMinutes: limits.minutes, startedAt: new Date(start).toISOString(), endsAt: new Date(start + limits.minutes * 60000).toISOString() };
             }
-            const maxParticipants = limits && limits.participants ? Math.min(limits.participants, registry.maxParticipants) : registry.maxParticipants;
+            const maxParticipants = limits && limits.participants ? Math.min(limits.participants, registry.capFor(unlimited)) : registry.capFor(unlimited);
             socket.emit('huddle:roster', { huddleId, meetingId, participants: joined.others, maxParticipants, video: !!joined.huddle.video, timeLimit });
             socket.to(room).emit('huddle:joined', { huddleId, meetingId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, timestamp: new Date() });
 

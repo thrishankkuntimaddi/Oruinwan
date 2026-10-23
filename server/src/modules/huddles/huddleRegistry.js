@@ -16,6 +16,14 @@
 
 // The free plan allows 10 people in a call (src/shared/plans); HUDDLE_MAX_PARTICIPANTS lowers or raises the server's own cap.
 const DEFAULT_MAX_PARTICIPANTS = 10;
+// Unlimited workspaces (company, plan 'enterprise') get a higher technical cap: still a mesh, so
+// clients only play the videos on screen. HUDDLE_MAX_PARTICIPANTS_UNLIMITED changes it.
+const DEFAULT_UNLIMITED_MAX_PARTICIPANTS = 25;
+
+function unlimitedMaxFromEnv(env = process.env) {
+  const n = Number(env.HUDDLE_MAX_PARTICIPANTS_UNLIMITED);
+  return Number.isInteger(n) && n >= 2 ? n : DEFAULT_UNLIMITED_MAX_PARTICIPANTS;
+}
 
 function maxParticipantsFromEnv(env = process.env) {
   const n = Number(env.HUDDLE_MAX_PARTICIPANTS);
@@ -36,8 +44,9 @@ function publicParticipant(p) {
 const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : new Date());
 
 class HuddleRegistry {
-  constructor({ maxParticipants = DEFAULT_MAX_PARTICIPANTS } = {}) {
+  constructor({ maxParticipants = DEFAULT_MAX_PARTICIPANTS, unlimitedMaxParticipants = DEFAULT_UNLIMITED_MAX_PARTICIPANTS } = {}) {
     this.maxParticipants = maxParticipants;
+    this.unlimitedMaxParticipants = Math.max(unlimitedMaxParticipants, maxParticipants);
     this.huddles = new Map();
     /** @type {null | ((op: object) => void)} set by huddleReplication to broadcast local changes */
     this.onMutation = null;
@@ -100,12 +109,17 @@ class HuddleRegistry {
    * the copies converge through replication, so two joins that land on two
    * different instances within that delay can still overshoot by one.
    */
-  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null, device = null }) {
+  /** People allowed in one call: the server cap, or the higher one for unlimited workspaces. */
+  capFor(unlimited = false) {
+    return unlimited ? this.unlimitedMaxParticipants : this.maxParticipants;
+  }
+
+  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null, device = null, unlimited = false }) {
     const huddle = this.huddles.get(huddleId);
     if (!huddle) return { error: 'HUDDLE_NOT_FOUND' };
     const uid = String(userId);
     const previous = huddle.participants.get(uid);
-    if (!previous && huddle.participants.size >= this.maxParticipants) {
+    if (!previous && huddle.participants.size >= this.capFor(unlimited)) {
       return { error: 'HUDDLE_FULL' };
     }
     if (!previous && Number.isFinite(max) && max > 0 && huddle.participants.size >= max) {
@@ -365,7 +379,7 @@ class HuddleRegistry {
   }
 }
 
-const registry = new HuddleRegistry({ maxParticipants: maxParticipantsFromEnv() });
+const registry = new HuddleRegistry({ maxParticipants: maxParticipantsFromEnv(), unlimitedMaxParticipants: unlimitedMaxFromEnv() });
 
 /**
  * Whose plan limits a call: { workspaceId } when the server resolved its
@@ -378,4 +392,4 @@ function planSourceOf(huddle) {
   return { workspaceId: huddle.workspaceId || null, userId: null };
 }
 
-module.exports = { HuddleRegistry, registry, scopeKey, maxParticipantsFromEnv, planSourceOf, DEFAULT_MAX_PARTICIPANTS };
+module.exports = { HuddleRegistry, registry, scopeKey, maxParticipantsFromEnv, unlimitedMaxFromEnv, planSourceOf, DEFAULT_MAX_PARTICIPANTS, DEFAULT_UNLIMITED_MAX_PARTICIPANTS };
