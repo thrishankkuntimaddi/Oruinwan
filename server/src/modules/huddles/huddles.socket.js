@@ -308,7 +308,12 @@ function announceEnded(io, huddle, reason, { history = defaultHistory(), meeting
  * End a live huddle for everyone (e.g. "End meeting" on the meeting page).
  * Returns true when a live huddle was ended.
  */
+// 1:1 DM calls that have had both people in them. Like a phone call, such a call ends when one of
+// them hangs up; group DMs, channels and workspace huddles stay open while anyone is in them.
+const connectedOneToOne = new Set();
+
 function endHuddle(io, huddleId, reason = 'ended', { registry = defaultRegistry, history = defaultHistory(), meetings = defaultMeetings } = {}) {
+    connectedOneToOne.delete(huddleId);
     const huddle = registry.end(huddleId);
     if (!huddle) return false;
     announceEnded(io, huddle, reason, { history, meetings });
@@ -388,7 +393,14 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         io.to(`huddle:${huddleId}`).emit('huddle:left', { huddleId, userId: uid(), reason, timestamp: new Date() });
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:participant_left', { huddleId, userId: uid() });
-        if (ended) announce(huddle, 'empty');
+        if (ended) {
+            connectedOneToOne.delete(huddleId);
+            announce(huddle, 'empty');
+        } else if (reason !== 'disconnected' && connectedOneToOne.has(huddleId) && huddle.participants.size <= 1) {
+            // The other person hung up a 1:1 call: end it for the one left (a dropped connection
+            // doesn't count, so they can still reconnect).
+            endHuddle(io, huddleId, 'ended', { registry, history, meetings });
+        }
         emitSelfActive(io, registry, uid());
     };
 
@@ -553,6 +565,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             }
             if (joined.error) return huddleError(socket, huddleId, joined.error, 'Could not join huddle');
             history.joined(huddleId, { userId: uid(), username });
+            if (joined.huddle?.dmId && !check.groupDm && joined.huddle.participants.size >= 2) connectedOneToOne.add(huddleId);
             const meetingId = await meetingIdFor(registry, huddleId);
 
             const room = `huddle:${huddleId}`;

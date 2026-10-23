@@ -53,11 +53,9 @@ test('a DM voice huddle: start, join from the other side, connect, leave', async
   await alice.getByTestId('mini-expand').click();
   await expect(aliceCall).toBeVisible();
 
-  // Alice leaves; Bob sees it and the call ends when he leaves too.
+  // Alice hangs up; like a phone call, a 1:1 call then ends for Bob too.
   await aliceCall.getByTitle('Leave huddle').click();
   await expect(aliceCall).toBeHidden();
-  await expect(bobCall).toContainText('1 participant');
-  await bobCall.getByTitle('Leave huddle').click();
   await expect(bobCall).toBeHidden();
 
   await Promise.all(contexts.map((c) => c.close()));
@@ -98,7 +96,7 @@ test('a call moves from one of my devices to another', async ({ browser }) => {
   await peerConnected(phone);
 
   await phone.getByTitle('Leave huddle').click();
-  await bob.getByTitle('Leave huddle').click();
+  await expect(bob.getByTestId('call-screen')).toBeHidden();
   await Promise.all(contexts.map((c) => c.close()));
 });
 
@@ -133,6 +131,6 @@ test('a DM video call shows both cameras', async ({ browser }) => {
   await expect(bobCall.getByTestId('video-tile-remote').locator('video')).toHaveCount(0);
 
   await aliceCall.getByTitle('Leave huddle').click();
-  await bobCall.getByTitle('Leave huddle').click();
+  await expect(bobCall).toBeHidden();
   await Promise.all(contexts.map((c) => c.close()));
 });

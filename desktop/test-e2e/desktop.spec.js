@@ -170,7 +170,8 @@ test('a call between two desktop apps: connect, floating window, screen share, l
   if (await win.getByTestId('call-mini').isVisible()) await win.getByTestId('mini-expand').click();
   await win.getByTestId('call-screen').getByTitle('Leave huddle').click();
   await expect(win.getByTestId('call-screen')).toBeHidden();
-  await bob.getByTestId('call-screen').getByTitle('Leave huddle').click();
+  // A 1:1 call ends for Bob too when Alice hangs up.
+  await expect(bob.getByTestId('call-screen')).toBeHidden();
   await bobApp.close();
   bobApp = null;
 });

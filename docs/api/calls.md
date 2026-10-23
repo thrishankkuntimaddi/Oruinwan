@@ -22,6 +22,10 @@ Recordings, transcripts and summaries are in [meetings.md](meetings.md).
 - **Ringing.** A call in a DM or group DM rings everyone else in it on every device (incoming-call
   screen + phone push) for 45 seconds. A channel huddle never rings: members get a "Join" banner and
   a "huddle started" notification. See [Ringing](#ringing).
+- **1:1 calls end like a phone call.** Once both people in a 1:1 DM call have joined, the call ends
+  for both (`huddle:ended { reason: 'ended' }`) as soon as one of them leaves. A dropped connection
+  (`disconnected`) doesn't end it, so they can reconnect. Group DM, channel and workspace huddles
+  stay open while anyone is in them.
 
 ## Client → server
 

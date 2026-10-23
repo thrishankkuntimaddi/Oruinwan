@@ -101,8 +101,9 @@ test.describe('call ringing', () => {
     await expect(bobPhone.getByTestId('incoming-call')).toBeHidden();
     await expect(alice.getByTestId('call-screen')).toContainText('2 participants');
 
+    // A 1:1 call ends for both when one hangs up.
     await alice.getByTestId('call-screen').getByTitle('Leave huddle').click();
-    await bobLaptop.getByTestId('call-screen').getByTitle('Leave huddle').click();
+    await expect(bobLaptop.getByTestId('call-screen')).toBeHidden();
     await close();
   });
 
