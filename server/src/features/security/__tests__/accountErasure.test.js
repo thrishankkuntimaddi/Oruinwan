@@ -25,6 +25,7 @@ jest.mock('../../../../models/Note', () => ({
   deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 }),
 }));
 jest.mock('../../../models/AIMemory', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 3 }) }));
+jest.mock('../../ai/aiChat.model', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 2 }) }));
 jest.mock('../../ai/ai.knowledge.service', () => ({ forgetSources: jest.fn().mockResolvedValue(1) }));
 jest.mock('../../../modules/notifications/notificationPreference.model', () => ({ deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }) }));
 jest.mock('../../../socket/getIO', () => ({ getIO: () => null }));
@@ -65,7 +66,7 @@ describe('eraseAccount', () => {
 
     // Identity goes in one PostgreSQL transaction, after the document cleanup.
     expect(eraseIdentity).toHaveBeenCalledWith(UID, { personalWorkspaceId: 'w1' });
-    expect(result.cleanup).toMatchObject({ userDeleted: 1, aiMemoriesDeleted: 3 });
+    expect(result.cleanup).toMatchObject({ userDeleted: 1, aiMemoriesDeleted: 3, aiChatsDeleted: 2 });
 
     expect(AIMemory.deleteMany).toHaveBeenCalledWith({ user: UID });
     // Only the user's private notes are deleted, scoped to them as owner.

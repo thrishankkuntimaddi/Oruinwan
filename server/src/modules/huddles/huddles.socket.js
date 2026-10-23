@@ -214,10 +214,16 @@ async function ringForNewCall(io, socket, { registry, huddle, check, meetingId, 
 }
 
 /** Bus event for a huddle lifecycle change; a bus failure never affects the call. */
+// Call events for webhooks and automations. Never lets a problem there break the call itself.
 function publishHuddle(name, huddle, payload) {
     if (!huddle?.workspaceId) return;
-    require('../../shared/events/bus').publish(name, payload, { workspaceId: huddle.workspaceId, actorId: payload.startedBy || null })
-        .catch(() => {});
+    try {
+        const { publish } = require('../../shared/events/bus');
+        if (typeof publish !== 'function') return;
+        Promise.resolve(publish(name, payload, { workspaceId: huddle.workspaceId, actorId: payload.startedBy || null })).catch(() => {});
+    } catch (err) {
+        logger.warn(`[huddle] could not publish ${name}: ${err.message}`);
+    }
 }
 
 function huddleError(socket, huddleId, code, message) {
