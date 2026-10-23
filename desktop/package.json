@@ -39,6 +39,7 @@
       "!electron/__tests__/**",
       "app/**/*",
       "assets/icon.png",
+      "assets/icon-dark.png",
       "assets/tray/**/*"
     ],
     "publish": null,

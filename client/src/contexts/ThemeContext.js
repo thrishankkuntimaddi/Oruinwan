@@ -93,6 +93,8 @@ export const ThemeProvider = ({ children }) => {
         const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0c0c0c' : '#efe6d7');
         applyNativeBars(resolvedTheme);
+        // Desktop app (2.3.5+): the dock / taskbar icon follows the theme.
+        try { window.oruinwanDesktop?.setAppearance?.(resolvedTheme); } catch { /* older desktop app */ }
     }, [resolvedTheme]);
 
     useEffect(() => {

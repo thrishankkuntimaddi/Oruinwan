@@ -794,6 +794,24 @@ ipcMain.on('oruinwan:quick-reply-failed', (event, target) => {
   }
 });
 
+// The dock (macOS) and window/taskbar (Windows, Linux) icon follows the app's theme while it
+// runs. The installed icon (Finder, Start menu) is the light one (assets/icon.png).
+let appearance = 'light';
+function applyAppIcon() {
+  const file = path.join(__dirname, '..', 'assets', appearance === 'dark' ? 'icon-dark.png' : 'icon.png');
+  const image = nativeImage.createFromPath(file);
+  if (image.isEmpty()) return;
+  if (process.platform === 'darwin') app.dock?.setIcon(image);
+  else if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(image);
+}
+ipcMain.on('oruinwan:appearance', (event, theme) => {
+  if (!fromAppPage(event)) return;
+  const next = theme === 'dark' ? 'dark' : 'light';
+  if (next === appearance) return;
+  appearance = next;
+  applyAppIcon();
+});
+
 ipcMain.on('oruinwan:badge', (event, count) => {
   if (!fromAppPage(event)) return;
   const n = trayState.clampUnread(count);

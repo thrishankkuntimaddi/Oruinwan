@@ -15,7 +15,7 @@
     "android:debug": "npm run sync && cd android && ./gradlew assembleGithubDebug",
     "android:release": "npm run sync && cd android && ./gradlew assembleGithubRelease",
     "android:play": "npm run sync && cd android && ./gradlew bundlePlayRelease",
-    "icons": "bash scripts/make-icons.sh"
+    "icons": "python3 scripts/make-icons.py"
   },
   "engines": {
     "node": ">=20"

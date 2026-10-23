@@ -52,7 +52,7 @@ Releases are built by CI, not by hand: pushing a `vX.Y.Z` tag runs the **Build a
 publishes the APK and all desktop installers together. See "Releasing a new version" in
 [mobile/README.md](../mobile/README.md). The app's version comes from `mobile/package.json`.
 
-The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts/make-icons.sh`; the tray
+The icon (`assets/icon.png`) is rendered from the master logo by `mobile/scripts/make-icons.py` (with `icon-dark.png`, which the dock / taskbar switches to in dark mode); the tray
 icons in `assets/tray/` from it by `npm run tray-icons`. Unit tests for the tray, close and quick-reply
 logic (`electron/trayState.js`): `npm test`.
 

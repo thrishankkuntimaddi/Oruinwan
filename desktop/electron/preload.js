@@ -18,6 +18,7 @@ const version = versionArg ? versionArg.split('=')[1] : '';
 
 const setBadgeCount = (count) => ipcRenderer.send('oruinwan:badge', Number(count) || 0);
 const openExternal = (url) => ipcRenderer.send('oruinwan:open-external', String(url));
+const setAppearance = (theme) => ipcRenderer.send('oruinwan:appearance', theme === 'dark' ? 'dark' : 'light');
 
 contextBridge.exposeInMainWorld('oruinwanDesktop', {
   /** 'darwin' | 'win32' | 'linux' */
@@ -28,6 +29,8 @@ contextBridge.exposeInMainWorld('oruinwanDesktop', {
   version,
   /** Unread count on the dock / launcher icon and in the window title. */
   setBadgeCount,
+  /** The app's theme ('light' | 'dark'): the dock / taskbar icon follows it while the app runs. */
+  setAppearance,
   /** Opens an http(s) or mailto link in the default browser or mail app. */
   openExternal,
   /**
