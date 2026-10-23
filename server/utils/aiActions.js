@@ -107,7 +107,16 @@ async function findMember(ws, who) {
     const handle = raw.replace(/^@/, '').toLowerCase();
     if (!handle) return null;
     const users = [...(await identity.users.findManyByIds([...active])).values()];
-    return users.find(u => String(u.username || '').toLowerCase() === handle) || null;
+    const byUsername = users.find(u => String(u.username || '').toLowerCase() === handle);
+    if (byUsername) return byUsername;
+    // A plain name ("Manideep", "Manideep Kuntimaddi"): full name first, then first name.
+    // More than one match is ambiguous: say who, so the assistant can ask.
+    const lower = (v) => String(v || '').trim().toLowerCase();
+    const full = users.filter(u => lower(nameOf(u)) === handle);
+    const first = full.length ? full : users.filter(u => lower(nameOf(u)).split(/\s+/)[0] === handle);
+    if (first.length === 1) return first[0];
+    if (first.length > 1) return { ambiguous: first.map(u => `${nameOf(u)} (@${u.username})`) };
+    return null;
 }
 
 /**
@@ -123,6 +132,7 @@ async function sendDirectMessage({ userId: who, message }, ctx) {
     const { ws, error } = await membership(ctx);
     if (error) return error;
     const recipient = await findMember(ws, who);
+    if (recipient?.ambiguous) return fail(`More than one person matches "${who}": ${recipient.ambiguous.join(', ')}. Ask which one.`);
     if (!recipient) return fail('That person is not a member of this workspace. Only people in this workspace can be messaged.');
     const recipientId = String(recipient._id);
     if (recipientId === String(ctx.userId)) return fail('Cannot message yourself');

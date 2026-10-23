@@ -196,9 +196,17 @@ class ChatAgent extends BaseAgent {
 
     // `context.tools`: 'auto' (default: only when the request needs them), 'all' or 'none'.
     const toolMode = codeReview ? 'none' : (context.tools || 'auto');
-    const offerTools = toolMode === 'all' || (toolMode === 'auto' && wantsTools(message, { mentions: mentioned }));
+    // Decide on the request in its context: a follow-up such as "ok, just say it's done" or "send
+    // it" continues the turns before it, which named the person and the action.
+    // In-conversation replies (agent chats, @ai in a channel) carry the earlier messages as the
+    // conversation transcript instead of chat turns: use whichever is there.
+    const transcript = Array.isArray(payload.context?.conversation?.messages)
+      ? payload.context.conversation.messages.map((m) => ({ text: m?.text || '' }))
+      : [];
+    const gateText = ChatAgent.gateText(message, [...turns, ...transcript]);
+    const offerTools = toolMode === 'all' || (toolMode === 'auto' && wantsTools(gateText, { mentions: mentioned }));
 
-    const picked = toolMode === 'all' ? new Set() : toolsFor(message, { mentions: mentioned });
+    const picked = toolMode === 'all' ? new Set() : toolsFor(gateText, { mentions: mentioned });
     const offered = !offerTools ? [] : tools.filter((t) => !picked.size || picked.has(t.declaration.name));
 
     // Reviews can use a dedicated coding model on the local engine (LOCAL_LLM_CODE_MODEL).
@@ -289,6 +297,9 @@ class ChatAgent extends BaseAgent {
 }
 
 ChatAgent.wantsTools = wantsTools;
+/** The latest message plus the last few turns (most recent last), for deciding which tools to offer. */
+ChatAgent.gateText = (message, turns = [], depth = 4) =>
+  [...turns.slice(-depth).map((t) => String(t.text || '').slice(0, 1000)), String(message || '')].join('\n');
 ChatAgent.toFact = toFact;
 ChatAgent.toolsFor = toolsFor;
 ChatAgent.isCodeReview = isCodeReview;

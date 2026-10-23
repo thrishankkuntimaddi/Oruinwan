@@ -46,7 +46,7 @@ const DECLARATIONS = [
     parameters: {
       type: 'object',
       properties: {
-        userId: { type: 'string', description: 'Recipient user id: from the people the user @mentioned, or from get_workspace_members' },
+        userId: { type: 'string', description: 'Recipient: a user id (from the people the user @mentioned or get_workspace_members), their @username, or their name as the user wrote it (e.g. "Manideep")' },
         message: { type: 'string', description: 'The exact message text to send, written as the user (first person)' },
       },
       required: ['userId', 'message'],

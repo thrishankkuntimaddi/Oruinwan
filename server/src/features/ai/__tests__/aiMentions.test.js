@@ -135,6 +135,16 @@ describe('send_direct_message to a mentioned person', () => {
     expect(out).toMatchObject({ success: true, toUserId: MUZAMIL });
   });
 
+  test('accepts a plain name as the user wrote it (full name or first name)', async () => {
+    expect(await sendDirectMessage({ userId: 'Muzamil', message: 'hi' }, ctx)).toMatchObject({ success: true, toUserId: MUZAMIL });
+    expect(await sendDirectMessage({ userId: 'muzamil ahmed', message: 'hi' }, ctx)).toMatchObject({ success: true, toUserId: MUZAMIL });
+  });
+
+  test('a removed member is not found by name either', async () => {
+    const out = await sendDirectMessage({ userId: 'Gone', message: 'hi' }, ctx);
+    expect(out.success).toBe(false);
+  });
+
   test('only active members of this workspace can be messaged', async () => {
     for (const who of [OUTSIDER, REMOVED, 'nobody']) {
       const out = await sendDirectMessage({ userId: who, message: 'hi' }, ctx);
@@ -182,6 +192,34 @@ describe('root cause: the assistant was not given the send tool', () => {
 
   test.each(['tell me a joke', 'explain what a race condition is', 'send me ideas for a launch tweet'])('"%s" still gets no tools', (message) => {
     expect(ChatAgent.wantsTools(message)).toBe(false);
+  });
+
+  test('a follow-up keeps the send tool when the turns before it asked to message someone', async () => {
+    const provider = new MockProvider(() => 'ok');
+    const orchestrator = new Orchestrator({ provider, actions: { sendDirectMessage: jest.fn(async () => ({ success: true })) }, logger: quiet });
+    const history = [
+      { role: 'user', content: 'Send Manideep a message that the latest build is ready for testing' },
+      { role: 'assistant', content: 'Here is the draft: "Hi Manideep, the latest build is ready for testing". I\'ll send it as written.' },
+    ];
+    await orchestrator.run('chat', { message: 'Ok just mention everything is done check now', history }, { userId: ME, workspaceId: WS });
+    const call = provider.calls.find((c) => c.kind === 'chat');
+    expect((call.tools || []).map((t) => t.name)).toContain('send_direct_message');
+  });
+
+  test('in an agent chat the transcript counts too (the earlier messages arrive as the conversation)', async () => {
+    const provider = new MockProvider(() => 'ok');
+    const orchestrator = new Orchestrator({ provider, actions: { sendDirectMessage: jest.fn(async () => ({ success: true })) }, logger: quiet });
+    const conversation = { id: 'c1', type: 'dm', name: 'Oruinwan AI', messages: [
+      { sender: 'Thrishank', text: 'Send Manideep a message that the latest build is ready for testing' },
+      { sender: 'Oruinwan AI', text: 'Draft: "Hi Manideep, the latest build is ready for testing". I\'ll send it as written.' },
+    ] };
+    await orchestrator.run('chat', { message: 'Ok just mention everything is done check now', context: { conversation } }, { userId: ME, workspaceId: WS, shared: true });
+    const call = provider.calls.find((c) => c.kind === 'chat');
+    expect((call.tools || []).map((t) => t.name)).toContain('send_direct_message');
+  });
+
+  test('an unrelated follow-up after small talk still gets no tools', () => {
+    expect(ChatAgent.wantsTools(ChatAgent.gateText('and a shorter one?', [{ role: 'user', text: 'tell me a joke' }, { role: 'model', text: 'Why did…' }]))).toBe(false);
   });
 
   test('with a mentioned person the send + search tools are offered and the person is described', async () => {
