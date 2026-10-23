@@ -93,23 +93,65 @@ async function sendMessageToChannel({ channelId, message }, ctx) {
     return { success: true, channelName: channel.name, messageId: String(saved._id) };
 }
 
-async function sendDirectMessage({ userId: recipientId, message }, ctx) {
-    if (!oid(recipientId) || !message?.trim()) return fail('userId and message are required');
-    if (String(recipientId) === String(ctx.userId)) return fail('Cannot message yourself');
+const activeMemberIds = (ws) => new Set((ws.members || []).filter(m => m.status !== 'removed').map(m => String(m.user?._id || m.user)));
+const nameOf = (u) => (u && (u.name || u.displayName || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username)) || null;
+
+/**
+ * The workspace member a tool call names: a user id, or (models often pass the
+ * handle they saw) a username / "@username". Only active members of this workspace.
+ */
+async function findMember(ws, who) {
+    const active = activeMemberIds(ws);
+    const raw = String(who || '').trim();
+    if (oid(raw)) return active.has(raw) ? (await identity.users.findById(raw)) || { _id: raw } : null;
+    const handle = raw.replace(/^@/, '').toLowerCase();
+    if (!handle) return null;
+    const users = [...(await identity.users.findManyByIds([...active])).values()];
+    return users.find(u => String(u.username || '').toLowerCase() === handle) || null;
+}
+
+/**
+ * Send a DM on the requester's behalf: only to an active member of the current
+ * workspace, never when either side blocked the other. The DM is created when
+ * missing (findOrCreateDMSession gives it a conversation key with a server
+ * copy) and the text is encrypted with that key, so it stays E2EE and both
+ * people can read it. The result carries exactly what was sent, for the chat to show.
+ */
+async function sendDirectMessage({ userId: who, message }, ctx) {
+    const text = String(message || '').trim().slice(0, 4000);
+    if (!who || !text) return fail('userId and message are required');
     const { ws, error } = await membership(ctx);
     if (error) return error;
-    if (!(ws.members || []).some(m => String(m.user?._id || m.user) === String(recipientId))) return fail('That user is not in this workspace');
+    const recipient = await findMember(ws, who);
+    if (!recipient) return fail('That person is not a member of this workspace. Only people in this workspace can be messaged.');
+    const recipientId = String(recipient._id);
+    if (recipientId === String(ctx.userId)) return fail('Cannot message yourself');
+    const to = nameOf(recipient) || 'them';
 
+    const DMSession = require('../models/DMSession');
     const messagesService = require('../src/modules/messages/messages.service');
     const { encryptForConversation } = require('../src/modules/conversations/cryptoUtils');
+
+    // A block stops the assistant exactly like it stops the composer (checked before creating anything).
+    const pair = [String(ctx.userId), recipientId].sort().map(id => new mongoose.Types.ObjectId(id));
+    const existing = await DMSession.findOne({ workspace: ctx.workspaceId, participants: { $all: pair, $size: 2 }, isGroup: { $ne: true } })
+        .select('blockedBy').lean();
+    const blocks = existing?.blockedBy || [];
+    if (blocks.some(b => String(b.user) === String(ctx.userId))) return fail(`You blocked ${to}. Unblock them to send messages.`);
+    if (blocks.length) return fail(`You can't send messages to ${to}.`);
+
     const dm = await messagesService.findOrCreateDMSession(ctx.userId, recipientId, ctx.workspaceId);
     let enc;
     try {
-        enc = await encryptForConversation(String(dm._id), 'dm', message.trim());
+        enc = await encryptForConversation(String(dm._id), 'dm', text);
     } catch (err) {
-        logger.warn({ err }, '[aiActions] dm encryption unavailable');
-        return fail('This conversation cannot be encrypted by the assistant yet. Send the message yourself.');
+        logger.warn({ err: err.message, dmSessionId: String(dm._id) }, '[aiActions] dm has no server key copy');
+        // An older conversation keyed in the browser: opening it once in the app adds the
+        // server copy (POST /keys/escrow), after which the assistant can send in it.
+        return fail(`Your conversation with ${to} was set up before the assistant could send in it. Open it once in Oruinwan, then ask again (or send the message yourself).`);
     }
+    // A new message brings a deleted (hidden) conversation back for both people.
+    if ((dm.hiddenFor || []).length) await DMSession.updateOne({ _id: dm._id }, { $set: { hiddenFor: [] } });
     const saved = await messagesService.createMessage({
         type: 'message',
         company: dm.company,
@@ -120,8 +162,7 @@ async function sendDirectMessage({ userId: recipientId, message }, ctx) {
         messageIv: enc.messageIv,
         isEncrypted: true,
     }, ioFrom(ctx));
-    const recipient = await identity.users.findById(recipientId);
-    return { success: true, to: recipient?.username || String(recipientId), dmSessionId: String(dm._id), messageId: String(saved._id) };
+    return { success: true, to, toUserId: recipientId, username: recipient.username || null, sent: text, dmSessionId: String(dm._id), messageId: String(saved._id) };
 }
 
 async function createTaskForUser({ title, description, dueDate, priority, assigneeIds }, ctx) {

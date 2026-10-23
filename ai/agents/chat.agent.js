@@ -3,6 +3,7 @@
 const BaseAgent = require('./base.agent');
 const config = require('../config');
 const { transcriptToText } = require('../utils/json');
+const mentionTools = require('../utils/mentions');
 
 const DEFAULT_SYSTEM_PROMPT = [
   'You are Oruinwan AI, the assistant built into the Oruinwan team workspace.',
@@ -23,6 +24,10 @@ const DEFAULT_SYSTEM_PROMPT = [
 const ACTION_RE = /\b(create|add|make|open|assign|schedule|book|remind|send|post|message|dm|notify|tell|update|change|mark|move|complete|close|finish|rename|delete|remove|set)\b[^.?!]{0,60}\b(task|todo|to-do|note|meeting|call|reminder|message|dm|channel|status|due|priority|them|him|her|team|everyone)\b/i;
 const LOOKUP_RE = /\b(my|our|which|what|who|list|show|find|search|look ?up)\b[^.?!]{0,50}\b(tasks?|notes?|channels?|members?|people|teammates?|workspace|meetings?|mentions?)\b/i;
 const MEMORY_RE = /\b(remember|forget|don'?t forget|keep in mind|note that|from now on)\b/i;
+// Messaging a person by name: "tell muzamil the build is green", "ping @sara", "message Raj that…",
+// "let maya know…". ACTION_RE needs a noun like "message" after the verb, so these used to get
+// no tools at all and the assistant answered that it couldn't send messages.
+const PERSON_RE = /\b(?:message|dm|tell|ping|notify|remind|write to|reply to|send)\s+@?(?!(?:me|us|you|it|this|that|a|an|the|all|my|our|some|any)\b)\p{L}[\p{L}\p{N}_.-]*|\blet\s+@?\p{L}[\p{L}\p{N}_.-]*\s+know\b/iu;
 
 // Explicit memory commands. When the model does not call the memory tool for
 // one of these, the agent performs it itself so memory never depends on model size.
@@ -61,7 +66,7 @@ const CODE_REVIEW_GUIDE = [
 // Tools relevant to a request, so small models get a short prompt. Empty = all tools.
 const TOOL_GROUPS = [
   [/\b(tasks?|todos?|to-dos?|due|assign(?:ed)?|priority|status|backlog|done|complete)\b/i, ['create_task', 'list_my_tasks', 'update_task_status', 'get_workspace_members']],
-  [/\b(messages?|dms?|send|post|tell|notify|channels?)\b/i, ['send_message_to_channel', 'send_direct_message', 'get_user_channels', 'get_workspace_members']],
+  [/\b(messages?|dms?|send|post|tell|notify|ping|remind|channels?)\b|\blet\s+\S+\s+know\b/i, ['send_message_to_channel', 'send_direct_message', 'get_user_channels', 'get_workspace_members']],
   [/\b(notes?|write down|jot)\b/i, ['create_note', 'list_recent_notes']],
   [/\b(meetings?|calls?|schedule|book|calendar)\b/i, ['schedule_meeting', 'get_workspace_members']],
   [/\b(search|find|look ?up|which|what|who|where)\b/i, ['search_workspace']],
@@ -69,15 +74,19 @@ const TOOL_GROUPS = [
   [/\b(workspace)\b/i, ['get_current_workspace']],
   [/\b(remember|forget|keep in mind|from now on|note that)\b/i, ['remember_about_user', 'forget_about_user']],
 ];
-function toolsFor(message) {
+// With people @mentioned, these are always offered: the person's id is already known.
+const PERSON_TOOLS = ['send_direct_message', mentionTools.SEARCH_TOOL.name];
+
+function toolsFor(message, { mentions = false } = {}) {
   const names = new Set();
   for (const [re, tools] of TOOL_GROUPS) if (re.test(message)) tools.forEach((t) => names.add(t));
+  if (mentions) PERSON_TOOLS.forEach((t) => names.add(t));
   return names;
 }
 
-function wantsTools(message) {
+function wantsTools(message, { mentions = false } = {}) {
   const text = String(message || '');
-  return ACTION_RE.test(text) || LOOKUP_RE.test(text) || MEMORY_RE.test(text);
+  return mentions || ACTION_RE.test(text) || LOOKUP_RE.test(text) || MEMORY_RE.test(text) || PERSON_RE.test(text);
 }
 
 /**
@@ -140,6 +149,8 @@ class ChatAgent extends BaseAgent {
     if (ctx.note?.text) parts.push(`Open note "${String(ctx.note.title || 'Untitled').slice(0, 100)}":\n<<<\n${String(ctx.note.text).slice(0, 12_000)}\n>>>`);
     if (ctx.task?.title) parts.push(`Open task: ${JSON.stringify({ title: ctx.task.title, status: ctx.task.status, description: String(ctx.task.description || '').slice(0, 2000) })}`);
     if (ctx.selection) parts.push(`Selected text:\n<<<\n${String(ctx.selection).slice(0, 6_000)}\n>>>`);
+    const people = mentionTools.describeMentions(ctx.mentions);
+    if (people) parts.push(people);
     return parts.join('\n\n');
   }
 
@@ -168,6 +179,15 @@ class ChatAgent extends BaseAgent {
     const systemInstruction = [this.systemPrompt, today, memories, ...system, knowledge, screen, codeReview ? CODE_REVIEW_GUIDE : ''].filter(Boolean).join('\n\n');
     const toolCtx = { userId: context.userId, workspaceId: workspaceId || context.workspaceId || null, req: context.req || null, io: context.io || null, shared: !!context.shared, channelId: context.channelId || null };
     const toolsByName = new Map(this.tools.map((t) => [t.declaration.name, t]));
+    // People @mentioned: their ids are known, and their messages with the user (decrypted on
+    // the user's device) can be searched here without a round trip to the API.
+    const mentioned = mentionTools.hasMentions(payload.context);
+    const tools = this.tools.slice();
+    if (mentioned) {
+      const searchTool = { declaration: mentionTools.SEARCH_TOOL, execute: (args) => mentionTools.runSearch(payload.context.mentions, args) };
+      tools.push(searchTool);
+      toolsByName.set(searchTool.declaration.name, searchTool);
+    }
     const provider = this.providerFor(context);
     const emit = (event) => { try { context.onEvent?.(event); } catch { /* listeners never break a turn */ } };
     // Providers without native streaming still feed onToken, once, with the final text.
@@ -176,10 +196,10 @@ class ChatAgent extends BaseAgent {
 
     // `context.tools`: 'auto' (default: only when the request needs them), 'all' or 'none'.
     const toolMode = codeReview ? 'none' : (context.tools || 'auto');
-    const offerTools = toolMode === 'all' || (toolMode === 'auto' && wantsTools(message));
+    const offerTools = toolMode === 'all' || (toolMode === 'auto' && wantsTools(message, { mentions: mentioned }));
 
-    const picked = toolMode === 'all' ? new Set() : toolsFor(message);
-    const offered = !offerTools ? [] : this.tools.filter((t) => !picked.size || picked.has(t.declaration.name));
+    const picked = toolMode === 'all' ? new Set() : toolsFor(message, { mentions: mentioned });
+    const offered = !offerTools ? [] : tools.filter((t) => !picked.size || picked.has(t.declaration.name));
 
     // Reviews can use a dedicated coding model on the local engine (LOCAL_LLM_CODE_MODEL).
     const model = codeReview && provider.name === 'local_llm' && config.models.code && !context.model ? config.models.code : this.modelFor(context);

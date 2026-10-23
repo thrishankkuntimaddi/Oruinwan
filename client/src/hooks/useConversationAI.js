@@ -19,6 +19,7 @@ const TOOL_PROGRESS = {
     send_message_to_channel: 'Sending a message', send_direct_message: 'Sending a message', create_task: 'Creating a task',
     list_my_tasks: 'Reading tasks', update_task_status: 'Updating a task', create_note: 'Creating a note', list_recent_notes: 'Reading notes',
     search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling a meeting',
+    search_messages_with_person: 'Searching your messages',
     remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 
@@ -114,13 +115,14 @@ export default function useConversationAI({ socket, conversationId, conversation
         };
     }, [socket, conversationId, currentUserId]);
 
-    const ask = useCallback(async ({ prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant }) => {
+    const ask = useCallback(async ({ prompt, triggerMessageId, parentId = null, messages = [], conversationName, assistant, mentions = [] }) => {
         if (!conversationId || !prompt) return null;
         endFollowUp(parentId); // re-armed when this answer finishes
         try {
             const { data } = await api.post('/api/ai/reply', {
                 workspaceId, conversationId, conversationType, parentId, triggerMessageId, conversationName,
                 prompt, messages: messages.slice(-40), ...(assistant && assistant !== 'default' ? { assistant } : {}),
+                ...(mentions.length ? { mentions } : {}),
             });
             return data?.replyId || null;
         } catch (err) {
