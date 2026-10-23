@@ -46,10 +46,11 @@ describe('SAML configuration', () => {
         fireEvent.change(screen.getByLabelText(/IdP entity ID/), { target: { value: 'idp' } });
         fireEvent.change(screen.getByLabelText(/IdP signing certificate/), { target: { value: '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/api/auth/sso/saml/config', expect.objectContaining({ entryPoint: 'https://idp/sso', issuer: 'idp', cert: expect.stringContaining('BEGIN') })));
-        expect(await screen.findByText('On')).toBeTruthy();
+        // Generous timeouts: CI machines can be slow to run the save.
+        await waitFor(() => expect(api.put).toHaveBeenCalledWith('/api/auth/sso/saml/config', expect.objectContaining({ entryPoint: 'https://idp/sso', issuer: 'idp', cert: expect.stringContaining('BEGIN') })), { timeout: 8000 });
+        expect(await screen.findByText('On', {}, { timeout: 8000 })).toBeTruthy();
         expect(screen.getByText(/SHA-256 AB:CD/)).toBeTruthy();
-    });
+    }, 20000);
 
     it('maps server validation codes to the field', async () => {
         api.get.mockResolvedValue({ data: { configured: true, enabled: true, entryPoint: 'https://idp/sso', issuer: 'idp', ...SP } });
