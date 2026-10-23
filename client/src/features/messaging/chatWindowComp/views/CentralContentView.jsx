@@ -264,6 +264,8 @@ const CentralContentView = ({
                     onClose={onThreadClose}
                     socket={rawSocket}
                     currentUserId={currentUserId}
+                    members={channelMembers || null}
+                    broadcastMentionsAllowed={broadcastMentionsAllowed}
                     style={{ width: 'clamp(280px, 35vw, 400px)', flexShrink: 0 }}
                 />
             )}

@@ -23,12 +23,28 @@ import { setOpenThread, clearOpenThread } from '../../notifications/attention';
 import { indexConversation } from '../../../utils/localMessageIndex';
 import { useAuth } from '../../../contexts/AuthContext';
 
-export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {} }) {
+export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true }) {
     const { showToast } = useToast();
 
     
     
     const [parentMessageState, setParentMessageState] = useState(parentMessage);
+    // People for @mentions in replies (and @here / @channel in channels). Uses the chat's list
+    // when it's passed in; otherwise loads the channel's members once.
+    const [loadedMembers, setLoadedMembers] = useState([]);
+    useEffect(() => {
+        if (membersProp || conversationType !== 'channel' || !channelId) return undefined;
+        let alive = true;
+        api.get(`/api/v2/channels/${channelId}`)
+            .then(({ data }) => {
+                if (!alive) return;
+                const list = (data?.channel?.members || []).map((m) => m?.user && typeof m.user === 'object' ? m.user : m).filter((u) => u && u._id);
+                setLoadedMembers(list);
+            })
+            .catch(() => { });
+        return () => { alive = false; };
+    }, [membersProp, conversationType, channelId]);
+    const mentionMembers = membersProp || loadedMembers;
     const [replies, setReplies] = useState([]);
     const [newReply, setNewReply] = useState("");
     const [loading, setLoading] = useState(false);
@@ -367,7 +383,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         repliesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [replies]);
 
-    const handleSendReply = async (text) => {
+    const handleSendReply = async (text, { mentionText = '' } = {}) => {
         if (!text || !text.trim() || sending) return;
 
         const replyText = text.trim();
@@ -419,7 +435,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     ciphertext: encryptedPayload.ciphertext,
                     messageIv: encryptedPayload.messageIv,
                     attachments: [],
-                    clientTempId: tempId
+                    clientTempId: tempId,
+                    // Plain mention handles only (@name, @here, @channel), so mentions notify.
+                    mentionText: mentionText || (replyText.match(/@[\w.-]+/g) || []).join(' '),
                 });
 
             // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
@@ -936,6 +954,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 setNewMessage={setNewReply}
                                 onSend={handleSendReply}
                                 onSlashCommand={handleThreadSlash}
+                                conversationType={conversationType}
+                                members={mentionMembers}
+                                broadcastMentionsAllowed={broadcastMentionsAllowed}
                                 aiFollowUp={threadAI.isFollowUp(threadRootId) ? { onStop: () => threadAI.endFollowUp(threadRootId) } : null}
                                 onChange={(e) => setNewReply(e.target.value)}
                                 showAI={true}

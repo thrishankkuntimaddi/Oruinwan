@@ -52,6 +52,15 @@ function isCompanyWorkspace(ws) {
     return !!(ws && (ws.company || ws.companyId));
 }
 
+/**
+ * A workspace with no limits at all: company workspaces, and personal workspaces set to an
+ * unlimited plan (enterprise) by the operator — e.g. `UPDATE workspaces SET plan = 'enterprise'`.
+ * Everything inside it (members, channels, tasks, notes, calls, AI) is unlimited, for every member.
+ */
+function isUnlimitedWorkspace(ws) {
+    return isCompanyWorkspace(ws) || ws?.plan === 'enterprise';
+}
+
 /** The note template key for a create request, or null for a blank note. */
 function templateKeyFor(templateId) {
     if (templateId == null || templateId === '') return null;
@@ -81,6 +90,7 @@ async function userPlan(userOrId) {
 async function workspacePlan(wsOrId) {
     const ws = await loadWorkspace(wsOrId);
     if (isCompanyWorkspace(ws)) return { plan: 'company', exempt: true, workspace: ws };
+    if (isUnlimitedWorkspace(ws)) return { plan: 'enterprise', exempt: true, workspace: ws };
     return { plan: plans.normalizePlan(ws?.plan || 'free'), exempt: false, workspace: ws };
 }
 
@@ -250,7 +260,7 @@ async function assertCanCreateWorkspace(userOrId) {
 /** Joining someone else's workspace. Company workspaces and company accounts never count. */
 async function assertCanJoinWorkspace(userOrId, wsOrId) {
     const ws = await loadWorkspace(wsOrId);
-    if (isCompanyWorkspace(ws)) return;
+    if (isUnlimitedWorkspace(ws)) return;
     const { plan, exempt, user } = await userPlan(userOrId);
     if (exempt) return;
     const { joined } = await workspaceCounts(idOf(user || userOrId));

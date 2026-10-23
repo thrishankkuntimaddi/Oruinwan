@@ -886,7 +886,75 @@ async function repairUserConversationAccess(userId) {
     }
 }
 
+/**
+ * Hand every member who lacks the key their copy (needs the server copy under SERVER_KEK).
+ * Returns how many members got a key.
+ */
+async function distributeToMissingMembers(conversationId, conversationType) {
+    const mongoose = require('mongoose');
+    let members = [];
+    if (conversationType === 'dm') {
+        const DMSession = require('../../../models/DMSession');
+        const dm = await DMSession.findById(conversationId).select('participants').lean();
+        members = (dm?.participants || []).map(String);
+    } else if (mongoose.isValidObjectId(String(conversationId))) {
+        const Channel = require("../../features/channels/channel.model.js");
+        const channel = await Channel.findById(conversationId).select('members').lean();
+        members = (channel?.members || []).map((m) => String(m?.user?._id || m?.user || m));
+    }
+    const existing = await ConversationKey.findByConversation(conversationId, conversationType);
+    if (!existing) return 0;
+    let given = 0;
+    for (const userId of members.filter((u) => !existing.hasAccess(u))) {
+        if (await distributeKeyToNewMember(conversationId, conversationType, userId)) given++;
+    }
+    return given;
+}
+
+/**
+ * Older conversations were keyed in the browser without a server copy, so members who joined
+ * later (or set up encryption later) could never be given the key. A member who can open the
+ * key sends it here once; it is stored under SERVER_KEK like every newer conversation, and the
+ * members without a copy get one.
+ */
+async function escrowConversationKey(conversationId, conversationType, userId, keyBase64) {
+    if (!(await isConversationMember(conversationId, conversationType, userId))) return { status: 'NOT_MEMBER' };
+    const doc = await ConversationKey.findByConversation(conversationId, conversationType);
+    if (!doc) return { status: 'NOT_FOUND' };
+    if (!doc.hasAccess(userId)) return { status: 'NO_ACCESS' };
+    if (doc.workspaceEncryptedKey) return { status: 'ALREADY_ESCROWED', distributed: await distributeToMissingMembers(conversationId, conversationType) };
+    const bytes = Buffer.from(String(keyBase64 || ''), 'base64');
+    if (bytes.length !== 32) return { status: 'BAD_KEY' };
+    const wrapped = cryptoUtils.encryptWithWorkspaceKey(bytes, doc.workspaceId);
+    doc.workspaceEncryptedKey = wrapped.ciphertext;
+    doc.workspaceKeyIv = wrapped.iv;
+    doc.workspaceKeyAuthTag = wrapped.authTag;
+    if (!doc.createdBy) doc.createdBy = userId;
+    await doc.save();
+    const distributed = await distributeToMissingMembers(conversationId, conversationType);
+    logger.info({ conversationId, conversationType, distributed }, '[E2EE] Server copy added to an older conversation key');
+    return { status: 'ESCROWED', distributed };
+}
+
+/**
+ * The member's copy no longer opens (wrapped for an identity key they've since replaced):
+ * wrap the server copy again for their current public key.
+ */
+async function rewrapForUser(conversationId, conversationType, userId) {
+    if (!(await isConversationMember(conversationId, conversationType, userId))) return { status: 'NOT_MEMBER' };
+    const doc = await ConversationKey.findByConversation(conversationId, conversationType);
+    if (!doc) return { status: 'NOT_FOUND' };
+    if (!doc.workspaceEncryptedKey) return { status: 'NO_SERVER_COPY' };
+    doc.encryptedKeys = doc.encryptedKeys.filter((e) => String(e.userId) !== String(userId));
+    await doc.save();
+    const ok = await distributeKeyToNewMember(conversationId, conversationType, userId);
+    return { status: ok ? 'REWRAPPED' : 'FAILED' };
+}
+
 module.exports = {
+    distributeToMissingMembers,
+    escrowConversationKey,
+    rewrapForUser,
     storeConversationKeys,
     getUserConversationKey,
     getUserWorkspaceConversationKeys,

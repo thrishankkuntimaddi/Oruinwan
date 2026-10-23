@@ -102,6 +102,19 @@ exports.getConversationKey = async (req, res) => {
             }
         }
 
+        // Channel members who joined (or set up encryption) after the key was made get their
+        // copy now from the server copy, instead of a "key not ready" error.
+        if (conversationType === 'channel') {
+            try {
+                const existingKey = await conversationKeysService.getUserConversationKey(conversationId, 'channel', userId);
+                if (!existingKey && await conversationKeysService.isConversationMember(conversationId, 'channel', userId)) {
+                    await conversationKeysService.distributeKeyToNewMember(conversationId, 'channel', userId);
+                }
+            } catch (lazyErr) {
+                logger.warn({ err: lazyErr.message, conversationId }, '[E2EE] Lazy channel key distribution failed');
+            }
+        }
+
         const keyExists = await conversationKeysService.hasConversationKeys(
             conversationId,
             conversationType
@@ -178,7 +191,10 @@ exports.getConversationKey = async (req, res) => {
         logger.info(`   └─ Response: 200 with encrypted key data`);
         logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-        return res.json(encryptedKeyData);
+        // serverCopy=false: an older key without a server copy; the client sends one (escrow)
+        // so members who join later can be given the key.
+        const doc = await require('../../identity/queries/auth').conversationKeyDocs.findByConversation(conversationId, conversationType);
+        return res.json({ ...encryptedKeyData, serverCopy: !!doc?.workspaceEncryptedKey });
     } catch (err) {
         return handleError(res, err, 'GET CONVERSATION KEY ERROR');
     }
@@ -367,5 +383,31 @@ exports.repairUserAccess = async (req, res) => {
             message: 'Repair failed (non-critical)',
             error: err.message
         });
+    }
+};
+
+/** POST /:id/keys/escrow { type, key } — add the server copy to an older conversation key. */
+exports.escrowKey = async (req, res) => {
+    try {
+        const { type } = req.body || {};
+        if (!['channel', 'dm'].includes(type)) return res.status(400).json({ message: 'type must be channel or dm' });
+        const result = await conversationKeysService.escrowConversationKey(req.params.id, type, req.user.sub, req.body.key);
+        const code = { NOT_MEMBER: 403, NO_ACCESS: 403, NOT_FOUND: 404, BAD_KEY: 400 }[result.status] || 200;
+        return res.status(code).json(result);
+    } catch (err) {
+        return handleError(res, err, 'ESCROW CONVERSATION KEY ERROR');
+    }
+};
+
+/** POST /:id/keys/rewrap { type } — my copy doesn't open any more: wrap it again for my key. */
+exports.rewrapKey = async (req, res) => {
+    try {
+        const { type } = req.body || {};
+        if (!['channel', 'dm'].includes(type)) return res.status(400).json({ message: 'type must be channel or dm' });
+        const result = await conversationKeysService.rewrapForUser(req.params.id, type, req.user.sub);
+        const code = { NOT_MEMBER: 403, NOT_FOUND: 404, NO_SERVER_COPY: 409, FAILED: 409 }[result.status] || 200;
+        return res.status(code).json(result);
+    } catch (err) {
+        return handleError(res, err, 'REWRAP CONVERSATION KEY ERROR');
     }
 };

@@ -261,18 +261,52 @@ class ConversationKeyService {
             throw new Error('Failed to fetch conversation key');
         }
 
-        const { encryptedKey, ephemeralPublicKey, algorithm } = data;
         // Throws "Identity keys not initialized" until the identity is unlocked;
         // nothing is cached, so the next call retries once it is ready.
         const privateKey = identityKeyService.getMyPrivateKey();
 
-        const conversationKeyBytes = algorithm === 'X25519'
-            ? await unwrapKeyWithX25519(encryptedKey, ephemeralPublicKey, privateKey)
-            : await unwrapKeyWithRSA(encryptedKey, privateKey);
+        let conversationKeyBytes;
+        try {
+            conversationKeyBytes = await this._unwrap(data, privateKey);
+        } catch (unwrapErr) {
+            // My copy was wrapped for an identity key I no longer have (set up again on another
+            // device, or an old copy): ask the server to wrap its copy for my current key, once.
+            logger.warn(`[E2EE] Key for ${cacheKey} did not open; asking for a fresh copy`, unwrapErr?.message);
+            try {
+                await api.post(`/api/v2/conversations/${conversationId}/keys/rewrap`, { type: conversationType });
+                ({ data } = await api.get(`/api/v2/conversations/${conversationId}/keys`, { params: { type: conversationType } }));
+                conversationKeyBytes = await this._unwrap(data, privateKey);
+            } catch (retryErr) {
+                logger.error(`[E2EE] Fresh copy for ${cacheKey} failed:`, retryErr?.message);
+                throw unwrapErr;
+            }
+        }
 
         const conversationKey = await importKey(conversationKeyBytes);
         this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+
+        // An older key without a server copy can't be given to people who join later. Send it
+        // once (in the background) so the server can hand it to every member.
+        if (data.serverCopy === false) this._escrow(conversationId, conversationType, conversationKeyBytes);
         return conversationKey;
+    }
+
+    async _unwrap({ encryptedKey, ephemeralPublicKey, algorithm }, privateKey) {
+        return algorithm === 'X25519'
+            ? unwrapKeyWithX25519(encryptedKey, ephemeralPublicKey, privateKey)
+            : unwrapKeyWithRSA(encryptedKey, privateKey);
+    }
+
+    _escrow(conversationId, conversationType, keyBytes) {
+        try {
+            const bytes = new Uint8Array(keyBytes);
+            let bin = '';
+            for (let i = 0; i < bytes.length; i += 1) bin += String.fromCharCode(bytes[i]);
+            api.post(`/api/v2/conversations/${conversationId}/keys/escrow`, { type: conversationType, key: btoa(bin) })
+                .catch((err) => logger.warn('[E2EE] Could not add the server copy (will retry next time):', err?.message));
+        } catch (err) {
+            logger.warn('[E2EE] Escrow skipped:', err?.message);
+        }
     }
 
     // A channel key 403 means either "not a member" or a distribution gap.

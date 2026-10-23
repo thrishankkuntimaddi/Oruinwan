@@ -21,4 +21,8 @@ router.get('/:id/keys/exists', conversationKeysController.checkKeysExist);
 
 router.post('/repair-access', conversationKeysController.repairUserAccess);
 
+router.post('/:id/keys/escrow', conversationKeysController.escrowKey);
+
+router.post('/:id/keys/rewrap', conversationKeysController.rewrapKey);
+
 module.exports = router;
