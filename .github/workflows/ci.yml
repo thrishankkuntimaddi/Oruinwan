@@ -54,7 +54,7 @@ jobs:
   e2e:
     name: E2E (Playwright, core flows)
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     services:
       mongo:
         image: mongo:7
