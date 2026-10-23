@@ -64,11 +64,11 @@ const WorkspaceHeader = ({
                     {isAdmin && (
                         <button type="button" role="menuitem" className="gl-shell-menu-item"
                             onClick={() => {
-                                const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
+                                const canInvite = isAdmin || activeWorkspace?.plan === 'enterprise' || activeWorkspace?.settings?.membersMayInvite === true;
                                 if (!canInvite) { showToast('Member invitations are disabled', 'warning'); return; }
                                 setShowInviteModal(true); setShowWorkspaceMenu(false);
                             }}
-                            disabled={!isAdmin && activeWorkspace?.settings?.allowMemberInvite === false}
+                            disabled={!isAdmin && !(activeWorkspace?.plan === 'enterprise' || activeWorkspace?.settings?.membersMayInvite === true)}
                         >
                             <UserPlus size={14} />
                             Invite people

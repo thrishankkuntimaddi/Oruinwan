@@ -9,7 +9,7 @@
  *   PUT  /api/workspaces/:workspaceId/channels/:channelId/default { isDefault }   owner/admin
  *
  * plus `requireInviteRight`, which makes the "Invite members" setting
- * (settings.allowMemberInvite) real: members may invite when it is on, admins always.
+ * (settings.membersMayInvite) real: members may invite when it is on, admins always.
  */
 
 const logger = require('../../../utils/logger');
@@ -30,11 +30,20 @@ function fail(res, status, message, code) {
     return res.status(status).json({ message, ...(code ? { code } : {}) });
 }
 
-/** Members may invite when settings.allowMemberInvite is not off; their invites are always 'member'. */
+/**
+ * Members may invite only when an owner or admin has turned "Members can invite people" on
+ * (settings.membersMayInvite === true; their invites are always 'member'). It is off by default:
+ * before this switch was enforced only admins could invite, and existing workspaces keep that.
+ * Unlimited (enterprise) workspaces let everyone invite.
+ */
+function membersMayInvite(ws) {
+    return ws?.plan === 'enterprise' || ws?.settings?.membersMayInvite === true;
+}
+
 function requireInviteRight(req, res, next) {
     const role = req.workspaceRole;
     if (role === 'owner' || role === 'admin') return next();
-    if (req.workspace?.settings?.allowMemberInvite === false) {
+    if (!membersMayInvite(req.workspace)) {
         return fail(res, 403, 'Only admins can invite people to this workspace.', 'MEMBER_INVITES_OFF');
     }
     if (req.body && typeof req.body === 'object') req.body.role = 'member';
@@ -188,3 +197,4 @@ exports.setDefaultChannel = async (req, res) => {
 };
 
 exports.requireInviteRight = requireInviteRight;
+exports.membersMayInvite = membersMayInvite;

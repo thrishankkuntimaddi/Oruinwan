@@ -39,9 +39,13 @@ const SECTION_LEADS = {
     'Danger zone': 'Transfer ownership, archive or delete the workspace.',
 };
 
-const PERMISSION_KEYS = ['allowMemberChannelCreation', 'allowMemberInvite'];
-// Both are on unless turned off (the server and the invite button treat a missing value as on).
-export const permissionsFrom = (ws) => Object.fromEntries(PERMISSION_KEYS.map(k => [k, ws?.settings?.[k] !== false]));
+const PERMISSION_KEYS = ['allowMemberChannelCreation', 'membersMayInvite'];
+// Channel creation is on unless turned off; member invites are off unless turned on (as the
+// server treats them; unlimited workspaces let everyone invite).
+export const permissionsFrom = (ws) => ({
+    allowMemberChannelCreation: ws?.settings?.allowMemberChannelCreation !== false,
+    membersMayInvite: ws?.plan === 'enterprise' || ws?.settings?.membersMayInvite === true,
+});
 
 /**
  * Workspace settings. `variant="modal"` (default): the dialog from the workspace menu.

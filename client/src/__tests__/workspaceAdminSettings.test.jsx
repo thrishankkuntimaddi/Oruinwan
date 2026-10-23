@@ -121,11 +121,11 @@ describe('Danger zone', () => {
 
 describe('Permissions', () => {
     it('shows only the settings the server enforces', () => {
-        expect(TOGGLES.map((t) => t.key)).toEqual(['allowMemberChannelCreation', 'allowMemberInvite']);
+        expect(TOGGLES.map((t) => t.key)).toEqual(['allowMemberChannelCreation', 'membersMayInvite']);
         const change = vi.fn();
-        render(<PermissionsTab isAdmin permissions={{ allowMemberChannelCreation: true, allowMemberInvite: false }} savingPermissions={false} handlePermissionChange={change} />);
+        render(<PermissionsTab isAdmin permissions={{ allowMemberChannelCreation: true, membersMayInvite: false }} savingPermissions={false} handlePermissionChange={change} />);
         fireEvent.click(screen.getByRole('switch', { name: 'Members can invite people' }));
-        expect(change).toHaveBeenCalledWith('allowMemberInvite', true);
+        expect(change).toHaveBeenCalledWith('membersMayInvite', true);
         expect(screen.queryByText(/Admin Approval/i)).toBeNull();
     });
 });

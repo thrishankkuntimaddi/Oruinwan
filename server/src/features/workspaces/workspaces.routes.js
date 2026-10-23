@@ -75,7 +75,7 @@ router.post('/:workspaceId/channels', ...memberGatePersonal, requireCompanyPermi
 
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 
-// Admins always; members too while settings.allowMemberInvite is on (their invites are 'member').
+// Admins always; members too while settings.membersMayInvite is on (their invites are 'member').
 router.post('/:workspaceId/invite', ...memberGatePersonal, lifecycle.requireInviteRight, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);
 
 router.post('/:id/invite', ...memberGatePersonal, lifecycle.requireInviteRight, requireCompanyPermission('inviteUsers'), planGuards.workspaceInvite, workspaceController.inviteToWorkspace);

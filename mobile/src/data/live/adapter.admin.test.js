@@ -20,11 +20,12 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('workspace admin', () => {
   it('reads and saves the enforced member permissions as workspace settings', async () => {
-    mockApi.get.mockResolvedValue({ workspaces: [{ id: 'w1', settings: { allowMemberInvite: false } }, { id: 'w2', settings: {} }] });
+    mockApi.get.mockResolvedValue({ workspaces: [{ id: 'w1', settings: {} }, { id: 'w2', settings: { membersMayInvite: true } }, { id: 'w3', plan: 'enterprise', settings: {} }] });
     expect(await a.workspacePermissions('w1')).toEqual({ invite: 'admin', channelCreation: 'member' });
     expect(await a.workspacePermissions('w2')).toEqual({ invite: 'member', channelCreation: 'member' });
+    expect(await a.workspacePermissions('w3')).toEqual({ invite: 'member', channelCreation: 'member' });
     await a.saveWorkspacePermissions('w1', { invite: 'member' });
-    expect(mockApi.put).toHaveBeenCalledWith('/workspaces/w1', { settings: { allowMemberInvite: true } });
+    expect(mockApi.put).toHaveBeenCalledWith('/workspaces/w1', { settings: { membersMayInvite: true } });
     await a.saveWorkspacePermissions('w1', { channelCreation: 'admin' });
     expect(mockApi.put).toHaveBeenLastCalledWith('/workspaces/w1', { settings: { allowMemberChannelCreation: false } });
   });

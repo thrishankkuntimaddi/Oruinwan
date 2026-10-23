@@ -5,7 +5,7 @@ import SettingSwitch from '../../ui/SettingSwitch';
 // Only settings the server enforces (admins and the owner can always do both).
 export const TOGGLES = [
     { key: 'allowMemberChannelCreation', label: 'Members can create channels', sub: 'When off, only admins and the owner create channels' },
-    { key: 'allowMemberInvite',          label: 'Members can invite people',   sub: 'When off, only admins and the owner send invites and team links. Members always invite as members.' },
+    { key: 'membersMayInvite',           label: 'Members can invite people',   sub: 'When off, only admins and the owner send invites and team links. Members always invite as members.' },
 ];
 
 const PermissionsTab = ({ isAdmin, permissions, savingPermissions, handlePermissionChange }) => (

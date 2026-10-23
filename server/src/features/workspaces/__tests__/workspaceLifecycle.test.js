@@ -202,8 +202,8 @@ describe('setDefaultChannel', () => {
 });
 
 describe('requireInviteRight', () => {
-    const run = (role, settings, body = { role: 'admin' }) => {
-        const req = { workspaceRole: role, workspace: { settings }, body };
+    const run = (role, settings, body = { role: 'admin' }, plan = 'free') => {
+        const req = { workspaceRole: role, workspace: { settings, plan }, body };
         const res = mkRes();
         const next = jest.fn();
         lifecycle.requireInviteRight(req, res, next);
@@ -211,22 +211,29 @@ describe('requireInviteRight', () => {
     };
 
     it('lets admins invite with any role', () => {
-        const { next, req } = run('admin', { allowMemberInvite: false });
+        const { next, req } = run('admin', {});
         expect(next).toHaveBeenCalled();
         expect(req.body.role).toBe('admin');
     });
 
-    it('lets members invite (as members only) while the setting is on', () => {
-        const { next, req } = run('member', { allowMemberInvite: true });
+    it('lets members invite (as members only) once an admin turns the setting on', () => {
+        const { next, req } = run('member', { membersMayInvite: true });
         expect(next).toHaveBeenCalled();
         expect(req.body.role).toBe('member');
     });
 
-    it('stops members when the setting is off', () => {
-        const { next, res } = run('member', { allowMemberInvite: false });
-        expect(next).not.toHaveBeenCalled();
-        expect(statusOf(res)).toBe(403);
-        expect(bodyOf(res).code).toBe('MEMBER_INVITES_OFF');
+    it('stops members when the setting is off or was never turned on (existing workspaces)', () => {
+        for (const settings of [{ membersMayInvite: false }, {}, { allowMemberInvite: true }]) {
+            const { next, res } = run('member', settings);
+            expect(next).not.toHaveBeenCalled();
+            expect(statusOf(res)).toBe(403);
+            expect(bodyOf(res).code).toBe('MEMBER_INVITES_OFF');
+        }
+    });
+
+    it('lets everyone invite in an unlimited (enterprise) workspace', () => {
+        const { next } = run('member', {}, { role: 'member' }, 'enterprise');
+        expect(next).toHaveBeenCalled();
     });
 });
 

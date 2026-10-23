@@ -21,7 +21,7 @@ const { isValidId, userRoom } = require("../../shared/utils/workspaceAccess");
 const planService = require("../../shared/plans/planService");
 
 // Workspace settings a member may see and an admin may change (booleans / numbers only).
-const BOOLEAN_SETTINGS = ['isPrivate', 'allowMemberInvite', 'allowMemberChannelCreation', 'requireAdminApproval', 'isDiscoverable'];
+const BOOLEAN_SETTINGS = ['isPrivate', 'allowMemberInvite', 'membersMayInvite', 'allowMemberChannelCreation', 'requireAdminApproval', 'isDiscoverable'];
 const NUMBER_SETTINGS = ['autoArchiveInactiveDays'];
 const RULES_MAX = 5000;
 

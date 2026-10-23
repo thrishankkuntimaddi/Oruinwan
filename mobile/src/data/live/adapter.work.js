@@ -853,18 +853,18 @@ export const workAdapter = {
   },
   /**
    * Who may invite people and create channels: 'member' (everyone) or 'admin' (admins and the owner).
-   * These are the workspace settings the server enforces (allowMemberInvite / allowMemberChannelCreation,
-   * on unless turned off), the same switches as the web's Workspace admin → Permissions.
+   * These are the workspace settings the server enforces (membersMayInvite: off unless turned on;
+   * allowMemberChannelCreation: on unless turned off), the same switches as the web's Workspace admin → Permissions.
    */
   async workspacePermissions(ws) {
     const data = await api.get('/workspaces/my');
     const w = (data.workspaces || []).find((x) => idOf(x) === String(ws));
     const s = w?.settings || {};
-    return { invite: s.allowMemberInvite === false ? 'admin' : 'member', channelCreation: s.allowMemberChannelCreation === false ? 'admin' : 'member' };
+    return { invite: (w?.plan === 'enterprise' || s.membersMayInvite === true) ? 'member' : 'admin', channelCreation: s.allowMemberChannelCreation === false ? 'admin' : 'member' };
   },
   async saveWorkspacePermissions(ws, { invite, channelCreation }) {
     const settings = {};
-    if (invite) settings.allowMemberInvite = invite === 'member';
+    if (invite) settings.membersMayInvite = invite === 'member';
     if (channelCreation) settings.allowMemberChannelCreation = channelCreation === 'member';
     await api.put(`/workspaces/${ws}`, { settings });
   },
