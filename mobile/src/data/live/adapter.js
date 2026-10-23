@@ -995,6 +995,59 @@ export const liveAdapter = {
     return { text: result.text || '', actions: mapActions(result.actionsExecuted), sources: mapSources(result.sources), provider: result.provider };
   },
 
+  // AI panel history, saved on the server so it follows the person to every device.
+  // An older server without it answers 404: then history stays on this device.
+  async aiChats(ws) {
+    try {
+      return (await api.get('/ai/chats', { workspaceId: ws })).chats || [];
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
+  async aiChat(ws, id) {
+    try {
+      return (await api.get(`/ai/chats/${encodeURIComponent(id)}`, { workspaceId: ws })).chat || null;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  },
+  async saveAiChat(ws, id, chat) {
+    return (await api.put(`/ai/chats/${encodeURIComponent(id)}`, { ...chat, workspaceId: ws })).chat;
+  },
+  async renameAiChat(ws, id, title) {
+    return (await api.patch(`/ai/chats/${encodeURIComponent(id)}`, { workspaceId: ws, title })).chat;
+  },
+  async deleteAiChat(ws, id) {
+    await api.del(`/ai/chats/${encodeURIComponent(id)}`, { workspaceId: ws });
+  },
+  async clearAiChats(ws) {
+    await api.del('/ai/chats', { workspaceId: ws });
+  },
+
+  // Support requests to the Oruinwan team (Settings → Contact support).
+  async supportTickets() {
+    const data = await api.get('/support/tickets/mine');
+    return (data.tickets || []).map((t) => ({
+      id: String(t._id),
+      subject: t.subject,
+      description: t.description,
+      category: t.category,
+      status: t.status,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+      replies: (t.replies || []).map((r) => ({ id: String(r._id), text: r.message || '', fromSupport: Boolean(r.fromSupport), at: r.createdAt })),
+    }));
+  },
+  async createSupportTicket({ subject, description, category, context }) {
+    const data = await api.post('/support/tickets', { subject, description, category, context });
+    return String(data.ticket?._id || '');
+  },
+  async replySupportTicket(id, message) {
+    await api.post(`/support/tickets/${encodeURIComponent(id)}/message`, { message });
+  },
+
   /**
    * Asks Oruinwan AI to answer in this conversation (after a message that mentions @ai).
    * The answer streams over the socket ('ai:reply') and is then saved as a normal message.

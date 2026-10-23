@@ -318,7 +318,7 @@ export function SprintScreen({ id }) {
         ) : !count ? (
           <EmptyState icon={Rocket} title="No tasks in this sprint" body="Add tasks to plan this sprint, then move them across the board." action={{ label: 'Add tasks', icon: Plus, onClick: () => setAdding(true) }} />
         ) : (
-          <div className={cx('px-4 pt-2 pb-4', wide ? 'grid gap-3' : 'no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto')} style={wide ? { gridTemplateColumns: `repeat(${board.length}, minmax(0, 1fr))` } : undefined}>
+          <div className={cx('px-4 pt-2 pb-4', wide ? 'grid gap-3' : 'no-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto')} style={wide ? { gridTemplateColumns: `repeat(${board.length}, minmax(0, 1fr))` } : undefined}>
             {board.map((col) => (
               <section key={col.status} className={cx('flex flex-col rounded-card border border-line-soft bg-surface', !wide && 'w-[78%] max-w-80 shrink-0 snap-center')}>
                 <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">

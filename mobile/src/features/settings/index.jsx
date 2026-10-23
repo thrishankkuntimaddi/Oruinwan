@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
   ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
+  LifeBuoy, BookOpen, Gift, ChevronRight,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -21,7 +22,7 @@ import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { openScanToSignIn } from '../auth/ApprovalHost.jsx';
-import { Field, Segmented, Toggle } from '../../ui/Controls.jsx';
+import { Field, SearchField, Segmented, Toggle } from '../../ui/Controls.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -35,8 +36,13 @@ import { UpdateButton, UpdateDetails, UpdateProgress } from '../update/UpdatePan
 import { UnlockSheet } from '../chats/E2eeBanner.jsx';
 import { useE2ee } from '../../data/e2ee.js';
 import { startTour } from '../tour/tourState.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { clearConversations, listConversations } from '../ai/aiHistory.js';
+import { searchSettings } from './searchIndex.js';
 export { AccountDataSettings, TwoFactorSettings } from './account.jsx';
 export { BackupSettings } from './backup.jsx';
+export { HelpCenterScreen, HelpPageScreen } from './help.jsx';
+export { NewSupportRequestScreen, SupportScreen, SupportTicketScreen } from './support.jsx';
 
 const STATUS = [
   { value: 'active', label: 'Active', color: 'bg-success' },
@@ -44,10 +50,13 @@ const STATUS = [
   { value: 'dnd', label: 'Do not disturb', color: 'bg-danger' },
 ];
 
+// Links to pages of the web app. They open on the web app's address, which can differ from
+// the API's (api.example.com serves no pages).
 function useWebLink() {
   const mode = useSession((s) => s.mode);
   const server = useSession((s) => s.server);
-  return (path = '') => (mode === 'live' && server ? () => openExternal(`${server}${path}`) : null);
+  const webUrl = useWebUrl(server);
+  return (path = '') => (mode === 'live' && webUrl ? () => openExternal(`${webUrl}${path}`) : null);
 }
 
 const External = <Icon as={ExternalLink} size="sm" className="text-text-3" />;
@@ -62,6 +71,17 @@ export function SettingsScreen() {
   const labs = useFlags((s) => s.flags.labs);
   const [statusSheet, setStatusSheet] = useState(false);
   const [signOut, setSignOut] = useState(false);
+  const [query, setQuery] = useState('');
+  const results = searchSettings(query);
+
+  const openResult = (item) => {
+    if (item.route) nav.push(item.route);
+    else if (item.action === 'scan') openScanToSignIn();
+    else if (item.action === 'workspace') nav.push('workspace');
+    else if (item.action === 'integrations') nav.push('integrations');
+    else if (item.action === 'tour') startTour();
+    else if (item.action === 'signout') setSignOut(true);
+  };
 
   const setPresence = async (presence) => {
     useSession.getState().setUser({ presence });
@@ -78,6 +98,26 @@ export function SettingsScreen() {
     <Screen>
       <Header title="Settings" actions={<IconButton icon={ScanQrCode} label="Scan to sign in" onClick={openScanToSignIn} />} />
       <Body>
+        <div className="px-4 pt-1 pb-3">
+          <SearchField value={query} onChange={setQuery} placeholder="Search settings" />
+        </div>
+        {query.trim() ? (
+          <Section title={results.length ? 'Results' : 'No settings match'}>
+            {results.length ? (
+              <RowGroup>
+                {results.map((item) => (
+                  <Row key={item.title} title={item.title} subtitle={item.in ? `In ${item.in}` : null} onClick={() => openResult(item)} trailing={<Icon as={ChevronRight} size="sm" className="text-text-3" />} chevron={false} />
+                ))}
+              </RowGroup>
+            ) : (
+              <div className="px-4 text-sm text-text-2">
+                <p>Try another word, or search the help center.</p>
+                <button type="button" className="mt-2 font-medium text-accent-ink" onClick={() => nav.push('settings.help')}>Open the help center</button>
+              </div>
+            )}
+          </Section>
+        ) : (
+        <>
         <div className="mx-4 mt-1 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
           <Avatar name={user?.name} src={user?.avatarUrl} size="lg" />
           <div className="min-w-0 flex-1">
@@ -149,11 +189,14 @@ export function SettingsScreen() {
           </RowGroup>
         </Section>
 
-        <Section title="Support">
+        <Section title="Help & support">
           <RowGroup>
+            <Row icon={BookOpen} tile="accent" title="Help center" subtitle="Guides and answers" onClick={() => nav.push('settings.help')} />
+            <Row icon={LifeBuoy} tile="accent" title="Contact support" subtitle="Ask the Oruinwan team" onClick={() => nav.push('settings.support')} />
+            <Row icon={Bug} tile="accent" title="Report a problem" onClick={() => nav.push('settings.support.new', { category: 'problem' })} />
+            <Row icon={Gift} tile="accent" title="What's new" subtitle={`Version ${current}`} onClick={() => nav.push('settings.updates')} />
             <Row icon={Compass} tile="accent" title="Take the tour again" subtitle="A quick look around the app" onClick={startTour} />
             <Row icon={Info} tile="accent" title="About Oruinwan" onClick={() => nav.push('settings.about')} />
-            <Row icon={Bug} tile="accent" title="Report a problem" trailing={External} onClick={() => openExternal(`https://github.com/${REPO}/issues/new`)} />
           </RowGroup>
         </Section>
 
@@ -165,6 +208,8 @@ export function SettingsScreen() {
         <p className="mt-6 text-center text-xs text-text-3">
           Oruinwan {current} · {platformLabel}
         </p>
+        </>
+        )}
       </Body>
 
       <ActionSheet
@@ -765,7 +810,12 @@ export function AiSettings() {
   const ws = useSession((s) => s.workspaceId);
   const web = useWebLink();
   const [confirm, setConfirm] = useState(false);
-  const count = prefs.get(`ai.threads.${ws}`, []).length;
+  const [count, setCount] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    listConversations(ws).then((list) => alive && setCount(list.length)).catch(() => alive && setCount(0));
+    return () => { alive = false; };
+  }, [ws]);
   return (
     <Screen>
       <Header title="Oruinwan AI" />
@@ -776,9 +826,9 @@ export function AiSettings() {
             behalf when you ask it to.
           </div>
         </Section>
-        <Section title={`On this ${deviceNoun}`}>
-          <RowGroup footer={`Past AI conversations are stored on this ${deviceNoun} only.`}>
-            <Row icon={MessageSquareText} title="Saved conversations" value={String(count)} chevron={false} />
+        <Section title="Your conversations">
+          <RowGroup footer="Past AI conversations are saved to your account, so they're on all your devices. Only you can see them.">
+            <Row icon={MessageSquareText} title="Saved conversations" value={count == null ? '…' : String(count)} onClick={() => nav.setTab('ai')} />
             <Row icon={Eraser} danger title="Clear AI conversations" chevron={false} disabled={!count} onClick={() => setConfirm(true)} />
           </RowGroup>
         </Section>
@@ -792,13 +842,18 @@ export function AiSettings() {
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Clear AI conversations?"
-        body={`This removes past AI conversations for this workspace from this ${deviceNoun}.`}
+        body="This removes your past AI conversations in this workspace from all your devices."
         confirmLabel="Clear"
         danger
-        onConfirm={() => {
-          prefs.set(`ai.threads.${ws}`, null);
+        onConfirm={async () => {
           setConfirm(false);
-          toast('AI conversations cleared');
+          try {
+            await clearConversations(ws);
+            setCount(0);
+            toast('AI conversations cleared');
+          } catch {
+            toast("Couldn't clear them. Check your connection and try again.", 'danger');
+          }
         }}
       />
     </Screen>
@@ -903,6 +958,7 @@ export function UpdateSettings() {
 export function ServerSettings() {
   const mode = useSession((s) => s.mode);
   const server = useSession((s) => s.server);
+  const webUrl = useWebUrl(server);
   const [probe, setProbe] = useState(null);
   const [confirm, setConfirm] = useState(false);
   useEffect(() => {
@@ -927,7 +983,7 @@ export function ServerSettings() {
               subtitle={!probe ? 'Checking…' : probe.state === 'ok' ? `Healthy${probe.insecure ? ' · not HTTPS' : ''}` : probe.message}
               chevron={false}
             />
-            <Row icon={ExternalLink} title="Open the web app" onClick={() => openExternal(server)} trailing={External} />
+            <Row icon={ExternalLink} title="Open the web app" subtitle={webUrl !== server ? webUrl : null} onClick={() => openExternal(webUrl)} trailing={External} />
           </RowGroup>
         </Section>
         <Section>

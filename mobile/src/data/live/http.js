@@ -6,6 +6,7 @@
 import { prefs, secure } from '../../native/storage.js';
 import { clientPlatform } from '../../native/index.js';
 import { emit } from '../../lib/bus.js';
+import { bundledAsset } from '../../lib/staticAssets.js';
 
 let base = '';
 let tokens = null; // { access, refresh }
@@ -83,6 +84,9 @@ export async function saveTokens(next) {
 export function absolute(url) {
   if (!url) return null;
   if (/^(https?:|data:)/.test(url)) return url;
+  // Web-app icons (agents, integration bots) aren't on the API domain: use the app's copy.
+  const local = bundledAsset(url);
+  if (local) return local;
   return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 

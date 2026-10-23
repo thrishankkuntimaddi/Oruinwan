@@ -16,6 +16,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
 import { openConversation } from '../chats/chatsUi.js';
 
 function statusOf(a) {
@@ -161,7 +162,8 @@ export function AgentsScreen() {
   const tools = data?.tools || [];
   const policy = data?.policy || { canConnectOwn: false };
   const current = active && agents.find((a) => a.id === active);
-  const webPage = mode === 'live' && server ? `${server}/workspace/${ws}/agents?tab=directory` : null;
+  const webUrl = useWebUrl(server);
+  const webPage = mode === 'live' && webUrl ? `${webUrl}/workspace/${ws}/agents?tab=directory` : null;
 
   return (
     <Screen>
