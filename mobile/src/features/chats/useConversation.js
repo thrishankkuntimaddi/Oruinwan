@@ -1,5 +1,5 @@
 // Messages for one conversation (or one thread), with optimistic sends and reactions.
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { api, useSession } from '../../data/session.js';
 import { getQueryData, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { uid } from '../../lib/id.js';
@@ -58,10 +58,32 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     });
   }, [key, threadOf]);
 
+  // Mark the conversation read when it opens, whenever someone else's message arrives while it's
+  // on screen, when the app comes back to the foreground and when the socket reconnects, so the
+  // sender's Message info shows the read (it used to be marked only once, on open).
+  const items0 = query.data?.items;
+  const latestFromOthers = useMemo(() => {
+    for (let i = (items0?.length || 0) - 1; i >= 0; i -= 1) {
+      const m = items0[i];
+      if (m && !m.pending && m.authorId && m.authorId !== me) return m.id;
+    }
+    return null;
+  }, [items0, me]);
   useEffect(() => {
-    if (!conv?.id || threadOf) return;
-    api().markRead?.(conv).catch(() => {});
-  }, [conv?.id, conv?.kind, threadOf]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!conv?.id || threadOf) return undefined;
+    const mark = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      Promise.resolve(api().markRead?.(conv)).catch(() => {});
+    };
+    mark();
+    const offRealtime = on('realtime', (s) => s?.connected && mark());
+    const onVisible = () => document.visibilityState === 'visible' && mark();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      offRealtime?.();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [conv?.id, conv?.kind, threadOf, latestFromOthers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patch = useCallback((fn) => setQueryData(key, (d) => (d ? { ...d, items: fn(d.items) } : d)), [key]);
 

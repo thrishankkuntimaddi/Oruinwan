@@ -15,7 +15,7 @@ import { reminderLabel } from '../../lib/reminders.js';
 import { toast } from '../../lib/bus.js';
 import { openStoredMessage, useConversationName } from './chatsUi.js';
 
-function preview(m) {
+export function preview(m) {
   if (!m) return 'This message is no longer available.';
   if (m.poll) return `📊 ${m.poll.question}`;
   if (m.state === 'locked') return 'Encrypted. Unlock your messages to read.';
@@ -24,11 +24,11 @@ function preview(m) {
   return plainPreview(m.text, 160) || m.attachments?.[0]?.name || 'Message';
 }
 
-function MessageCard({ m, conv, convName, directory, meta, action }) {
+export function MessageCard({ m, conv, convName, directory, meta, action, onOpen }) {
   const author = m ? m.author || directory[m.authorId] : null;
   return (
     <div className="flex items-start gap-3 px-4 py-3">
-      <button type="button" onClick={() => openStoredMessage(conv, m)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
+      <button type="button" onClick={() => (onOpen ? onOpen(m) : openStoredMessage(conv, m))} className="flex min-w-0 flex-1 items-start gap-3 text-left">
         <Avatar name={author?.name || '?'} src={author?.avatarUrl} size="sm" className="mt-0.5" />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">

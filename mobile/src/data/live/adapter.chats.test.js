@@ -13,7 +13,7 @@ vi.mock('./crypto.js', () => ({
 }));
 vi.mock('../e2ee.js', () => ({ useE2ee: { getState: () => ({ status: 'ready' }) } }));
 
-const { chatsAdapter, convOf, mapPoll, messageExtras, parseChecklistText } = await import('./adapter.chats.js');
+const { chatsAdapter, convOf, mapMessageInfo, mapPoll, messageExtras, parseChecklistText } = await import('./adapter.chats.js');
 
 const mapMessage = vi.fn(async (conv, m) => ({ id: String(m._id), convId: conv.id, text: m.text || '', state: 'ok', parentId: m.parentId || null }));
 const a = chatsAdapter({ mapMessage, me: () => ({ id: 'me' }), ws: () => 'w1', dm: () => null });
@@ -211,6 +211,73 @@ describe('AI and search', () => {
 
   it('reads the channel mention policy', async () => {
     mockApi.get.mockResolvedValueOnce({ isMuted: false, postingPolicy: 'everyone', broadcastMentions: 'admins', canManage: false });
-    expect(await a.channelPolicy('c1')).toEqual({ broadcastMentions: 'admins', canManage: false, postingPolicy: 'everyone' });
+    expect(await a.channelPolicy('c1')).toEqual({ broadcastMentions: 'admins', canManage: false, postingPolicy: 'everyone', muted: false });
+  });
+});
+
+describe('conversation tools (the web header menu)', () => {
+  it('loads pinned messages for a channel or a DM', async () => {
+    mockApi.get.mockResolvedValueOnce({ messages: [{ _id: 'p1', text: 'Pinned' }] });
+    expect(await a.pinnedMessages({ kind: 'channel', id: 'c1' })).toEqual([expect.objectContaining({ id: 'p1', convId: 'c1' })]);
+    expect(mockApi.get).toHaveBeenLastCalledWith('/v2/messages/pinned', { channelId: 'c1' });
+    mockApi.get.mockResolvedValueOnce({ messages: [] });
+    await a.pinnedMessages({ kind: 'dm', id: 'd1' });
+    expect(mockApi.get).toHaveBeenLastCalledWith('/v2/messages/pinned', { dmId: 'd1' });
+  });
+
+  it('lists channel threads by latest reply', async () => {
+    mapMessage.mockImplementation(async (conv, m) => ({ id: String(m._id), convId: conv.id, lastReplyAt: m.lastReplyAt, at: m.createdAt }));
+    mockApi.get.mockResolvedValueOnce({ threads: [{ _id: 't1', lastReplyAt: '2026-01-01' }, { _id: 't2', lastReplyAt: '2026-02-01' }] });
+    const list = await a.channelThreads('c1');
+    expect(mockApi.get).toHaveBeenCalledWith('/threads/channels/c1/threads');
+    expect(list.map((m) => m.id)).toEqual(['t2', 't1']);
+  });
+
+  it('reads and changes DM mute and block state, clears and deletes', async () => {
+    mockApi.get.mockResolvedValueOnce({ isMuted: true, isBlocked: false, isBlockedByOther: true, isGroup: false });
+    expect(await a.dmStatus('d1')).toEqual({ muted: true, blocked: false, blockedByOther: true, isGroup: false });
+    await a.setDmMuted('d1', true);
+    expect(mockApi.post).toHaveBeenLastCalledWith('/v2/dm/d1/mute', {});
+    await a.setDmMuted('d1', false);
+    expect(mockApi.del).toHaveBeenLastCalledWith('/v2/dm/d1/mute');
+    await a.setDmBlocked('d1', true);
+    expect(mockApi.post).toHaveBeenLastCalledWith('/v2/dm/d1/block', {});
+    await a.setDmBlocked('d1', false);
+    expect(mockApi.del).toHaveBeenLastCalledWith('/v2/dm/d1/block');
+    await a.clearDm('d1');
+    expect(mockApi.post).toHaveBeenLastCalledWith('/v2/dm/d1/clear', {});
+    await a.deleteDm('d1');
+    expect(mockApi.del).toHaveBeenLastCalledWith('/v2/dm/d1');
+  });
+
+  it('maps message info: readers with times, the rest as not read yet, never the sender', async () => {
+    const data = {
+      message: { _id: 'm1', sender: { _id: 'me', username: 'me' }, createdAt: '2026-03-01T10:00:00Z', isPinned: false },
+      members: [{ _id: 'me', username: 'me' }, { _id: 'u1', username: 'ana', profilePicture: '/a.png' }, { _id: 'u2', username: 'ben' }, { _id: 'u3', username: 'cy' }],
+      readByUsers: [{ _id: 'u1', username: 'ana', readAt: '2026-03-01T10:05:00Z' }, { _id: 'me', username: 'me' }],
+      readBy: ['u1', 'u2', 'me'],
+      editedAt: null,
+      editCount: 0,
+    };
+    const info = mapMessageInfo(data, 'me');
+    expect(info.sentAt).toBe('2026-03-01T10:00:00Z');
+    expect(info.recipients).toBe(3);
+    expect(info.read).toEqual([
+      { id: 'u1', username: 'ana', avatarUrl: 'https://api.example/a.png', readAt: '2026-03-01T10:05:00Z' },
+      { id: 'u2', username: 'ben', avatarUrl: null, readAt: null },
+    ]);
+    expect(info.unread.map((u) => u.id)).toEqual(['u3']);
+    expect(info.pinnedBy).toBeNull();
+
+    mockApi.get.mockResolvedValueOnce(data);
+    expect((await a.messageInfo({ kind: 'dm', id: 'd1' }, 'm1', 'me')).read).toHaveLength(2);
+    expect(mockApi.get).toHaveBeenCalledWith('/v2/messages/m1/info');
+  });
+
+  it('message info for a 1:1 DM nobody has read yet', () => {
+    const info = mapMessageInfo({ message: { sender: 'me' }, members: [{ _id: 'me' }, { _id: 'u1', username: 'ana' }], readByUsers: [], readBy: [] });
+    expect(info.read).toEqual([]);
+    expect(info.unread).toEqual([{ id: 'u1', username: 'ana', avatarUrl: null, readAt: null }]);
+    expect(info.recipients).toBe(1);
   });
 });

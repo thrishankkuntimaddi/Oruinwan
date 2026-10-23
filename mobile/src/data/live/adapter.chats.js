@@ -68,6 +68,50 @@ export function convOf(m) {
   return dm ? { kind: 'dm', id: dm, name: null } : null;
 }
 
+/**
+ * GET /v2/messages/:id/info as the app models it (the same data the web's Message info shows):
+ * { sentAt, editedAt, editCount, pinnedBy, pinnedAt, read: [person], unread: [person] } where a
+ * person is { id, username, avatarUrl, readAt }. The sender is never in either list; readers who
+ * hide their receipts are already left out by the server. readAt is null for reads recorded before
+ * the server kept times.
+ */
+export function mapMessageInfo(data, senderId) {
+  const d = data || {};
+  const m = d.message || {};
+  const sender = idOf(m.sender) || (senderId ? String(senderId) : null);
+  const person = (u) => ({ id: idOf(u), username: (u && typeof u === 'object' && u.username) || 'Unknown', avatarUrl: u && typeof u === 'object' ? absolute(u.profilePicture) : null });
+  const members = (Array.isArray(d.members) ? d.members : []).map(person).filter((u) => u.id);
+  const byId = new Map(members.map((u) => [u.id, u]));
+  const readUsers = Array.isArray(d.readByUsers) ? d.readByUsers : Array.isArray(m.readByUsers) ? m.readByUsers : [];
+  const read = [];
+  const seen = new Set();
+  for (const u of readUsers) {
+    const own = person(u);
+    const known = byId.get(own.id);
+    const p = { ...own, username: own.username === 'Unknown' && known ? known.username : own.username, avatarUrl: own.avatarUrl || known?.avatarUrl || null, readAt: (u && typeof u === 'object' && u.readAt) || null };
+    if (!p.id || p.id === sender || seen.has(p.id)) continue;
+    seen.add(p.id);
+    read.push(p);
+  }
+  for (const id of (Array.isArray(d.readBy) ? d.readBy : []).map(idOf)) {
+    if (!id || id === sender || seen.has(id)) continue;
+    seen.add(id);
+    read.push({ ...(byId.get(id) || { id, username: 'Unknown', avatarUrl: null }), readAt: null });
+  }
+  read.sort((a, b) => String(b.readAt || '').localeCompare(String(a.readAt || '')));
+  const unread = members.filter((u) => u.id !== sender && !seen.has(u.id)).map((u) => ({ ...u, readAt: null }));
+  return {
+    sentAt: m.createdAt || null,
+    editedAt: d.editedAt ?? m.editedAt ?? null,
+    editCount: d.editCount ?? m.editCount ?? 0,
+    pinnedBy: m.isPinned ? d.pinnedBy ?? m.pinnedBy ?? null : null,
+    pinnedAt: m.isPinned ? d.pinnedAt ?? m.pinnedAt ?? null : null,
+    recipients: members.filter((u) => u.id !== sender).length,
+    read,
+    unread,
+  };
+}
+
 function mapTaskRef(t) {
   return t ? { id: idOf(t), title: t.title, status: t.status } : null;
 }
@@ -265,10 +309,50 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
     },
 
     // ---- Channels
-    /** Who may use @channel/@here: { broadcastMentions, canManage, postingPolicy }. */
+    /** Who may use @channel/@here: { broadcastMentions, canManage, postingPolicy, muted }. */
     async channelPolicy(id) {
       const data = await api.get(`/channels/${id}/mute`);
-      return { broadcastMentions: data.broadcastMentions || 'everyone', canManage: Boolean(data.canManage), postingPolicy: data.postingPolicy || 'everyone' };
+      return { broadcastMentions: data.broadcastMentions || 'everyone', canManage: Boolean(data.canManage), postingPolicy: data.postingPolicy || 'everyone', muted: Boolean(data.isMuted) };
+    },
+    /** A channel's threads, newest activity first (the web's Threads view). */
+    async channelThreads(channelId) {
+      const conv = { kind: 'channel', id: channelId };
+      const data = await api.get(`/threads/channels/${channelId}/threads`);
+      const list = await Promise.all((data.threads || []).map((m) => mapMessage(conv, m)));
+      return list.sort((a, b) => String(b.lastReplyAt || b.at || '').localeCompare(String(a.lastReplyAt || a.at || '')));
+    },
+
+    // ---- Conversation tools (the web's header menu)
+    /** Pinned messages of a channel or DM, decrypted here. */
+    async pinnedMessages(conv) {
+      const data = await api.get('/v2/messages/pinned', conv.kind === 'channel' ? { channelId: conv.id } : { dmId: conv.id });
+      return Promise.all((data.messages || []).map((m) => mapMessage(conv, m)));
+    },
+    /** Who has read one of my messages, and who hasn't yet. */
+    async messageInfo(conv, id, senderId) {
+      return mapMessageInfo(await api.get(`/v2/messages/${id}/info`), senderId);
+    },
+    /** A DM's mute and block state: { muted, blocked, blockedByOther, isGroup }. */
+    async dmStatus(id) {
+      const data = await api.get(`/v2/dm/${id}/status`);
+      return { muted: Boolean(data.isMuted), blocked: Boolean(data.isBlocked), blockedByOther: Boolean(data.isBlockedByOther), isGroup: Boolean(data.isGroup) };
+    },
+    async setDmMuted(id, muted) {
+      if (muted) await api.post(`/v2/dm/${id}/mute`, {});
+      else await api.del(`/v2/dm/${id}/mute`);
+    },
+    /** Not for group DMs (leave the group instead). */
+    async setDmBlocked(id, blocked) {
+      if (blocked) await api.post(`/v2/dm/${id}/block`, {});
+      else await api.del(`/v2/dm/${id}/block`);
+    },
+    /** Hides everything sent so far, for me only. */
+    async clearDm(id) {
+      await api.post(`/v2/dm/${id}/clear`, {});
+    },
+    /** Removes the DM from my list and clears it for me; a new message brings it back. */
+    async deleteDm(id) {
+      await api.del(`/v2/dm/${id}`);
     },
 
     // ---- Server search (pages, files, tasks, notes: not end-to-end encrypted)

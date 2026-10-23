@@ -1,7 +1,7 @@
 // Renders the chat screens with a fake adapter in the phone, split and wide layouts, and
 // drives the new message tools (polls, checklists, saved, threads, search filters).
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { create } from 'zustand';
 
 const me = { id: 'me', name: 'Me', username: 'me' };
@@ -19,6 +19,7 @@ const fake = {
   notifications: vi.fn(async () => []),
   messages: vi.fn(async () => ({
     items: [
+      msg({ id: 'm0', authorId: 'me', text: 'My own note' }),
       msg({ id: 'm1', text: 'Hello team\n```js\nconst a = 1;\n```', editCount: 1, edited: true }),
       msg({ id: 'm2', type: 'poll', state: 'attachment', text: 'Poll', poll: { question: 'Lunch?', options: [{ text: 'Pizza', votes: [] }, { text: 'Salad', votes: [] }], allowMultiple: false, anonymous: false, active: true, totalVotes: 0, createdBy: 'u1' } }),
       msg({ id: 'm3', type: 'checklist', text: '{"title":"Ship","items":["Docs"]}', checklist: [{ checked: false }] }),
@@ -53,6 +54,16 @@ const fake = {
   searchMessages: vi.fn(async () => []),
   searchServer: vi.fn(async () => ({ knowledge: [{ id: 'k1', title: 'Roadmap', icon: '🗺', snippet: 'Q3' }], files: [], tasks: [], notes: [] })),
   sendMessage: vi.fn(async (conv, text) => msg({ id: 'n1', authorId: 'me', text })),
+  pinnedMessages: vi.fn(async () => [msg({ id: 'm1', text: 'Pinned hello', pinned: true })]),
+  channelThreads: vi.fn(async () => [msg({ id: 't1', text: 'A thread starter', replyCount: 2 })]),
+  togglePin: vi.fn(async () => false),
+  setChannelMuted: vi.fn(async () => {}),
+  messageInfo: vi.fn(async () => ({ sentAt: new Date().toISOString(), editedAt: null, editCount: 0, pinnedBy: null, pinnedAt: null, recipients: 1, read: [{ id: 'u9', username: 'reader9', avatarUrl: null, readAt: new Date().toISOString() }], unread: [] })),
+  dmStatus: vi.fn(async () => ({ muted: false, blocked: false, blockedByOther: false, isGroup: false })),
+  setDmMuted: vi.fn(async () => {}),
+  setDmBlocked: vi.fn(async () => {}),
+  clearDm: vi.fn(async () => {}),
+  deleteDm: vi.fn(async () => {}),
 };
 
 const mockSession = create(() => ({ user: me, workspaceId: 'w1', workspaces: [{ id: 'w1', role: 'member' }] }));
@@ -137,6 +148,64 @@ describe.each(Object.keys(LAYOUTS))('chat screens (%s layout)', (layout) => {
     await act(async () => fireEvent.click(screen.getByText('Mark as resolved')));
     expect(fake.resolveThread).toHaveBeenCalledWith('m1');
     expect(await screen.findByText(/^Resolved/)).toBeTruthy();
+  });
+
+  it('offers the web header tools in the channel ⋮ menu: pinned, threads, mute', async () => {
+    render(<ConversationScreen kind="channel" id="c1" />);
+    await screen.findByTestId('poll-card');
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    for (const label of ['Create poll', 'Search in conversation', 'Threads', 'Reminders', 'Pinned messages', 'Saved messages', 'Channel info', 'Channel members', 'Mute notifications']) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    fireEvent.click(screen.getByText('Pinned messages'));
+    expect(await screen.findByText('Pinned hello')).toBeTruthy();
+    expect(fake.pinnedMessages).toHaveBeenCalledWith({ kind: 'channel', id: 'c1' });
+  });
+
+  it('mutes a channel and lists its threads from the menu', async () => {
+    render(<ConversationScreen kind="channel" id="c1" />);
+    await screen.findByTestId('poll-card');
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    await act(async () => fireEvent.click(screen.getByText('Mute notifications')));
+    expect(fake.setChannelMuted).toHaveBeenCalledWith('c1', true);
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    fireEvent.click(await screen.findByText('Threads'));
+    expect(await screen.findByText('A thread starter')).toBeTruthy();
+  });
+
+  it('searches the loaded conversation and shows message info for my message', async () => {
+    render(<ConversationScreen kind="channel" id="c1" />);
+    await screen.findByTestId('poll-card');
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    fireEvent.click(screen.getByText('Search in conversation'));
+    fireEvent.change(await screen.findByPlaceholderText('Search messages'), { target: { value: 'own note' } });
+    expect(await screen.findByText('My own note', { selector: 'span' })).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Message actions' })[0]);
+    fireEvent.click(await screen.findByText('Message info'));
+    expect(await screen.findByText('reader9')).toBeTruthy();
+    expect(fake.messageInfo).toHaveBeenCalledWith({ kind: 'channel', id: 'c1' }, 'm0', 'me');
+  });
+
+  it('a DM menu blocks and clears the chat, each after a confirmation', async () => {
+    fake.dms.mockResolvedValue([{ id: 'd1', isGroup: false, userId: 'u1', user: { id: 'u1', name: 'Ana Silva', presence: 'active' }, participantIds: ['me', 'u1'] }]);
+    render(<ConversationScreen kind="dm" id="d1" />);
+    await screen.findByTestId('poll-card');
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    for (const label of ['View profile', 'Mute notifications', 'Block user', 'Clear chat', 'Delete chat']) expect(screen.getByText(label)).toBeTruthy();
+    fireEvent.click(screen.getByText('Block user'));
+    expect(fake.setDmBlocked).not.toHaveBeenCalled();
+    expect(await screen.findByText('Block this person?')).toBeTruthy();
+    await act(async () => fireEvent.click(await screen.findByRole('button', { name: 'Block' })));
+    expect(fake.setDmBlocked).toHaveBeenCalledWith('d1', true);
+    expect(await screen.findByText(/You blocked this person/)).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('conversation-menu'));
+    fireEvent.click(await screen.findByText('Clear chat'));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Clear chat history?' });
+    await act(async () => fireEvent.click(within(dialog).getByRole('button', { name: 'Clear chat' })));
+    expect(fake.clearDm).toHaveBeenCalledWith('d1');
+    fake.dms.mockResolvedValue([]);
   });
 
   it('lists saved messages', async () => {
