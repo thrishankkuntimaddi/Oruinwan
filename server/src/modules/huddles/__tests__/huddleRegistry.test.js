@@ -16,6 +16,14 @@ describe('HuddleRegistry', () => {
     expect(second.others[0]).not.toHaveProperty('socketId');
   });
 
+  test('a screen share is marked on the participant, and cleared when the video stops', () => {
+    r.join('h1', { userId: 'a', socketId: 's1' });
+    r.setVideo('h1', 'a', true, true);
+    expect(r.join('h1', { userId: 'b', socketId: 's2' }).others[0]).toMatchObject({ userId: 'a', videoEnabled: true, sharing: true });
+    r.setVideo('h1', 'a', false, true);
+    expect(r.participant('h1', 'a').sharing).toBe(false);
+  });
+
   test('unlimited workspaces get the higher cap (still a cap)', () => {
     const u = new HuddleRegistry({ maxParticipants: 3, unlimitedMaxParticipants: 5 });
     u.ensure('h2', { channelId: 'c2' }, { channelName: 'big' });

@@ -259,7 +259,7 @@ describe('video huddles', () => {
 
     const changed = once(b, 'huddle:video_changed');
     a.emit('huddle:video_toggle', { huddleId: 'hv', videoEnabled: false });
-    expect(await changed).toEqual({ huddleId: 'hv', userId: 'a', videoEnabled: false });
+    expect(await changed).toEqual({ huddleId: 'hv', userId: 'a', videoEnabled: false, sharing: false });
 
     [a, b].forEach((c) => c.close());
     io.close(); httpServer.close();

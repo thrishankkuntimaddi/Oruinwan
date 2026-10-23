@@ -639,9 +639,10 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
     });
 
     socket.on('huddle:video_toggle', (data = {}) => {
-        const { huddleId, videoEnabled } = data;
-        if (!huddleId || !registry.setVideo(huddleId, uid(), videoEnabled)) return;
-        io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled });
+        // `sharing`: this video is a screen share, so every client can give it the main stage.
+        const { huddleId, videoEnabled, sharing } = data;
+        if (!huddleId || !registry.setVideo(huddleId, uid(), videoEnabled, sharing)) return;
+        io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled, sharing: !!videoEnabled && !!sharing });
         emitSelfActive(io, registry, uid());
     });
 

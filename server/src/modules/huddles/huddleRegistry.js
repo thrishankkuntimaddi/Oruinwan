@@ -38,7 +38,7 @@ function scopeKey(scope) {
 }
 
 function publicParticipant(p) {
-  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, handRaised: !!p.handRaised, joinedAt: p.joinedAt };
+  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, sharing: !!p.sharing, handRaised: !!p.handRaised, joinedAt: p.joinedAt };
 }
 
 const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : new Date());
@@ -192,11 +192,13 @@ class HuddleRegistry {
     return p;
   }
 
-  setVideo(huddleId, userId, videoEnabled) {
+  /** `sharing`: the video is a screen share (so every client can put it on the main stage). */
+  setVideo(huddleId, userId, videoEnabled, sharing = false) {
     const p = this.participant(huddleId, userId);
     if (p) {
       p.videoEnabled = !!videoEnabled;
-      this._changed({ type: 'video', huddleId, userId: p.userId, videoEnabled: p.videoEnabled });
+      p.sharing = p.videoEnabled && !!sharing;
+      this._changed({ type: 'video', huddleId, userId: p.userId, videoEnabled: p.videoEnabled, sharing: p.sharing });
     }
     return p;
   }
@@ -362,7 +364,7 @@ class HuddleRegistry {
         }
         case 'video': {
           const p = this.participant(op.huddleId, op.userId);
-          if (p) p.videoEnabled = !!op.videoEnabled;
+          if (p) { p.videoEnabled = !!op.videoEnabled; p.sharing = p.videoEnabled && !!op.sharing; }
           return !!p;
         }
         case 'hand': {
