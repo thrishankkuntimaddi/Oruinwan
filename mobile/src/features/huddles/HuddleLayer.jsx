@@ -1,17 +1,18 @@
-// App-wide huddle chrome: the call screen (full or minimised, CallScreen.jsx), the ring for a DM
-// call, "you're in another call" and permission prompts, and "In a call on … · Move here".
+// App-wide huddle chrome: the call screen (full or minimised, CallScreen.jsx), incoming calls
+// (IncomingCall.jsx), channel huddle notices, "you're in another call" and permission prompts, and "In a call on … · Move here".
 // Mounted once in the shell; listens for huddle events while signed in to a server.
-import { useEffect, useState } from 'react';
-import { ClipboardList, Phone, Video, X } from 'lucide-react';
+import { useEffect } from 'react';
+import { ClipboardList, X } from 'lucide-react';
 import { useSession } from '../../data/session.js';
 import { useDms, useChannels } from '../../data/hooks.js';
 import { useFlag } from '../../config/flags.js';
-import { toast } from '../../lib/bus.js';
 import { Icon } from '../../ui/Icon.jsx';
 import { Button } from '../../ui/Button.jsx';
-import { openConversation } from '../chats/chatsUi.js';
 import { onAppState } from '../../native/index.js';
-import { bindHuddles, dismissRing, joinHuddle, leave, loadLive, refreshMine, useHuddle } from './huddle.js';
+import { bindHuddles, leave, loadLive, refreshMine, useHuddle } from './huddle.js';
+import { bindIncomingCalls } from './incomingCall.js';
+import { HuddleNotice, IncomingCall } from './IncomingCall.jsx';
+import { CrashNotice } from '../push/CrashNotice.jsx';
 import { bindCallExtras } from './callExtras.js';
 import { CaptionStrip, RecordingConsentBanner } from './CallExtras.jsx';
 import { CallView } from './CallScreen.jsx';
@@ -40,47 +41,6 @@ function Call() {
   const call = useHuddle((s) => s.call);
   const title = useCallTitle(call?.scope, call?.title);
   return <CallView title={title} />;
-}
-
-function Ring() {
-  const ring = useHuddle((s) => s.ring);
-  const title = useCallTitle(ring ? { dmId: ring.dmId } : null);
-  const [busy, setBusy] = useState(false);
-  if (!ring) return null;
-  const answer = async () => {
-    setBusy(true);
-    try {
-      openConversation('dm', ring.dmId);
-      await joinHuddle(ring.huddleId, { dmId: ring.dmId }, title, null, { video: ring.video });
-    } catch (err) {
-      toast(err.message || 'Could not join the call', 'danger');
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div
-      role="alertdialog"
-      aria-label="Incoming call"
-      data-testid="huddle-ring"
-      className="glass-strong fixed inset-x-3 z-[61] flex items-center gap-3 rounded-2xl border px-3 py-3 animate-sheet-in"
-      style={{ top: 'calc(env(safe-area-inset-top) + 8px)', borderLeft: '3px solid rgb(var(--c-success))' }}
-    >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-success/50 text-success">
-        <Icon as={ring.video ? Video : Phone} size={18} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-semibold">{ring.startedBy?.username || 'Someone'} is calling</span>
-        <span className="block text-xs text-text-2">{ring.video ? 'Video call' : 'Voice call'} · direct message</span>
-      </span>
-      <Button size="sm" variant="secondary" onClick={dismissRing}>
-        Decline
-      </Button>
-      <Button size="sm" loading={busy} onClick={answer} data-testid="huddle-ring-join">
-        Join
-      </Button>
-    </div>
-  );
 }
 
 /** "Meeting ended · View recap" where the person is, after a call they were part of ends. */
@@ -126,6 +86,7 @@ export function HuddleLayer() {
   const workspaceId = useSession((s) => s.workspaceId);
   const on = useFlag('huddles');
   useEffect(() => (live && on ? bindHuddles() : undefined), [live, on]);
+  useEffect(() => (live && on ? bindIncomingCalls() : undefined), [live, on]);
   useEffect(() => (live && on ? bindCallExtras() : undefined), [live, on]);
   useEffect(() => (live ? bindRecap() : undefined), [live]);
   useEffect(() => {
@@ -149,11 +110,13 @@ export function HuddleLayer() {
   useEffect(() => {
     if ((!live || !on) && useHuddle.getState().call) leave();
   }, [live, on]);
-  if (!live || !on) return null;
+  if (!live || !on) return <CrashNotice />;
   return (
     <>
-      <Ring />
+      <CrashNotice />
       <Call />
+      <IncomingCall />
+      <HuddleNotice />
       <ElsewherePill />
       <SwitchPrompt />
       <PermissionPrompt />

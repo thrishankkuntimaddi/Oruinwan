@@ -2,7 +2,7 @@
 // screen) without leaving the call. A sheet on phones and split windows, a side panel on wide
 // ones. Loaded on demand from the call bar (HuddleLayer.jsx).
 import { useEffect, useState } from 'react';
-import { CalendarClock, ExternalLink, X } from 'lucide-react';
+import { CalendarClock, FileText, X } from 'lucide-react';
 import { api } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
@@ -10,7 +10,7 @@ import { useOverlay, Sheet } from '../../ui/Overlay.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { MeetingTabBar, MeetingTabContent, MeetingUnavailable, useMeetingLive } from '../meetings/MeetingPanel.jsx';
-import { useHuddle } from './huddle.js';
+import { setCallView, useHuddle } from './huddle.js';
 
 /** The call's meeting record id: from the huddle's socket payloads, else GET /by-huddle/:huddleId. */
 export function useCallMeetingId() {
@@ -60,9 +60,11 @@ function PanelBody({ meetingId, failed, tab, setTab, onClose }) {
         <Button
           size="sm"
           variant="ghost"
-          icon={ExternalLink}
+          icon={FileText}
           onClick={() => {
+            // The page opens inside the app; the call keeps going in the floating bubble.
             onClose();
+            setCallView('mini');
             nav.push('meeting', { id: meeting.id, tab });
           }}
         >

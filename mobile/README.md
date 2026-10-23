@@ -94,7 +94,9 @@ src/native/      platform bridge (Capacitor on Android, window.oruinwanDesktop o
 src/update/      update manifest checks and the installer bridge
 src/config/      build config, feature flags, Firebase Remote Config
 android/         the Capacitor Android project (AppUpdaterPlugin, AppWindowPlugin, CallSessionPlugin + CallService:
-                 calls keep running in the background with an ongoing "In call" notification)
+                 calls keep running in the background with an ongoing "In call" notification; CallRinger +
+                 CallMessagingService + CallActionReceiver: incoming calls ring with Answer/Decline even when
+                 the app is closed (needs Firebase, docs/FIREBASE_SETUP.md); CrashLog: "closed unexpectedly")
 ios/             the Capacitor iOS project (Swift Package Manager), iPhone and iPad
 scripts/         icons, assembling www/, local release build, update manifest, iOS release signing
 release-notes/   one Markdown file per version, shown in the app and on the release page

@@ -14,7 +14,7 @@ import { Capacitor } from '@capacitor/core';
 import { api, useSession } from '../../data/session.js';
 import { emit as busEmit, on, toast } from '../../lib/bus.js';
 import { callFullText, timeLimitEndedText } from '../plan/planText.js';
-import { keepScreenOn, nativeDeviceName, onCallAction, setSpeaker, startCallSession, stopCallSession, updateCallSession } from '../../native/callSession.js';
+import { cancelIncomingNotification, keepScreenOn, nativeDeviceName, onCallAction, setSpeaker, startCallSession, stopCallSession, stopRinging, updateCallSession } from '../../native/callSession.js';
 import { cameraConstraints, deviceLabel, elsewhereCall, endedMessage, promptForError, scopeOf, switchPrompt } from './callLogic.js';
 import { ensureAllowed } from './callPermissions.js';
 import { prefs } from '../../native/storage.js';
@@ -67,8 +67,10 @@ export const useHuddle = create(() => ({
   peerStates: {}, // userId -> RTCPeerConnection.connectionState
   /** Live huddles I can see, by conversation: { [channelId|dmId]: { huddleId, startedBy, video, participants } }. */
   live: {},
-  /** A DM call ringing for me. */
+  /** A DM or group-DM call ringing for me (ringLogic.normalizeRing; incomingCall.js), or null. */
   ring: null,
+  /** "Ben started a huddle in #design · Join" (a channel huddle; no ringing), or null. */
+  notice: null,
   /** "You're in another call · Switch?" or "Move the call here?" (callLogic.switchPrompt), or null. */
   prompt: null,
   /** My call on another of my devices (the server's huddle:self_active), for "Move here". */
@@ -329,11 +331,7 @@ const handlers = {
     if (pendingStart?.huddleId === p.huddleId) joinPendingStart(p.huddleId);
     const key = scopeKey(p);
     if (key !== 'workspace') setLive(key, { huddleId: p.huddleId, startedBy: p.startedBy, video: Boolean(p.video), participants: [] });
-    // A DM call for me, while I'm in no call: ring.
-    if (p.dmId && String(p.startedBy?._id || '') !== myId() && !useHuddle.getState().call) {
-      set({ ring: { huddleId: p.huddleId, dmId: String(p.dmId), startedBy: p.startedBy || null, video: Boolean(p.video) } });
-      setTimeout(() => set((s) => (s.ring?.huddleId === p.huddleId ? { ring: null } : {})), 45000);
-    }
+    // Ringing for DM calls: incomingCall.js (huddle:ring, or this event from older servers).
   },
   'huddle:ended'(p) {
     const key = scopeKey(p);
@@ -575,6 +573,12 @@ async function enter({ huddleId, scope, title, start, meetingId = null, video = 
   if (!(await ensureAllowed('microphone'))) throw new Error('Allow the microphone to join the huddle.');
   const wantCamera = videoEnabled ?? video;
   const cameraAllowed = wantCamera ? await ensureAllowed('camera') : false;
+  // Joining any call stops a ring that's still sounding.
+  const ringing = useHuddle.getState().ring;
+  if (ringing) {
+    stopRinging();
+    cancelIncomingNotification(ringing.huddleId);
+  }
   set({ connecting: true, ring: null, prompt: null });
   let withCamera = false;
   try {
@@ -879,7 +883,10 @@ export async function checkConversation(scope) {
   else setLive(key, null);
 }
 
-export const dismissRing = () => set({ ring: null });
+/** Tells the server (and so the caller and my other devices) that I declined this call. */
+export function declineCall(huddleId) {
+  if (huddleId) emit('huddle:decline', { huddleId: String(huddleId) });
+}
 export const dismissTimeWarning = () => set({ timeWarning: null });
 export const dismissEndedNotice = () => set({ endedNotice: null });
 
@@ -887,5 +894,5 @@ export const dismissEndedNotice = () => set({ endedNotice: null });
 export function __resetHuddles() {
   teardown();
   lastRequest = null;
-  set({ live: {}, ring: null, endedNotice: null, prompt: null, elsewhere: null, facing: 'user' });
+  set({ live: {}, ring: null, notice: null, endedNotice: null, prompt: null, elsewhere: null, facing: 'user' });
 }

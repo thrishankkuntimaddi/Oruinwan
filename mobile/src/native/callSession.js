@@ -61,6 +61,60 @@ export const requestPermission = (kind) =>
 
 export const openAppSettings = () => quietly(() => CallSession.openSettings());
 
+// ---------------------------------------------------------------- notifications permission
+
+/** 'granted' | 'prompt' | 'denied' for notifications ('granted' where the plugin isn't there). */
+export const notificationPermission = () =>
+  quietly(async () => (await CallSession.notificationPermission())?.state || 'prompt', 'granted');
+
+export const requestNotificationPermission = () =>
+  quietly(async () => (await CallSession.requestNotificationPermission())?.state || 'denied', 'granted');
+
+/** Android 14+: whether an incoming call may open full screen over the lock screen. */
+export const fullScreenCallsAllowed = () => quietly(async () => Boolean((await CallSession.fullScreenCallsAllowed())?.allowed), true);
+
+export const openFullScreenCallSettings = () => quietly(() => CallSession.openFullScreenCallSettings());
+
+// ---------------------------------------------------------------- incoming calls
+
+/** The phone's ringtone and vibration while the incoming-call screen shows. */
+export const startRinging = () => quietly(() => CallSession.startRinging());
+export const stopRinging = () => quietly(() => CallSession.stopRinging());
+
+/** Rings with the system's call notification (used when the app is in the background). */
+export const showIncomingNotification = (call) => quietly(async () => Boolean((await CallSession.showIncoming({ call }))?.shown));
+
+export const cancelIncomingNotification = (huddleId) => quietly(() => CallSession.cancelIncoming({ huddleId: String(huddleId || '') }));
+
+/**
+ * fn(action, call) for taps on an incoming call's notification: 'answer' | 'open' | 'decline' |
+ * 'cancel'. A tap that started the app is delivered once the listener is added.
+ */
+export function onIncomingCallAction(fn) {
+  if (!hasCallSession()) return () => {};
+  let sub = null;
+  let gone = false;
+  CallSession.addListener('callAction', (e) => fn(e?.action, e?.call || {}))
+    .then((s) => {
+      if (gone) s.remove();
+      else sub = s;
+    })
+    .catch(() => {});
+  return () => {
+    gone = true;
+    sub?.remove();
+  };
+}
+
+/** After a ring ends: the app stops showing over the lock screen. */
+export const leaveLockScreen = () => quietly(() => CallSession.leaveLockScreen());
+
+// ---------------------------------------------------------------- crash reports
+
+/** The last native crash's details (text), or null. */
+export const lastCrashReport = () => quietly(async () => (await CallSession.lastCrash())?.report || null, null);
+export const clearCrashReport = () => quietly(() => CallSession.clearLastCrash());
+
 /** fn('mute' | 'leave') for taps on the notification's buttons. Returns an unsubscribe. */
 export function onCallAction(fn) {
   if (!hasCallSession()) return () => {};
