@@ -6,6 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Btn, IconBtn, Chip, EmptyState, LoadingState, Dialog, Confirm, Field, errorMessage, timeAgo } from '../../components/ui/page';
 import { fileKind, formatSize, announceFilesChanged } from './fileKinds';
 import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
+import AttachmentPreview from './AttachmentPreview';
+import { downloadLibraryFile } from '../../hooks/useFiles';
 import FileShareDialog, { FILE_SHARE_CSS } from './FileShareDialog';
 import StartReviewDialog from '../designReview/StartReviewDialog';
 import designReviewService from '../../services/designReviewService';
@@ -90,10 +92,13 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
     const versionInput = useRef(null);
 
     const { Icon, label } = fileKind(file.mimeType);
-    const isImage = file.mimeType?.startsWith('image/');
-    const isVideo = file.mimeType?.startsWith('video/');
-    const isAudio = file.mimeType?.startsWith('audio/');
-    const isPDF = file.mimeType?.includes('pdf');
+    const download = async (version) => {
+        try {
+            await downloadLibraryFile(file._id, { versionId: version?._id, name: file.name });
+        } catch (err) {
+            showToast(errorMessage(err, 'Couldn’t download the file'), 'error');
+        }
+    };
 
     useEffect(() => { setTags(file.tags || []); }, [file._id, file.tags]);
 
@@ -209,14 +214,8 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
             <div className="fl-preview-body">
                 {activeTab === 'preview' && (
                     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div className="fl-media">
-                            {isImage && <img src={file.url} alt={file.name} />}
-                            {isVideo && <video src={file.url} controls />}
-                            {isAudio && <audio src={file.url} controls style={{ width: '100%', padding: 16, boxSizing: 'border-box' }} />}
-                            {isPDF && <iframe src={file.url} title={file.name} style={{ width: '100%', height: 300, border: 0 }} />}
-                            {!isImage && !isVideo && !isAudio && !isPDF && (
-                                <EmptyState icon={Icon} title="No preview for this type" text={`${file.mimeType || 'Unknown type'} — download it to open on your device.`} />
-                            )}
+                        <div className="fl-media fl-media--viewer">
+                            <AttachmentPreview attachment={file} />
                         </div>
 
                         <dl className="fl-facts">
@@ -244,9 +243,7 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
                         {inRouter && reviewKind(file.mimeType) && <FileReviews file={file} workspaceId={workspaceId} />}
 
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="gl-btn gl-btn--primary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
-                                <Download size={13} /> Download
-                            </a>
+                            <Btn variant="primary" icon={Download} onClick={() => download()} style={{ flex: 1, justifyContent: 'center' }}>Download</Btn>
                             <Btn variant="ghost" icon={Share2} onClick={() => setShareOpen(true)}>Share</Btn>
                             {isOwner && <Btn variant="ghost" icon={Trash2} onClick={onDelete}>Delete</Btn>}
                         </div>
@@ -320,7 +317,7 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
                                         </span>
                                     </span>
                                     <span className="fl-actions" style={{ opacity: 1 }}>
-                                        <IconBtn label={`Download version ${v.versionNumber}`} onClick={() => window.open(v.url, '_blank')}><Download size={14} /></IconBtn>
+                                        <IconBtn label={`Download version ${v.versionNumber}`} onClick={() => download(v)}><Download size={14} /></IconBtn>
                                         {canEdit && <Btn size="sm" variant="ghost" icon={RotateCcw} onClick={() => setConfirmRestore(v)}>Restore</Btn>}
                                     </span>
                                 </li>

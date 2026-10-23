@@ -438,7 +438,12 @@ async function fetchMessages(query, options = {}) {
     }
 
     if (around) {
-        const anchorMsg = await Message.findById(around)
+        // The anchor must be a message of this conversation that the reader can see
+        // (same scope as the page itself), not any message id.
+        if (!mongoose.isValidObjectId(String(around))) {
+            return { messages: [], hasMore: false, hasMoreNewer: false };
+        }
+        const anchorMsg = await Message.findOne({ ...finalQuery, _id: around })
             .populate('parentId')
             .populate('quotedMessageId');
 

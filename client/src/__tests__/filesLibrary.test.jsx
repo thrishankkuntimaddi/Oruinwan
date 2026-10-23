@@ -167,7 +167,9 @@ describe('FileShareDialog', () => {
 
 describe('FileLibrary upload with tags', () => {
     it('asks for tags before uploading and sends them', async () => {
-        api.get.mockResolvedValue({ data: { files: [baseFile] } });
+        api.get.mockImplementation(async (url) => (url === '/api/v2/files/shared'
+            ? { data: { items: [{ id: 'lib:f1', source: 'library', fileId: 'f1', name: 'spec.pdf', mimeType: 'application/pdf', size: 2048, sharedBy: { _id: ME, username: 'alice' }, sharedAt: baseFile.createdAt, conversation: null }], total: 1, hasMore: false, conversations: [] } }
+            : { data: { files: [baseFile] } }));
         api.post.mockResolvedValue({ data: { file: { ...baseFile, _id: 'f2', name: 'notes.txt', tags: ['ops'] } } });
         const { container } = render(
             <MemoryRouter initialEntries={[`/workspace/${WS}/files`]}>

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FolderOpen, Upload, Search, RefreshCw, Loader2 } from 'lucide-react';
 import { useFiles } from '../../../hooks/useFiles';
+import { useSharedFiles, KIND_OPTIONS, whereLabel } from '../../../hooks/useSharedFiles';
 import { useToast } from '../../../contexts/ToastContext';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
 import { fileKind, formatSize, FILES_CHANGED, announceFilesChanged } from '../../../pages/SidebarComp/fileKinds';
@@ -13,17 +14,21 @@ const FilesPanel = ({ title }) => {
   const { workspaceId, id: fileId } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { files, loading, listFiles, uploadFile } = useFiles();
+  const [searchParams] = useSearchParams();
+  const openItem = searchParams.get('item');
+  const { uploadFile } = useFiles();
   const [search, setSearch] = useState('');
-  const [activeTag, setActiveTag] = useState(null);
+  const [q, setQ] = useState('');
+  const [kind, setKind] = useState('all');
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
+  // Everything shared with the person: channel / DM attachments and library uploads.
+  const { items, total, loading, reload } = useSharedFiles(workspaceId, { kind, source: 'all', q, sort: 'newest' });
 
-  const reload = useCallback(() => {
-    if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
-  }, [workspaceId, listFiles]);
-
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    const t = setTimeout(() => setQ(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // The Files page uploads and deletes too: stay in step with it.
   useEffect(() => {
@@ -50,18 +55,18 @@ const FilesPanel = ({ title }) => {
     if (ok) {
       showToast(`${ok} file${ok > 1 ? 's' : ''} uploaded`, 'success');
       announceFilesChanged(SOURCE);
+      reload();
       if (ok === 1 && last?._id) navigate(`/workspace/${workspaceId}/files/${last._id}`);
     }
   };
 
   const pickFiles = () => inputRef.current?.click();
 
-  const allTags = [...new Set(files.flatMap(f => f.tags || []))];
-  const filtered = files.filter(f => {
-    const matchesSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
-    const matchesTag = !activeTag || (f.tags || []).includes(activeTag);
-    return matchesSearch && matchesTag;
-  });
+  const filtering = Boolean(q) || kind !== 'all';
+  const open = (item) => {
+    if (item.source === 'library') navigate(`/workspace/${workspaceId}/files/${item.fileId}`);
+    else navigate(`/workspace/${workspaceId}/files?item=${encodeURIComponent(item.id)}`);
+  };
 
   return (
     <WorkspacePanel
@@ -83,51 +88,48 @@ const FilesPanel = ({ title }) => {
         <>
           <div className="gl-search">
             <Search size={12} />
-            <input className="gl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a file…" aria-label="Find a file" />
+            <input className="gl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find a file by name…" aria-label="Find a file" />
           </div>
-          {allTags.length > 0 && (
-            <div className="gl-x-chips">
-              {[null, ...allTags.slice(0, 8)].map((tag, i) => (
-                <button key={i} type="button" className={`gl-x-chip${activeTag === tag ? ' is-active' : ''}`} aria-pressed={activeTag === tag}
-                  onClick={() => setActiveTag(tag === activeTag ? null : tag)}>
-                  {tag ? `#${tag}` : 'All'}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="gl-x-chips">
+            {KIND_OPTIONS.map((o) => (
+              <button key={o.value} type="button" className={`gl-x-chip${kind === o.value ? ' is-active' : ''}`} aria-pressed={kind === o.value}
+                onClick={() => setKind(o.value)}>
+                {o.label}
+              </button>
+            ))}
+          </div>
         </>
       )}
-      footer={!loading && files.length > 0 ? `${files.length} ${files.length === 1 ? 'file' : 'files'} in the workspace` : null}
+      footer={!loading && total > 0 ? `${total} ${total === 1 ? 'file' : 'files'} shared with you` : null}
     >
-      {loading && files.length === 0 && <div className="gl-x-center"><div className="gl-x-spinner" /></div>}
-      {!loading && filtered.length === 0 && (
+      {loading && items.length === 0 && <div className="gl-x-center"><div className="gl-x-spinner" /></div>}
+      {!loading && items.length === 0 && (
         <PanelEmpty
           icon={FolderOpen}
-          title={search || activeTag ? 'No matching files' : 'No files yet'}
-          text={search || activeTag ? 'Try a different name or tag.' : 'Upload documents, images and recordings for the whole workspace.'}
-          action={!search && !activeTag && (
+          title={filtering ? 'No matching files' : 'Nothing shared yet'}
+          text={filtering ? 'Try a different name or type.' : 'Files sent in your channels and DMs show up here, along with uploads for the whole workspace.'}
+          action={!filtering && (
             <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={pickFiles} disabled={uploading}>
               <Upload size={12} /> Upload files
             </button>
           )}
         />
       )}
-      {filtered.length > 0 && (
-        <PanelSection label={search || activeTag ? 'Results' : 'All files'}>
-          {filtered.map(file => {
-            const { Icon } = fileKind(file.mimeType);
-            const active = fileId === file._id;
+      {items.length > 0 && (
+        <PanelSection label={filtering ? 'Results' : 'Recent'}>
+          {items.map(item => {
+            const { Icon } = fileKind(item.mimeType);
+            const active = item.source === 'library' ? fileId === item.fileId : openItem === item.id;
             return (
-              <button key={file._id} type="button"
+              <button key={item.id} type="button"
                 className={`gl-item gl-x-tall${active ? ' is-active' : ''}`}
                 aria-current={active ? 'page' : undefined}
-                onClick={() => navigate(`/workspace/${workspaceId}/files/${file._id}`)}>
+                onClick={() => open(item)}>
                 <Icon size={14} className="gl-x-item-icon" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span className="gl-x-item-main">
-                  <span className="gl-x-item-title" style={{ display: 'block' }}>{file.name}</span>
+                  <span className="gl-x-item-title" style={{ display: 'block' }}>{item.name}</span>
                   <span className="gl-x-item-sub" style={{ display: 'block' }}>
-                    {formatSize(file.size)}
-                    {file.tags?.length > 0 && ` · ${file.tags.map(t => `#${t}`).join(' ')}`}
+                    {formatSize(item.size)} · {whereLabel(item)}
                   </span>
                 </span>
               </button>

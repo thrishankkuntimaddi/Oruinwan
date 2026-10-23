@@ -1305,6 +1305,37 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         handleThreadOpen({ _id: String(openThreadIdFromNav), id: String(openThreadIdFromNav), workspace: workspaceId || chat?.workspaceId || null });
     }, [openThreadIdFromNav, location.key, chat?.id, chat?.workspaceId, workspaceId, features.threads, handleThreadOpen]);
 
+    // Files → "Go to message" links carry ?message=<id> (plus ?thread=<parent> for a
+    // thread reply): bring that message (or the reply's parent) into view and flash it,
+    // loading the page of history around it when it is further back.
+    const navSearch = new URLSearchParams(location.search);
+    const navMessageId = navSearch.get('message') ? (navSearch.get('thread') || navSearch.get('message')) : null;
+    const navJump = useRef({ key: null, loadedAround: false, pending: false, done: false });
+    const [navJumpTick, setNavJumpTick] = useState(0);
+    const { jumpToMessage, loading: convLoading, historyLoaded: convHistoryLoaded, events: convEvents } = conversation;
+    useEffect(() => {
+        if (!navMessageId || !chat?.id || convLoading || !convHistoryLoaded) return;
+        const key = `${chat.id}:${navMessageId}:${location.key}`;
+        if (navJump.current.key !== key) navJump.current = { key, loadedAround: false, pending: false, done: false };
+        const st = navJump.current;
+        if (st.done || st.pending) return;
+        if (document.getElementById(`msg-${navMessageId}`)) {
+            st.done = true;
+            jumpToLoadedMessage(navMessageId);
+            return;
+        }
+        if (!st.loadedAround && jumpToMessage) {
+            st.loadedAround = true;
+            st.pending = true;
+            Promise.resolve(jumpToMessage(navMessageId))
+                .catch(() => {})
+                .finally(() => { st.pending = false; setNavJumpTick((t) => t + 1); });
+            return;
+        }
+        st.done = true;
+        showToast('That message isn’t available any more.', 'info');
+    }, [navMessageId, chat?.id, location.key, convLoading, convHistoryLoaded, convEvents, jumpToMessage, navJumpTick, jumpToLoadedMessage, showToast]);
+
     
     const handleThreadClose = useCallback(() => {
         setActiveThread(null);

@@ -468,6 +468,14 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         }
     }, [conversationId, reset, loadMessages]);
 
+    /** Load the page of history around one message (Files → "Go to message"). */
+    const jumpToMessage = useCallback(async (messageId) => {
+        if (!conversationId || !messageId) return;
+        reset();
+        loadedRef.current = true;
+        await loadMessages({ around: messageId });
+    }, [conversationId, reset, loadMessages]);
+
     useEffect(() => {
         if (conversationId) {
             reset();
@@ -501,6 +509,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         loadMore,
         loadNewer,
         jumpToDate,
+        jumpToMessage,
         addOptimisticEvent,
         updateEvent,
         removeEvent,
