@@ -91,6 +91,17 @@ export function handleReceived(notification) {
     emit('approvals:check');
     return;
   }
+  // A call while the app is open: the same path as the socket's ring (huddles/incomingCall.js).
+  if (type === 'call' || type === 'call_cancel') {
+    let call = notification?.data?.call;
+    try {
+      call = typeof call === 'string' ? JSON.parse(call) : call || notification.data;
+    } catch {
+      call = notification.data;
+    }
+    emit('huddle', { event: type === 'call' ? 'huddle:ring' : 'huddle:ring_cancel', payload: call });
+    return;
+  }
   const conv = conversationOf(notification?.data);
   if (!conv || !isMessagePush(notification?.data)) return;
   repostWithActions(notification, { show: openConversationId() !== conv.id });

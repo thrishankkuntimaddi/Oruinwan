@@ -72,17 +72,50 @@ public class CallService extends Service {
         try {
             Notification notification = build(title == null ? "Huddle" : title, muted, video, startedAt);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                startForeground(NOTIFICATION_ID, notification, serviceTypes(video));
+                try {
+                    startForeground(NOTIFICATION_ID, notification, serviceTypes(video));
+                } catch (SecurityException cameraRefused) {
+                    // The camera type was refused (permission changed mid-call): keep the microphone.
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+                }
             } else {
                 startForeground(NOTIFICATION_ID, notification);
             }
             running = true;
         } catch (Exception e) {
-            // Android 12+ refuses to start one from the background; the call still runs in the foreground.
+            // Android refused (for example the app counted as in the background for a moment).
+            // A service started with startForegroundService must still call startForeground, or
+            // Android closes the whole app: satisfy it with a short service, then stop cleanly.
             Log.w(TAG, "Could not start the call service", e);
-            stopSelf();
+            stopWithoutCrash(title == null ? "Huddle" : title, muted, video, startedAt);
         }
         return START_NOT_STICKY;
+    }
+
+    private void stopWithoutCrash(String title, boolean muted, boolean video, long startedAt) {
+        try {
+            Notification notification = build(title, muted, video, startedAt);
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE);
+            } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Short service fallback failed too", e);
+        }
+        running = false;
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } catch (Exception ignored) {
+            // not in the foreground
+        }
+        stopSelf();
+    }
+
+    /** Android 14+ ends a short service after a few minutes; this one has already stopped. */
+    @Override
+    public void onTimeout(int startId) {
+        stopSelf();
     }
 
     /** Microphone always; camera too while it is on and allowed (Android 14 checks both). */

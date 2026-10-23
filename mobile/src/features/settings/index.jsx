@@ -18,6 +18,7 @@ import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/en
 import { prefs } from '../../native/storage.js';
 import { deviceNoun, isAndroid, isDesktop, isIOS, isPlayStore, isWeb, onAppState, openExternal, platformLabel } from '../../native/index.js';
 import { usePushState } from '../push/usePushState.js';
+import { CallReadiness } from '../push/CallReadiness.jsx';
 import { probeServer } from '../../data/live/server.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
@@ -668,6 +669,7 @@ export function NotificationSettings() {
       <Header title="Notifications" subtitle={workspace?.name} />
       <Body>
         <ThisDevicePush />
+        <CallReadiness />
         {loading ? (
           <SkeletonRows count={5} avatar={false} />
         ) : (

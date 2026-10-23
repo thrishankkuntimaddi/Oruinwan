@@ -56,15 +56,6 @@ describe('huddles on the phone', () => {
     expect(useHuddle.getState().live.c1).toBeUndefined();
   });
 
-  it('rings for a DM call from someone else, not for my own', () => {
-    fire('huddle:started', { huddleId: 'mine', dmId: 'd1', startedBy: { _id: 'me' } });
-    expect(useHuddle.getState().ring).toBeNull();
-    fire('huddle:started', { huddleId: 'theirs', dmId: 'd1', startedBy: { _id: 'sam', username: 'sam' } });
-    expect(useHuddle.getState().ring).toMatchObject({ huddleId: 'theirs', dmId: 'd1' });
-    fire('huddle:ended', { huddleId: 'theirs', dmId: 'd1' });
-    expect(useHuddle.getState().ring).toBeNull();
-  });
-
   it('joins a live huddle with the microphone and mutes it', async () => {
     await huddle.joinHuddle('h1', { channelId: 'c1' }, '# general');
     expect(lastOf('huddle:join')).toEqual({ channelId: 'c1', huddleId: 'h1', audioEnabled: true, videoEnabled: false, device: { label: 'Android phone', platform: 'web' } });

@@ -72,6 +72,23 @@ jobs:
             exit 1
           fi
 
+      # Push notifications and ringing calls on Android need Firebase's google-services.json
+      # (docs/FIREBASE_SETUP.md). The GOOGLE_SERVICES_JSON secret holds it, raw or base64.
+      - name: Add the Firebase config (push and calls)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::notice::GOOGLE_SERVICES_JSON not set; Android builds without push notifications (calls only ring while the app is open)"
+          else
+            if printf '%s' "$GOOGLE_SERVICES_JSON" | head -c 1 | grep -q '{'; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            else
+              printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+            fi
+            node -e "const j=require('./android/app/google-services.json'); if(!(j.client||[]).some(c=>c.client_info?.android_client_info?.package_name==='com.oruinwan.app')) { console.error('google-services.json has no Android app com.oruinwan.app'); process.exit(1) }"
+            echo "Firebase config added"
+          fi
       # The phone UI, built once for Android and iOS.
       - name: Build the phone UI
         env:
@@ -164,6 +181,23 @@ jobs:
           name: phone-bundle
           path: mobile/dist
 
+      # Push notifications and ringing calls on Android need Firebase's google-services.json
+      # (docs/FIREBASE_SETUP.md). The GOOGLE_SERVICES_JSON secret holds it, raw or base64.
+      - name: Add the Firebase config (push and calls)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::notice::GOOGLE_SERVICES_JSON not set; Android builds without push notifications (calls only ring while the app is open)"
+          else
+            if printf '%s' "$GOOGLE_SERVICES_JSON" | head -c 1 | grep -q '{'; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            else
+              printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+            fi
+            node -e "const j=require('./android/app/google-services.json'); if(!(j.client||[]).some(c=>c.client_info?.android_client_info?.package_name==='com.oruinwan.app')) { console.error('google-services.json has no Android app com.oruinwan.app'); process.exit(1) }"
+            echo "Firebase config added"
+          fi
       # The app UI, copied into the Android project. No signing secret is visible to these npm steps.
       - name: Assemble the app
         run: |

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
@@ -50,11 +51,30 @@
         </provider>
 
         <!-- Keeps a huddle running in the background with an ongoing "In call" notification
-             (CallService.java, started from CallSessionPlugin when a call starts). -->
+             (CallService.java, started from CallSessionPlugin when a call starts). shortService
+             is only the fallback that lets it stop cleanly when Android refuses the call types. -->
         <service
             android:name=".CallService"
             android:exported="false"
-            android:foregroundServiceType="microphone|camera" />
+            android:foregroundServiceType="microphone|camera|shortService" />
+
+        <!-- Incoming calls: Firebase messages are handled here first (CallMessagingService rings for
+             calls, even when the app is closed) and then passed on to the push plugin, whose own
+             service is removed so only one receives them. -->
+        <service
+            android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+            tools:node="remove" />
+        <service
+            android:name=".CallMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <!-- "Decline" on the incoming-call notification (CallActionReceiver.java). -->
+        <receiver
+            android:name=".CallActionReceiver"
+            android:exported="false" />
 
         <!-- Sign-in QR codes are scanned with Google's code scanner (@capacitor-mlkit/barcode-scanning). -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
@@ -79,6 +99,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Incoming calls ring over the lock screen (Android 14+ also asks the person to allow it). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Bluetooth headsets in calls (Android 12+). -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Live captions in calls use the system speech recognizer (@capacitor-community/speech-recognition;
          its own manifest merges the same query). Android 11+ hides recognition services without it. -->
