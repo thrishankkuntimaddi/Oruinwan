@@ -42,9 +42,37 @@
 .cs-chip.is-danger { color: var(--state-danger); border-color: var(--state-danger); }
 
 .cs-body { flex: 1; display: flex; min-height: 0; }
-.cs-stage { flex: 1; min-width: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
-.cs-grid { display: grid; gap: 12px; width: 100%; margin: 0 auto; }
-.cs-waiting { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-secondary); }
+.cs-stage { flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 12px 16px 16px; display: flex; flex-direction: column; }
+
+/* The stage: a layout toolbar, then a canvas the layout (callLayout.js) is measured against.
+   Tiles get exact pixel sizes, so nothing overflows or is clipped at any size. */
+.cs-stagebox { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.cs-stagebar { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 0; flex-wrap: wrap; }
+.cs-viewtabs { flex: 0 0 auto; }
+.cs-viewtabs .gl-tab { flex: 0 0 auto; }
+.cs-stagechip { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-unpin { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; font-size: 12px; }
+.cs-pager { display: flex; align-items: center; gap: 4px; }
+.cs-pager-text { font-size: 12px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cs-pager .gl-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.cs-canvas { position: relative; flex: 1; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: pan-y; }
+.cs-grid { display: flex; flex-wrap: wrap; justify-content: center; align-content: center; max-width: 100%; }
+.cs-grid > .cs-tile { flex: 0 0 auto; }
+.cs-stagewrap { display: flex; width: 100%; height: 100%; }
+.cs-stagewrap.is-bottom { flex-direction: column; }
+.cs-stagewrap.is-right { flex-direction: row; }
+.cs-main { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
+.cs-strip { display: flex; gap: 10px; flex-shrink: 0; scrollbar-width: thin; overscroll-behavior: contain; }
+.cs-stagewrap.is-bottom .cs-strip { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+.cs-stagewrap.is-right .cs-strip { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+.cs-strip > .cs-tile { flex: 0 0 auto; }
+.cs-pip { position: absolute; z-index: 2; cursor: grab; touch-action: none; border-radius: var(--gl-radius-md, 7px); box-shadow: var(--lg-shadow, var(--card-shadow)); transition: left 160ms ease, top 160ms ease; }
+.cs-pip.is-dragging { cursor: grabbing; transition: none; }
+.cs-pip.at-tl { left: 12px; top: 12px; }
+.cs-pip.at-tr { right: 12px; top: 12px; }
+.cs-pip.at-bl { left: 12px; bottom: 12px; }
+.cs-pip.at-br { right: 12px; bottom: 12px; }
+.cs-waiting { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; margin: 0; font-size: 13px; color: var(--text-secondary); }
 
 .cs-tile {
     position: relative;
@@ -58,7 +86,22 @@
     border-radius: var(--gl-radius-md, 7px);
     transition: box-shadow 140ms ease, border-color 140ms ease;
 }
-.cs-tile.is-speaking { border-color: var(--state-success); box-shadow: 0 0 0 2px var(--state-success); }
+/* The rings are drawn inside the tile, so a tile that fills the stage never has them clipped. */
+.cs-tile::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1; }
+.cs-tile.is-pinned::after { box-shadow: inset 0 0 0 2px var(--accent); }
+.cs-tile.is-speaking { border-color: var(--state-success); }
+.cs-tile.is-speaking::after { box-shadow: inset 0 0 0 3px var(--state-success); }
+.cs-tile.is-weak .cs-video, .cs-tile.is-weak .cs-avatar { opacity: 0.45; }
+.cs-tile-tr { position: absolute; z-index: 2; top: 8px; right: 8px; display: flex; align-items: center; gap: 6px; }
+.cs-pin {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+    border-radius: 999px; border: 1px solid var(--border-default); background: var(--bg-base); color: var(--text-primary);
+    opacity: 0; transition: opacity 120ms ease;
+}
+.cs-tile:hover .cs-pin, .cs-tile:focus-within .cs-pin, .cs-pin.is-on { opacity: 1; }
+.cs-pin.is-on { background: var(--accent); color: var(--bg-base); border-color: var(--accent); }
+.cs-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (hover: none) { .cs-pin { opacity: 1; } }
 .cs-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
 .cs-avatar { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-active); border: 1px solid var(--border-accent); }
 .cs-avatar span { font-size: 28px; font-weight: 700; }
@@ -72,8 +115,12 @@
 .cs-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cs-name.on-video { background: rgba(0, 0, 0, 0.6); border-color: transparent; color: #fff; }
 .cs-tile.is-compact .cs-name { left: 6px; bottom: 6px; font-size: 11px; padding: 2px 6px; }
+.cs-tile.is-compact .cs-hand { top: 6px; left: 6px; padding: 3px 6px; }
+.cs-tile.is-compact .cs-tile-tr { top: 6px; right: 6px; }
+.cs-tile.is-compact .cs-status { padding: 3px 6px; }
+.cs-tile.is-tiny .cs-name { font-size: 10px; gap: 4px; }
 .cs-hand { position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--bg-base); font-size: 11px; font-weight: 700; }
-.cs-status { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; background: var(--bg-base); border: 1px solid var(--border-default); font-size: 11px; color: var(--text-secondary); }
+.cs-status { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; background: var(--bg-base); border: 1px solid var(--border-default); font-size: 11px; color: var(--text-secondary); }
 .cs-status.is-failed { color: var(--state-danger); }
 
 .cs-dock {
@@ -158,11 +205,12 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .cs-screen, .cs-mini { animation: none; }
-    .cs-btn, .cs-tile { transition: none; }
+    .cs-btn, .cs-tile, .cs-pip, .cs-pin { transition: none; }
 }
 @media (max-width: 640px) {
     .cs-head { padding: 10px 12px; }
     .cs-head .cs-sub, .cs-head .cs-chip { display: none; }
-    .cs-stage { padding: 12px; }
+    .cs-stage { padding: 8px; }
+    .cs-viewtabs .gl-tab span { display: none; }
     .cs-people { position: absolute; inset: 0 0 auto auto; height: 100%; width: min(100vw, 300px); z-index: 1; }
 }

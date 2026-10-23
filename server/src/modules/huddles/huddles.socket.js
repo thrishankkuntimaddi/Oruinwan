@@ -525,7 +525,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
     });
 
     socket.on('huddle:join', async (data = {}) => {
-        const { huddleId, channelId, dmId, workspaceId, audioEnabled = true, videoEnabled = false } = data;
+        const { huddleId, channelId, dmId, workspaceId, audioEnabled = true, videoEnabled = false, sharing = false } = data;
         if (!huddleId) return huddleError(socket, huddleId, 'BAD_REQUEST', 'Missing huddleId');
 
         try {
@@ -560,7 +560,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             const source = planSourceOf(ensured.huddle);
             const limits = await planLimits(source.workspaceId, { userId: source.userId });
             const unlimited = !!limits?.exempt;
-            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device, unlimited });
+            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device, unlimited, sharing });
             if (joined.error === 'PLAN_LIMIT') {
                 const { planLimitBody } = require('../../shared/plans/plans');
                 const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
@@ -595,7 +595,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             }
             const maxParticipants = limits && limits.participants ? Math.min(limits.participants, registry.capFor(unlimited)) : registry.capFor(unlimited);
             socket.emit('huddle:roster', { huddleId, meetingId, participants: joined.others, maxParticipants, video: !!joined.huddle.video, timeLimit });
-            socket.to(room).emit('huddle:joined', { huddleId, meetingId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, timestamp: new Date() });
+            socket.to(room).emit('huddle:joined', { huddleId, meetingId, userId: uid(), username, audioEnabled: audioEnabled !== false, videoEnabled: !!videoEnabled, sharing: !!videoEnabled && !!sharing, timestamp: new Date() });
 
             const scoped = scopeRoom(registryScope(check.scope));
             if (scoped) io.to(scoped).emit('huddle:participant_joined', { huddleId, meetingId, userId: uid() });

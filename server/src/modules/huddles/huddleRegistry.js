@@ -114,7 +114,7 @@ class HuddleRegistry {
     return unlimited ? this.unlimitedMaxParticipants : this.maxParticipants;
   }
 
-  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null, device = null, unlimited = false }) {
+  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, sharing = false, socketId, joinedAt, max = null, device = null, unlimited = false }) {
     const huddle = this.huddles.get(huddleId);
     if (!huddle) return { error: 'HUDDLE_NOT_FOUND' };
     const uid = String(userId);
@@ -131,6 +131,8 @@ class HuddleRegistry {
       username: username || 'Unknown',
       audioEnabled: audioEnabled !== false,
       videoEnabled: !!videoEnabled,
+      // Re-joining mid screen share (reconnect) keeps the share on everyone's stage.
+      sharing: !!videoEnabled && !!sharing,
       socketId,
       // Which of the person's devices is in the call: { id, label, platform } (null for older apps).
       device: device || null,

@@ -368,7 +368,7 @@ const handlers = {
   async 'huddle:joined'(p) {
     if (!isMine(p.huddleId) || String(p.userId) === myId()) return;
     const uid = String(p.userId);
-    upsert({ userId: uid, username: p.username, audioEnabled: p.audioEnabled !== false, videoEnabled: Boolean(p.videoEnabled), handRaised: false });
+    upsert({ userId: uid, username: p.username, audioEnabled: p.audioEnabled !== false, videoEnabled: Boolean(p.videoEnabled), sharing: Boolean(p.videoEnabled && p.sharing), handRaised: false });
     closePeer(uid);
     peerFor(uid, false);
     await offer(uid).catch(() => {});
