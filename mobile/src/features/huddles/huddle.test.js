@@ -175,13 +175,13 @@ describe('video on the phone', () => {
     await huddle.joinHuddle('v1', { channelId: 'c1' });
     await huddle.toggleCamera();
     expect(useHuddle.getState().cameraOn).toBe(true);
-    expect(lastOf('huddle:video_toggle')).toEqual({ huddleId: 'v1', videoEnabled: true });
+    expect(lastOf('huddle:video_toggle')).toEqual({ huddleId: 'v1', videoEnabled: true, sharing: false });
     expect(huddle.localMedia().getVideoTracks()).toHaveLength(1);
     const cam = huddle.localMedia().getVideoTracks()[0];
     await huddle.toggleCamera();
     expect(cam.stop).toHaveBeenCalled();
     expect(huddle.localMedia().getVideoTracks()).toHaveLength(0);
-    expect(lastOf('huddle:video_toggle')).toEqual({ huddleId: 'v1', videoEnabled: false });
+    expect(lastOf('huddle:video_toggle')).toEqual({ huddleId: 'v1', videoEnabled: false, sharing: false });
   });
 
   it('joins a video huddle with the camera, and starts one from a conversation', async () => {

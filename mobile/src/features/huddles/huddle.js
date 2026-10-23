@@ -363,7 +363,7 @@ const handlers = {
     set({ connecting: false, ...(p.timeLimit !== undefined ? { timeLimit: p.timeLimit || null } : {}) });
     (p.participants || [])
       .filter((x) => String(x.userId) !== myId())
-      .forEach((x) => upsert({ userId: String(x.userId), username: x.username, audioEnabled: x.audioEnabled !== false, videoEnabled: Boolean(x.videoEnabled), handRaised: Boolean(x.handRaised) }));
+      .forEach((x) => upsert({ userId: String(x.userId), username: x.username, audioEnabled: x.audioEnabled !== false, videoEnabled: Boolean(x.videoEnabled), sharing: Boolean(x.videoEnabled && x.sharing), handRaised: Boolean(x.handRaised) }));
   },
   async 'huddle:joined'(p) {
     if (!isMine(p.huddleId) || String(p.userId) === myId()) return;
@@ -423,7 +423,8 @@ const handlers = {
   },
   'huddle:video_changed'(p) {
     if (!isMine(p.huddleId) || String(p.userId) === myId()) return;
-    patchParticipant(p.userId, { videoEnabled: Boolean(p.videoEnabled) });
+    // `sharing` (2.3.4+ senders): the video is a screen share, so the layout gives it the stage.
+    patchParticipant(p.userId, { videoEnabled: Boolean(p.videoEnabled), sharing: Boolean(p.videoEnabled && p.sharing) });
     bumpMedia();
   },
   'huddle:hand_changed'(p) {
@@ -711,7 +712,7 @@ function announceVideo() {
   const { call, cameraOn, sharing } = useHuddle.getState();
   if (!call) return;
   patchLocal({ videoEnabled: cameraOn || sharing });
-  emit('huddle:video_toggle', { huddleId: call.huddleId, videoEnabled: cameraOn || sharing });
+  emit('huddle:video_toggle', { huddleId: call.huddleId, videoEnabled: cameraOn || sharing, sharing: !!sharing });
   bumpMedia();
   syncSession();
 }
