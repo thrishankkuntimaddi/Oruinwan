@@ -4,19 +4,10 @@ import { DockButton, ParticipantTile, formatTime, streamFor, videoOn } from './c
 import { useSpeaking } from './useSpeaking';
 import { useCallHeader, audioStreams } from './CallScreen';
 import { canPopOut } from './floatingWindow';
+import { pickFeatured } from './callLayout';
 
-/**
- * Who the mini call shows: whoever is talking, else someone with video, else the first
- * other person, else me. The last speaker stays until someone else talks.
- */
-export function pickFeatured(participants, speaking, lastId) {
-    const others = participants.filter(p => !p.isLocal);
-    const talking = others.find(p => speaking.has(p.userId));
-    if (talking) return talking;
-    const last = lastId && participants.find(p => p.userId === lastId);
-    if (last) return last;
-    return others.find(p => p.videoEnabled) || others[0] || participants[0] || null;
-}
+/** Who the mini call shows: the active speaker (see callLayout.pickFeatured). */
+export { pickFeatured };
 
 /** The small call: one tile, the call name and time, and mute / camera / expand / leave. */
 export function MiniCallBody({ ctx, floating = false, onExpand, onPopOut, dragHandleProps = null }) {

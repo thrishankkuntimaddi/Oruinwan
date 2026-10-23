@@ -6,7 +6,8 @@ import {
 import { useToast } from '../../../contexts/ToastContext';
 import { useCallCapture } from '../capture/CallCaptureContext';
 import { callTitle } from '../HuddleContext';
-import { DockButton, ParticipantTile, ParticipantsPanel, Spinner, formatTime, streamFor, videoOn } from './callParts';
+import { DockButton, ParticipantsPanel, Spinner, formatTime } from './callParts';
+import CallStage from './CallStage';
 import { useSpeaking } from './useSpeaking';
 import { canPopOut } from './floatingWindow';
 
@@ -70,7 +71,6 @@ export default function CallScreen({ ctx, onPopOut }) {
     const canShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
     const anyVideo = isVideo || sharing || cameraOn || participants.some(p => !p.isLocal && p.videoEnabled);
     const count = participants.length;
-    const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
     const raised = participants.filter(p => p.handRaised).length;
 
     const handleScreen = async () => {
@@ -114,20 +114,15 @@ export default function CallScreen({ ctx, onPopOut }) {
 
             <div className="cs-body">
                 <main className="cs-stage">
-                    <div className="cs-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols === 1 ? 760 : 1200 }}>
-                        {participants.map(p => (
-                            <ParticipantTile
-                                key={p.userId}
-                                participant={p}
-                                stream={streamFor(p, { localStream, screenStream, remoteStreams })}
-                                showVideo={videoOn(p, { cameraOn, screenStream })}
-                                mirror={p.isLocal && !sharing}
-                                connection={peerStates[p.userId]}
-                                speaking={speaking.has(p.userId) && p.audioEnabled !== false}
-                            />
-                        ))}
-                    </div>
-                    {count <= 1 && <p className="cs-waiting">Waiting for others to join…</p>}
+                    <CallStage
+                        participants={participants}
+                        localStream={localStream}
+                        screenStream={screenStream}
+                        remoteStreams={remoteStreams}
+                        cameraOn={cameraOn}
+                        speaking={speaking}
+                        peerStates={peerStates}
+                    />
                 </main>
                 {showPeople && <ParticipantsPanel participants={participants} peerStates={peerStates} onClose={() => setShowPeople(false)} />}
             </div>

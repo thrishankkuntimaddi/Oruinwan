@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, Hand, X } from 'lucide-react';
+import { Mic, MicOff, Video, Hand, X, Monitor, Pin, PinOff } from 'lucide-react';
 
 /** 1:05 or 1:02:03. */
 export function formatTime(seconds) {
@@ -36,44 +36,81 @@ export function videoOn(p, { cameraOn, screenStream }) {
 }
 
 /**
- * One participant: their video when it is on, otherwise their initials. A ring shows who is
- * speaking. Audio plays through hidden <audio> elements, so every <video> is muted.
+ * One participant: their video when it is on (and the tile is on screen), otherwise their
+ * initials. A ring shows who is speaking. Audio never goes through tiles: it plays through
+ * hidden <audio> elements (useHuddle), so every <video> is muted and a tile that is off
+ * screen (another page, scrolled out of the filmstrip) can drop its video safely.
+ *
+ * `size` ({ w, h }) sizes the tile from the layout; without it the tile is 16:9 (mini call).
  */
-export function ParticipantTile({ participant, stream, showVideo, mirror, connection, speaking = false, compact = false }) {
+export function ParticipantTile({
+    participant, stream, showVideo, mirror, connection, speaking = false, compact = false,
+    size = null, fit = 'cover', visible = true, pinned = false, onPin = null, screen = false, testId,
+}) {
     const ref = useRef(null);
-    const hasVideo = showVideo && !!stream && stream.getVideoTracks().length > 0;
-    const label = participant.isLocal ? 'You' : (participant.username || 'Guest');
+    const hasVideo = visible && showVideo && !!stream && stream.getVideoTracks().length > 0;
+    const name = participant.username || 'Guest';
+    const label = participant.isLocal ? 'You' : name;
     const isAudioOn = participant.audioEnabled !== false;
     const status = !participant.isLocal ? CONNECTION_LABELS[connection] : null;
+    const weak = !participant.isLocal && (connection === 'disconnected' || connection === 'failed');
+    const small = compact || (size && size.w < 240);
+    const tiny = size && size.w < 150;
 
     useEffect(() => {
-        if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream || null;
+        const el = ref.current;
+        if (!el) return undefined;
+        if (el.srcObject !== stream) el.srcObject = stream || null;
+        // Detach when the tile goes off screen or the stream changes.
+        return () => { el.srcObject = null; };
     }, [stream, hasVideo]);
+
+    const avatar = size ? Math.round(Math.max(28, Math.min(88, size.h * 0.42))) : null;
+    const style = size ? { width: size.w, height: size.h, aspectRatio: 'auto' } : undefined;
+    const cls = ['cs-tile', speaking && 'is-speaking', small && 'is-compact', tiny && 'is-tiny', weak && 'is-weak',
+        pinned && 'is-pinned', hasVideo && 'has-video'].filter(Boolean).join(' ');
 
     return (
         <div
-            data-testid={participant.isLocal ? 'video-tile-local' : 'video-tile-remote'}
-            className={`cs-tile${speaking ? ' is-speaking' : ''}${compact ? ' is-compact' : ''}`}
-            title={label}
+            data-testid={testId || (participant.isLocal ? 'video-tile-local' : 'video-tile-remote')}
+            data-user={participant.userId}
+            data-video={hasVideo ? 'on' : 'off'}
+            className={cls}
+            style={style}
+            title={participant.isLocal ? `${name} (you)` : name}
         >
             {hasVideo ? (
-                <video ref={ref} autoPlay playsInline muted className="cs-video" style={mirror ? { transform: 'scaleX(-1)' } : undefined} />
+                <video ref={ref} autoPlay playsInline muted className="cs-video"
+                    style={{ objectFit: fit, ...(mirror ? { transform: 'scaleX(-1)' } : {}) }} />
             ) : (
-                <div className="cs-avatar"><span>{getInitials(participant.username || label)}</span></div>
-            )}
-            <div className={`cs-name${hasVideo ? ' on-video' : ''}`}>
-                {isAudioOn ? <Mic size={12} /> : <MicOff size={12} className="cs-danger" />}
-                <span>{label}</span>
-            </div>
-            {participant.handRaised && (
-                <div className="cs-hand" title="Hand raised"><Hand size={11} />{!compact && ' Hand raised'}</div>
-            )}
-            {status && !compact && (
-                <div className={`cs-status${connection === 'failed' ? ' is-failed' : ''}`}>
-                    {connection !== 'failed' && <Spinner size={9} />}
-                    {status}
+                <div className="cs-avatar" style={avatar ? { width: avatar, height: avatar } : undefined}>
+                    <span style={avatar ? { fontSize: Math.round(avatar * 0.34) } : undefined}>{getInitials(name)}</span>
                 </div>
             )}
+            <div className={`cs-name${hasVideo ? ' on-video' : ''}`}>
+                {isAudioOn ? <Mic size={12} aria-label="Mic on" /> : <MicOff size={12} className="cs-danger" aria-label="Muted" />}
+                {screen && <Monitor size={12} aria-label="Screen" />}
+                <span>{screen ? `${label === 'You' ? 'Your' : `${label}’s`} screen` : label}</span>
+            </div>
+            {participant.handRaised && (
+                <div className="cs-hand" title="Hand raised" aria-label="Hand raised"><Hand size={11} />{!small && ' Hand raised'}</div>
+            )}
+            <div className="cs-tile-tr">
+                {status && !tiny && (
+                    <div className={`cs-status${connection === 'failed' ? ' is-failed' : ''}`}>
+                        {connection !== 'failed' && <Spinner size={9} />}
+                        {!small && status}
+                    </div>
+                )}
+                {onPin && (
+                    <button type="button" className={`cs-pin${pinned ? ' is-on' : ''}`} data-testid="tile-pin"
+                        onClick={() => onPin(participant.userId)}
+                        title={pinned ? 'Unpin' : screen ? 'Pin this screen to the main stage' : `Pin ${label === 'You' ? 'yourself' : label} to the main stage`}
+                        aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`} aria-pressed={pinned}>
+                        {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
