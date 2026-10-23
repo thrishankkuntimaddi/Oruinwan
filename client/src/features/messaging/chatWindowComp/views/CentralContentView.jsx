@@ -106,7 +106,7 @@ const CentralContentView = ({
     showSmartReply = false,
 }) => {
     return (
-        <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
+        <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)', position: 'relative' }}>
             {}
             {!isMember && isDiscoverablePublicChannel ? (
                 <ChannelJoinPrompt
@@ -256,6 +256,7 @@ const CentralContentView = ({
 
             {}
             {activeTab === 'chat' && activeThread && (
+                <div className="cw-side-panel">
                 <ThreadPanel
                     parentMessage={activeThread}
                     channelId={chat.id || chat._id}
@@ -268,18 +269,21 @@ const CentralContentView = ({
                     broadcastMentionsAllowed={broadcastMentionsAllowed}
                     style={{ width: 'clamp(280px, 35vw, 400px)', flexShrink: 0 }}
                 />
+                </div>
             )}
 
             {}
             {activeTab === 'chat' && showBookmarks && (
-                <BookmarksPanel
-                    open={showBookmarks}
-                    onClose={onCloseBookmarks}
-                    inline
-                />
+                <div className="cw-side-panel">
+                    <BookmarksPanel
+                        open={showBookmarks}
+                        onClose={onCloseBookmarks}
+                        inline
+                    />
+                </div>
             )}
 
-            {activeTab === 'chat' && sidePanel}
+            {activeTab === 'chat' && sidePanel && <div className="cw-side-panel">{sidePanel}</div>}
         </div>
     );
 };

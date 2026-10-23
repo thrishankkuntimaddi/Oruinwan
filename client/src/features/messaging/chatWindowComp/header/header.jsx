@@ -83,6 +83,10 @@ export default function Header({
 
   const isChannelAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
 
+  const compactItems = compactHeaderActions({
+    chat, isGroup, huddleActive, onStartHuddle, onStartVideoCall, onCreatePoll, onShowReminders, onShowPinned, onShowBookmarks,
+  });
+
   const handleDelete = () => {
     if (onDeleteChat) {
       onDeleteChat();
@@ -101,8 +105,10 @@ export default function Header({
   return (
     <>
       <style>{`
+        .hdr-menu-compact { display: none; }
         @media (max-width: 768px) {
           .hdr-extra { display: none !important; }
+          .hdr-menu-compact { display: block; }
         }
       `}</style>
       <div style={{
@@ -442,8 +448,18 @@ export default function Header({
                     position: 'absolute', right: 0, top: 'calc(100% + 8px)',
                     width: '220px', borderRadius: 'var(--gl-radius-md)',
                     padding: '4px', zIndex: 50,
+                    maxHeight: 'min(70vh, 560px)', overflowY: 'auto',
                     animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
                   }}>
+                    {/* Phone width: the header buttons hidden there (.hdr-extra) live here instead. */}
+                    {compactItems.length > 0 && (
+                      <div className="hdr-menu-compact" data-testid="header-compact-actions">
+                        {compactItems.map((item) => (
+                          <MenuButton key={item.label} icon={item.icon} label={item.label} onClick={() => { setShowMenu(false); item.run(); }} />
+                        ))}
+                        <div style={{ height: '1px', backgroundColor: 'var(--border-default)', margin: '4px 0' }} />
+                      </div>
+                    )}
                     {chat.type === "channel" && (
                       <>
                         <div style={{
@@ -611,4 +627,26 @@ function MenuButton({ icon, label, onClick, danger = false }) {
       {label}
     </button>
   );
+}
+
+/**
+ * The header buttons that are hidden at phone width (.hdr-extra), as ⋮ menu items:
+ * [{ label, icon, run }] in the same order as the header shows them.
+ */
+export function compactHeaderActions({
+  chat, isGroup = false, huddleActive = false, onStartHuddle, onStartVideoCall, onCreatePoll, onShowReminders, onShowPinned, onShowBookmarks,
+}) {
+  const items = [];
+  if (chat?.type === 'channel') {
+    if (onStartHuddle) items.push({ label: huddleActive ? 'In huddle' : 'Start huddle', icon: huddleActive ? <PhoneOff size={14} /> : <Radio size={14} />, run: onStartHuddle });
+    if (onCreatePoll) items.push({ label: 'Create poll', icon: <BarChart2 size={14} />, run: onCreatePoll });
+  }
+  if (chat?.type === 'dm' && !chat.isAgent && onStartHuddle) {
+    items.push({ label: huddleActive ? 'Leave voice call' : (isGroup ? 'Start huddle' : 'Voice call'), icon: huddleActive ? <PhoneOff size={14} /> : <Phone size={14} />, run: onStartHuddle });
+    if (onStartVideoCall) items.push({ label: 'Video call', icon: <Video size={14} />, run: onStartVideoCall });
+  }
+  if (onShowReminders) items.push({ label: 'Reminders', icon: <AlarmClock size={14} />, run: onShowReminders });
+  if (onShowPinned) items.push({ label: 'Pinned messages', icon: <Pin size={14} />, run: onShowPinned });
+  if (onShowBookmarks) items.push({ label: 'Saved messages', icon: <Bookmark size={14} />, run: onShowBookmarks });
+  return items;
 }

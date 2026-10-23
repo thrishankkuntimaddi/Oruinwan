@@ -99,3 +99,19 @@ html.dark input[type="date"] {
 html.light input[type="date"] {
     color-scheme: light;
 }
+/* Thread, saved, pinned and reminder panels: beside the conversation, or over it at phone width. */
+.cw-side-panel { display: contents; }
+@media (max-width: 768px) {
+    .cw-side-panel {
+        display: flex;
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        background-color: var(--bg-surface);
+    }
+    .cw-side-panel > * {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        border-left: none !important;
+    }
+}
