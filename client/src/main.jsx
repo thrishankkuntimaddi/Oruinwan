@@ -2,6 +2,7 @@
 import './appMode/preboot';
 // Moves settings saved under the old Chttrix names before anything reads them.
 import './utils/legacyStorageBoot';
+import { installAvatarFallback } from './utils/avatarFallback';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
@@ -24,6 +25,7 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'google-sign-in-
 // Desktop and tablet apps (vite --mode app) talk to the built-in server the way the phone app
 // does (src/appMode/network.js).
 if (IS_APP) prepareNativeShell();
+installAvatarFallback();
 if (IS_APP) installAppNetwork(getServer(), appPlatform());
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
