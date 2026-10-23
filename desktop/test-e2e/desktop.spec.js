@@ -141,7 +141,9 @@ test('a call between two desktop apps: connect, floating window, screen share, l
   await win.locator('button[title="Start Voice Call"], button[title="Start huddle"]').first().click();
   const aliceCall = win.getByTestId('call-screen');
   await expect(aliceCall).toBeVisible();
-  await bob.getByTestId('huddle-announcement').getByRole('button', { name: 'Join' }).click();
+  // A DM call rings Bob: he answers on the incoming-call screen.
+  await expect(bob.getByTestId('incoming-call')).toBeVisible();
+  await bob.getByTestId('incoming-call-accept').click();
   await expect(aliceCall).toContainText('2 participants');
   await expect(bob.getByTestId('call-screen')).toContainText('2 participants');
   // Audio really flows: the remote stream has a live audio track on both sides.
