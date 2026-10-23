@@ -985,8 +985,8 @@ function serializePreferences(prefs) {
   const p = prefs && typeof prefs.toObject === 'function' ? prefs.toObject() : (prefs || {});
   const notifications = notificationsWithDefaults(p.notifications);
   return {
-    // No saved choice follows the device, like the web client's own default and the phone app.
-    theme: THEMES.includes(p.theme) ? p.theme : 'auto',
+    // No saved choice means light, like the web client's own default and the phone app.
+    theme: THEMES.includes(p.theme) ? p.theme : 'light',
     appearance: { textSize: TEXT_SIZES.includes(p.appearance?.textSize) ? p.appearance.textSize : 'default' },
     privacy: privacyWithDefaults(p.privacy),
     region: regionWithDefaults(p.region),

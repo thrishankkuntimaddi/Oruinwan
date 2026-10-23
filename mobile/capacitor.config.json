@@ -4,7 +4,7 @@
   "webDir": "www",
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#0c0c0c",
+    "backgroundColor": "#f8f5f0",
     "minWebViewVersion": 111
   },
   "plugins": {

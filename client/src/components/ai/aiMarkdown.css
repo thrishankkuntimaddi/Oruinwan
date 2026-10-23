@@ -45,7 +45,7 @@
 /* Live in-conversation AI reply (shown while the assistant is typing). */
 .ai-live-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 16px 8px; }
 .ai-live { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border: 1px solid var(--border-default); border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-dim), transparent 70%); border-radius: 2px; animation: aiLiveIn 260ms ease both; }
-.ai-live__avatar { width: 32px; height: 32px; border-radius: 2px; object-fit: cover; background: #0b0b0d; }
+.ai-live__avatar { width: 32px; height: 32px; border-radius: 2px; object-fit: contain; background: var(--bg-active); }
 .ai-live__body { min-width: 0; }
 .ai-live__meta { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 13px; color: var(--text-primary); }
 .ai-live__badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border: 1px solid var(--accent); color: var(--accent); border-radius: 2px; }

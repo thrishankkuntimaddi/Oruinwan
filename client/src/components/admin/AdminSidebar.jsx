@@ -72,7 +72,7 @@ export default function AdminSidebar({ onNavigate }) {
                 height: '56px', padding: '0 16px', display: 'flex', alignItems: 'center',
                 gap: '10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0,
             }}>
-                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-accent)' }} />
+                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }} />
                 <div>
                     <p style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>Oruinwan</p>
                     <p style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '2px' }}>Company Admin</p>

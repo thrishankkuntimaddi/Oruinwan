@@ -7,7 +7,7 @@ const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-sche
 
 function resolve(pref) {
   if (pref === 'light' || pref === 'dark') return pref;
-  return media?.matches === false ? 'light' : 'dark';
+  return media?.matches ? 'dark' : 'light';
 }
 
 function apply({ theme, textSize, reduceMotion }) {
@@ -29,10 +29,11 @@ export const TEXT_SIZES = [
 
 export const useAppearance = create((set, get) => ({
   // Stored raw (not JSON) because index.html reads it before React loads.
-  theme: prefs.raw('theme') || 'system',
+  // Light unless the person picked Dark or System.
+  theme: prefs.raw('theme') || 'light',
   textSize: prefs.get('textSize', 'default'),
   reduceMotion: prefs.get('reduceMotion', false),
-  resolved: 'dark',
+  resolved: 'light',
   setTheme(theme) {
     prefs.setRaw('theme', theme);
     set({ theme, resolved: apply({ ...get(), theme }) });

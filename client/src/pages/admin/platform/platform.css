@@ -105,7 +105,7 @@
 .pf-flow-card[data-narrow='true'] { max-width: 980px; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
 .pf-flow-aside { padding: 28px 24px; display: flex; flex-direction: column; gap: 20px; border-right: 1px solid var(--border-subtle); background: var(--bg-active); background-image: var(--gl-glass-strong); }
 .pf-flow-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 750; letter-spacing: -0.02em; }
-.pf-flow-brand img { width: 30px; height: 30px; object-fit: cover; }
+.pf-flow-brand img { width: 30px; height: 30px; object-fit: contain; }
 .pf-flow-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .pf-flow-body { flex: 1; min-height: 0; overflow-y: auto; padding: 32px 36px; display: flex; flex-direction: column; gap: 18px; }
 .pf-flow-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 36px; border-top: 1px solid var(--border-subtle); }

@@ -3,11 +3,13 @@ import { useAuth } from './AuthContext';
 import api from '@services/api';
 import logger from '../utils/logger';
 import { syncUserPreferences, TEXT_SIZES } from '../hooks/useUserPreferences';
+import { applyNativeBars } from '../appMode/nativeShell';
 import '../styles/userPreferences.css';
 
 /**
  * Appearance preferences, applied to <html>:
- *   theme       'light' | 'dark' | 'auto' (follows the OS, live) → class light/dark
+ *   theme       'light' | 'dark' | 'auto' (follows the OS, live) → class light/dark.
+ *               Light unless the person chose otherwise.
  *   textSize    'small' | 'default' | 'large' | 'larger'   → data-text-size
  *   reduceMotion (this device only)                        → data-reduce-motion
  * Theme and text size are saved to the account (PUT /api/auth/me) and cached in
@@ -19,7 +21,9 @@ const ThemeContext = createContext();
 
 export const useTheme = () => useContext(ThemeContext);
 
-const THEME_KEY = 'theme';
+// Only an explicit choice is cached. (The old 'theme' key also cached the 'auto' default,
+// which kept people in dark mode on a dark-mode device; it is no longer read.)
+const THEME_KEY = 'oruinwan.theme';
 const TEXT_SIZE_KEY = 'oruinwan.textSize';
 const REDUCE_MOTION_KEY = 'oruinwan.reduceMotion';
 
@@ -43,16 +47,20 @@ if (typeof document !== 'undefined') {
 export const ThemeProvider = ({ children }) => {
     const { user, setUser } = useAuth();
 
-    // No saved choice follows the device. The server uses the same default, so signing in
-    // never flips the theme.
-    const [theme, setThemeState] = useState(() => normalizeTheme(store.get(THEME_KEY)) || 'auto');
+    // No saved choice means light. The server uses the same default, so signing in never
+    // flips the theme.
+    const [theme, setThemeState] = useState(() => normalizeTheme(store.get(THEME_KEY)) || 'light');
     const [systemDark, setSystemDark] = useState(() => darkQuery()?.matches ?? true);
     const [textSize, setTextSizeState] = useState(() => normalizeTextSize(store.get(TEXT_SIZE_KEY)));
     const [reduceMotion, setReduceMotionState] = useState(() => store.get(REDUCE_MOTION_KEY) === 'true');
 
     // Account values win once the user has loaded.
     const serverTheme = normalizeTheme(user?.preferences?.theme);
-    useEffect(() => { if (serverTheme) setThemeState(serverTheme); }, [serverTheme]);
+    useEffect(() => {
+        if (!serverTheme) return;
+        setThemeState(serverTheme);
+        store.set(THEME_KEY, serverTheme);
+    }, [serverTheme]);
 
     const serverTextSize = user?.preferences?.appearance?.textSize;
     useEffect(() => { if (TEXT_SIZES.includes(serverTextSize)) setTextSizeState(serverTextSize); }, [serverTextSize]);
@@ -82,8 +90,10 @@ export const ThemeProvider = ({ children }) => {
         root.classList.remove('light', 'dark');
         root.classList.add(resolvedTheme);
         root.style.colorScheme = resolvedTheme;
-        store.set(THEME_KEY, theme);
-    }, [theme, resolvedTheme]);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0c0c0c' : '#efe6d7');
+        applyNativeBars(resolvedTheme);
+    }, [resolvedTheme]);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-text-size', textSize);
@@ -114,6 +124,7 @@ export const ThemeProvider = ({ children }) => {
         const t = normalizeTheme(next);
         if (!t) return Promise.resolve(false);
         setThemeState(t);
+        store.set(THEME_KEY, t);
         return savePreference({ theme: t });
     }, [savePreference]);
 

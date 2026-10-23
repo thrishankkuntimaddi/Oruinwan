@@ -42,7 +42,7 @@ function Item({ icon, label, active, badge, dot, hint, onClick, tour }) {
       className={cx(
         'group relative flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] transition-colors',
         'justify-center xl:justify-start',
-        active ? 'bg-accent/12 font-medium text-accent-ink' : 'text-text-2 hover:bg-surface-2 hover:text-text',
+        active ? 'bg-accent/15 font-medium text-accent-ink' : 'text-text-2 hover:bg-surface-3/70 hover:text-text',
       )}
     >
       <span className="relative shrink-0">
@@ -97,7 +97,7 @@ export function Sidebar() {
       aria-label="Main"
       onPointerDownCapture={() => markPane(tab, 'sidebar')}
       onClickCapture={() => markPane(tab, 'sidebar')}
-      className="flex h-full w-[76px] shrink-0 flex-col border-r border-line-soft bg-surface/60 pt-safe xl:w-60"
+      className="flex h-full w-[76px] shrink-0 flex-col border-r border-line-soft bg-chrome pt-safe xl:w-60"
     >
       <button
         type="button"

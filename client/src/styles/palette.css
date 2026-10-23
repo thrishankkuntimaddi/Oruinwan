@@ -1,0 +1,104 @@
+/*
+ * 60 : 30 : 10 colour balance, in light and dark.
+ *
+ *   60  canvas   — the main area where people read and work (--bg-base, cards on --bg-surface)
+ *   30  chrome   — the frame around it: icon rail, top bar, side panels, settings and console
+ *                  sidebars. A warm sand in light, a lifted warm charcoal in dark.
+ *   10  accent   — gold: primary buttons, the active rail item, the selected row, badges, focus.
+ *
+ * The chrome is a token scope: inside a chrome container the base tokens are remapped to the
+ * chrome tokens, so every list, row and button in a side panel picks up the secondary colour
+ * without per-component overrides.
+ */
+
+:root {
+    --bg-chrome:        #161412;
+    --bg-chrome-deep:   #121110;   /* icon rail: one step deeper than the panels */
+    --bg-chrome-raised: #1c1a17;
+    --bg-chrome-hover:  #221f1b;
+    --bg-chrome-active: #2a2620;
+    --bg-chrome-input:  #1b1916;
+    --border-chrome:    #26221d;
+    --text-chrome-muted: #6f6a62;
+}
+
+html.light {
+    --bg-chrome:        #efe6d7;
+    --bg-chrome-deep:   #e8dcc7;
+    --bg-chrome-raised: #f6f0e6;
+    --bg-chrome-hover:  #e6d9c4;
+    --bg-chrome-active: #dfcfb5;
+    --bg-chrome-input:  #fbf8f3;
+    --border-chrome:    #dfd1ba;
+    --text-chrome-muted: #685f53;  /* AA on the sand */
+}
+
+/* ── 30: chrome scope ─────────────────────────────────────────────────────── */
+/* Always chrome: the icon rail, the top bar, the phone tab bar and the sidebars of the
+   settings page and the company consoles. Workspace side panels are chrome only next to a
+   main area (tablet/desktop); on a phone the panel is the whole screen, so it stays canvas. */
+.gl-shell-rail,
+.gl-shell-topbar,
+.gl-shell-tabbar,
+.stg-sidebar,
+.cd-side {
+    --bg-base: var(--bg-chrome);
+    --bg-primary: var(--bg-chrome);
+    --bg-surface: var(--bg-chrome-raised);
+    --bg-secondary: var(--bg-chrome-raised);
+    --bg-hover: var(--bg-chrome-hover);
+    --bg-active: var(--bg-chrome-active);
+    --bg-tertiary: var(--bg-chrome-active);
+    --bg-input: var(--bg-chrome-input);
+    --input-bg: var(--bg-chrome-input);
+    --border-subtle: var(--border-chrome);
+    --border-color: var(--border-chrome);
+    --text-muted: var(--text-chrome-muted);
+    --lg-chrome: var(--bg-chrome);
+}
+@media (min-width: 768px) {
+    .gl-shell-panel-col,
+    .gl-x-tasks-side {
+        --bg-base: var(--bg-chrome);
+        --bg-primary: var(--bg-chrome);
+        --bg-surface: var(--bg-chrome-raised);
+        --bg-secondary: var(--bg-chrome-raised);
+        --bg-hover: var(--bg-chrome-hover);
+        --bg-active: var(--bg-chrome-active);
+        --bg-tertiary: var(--bg-chrome-active);
+        --bg-input: var(--bg-chrome-input);
+        --input-bg: var(--bg-chrome-input);
+        --border-subtle: var(--border-chrome);
+        --border-color: var(--border-chrome);
+        --text-muted: var(--text-chrome-muted);
+    }
+    .gl-shell-panel-col { background-color: var(--bg-chrome); border-right-color: var(--border-chrome); }
+}
+.gl-shell-rail { --lg-chrome: var(--bg-chrome-deep); }
+.stg-sidebar,
+.cd-side { background-color: var(--bg-chrome); background-image: none; }
+.gl-shell-rail,
+.gl-shell-topbar,
+.gl-shell-tabbar { border-color: var(--border-chrome); }
+/* The light tab bar's white sheen would wash the sand out; keep a faint one. */
+html.light nav.gl-shell-tabbar { background-image: linear-gradient(0deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.35) 100%); }
+
+/* ── 10: accent ───────────────────────────────────────────────────────────── */
+/* Active rail item: a solid gold tile, the strongest accent on screen. */
+.gl-shell-rail .gl-shell-rail-btn.is-active,
+html.light .gl-shell-rail .gl-shell-rail-btn.is-active {
+    color: var(--gl-on-accent);
+    background: var(--gl-accent-grad);
+    background-image: var(--gl-gloss), var(--gl-accent-grad);
+    border-color: transparent;
+    box-shadow: var(--gl-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+/* Selected row in a side panel: gold tint with the gold edge marker. */
+.gl-item.is-active,
+.gl-item[aria-current='page'] {
+    background: var(--gl-accent-soft);
+    background-image: none;
+    border-color: var(--gl-accent-line);
+}
+.gl-item.is-active > svg,
+.gl-item[aria-current='page'] > svg { color: var(--accent); }

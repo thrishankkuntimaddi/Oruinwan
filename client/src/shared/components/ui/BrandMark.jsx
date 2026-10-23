@@ -1,12 +1,13 @@
 import React from 'react';
 import BRAND from '../../brand';
 
-// Oruinwan logo. Uses a downscaled copy of public/icons/Oruinwan.png; the
-// 512px variant is picked on high-density screens for large sizes.
+// Oruinwan logo on a transparent background (works on light and dark). The 512px
+// variant is picked on high-density screens for large sizes. The square app icons
+// (oruinwan-192/512.png) keep their dark tile for home screens and notifications.
 const BrandMark = ({ size = 28, title = BRAND.name, className, style }) => (
     <img
         src={`${import.meta.env.BASE_URL}icons/oruinwan-128.png`}
-        srcSet={`${import.meta.env.BASE_URL}icons/oruinwan-128.png 1x, ${import.meta.env.BASE_URL}icons/oruinwan-512.png 4x`}
+        srcSet={`${import.meta.env.BASE_URL}icons/oruinwan-128.png 1x, ${import.meta.env.BASE_URL}icons/oruinwan-mark-512.png 4x`}
         width={size}
         height={size}
         alt={title || ''}

@@ -18,12 +18,18 @@
  * Each token is an RGB triplet, so Tailwind opacity modifiers work: bg-accent/15.
  *   accent      gold fill (buttons, badges, toggles); always paired with on-accent text
  *   accent-ink  gold used as text/icon colour; darker in light mode for contrast
- * The theme is chosen per device (<html data-theme>), never synced.
+ * The theme is chosen per device (<html data-theme>), never synced. Light by default.
+ *
+ * 60:30:10 colour balance (same as the web client's styles/palette.css):
+ *   60  bg / surface   the screen canvas and its cards
+ *   30  chrome         the frame: screen headers, tab bar, composer bar, tablet sidebar
+ *   10  accent         gold: primary buttons, the active tab, badges, toggles
  */
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
   --c-bg: 12 12 12;
+  --c-chrome: 22 20 18;
   --c-surface: 17 17 17;
   --c-surface-2: 22 22 22;
   --c-surface-3: 28 28 28;
@@ -56,14 +62,14 @@
      Screens, list rows and cards stay solid (Monolith). See the glass utilities below. */
   --glass-tint: rgb(24 24 24 / 0.6);
   --glass-tint-strong: rgb(22 22 22 / 0.8);
-  --glass-tint-bar: rgb(14 14 14 / 0.68);
+  --glass-tint-bar: rgb(var(--c-chrome) / 0.86);
   --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.075) 0%, rgb(255 255 255 / 0.02) 38%, rgb(255 255 255 / 0) 70%);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.025);
   --glass-border: rgb(255 255 255 / 0.085);
   --glass-shadow: 0 2px 6px rgb(0 0 0 / 0.3), 0 18px 44px -14px rgb(0 0 0 / 0.7);
   --glass-shadow-up: 0 -10px 30px -12px rgb(0 0 0 / 0.55);
   --glass-solid: rgb(20 20 20);
-  --glass-solid-bar: rgb(14 14 14);
+  --glass-solid-bar: rgb(var(--c-chrome));
   --glass-blur: blur(20px) saturate(170%);
   --scrim: rgb(0 0 0 / 0.6);
 }
@@ -71,7 +77,8 @@
 [data-theme='light'] {
   /* Warm off-white base, matching the web client's light theme (client/src/index.css). */
   color-scheme: light;
-  --c-bg: 246 243 238;
+  --c-bg: 248 245 240;
+  --c-chrome: 239 230 215; /* sand */
   --c-surface: 255 255 255;
   --c-surface-2: 239 235 228;
   --c-surface-3: 232 226 216;
@@ -100,19 +107,20 @@
   --shadow-pop: 0 1px 2px rgb(60 44 20 / 0.06), 0 16px 40px -12px rgb(60 44 20 / 0.24);
   --glass-tint: rgb(255 253 250 / 0.66);
   --glass-tint-strong: rgb(255 253 250 / 0.84);
-  --glass-tint-bar: rgb(250 248 244 / 0.72);
+  --glass-tint-bar: rgb(var(--c-chrome) / 0.9);
   --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.8) 0%, rgb(255 255 255 / 0.25) 40%, rgb(255 255 255 / 0) 75%);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.4);
   --glass-border: rgb(120 92 54 / 0.14);
   --glass-shadow: 0 1px 3px rgb(60 44 20 / 0.06), 0 18px 44px -14px rgb(60 44 20 / 0.24);
   --glass-shadow-up: 0 -8px 28px -14px rgb(60 44 20 / 0.2);
   --glass-solid: rgb(252 250 247);
-  --glass-solid-bar: rgb(250 248 244);
+  --glass-solid-bar: rgb(var(--c-chrome));
   --scrim: rgb(48 38 24 / 0.32);
 }
 
 @theme inline {
   --color-bg: rgb(var(--c-bg));
+  --color-chrome: rgb(var(--c-chrome));
   --color-surface: rgb(var(--c-surface));
   --color-surface-2: rgb(var(--c-surface-2));
   --color-surface-3: rgb(var(--c-surface-3));
@@ -230,7 +238,7 @@
  *   glass         toasts, popovers, floating pills and banners (lifted)
  *   glass-strong  sheets and dialogs: more opaque, so long text stays readable
  *   glass-bar     edge-to-edge bars (tab bar, composer); the component adds its own hairline
- *   glass-header  sticky screen headers: tinted with the page colour, so they stay quiet
+ *   glass-header  sticky screen headers: the chrome colour, like the tab bar
  * glass and glass-strong colour the border; the component sets its width (border, border-t).
  * Without backdrop-filter (old Android WebViews) each falls back to a solid colour below.
  */
@@ -258,7 +266,7 @@
   box-shadow: var(--glass-edge), var(--glass-shadow-up);
 }
 @utility glass-header {
-  background-color: rgb(var(--c-bg) / 0.82);
+  background-color: rgb(var(--c-chrome) / 0.9);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
@@ -266,7 +274,7 @@
   .glass { background-color: var(--glass-solid); }
   .glass-strong { background-color: var(--glass-solid); }
   .glass-bar { background-color: var(--glass-solid-bar); }
-  .glass-header { background-color: rgb(var(--c-bg)); }
+  .glass-header { background-color: rgb(var(--c-chrome)); }
 }
 
 /* Dims what is under a sheet or dialog; lighter and warmer in light mode. */

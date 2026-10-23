@@ -5,8 +5,8 @@
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0c0c0c",
-  "theme_color": "#0c0c0c",
+  "background_color": "#f8f5f0",
+  "theme_color": "#efe6d7",
   "icons": [
     {
       "src": "icons/oruinwan-192.png",

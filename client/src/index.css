@@ -101,15 +101,15 @@
 
 /* ── Light Mode Token Overrides ───────────────────────────────── */
 html.light {
-  /* Backgrounds — warm white shell */
-  --bg-base:    #f6f3ee;
+  /* Backgrounds — warm ivory canvas (the 60%; the sand chrome is in styles/palette.css) */
+  --bg-base:    #f8f5f0;
   --bg-surface: #ffffff;
   --bg-hover:   #efebe4;
   --bg-active:  #e8e2d8;
   --bg-input:   #fbf9f6;
 
   /* Semantic aliases */
-  --bg-primary:   #f6f3ee;
+  --bg-primary:   #f8f5f0;
   --bg-secondary: #ffffff;
   --bg-tertiary:  #e8e2d8;
 

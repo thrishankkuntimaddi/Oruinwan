@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#0c0c0c" />
+    <meta name="theme-color" content="#efe6d7" />
     <meta name="color-scheme" content="dark light" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="icon" type="image/png" href="./icon-192.png" />
@@ -12,10 +12,10 @@
       // Apply the saved theme before first paint so there is no light/dark flash.
       (function () {
         try {
-          var pref = localStorage.getItem('oru.theme') || 'system';
+          var pref = localStorage.getItem('oru.theme') || 'light';
           var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-          document.querySelector('meta[name="theme-color"]').content = dark ? '#0c0c0c' : '#f6f3ee';
+          document.querySelector('meta[name="theme-color"]').content = dark ? '#0c0c0c' : '#efe6d7';
         } catch (e) {}
       })();
     </script>

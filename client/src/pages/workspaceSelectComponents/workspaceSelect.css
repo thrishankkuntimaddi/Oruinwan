@@ -75,10 +75,8 @@
 .gl-wsp-brand__mark {
     width: 28px;
     height: 28px;
-    border-radius: var(--gl-radius);
-    object-fit: cover;
-    border: 1px solid var(--gl-line-2);
-    box-shadow: var(--gl-spec-strong), 0 6px 18px -8px rgba(200, 162, 116, 0.45);
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(200, 162, 116, 0.35));
 }
 .gl-wsp-brand__name { font-size: 15px; font-weight: 750; letter-spacing: -0.02em; color: var(--text-primary); white-space: nowrap; }
 .gl-wsp-bar__right { margin-left: auto; display: flex; align-items: center; gap: 4px; min-width: 0; }
