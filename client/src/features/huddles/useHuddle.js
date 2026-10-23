@@ -402,8 +402,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
         }
         tracks.forEach(t => { t.enabled = next; });
         setCameraOn(next);
-        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: next || !!screenStreamRef.current } : p));
-        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: next || !!screenStreamRef.current });
+        const sharing = !!screenStreamRef.current;
+        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: next || sharing, screenSharing: sharing } : p));
+        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: next || sharing, screenSharing: sharing });
     }, [cameraOn, socket, sendVideoTrack, showToast]);
 
     const stopScreenShare = useCallback(() => {
@@ -417,8 +418,8 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
         sendVideoTrack(camera).catch(() => {});
         const id = huddleIdRef.current;
         const on = cameraOnRef.current && !!camera;
-        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: on } : p));
-        if (id && socket) socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: on });
+        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: on, screenSharing: false } : p));
+        if (id && socket) socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: on, screenSharing: false });
     }, [socket, sendVideoTrack]);
 
     /** Share the screen in place of the camera (voice huddles add it as a new video track). */
@@ -437,8 +438,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
         track.onended = () => stopScreenShare();
         await sendVideoTrack(track);
         setScreenStream(display);
-        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: true } : p));
-        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: true });
+        setParticipants(prev => prev.map(p => p.isLocal ? { ...p, videoEnabled: true, screenSharing: true } : p));
+        // Flagged as a screen share so the others put it on their main stage.
+        socket.emit('huddle:video_toggle', { huddleId: id, videoEnabled: true, screenSharing: true });
         return true;
     }, [socket, stopScreenShare, sendVideoTrack]);
 
@@ -486,6 +488,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
             if (!isMine(hid)) return;
             others.filter(p => String(p.userId) !== myUserId).forEach(p => upsertParticipant({
                 userId: String(p.userId), username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, handRaised: !!p.handRaised,
+                screenSharing: !!p.videoEnabled && !!p.screenSharing,
             }));
         };
 
@@ -494,9 +497,10 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
             setParticipants(prev => prev.map(p => p.userId === String(userId) ? { ...p, handRaised: !!raised } : p));
         };
 
-        const onVideoChanged = ({ huddleId: hid, userId, videoEnabled }) => {
+        const onVideoChanged = ({ huddleId: hid, userId, videoEnabled, screenSharing }) => {
             if (!isMine(hid)) return;
-            setParticipants(prev => prev.map(p => p.userId === String(userId) ? { ...p, videoEnabled } : p));
+            setParticipants(prev => prev.map(p => p.userId === String(userId)
+                ? { ...p, videoEnabled, screenSharing: !!videoEnabled && !!screenSharing } : p));
         };
 
         // Existing members call each newcomer, so there is exactly one offerer per pair.
@@ -612,7 +616,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
             if (!id) return;
             cleanupPeers();
             // rejoin: the server won't bring back a call that ended while we were offline.
-            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn, device: callDevice(), rejoin: true });
+            socket.emit('huddle:join', { ...scopePayload(), huddleId: id, audioEnabled: !muted, videoEnabled: cameraOn || !!screenStreamRef.current, screenSharing: !!screenStreamRef.current, device: callDevice(), rejoin: true });
         };
 
         socket.on('huddle:roster', onRoster);

@@ -259,7 +259,12 @@ describe('video huddles', () => {
 
     const changed = once(b, 'huddle:video_changed');
     a.emit('huddle:video_toggle', { huddleId: 'hv', videoEnabled: false });
-    expect(await changed).toEqual({ huddleId: 'hv', userId: 'a', videoEnabled: false });
+    expect(await changed).toEqual({ huddleId: 'hv', userId: 'a', videoEnabled: false, screenSharing: false });
+
+    // A screen share is flagged so viewers can put it on the main stage.
+    const shared = once(b, 'huddle:video_changed');
+    a.emit('huddle:video_toggle', { huddleId: 'hv', videoEnabled: true, screenSharing: true });
+    expect(await shared).toEqual({ huddleId: 'hv', userId: 'a', videoEnabled: true, screenSharing: true });
 
     [a, b].forEach((c) => c.close());
     io.close(); httpServer.close();

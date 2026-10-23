@@ -30,7 +30,7 @@ function scopeKey(scope) {
 }
 
 function publicParticipant(p) {
-  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, handRaised: !!p.handRaised, joinedAt: p.joinedAt };
+  return { userId: p.userId, username: p.username, audioEnabled: p.audioEnabled, videoEnabled: !!p.videoEnabled, screenSharing: !!p.screenSharing, handRaised: !!p.handRaised, joinedAt: p.joinedAt };
 }
 
 const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : new Date());
@@ -100,7 +100,7 @@ class HuddleRegistry {
    * the copies converge through replication, so two joins that land on two
    * different instances within that delay can still overshoot by one.
    */
-  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, socketId, joinedAt, max = null, device = null }) {
+  join(huddleId, { userId, username, audioEnabled = true, videoEnabled = false, screenSharing = false, socketId, joinedAt, max = null, device = null }) {
     const huddle = this.huddles.get(huddleId);
     if (!huddle) return { error: 'HUDDLE_NOT_FOUND' };
     const uid = String(userId);
@@ -117,6 +117,8 @@ class HuddleRegistry {
       username: username || 'Unknown',
       audioEnabled: audioEnabled !== false,
       videoEnabled: !!videoEnabled,
+      // The video is a screen share (so viewers put it on the main stage).
+      screenSharing: !!videoEnabled && !!screenSharing,
       socketId,
       // Which of the person's devices is in the call: { id, label, platform } (null for older apps).
       device: device || null,
@@ -178,11 +180,12 @@ class HuddleRegistry {
     return p;
   }
 
-  setVideo(huddleId, userId, videoEnabled) {
+  setVideo(huddleId, userId, videoEnabled, screenSharing = false) {
     const p = this.participant(huddleId, userId);
     if (p) {
       p.videoEnabled = !!videoEnabled;
-      this._changed({ type: 'video', huddleId, userId: p.userId, videoEnabled: p.videoEnabled });
+      p.screenSharing = p.videoEnabled && !!screenSharing;
+      this._changed({ type: 'video', huddleId, userId: p.userId, videoEnabled: p.videoEnabled, screenSharing: p.screenSharing });
     }
     return p;
   }
@@ -348,7 +351,10 @@ class HuddleRegistry {
         }
         case 'video': {
           const p = this.participant(op.huddleId, op.userId);
-          if (p) p.videoEnabled = !!op.videoEnabled;
+          if (p) {
+            p.videoEnabled = !!op.videoEnabled;
+            p.screenSharing = p.videoEnabled && !!op.screenSharing;
+          }
           return !!p;
         }
         case 'hand': {

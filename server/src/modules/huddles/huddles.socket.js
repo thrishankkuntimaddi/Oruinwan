@@ -525,7 +525,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
     });
 
     socket.on('huddle:join', async (data = {}) => {
-        const { huddleId, channelId, dmId, workspaceId, audioEnabled = true, videoEnabled = false } = data;
+        const { huddleId, channelId, dmId, workspaceId, audioEnabled = true, videoEnabled = false, screenSharing = false } = data;
         if (!huddleId) return huddleError(socket, huddleId, 'BAD_REQUEST', 'Missing huddleId');
 
         try {
@@ -559,7 +559,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // The registry checks it in the same step that adds the person (no await in between).
             const source = planSourceOf(ensured.huddle);
             const limits = await planLimits(source.workspaceId, { userId: source.userId });
-            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device });
+            const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, screenSharing, socketId: socket.id, max: limits?.participants || null, device });
             if (joined.error === 'PLAN_LIMIT') {
                 const { planLimitBody } = require('../../shared/plans/plans');
                 const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
@@ -638,9 +638,10 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
     });
 
     socket.on('huddle:video_toggle', (data = {}) => {
-        const { huddleId, videoEnabled } = data;
-        if (!huddleId || !registry.setVideo(huddleId, uid(), videoEnabled)) return;
-        io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled });
+        const { huddleId, videoEnabled, screenSharing } = data;
+        const p = huddleId && registry.setVideo(huddleId, uid(), videoEnabled, screenSharing);
+        if (!p) return;
+        io.to(`huddle:${huddleId}`).emit('huddle:video_changed', { huddleId, userId: uid(), videoEnabled: !!videoEnabled, screenSharing: !!p.screenSharing });
         emitSelfActive(io, registry, uid());
     });
 
