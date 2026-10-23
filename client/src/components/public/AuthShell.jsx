@@ -10,7 +10,7 @@ const POINTS = [
     { icon: MessagesSquare, text: 'Channels, DMs and threads' },
     { icon: Headphones, text: 'One-click voice huddles' },
     { icon: Sparkles, text: `${BRAND.ai}, aware of your workspace` },
-    { icon: Lock, text: 'End-to-end encrypted messages' },
+    { icon: Lock, text: 'Messages encrypted on your device' },
 ];
 
 const Logo = () => (
@@ -35,7 +35,7 @@ const AuthShell = ({ title, aside, children }) => {
                         {aside || (
                             <>
                                 <h1 className="orw-auth__title">One workspace.<br /><span className="orw-gloss-text">Every conversation.</span></h1>
-                                <p className="orw-auth__lead">Chat, huddles, tasks, notes and {BRAND.ai}, together in one end-to-end encrypted workspace.</p>
+                                <p className="orw-auth__lead">Chat, huddles, tasks, notes and {BRAND.ai}, together in one workspace, with messages encrypted on your device.</p>
                             </>
                         )}
                         <ul className="orw-auth__points">
