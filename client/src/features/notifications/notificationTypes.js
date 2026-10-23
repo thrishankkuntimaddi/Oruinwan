@@ -1,7 +1,7 @@
 import {
     AtSign, MessageCircle, Check, UserPlus, Bell, Trash2, ExternalLink,
     GitBranch, Calendar, Zap, Brain, AlertTriangle, Pin, Headphones, Smile, ArrowRightLeft,
-    Clock, FileText, PenTool, ListChecks,
+    Clock, FileText, PenTool, ListChecks, PhoneMissed,
 } from 'lucide-react';
 
 /**
@@ -26,6 +26,7 @@ export const NOTIFICATION_TYPE_META = {
     member_joined:     { label: 'Team',        Icon: UserPlus,       color: 'var(--state-success)',   tab: 'team' },
     channel_pinned:    { label: 'Channel',     Icon: Pin,            color: 'var(--accent)',          tab: 'all' },
     huddle_started:    { label: 'Huddle',      Icon: Headphones,     color: 'var(--state-danger)',    tab: 'all' },
+    missed_call:       { label: 'Missed call', Icon: PhoneMissed,    color: 'var(--state-danger)',    tab: 'messages' },
     schedule_created:  { label: 'Meeting',     Icon: Calendar,       color: 'var(--accent)',          tab: 'all' },
     meeting_reminder:  { label: 'Meeting',     Icon: Calendar,       color: 'var(--accent)',          tab: 'all' },
     meeting_recap:     { label: 'Recap',       Icon: ListChecks,     color: 'var(--accent)',          tab: 'all' },

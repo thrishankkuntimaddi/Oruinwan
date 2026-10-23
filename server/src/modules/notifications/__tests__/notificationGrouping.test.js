@@ -165,3 +165,51 @@ describe('markConversationRead', () => {
         expect(Notification.updateMany).not.toHaveBeenCalled();
     });
 });
+
+describe('merging old one-per-message rows', () => {
+    const legacyRows = (rows) => {
+        Notification.find.mockReturnValue({ sort: () => ({ limit: () => ({ lean: async () => rows }) }) });
+    };
+
+    test('unread rows from before grouping become one row per conversation with the total count', async () => {
+        legacyRows([
+            { _id: 'a3', recipient: 'u2', workspaceId: WS, type: 'dm', title: 'New message from bob', meta: { dmSessionId: DM, senderUsername: 'bob' } },
+            { _id: 'a2', recipient: 'u2', workspaceId: WS, type: 'dm', title: 'New message from bob', meta: { dmSessionId: DM, senderUsername: 'bob' } },
+            { _id: 'a1', recipient: 'u2', workspaceId: WS, type: 'dm', title: 'New message from bob', meta: { dmSessionId: DM, senderUsername: 'bob' } },
+            { _id: 'b1', recipient: 'u2', workspaceId: WS, type: 'mention', title: 'bob mentioned you', meta: { channelId: CH, senderUsername: 'bob' } },
+        ]);
+        Notification.findOne.mockResolvedValue(null);
+        Notification.updateOne = jest.fn().mockResolvedValue({});
+        Notification.deleteMany = jest.fn().mockResolvedValue({ deletedCount: 2 });
+
+        const removed = await svc.mergeLegacyChatNotifications();
+
+        expect(removed).toBe(2);
+        // The newest DM row keeps the count of all three.
+        expect(Notification.updateOne).toHaveBeenCalledWith({ _id: 'a3' }, { $set: expect.objectContaining({
+            groupKey: `dm:${DM}`, title: 'bob · 3 new messages', meta: expect.objectContaining({ count: 3 }),
+        }) });
+        expect(Notification.deleteMany).toHaveBeenCalledWith({ _id: { $in: ['a2', 'a1'] } });
+        // A single mention just gets its key.
+        expect(Notification.updateOne).toHaveBeenCalledWith({ _id: 'b1' }, { $set: { groupKey: `mention:${CH}`, 'meta.count': 1 } });
+    });
+
+    test('old rows fold into a grouped row that already exists', async () => {
+        legacyRows([{ _id: 'a1', recipient: 'u2', workspaceId: WS, type: 'dm', title: 'New message from bob', meta: { dmSessionId: DM, senderUsername: 'bob' } }]);
+        Notification.findOne.mockResolvedValue({ _id: 'g1', type: 'dm', title: 'bob · 2 new messages', meta: { dmSessionId: DM, senderUsername: 'bob', count: 2 } });
+        Notification.updateOne = jest.fn().mockResolvedValue({});
+        Notification.deleteMany = jest.fn().mockResolvedValue({ deletedCount: 1 });
+
+        await svc.mergeLegacyChatNotifications();
+
+        expect(Notification.updateOne).toHaveBeenCalledWith({ _id: 'g1' }, { $set: expect.objectContaining({ meta: expect.objectContaining({ count: 3 }), title: 'bob · 3 new messages' }) });
+        expect(Notification.deleteMany).toHaveBeenCalledWith({ _id: { $in: ['a1'] } });
+    });
+
+    test('nothing to merge does nothing', async () => {
+        legacyRows([]);
+        Notification.deleteMany = jest.fn();
+        expect(await svc.mergeLegacyChatNotifications()).toBe(0);
+        expect(Notification.deleteMany).not.toHaveBeenCalled();
+    });
+});

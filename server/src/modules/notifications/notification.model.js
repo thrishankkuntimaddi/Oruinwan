@@ -15,6 +15,7 @@ const NOTIFICATION_TYPES = [
     'member_joined',     
     'channel_pinned',    
     'huddle_started',    
+    'missed_call',       // a DM / group-DM call rang and nobody answered on any device
     'schedule_created',  
     'meeting_reminder',  
     'meeting_recap',     // a call ended: "Meeting ended · View recap" (link to the meeting page)

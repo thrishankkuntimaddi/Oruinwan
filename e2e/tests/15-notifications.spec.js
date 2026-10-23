@@ -112,11 +112,14 @@ test.describe('notification pop-ups', () => {
     await bob.keyboard.press('Enter');
     await expect(alice.getByTestId('thread-panel').getByText(`thread reply ${stamp}`)).toBeVisible();
 
+    // Nothing unread for it: the server stores no notification for a thread Alice has open (since
+    // 2.2), or, if her "viewing" arrived late, one that her app marks read straight away.
+    await settle(alice, 1500);
     await expect.poll(async () => {
       const { data } = await api(alice, 'GET', `/api/notifications?workspaceId=${workspaceId}&limit=30`);
       const reply = (data?.notifications || []).find((n) => n.type === 'thread_reply');
-      return reply ? reply.read : 'missing';
-    }, { timeout: 10_000 }).toBe(true);
+      return reply ? (reply.read ? 'read' : 'unread') : 'none';
+    }, { timeout: 10_000 }).not.toBe('unread');
     await expect(bobToasts(alice)).toHaveCount(0);
     expect(await osNotifs(alice)).toHaveLength(0);
     await alice.getByTestId('thread-panel').getByTitle('Close').click();

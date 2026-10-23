@@ -110,6 +110,29 @@ export function conversationPath(workspaceId, conv) {
     return `/workspace/${workspaceId}/${conv.kind === 'dm' ? 'dm' : 'channel'}/${conv.id}`;
 }
 
+/** Inside the desktop app or the tablet app there are no browser tabs: pages open in the app. */
+export function insideApp(win = typeof window !== 'undefined' ? window : undefined) {
+    if (!win) return false;
+    if (win.oruinwanDesktop || win.electronAPI?.isDesktop) return true;
+    try { return !!win.Capacitor?.isNativePlatform?.(); } catch { return false; }
+}
+
+/**
+ * Open a meeting page. On the web it opens in a new browser tab (the call keeps going in this
+ * one); in the desktop and tablet apps it opens in the app, and `inApp` runs (e.g. shrink the call
+ * to the mini call so you can browse while staying in it). Falls back to the app if the browser
+ * blocks the new tab.
+ */
+export function openMeetingPage(href, { navigate, inApp, win = typeof window !== 'undefined' ? window : undefined } = {}) {
+    if (!href) return;
+    if (!insideApp(win) && win?.open) {
+        const tab = win.open(href, '_blank', 'noopener');
+        if (tab !== null) return;
+    }
+    navigate?.(href);
+    inApp?.();
+}
+
 export function meetingPath(workspaceId, meetingId, tab) {
     if (!workspaceId || !meetingId) return null;
     return `/workspace/${workspaceId}/meetings/${meetingId}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`;

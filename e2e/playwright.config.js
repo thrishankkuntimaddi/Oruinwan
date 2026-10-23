@@ -24,7 +24,7 @@ module.exports = defineConfig({
     // Locally, use the installed Chrome; CI installs Playwright's Chromium.
     ...(isCI ? {} : { channel: 'chrome' }),
     // Huddles need a microphone: grant it and feed a synthetic audio track.
-    permissions: ['microphone'],
+    permissions: ['microphone', 'notifications'],
     launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], ...(isCI ? {} : { channel: 'chrome' }) } }],

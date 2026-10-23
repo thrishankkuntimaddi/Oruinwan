@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Home → Activity (client/src/features/activity): while Alice sits on Home,
- * Bob DMs her and @mentions her in a channel. Both rows appear live with
- * decrypted previews; opening the DM row opens the conversation and clears
- * the row. The /activity endpoint is members-only.
+ * Home → Activity (client/src/features/activity) on a phone-sized screen: while Alice sits on
+ * Home, Bob DMs her and @mentions her in a channel. Both rows appear live with decrypted
+ * previews; opening the DM row opens the conversation and clears the row. The /activity
+ * endpoint is members-only. On a desktop-sized screen Activity is only in the bell, not in
+ * the Home side panel.
  */
 
 const { test, expect } = require('@playwright/test');
@@ -31,7 +32,12 @@ test.describe('home activity', () => {
   const stamp = Date.now();
 
   test.beforeAll(async ({ browser }) => {
-    contexts = await Promise.all([browser.newContext(), browser.newContext(), browser.newContext()]);
+    // Alice uses a phone-sized window (the phone Home has Activity); Bob a desktop one.
+    contexts = await Promise.all([
+      browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'] }),
+      browser.newContext(),
+      browser.newContext(),
+    ]);
     [alice, bob, carol] = await Promise.all(contexts.map((c) => c.newPage()));
     await login(bob, 'bob');
     await login(alice, 'alice');
@@ -48,6 +54,12 @@ test.describe('home activity', () => {
     await expect(alice.getByTestId('home-activity')).toBeVisible();
   });
   test.afterAll(async () => { await Promise.all(contexts.map((c) => c.close())); });
+
+  test('the desktop Home side panel has no Activity section (the bell has it)', async () => {
+    await spaNavigate(bob, `/workspace/${workspaceId}/home`);
+    await expect(bob.getByRole('heading', { name: /Good (morning|afternoon|evening)/ }).first()).toBeVisible();
+    await expect(bob.getByTestId('home-activity')).toHaveCount(0);
+  });
 
   test('the activity endpoint is for workspace members only', async () => {
     const mine = await api(alice).req('get', `/api/v2/messages/workspace/${workspaceId}/activity`);
@@ -100,7 +112,7 @@ test.describe('home activity', () => {
     const activity = alice.getByTestId('home-activity');
     const dmRow = activity.locator('[data-testid="activity-row"][data-kind="dm"]').filter({ hasText: 'bob' });
     await dmRow.click();
-    await alice.waitForURL(/\/home\/dm\/[a-f0-9]{24}/);
+    await alice.waitForURL(/\/dm\/[a-f0-9]{24}/);
     await expect(alice.locator('[id^="msg-"]').filter({ hasText: `review the deck ${stamp}` })).toBeVisible();
     await expect(dmRow).toHaveCount(0);
 

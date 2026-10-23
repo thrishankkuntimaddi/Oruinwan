@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { useHuddle } from './useHuddle';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import logger from '../../utils/logger';
 import api from '../../services/api';
 
@@ -109,6 +110,7 @@ export function HuddleProvider({ workspaceId, children }) {
 function HuddleProviderImpl({ workspaceId, children }) {
     const { socket } = useSocket();
     const { user: currentUser } = useAuth();
+    const { showToast } = useToast();
 
     // "You're already in a call" questions: { kind: 'switch' | 'move', current, run(extraOpts) }.
     const [conflict, setConflict] = useState(null);
@@ -169,8 +171,11 @@ function HuddleProviderImpl({ workspaceId, children }) {
     const [workspaceOpen, setWorkspaceOpen] = useState(false);
     const [workspaceTab, setWorkspaceTab] = useState('notes');
     const [panelCall, setPanelCall] = useState(null);
-    // A DM call ringing for me: { huddleId, dmId, workspaceId, startedBy, video }.
+    // A DM / group-DM call ringing for me (huddle:ring with ring: true):
+    // { huddleId, kind, dmId, workspaceId, title, from: { id, name, avatar }, video, meetingId, expiresAt }.
     const [incomingCall, setIncomingCall] = useState(null);
+    // A channel huddle someone just started (huddle:ring with ring: false): a "Join" banner, no ringing.
+    const [huddleBanner, setHuddleBanner] = useState(null);
     const currentUserIdRef = useRef(null);
     currentUserIdRef.current = currentUser?.id || currentUser?._id || currentUser?.sub || null;
 
@@ -178,6 +183,49 @@ function HuddleProviderImpl({ workspaceId, children }) {
     huddleRef.current = huddle;
     const workspaceIdRef = useRef(workspaceId);
     workspaceIdRef.current = workspaceId;
+
+    // Rings come to my own room whatever workspace is open: answer, decline, or let it ring out.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const onRing = (payload) => {
+            if (!payload?.huddleId) return;
+            const mine = String(currentUserIdRef.current || '');
+            if (String(payload.from?.id || '') === mine) return;
+            // Already in a call (here or on another device): the server doesn't ring, but be safe.
+            if (huddleRef.current.active || selfActiveRef.current?.huddleId) return;
+            if (payload.ring === false) setHuddleBanner(payload);
+            else setIncomingCall(payload);
+        };
+        const onCancel = ({ huddleId } = {}) => {
+            if (!huddleId) return;
+            setIncomingCall(prev => (prev?.huddleId === huddleId ? null : prev));
+            setHuddleBanner(prev => (prev?.huddleId === huddleId ? null : prev));
+        };
+        const onDeclined = ({ huddleId, name } = {}) => {
+            if (huddleId && huddleId === huddleRef.current.huddleId) showToast(`${name || 'They'} declined the call.`, 'info');
+        };
+        const onNoAnswer = ({ huddleId } = {}) => {
+            if (huddleId && huddleId === huddleRef.current.huddleId) showToast('No answer.', 'info');
+        };
+        socket.on('huddle:ring', onRing);
+        socket.on('huddle:ring_cancel', onCancel);
+        socket.on('huddle:declined', onDeclined);
+        socket.on('huddle:no_answer', onNoAnswer);
+        return () => {
+            socket.off('huddle:ring', onRing);
+            socket.off('huddle:ring_cancel', onCancel);
+            socket.off('huddle:declined', onDeclined);
+            socket.off('huddle:no_answer', onNoAnswer);
+        };
+    }, [socket, showToast]);
+
+    const declineIncomingCall = useCallback(() => {
+        setIncomingCall(prev => {
+            if (prev?.huddleId) socket?.emit('huddle:decline', { huddleId: prev.huddleId });
+            return null;
+        });
+    }, [socket]);
+
 
     /** Run a start/join with a timeout; on failure leave a retryable error for the UI. */
     const runConnect = useCallback(async (label, fn, { quiet = false } = {}) => {
@@ -473,11 +521,6 @@ function HuddleProviderImpl({ workspaceId, children }) {
                     ...prev,
                     toEntry({ ...payload, startedAt: payload.timestamp, participants: [] }),
                 ]));
-                // Someone calls me in a DM: ring, unless I'm already in a call (on any device).
-                const mine = String(currentUserIdRef.current || '');
-                if (String(payload.startedBy?._id || '') !== mine && !huddleRef.current.active && !selfActiveRef.current?.huddleId) {
-                    setIncomingCall({ huddleId: payload.huddleId, dmId: String(payload.dmId), workspaceId: String(payload.workspaceId), startedBy: payload.startedBy || null, video: !!payload.video });
-                }
                 return;
             }
             reload();
@@ -486,6 +529,7 @@ function HuddleProviderImpl({ workspaceId, children }) {
         const onEnded = ({ huddleId } = {}) => {
             if (!huddleId) return;
             setIncomingCall(prev => (prev?.huddleId === huddleId ? null : prev));
+            setHuddleBanner(prev => (prev?.huddleId === huddleId ? null : prev));
             setListedHuddles(prev => prev.filter(h => h.id !== huddleId));
             setDmHuddles(prev => prev.filter(h => h.id !== huddleId));
             refreshHistorySoon();
@@ -512,13 +556,24 @@ function HuddleProviderImpl({ workspaceId, children }) {
         };
     }, [socket, workspaceId, refreshHistorySoon]);
 
-    // A ring lasts 45 seconds, and stops once I'm in a call.
+    // A ring lasts until its expiresAt (45 seconds), and stops once I'm in a call.
     useEffect(() => {
         if (!incomingCall) return undefined;
         if (huddle.active) { setIncomingCall(null); return undefined; }
-        const t = setTimeout(() => setIncomingCall(null), 45000);
+        // expiresAt is milliseconds since 1970 (older servers sent an ISO string).
+        const exp = typeof incomingCall.expiresAt === 'number' ? incomingCall.expiresAt : Date.parse(incomingCall.expiresAt || '');
+        const left = exp - Date.now();
+        const t = setTimeout(() => setIncomingCall(null), Number.isFinite(left) ? Math.max(0, Math.min(left, 60000)) : 45000);
         return () => clearTimeout(t);
     }, [incomingCall, huddle.active]);
+
+    // The "huddle started" banner goes away by itself, or once I'm in a call.
+    useEffect(() => {
+        if (!huddleBanner) return undefined;
+        if (huddle.active) { setHuddleBanner(null); return undefined; }
+        const t = setTimeout(() => setHuddleBanner(null), 20000);
+        return () => clearTimeout(t);
+    }, [huddleBanner, huddle.active]);
 
     // Starting a huddle where one was already running joins that one: follow its id.
     useEffect(() => {
@@ -587,6 +642,9 @@ function HuddleProviderImpl({ workspaceId, children }) {
         liveHuddles,
         incomingCall,
         dismissIncomingCall: () => setIncomingCall(null),
+        declineIncomingCall,
+        huddleBanner,
+        dismissHuddleBanner: () => setHuddleBanner(null),
 
         workspaceId: workspaceId || null,
         session: session && session.huddleId === (panelCall?.id || huddle.huddleId) ? session : null,

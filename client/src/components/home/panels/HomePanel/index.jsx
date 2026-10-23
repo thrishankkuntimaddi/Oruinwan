@@ -20,7 +20,6 @@ import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 import logger from '../../../../utils/logger';
-import ActivitySection from "../../../../features/activity/ActivitySection";
 import { openAgentDm, useAgents } from "../../../../features/agents/useAgents";
 
 const HomePanel = ({ title }) => {
@@ -84,7 +83,6 @@ const HomePanel = ({ title }) => {
     
 
     const [expanded, setExpanded] = useState({
-        activity: true,
         favorites: true,
         channels: true,
         dms: true,
@@ -448,10 +446,7 @@ const HomePanel = ({ title }) => {
                 </div>
             )}
 
-            {!isSelectionMode && (
-                <ActivitySection isOpen={expanded.activity} onToggle={() => toggle("activity")} />
-            )}
-
+            {/* Activity lives in the bell (and on the phone's Home), not in this side panel. */}
             {favorites.length > 0 && (
                 <>
                     <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />

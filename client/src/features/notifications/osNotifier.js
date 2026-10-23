@@ -17,7 +17,7 @@ export function osNotificationsAvailable() {
  * Show (or replace) the OS notification for `tag`.
  * route: { type, workspaceId, channelId, dmSessionId } for the desktop app.
  */
-export function showOsNotification({ title, body, tag, silent = false, onClick, route = {} }) {
+export function showOsNotification({ title, body, tag, silent = false, onClick, route = {}, requireInteraction = false }) {
     if (typeof window === 'undefined') return false;
     try {
         if (window.oruinwanDesktopBridge?.notify) {
@@ -43,6 +43,8 @@ export function showOsNotification({ title, body, tag, silent = false, onClick, 
             tag: tag || undefined,
             renotify: false,
             silent,
+            // An incoming call stays on screen until it is answered or stops ringing.
+            ...(requireInteraction && { requireInteraction: true }),
         });
         if (tag) open.set(tag, n);
         n.onclick = () => {
@@ -56,6 +58,14 @@ export function showOsNotification({ title, body, tag, silent = false, onClick, 
         // Some mobile browsers only allow notifications from a service worker.
         return false;
     }
+}
+
+/** Close the OS notification for one tag (e.g. a call that stopped ringing). */
+export function closeOsNotification(tag) {
+    const n = tag && open.get(tag);
+    if (!n) return;
+    try { n.close(); } catch { /* ignore */ }
+    open.delete(tag);
 }
 
 /** Close every OS notification this tab opened (the user is back). */

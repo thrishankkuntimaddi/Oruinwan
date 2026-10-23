@@ -33,10 +33,12 @@ test('a DM voice huddle: start, join from the other side, connect, leave', async
   const aliceCall = alice.getByTestId('call-screen');
   await expect(aliceCall).toBeVisible();
 
-  // Bob is offered the live huddle and joins it (not a second, separate huddle).
-  const banner = bob.getByTestId('huddle-announcement');
-  await expect(banner).toContainText('alice');
-  await banner.getByRole('button', { name: 'Join' }).click();
+  // Bob's app rings with Alice's name; he accepts and joins her call (not a second one).
+  const ring = bob.getByTestId('incoming-call');
+  await expect(ring).toContainText('alice');
+  await expect(ring).toContainText('Incoming voice call');
+  await bob.getByTestId('incoming-call-accept').click();
+  await expect(ring).toBeHidden();
   const bobCall = bob.getByTestId('call-screen');
   await expect(bobCall).toContainText('2 participants');
   await expect(aliceCall).toContainText('2 participants');
@@ -74,7 +76,7 @@ test('a call moves from one of my devices to another', async ({ browser }) => {
 
   await laptop.locator('button[title="Start Voice Call"], button[title="Start huddle"]').first().click();
   await expect(laptop.getByTestId('call-screen')).toBeVisible();
-  await bob.getByTestId('huddle-announcement').getByRole('button', { name: 'Join' }).click();
+  await bob.getByTestId('incoming-call-accept').click();
   await expect(bob.getByTestId('call-screen')).toContainText('2 participants');
 
   // The other device shows "In a call on … · Move here". Starting a call in that same DM there
@@ -113,8 +115,8 @@ test('a DM video call shows both cameras', async ({ browser }) => {
   const aliceCall = alice.getByTestId('call-screen');
   await expect(aliceCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
 
-  const banner = bob.getByTestId('huddle-announcement');
-  await banner.getByRole('button', { name: 'Join' }).click();
+  await expect(bob.getByTestId('incoming-call')).toContainText('Incoming video call');
+  await bob.getByTestId('incoming-call-accept').click();
   const bobCall = bob.getByTestId('call-screen');
   await expect(bobCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
   await Promise.all([peerConnected(alice), peerConnected(bob)]);

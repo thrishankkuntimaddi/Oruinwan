@@ -61,6 +61,7 @@ const PREF_KEY_BY_TYPE = {
     reaction: 'message',
     channel_pinned: 'message',
     huddle_started: 'message',
+    missed_call: 'message',
     thread_reply: 'threadReply',
     task_assigned: 'task',
     task_comment: 'task',
@@ -269,6 +270,53 @@ async function markConversationRead(io, { userId, conversationType, conversation
     }
 }
 
+/**
+ * Unread chat notifications from before grouping (one row per message, no groupKey) become one
+ * row per conversation, like new ones: the newest row stays with the total count, the rest go.
+ * Runs once at start-up; returns how many rows were removed.
+ */
+async function mergeLegacyChatNotifications({ limit = 20000 } = {}) {
+    const legacy = await Notification.find({
+        type: { $in: [...GROUPED_TYPES] },
+        read: false,
+        $or: [{ groupKey: null }, { groupKey: { $exists: false } }],
+    }).sort({ createdAt: -1 }).limit(limit).lean();
+    if (!legacy.length) return 0;
+
+    const groups = new Map(); // recipient|workspace|groupKey -> rows (newest first)
+    for (const row of legacy) {
+        const key = groupKeyFor(row.type, row.meta || {});
+        if (!key) continue;
+        const id = `${row.recipient}|${row.workspaceId}|${key}`;
+        if (!groups.has(id)) groups.set(id, { key, rows: [] });
+        groups.get(id).rows.push(row);
+    }
+
+    let removed = 0;
+    for (const { key, rows } of groups.values()) {
+        const [newest] = rows;
+        // A grouped row may already exist for this conversation: fold the old rows into it.
+        const current = await Notification.findOne({ recipient: newest.recipient, workspaceId: newest.workspaceId, groupKey: key, read: false });
+        const keep = current || newest;
+        const extra = current ? rows : rows.slice(1);
+        if (!extra.length && !current && rows.length === 1) {
+            await Notification.updateOne({ _id: newest._id }, { $set: { groupKey: key, 'meta.count': 1 } });
+            continue;
+        }
+        const count = (current ? (current.meta?.count || 1) : 1) + extra.length;
+        const meta = { ...(keep.meta || {}), count };
+        await Notification.updateOne({ _id: keep._id }, {
+            $set: { groupKey: key, meta, title: groupedTitle(keep.type, meta, count, keep.title) },
+        });
+        const drop = extra.map((r) => r._id).filter((id) => String(id) !== String(keep._id));
+        if (drop.length) {
+            const res = await Notification.deleteMany({ _id: { $in: drop } });
+            removed += res?.deletedCount || 0;
+        }
+    }
+    return removed;
+}
+
 async function createMany(io, recipients, payload) {
     const unique = [...new Set((recipients || []).filter(Boolean).map(String))];
     if (!unique.length || !payload?.workspaceId) return [];
@@ -305,7 +353,8 @@ async function dmReceived(io, { recipientId, senderId, senderUsername, senderAva
         workspaceId,
         type: 'dm',
         title: `New message from ${senderUsername}`,
-        body: snippet || 'Sent you a message',
+        // The text itself is encrypted: apps that can decrypt the preview show it instead.
+        body: snippet || 'New message',
         link: dmSessionId ? `/dm/${dmSessionId}` : null,
         meta: { senderId, senderUsername, senderAvatar, dmSessionId, preview, kind },
     });
@@ -453,6 +502,19 @@ async function huddleStarted(io, { recipientIds, workspaceId, channelId, dmSessi
     });
 }
 
+/** "Missed call from Ben": a DM or group-DM call rang out (or was hung up) before they answered. */
+async function missedCall(io, { recipientIds, workspaceId, dmSessionId, callerName, title, video, huddleId }) {
+    const kind = video ? 'video call' : 'call';
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'missed_call',
+        title: `Missed ${kind} from ${callerName || 'someone'}`,
+        body: title ? `in ${title}` : 'Tap to call back',
+        link: dmSessionId ? `/dm/${dmSessionId}` : null,
+        meta: { dmSessionId, callerName, video: !!video, huddleId },
+    });
+}
+
 async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId, startTime }) {
     const when = startTime ? new Date(startTime) : null;
     return createMany(io, recipientIds, {
@@ -507,6 +569,8 @@ module.exports = {
     memberJoined,
     channelPinned,
     huddleStarted,
+    missedCall,
+    mergeLegacyChatNotifications,
     scheduleCreated,
     threadReply,
 };

@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Phone, Video } from 'lucide-react';
-import { playChime } from '../../notifications/osNotifier';
+import { useNavigate } from 'react-router-dom';
+import { closeOsNotification, playChime, showOsNotification } from '../../notifications/osNotifier';
 import { useHuddleContext } from '../HuddleContext';
 import HuddleWorkspacePanel from '../workspace/HuddleWorkspacePanel';
 import CallScreen, { CallConnecting } from '../call/CallScreen';
 import MiniCall, { MiniCallBody } from '../call/MiniCall';
 import { ConflictDialog, ElsewherePill } from '../call/CallDialogs';
 import { openFloatingWindow } from '../call/floatingWindow';
+import { HuddleStartedBanner, IncomingCall, ringLabel } from '../call/IncomingCall';
+import { startRingtone } from '../call/ringtone';
+import { announceRing, announceRingEnd, desktopRings, onRingAction } from '../call/ringBridge';
 import '../workspace/huddleWorkspace.css';
 import '../call/callScreen.css';
+import '../call/incomingCall.css';
 
 /**
  * The floating call window (desktop app window or browser Picture-in-Picture). `auto` marks a
@@ -58,6 +61,41 @@ function useFloatingCall(active) {
     return { floating, open, close };
 }
 
+/** The page is behind other windows or another tab: an OS notification is the only way to be seen. */
+function pageAway() {
+    if (typeof document === 'undefined') return false;
+    try { return document.hidden || !document.hasFocus(); } catch { return document.hidden; }
+}
+
+/**
+ * While a call rings for me: the ringtone, and an OS notification when the app is in the
+ * background (clicking it brings the app forward to answer). Both stop when the ring stops.
+ */
+function useRinging(ring) {
+    const id = ring?.huddleId || null;
+    useEffect(() => {
+        if (!id) return undefined;
+        const stop = startRingtone();
+        const tag = `oruinwan:call:${id}`;
+        // The desktop app shows its own ring notification (with Accept / Decline).
+        announceRing(ring);
+        if (pageAway() && !desktopRings()) {
+            showOsNotification({
+                title: ring.kind === 'group_dm' && ring.title ? ring.title : (ring.from?.name || 'Incoming call'),
+                body: `${ring.kind === 'group_dm' ? `${ring.from?.name || 'Someone'} · ` : ''}${ringLabel(ring)}`,
+                tag,
+                requireInteraction: true,
+                route: { type: 'system', workspaceId: ring.workspaceId || undefined, dmSessionId: ring.dmId || undefined },
+            });
+        }
+        return () => {
+            stop();
+            closeOsNotification(tag);
+            announceRingEnd(id);
+        };
+    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 /**
  * App-wide call chrome: the full call screen or the small floating one, the call in its own
  * window, "switch / move here?" questions, "in a call on another device", the ring for an
@@ -66,24 +104,40 @@ function useFloatingCall(active) {
 export default function HuddleDock() {
     const ctx = useHuddleContext();
     const navigate = useNavigate();
-    const location = useLocation();
     const { floating, open: popOut, close: closeFloating } = useFloatingCall(ctx.active);
 
-    // A DM call ringing for me (the DM page itself shows its own "Join" bar).
+    // A DM / group-DM call ringing for me, and a channel huddle someone started.
     const ring = ctx.incomingCall;
-    const ringHere = ring && location.pathname.includes(`/dm/${ring.dmId}`);
-    useEffect(() => {
-        if (!ring || ringHere) return undefined;
-        playChime();
-        const t = setInterval(playChime, 3000);
-        return () => clearInterval(t);
-    }, [ring, ringHere]);
-    const answer = () => {
+    const banner = ctx.huddleBanner;
+    useRinging(ring);
+    const bannerId = banner?.huddleId || null;
+    useEffect(() => { if (bannerId) playChime(); }, [bannerId]);
+
+    const workspacePath = (r) => `/workspace/${r.workspaceId || ctx.workspaceId}`;
+    const answer = useCallback(() => {
         const r = ctx.incomingCall;
         if (!r) return;
         ctx.dismissIncomingCall();
-        navigate(`/workspace/${r.workspaceId || ctx.workspaceId}/dm/${r.dmId}`);
-        ctx.joinHuddle({ id: r.huddleId, dmId: r.dmId, video: r.video }, { quiet: true }).catch(() => {});
+        try { window.focus(); } catch { /* the desktop app brings itself forward */ }
+        if (r.dmId) navigate(`${workspacePath(r)}/dm/${r.dmId}`);
+        ctx.joinHuddle({ id: r.huddleId, dmId: r.dmId || null, channelId: r.channelId || null, video: r.video }, { quiet: true }).catch(() => {});
+    }, [ctx, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Accept / Decline / Open from the desktop app's ring notification.
+    const ringRef = useRef(ring);
+    ringRef.current = ring;
+    useEffect(() => onRingAction(({ huddleId, action }) => {
+        if (ringRef.current?.huddleId !== huddleId) return;
+        if (action === 'accept') answer();
+        else if (action === 'decline') ctx.declineIncomingCall();
+        else try { window.focus(); } catch { /* the app brings itself forward */ }
+    }), [answer, ctx.declineIncomingCall]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const joinFromBanner = () => {
+        const b = ctx.huddleBanner;
+        if (!b) return;
+        ctx.dismissHuddleBanner();
+        if (b.channelId) navigate(`${workspacePath(b)}/channel/${b.channelId}`);
+        ctx.joinHuddle({ id: b.huddleId, channelId: b.channelId || null, video: b.video }, { quiet: true }).catch(() => {});
     };
 
     const expandFromFloating = () => {
@@ -106,19 +160,8 @@ export default function HuddleDock() {
             )}
             {!ctx.active && <ElsewherePill call={ctx.callElsewhere} onMove={() => ctx.moveCallHere().catch(() => {})} />}
             <ConflictDialog conflict={ctx.conflict} onAnswer={ctx.resolveConflict} />
-            {ring && !ringHere && (
-                <div className="hw-ring" data-testid="huddle-ring" role="alertdialog" aria-label="Incoming call">
-                    <span className="hw-ring-icon">{ring.video ? <Video size={16} /> : <Phone size={16} />}</span>
-                    <div className="hw-ring-text">
-                        <p className="hw-ring-title">{ring.startedBy?.username || 'Someone'} is calling</p>
-                        <p className="hw-ring-sub">{ring.video ? 'Video call' : 'Voice call'} · direct message</p>
-                    </div>
-                    <div className="hw-ring-actions">
-                        <button type="button" className="gl-btn" onClick={ctx.dismissIncomingCall}>Decline</button>
-                        <button type="button" className="gl-btn gl-btn--primary" data-testid="huddle-ring-join" onClick={answer}>Join</button>
-                    </div>
-                </div>
-            )}
+            {!ctx.active && <IncomingCall ring={ring} onAccept={answer} onDecline={ctx.declineIncomingCall} />}
+            {!ctx.active && !ring && <HuddleStartedBanner banner={banner} onJoin={joinFromBanner} onDismiss={ctx.dismissHuddleBanner} />}
             {ctx.workspaceOpen && ctx.panelCall && <HuddleWorkspacePanel />}
         </>
     );

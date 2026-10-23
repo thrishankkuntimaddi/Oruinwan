@@ -62,29 +62,40 @@ function stringData(data) {
   );
 }
 
+/** The FCM message for one device. A data-only message (calls) wakes the app's own handler. */
+function fcmMessage(token, { title, body, data, badge, dataOnly = false, ttlSeconds = null }) {
+  if (dataOnly) {
+    return {
+      token,
+      data: stringData(data),
+      android: { priority: 'HIGH', ...(ttlSeconds ? { ttl: `${ttlSeconds}s` } : {}) },
+    };
+  }
+  return {
+    token,
+    notification: { title, body },
+    data: stringData(data),
+    android: {
+      priority: 'HIGH',
+      ...(ttlSeconds ? { ttl: `${ttlSeconds}s` } : {}),
+      notification: {
+        channel_id: 'messages',
+        ...(data?.conversationId ? { tag: String(data.conversationId) } : {}),
+        ...(typeof badge === 'number' ? { notification_count: badge } : {}),
+      },
+    },
+  };
+}
+
 /** Returns 'sent', 'gone' (token no longer valid) or 'failed'. */
-async function sendFcm(token, { title, body, data, badge }) {
+async function sendFcm(token, message) {
   const credentials = fcmConfig();
   if (!credentials) return 'failed';
   try {
     const accessToken = await fcmAccessToken(credentials);
     await axios.post(
       `https://fcm.googleapis.com/v1/projects/${credentials.project_id}/messages:send`,
-      {
-        message: {
-          token,
-          notification: { title, body },
-          data: stringData(data),
-          android: {
-            priority: 'HIGH',
-            notification: {
-              channel_id: 'messages',
-              ...(data?.conversationId ? { tag: String(data.conversationId) } : {}),
-              ...(typeof badge === 'number' ? { notification_count: badge } : {}),
-            },
-          },
-        },
-      },
+      { message: fcmMessage(token, message) },
       { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 10000 },
     );
     return 'sent';
@@ -123,7 +134,7 @@ function apnsProviderToken(cfg) {
   return token;
 }
 
-function sendApns(deviceToken, { title, body, data, badge }) {
+function sendApns(deviceToken, { title, body, data, badge, ttlSeconds = null }) {
   const cfg = apnsConfig();
   if (!cfg) return Promise.resolve('failed');
   return new Promise((resolve) => {
@@ -155,6 +166,7 @@ function sendApns(deviceToken, { title, body, data, badge }) {
       'apns-topic': cfg.bundleId,
       'apns-push-type': 'alert',
       'apns-priority': '10',
+      ...(ttlSeconds ? { 'apns-expiration': String(Math.floor(Date.now() / 1000) + ttlSeconds) } : {}),
       'content-type': 'application/json',
     });
     let status = 0;
@@ -206,33 +218,75 @@ function serviceFor(entry) {
   return null; // old Expo tokens and unknown platforms are no longer delivered
 }
 
+/**
+ * Send to every registered device of a user. `send(service, entry)` returns the push result;
+ * tokens the services reject as gone are removed.
+ */
+async function deliver(userId, send) {
+  const user = await identity.users.findById(userId, { withSecrets: true });
+  const tokens = Array.isArray(user?.deviceTokens) ? user.deviceTokens : [];
+  if (!tokens.length) return;
+  const results = await Promise.all(
+    tokens.map(async (entry) => [entry.token, await send(serviceFor(entry), entry)]),
+  );
+  const gone = new Set(results.filter(([, r]) => r === 'gone').map(([t]) => t));
+  if (gone.size) {
+    await identity.users.update(userId, { deviceTokens: tokens.filter((t) => !gone.has(t.token)) });
+    logger.info({ userId, removed: gone.size }, '[Push] Removed device tokens the push service no longer accepts');
+  }
+}
+
 async function sendToUser(userId, title, body, data = {}) {
   try {
-    const user = await identity.users.findById(userId, { withSecrets: true });
-    const tokens = Array.isArray(user?.deviceTokens) ? user.deviceTokens : [];
-    if (!tokens.length) return;
-
     const conversationId = data.channelId || data.dmSessionId || undefined;
     const full = { ...data, conversationId };
     // `category` in the data tells the Android app which pushes to re-post with the reply actions.
     const message = { title, body, data: isMessagePush(full) ? { ...full, category: MESSAGE_CATEGORY } : full };
-    const results = await Promise.all(
-      tokens.map(async (entry) => {
-        const service = serviceFor(entry);
-        if (service === 'fcm') return [entry.token, await sendFcm(entry.token, message)];
-        if (service === 'apns') return [entry.token, await sendApns(entry.token, message)];
-        return [entry.token, 'gone'];
-      }),
-    );
-
-    const gone = new Set(results.filter(([, r]) => r === 'gone').map(([t]) => t));
-    if (gone.size) {
-      await identity.users.update(userId, { deviceTokens: tokens.filter((t) => !gone.has(t.token)) });
-      logger.info({ userId, removed: gone.size }, '[Push] Removed device tokens the push service no longer accepts');
-    }
+    await deliver(userId, async (service, entry) => {
+      if (service === 'fcm') return sendFcm(entry.token, message);
+      if (service === 'apns') return sendApns(entry.token, message);
+      return 'gone';
+    });
   } catch (err) {
     logger.error({ userId, err: err.message }, '[Push] sendToUser error');
   }
 }
 
-module.exports = { sendToUser, isConfigured, _internal: { isMessagePush, MESSAGE_CATEGORY, fcmConfig, apnsConfig, stringData, serviceFor, sendFcm, sendApns } };
+// ── Calls ───────────────────────────────────────────────────────────────────
+
+const CALL_TTL_SECONDS = 45;
+
+/**
+ * A ringing call (`type: 'call'`, payload in `call`) or the end of one (`type: 'call_cancel'`).
+ * Android gets a high-priority data-only message, so the app shows its own incoming-call screen
+ * (with Accept / Decline) even when it was closed; it expires with the ring. iPhone gets an alert
+ * that expires the same way (no VoIP push yet), and nothing for a cancel.
+ */
+async function sendCallToUser(userId, type, payload = {}) {
+  try {
+    const isCall = type === 'call';
+    const data = {
+      type,
+      huddleId: payload.huddleId,
+      call: payload,
+      ...(payload.reason ? { reason: payload.reason } : {}),
+      // Also at the top level, so the notification's Decline button finds it without parsing `call`.
+      ...(payload.declineUrl ? { declineUrl: payload.declineUrl } : {}),
+    };
+    const who = payload.from?.name || 'Someone';
+    const title = payload.kind === 'group_dm' && payload.title ? payload.title : who;
+    const body = `${payload.kind === 'group_dm' ? `${who} · ` : ''}Incoming ${payload.video ? 'video' : 'voice'} call`;
+    await deliver(userId, async (service, entry) => {
+      if (service === 'fcm') return sendFcm(entry.token, { data, dataOnly: true, ttlSeconds: CALL_TTL_SECONDS });
+      if (service === 'apns') {
+        if (!isCall) return 'sent';
+        return sendApns(entry.token, { title, body, data, ttlSeconds: CALL_TTL_SECONDS });
+      }
+      return 'gone';
+    });
+  } catch (err) {
+    logger.error({ userId, err: err.message }, '[Push] sendCallToUser error');
+  }
+}
+
+module.exports = { sendToUser, sendCallToUser, isConfigured, _internal: { isMessagePush, MESSAGE_CATEGORY, fcmConfig, fcmMessage, apnsConfig, stringData, serviceFor, sendFcm, sendApns } };

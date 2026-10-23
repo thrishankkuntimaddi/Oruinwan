@@ -11,7 +11,7 @@ import {
 import useMeetingList from './useMeetingList';
 import {
     huddlesTab, meetingTitle, meetingWhenLabel, meetingConversation, conversationLabel, meetingPath, meetingIdOf,
-    summaryText, normaliseActionItems,
+    summaryText, normaliseActionItems, openMeetingPage,
 } from './meetingModel';
 import './meetings.css';
 
@@ -170,7 +170,7 @@ function LiveSection({ workspaceId, onStart }) {
                     <span className="mt-grow"><span className="mt-list-title">Your huddle</span><span className="mt-list-sub">{(ctx.participants || []).length} in the call</span></span>
                     <span className="mt-list-right">
                         <Btn size="sm" onClick={() => ctx.openWorkspace?.()}>Meeting panel</Btn>
-                        {mine.meetingId && <Btn size="sm" variant="ghost" onClick={openPage(mine.meetingId)}>Open meeting page</Btn>}
+                        {mine.meetingId && <Btn size="sm" variant="ghost" onClick={() => openMeetingPage(meetingPath(workspaceId, mine.meetingId), { navigate, inApp: ctx.minimiseCall })}>Open meeting page</Btn>}
                     </span>
                 </div>
             )}
