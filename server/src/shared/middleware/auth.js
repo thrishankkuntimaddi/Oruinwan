@@ -26,9 +26,14 @@ module.exports = async function requireAuth(req, res, next) {
         const deviceId = req.headers['x-device-id'];
         if (deviceId) {
           const deviceSessionService = require('../../services/deviceSession.service');
-          const isRevoked = await deviceSessionService.isSessionRevoked(payload.sub, deviceId);
+          const status = await deviceSessionService.sessionStatus(payload.sub, deviceId);
 
-          if (isRevoked) {
+          // The database could not be asked: refuse this request, but don't sign the device out.
+          if (status === 'unknown') {
+            return res.status(503).json({ message: 'Could not check your session. Please try again.', code: 'SESSION_CHECK_UNAVAILABLE' });
+          }
+
+          if (status === 'revoked') {
             
             try {
               const securityAudit = require('../../services/securityAudit.service');
