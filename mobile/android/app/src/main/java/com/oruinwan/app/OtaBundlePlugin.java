@@ -120,8 +120,11 @@ public class OtaBundlePlugin extends Plugin {
         String path = call.getString("path", "");
         String version = call.getString("version", "");
         File dir = new File(path);
-        String root = OtaBundleStore.root(getContext()).getAbsolutePath() + File.separator;
         try {
+            // Compare canonical paths on both sides: getFilesDir() is /data/user/0/<app>/files,
+            // which resolves to /data/data/<app>/files, so mixing the two always failed and no
+            // quick update could ever be applied ("That update isn't ready").
+            String root = OtaBundleStore.root(getContext()).getCanonicalPath() + File.separator;
             if (!dir.getCanonicalPath().startsWith(root) || !new File(dir, "index.html").isFile()) {
                 call.reject("That update isn't ready.", "INVALID");
                 return;

@@ -292,7 +292,8 @@ test.describe('smoke crawl', () => {
       await goto(page, `/workspace/${w}/admin`);
       for (const tab of ['General', 'Permissions', 'Members', 'Invitations', 'Channels', 'Agents & apps', 'Features', 'AI', 'Integrations', 'Analytics', 'Data', 'Plan & usage', 'Danger zone', 'Overview']) {
         state.where = `workspace admin · ${tab}`;
-        await page.getByRole('button', { name: tab, exact: true }).first().click();
+        // Inside the admin page: the left rail also has a "Channels" button.
+        await page.getByRole('region', { name: 'Workspace admin' }).getByRole('button', { name: tab, exact: true }).first().click();
         await checkPage(page, state, problems, 'dialogs');
       }
     });

@@ -181,7 +181,12 @@ async function installBundle(manifest, bundle) {
 export async function installUpdate() {
   const { manifest, plan } = useUpdate.getState();
   if (!manifest) return { ok: false };
-  if (plan?.mode === 'bundle' && plan.bundle && canApplyBundles()) return installBundle(manifest, plan.bundle);
+  if (plan?.mode === 'bundle' && plan.bundle && canApplyBundles()) {
+    const quick = await installBundle(manifest, plan.bundle);
+    // A quick update that can't be applied on this device (e.g. 2.3.1's path check) falls back to
+    // the full download instead of a dead end. An unsigned bundle never falls back silently.
+    if (quick.ok || quick.reason === 'signature' || !isAndroid || (!manifest.apkUrl && !isPlayStore)) return quick;
+  }
   if (isDesktop) {
     await openExternal(desktopDownload(manifest, desktop) || RELEASES_PAGE);
     return { ok: true, via: 'browser' };
