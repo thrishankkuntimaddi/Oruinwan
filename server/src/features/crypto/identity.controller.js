@@ -181,6 +181,15 @@ exports.initIdentityCryptoState = async (req, res) => {
             });
 
             logger.info(`✅ Created crypto state for user ${userId}`);
+
+            // Publish the public key in this same request. The app also uploads it separately,
+            // and when only that upload failed, nobody could share a conversation key with them.
+            try {
+                const { identityKeys } = require('../../identity/keys.repo');
+                await identityKeys.upsert(userId, { publicKey: identityPublicKey, algorithm: cryptoState.algorithm, version: cryptoState.version });
+            } catch (err) {
+                logger.warn({ err: err.message, userId }, 'Publishing the new public key failed (the app retries it)');
+            }
         }
 
         return res.json({

@@ -157,7 +157,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
         try {
             const conversationKeyService = (await import('../services/conversationKeyService')).default;
-            const key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+            let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+
+            // No key on the server for this DM (a server older than this app, or making it
+            // failed there): make it here, with a server copy, instead of failing every send.
+            if (!(key instanceof CryptoKey) && conversationType === 'dm'
+                && key?.status === 'MISSING_FOR_USER' && key?.reason !== 'DM_NOT_FOUND') {
+                key = (await conversationKeyService.createDMKey(conversationId, workspaceId)) || key;
+            }
 
             if (!(key instanceof CryptoKey)) {
                 return {

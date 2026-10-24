@@ -43,6 +43,12 @@ const cryptoState = {
         const { rows } = await query('SELECT * FROM user_crypto_state WHERE user_id = $1', [str(userId)]);
         return camelRow(rows[0]);
     },
+    async batchFindByUserIds(userIds) {
+        const ids = [...new Set((userIds || []).map(str))];
+        if (!ids.length) return [];
+        const { rows } = await query('SELECT * FROM user_crypto_state WHERE user_id = ANY($1)', [ids]);
+        return rows.map((r) => camelRow(r));
+    },
     async upsert(userId, state) {
         const cols = ['user_id'];
         const params = [str(userId)];
