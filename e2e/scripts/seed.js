@@ -38,22 +38,27 @@ async function seed(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUrl) {
     await mongoose.connection.dropDatabase();
 
     const passwordHash = await bcrypt.hash(E2E.password, 10);
-    const makeUser = ({ username, email, profilePicture }) => identity.users.create({
+    // A Google sign-up gets a random password nobody knows (auth.controller googleSignup).
+    const unknownPasswordHash = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
+    const makeUser = ({ username, email, profilePicture, google }) => identity.users.create({
       username,
       email,
       ...(profilePicture ? { profilePicture } : {}),
-      passwordHash,
+      passwordHash: google ? unknownPasswordHash : passwordHash,
       verified: true,
       userType: 'personal',
       accountStatus: 'active',
       companyRole: 'member',
-      authProvider: 'local',
+      authProvider: google ? 'google' : 'local',
+      ...(google ? { googleAccount: true, googleId: `e2e-${email}` } : {}),
       // Seeded people have already seen the first-run tour (it would cover the page).
       preferences: { tour: { done: true } },
     });
     const alice = await makeUser(E2E.users.alice);
     const bob = await makeUser(E2E.users.bob);
     const carol = await makeUser(E2E.users.carol);
+    const scenario = {};
+    for (const key of ['thrishank', 'vishnu', 'shiva', 'sandeep', 'manogna']) scenario[key] = await makeUser(E2E.users[key]);
 
     const now = new Date();
     const workspace = await identity.workspaces.create({
@@ -66,6 +71,11 @@ async function seed(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUrl) {
       members: [
         { user: alice._id, role: 'owner', status: 'active', joinedAt: now },
         { user: bob._id, role: 'member', status: 'active', joinedAt: now },
+        { user: scenario.thrishank._id, role: 'admin', status: 'active', joinedAt: now },
+        { user: scenario.vishnu._id, role: 'member', status: 'active', joinedAt: now },
+        { user: scenario.shiva._id, role: 'member', status: 'active', joinedAt: now },
+        { user: scenario.sandeep._id, role: 'member', status: 'active', joinedAt: now },
+        { user: scenario.manogna._id, role: 'member', status: 'active', joinedAt: now },
       ],
     });
 
@@ -75,6 +85,7 @@ async function seed(mongoUri = E2E.mongoUri, databaseUrl = E2E.databaseUrl) {
         alice: { ...E2E.users.alice, id: String(alice._id) },
         bob: { ...E2E.users.bob, id: String(bob._id) },
         carol: { ...E2E.users.carol, id: String(carol._id) },
+        ...Object.fromEntries(Object.entries(scenario).map(([k, u]) => [k, { ...E2E.users[k], id: String(u._id) }])),
       },
     };
     const authDir = path.join(__dirname, '..', '.auth');

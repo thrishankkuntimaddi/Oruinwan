@@ -12,7 +12,7 @@ const cryptoUtils = require('./cryptoUtils');
 // from the app, and when it failed the person could never be given any DM or channel key.
 const isRsaKey = (algorithm) => !algorithm || /^RSA/i.test(algorithm);
 const fromState = (s) => (s?.identityPublicKey && isRsaKey(s.algorithm)
-    ? { userId: String(s.userId), publicKey: s.identityPublicKey, algorithm: s.algorithm || 'RSA-2048' }
+    ? { userId: String(s.userId), publicKey: s.identityPublicKey, algorithm: s.algorithm || 'RSA-2048', version: s.version || 1 }
     : null);
 const UserIdentityKey = {
     async findByUserId(userId) {
@@ -983,6 +983,7 @@ async function rewrapForUser(conversationId, conversationType, userId) {
 }
 
 module.exports = {
+    publicKeys: UserIdentityKey,
     distributeToMissingMembers,
     escrowConversationKey,
     rewrapForUser,

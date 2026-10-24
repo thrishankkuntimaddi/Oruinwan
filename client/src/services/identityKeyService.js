@@ -425,17 +425,14 @@ class IdentityKeyService {
 
         
         
+        // The server publishes the key with /identity/init and wraps for the key saved there, so
+        // a failed second upload must not leave this person stuck at an unlock prompt.
         try {
             logger.debug('📤 [PHASE 1] Uploading public key to identity service...');
             await this._uploadPublicKeyToIdentityService(publicKeyPEM, keyPair.algorithm, keyPair.version);
             logger.debug('✅ [PHASE 1] Public key uploaded to identity service');
         } catch (err) {
-            // When encryption is set up again, /identity/init has already published the key.
-            if (!serverExtras.allowOverwrite) {
-                logger.error('❌ [PHASE 1] CRITICAL: Failed to upload public key to identity service:', err);
-                throw new Error('Public key distribution failed - cannot proceed with E2EE');
-            }
-            logger.warn('⚠️ [PHASE 1] Public key re-upload failed after reset (server already has it):', err.message);
+            logger.warn('⚠️ [PHASE 1] Public key upload failed (the server has it from setup):', err.message);
         }
 
         logger.debug('✅ [PHASE 1] New identity keys created and uploaded');
@@ -540,26 +537,10 @@ class IdentityKeyService {
     
     async _uploadPublicKeyToIdentityService(publicKeyPEM, algorithm, version) {
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/v2/identity/public-key`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    publicKey: publicKeyPEM,
-                    algorithm,
-                    version
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to upload public key: ${errorData.message || response.status}`);
-            }
-
-            return await response.json();
+            // The shared API client attaches the token and refreshes an expired one.
+            const { default: api } = await import('./api');
+            const { data } = await api.post('/api/v2/identity/public-key', { publicKey: publicKeyPEM, algorithm, version });
+            return data;
         } catch (error) {
             logger.error('Error uploading public key to identity service:', error);
             throw error;

@@ -49,5 +49,14 @@ module.exports = defineConfig({
         VITE_GOOGLE_CLIENT_ID: 'e2e-google-client-id',
       },
     },
+    {
+      // The phone app's interface in the browser, talking to the same API (21-phone-member-dms).
+      command: `npx vite --port ${E2E.phonePort} --strictPort`,
+      cwd: path.join(__dirname, '..', 'mobile'),
+      url: E2E.phoneUrl,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: { VITE_SERVER_URL: E2E.apiUrl, VITE_GOOGLE_CLIENT_ID: 'e2e-google-client-id' },
+    },
   ],
 });
