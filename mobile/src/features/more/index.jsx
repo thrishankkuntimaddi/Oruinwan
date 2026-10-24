@@ -116,7 +116,7 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
         {loading ? (
           <SkeletonRows />
         ) : list.length ? (
-          <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-3 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
             {list.map((n) => (
               <ActivityRow key={n.id} item={n} directory={directory} />
             ))}

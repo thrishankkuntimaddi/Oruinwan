@@ -206,7 +206,7 @@ export function TasksScreen() {
           </div>
         ) : (
           <div className="flex items-center pr-2 pb-3">
-            <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="min-w-0 flex-1 pr-2" />
+            <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="min-w-0 flex-1 pr-2 [mask-image:linear-gradient(to_right,black_88%,transparent)]" />
             <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
               <IconButton icon={Search} label="Search tasks" size="sm" onClick={() => setSearching(true)} />
               <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} size="sm" onClick={() => setSortSheet(true)} />

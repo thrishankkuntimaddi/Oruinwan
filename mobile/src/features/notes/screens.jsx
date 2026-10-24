@@ -152,7 +152,7 @@ function NotesList({ section }) {
             </div>
           ) : (
             <div className="flex items-center pr-2">
-              <Chips options={FILTERS} value={filter} onChange={setFilter} className="min-w-0 flex-1 pr-2" />
+              <Chips options={FILTERS} value={filter} onChange={setFilter} className="min-w-0 flex-1 pr-2 [mask-image:linear-gradient(to_right,black_88%,transparent)]" />
               <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
                 <IconButton icon={Search} label="Search notes" size="sm" onClick={() => setSearching(true)} />
               </div>

@@ -212,9 +212,9 @@ export function HomeScreen() {
           <Tile
             testId="home-saved"
             icon={Bookmark}
-            label="Saved & reminders"
-            value={savedCount + reminderCount}
-            detail={`${savedCount} saved · ${plural(reminderCount, 'reminder')}`}
+            label="Saved"
+            value={savedCount}
+            detail={reminderCount ? plural(reminderCount, 'reminder') : 'No reminders'}
             onClick={() => nav.push('saved', reminderCount && !savedCount ? { tab: 'reminders' } : {})}
           />
         </div>
