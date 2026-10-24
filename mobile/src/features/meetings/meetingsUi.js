@@ -138,3 +138,50 @@ export function strokeHit(stroke, pos, radius = 8) {
   for (let i = 1; i < pts.length; i++) if (distToSegment(pos, pts[i - 1], pts[i]) <= reach) return true;
   return false;
 }
+
+// ---------------------------------------------------------------- clashes and priority
+// Server: features/meetings/conflicts.js (POST /v2/meetings/conflicts; meeting.priority / .conflicts).
+
+export const PRIORITIES = [
+  { value: 'low', label: 'Low' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
+const PRIORITY_LABEL = Object.fromEntries(PRIORITIES.map((p) => [p.value, p.label]));
+export const normalizePriority = (p) => (PRIORITY_LABEL[p] ? p : 'normal');
+export const priorityLabel = (p) => PRIORITY_LABEL[normalizePriority(p)];
+
+const hm = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+export const timeRange = (start, end) => `${hm(start)}–${hm(end)}`;
+
+/** "Asha is busy 9:00–9:30 (Design review · High priority)", organiser ("You are") first. */
+export function clashLines(result, nameOf = () => null) {
+  if (!result || !Array.isArray(result.attendees)) return [];
+  const people = [...result.attendees].sort((a, b) => Number(Boolean(b.isOrganizer)) - Number(Boolean(a.isOrganizer)));
+  const out = [];
+  for (const a of people) {
+    for (const c of a.conflicts || []) {
+      const who = a.isOrganizer ? 'You are' : `${a.name || nameOf(a.userId) || 'Someone'} is`;
+      out.push({ key: `${a.userId}:${c.meetingId}`, text: `${who} busy ${timeRange(c.start, c.end)} (${c.title || 'Busy'} · ${priorityLabel(c.priority)} priority)` });
+    }
+  }
+  return out;
+}
+
+/** Free slots from a clash check: [{ start, end }] (ISO), future ones only. */
+export function clashSuggestions(result, now = Date.now()) {
+  return (result?.suggestions || [])
+    .filter((s) => s?.start && new Date(s.end).getTime() > now)
+    .map((s) => ({ start: new Date(s.start).toISOString(), end: new Date(s.end).toISOString() }));
+}
+
+/** The list marker: "Clashes with Standup" (my own clash) or "2 people double-booked"; null when none. */
+export function clashMarker(m) {
+  const list = Array.isArray(m?.conflicts) ? m.conflicts : [];
+  if (!list.length || m.status === 'cancelled' || m.status === 'completed') return null;
+  const mine = list.filter((c) => c.mine);
+  if (mine.length) return `Clashes with ${mine[0].title || 'another meeting'}${mine.length > 1 ? ` +${mine.length - 1}` : ''}`;
+  const n = new Set(list.flatMap((c) => c.userIds || [])).size || list.length;
+  return `${n} ${n === 1 ? 'person' : 'people'} double-booked`;
+}

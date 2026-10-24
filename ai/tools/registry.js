@@ -118,7 +118,7 @@ const DECLARATIONS = [
   },
   {
     name: 'schedule_meeting',
-    description: 'Schedule a meeting in the current workspace with optional participants. Give startsAt when the user named a time; leave it out to book the earliest slot where every participant is free and inside their working hours (optionally between earliest and latest). If no slot suits everyone, nothing is booked and the best candidate slots are returned so you can ask the user.',
+    description: 'Schedule a meeting in the current workspace with optional participants. Give startsAt when the user named a time; leave it out to book the earliest slot where every participant is free and inside their working hours (optionally between earliest and latest). If no slot suits everyone, nothing is booked and the best candidate slots are returned so you can ask the user. A meeting booked at a given time that clashes with someone\'s other meeting is still booked; the result lists the clashes so you can tell the user.',
     parameters: {
       type: 'object',
       properties: {
@@ -128,6 +128,7 @@ const DECLARATIONS = [
         participantIds: { type: 'array', items: { type: 'string' } },
         earliest: { type: 'string', description: 'ISO 8601 date-time: when no startsAt, search for a slot from here (default now)' },
         latest: { type: 'string', description: 'ISO 8601 date-time: when no startsAt, the slot must start before this (default 7 days later, max 14)' },
+        priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], description: 'How much the meeting matters (default normal)' },
       },
       required: ['title'],
     },

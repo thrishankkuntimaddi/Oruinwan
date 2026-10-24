@@ -149,6 +149,8 @@ const MessageSchema = new mongoose.Schema({
     duration: Number,   
     meetingLink: String,
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // low / normal / high / urgent (the scheduled meeting's priority when the card was posted).
+    priority: { type: String, default: undefined },
     // The ScheduledMeeting behind this card (its Join opens the meeting's huddle).
     scheduledMeetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScheduledMeeting', default: null }
   },

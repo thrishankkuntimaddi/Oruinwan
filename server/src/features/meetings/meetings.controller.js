@@ -59,7 +59,7 @@ async function getMeetings(req, res) {
 
 async function getMeeting(req, res) {
     try {
-        const meeting = await meetingsService.getMeeting(req.params.id);
+        const meeting = await meetingsService.getMeeting(req.params.id, { viewerId: req.user.sub });
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
         res.json({ meeting });
     } catch (err) {
@@ -78,7 +78,7 @@ async function getMeetingByHuddle(req, res) {
         } catch (err) {
             return sendAccessError(res, err);
         }
-        const meeting = await records().getMeetingView(found._id);
+        const meeting = await records().getMeetingView(found._id, { viewerId: req.user.sub });
         if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
         res.json({ meeting });
     } catch (err) {

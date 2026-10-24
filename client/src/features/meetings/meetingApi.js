@@ -22,6 +22,8 @@ export const meetingApi = {
     }).then((r) => r.data),
 
     join: (id) => api.post(`${base(id)}/join`, {}).then((r) => r.data.meeting),
+    /** Move / rename / re-prioritise a scheduled meeting: { meeting, conflicts } (clashes re-checked on save). */
+    update: (id, patch) => api.patch(`/api/scheduled-meetings/${encodeURIComponent(id)}`, patch).then((r) => r.data),
     end: (id) => api.patch(`${base(id)}/end`, {}).then((r) => r.data.meeting),
     saveAgenda: (id, agenda) => api.patch(`${base(id)}/agenda`, { agenda }).then((r) => r.data.meeting),
 

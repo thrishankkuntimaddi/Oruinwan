@@ -355,6 +355,61 @@ Join the room with `meeting:join { meetingId }` → ack `{ ok, meetingId, worksp
 
 ---
 
+## Clashes and priority
+
+Scheduling never blocks on a clash: the apps **warn**, **suggest free times** and let the organiser
+**go ahead**; the invitees see the clash and both meetings' priorities. Server: `features/meetings/conflicts.js`.
+
+- **Priority**: `priority: "low" | "normal" | "high" | "urgent"` (default `normal`) on every scheduled
+  meeting. Set it on `POST /api/scheduled-meetings` or `PATCH /api/scheduled-meetings/:id`; anything else is 400.
+- **What counts**: every `scheduled` / `live` ScheduledMeeting (scheduled meetings and huddle records) the
+  person organises, is invited to or joined. Cancelled and completed ones never clash. Times are UTC
+  instants compared as half-open intervals `[start, end)`: 9:00–9:30 and 9:30–10:00 do not clash.
+
+### `POST /api/v2/meetings/conflicts` (also `/api/scheduled-meetings/conflicts`)
+
+```jsonc
+// body
+{ "workspaceId": "…", "startTime": "ISO", "duration": 30, "participants": ["<userId>"],
+  "channelId": null, "dmSessionId": null,   // a DM with nobody picked = the DM's people
+  "excludeMeetingId": null,                 // the meeting being edited
+  "timezone": "Europe/London", "suggest": 3 }
+// answer
+{ "start": "…", "end": "…", "durationMinutes": 30, "hasConflicts": true, "conflictCount": 1,
+  "attendees": [{ "userId": "…", "name": "Asha", "isOrganizer": false,
+    "conflicts": [{ "meetingId": "…", "title": "Design review" /* null = "Busy" */, "busy": false,
+                    "start": "…", "end": "…", "priority": "high", "status": "scheduled" }] }],
+  "suggestions": [{ "start": "…", "end": "…", "allAvailable": true }] }   // free for everyone, working hours
+```
+
+Titles are shown only when the caller may open that meeting; otherwise `title: null, busy: true`.
+
+### Save-time re-check (race safety)
+
+`POST /api/scheduled-meetings` and a `PATCH` that moves the time save first, then re-check what is in the
+database and mark the clash on **both** meetings (`conflicts[]`, an atomic "push unless already listed").
+Two organisers booking the same person at the same moment are therefore both flagged, whatever the order.
+The answer is `{ meeting, conflicts }`. Cancelling, deleting or moving a meeting removes it from every
+other meeting's `conflicts`.
+
+`meeting.conflicts` as served (per viewer):
+`[{ meetingId, userIds, mine, busy, title /* only when mine */, priority, start, end }]`.
+
+### Socket events
+
+| Event | Room | Payload |
+|---|---|---|
+| `schedule:conflict` | `user:<id>` of each double-booked person | `{ meetingId, title, priority, start, end, clashesWith: { meetingId, title, priority, start, end } }` |
+| `schedule:conflicts` | `workspace:<id>` | `{ meetingIds, resolved? }` — re-read those meetings |
+
+### Invites
+
+`schedule_created` notifications carry `meta.priority`; when the invitee is double-booked the title says
+"… · it clashes with your calendar", the body names the other meeting and its priority, and
+`meta.conflicts` lists them. A moved meeting sends the same notification with `meta.moved: true`.
+
+---
+
 ## Migration notes
 
 - **Records for huddles**: from now on every huddle run is linked to a meeting record (`HuddleSession.meeting`).

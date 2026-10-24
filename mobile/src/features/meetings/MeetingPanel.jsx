@@ -34,7 +34,7 @@ import { toggleCallCaptions, useCallExtras } from '../huddles/callExtras.js';
 import { AskMeetingSheet, TranscriptList, useActiveRecorder } from '../huddles/CallExtras.jsx';
 import {
   BOARD_H, BOARD_W, MEETING_TABS, STATUS_LABEL, STICKY_COLORS, applyBrainstormEvent, conversationLabel, durationLabel, isAccessError,
-  meetingWhen, newStrokeId, roundPoint, strokeHit, summaryText,
+  meetingWhen, newStrokeId, normalizePriority, priorityLabel, roundPoint, strokeHit, summaryText, timeRange,
 } from './meetingsUi.js';
 
 export const meetingKey = (id) => `meeting:${id}`;
@@ -65,9 +65,15 @@ export function useMeetingLive(id) {
       }
     });
     const offReconnect = on('realtime', ({ connected }) => connected && join());
+    // Moved, re-prioritised, or a clash with it appeared / went away: read it again.
+    const offSchedule = on('socket', ({ event, payload }) => {
+      if (event === 'schedule:conflicts' && (payload?.meetingIds || []).map(String).includes(String(id))) invalidate(key);
+      else if (event === 'schedule:updated' && String(payload?.meeting?._id || payload?.meeting?.id) === String(id)) invalidate(key);
+    });
     return () => {
       off();
       offReconnect();
+      offSchedule();
       if (joined) api().leaveMeetingRoom?.(id);
     };
   }, [id, key]);
@@ -222,12 +228,25 @@ function OverviewTab({ meeting, inCall }) {
         <p className="mt-3 text-[17px] font-semibold">{scheduled ? meetingWhen(meeting.start, meeting.duration) : fullDate(meeting.startedAt) || 'Not started'}</p>
         <div className="mt-2 divide-y divide-line-soft">
           {scheduled && <Fact label="Planned">{`${meeting.duration} min`}</Fact>}
+          {scheduled && <Fact label="Priority"><span data-testid="meeting-priority">{priorityLabel(meeting.priority)}</span></Fact>}
           <Fact label="Started">{fullDate(meeting.startedAt)}</Fact>
           <Fact label="Ended">{meeting.status === 'completed' ? fullDate(meeting.endedAt) : null}</Fact>
           <Fact label="Length">{meeting.status === 'completed' ? durationLabel(meeting.durationSec) : null}</Fact>
           <Fact label="Conversation">{conversationLabel(meeting.conversation)}</Fact>
           <Fact label={scheduled ? 'Organiser' : 'Started by'}>{meeting.organizer?.name}</Fact>
         </div>
+        {scheduled && meeting.status === 'scheduled' && (meeting.conflicts || []).length > 0 && (
+          <div className="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3" data-testid="meeting-clashes">
+            <p className="text-[13px] font-semibold text-warning">Clashes ({meeting.conflicts.length})</p>
+            {meeting.conflicts.map((c) => (
+              <p key={c.meetingId} className="mt-1 text-[13px] text-text-2">
+                {c.mine
+                  ? `You're also in “${c.title || 'another meeting'}” ${timeRange(c.start, c.end)} · ${priorityLabel(c.priority)} priority (this one is ${priorityLabel(normalizePriority(meeting.priority))}).`
+                  : `${c.userIds.map((u) => people.find((p) => p.id === u)?.name || 'Someone').join(', ') || 'Someone'} busy ${timeRange(c.start, c.end)} · ${priorityLabel(c.priority)} priority.`}
+              </p>
+            ))}
+          </div>
+        )}
         <div className="mt-4">
           <MeetingCallActions meeting={meeting} />
         </div>

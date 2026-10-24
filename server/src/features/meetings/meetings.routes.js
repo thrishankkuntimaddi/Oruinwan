@@ -16,6 +16,8 @@ router.use(requireAuth);
 
 router.get('/', ctrl.getMeetings);
 router.post('/suggest-time', ctrl.suggestTime);
+// Who is busy at a proposed time, with free slots (features/meetings/conflicts.js).
+router.post('/conflicts', require('./scheduled-meetings.controller').checkConflicts);
 // The meeting record of a huddle (ad-hoc huddle or "meeting-<id>"); access is checked inside.
 router.get('/by-huddle/:huddleId', ctrl.getMeetingByHuddle);
 

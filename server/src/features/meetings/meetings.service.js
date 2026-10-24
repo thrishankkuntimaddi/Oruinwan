@@ -35,11 +35,13 @@ async function getMeetings({ workspaceId, userId, companyId, limit = 20, include
         .sort({ startTime: -1 })
         .limit(Number(limit))
         .lean();
+    const { conflictsForViewer } = require('./conflicts');
+    for (const m of meetings) m.conflicts = conflictsForViewer(m.conflicts, userId);
     return hydrate(meetings, { createdBy: PERSON });
 }
 
-async function getMeeting(meetingId) {
-    return records().getMeetingView(meetingId);
+async function getMeeting(meetingId, { viewerId = null } = {}) {
+    return records().getMeetingView(meetingId, { viewerId });
 }
 
 async function joinMeeting(meetingId, userId, { companyId } = {}) {
@@ -249,7 +251,7 @@ async function completeMeetingsForHuddle(huddle, io) {
  * `timezone` when unset/'auto', else UTC). Returns the top `limit` slots; the first one is
  * also given as suggestedStart/suggestedEnd for older clients.
  */
-async function suggestTime({ participantIds = [], durationMinutes = 30, from, to, limit = 5, stepMinutes = 30, timezone, now = new Date() } = {}) {
+async function suggestTime({ participantIds = [], durationMinutes = 30, from, to, limit = 5, stepMinutes = 30, timezone, excludeMeetingIds = [], now = new Date() } = {}) {
     const duration = Math.min(Math.max(Number(durationMinutes) || 30, 5), 480);
     const ids = [...new Set((participantIds || []).map(String))].filter((id) => /^[a-f0-9]{24}$/i.test(id)).slice(0, 50);
     const validDate = (d) => d && !Number.isNaN(new Date(d).getTime());
@@ -259,17 +261,21 @@ async function suggestTime({ participantIds = [], durationMinutes = 30, from, to
     if (end.getTime() > maxEnd) end = new Date(maxEnd);
 
     // Busy time: meetings overlapping the window (the 8h look-back covers the longest meeting).
+    // (A meeting being moved is left out: its own time is not busy for itself.)
+    const exclude = (excludeMeetingIds || []).map(String).filter((id) => /^[a-f0-9]{24}$/i.test(id));
     const meetings = ids.length ? await ScheduledMeeting.find({
         status: { $in: ['scheduled', 'live'] },
         startTime: { $gte: new Date(start.getTime() - 8 * 3600e3), $lt: end },
-        $or: [{ participants: { $in: ids } }, { createdBy: { $in: ids } }],
-    }).select('startTime duration participants createdBy').lean() : [];
+        $or: [{ participants: { $in: ids } }, { createdBy: { $in: ids } }, { invitees: { $in: ids } }],
+        ...(exclude.length ? { _id: { $nin: exclude } } : {}),
+    }).select('startTime duration participants invitees createdBy').lean() : [];
 
     const busyBy = new Map(ids.map((id) => [id, []]));
     for (const m of meetings) {
+        if (exclude.includes(String(m._id))) continue;
         const s = new Date(m.startTime).getTime();
         const interval = { start: s, end: s + (m.duration || 30) * 60e3 };
-        const people = new Set([...(m.participants || []).map(String), String(m.createdBy)]);
+        const people = new Set([...(m.participants || []).map(String), ...(m.invitees || []).map(String), String(m.createdBy)]);
         for (const id of people) if (busyBy.has(id)) busyBy.get(id).push(interval);
     }
 

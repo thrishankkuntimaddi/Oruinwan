@@ -22,6 +22,7 @@ import CreatePollModal from './modals/CreatePollModal.jsx';
 import ContactPickerModal from './modals/ContactPickerModal.jsx';
 
 import ScheduleMeetingModal from './modals/ScheduleMeetingModal.jsx';
+import { scheduledToast } from '../../../utils/meetingConflicts';
 
 import BookmarksPanel from './panels/BookmarksPanel.jsx';
 import PinnedMessagesPanel from '../PinnedMessagesPanel.jsx';
@@ -1164,6 +1165,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 workspaceId: wsId,
                 ...(conversationType === 'dm' ? { dmSessionId: conversationId } : { channelId: conversationId }),
             });
+            // Booked even if it clashes (the dialog warned); say so when the save-time check found one.
+            const clashes = created?.conflicts || [];
+            if (clashes.length) {
+                const t = scheduledToast({ conflicts: clashes });
+                showToast(t.text, t.tone);
+            }
             const messageData = {
                 type: 'meeting',
                 meeting: { ...meetingData, scheduledMeetingId: created?.meeting?._id || null },

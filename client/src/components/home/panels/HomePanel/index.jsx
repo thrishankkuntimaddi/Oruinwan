@@ -11,6 +11,8 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import api from '@services/api';
 import { useSocket } from "../../../../contexts/SocketContext";
 import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
+import ScheduleMeetingModal from "../../../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal";
+import { clashMarker, priorityLabel, normalizePriority, scheduledToast } from "../../../../utils/meetingConflicts";
 
 import WorkspaceHeader from "./WorkspaceHeader";
 import SectionHeader from "./SectionHeader";
@@ -92,8 +94,6 @@ const HomePanel = ({ title }) => {
 
     
     const [showScheduleModal, setShowScheduleModal] = useState(false);
-    const [scheduleForm, setScheduleForm] = useState({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
-    const [schedulingLoading, setSchedulingLoading] = useState(false);
 
     const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Oruinwan");
 
@@ -309,30 +309,12 @@ const HomePanel = ({ title }) => {
     };
 
     
-    const handleScheduleMeeting = useCallback(async (e) => {
-        e.preventDefault();
-        if (!scheduleForm.title.trim()) { showToast('Title is required', 'error'); return; }
-        if (!scheduleForm.startDate) { showToast('Start date is required', 'error'); return; }
-        const isoTime = new Date(`${scheduleForm.startDate}T${scheduleForm.startHour}:${scheduleForm.startMin}:00`).toISOString();
-        if (new Date(isoTime) <= new Date()) { showToast('Start time must be in the future', 'error'); return; }
-
-        setSchedulingLoading(true);
-        try {
-            await createMeeting({
-                title: scheduleForm.title.trim(),
-                startTime: isoTime,
-                duration: scheduleForm.duration,
-                meetingLink: scheduleForm.meetingLink || null,
-            });
-            setShowScheduleModal(false);
-            setScheduleForm({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
-            showToast('Meeting scheduled!', 'success');
-        } catch (err) {
-            showToast('Failed to schedule meeting', 'error');
-        } finally {
-            setSchedulingLoading(false);
-        }
-    }, [scheduleForm, createMeeting, showToast]);
+    // The shared schedule dialog (invites, find a time, clash warning, priority); it shows its own errors.
+    const handleScheduleMeeting = useCallback(async (payload) => {
+        const created = await createMeeting(payload);
+        const t = scheduledToast(created);
+        showToast(t.text, t.tone);
+    }, [createMeeting, showToast]);
 
     const handleCancelMeeting = useCallback(async (meetingId) => {
         try {
@@ -530,7 +512,14 @@ const HomePanel = ({ title }) => {
                                     <Clock size={9} />
                                     {formatTime(meeting.startTime)} · {formatRelativeTime(meeting.startTime)}
                                     {meeting.duration ? ` · ${meeting.duration}m` : ''}
+                                    {normalizePriority(meeting.priority) !== 'normal' && ` · ${priorityLabel(meeting.priority)}`}
                                 </span>
+                                {clashMarker(meeting) && (
+                                    <span className="gl-shell-row-sub" data-testid="meeting-clash" title={clashMarker(meeting).title}
+                                        style={{ fontSize: '10.5px', color: 'var(--color-warning)' }}>
+                                        {clashMarker(meeting).label}
+                                    </span>
+                                )}
                             </span>
 
                             <span className="gl-shell-meeting-actions">
@@ -554,90 +543,11 @@ const HomePanel = ({ title }) => {
             )}
 
             {showScheduleModal && (
-                <div
-                    className="gl-shell-modal-scrim"
-                    onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(false); }}
-                >
-                    <div className="gl-card gl-shell-modal" role="dialog" aria-label="Schedule Meeting" style={{ background: 'var(--bg-surface)', backgroundImage: 'var(--gl-glass)' }}>
-                        <div className="gl-shell-popover-head">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span className="gl-panel-mark" aria-hidden="true"><Calendar size={13} /></span>
-                                <h2 className="gl-shell-popover-title" style={{ margin: 0, fontSize: '13.5px' }}>Schedule Meeting</h2>
-                            </span>
-                            <button type="button" className="gl-icon-btn" onClick={() => setShowScheduleModal(false)} aria-label="Close">
-                                <X size={15} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleScheduleMeeting} style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div>
-                                <label className="gl-shell-field-label">
-                                    Title <span style={{ color: 'var(--state-danger)' }}>*</span>
-                                </label>
-                                <input
-                                    type="text" value={scheduleForm.title}
-                                    onChange={e => setScheduleForm(f => ({ ...f, title: e.target.value }))}
-                                    placeholder="e.g. Weekly Sync" maxLength={100}
-                                    className="gl-input"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="gl-shell-field-label">
-                                    Date <span style={{ color: 'var(--state-danger)' }}>*</span>
-                                </label>
-                                <input
-                                    type="date" value={scheduleForm.startDate}
-                                    onChange={e => setScheduleForm(f => ({ ...f, startDate: e.target.value }))}
-                                    min={new Date().toISOString().slice(0, 10)}
-                                    className="gl-input"
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div>
-                                    <label className="gl-shell-field-label">Time</label>
-                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                        <select value={scheduleForm.startHour} onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))} className="gl-input" aria-label="Hour">
-                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => <option key={h} value={h}>{h}</option>)}
-                                        </select>
-                                        <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '12px' }}>:</span>
-                                        <select value={scheduleForm.startMin} onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))} className="gl-input" aria-label="Minute">
-                                            {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="gl-shell-field-label">Duration</label>
-                                    <select value={scheduleForm.duration} onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))} className="gl-input">
-                                        {[15, 30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="gl-shell-field-label">
-                                    Meeting link <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>(optional)</span>
-                                </label>
-                                <input
-                                    type="url" value={scheduleForm.meetingLink}
-                                    onChange={e => setScheduleForm(f => ({ ...f, meetingLink: e.target.value }))}
-                                    placeholder="https://meet.google.com/..."
-                                    className="gl-input"
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
-                                <button type="button" onClick={() => setShowScheduleModal(false)} className="gl-btn gl-btn--block" style={{ flex: 1 }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" disabled={schedulingLoading} className="gl-btn gl-btn--primary gl-btn--block" style={{ flex: 1 }}>
-                                    {schedulingLoading ? <><Loader size={12} className="animate-spin" /> Scheduling…</> : 'Schedule'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                <ScheduleMeetingModal
+                    workspaceId={activeWorkspace?.id}
+                    onSchedule={handleScheduleMeeting}
+                    onClose={() => setShowScheduleModal(false)}
+                />
             )}
 
             {}

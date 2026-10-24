@@ -31,6 +31,7 @@ const lazy = {
     summarizer: () => require('../ai/ai.summarizer.service'),
     transcript: () => require('./transcript'),
     recordings: () => require('./recordings'),
+    conflicts: () => require('./conflicts'),
     huddleNotes: () => require('../../modules/huddles/huddleNotes'),
     sanitize: () => require('../notes/notes.sanitize').sanitizeNoteContent,
     tasks: () => require('../tasks/tasks.service'),
@@ -137,10 +138,11 @@ function presentSummary(m) {
  * The API shape of a meeting (docs/api/meetings-unified.md). The legacy fields
  * (startTime, duration, participants, recordingUrl, sharedNotes...) stay for older clients.
  */
-function present(m, { channelNames, boards, hasTranscript } = {}) {
+function present(m, { channelNames, boards, hasTranscript, viewerId = null } = {}) {
     if (!m) return m;
     const {
         summaryMeta: _summaryMeta, transcriptSegments, sharedNotesMigratedAt: _migrated, attendees: rawAttendees, __v: _v,
+        conflicts: rawConflicts,
         ...rest
     } = m;
     const id = idOf(m._id);
@@ -185,6 +187,9 @@ function present(m, { channelNames, boards, hasTranscript } = {}) {
         whiteboard: boards ? boards.whiteboard : null,
         brainstorm: boards ? boards.brainstorm : null,
         sharedNotes: m.sharedNotes || '', // deprecated, read-only
+        priority: lazy.conflicts().normalizePriority(m.priority),
+        // Clashes with other meetings: titles only for the viewer's own clashes (features/meetings/conflicts.js).
+        conflicts: lazy.conflicts().conflictsForViewer(rawConflicts, viewerId),
     };
 }
 
@@ -212,7 +217,7 @@ async function boardsFor(meetingId) {
 }
 
 /** One meeting in the full API shape (people attached, board presence). Null when missing. */
-async function getMeetingView(meetingId) {
+async function getMeetingView(meetingId, { viewerId = null } = {}) {
     const M = lazy.Meeting();
     const doc = await M.findById(meetingId).select(LIGHT).lean();
     if (!doc) return null;
@@ -223,7 +228,7 @@ async function getMeetingView(meetingId) {
         doc.hasTranscript || doc.transcript || !M.exists ? !!(doc.hasTranscript || doc.transcript)
             : Promise.resolve(M.exists({ _id: meetingId, 'transcriptSegments.0': { $exists: true } })).then(Boolean).catch(() => false),
     ]);
-    return present(hydrated || doc, { channelNames, boards, hasTranscript: transcriptExists });
+    return present(hydrated || doc, { channelNames, boards, hasTranscript: transcriptExists, viewerId });
 }
 
 // ── Huddles → meeting records ───────────────────────────────────────────────
@@ -991,7 +996,7 @@ async function listMeetings(userId, {
     const page = rows.slice(0, cap);
     await lazy.hydrate()(page, { createdBy: PERSON });
     const channelNames = await channelNamesFor(page);
-    const meetings = page.map((m) => present(m, { channelNames }));
+    const meetings = page.map((m) => present(m, { channelNames, viewerId: userId }));
     const last = page[page.length - 1];
     const next = hasMore && last ? cursorOf(last) : null;
     return status === 'upcoming'

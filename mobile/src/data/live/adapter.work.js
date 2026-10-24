@@ -281,6 +281,17 @@ export function mapMeeting(m) {
     transcript: m.transcript || '',
     notes: m.sharedNotes || '',
     channelId: idOf(m.channelId),
+    priority: ['low', 'normal', 'high', 'urgent'].includes(m.priority) ? m.priority : 'normal',
+    // Clashes with other meetings (titles only for my own): see features/meetings/meetingsUi.js clashMarker.
+    conflicts: (Array.isArray(m.conflicts) ? m.conflicts : []).map((c) => ({
+      meetingId: idOf(c.meetingId),
+      userIds: (c.userIds || []).map(idOf).filter(Boolean),
+      mine: Boolean(c.mine),
+      title: c.title || null,
+      priority: c.priority || 'normal',
+      start: c.start || null,
+      end: c.end || null,
+    })),
     raw: m,
   };
 }
@@ -596,17 +607,46 @@ export const workAdapter = {
       throw err;
     }
   },
-  async scheduleMeeting(ws, { title, start, duration, participantIds, link, channelId }) {
+  /** Books it even when it clashes; the answer's `conflicts` is the save-time re-check. */
+  async scheduleMeeting(ws, { title, start, duration, participantIds, link, channelId, priority }) {
     const data = await api.post('/scheduled-meetings', {
       workspaceId: ws,
       title,
       startTime: start,
       duration,
       participants: participantIds || [],
+      ...(priority ? { priority } : {}),
       ...(link ? { meetingLink: link } : {}),
       ...(channelId ? { channelId } : {}),
     });
-    return mapMeeting(data.meeting);
+    return mapMeeting({ ...data.meeting, conflicts: data.conflicts || data.meeting?.conflicts || [] });
+  },
+  /** Move / rename / re-prioritise (organiser or admin): clashes are re-checked on save. */
+  async updateMeeting(id, { title, start, duration, priority }) {
+    const body = {};
+    if (title !== undefined) body.title = title;
+    if (start !== undefined) body.startTime = start;
+    if (duration !== undefined) body.duration = duration;
+    if (priority !== undefined) body.priority = priority;
+    const data = await api.patch(`/scheduled-meetings/${id}`, body);
+    return mapMeeting({ ...data.meeting, conflicts: data.conflicts || data.meeting?.conflicts || [] });
+  },
+  /**
+   * Who is busy at a proposed time, and free slots for everyone (advisory):
+   * { hasConflicts, attendees: [{ userId, name, isOrganizer, conflicts }], suggestions }.
+   */
+  async meetingConflicts(ws, { start, duration = 30, participantIds = [], channelId, excludeMeetingId } = {}) {
+    let timezone;
+    try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { timezone = undefined; }
+    return api.post('/v2/meetings/conflicts', {
+      workspaceId: ws,
+      startTime: start,
+      duration,
+      participants: participantIds,
+      ...(channelId ? { channelId } : {}),
+      ...(excludeMeetingId ? { excludeMeetingId } : {}),
+      ...(timezone ? { timezone } : {}),
+    });
   },
   async cancelMeeting(id) {
     await api.patch(`/scheduled-meetings/${id}`, { status: 'cancelled' });

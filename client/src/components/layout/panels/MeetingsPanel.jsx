@@ -17,6 +17,7 @@ import { Confirm } from "../../ui/page";
 import useMeetingList from "../../../features/meetings/useMeetingList";
 import { MeetingRow, HUDDLE_LIST_TABS, useHuddlesTab, useJoinLive, useJoinScheduled } from "../../../features/meetings/HuddlesLists";
 import { meetingIdOf, meetingTitle, meetingPath } from "../../../features/meetings/meetingModel";
+import { scheduledToast } from "../../../utils/meetingConflicts";
 import "../../../styles/gloss-x-panels.css";
 
 
@@ -168,8 +169,9 @@ const MeetingsPanel = ({ title }) => {
     }, [connecting, onHuddlesPage, navigate, workspaceId, startHuddle]);
 
     const handleScheduleMeeting = useCallback(async (payload) => {
-        await createMeeting(payload);
-        showToast("Meeting scheduled", "success");
+        const created = await createMeeting(payload);
+        const t = scheduledToast(created);
+        showToast(t.text, t.tone);
     }, [createMeeting, showToast]);
 
     const doCancel = useCallback(async () => {

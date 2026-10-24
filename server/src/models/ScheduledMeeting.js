@@ -70,6 +70,27 @@ const scheduledMeetingSchema = new mongoose.Schema(
             default: null,
             trim: true,
         },
+
+        // How much the meeting matters, so people with a clash can decide which to attend.
+        priority: {
+            type: String,
+            enum: ['low', 'normal', 'high', 'urgent'],
+            default: 'normal',
+        },
+
+        // Other meetings this one overlaps for some of its people (features/meetings/conflicts.js).
+        // Written after every save, on both meetings, so a clash booked at the same moment by
+        // two organisers is still flagged; removed when either meeting is cancelled or moved.
+        conflicts: [{
+            _id: false,
+            meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScheduledMeeting', required: true },
+            // People in both meetings.
+            userIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+            title: { type: String, default: '' },
+            priority: { type: String, default: 'normal' },
+            start: { type: Date, default: null },
+            end: { type: Date, default: null },
+        }],
         
         // Everyone involved: invitees (scheduled) plus everyone who joined the call.
         participants: [
@@ -197,5 +218,6 @@ scheduledMeetingSchema.index({ companyId: 1, workspaceId: 1, startTime: 1, statu
 scheduledMeetingSchema.index({ workspaceId: 1, startTime: 1, status: 1 });
 scheduledMeetingSchema.index({ workspaceId: 1, status: 1, startTime: -1 });
 scheduledMeetingSchema.index({ huddleId: 1, status: 1 });
+scheduledMeetingSchema.index({ 'conflicts.meetingId': 1 }, { sparse: true });
 
 module.exports = mongoose.model('ScheduledMeeting', scheduledMeetingSchema);

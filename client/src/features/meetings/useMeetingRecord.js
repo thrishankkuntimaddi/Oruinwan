@@ -74,7 +74,14 @@ export function useMeetingRecord(meetingId, { enabled = true } = {}) {
             setTimeout(() => load({ quiet: true }), 600);
         };
         const onScheduleUpdated = ({ meeting: m } = {}) => {
-            if (m && same(m.id || m._id, meetingId)) setMeeting((prev) => (prev ? { ...prev, ...m, createdBy: prev.createdBy, participants: prev.participants } : prev));
+            if (!m || !same(m.id || m._id, meetingId)) return;
+            // The broadcast hides clash titles from everyone: keep ours, and re-read (time may have moved).
+            setMeeting((prev) => (prev ? { ...prev, ...m, createdBy: prev.createdBy, participants: prev.participants, conflicts: prev.conflicts } : prev));
+            load({ quiet: true });
+        };
+        // A clash with this meeting appeared or went away (booked, moved or cancelled elsewhere).
+        const onConflicts = (p = {}) => {
+            if ((p.meetingIds || []).some((id) => same(id, meetingId))) load({ quiet: true });
         };
         // A huddle for this meeting started: it is live now.
         const onHuddleStarted = (p = {}) => {
@@ -91,7 +98,7 @@ export function useMeetingRecord(meetingId, { enabled = true } = {}) {
             ['meeting:summary_updated', onSummary], ['meeting:note_ready', onNote],
             ['meeting:recording_ready', onRecording], ['meeting:recording_deleted', onRecordingGone],
             ['meeting:transcript_segments', onSegments], ['meeting:ended', onEnded],
-            ['schedule:updated', onScheduleUpdated], ['huddle:started', onHuddleStarted],
+            ['schedule:updated', onScheduleUpdated], ['schedule:conflicts', onConflicts], ['huddle:started', onHuddleStarted],
         ];
         events.forEach(([e, fn]) => socket.on(e, fn));
         return () => {

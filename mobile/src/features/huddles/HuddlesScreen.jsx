@@ -16,7 +16,7 @@ import { Row, RowGroup } from '../../ui/List.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { ScheduleMeetingSheet } from '../meetings/screens.jsx';
-import { meetingSubtitle, mergePage } from '../meetings/meetingsUi.js';
+import { clashMarker, meetingSubtitle, mergePage, normalizePriority, priorityLabel } from '../meetings/meetingsUi.js';
 import { checkConversation, joinHuddle, joinMeetingCall, scopeKey, startHuddle, startWorkspaceHuddle, useHuddle } from './huddle.js';
 
 /** Huddles need a signed-in server session with the flag on. */
@@ -80,12 +80,20 @@ function MeetingRow({ m, list }) {
   const inIt = call && (call.meetingId === m.id || (m.huddleId && call.huddleId === m.huddleId));
   const live = m.status === 'live';
   const open = () => nav.push('meeting', { id: m.id, tab: list === 'past' ? 'summary' : 'overview' });
+  const clash = list === 'upcoming' ? clashMarker(m) : null;
+  const priority = normalizePriority(m.priority);
+  const sub = [meetingSubtitle(m), list === 'upcoming' && priority !== 'normal' ? `${priorityLabel(priority)} priority` : null].filter(Boolean).join(' · ');
   const row = (
     <Row
       icon={live ? Radio : m.kind === 'huddle' ? Headphones : CalendarClock}
       tile={live ? 'accent' : 'neutral'}
       title={m.title}
-      subtitle={meetingSubtitle(m)}
+      subtitle={clash ? (
+        <>
+          {sub}
+          <span className="block truncate text-warning" data-testid="meeting-clash">{clash}</span>
+        </>
+      ) : sub}
       chevron={!live}
       onClick={open}
       className={live ? 'min-w-0 flex-1' : undefined}
@@ -132,7 +140,7 @@ export function HuddlesScreen() {
     };
     const offH = on('huddle', ({ event }) => ['huddle:started', 'huddle:ended'].includes(event) && refresh());
     const offM = on('meeting', ({ event }) => event === 'meeting:ended' && refresh());
-    const offS = on('socket', ({ event }) => event === 'schedule:updated' && refresh());
+    const offS = on('socket', ({ event }) => ['schedule:created', 'schedule:updated', 'schedule:deleted', 'schedule:conflicts'].includes(event) && refresh());
     return () => {
       clearTimeout(t);
       offH();

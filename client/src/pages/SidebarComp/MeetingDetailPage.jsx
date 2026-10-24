@@ -1,15 +1,19 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { DashPage, PageHead } from '../../components/ui/page';
+import { ArrowLeft, CalendarClock } from 'lucide-react';
+import { DashPage, PageHead, Btn, Chip } from '../../components/ui/page';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
+import meetingApi from '../../features/meetings/meetingApi';
+import { normalizePriority, priorityLabel, priorityTone, scheduledToast } from '../../utils/meetingConflicts';
 import { useMeetingRecord } from '../../features/meetings/useMeetingRecord';
 import useMeetingTranscript from '../../features/meetings/useMeetingTranscript';
 import { MeetingTabBar, MeetingTabContent } from '../../features/meetings/MeetingTabs';
 import MeetingState from '../../features/meetings/MeetingStates';
 import { StatusChip, MeetingCallActions } from '../../features/meetings/tabs/OverviewTab';
 import {
-    normaliseTab, meetingTitle, personName, meetingConversation, conversationLabel, meetingTimes,
+    normaliseTab, meetingTitle, personName, meetingConversation, conversationLabel, meetingTimes, meetingPhase, idOf,
 } from '../../features/meetings/meetingModel';
 import '../../features/meetings/meetings.css';
 
@@ -34,6 +38,8 @@ const MeetingDetailPage = () => {
     const transcript = useMeetingTranscript(meeting);
     const { user } = useAuth() || {};
     const myId = String(user?._id || user?.id || user?.sub || '');
+    const { showToast } = useToast();
+    const [rescheduling, setRescheduling] = useState(false);
     const back = () => navigate(`/workspace/${workspaceId}/huddles${meeting?.status === 'completed' ? '?tab=past' : ''}`);
 
     const eyebrow = (
@@ -51,6 +57,15 @@ const MeetingDetailPage = () => {
     }
 
     const organiser = meeting.createdBy && typeof meeting.createdBy === 'object' ? personName(meeting.createdBy) : null;
+    // The organiser can move a scheduled meeting that has not started (the server also lets admins).
+    const canReschedule = meeting.kind !== 'huddle' && meetingPhase(meeting) === 'upcoming' && idOf(meeting.createdBy) === myId;
+    const priority = normalizePriority(meeting.priority);
+    const reschedule = async (patch) => {
+        const res = await meetingApi.update(meeting.id || meeting._id, patch);
+        const t = scheduledToast({ conflicts: res?.conflicts || [] }, { verb: 'updated' });
+        showToast(t.text, t.tone);
+        record.reload();
+    };
     const { start } = meetingTimes(meeting);
     const lead = [
         meeting.kind === 'huddle' ? 'Quick huddle' : organiser ? `Organised by ${organiser}` : 'Scheduled meeting',
@@ -63,9 +78,19 @@ const MeetingDetailPage = () => {
             head={(
                 <PageHead
                     eyebrow={eyebrow}
-                    title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: 'wrap' }}>{meetingTitle(meeting)} <StatusChip meeting={meeting} /></span>}
+                    title={(
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: 'wrap' }}>
+                            {meetingTitle(meeting)} <StatusChip meeting={meeting} />
+                            {meeting.kind !== 'huddle' && priority !== 'normal' && <Chip tone={priorityTone(priority)}>{priorityLabel(priority)} priority</Chip>}
+                        </span>
+                    )}
                     lead={lead}
-                    actions={<MeetingCallActions meeting={meeting} workspaceId={workspaceId} onEnd={record.end} onOpenTab={setTab} />}
+                    actions={(
+                        <>
+                            {canReschedule && <Btn variant="ghost" icon={CalendarClock} onClick={() => setRescheduling(true)} data-testid="meeting-reschedule">Reschedule</Btn>}
+                            <MeetingCallActions meeting={meeting} workspaceId={workspaceId} onEnd={record.end} onOpenTab={setTab} />
+                        </>
+                    )}
                 />
             )}
         >
@@ -86,6 +111,9 @@ const MeetingDetailPage = () => {
                     />
                 </div>
             </div>
+            {rescheduling && (
+                <ScheduleMeetingModal meeting={meeting} workspaceId={workspaceId} onSchedule={reschedule} onClose={() => setRescheduling(false)} />
+            )}
         </DashPage>
     );
 };

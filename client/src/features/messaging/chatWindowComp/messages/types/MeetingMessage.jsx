@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, Clock, Users, Video, ExternalLink, ListChecks } from 'lucide-react';
+import { Calendar, Clock, Users, Video, ExternalLink, ListChecks, Flag } from 'lucide-react';
+import { normalizePriority, priorityLabel } from '../../../../../utils/meetingConflicts';
 
 export default function MeetingMessage({ meeting }) {
-    const { title, startTime, duration, meetingLink, participants = [], scheduledMeetingId } = meeting || {};
+    const { title, startTime, duration, meetingLink, participants = [], scheduledMeetingId, priority } = meeting || {};
+    const level = normalizePriority(priority);
     const navigate = useNavigate();
     const { workspaceId } = useParams();
 
@@ -80,6 +82,12 @@ export default function MeetingMessage({ meeting }) {
                             {formattedDate.time}
                             {duration ? ` · ${duration} min` : ''}
                         </span>
+                        {level !== 'normal' && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: level === 'low' ? 'var(--text-muted)' : 'var(--color-warning)' }}>
+                                <Flag size={11} />
+                                {priorityLabel(level)} priority
+                            </span>
+                        )}
                     </div>
                 )}
 

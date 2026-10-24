@@ -61,16 +61,23 @@ export function useScheduledMeetings(workspaceId) {
             setMeetings(prev => prev.filter(m => m._id !== String(meetingId)));
         };
 
+        // Clashes appeared or went away: re-read (the broadcasts hide clash titles; the list shows ours).
+        let timer = null;
+        const onConflicts = () => { clearTimeout(timer); timer = setTimeout(fetchMeetings, 300); };
+
         socket.on('schedule:created', onCreated);
         socket.on('schedule:updated', onUpdated);
         socket.on('schedule:deleted', onDeleted);
+        socket.on('schedule:conflicts', onConflicts);
 
         return () => {
+            clearTimeout(timer);
             socket.off('schedule:created', onCreated);
             socket.off('schedule:updated', onUpdated);
             socket.off('schedule:deleted', onDeleted);
+            socket.off('schedule:conflicts', onConflicts);
         };
-    }, [socket, workspaceId]);
+    }, [socket, workspaceId, fetchMeetings]);
 
     
     const createMeeting = useCallback(async (payload) => {
@@ -78,8 +85,15 @@ export function useScheduledMeetings(workspaceId) {
             workspaceId,
             ...payload,
         });
-        return data.meeting;
+        // The save-time clash re-check (it may have caught a booking made at the same moment).
+        return { ...data.meeting, conflicts: data.conflicts || data.meeting?.conflicts || [] };
     }, [workspaceId]);
+
+    /** Move / rename / re-prioritise: { startTime?, duration?, title?, priority? }. */
+    const updateMeeting = useCallback(async (meetingId, patch) => {
+        const { data } = await api.patch(`/api/scheduled-meetings/${meetingId}`, patch);
+        return { ...data.meeting, conflicts: data.conflicts || data.meeting?.conflicts || [] };
+    }, []);
 
     const cancelMeeting = useCallback(async (meetingId) => {
         const { data } = await api.patch(`/api/scheduled-meetings/${meetingId}`, {
@@ -88,5 +102,5 @@ export function useScheduledMeetings(workspaceId) {
         return data.meeting;
     }, []);
 
-    return { meetings, loading, error, refresh: fetchMeetings, createMeeting, cancelMeeting };
+    return { meetings, loading, error, refresh: fetchMeetings, createMeeting, updateMeeting, cancelMeeting };
 }

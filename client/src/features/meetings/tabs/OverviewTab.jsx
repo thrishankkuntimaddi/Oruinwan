@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Square, ExternalLink, Hash, AtSign, Radio, Film, Captions, ListChecks, Users } from 'lucide-react';
+import { Video, Square, ExternalLink, Hash, AtSign, Radio, Film, Captions, ListChecks, Users, AlertTriangle } from 'lucide-react';
 import { Btn, Chip, Confirm } from '../../../components/ui/page';
 import { useToast } from '../../../contexts/ToastContext';
 import { formatDuration } from '../../huddles/workspace/wrapUp';
@@ -9,6 +9,7 @@ import {
     meetingPhase, PHASE_LABEL, PHASE_TONE, meetingTimes, meetingConversation, conversationLabel,
     conversationPath, meetingPeople, normaliseActionItems, summaryText, errorText,
 } from '../meetingModel';
+import { meetingClashes, normalizePriority, priorityLabel, priorityTone, timeRange } from '../../../utils/meetingConflicts';
 
 const initials = (name = '') => name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 const fmt = (d) => (d ? d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—');
@@ -85,6 +86,9 @@ export default function OverviewTab({ meeting, workspaceId, onEnd, onOpenTab, co
     const items = normaliseActionItems(meeting.actionItems);
     const open = items.filter((a) => !a.done).length;
     const ConvIcon = conv.kind === 'channel' ? Hash : conv.kind === 'dm' ? AtSign : Radio;
+    const priority = normalizePriority(meeting.priority);
+    const clashes = phase === 'upcoming' ? meetingClashes(meeting) : [];
+    const nameOf = (id) => people.find((p) => p.id === String(id))?.name || 'Someone';
 
     return (
         <div className="mt-stack mt-stack--wide" data-testid="meeting-tab-overview">
@@ -117,7 +121,26 @@ export default function OverviewTab({ meeting, workspaceId, onEnd, onOpenTab, co
                     </p>
                     <p className="mt-fact-sub">{meeting.kind === 'huddle' ? 'Quick huddle' : 'Scheduled meeting'}</p>
                 </div>
+                {meeting.kind !== 'huddle' && (
+                    <div className="gl-card mt-fact">
+                        <p className="mt-label">Priority</p>
+                        <p className="mt-fact-value" data-testid="meeting-priority"><Chip tone={priorityTone(priority)}>{priorityLabel(priority)}</Chip></p>
+                    </div>
+                )}
             </div>
+
+            {clashes.length > 0 && (
+                <div className="mt-stack" style={{ gap: 6 }} data-testid="meeting-clashes" role="note">
+                    <p className="mt-label" style={{ color: 'var(--color-warning)' }}><AlertTriangle size={12} /><span>Clashes ({clashes.length})</span></p>
+                    {clashes.map((c) => (
+                        <p key={`${c.meetingId}`} className="mt-muted" style={{ margin: 0 }}>
+                            {c.mine
+                                ? <>You are also in <strong>{c.title || 'another meeting'}</strong> {timeRange(c.start, c.end)} · {priorityLabel(c.priority)} priority (this one is {priorityLabel(priority)}).</>
+                                : <>{(c.userIds || []).map(nameOf).join(', ') || 'Someone'} {(c.userIds || []).length > 1 ? 'are' : 'is'} busy {timeRange(c.start, c.end)} · {priorityLabel(c.priority)} priority.</>}
+                        </p>
+                    ))}
+                </div>
+            )}
 
             {showCallActions && (
                 <div className="mt-row">

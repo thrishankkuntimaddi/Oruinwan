@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { X, Video, Calendar, Clock, Link, Users, UserPlus, Check } from 'lucide-react';
+import { X, Video, Calendar, Clock, Link, Users, UserPlus, Check, Flag } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../../../contexts/AuthContext';
 import FindTimeSlots from '../../../../components/meetingsComp/FindTimeSlots';
+import ConflictWarning from '../../../../components/meetingsComp/ConflictWarning';
+import useMeetingConflicts from '../../../../hooks/useMeetingConflicts';
+import { MEETING_PRIORITIES, normalizePriority } from '../../../../utils/meetingConflicts';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -30,37 +33,50 @@ function nextFullHour() {
     return { date: localDate(d), hour: pad(d.getHours()) };
 }
 
+/** Date / hour / minute fields of an existing time (editing a meeting). */
+function partsOf(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return { date: localDate(d), hour: pad(d.getHours()), min: pad(d.getMinutes()) };
+}
+
 /**
  * Schedule a meeting. `conversationType` ('channel' | 'dm') places it in that conversation:
  * its people are invited unless you pick some. Elsewhere, nobody picked = the whole workspace.
+ * With `meeting`, it reschedules that meeting instead (time, length, title, priority; the
+ * people stay). Either way the picked time is checked for clashes as it changes: the dialog
+ * warns, suggests free times and still lets you go ahead.
  */
-export default function ScheduleMeetingModal({ onSchedule, onClose, conversationType = null }) {
-    const { workspaceId } = useParams();
+export default function ScheduleMeetingModal({ onSchedule, onClose, conversationType = null, conversationId = null, meeting = null, workspaceId: workspaceIdProp = null }) {
+    const params = useParams();
+    const workspaceId = workspaceIdProp || params.workspaceId || (meeting ? String(meeting.workspaceId || '') : undefined);
+    const editing = !!meeting;
     const { user } = useAuth() || {};
     const myId = String(user?.id || user?._id || user?.sub || '');
     const [members, setMembers] = useState([]);
     const [invited, setInvited] = useState([]);
     const [memberQuery, setMemberQuery] = useState('');
     useEffect(() => {
-        if (!workspaceId || conversationType === 'dm') return undefined;
+        if (!workspaceId || conversationType === 'dm' || editing) return undefined;
         let cancelled = false;
         api.get(`/api/workspaces/${workspaceId}/members`)
             .then(({ data }) => { if (!cancelled) setMembers((data?.members || []).filter(m => String(m._id) !== myId && (m.membershipStatus || 'active') === 'active')); })
             .catch(() => { /* the picker just stays empty */ });
         return () => { cancelled = true; };
-    }, [workspaceId, conversationType, myId]);
+    }, [workspaceId, conversationType, myId, editing]);
     const shownMembers = useMemo(() => {
         const q = memberQuery.trim().toLowerCase();
         const list = q ? members.filter(m => `${m.username} ${m.profile?.name || ''} ${m.email || ''}`.toLowerCase().includes(q)) : members;
         return list.slice(0, 30);
     }, [members, memberQuery]);
     const toggleInvite = (id) => setInvited(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-    const [defaults] = useState(nextFullHour);
-    const [title,      setTitle]      = useState('');
+    const [defaults] = useState(() => (meeting && partsOf(meeting.scheduledStart || meeting.startTime)) || { ...nextFullHour(), min: '00' });
+    const [title,      setTitle]      = useState(meeting?.title || '');
     const [startDate,  setStartDate]  = useState(defaults.date);
     const [startHour,  setStartHour]  = useState(defaults.hour);
-    const [startMin,   setStartMin]   = useState('00');
-    const [duration,   setDuration]   = useState(30);
+    const [startMin,   setStartMin]   = useState(defaults.min);
+    const [duration,   setDuration]   = useState(Number(meeting?.duration) || 30);
+    const [priority,   setPriority]   = useState(normalizePriority(meeting?.priority));
     const [meetingLink,setMeetingLink]= useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error,      setError]      = useState('');
@@ -70,6 +86,23 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
         try { return new Date(`${startDate}T${startHour}:${startMin}:00`).toISOString(); }
         catch { return null; }
     }
+
+    // The people whose calendars count: the ones picked (or, editing, the meeting's own).
+    const meetingPeopleIds = useMemo(() => (meeting
+        ? [...new Set([...(meeting.invitees || []), ...(meeting.participantIds || []), ...(meeting.participants || []).map(p => String(p?._id || p))].map(String))].filter(id => id && id !== myId)
+        : []), [meeting, myId]);
+    const isoNow = buildISO();
+    const conflictQuery = isoNow ? {
+        workspaceId,
+        startTime: isoNow,
+        duration: Number(duration),
+        participants: editing ? meetingPeopleIds : invited,
+        ...(!editing && conversationId && conversationType === 'dm' ? { dmSessionId: conversationId } : {}),
+        ...(!editing && conversationId && conversationType === 'channel' ? { channelId: conversationId } : {}),
+        ...(editing ? { excludeMeetingId: String(meeting._id || meeting.id) } : {}),
+    } : null;
+    const clash = useMeetingConflicts(conflictQuery);
+    const memberName = (id) => { const m = members.find(x => String(x._id) === String(id)); return m ? (m.profile?.name || m.username) : null; };
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -83,12 +116,15 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
         }
         setSubmitting(true);
         try {
-            await onSchedule({
-                title: title.trim(), startTime: isoTime,
-                duration: Number(duration),
-                meetingLink: meetingLink.trim() || null,
-                participants: invited,
-            });
+            await onSchedule(editing
+                ? { title: title.trim(), startTime: isoTime, duration: Number(duration), priority }
+                : {
+                    title: title.trim(), startTime: isoTime,
+                    duration: Number(duration),
+                    meetingLink: meetingLink.trim() || null,
+                    participants: invited,
+                    priority,
+                });
             onClose();
         } catch (err) {
             setError(err?.response?.data?.message || err?.message || 'Failed to schedule meeting. Please try again.');
@@ -150,7 +186,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         <Video size={14} />
                     </div>
                     <h2 style={{ margin: 0, flex: 1, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: FONT }}>
-                        Schedule Meeting
+                        {editing ? 'Reschedule Meeting' : 'Schedule Meeting'}
                     </h2>
                     <CloseBtn onClick={onClose} />
                 </div>
@@ -209,10 +245,18 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         </FormField>
                     </div>
 
-                    <FindTimeSlots participantIds={invited} durationMinutes={Number(duration)} onPick={pickSlot} />
+                    <FormField label="Priority" icon={<Flag size={11} />}>
+                        <select value={priority} onChange={e => setPriority(e.target.value)} style={inputStyle} aria-label="Priority" data-testid="meeting-priority">
+                            {MEETING_PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        </select>
+                    </FormField>
+
+                    <ConflictWarning result={clash.result} loading={clash.loading} nameOf={memberName} onPick={pickSlot} />
+
+                    {!editing && <FindTimeSlots participantIds={invited} durationMinutes={Number(duration)} onPick={pickSlot} />}
 
                     {}
-                    <FormField label="Meeting link (optional)" icon={<Link size={11} />}>
+                    {!editing && <FormField label="Meeting link (optional)" icon={<Link size={11} />}>
                         <input
                             type="url" value={meetingLink}
                             onChange={e => setMeetingLink(e.target.value)}
@@ -221,9 +265,9 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                             onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
                             onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                         />
-                    </FormField>
+                    </FormField>}
 
-                    {conversationType !== 'dm' && members.length > 0 && (
+                    {!editing && conversationType !== 'dm' && members.length > 0 && (
                         <FormField label="Invite" icon={<UserPlus size={11} />}>
                             <p style={{ margin: '0 0 4px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
                                 {invited.length
@@ -262,7 +306,9 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                     <div style={{ display: 'flex', gap: '8px', paddingTop: '2px' }}>
                         <CancelBtn onClick={onClose}>Cancel</CancelBtn>
                         <SubmitBtn disabled={submitting}>
-                            {submitting ? 'Scheduling…' : 'Schedule'}
+                            {submitting ? (editing ? 'Saving…' : 'Scheduling…')
+                                : clash.result?.hasConflicts ? (editing ? 'Save anyway' : 'Schedule anyway')
+                                    : (editing ? 'Save changes' : 'Schedule')}
                         </SubmitBtn>
                     </div>
                 </form>

@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
 import { HuddlesLanding } from './landing/Landings';
+import { scheduledToast } from '../../utils/meetingConflicts';
 import api from '../../services/api';
 
 const FONT = 'Inter, system-ui, sans-serif';
@@ -142,8 +143,9 @@ const Meetings = () => {
     };
 
     const handleSchedule = useCallback(async (payload) => {
-        await createMeeting(payload);
-        showToast('Meeting scheduled', 'success');
+        const created = await createMeeting(payload);
+        const t = scheduledToast(created);
+        showToast(t.text, t.tone);
     }, [createMeeting, showToast]);
 
     const modal = showScheduleModal && (

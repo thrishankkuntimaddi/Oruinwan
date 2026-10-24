@@ -61,7 +61,7 @@ export default function useMeetingList({ workspaceId, status, q = '', limit = 20
         if (!socket || !enabled) return undefined;
         let t = null;
         const soon = () => { clearTimeout(t); t = setTimeout(() => load({ quiet: true }), 800); };
-        const events = ['schedule:created', 'schedule:updated', 'schedule:deleted', 'meeting:ended', 'huddle:started', 'huddle:ended'];
+        const events = ['schedule:created', 'schedule:updated', 'schedule:deleted', 'schedule:conflicts', 'meeting:ended', 'huddle:started', 'huddle:ended'];
         events.forEach((e) => socket.on(e, soon));
         return () => { clearTimeout(t); events.forEach((e) => socket.off(e, soon)); };
     }, [socket, enabled, load]);

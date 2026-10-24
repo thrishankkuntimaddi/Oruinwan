@@ -515,16 +515,36 @@ async function missedCall(io, { recipientIds, workspaceId, dmSessionId, callerNa
     });
 }
 
-async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId, startTime }) {
+/**
+ * "You are invited to a meeting" (or "Meeting time changed"). With `conflicts` (this recipient's
+ * clashes, [{ meetingId, title, priority, start, end }]) the invite says so and names both
+ * priorities, so the invitee can decide which to attend.
+ */
+async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId, startTime, priority = 'normal', conflicts = [], moved = false }) {
     const when = startTime ? new Date(startTime) : null;
+    const { priorityLabel, clashSentence, normalizePriority } = require('../../features/meetings/conflicts');
+    const level = normalizePriority(priority);
+    const clashes = (conflicts || []).map((c) => ({
+        meetingId: c.meetingId ? String(c.meetingId) : null,
+        title: c.title || 'Meeting',
+        priority: normalizePriority(c.priority),
+        start: c.start ? new Date(c.start).toISOString() : null,
+        end: c.end ? new Date(c.end).toISOString() : null,
+    }));
+    const head = moved ? 'Meeting time changed' : 'You are invited to a meeting';
+    const parts = [title, `${priorityLabel(level)} priority`];
+    if (clashes.length) parts.push(`${clashSentence(clashes[0])}${clashes.length > 1 ? ` and ${clashes.length - 1} more` : ''}`);
     return createMany(io, recipientIds, {
         workspaceId,
         type: 'schedule_created',
-        title: 'You are invited to a meeting',
+        title: clashes.length ? `${head} · it clashes with your calendar` : head,
         // The time is in meta: each app shows it in the reader's own time zone.
-        body: title,
+        body: parts.join(' · '),
         link: scheduledMeetingId ? `/meetings/${scheduledMeetingId}` : '/huddles?tab=scheduled',
-        meta: { scheduledMeetingId, meetingTitle: title, startTime: when ? when.toISOString() : null },
+        meta: {
+            scheduledMeetingId, meetingTitle: title, startTime: when ? when.toISOString() : null,
+            priority: level, ...(moved ? { moved: true } : {}), ...(clashes.length ? { conflicts: clashes } : {}),
+        },
     });
 }
 

@@ -294,7 +294,7 @@ async function searchWorkspace({ query }, ctx) {
  * each attendee's working hours and timezone) picks the earliest slot everyone can make. When no
  * slot suits everyone nothing is booked; the candidates go back to the model to ask the user.
  */
-async function scheduleMeeting({ title, startsAt, durationMinutes = 30, participantIds = [], earliest, latest }, ctx) {
+async function scheduleMeeting({ title, startsAt, durationMinutes = 30, participantIds = [], earliest, latest, priority }, ctx) {
     if (!title?.trim()) return fail('title is required');
     let start = null;
     if (startsAt) {
@@ -343,18 +343,32 @@ async function scheduleMeeting({ title, startsAt, durationMinutes = 30, particip
         startTime: start,
         duration,
         participants,
+        invitees: participants,
+        priority: ['low', 'normal', 'high', 'urgent'].includes(priority) ? priority : 'normal',
         status: 'scheduled',
     });
     const io = ioFrom(ctx);
+    // Clashes are advisory: the meeting stays booked, both meetings are marked and the result says so.
+    let clashes = [];
+    try {
+        clashes = await require('../src/features/meetings/conflicts').recordClashes(meeting, { io });
+    } catch { clashes = []; }
     if (io) io.to(`workspace:${ctx.workspaceId}`).emit('schedule:created', { meeting });
     try {
         const notificationService = require('../src/modules/notifications/notificationService');
-        await notificationService.scheduleCreated(io, {
-            recipientIds: (participants.length ? participants : [...memberIds]).filter(id => id !== String(ctx.userId)),
-            workspaceId: ctx.workspaceId, title: meeting.title, scheduledMeetingId: meeting._id,
-        });
+        const recipients = (participants.length ? participants : [...memberIds]).filter(id => id !== String(ctx.userId));
+        const base = { workspaceId: ctx.workspaceId, title: meeting.title, scheduledMeetingId: meeting._id, startTime: meeting.startTime, priority: meeting.priority };
+        const clashing = new Set(clashes.flatMap(c => (c.userIds || []).map(String)));
+        await notificationService.scheduleCreated(io, { ...base, recipientIds: recipients.filter(id => !clashing.has(id)) });
+        for (const id of recipients.filter(r => clashing.has(r))) {
+            await notificationService.scheduleCreated(io, { ...base, recipientIds: [id], conflicts: clashes.filter(c => (c.userIds || []).map(String).includes(id)) });
+        }
     } catch { /* non-fatal */ }
-    return { success: true, meetingId: String(meeting._id), title: meeting.title, startTime: meeting.startTime, duration: meeting.duration, chosenBy };
+    return {
+        success: true, meetingId: String(meeting._id), title: meeting.title, startTime: meeting.startTime, duration: meeting.duration, chosenBy,
+        priority: meeting.priority || 'normal',
+        ...(clashes.length ? { conflicts: clashes.map(c => ({ title: c.title, priority: c.priority, start: c.start, end: c.end, people: (c.userIds || []).map(String) })) } : {}),
+    };
 }
 
 /* ── Personal memory (private to the user; see ai.memory.service) ─────── */

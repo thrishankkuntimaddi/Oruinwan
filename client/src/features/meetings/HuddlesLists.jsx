@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-    Mic, Video, CalendarPlus, CalendarClock, History, Radio, Hash, AtSign, ChevronRight, Film, ListChecks,
+    Mic, Video, CalendarPlus, CalendarClock, History, Radio, Hash, AtSign, ChevronRight, Film, ListChecks, AlertTriangle,
 } from 'lucide-react';
 import { HuddleContext } from '../huddles/HuddleContext';
 import { useOptionalWorkspace } from '../../contexts/WorkspaceContext';
@@ -13,6 +13,7 @@ import {
     huddlesTab, meetingTitle, meetingWhenLabel, meetingConversation, conversationLabel, meetingPath, meetingIdOf,
     summaryText, normaliseActionItems, openMeetingPage,
 } from './meetingModel';
+import { clashMarker, priorityLabel, priorityTone, normalizePriority } from '../../utils/meetingConflicts';
 import './meetings.css';
 
 export const HUDDLE_LIST_TABS = [
@@ -62,6 +63,10 @@ export function MeetingRow({ meeting, workspaceId, onJoin, compact = false }) {
     const items = normaliseActionItems(meeting.actionItems);
     const hasRecap = !!summaryText(meeting.summary) || items.length > 0;
     const sub = [meetingWhenLabel(meeting), conversationLabel(conv)].filter(Boolean).join(' · ');
+    // Upcoming meetings show their priority (when not normal) and a clash marker.
+    const clash = !isPast && meeting.status !== 'cancelled' ? clashMarker(meeting) : null;
+    const priority = normalizePriority(meeting.priority);
+    const showPriority = !isPast && meeting.kind !== 'huddle' && priority !== 'normal';
 
     if (compact) {
         return (
@@ -71,8 +76,14 @@ export function MeetingRow({ meeting, workspaceId, onJoin, compact = false }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <p className="gl-x-pcard-title">{meetingTitle(meeting)}</p>
                     {meeting.hasRecording && <span title="Recorded" style={{ display: 'flex', color: 'var(--text-secondary)' }}><Film size={11} /></span>}
+                    {showPriority && <Chip tone={priorityTone(priority)}>{priorityLabel(priority)}</Chip>}
                 </div>
                 <div className="gl-x-pcard-meta" style={{ marginBottom: 6 }}><ScopeIcon kind={conv.kind} size={10} /><span>{sub}</span></div>
+                {clash && (
+                    <div className="gl-x-pcard-meta" data-testid="meeting-clash" title={clash.title} style={{ marginBottom: 6, color: 'var(--color-warning)' }}>
+                        <AlertTriangle size={10} aria-hidden="true" /><span>{clash.label}</span>
+                    </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     {!isPast && onJoin && (
                         <button type="button" className="gl-x-link" onClick={(e) => { e.stopPropagation(); onJoin(meeting); }}>
@@ -95,6 +106,8 @@ export function MeetingRow({ meeting, workspaceId, onJoin, compact = false }) {
                 <span className="mt-list-sub">{sub}</span>
             </span>
             <span className="mt-list-right">
+                {clash && <span data-testid="meeting-clash" title={clash.title}><Chip tone="warning"><AlertTriangle size={10} style={{ marginRight: 4 }} />{clash.label}</Chip></span>}
+                {showPriority && <Chip tone={priorityTone(priority)}>{priorityLabel(priority)} priority</Chip>}
                 <Chip>{meeting.kind === 'huddle' ? 'Quick huddle' : 'Scheduled'}</Chip>
                 {meeting.hasRecording && <Chip><Film size={10} style={{ marginRight: 4 }} />Recorded</Chip>}
                 {isPast && hasRecap && <Chip tone="success">Recap</Chip>}
