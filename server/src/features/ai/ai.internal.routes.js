@@ -35,6 +35,23 @@ router.use((req, res, next) => {
     next();
 });
 
+const plainId = (v) => (typeof v === 'string' || typeof v === 'number') && /^[A-Za-z0-9_-]{1,64}$/.test(String(v)) ? String(v) : null;
+
+/**
+ * The shared-conversation part of the run context (ai/service/actionsProxy.js plainCtx):
+ * only plain ids; each action still checks the user may use that conversation / message.
+ */
+function sharedContext(ctx = {}) {
+    const out = {};
+    if (ctx.shared === true) out.shared = true;
+    if (plainId(ctx.channelId)) out.channelId = plainId(ctx.channelId);
+    const c = ctx.conversation;
+    if (c && plainId(c.id)) {
+        out.conversation = { id: plainId(c.id), type: c.type === 'dm' ? 'dm' : 'channel', parentId: plainId(c.parentId), triggerMessageId: plainId(c.triggerMessageId) };
+    }
+    return out;
+}
+
 router.post('/:name', async (req, res) => {
     const name = String(req.params.name || '');
     const fn = Object.prototype.hasOwnProperty.call(aiActions, name) ? aiActions[name] : null;
@@ -42,7 +59,7 @@ router.post('/:name', async (req, res) => {
     const { args = {}, ctx = {} } = req.body || {};
     if (!ctx.userId) return res.status(400).json({ error: 'ctx.userId is required' });
     try {
-        const result = await fn(args, { userId: String(ctx.userId), workspaceId: ctx.workspaceId ? String(ctx.workspaceId) : null, io: getIO() });
+        const result = await fn(args, { userId: String(ctx.userId), workspaceId: ctx.workspaceId ? String(ctx.workspaceId) : null, io: getIO(), ...sharedContext(ctx) });
         return res.json({ result });
     } catch (err) {
         logger.error({ err }, `[AI internal] action ${name} failed`);
@@ -52,3 +69,4 @@ router.post('/:name', async (req, res) => {
 
 module.exports = router;
 module.exports.tokenMatches = tokenMatches;
+module.exports.sharedContext = sharedContext;

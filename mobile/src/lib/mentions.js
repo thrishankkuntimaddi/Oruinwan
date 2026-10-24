@@ -75,7 +75,8 @@ export function mentionTextFor(text, usernames, { allowBroadcast = true } = {}) 
   const out = new Set();
   for (const m of String(text || '').matchAll(/(^|[^\w@])@([a-zA-Z0-9_.-]+)/g)) {
     const handle = m[2].replace(/[.-]+$/, '').toLowerCase();
-    if (handle === 'channel' || handle === 'here') {
+    if (handle === 'channel' || handle === 'here' || handle === 'everyone') {
+      // @everyone is the same as @channel on the server.
       if (allowBroadcast) out.add(`@${handle}`);
     } else if (usernames?.has(handle)) out.add(`@${handle}`);
   }

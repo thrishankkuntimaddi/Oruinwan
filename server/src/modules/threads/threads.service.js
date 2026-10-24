@@ -213,3 +213,57 @@ module.exports.LIVE_REPLY = LIVE_REPLY;
 module.exports.recountThread = recountThread;
 module.exports.emitThreadCounters = emitThreadCounters;
 module.exports.followAndNotify = followAndNotify;
+
+/**
+ * Store an already-encrypted thread reply from `senderId` and broadcast it exactly like
+ * POST /messages/thread/:id does (thread:created on the first reply, thread-reply,
+ * message-updated), then follow and notify (mentions, @here / @channel, followers).
+ * Used by server-side senders such as the assistant's reply_in_thread / create_thread tools.
+ * `parent` is the lean parent message (channel/dm, workspace, company, sender, replyCount).
+ */
+async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv, mentionText = '' }) {
+    const { hydrate, USER_MIN } = require('../../identity/hydrate');
+    const logger = require('../../../utils/logger');
+    const parentId = parent._id;
+    const reply = await Message.create({
+        type: 'message',
+        sender: senderId,
+        payload: { ciphertext, messageIv, isEncrypted: true },
+        attachments: [],
+        parentId,
+        readBy: [senderId],
+        workspace: parent.workspace,
+        company: parent.company,
+        ...(parent.dm ? { dm: parent.dm } : { channel: parent.channel }),
+    });
+    const replyOut = await hydrate(reply.toObject(), { sender: USER_MIN });
+    const lastReplyAt = replyOut.createdAt || new Date();
+    const updatedParent = await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 }, $set: { lastReplyAt } }, { new: true })
+        .lean().then((doc) => (doc ? hydrate(doc, { sender: USER_MIN }) : doc));
+
+    if (io && updatedParent) {
+        const room = parent.channel ? `channel:${parent.channel}` : `dm:${parent.dm}`;
+        const lastReplyIso = new Date(lastReplyAt).toISOString();
+        if (updatedParent.replyCount === 1) {
+            io.to(room).emit('thread:created', {
+                parentMessageId: String(parentId), channelId: parent.channel || null, dmId: parent.dm || null,
+                replyCount: 1, lastReplyAt: lastReplyIso, parentMessage: updatedParent,
+            });
+        }
+        io.to(room).emit('thread-reply', { parentId: String(parentId), reply: replyOut });
+        io.to(room).emit('message-updated', {
+            messageId: String(parentId),
+            channelId: parent.channel ? String(parent.channel) : null,
+            dmId: parent.dm ? String(parent.dm) : null,
+            updates: { replyCount: updatedParent.replyCount, lastReplyAt: lastReplyIso },
+            fullMessage: updatedParent,
+        });
+    }
+
+    // Same as the REST path: following and notifications never fail the reply.
+    await followAndNotify(io, { parent, replierId: senderId, senderUsername: replyOut.sender?.username, mentionText, replyId: reply._id })
+        .catch((err) => logger.error('[THREADS] Follow/notify error (non-fatal):', err.message));
+    return replyOut;
+}
+
+module.exports.postEncryptedReply = postEncryptedReply;

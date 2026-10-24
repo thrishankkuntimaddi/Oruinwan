@@ -43,6 +43,9 @@ const IN_CONVERSATION_PROMPT = [
   'Answer the latest request addressed to you, using the conversation above as context.',
   'Be concise and well formatted (short paragraphs, bullet lists, fenced code blocks for code).',
   'Do not repeat the question. Do not address people as "the user".',
+  'When the person who asked wants something done here (start a thread, reply in this thread, create a task or note, set a reminder, mention people),',
+  'use your tools: threads and replies go to this conversation unless they name another channel or person, and are posted as the person who asked.',
+  'Then confirm in one or two lines what you did, with the link the tool returned.',
 ].join(' ');
 
 /** Matches a message addressed to an assistant: @ai, @oruinwan, @claude, @chatgpt, @gemini, @grok… */
@@ -174,6 +177,14 @@ async function run({ conversationType, conversationId, parent, triggerMessageId,
     // Shared conversation: no personal memories in, no memory changes out.
     shared: true,
     channelId: isDm ? null : String(conversationId),
+    // Where the assistant was asked: the default target of its thread / reply / reminder tools.
+    // Set here from the validated request, never by the model.
+    conversation: {
+      id: String(conversationId),
+      type: isDm ? 'dm' : 'channel',
+      parentId: parent ? String(parent._id) : null,
+      triggerMessageId: triggerMessageId ? String(triggerMessageId) : null,
+    },
     knowledge,
     ...(ctx.aiContext || {}),
     onToken: (t) => {

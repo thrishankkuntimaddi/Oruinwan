@@ -3,7 +3,8 @@ const { query } = require('../shared/postgres');
 
 const MENTION_REGEX = /@([a-zA-Z0-9_.-]+)/g;
 const HERE_REGEX = /@here\b/i;
-const CHANNEL_REGEX = /@channel\b/i;
+// @everyone is the same as @channel (people coming from other chat apps type either).
+const CHANNEL_REGEX = /@(?:channel|everyone)\b/i;
 
 function parseMentionHandles(text) {
     if (!text || typeof text !== 'string') {
@@ -19,7 +20,7 @@ function parseMentionHandles(text) {
     while ((match = regex.exec(text)) !== null) {
         const handle = match[1].toLowerCase();
         
-        if (handle !== 'here' && handle !== 'channel') {
+        if (handle !== 'here' && handle !== 'channel' && handle !== 'everyone') {
             handles.add(handle);
         }
     }
