@@ -48,7 +48,7 @@ test('stores the encrypted reply and emits thread:created, thread-reply and mess
         ['channel:c1', 'thread:created'], ['channel:c1', 'thread-reply'], ['channel:c1', 'message-updated'],
     ]);
     // the replier and the parent's author follow the thread
-    expect(Message.updateOne).toHaveBeenCalledWith({ _id: 'p1' }, { $addToSet: { followers: { $each: ['alice', 'alice'] } } });
+    expect(Message.updateOne).toHaveBeenCalledWith({ _id: 'p1' }, { $addToSet: { followers: { $each: ['alice'] } } });
 });
 
 test('@here in the reply notifies the channel members who are online', async () => {
