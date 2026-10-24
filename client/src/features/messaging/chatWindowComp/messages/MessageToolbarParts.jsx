@@ -3,7 +3,7 @@ import { isSameLanguage } from '../../../../utils/autoTranslate';
 import { createPortal } from 'react-dom';
 import {
     MessageSquare, Share, Pin, Copy, Trash2, Info, Pencil, Check, X, History, Globe,
-    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2,
+    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2, Link2, Share2,
 } from 'lucide-react';
 import { getMessageText, hasEditHistory, isBookmarkedBy } from '../../../../utils/messageActionUtils';
 
@@ -285,6 +285,8 @@ export function useMessageToolbar({
         ],
         [
             text && { label: 'Copy text', icon: <Copy size={13} />, onClick: act(() => toolbar.copyText?.(msg)) },
+            toolbar.copyMessageLink && !msg.sending && !msg.failed && { label: 'Copy link', icon: <Link2 size={13} />, onClick: act(() => toolbar.copyMessageLink(msg)) },
+            toolbar.shareMessage && !msg.sending && !msg.failed && { label: 'Share…', icon: <Share2 size={13} />, onClick: act(() => toolbar.shareMessage(msg)) },
             text && onTranslate && {
                 label: translationDone ? 'Show original' : 'Translate',
                 icon: <Globe size={13} />,

@@ -54,6 +54,7 @@ import { CODE_REVIEW_EVENT } from '../../integrations/codeReviewBus';
 import logger from '../../../utils/logger';
 import { getUserPreferences } from '../../../hooks/useUserPreferences';
 import { markReadKey, sendMarkRead } from './helpers/markRead';
+import { webBase, messageLink as buildMessageLink, messageShareText, shareableBody, senderOf, copyToClipboard, shareOrCopy } from '../../../utils/shareContent';
 
 // Pull request viewer (loaded on first use; carries the syntax highlighter).
 const CodeReviewPanel = lazy(() => import('../../integrations/codeReview/CodeReviewPanel'));
@@ -1423,6 +1424,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         }
     }, []);
 
+    const shareWorkspaceId = workspaceId || chat?.workspaceId || activeWorkspace?.id || activeWorkspace?._id || null;
     const enhancedActions = useMemo(() => ({
         ...actions,
         sendMessage: handleSend,
@@ -1561,13 +1563,28 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             }
         },
 
+        // Links and shared text are built here from what this device decrypted; nothing is uploaded.
+        copyMessageLink: async (msg) => {
+            const link = buildMessageLink({ base: webBase(), workspaceId: shareWorkspaceId, kind: conversationType, conversationId, message: msg });
+            if (!link) { showToast('No link for this message', 'error'); return; }
+            const ok = await copyToClipboard(link);
+            showToast(ok ? 'Link copied' : 'Could not copy the link', ok ? 'success' : 'error');
+        },
+        shareMessage: async (msg) => {
+            const link = buildMessageLink({ base: webBase(), workspaceId: shareWorkspaceId, kind: conversationType, conversationId, message: msg });
+            const text = messageShareText({ sender: senderOf(msg), body: shareableBody(msg) });
+            const result = await shareOrCopy({ title: chat?.name ? `Message from ${chat.type === 'channel' ? '#' : ''}${chat.name}` : 'Message', text, url: link });
+            if (result === 'copied') showToast('Copied the message and its link', 'success');
+            else if (result === 'failed') showToast('Could not share this message', 'error');
+        },
+
         infoMessage: (msg) => loadMessageInfo(msg),
         onRemind: features.reminders ? (msg) => setReminderMsg(msg) : undefined,
         features,
         onShowHistory: (msg) => setHistoryMsg(msg),
         onConvertToTask: (msg) => setTaskMsg(msg),
         onSummarizeThread: (msg) => setSummaryMsg(msg),
-    }), [actions, handleSend, showToast, isChannelAdmin, performDelete, patchEvent, currentUserId, user?.username, conversationId, conversationType, loadMessageInfo, features]);
+    }), [actions, handleSend, showToast, isChannelAdmin, performDelete, patchEvent, currentUserId, user?.username, conversationId, conversationType, loadMessageInfo, features, shareWorkspaceId, chat?.name, chat?.type]);
 
     // Stream update after a version restore from the history viewer.
     const handleVersionRestored = useCallback((message, plaintext, restoredVersion) => {

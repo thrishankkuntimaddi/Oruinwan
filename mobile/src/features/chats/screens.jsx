@@ -37,7 +37,10 @@ import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
 import { GroupTile } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
 import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
-import { EllipsisVertical } from 'lucide-react';
+import { EllipsisVertical, Share2, Copy, Link2 } from 'lucide-react';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { copyText, shareText } from '../../native/index.js';
+import { messageLink, messageShareText, shareableBody, threadLink, threadTitle, threadTranscript } from '../../lib/shareContent.js';
 
 const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: 'Do not disturb', offline: 'Offline' };
 
@@ -59,6 +62,8 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
   const [infoOf, setInfoOf] = useState(null);
   const threadsOn = useFlag('threads');
   const aiOn = useFlag('ai');
+  const share = useShareLinks(conv);
+  const directory = useDirectory();
 
   const save = async (m) => {
     const before = Boolean(m.saved);
@@ -102,6 +107,16 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
         onTranslate={api().translate && aiOn ? () => setTranslateOf(active) : null}
         onHistory={api().messageVersions ? () => setHistoryOf(active) : null}
         onInfo={api().messageInfo ? () => setInfoOf(active) : null}
+        onCopyLink={share.ready ? () => share.copy(share.messageLink(active), 'Link copied') : null}
+        onShare={
+          share.ready
+            ? () => {
+                const m = active;
+                const sender = m.authorId === me ? directory[me]?.name || 'Me' : m.author?.name || directory[m.authorId]?.name || 'Someone';
+                share.send(label ? `Message in ${label}` : 'Message', messageShareText({ sender, body: shareableBody(m), link: share.messageLink(m) }));
+              }
+            : null
+        }
         onTask={() => (api().convertToTask ? setConvertFrom(active) : setTaskFrom(active))}
         onEdit={() => setEditing(active)}
         onDelete={() => convo.remove(active.id)}
@@ -134,6 +149,31 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
   };
 
   return { actions, onLongPress, editing, setEditing, openTask: () => setTaskFrom({ text: '' }) };
+}
+
+/**
+ * Links to messages and threads in this conversation, and copy / share-sheet helpers. Shared
+ * text is built on this device from decrypted messages; nothing is uploaded.
+ */
+function useShareLinks(conv) {
+  const ws = useSession((s) => s.workspaceId);
+  const server = useSession((s) => s.server);
+  const base = useWebUrl(server);
+  const ready = Boolean(ws && base);
+  return {
+    ready,
+    messageLink: (m) => messageLink({ base, workspaceId: ws, kind: conv.kind, conversationId: conv.id, message: m }),
+    threadLink: (parentId) => threadLink({ base, workspaceId: ws, kind: conv.kind, conversationId: conv.id, parentId }),
+    copy: async (text, done = 'Copied') => {
+      if (text && (await copyText(text))) toast(done);
+      else toast("Couldn't copy on this device", 'danger');
+    },
+    send: async (title, text) => {
+      const result = await shareText({ title, text });
+      if (result === 'copied') toast('Copied — paste it anywhere');
+      else if (result === 'failed') toast("Couldn't share on this device", 'danger');
+    },
+  };
 }
 
 /** The decrypted end of a conversation, as AI features take it: [{ id, sender, text, isMe }]. */
@@ -389,6 +429,14 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const [attach, setAttach] = useState(false);
   const [sheet, setSheet] = useState(null); // 'menu' | 'people' | 'summary'
   const info = convo.meta;
+  const share = useShareLinks(conv);
+  const nameOf = (m) => (m.authorId === me ? directory[me]?.name || 'Me' : m.author?.name || directory[m.authorId]?.name || 'Someone');
+  const threadText = () =>
+    threadTranscript({
+      title: threadTitle(kind, label),
+      messages: [convo.parent, ...convo.items].filter((m) => m && !m.pending).map((m) => ({ sender: nameOf(m), text: shareableBody(m), at: m.at })),
+      link: share.threadLink(messageId),
+    });
 
   const follow = async () => {
     const next = !info?.following;
@@ -521,6 +569,9 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
           { label: info?.following ? 'Unfollow thread' : 'Follow thread', icon: info?.following ? BellOff : Bell, hint: 'Get notified about new replies', onSelect: follow },
           { label: info?.resolved ? 'Reopen thread' : 'Mark as resolved', icon: info?.resolved ? RotateCcw : CheckCircle2, onSelect: resolve },
           { label: 'People in this thread', icon: Users, onSelect: () => setTimeout(() => setSheet('people'), 220) },
+          { label: 'Share thread', icon: Share2, hint: 'The replies as text, with a link', onSelect: () => share.send(threadTitle(kind, label), threadText()) },
+          { label: 'Copy thread', icon: Copy, onSelect: () => share.copy(threadText(), 'Thread copied') },
+          share.ready && { label: 'Copy link to thread', icon: Link2, onSelect: () => share.copy(share.threadLink(messageId), 'Link copied') },
           aiOn && api().summarizeThread && { label: 'Summarize thread', icon: Sparkles, hint: 'With Oruinwan AI, from the replies decrypted here', onSelect: () => setTimeout(() => setSheet('summary'), 220) },
         ]}
       />

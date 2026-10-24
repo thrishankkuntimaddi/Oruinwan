@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import api from '@services/api';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
-import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2 } from "lucide-react";
+import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2, Share2, Copy, Link2 } from "lucide-react";
+import { MessageMoreMenu } from "./messages/MessageToolbarParts";
+import { webBase, threadLink, threadTranscript as buildThreadTranscript, threadTitle, shareableBody, senderOf, copyToClipboard, shareOrCopy } from "../../../utils/shareContent";
 import { split } from "../../split/splitStore";
 import ThreadSummaryModal from "./modals/ThreadSummaryModal";
 import FooterInput from "./footer/footerInput";
@@ -80,6 +82,41 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             isMe: String(m.sender?._id || m.senderId) === String(currentUserId),
         }))
         .filter(m => m.text);
+
+    // Share / copy the thread: a plain-text transcript of what this device decrypted, plus a link
+    // that opens the thread. Nothing is uploaded.
+    const [shareAnchor, setShareAnchor] = useState(null);
+    const shareThreadLink = () => threadLink({ base: webBase(), workspaceId: threadWorkspaceId ? String(threadWorkspaceId) : null, kind: conversationType, conversationId: channelId, parentId: threadRootId });
+    const shareThreadText = () => buildThreadTranscript({
+        title: threadTitle(conversationType, conversationName || parentMessageState?.channelId?.name || ''),
+        messages: [parentMessageState, ...replies].filter(Boolean).map((m) => ({
+            sender: m.sender?.username || m.senderName || m.senderId?.username || senderOf(m),
+            text: shareableBody(m),
+            at: m.createdAt || m.ts || m.timestamp,
+        })),
+        link: shareThreadLink(),
+    });
+    const copyThread = async () => {
+        const ok = await copyToClipboard(shareThreadText());
+        showToast(ok ? 'Thread copied' : 'Could not copy the thread', ok ? 'success' : 'error');
+    };
+    const shareThread = async () => {
+        const result = await shareOrCopy({ title: threadTitle(conversationType, conversationName), text: shareThreadText() });
+        if (result === 'copied') showToast('Thread copied', 'success');
+        else if (result === 'failed') showToast('Could not share this thread', 'error');
+    };
+    const copyThreadLink = async () => {
+        const link = shareThreadLink();
+        const ok = !!link && await copyToClipboard(link);
+        showToast(ok ? 'Link copied' : 'Could not copy the link', ok ? 'success' : 'error');
+    };
+    const closeShareMenu = useCallback(() => setShareAnchor(null), []);
+    useEffect(() => {
+        if (!shareAnchor) return undefined;
+        const onDown = (e) => { if (!e.target.closest?.('[role="menu"], [data-testid="thread-share"]')) setShareAnchor(null); };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [shareAnchor]);
 
     // While open, the AI panel works on this thread (replies decrypted on this device).
     const setAIThread = useAIContext()?.setThread;
@@ -686,6 +723,33 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 >
                                     <Sparkles size={14} />
                                 </button>
+                                <button
+                                    type="button"
+                                    data-testid="thread-share"
+                                    onClick={(e) => {
+                                        if (shareAnchor) { setShareAnchor(null); return; }
+                                        const r = e.currentTarget.getBoundingClientRect();
+                                        setShareAnchor({ top: r.top, bottom: r.bottom, left: r.left, right: r.right });
+                                    }}
+                                    title="Share thread"
+                                    aria-label="Share thread"
+                                    aria-haspopup="menu"
+                                    aria-expanded={!!shareAnchor}
+                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', color: shareAnchor ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+                                >
+                                    <Share2 size={14} />
+                                </button>
+                                {shareAnchor && (
+                                    <MessageMoreMenu
+                                        anchor={shareAnchor}
+                                        onClose={closeShareMenu}
+                                        groups={[[
+                                            { label: 'Share thread…', icon: <Share2 size={13} />, onClick: () => { closeShareMenu(); shareThread(); } },
+                                            { label: 'Copy thread', icon: <Copy size={13} />, onClick: () => { closeShareMenu(); copyThread(); } },
+                                            { label: 'Copy link to thread', icon: <Link2 size={13} />, onClick: () => { closeShareMenu(); copyThreadLink(); } },
+                                        ]]}
+                                    />
+                                )}
                                 <button
                                     onClick={toggleResolved}
                                     disabled={resolving}

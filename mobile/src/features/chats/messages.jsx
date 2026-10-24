@@ -2,7 +2,7 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown, BarChart3, BellRing, Bookmark, Camera, CheckCircle2, Copy, CornerDownRight, Ellipsis, History, ImageIcon, Languages, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Sparkles, Trash2, TriangleAlert, Paperclip,
+  ArrowDown, BarChart3, BellRing, Bookmark, Camera, CheckCircle2, Copy, CornerDownRight, Ellipsis, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, Sparkles, Trash2, TriangleAlert, Paperclip,
 } from 'lucide-react';
 import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
@@ -12,7 +12,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { Markdown } from '../../ui/Markdown.jsx';
 import { Sheet, Dialog } from '../../ui/Overlay.jsx';
 import { cx } from '../../ui/cx.js';
-import { tap } from '../../native/index.js';
+import { copyText, tap } from '../../native/index.js';
 import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
@@ -448,7 +448,7 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
   );
 }
 
-export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, onInfo, canThread = true }) {
+export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, onInfo, onCopyLink, onShare, canThread = true }) {
   const [confirm, setConfirm] = useState(false);
   if (!message) return null;
   const mine = message.authorId === me;
@@ -459,14 +459,12 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
       icon: Copy,
       label: 'Copy text',
       run: async () => {
-        try {
-          await navigator.clipboard.writeText(message.text);
-          toast('Copied');
-        } catch {
-          toast("Couldn't copy on this device", 'danger');
-        }
+        if (await copyText(message.text)) toast('Copied');
+        else toast("Couldn't copy on this device", 'danger');
       },
     },
+    onCopyLink && !message.pending && { icon: Link2, label: 'Copy link', run: onCopyLink },
+    onShare && !message.pending && { icon: Share2, label: 'Share…', run: onShare },
     onPin && { icon: Pin, label: message.pinned ? 'Unpin from conversation' : 'Pin to conversation', run: onPin },
     onSave && { icon: Bookmark, label: message.saved ? 'Remove from saved' : 'Save for later', run: onSave },
     onRemind && { icon: BellRing, label: 'Remind me about this', run: onRemind },

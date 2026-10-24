@@ -16,6 +16,7 @@ import api from '@services/api';
 import logger from '../../../utils/logger';
 import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark';
 import GroupAvatar from '../../../features/messaging/groupDm/GroupAvatar';
+import { missingUnreadIds, idsToReloadFor } from '../../../features/notifications/unreadListSync';
 
 const MessagesPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -69,6 +70,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     }, []);
 
     // Keep previews and ordering live: newest conversation first.
+    const reloadedForRef = useRef(new Set());
     useEffect(() => {
         if (!socket) return undefined;
         const LABELS = { image: '📷 Photo', video: '🎬 Video', voice: '🎵 Voice note', file: '📎 File', poll: '📊 Poll', contact: '👤 Contact', meeting: '📅 Meeting', checklist: '☑️ Checklist' };
@@ -80,6 +82,15 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 const { decryptTextOrNull } = await import('../../../services/messageEncryptionService');
                 text = (await decryptTextOrNull(msg.payload.ciphertext, msg.payload.messageIv, dmId, 'dm')) || 'Encrypted message';
             }
+            if (!contactsRef.current.some(c => String(c.id) === dmId)) {
+                // A conversation this list doesn't have yet (someone just started it): reload,
+                // once per conversation (agent chats are never listed here).
+                if (!reloadedForRef.current.has(dmId)) {
+                    reloadedForRef.current.add(dmId);
+                    setReloadKey(k => k + 1);
+                }
+                return;
+            }
             setContacts(prev => {
                 const idx = prev.findIndex(c => String(c.id) === dmId);
                 if (idx === -1) return prev;
@@ -87,9 +98,27 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
             });
         };
+        const onNewSession = () => setReloadKey(k => k + 1);
         socket.on('new-message', onNewMessage);
-        return () => socket.off('new-message', onNewMessage);
+        socket.on('new-dm-session', onNewSession);
+        socket.on('dm:members_updated', onNewSession);
+        return () => {
+            socket.off('new-message', onNewMessage);
+            socket.off('new-dm-session', onNewSession);
+            socket.off('dm:members_updated', onNewSession);
+        };
     }, [socket]);
+
+    // A DM with unread messages that isn't listed yet (its first message reached the unread
+    // counts before this list knew about it): reload so it shows here, not only under Unread.
+    const conversationUnread = notif?.conversationUnread;
+    const triedMissingRef = useRef(new Set());
+    useEffect(() => { triedMissingRef.current = new Set(); }, [workspaceId]);
+    useEffect(() => {
+        if (isLoading || !workspaceId) return;
+        const missing = missingUnreadIds(conversationUnread, 'dm', contacts.map(c => c.id));
+        if (idsToReloadFor(missing, triedMissingRef.current).length) setReloadKey(k => k + 1);
+    }, [conversationUnread, contacts, isLoading, workspaceId]);
 
     useEffect(() => {
         const loadDMs = async () => {
