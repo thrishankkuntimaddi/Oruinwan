@@ -1,6 +1,8 @@
 // Wide-window navigation: replaces the bottom tab bar. A narrow rail with icons on laptops,
-// and labels too once there is room. Search, notifications, files and knowledge open in
-// the Home tab's detail pane, so the list on the left keeps its place.
+// and labels too once there is room. The same destinations as the phone: the five tabs (Home,
+// Chats, Tasks, Notes, Activity), then Oruinwan AI and Search (the phone header's buttons).
+// Search, saved items, files and knowledge open in the Home tab's detail pane, so the list on
+// the left keeps its place.
 import { useState } from 'react';
 import {
   Bell, Bookmark, BookOpen, ChevronDown, FileText, FolderOpen, Headphones, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig, Workflow,
@@ -75,17 +77,17 @@ export function Sidebar() {
 
   const hub = tab === 'home' && (HUB_ROUTES.includes(homeTop) || homeTop?.startsWith('settings')) ? homeTop : null;
   const main = [
-    { id: 'home', label: 'Home', icon: House, dot: unread.notifications > 0 },
+    { id: 'home', label: 'Home', icon: House },
     { id: 'chats', label: 'Chats', icon: MessagesSquare, badge: unread.channels + unread.dms },
-    flags.ai && { id: 'ai', label: 'Oruinwan AI', icon: Sparkles },
     { id: 'tasks', label: 'Tasks', icon: SquareCheckBig, badge: due },
     flags.notes && { id: 'notes', label: 'Notes', icon: FileText },
-    // Not a tab: the Huddles list opens in the Home tab's detail pane (meetings open beside it).
-    flags.huddles && { id: 'huddles', route: 'huddles', label: 'Huddles', icon: Headphones },
+    { id: 'activity', label: 'Activity', icon: Bell, badge: unread.notifications },
   ].filter(Boolean);
   const more = [
+    flags.ai && { id: 'ai', label: 'Oruinwan AI', icon: Sparkles },
     { route: 'search', label: 'Search', icon: Search, hint: SEARCH_SHORTCUT },
-    { route: 'notifications', label: 'Notifications', icon: Bell, badge: unread.notifications },
+    // Not a tab: the Huddles list opens in the Home tab's detail pane (meetings open beside it).
+    flags.huddles && { route: 'huddles', label: 'Huddles', icon: Headphones },
     { route: 'saved', label: 'Saved items', icon: Bookmark },
     flags.files && { route: 'files', label: 'Files', icon: FolderOpen },
     flags.knowledge && { route: 'knowledge', label: 'Knowledge', icon: BookOpen },
@@ -121,13 +123,19 @@ export function Sidebar() {
             key={it.id}
             {...it}
             tour={it.id}
-            active={it.route ? hub === it.route || (it.route === 'huddles' && hub === 'meetings') : tab === it.id && !hub}
-            onClick={() => (it.route ? open('home', it.route) : hub && it.id === 'home' ? open('home') : setTab(it.id))}
+            active={tab === it.id && !hub}
+            onClick={() => (hub && it.id === 'home' ? open('home') : setTab(it.id))}
           />
         ))}
         <div className="mx-1 my-3 border-t border-line-soft" />
         {more.map((it) => (
-          <Item key={it.route} {...it} tour={it.route} active={hub === it.route} onClick={() => open('home', it.route)} />
+          <Item
+            key={it.id || it.route}
+            {...it}
+            tour={it.id || it.route}
+            active={it.id ? tab === it.id : hub === it.route || (it.route === 'huddles' && hub === 'meetings')}
+            onClick={() => (it.id ? setTab(it.id) : open('home', it.route))}
+          />
         ))}
       </div>
 

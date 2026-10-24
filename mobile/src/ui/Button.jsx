@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { cx } from './cx.js';
 import { Icon } from './Icon.jsx';
+import { useWide } from '../app/layout.js';
 
 const VARIANTS = {
   primary: 'bg-gold text-on-accent active:brightness-95',
@@ -72,6 +73,32 @@ export function IconButton({ icon, label, onClick, className, badge, tone = 'def
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
+    </button>
+  );
+}
+
+/**
+ * The floating "create" button of a list tab (new message, new task, new note): a gold rounded
+ * square in a bottom corner, clear of the tab bar and the home indicator. Wide windows have no
+ * tab bar, so there it sits lower.
+ */
+export function Fab({ icon, label, onClick, side = 'right', className, ...rest }) {
+  const wide = useWide();
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cx(
+        'pressable absolute z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent shadow-lg',
+        side === 'left' ? 'left-4' : 'right-4',
+        className,
+      )}
+      style={{ bottom: wide ? 'calc(var(--sab) + 20px)' : 'calc(var(--sab) + 76px)' }}
+      {...rest}
+    >
+      <Icon as={icon} size="lg" />
     </button>
   );
 }

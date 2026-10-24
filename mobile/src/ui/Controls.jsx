@@ -1,4 +1,4 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef, useEffect, useId, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { cx } from './cx.js';
 import { Icon } from './Icon.jsx';
@@ -71,8 +71,18 @@ export function Segmented({ options, value, onChange, className, size = 'md', sc
 
 /** Horizontally scrolling filter chips. */
 export function Chips({ options, value, onChange, className }) {
+  // Keep the chosen chip in view when it changes (e.g. a remembered view further along the row).
+  const row = useRef(null);
+  useEffect(() => {
+    const el = row.current?.querySelector('[data-active="true"]');
+    const box = row.current;
+    if (!el || !box) return;
+    if (el.offsetLeft < box.scrollLeft || el.offsetLeft + el.offsetWidth > box.scrollLeft + box.clientWidth) {
+      box.scrollLeft = Math.max(0, el.offsetLeft - 16);
+    }
+  }, [value]);
   return (
-    <div className={cx('no-scrollbar flex gap-2 overflow-x-auto px-4', className)}>
+    <div ref={row} className={cx('no-scrollbar relative flex gap-2 overflow-x-auto px-4', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -80,6 +90,7 @@ export function Chips({ options, value, onChange, className }) {
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
+            data-active={active ? 'true' : undefined}
             className={cx(
               'pressable h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium',
               active ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2',

@@ -53,11 +53,13 @@ describe('syncLayout', () => {
 });
 
 describe('shortcutFor', () => {
-  const tabs = ['home', 'chats', 'ai', 'tasks', 'notes'];
+  const tabs = ['home', 'chats', 'tasks', 'notes', 'activity'];
   const key = (k, extra = {}) => ({ key: k, metaKey: true, ...extra });
   it('maps modifier shortcuts', () => {
     expect(shortcutFor(key('k'), tabs)).toEqual({ kind: 'search' });
     expect(shortcutFor(key('2'), tabs)).toEqual({ kind: 'tab', tab: 'chats' });
+    expect(shortcutFor(key('5'), tabs)).toEqual({ kind: 'tab', tab: 'activity' });
+    expect(shortcutFor(key('j'), tabs)).toEqual({ kind: 'ai' });
     expect(shortcutFor(key('9'), tabs)).toBeNull();
     expect(shortcutFor(key('['), tabs)).toEqual({ kind: 'back' });
     expect(shortcutFor(key(','), tabs)).toEqual({ kind: 'settings' });

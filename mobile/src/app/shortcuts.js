@@ -5,10 +5,11 @@ export const MOD = isApple ? '⌘' : 'Ctrl';
 
 export const SHORTCUTS = [
   { keys: `${MOD} K`, label: 'Search' },
-  { keys: `${MOD} 1 … 5`, label: 'Home, Chats, AI, Tasks, Notes' },
+  { keys: `${MOD} 1 … 5`, label: 'Home, Chats, Tasks, Notes, Activity' },
+  { keys: `${MOD} J`, label: 'Oruinwan AI' },
   { keys: `${MOD} [`, label: 'Back' },
   { keys: `${MOD} ,`, label: 'Settings' },
-  { keys: `${MOD} ⇧ N`, label: 'Notifications' },
+  { keys: `${MOD} ⇧ N`, label: 'Activity' },
   { keys: `${MOD} /`, label: 'Keyboard shortcuts' },
   { keys: 'Esc', label: 'Close a sheet, leave a field, go back' },
 ];
@@ -16,7 +17,7 @@ export const SHORTCUTS = [
 /**
  * What a key press asks for, or null. `tabs` is the list of visible tabs in order.
  * Returns { kind: 'tab', tab } | { kind: 'search' } | { kind: 'back' } | { kind: 'settings' }
- *   | { kind: 'notifications' } | { kind: 'help' }.
+ *   | { kind: 'notifications' } | { kind: 'ai' } | { kind: 'help' }.
  */
 export function shortcutFor(e, tabs = []) {
   const mod = e.metaKey || e.ctrlKey;
@@ -27,6 +28,7 @@ export function shortcutFor(e, tabs = []) {
     return null;
   }
   if (key === 'k') return { kind: 'search' };
+  if (key === 'j') return { kind: 'ai' };
   if (key === '[') return { kind: 'back' };
   if (key === ',') return { kind: 'settings' };
   if (key === '/') return { kind: 'help' };

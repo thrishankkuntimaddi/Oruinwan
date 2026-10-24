@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
+  FileText, Plus, Search, Star, Users, X, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -9,7 +9,7 @@ import { useDirectory, useMembers, useNotes } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { NOTE_TYPES, NOTE_TYPE_OPTIONS } from '../../data/constants.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
-import { IconButton, Button } from '../../ui/Button.jsx';
+import { IconButton, Button, Fab } from '../../ui/Button.jsx';
 import { Chips, SearchField, Segmented } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
@@ -98,6 +98,7 @@ function NotesList({ section }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [templates, setTemplates] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   const notes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -136,10 +137,27 @@ function NotesList({ section }) {
       <TabHeader title="Notes">
         <div className="space-y-2.5 pb-3">
           {section}
-          <div className="px-4">
-            <SearchField value={query} onChange={setQuery} placeholder="Search notes" />
-          </div>
-          <Chips options={FILTERS} value={filter} onChange={setFilter} />
+          {searching ? (
+            <div className="flex items-center gap-2 pr-2 pl-4">
+              <SearchField value={query} onChange={setQuery} placeholder="Search notes" className="flex-1" autoFocus />
+              <IconButton
+                icon={X}
+                label="Close search"
+                size="sm"
+                onClick={() => {
+                  setSearching(false);
+                  setQuery('');
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center pr-2">
+              <Chips options={FILTERS} value={filter} onChange={setFilter} className="min-w-0 flex-1 pr-2 [mask-image:linear-gradient(to_right,black_88%,transparent)]" />
+              <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
+                <IconButton icon={Search} label="Search notes" size="sm" onClick={() => setSearching(true)} />
+              </div>
+            </div>
+          )}
         </div>
       </TabHeader>
       <Body tab="notes" onRefresh={() => invalidate('notes')}>
@@ -155,20 +173,12 @@ function NotesList({ section }) {
           <EmptyState
             icon={FileText}
             title={query ? 'No notes match' : filter === 'archived' ? 'No archived notes' : 'No notes yet'}
-            body={query ? 'Try a different word.' : 'Meeting notes, specs, ideas — keep them with your team.'}
+            body={query ? 'Try a different word.' : filter === 'archived' ? 'Notes you archive are kept here.' : 'Meeting notes, specs, ideas — keep them with your team.'}
             action={!query && filter !== 'archived' ? { label: 'New note', icon: Plus, onClick: () => setTemplates(true) } : null}
           />
         )}
       </Body>
-      <button
-        type="button"
-        aria-label="New note"
-        onClick={() => setTemplates(true)}
-        className="pressable absolute right-4 z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent"
-        style={{ bottom: 'calc(var(--sab) + 76px)' }}
-      >
-        <Icon as={Plus} size="lg" />
-      </button>
+      <Fab icon={Plus} label="New note" onClick={() => setTemplates(true)} />
       <Sheet open={templates} onClose={() => setTemplates(false)} title="New note">
         <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
           {TEMPLATES.map((t) => {

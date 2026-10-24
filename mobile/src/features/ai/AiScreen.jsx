@@ -342,6 +342,7 @@ export function AiScreen() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TabHeader
+        onBack={nav.leaveAi}
         title={knowledge ? 'Company knowledge' : current.name}
         actions={
           <>
@@ -490,7 +491,8 @@ export function AiScreen() {
         <AiQuotaLine ws={ws} className="pt-1.5" />
         <p className="pt-1 text-center text-[11px] text-text-3">AI can make mistakes. Check important answers.</p>
       </div>
-      <div aria-hidden style={{ height: keyboardOpen ? 0 : 'calc(72px + var(--sab))' }} className="shrink-0" />
+      {/* No tab bar under AI (it opens from the headers), so only the home indicator needs room. */}
+      <div aria-hidden style={{ height: keyboardOpen ? 0 : 'var(--sab)' }} className="shrink-0" />
       <Sheet open={historyOpen} onClose={() => setHistoryOpen(false)} title="Past conversations">
         <div className="px-2 pb-3">
           {history === null ? (
