@@ -7,7 +7,7 @@ import { pushTarget } from '../../data/live/notificationTarget.js';
 
 /**
  * A tapped push notification: switch to its workspace if needed, then open its conversation
- * (or the Notifications list when it points at something else).
+ * (or the Activity tab when it points at something else).
  */
 export function openPush(data = {}) {
   const session = useSession.getState();
@@ -24,7 +24,7 @@ export function openPush(data = {}) {
     return;
   }
   // Meeting reminders, design reviews, AI suggestions… open what they're about.
-  if (!openTarget(pushTarget(data))) nav.push('notifications');
+  if (!openTarget(pushTarget(data))) nav.open('activity');
 }
 
 /** Opens a notification target; false when there's nothing to open. */

@@ -17,9 +17,11 @@ const automations = () => import('../features/automations/screens.jsx');
 
 export const TAB_ROOTS = {
   chats: pick(chats, 'ChatsScreen'),
-  ai: pick(() => import('../features/ai/AiScreen.jsx'), 'AiScreen'),
   tasks: pick(tasks, 'TasksScreen'),
   notes: pick(notes, 'NotesScreen'),
+  activity: pick(more, 'ActivityScreen'),
+  // Not on the tab bar: opened from the AI button in every tab's header.
+  ai: pick(() => import('../features/ai/AiScreen.jsx'), 'AiScreen'),
 };
 
 export const ROUTES = {
@@ -32,6 +34,7 @@ export const ROUTES = {
   browseChannels: pick(chats, 'BrowseChannelsScreen'),
   profile: pick(chats, 'ProfileScreen'),
   saved: pick(chats, 'SavedScreen'),
+  unread: pick(chats, 'UnreadScreen'),
   task: pick(tasks, 'TaskScreen'),
   planning: pick(tasks, 'PlanningScreen'),
   sprint: pick(tasks, 'SprintScreen'),
@@ -40,6 +43,7 @@ export const ROUTES = {
   page: pick(knowledge, 'PageScreen'),
   files: pick(more, 'FilesScreen'),
   file: pick(() => import('../features/files/FileScreen.jsx'), 'FileScreen'),
+  // Older links and builds; the Activity tab shows the same list.
   notifications: pick(more, 'NotificationsScreen'),
   search: pick(() => import('../features/search/SearchScreen.jsx'), 'SearchScreen'),
   integrations: pick(more, 'IntegrationsScreen'),

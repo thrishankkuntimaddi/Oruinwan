@@ -9,3 +9,4 @@ export {
 } from './screens.jsx';
 export { SavedScreen } from './SavedScreen.jsx';
 export { NewGroupScreen, GroupInfoScreen } from './groupScreens.jsx';
+export { UnreadScreen } from './UnreadScreen.jsx';

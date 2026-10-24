@@ -5,6 +5,7 @@ import {
   SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
+import { TabHeader } from '../../app/TabHeader.jsx';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import {
   useChannels, useDirectory, useIntegrations, useMembers, useNotifications, useSharedFiles,
@@ -49,7 +50,13 @@ const NOTIF_FILTERS = [
   { value: 'reviews', label: 'Reviews' },
 ];
 
-export function NotificationsScreen({ initial = 'all' }) {
+/** The Activity tab: notifications, with the same header as every other tab. */
+export function ActivityScreen() {
+  return <NotificationsScreen asTab />;
+}
+
+/** Notifications. `asTab`: the Activity tab's root; otherwise a pushed screen (older links). */
+export function NotificationsScreen({ initial = 'all', asTab = false }) {
   const ws = useSession((s) => s.workspaceId);
   const { data, loading } = useNotifications();
   const directory = useDirectory();
@@ -92,14 +99,20 @@ export function NotificationsScreen({ initial = 'all' }) {
 
   return (
     <Screen>
-      <Header
-        title="Notifications"
-        subtitle={unread ? `${unread} unread` : 'All caught up'}
-        actions={unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}
-      >
-        <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />
-      </Header>
-      <Body onRefresh={() => invalidate('notifications')}>
+      {asTab ? (
+        <TabHeader title="Activity" actions={unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}>
+          <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />
+        </TabHeader>
+      ) : (
+        <Header
+          title="Notifications"
+          subtitle={unread ? `${unread} unread` : 'All caught up'}
+          actions={unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}
+        >
+          <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />
+        </Header>
+      )}
+      <Body tab={asTab ? 'activity' : undefined} onRefresh={() => invalidate('notifications')}>
         {loading ? (
           <SkeletonRows />
         ) : list.length ? (
@@ -109,7 +122,11 @@ export function NotificationsScreen({ initial = 'all' }) {
             ))}
           </div>
         ) : (
-          <EmptyState icon={Bell} title="Nothing here" body="Mentions, direct messages, tasks, meetings and design reviews show up here." />
+          <EmptyState
+            icon={Bell}
+            title={filter === 'all' ? 'No activity yet' : 'Nothing here'}
+            body="Mentions, direct messages, tasks, meetings and design reviews show up here."
+          />
         )}
         <div className="mt-6 px-4">
           <Button variant="secondary" size="sm" icon={Settings2} onClick={() => nav.push('settings.notifications')}>

@@ -12,6 +12,7 @@ export const TOUR_STEPS = [
   { target: 'search', title: 'Search', body: 'Find messages, files and people in this workspace.' },
   { target: 'ai', title: 'AI & agents', body: 'Ask Oruinwan AI about your work, or chat with Claude and other agents.' },
   { target: 'tasks', title: 'Tasks', body: 'What’s assigned to you and what’s due, in one place.' },
+  { target: 'activity', title: 'Activity', body: 'Mentions, replies, reminders and anything else that needs you.' },
   { target: 'profile', title: 'You’re all set', body: 'Your profile and settings are here. Take this tour again any time from Settings.' },
 ];
 

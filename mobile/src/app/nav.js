@@ -5,7 +5,11 @@ import { uid } from '../lib/id.js';
 import { tap } from '../native/index.js';
 import { isSplit, useSplit } from './layout.js';
 
-export const TABS = ['home', 'chats', 'ai', 'tasks', 'notes'];
+// The bottom tab bar, in order. Activity is the notifications list.
+export const BAR_TABS = ['home', 'chats', 'tasks', 'notes', 'activity'];
+// Every stack. AI is not on the tab bar: it opens from the AI button in each tab's header (and
+// the sidebar on wide windows), covers the tab bar, and its back button returns to `prev`.
+export const TABS = [...BAR_TABS, 'ai'];
 
 const emptyStacks = () => Object.fromEntries(TABS.map((t) => [t, []]));
 
@@ -19,6 +23,7 @@ export function markPane(tab, pane) {
 
 export const useNav = create((set, get) => ({
   tab: 'home',
+  prev: 'home', // the tab to return to when leaving AI
   stacks: emptyStacks(),
   overlays: [], // [{ id, close }]
 
@@ -31,7 +36,13 @@ export const useNav = create((set, get) => ({
       return;
     }
     tap('select');
-    set({ tab });
+    set(tab === 'ai' ? { tab, prev: current } : { tab });
+  },
+
+  /** Leaves the AI screen for the tab it was opened from. */
+  leaveAi() {
+    const { tab, prev } = get();
+    if (tab === 'ai') set({ tab: prev && prev !== 'ai' ? prev : 'home' });
   },
 
   push(name, params = {}, { tab } = {}) {
@@ -40,7 +51,7 @@ export const useNav = create((set, get) => ({
     const fresh = isSplit(target) && !(origin?.pane === 'detail' && origin.tab === target);
     // Anything else opened before the next click (open() then push()) stacks on this screen.
     origin = { tab: target, pane: 'detail' };
-    set((s) => ({ tab: target, stacks: { ...s.stacks, [target]: fresh ? [route] : [...s.stacks[target], route] } }));
+    set((s) => ({ tab: target, ...(target === 'ai' && s.tab !== 'ai' ? { prev: s.tab } : {}), stacks: { ...s.stacks, [target]: fresh ? [route] : [...s.stacks[target], route] } }));
   },
 
   replace(name, params = {}) {
@@ -63,12 +74,13 @@ export const useNav = create((set, get) => ({
     origin = { tab, pane: 'detail' };
     set((s) => ({
       tab,
+      ...(tab === 'ai' && s.tab !== 'ai' ? { prev: s.tab } : {}),
       stacks: { ...s.stacks, [tab]: name ? [{ key: uid('r'), name, params }] : [] },
     }));
   },
 
   resetAll() {
-    set({ tab: 'home', stacks: emptyStacks(), overlays: [] });
+    set({ tab: 'home', prev: 'home', stacks: emptyStacks(), overlays: [] });
   },
 
   pushOverlay(id, close) {
@@ -78,7 +90,7 @@ export const useNav = create((set, get) => ({
     set((s) => ({ overlays: s.overlays.filter((o) => o.id !== id) }));
   },
 
-  /** Android back: overlay → pushed screen → Home tab → let the OS minimise. */
+  /** Android back: overlay → pushed screen → (AI → the tab it came from) → Home tab → let the OS minimise. */
   back() {
     const { overlays, tab } = get();
     if (overlays.length) {
@@ -86,6 +98,10 @@ export const useNav = create((set, get) => ({
       return true;
     }
     if (get().pop()) return true;
+    if (tab === 'ai') {
+      get().leaveAi();
+      return true;
+    }
     if (tab !== 'home') {
       set({ tab: 'home' });
       return true;
@@ -110,4 +126,7 @@ export const nav = {
   replace: (...a) => useNav.getState().replace(...a),
   open: (...a) => useNav.getState().open(...a),
   setTab: (t) => useNav.getState().setTab(t),
+  /** Opens Oruinwan AI (header button, "Ask AI" actions). */
+  openAi: () => useNav.getState().setTab('ai'),
+  leaveAi: () => useNav.getState().leaveAi(),
 };

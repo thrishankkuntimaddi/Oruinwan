@@ -4,10 +4,12 @@
 //  - Split windows (tablets in portrait, app/layout.js): list tabs keep the phone layout in a
 //    column on the left, tab bar included, with the open screen beside it.
 //  - Wide windows: a sidebar, and for list tabs the list on the left with the open screen
-//    beside it. The AI tab stays a single centred column.
+//    beside it. AI stays a single centred column.
+//  - AI isn't on the tab bar: on phones and split windows it covers the tab bar, like a pushed
+//    screen, and its back button returns to the tab it was opened from.
 import { Suspense, useEffect, useState } from 'react';
-import { FileText, House, MessagesSquare, SquareCheckBig } from 'lucide-react';
-import { TABS, markPane, useNav } from './nav.js';
+import { Bell, FileText, House, MessagesSquare, SquareCheckBig } from 'lucide-react';
+import { BAR_TABS, TABS, markPane, useNav } from './nav.js';
 import { TAB_ROOTS, ROUTES } from './routes.js';
 import { PaneContext, SPLIT_TABS, useListWidth, useSplit, useWide } from './layout.js';
 import { TabBar } from './TabBar.jsx';
@@ -118,6 +120,7 @@ const PLACEHOLDER = {
   chats: { icon: MessagesSquare, title: 'Pick a conversation', body: 'Channels and direct messages open here, next to your list.' },
   tasks: { icon: SquareCheckBig, title: 'Pick a task', body: 'Details, subtasks and comments open here.' },
   notes: { icon: FileText, title: 'Pick a note', body: 'Notes open here, so you can keep your list in view.' },
+  activity: { icon: Bell, title: 'Nothing open', body: 'Tap a notification and what it points at opens here.' },
 };
 
 /** Unread conversations on the dock / taskbar icon (desktop app only). Its own component so
@@ -182,7 +185,7 @@ function SplitTab({ tab, stack }) {
       <div className="relative h-full">
         <Root tab={tab} />
         <Stack stack={stack} split={false} />
-        {stack.length === 0 && <TabBar />}
+        {stack.length === 0 && tab !== 'ai' && <TabBar />}
       </div>
     );
   }
@@ -218,7 +221,7 @@ export function Shell() {
   // Hardware keyboard shortcuts (app/shortcuts.js): ⌘K search, ⌘1-5 tabs, ⌘[ back, ⌘, settings.
   const [help, setHelp] = useState(false);
   useEffect(() => {
-    const tabs = TABS.filter((t) => (t !== 'ai' || flags.ai) && (t !== 'notes' || flags.notes));
+    const tabs = BAR_TABS.filter((t) => t !== 'notes' || flags.notes);
     const onKey = (e) => {
       const action = shortcutFor(e, tabs);
       if (!action) return;
@@ -228,7 +231,8 @@ export function Shell() {
       const openHub = (name) => (wide ? navState.open('home', name) : navState.push(name));
       if (action.kind === 'search') openHub('search');
       else if (action.kind === 'settings') openHub('settings');
-      else if (action.kind === 'notifications') openHub('notifications');
+      else if (action.kind === 'notifications') navState.setTab('activity');
+      else if (action.kind === 'ai') navState.setTab('ai');
       else if (action.kind === 'back') navState.pop();
       else if (action.kind === 'tab') navState.setTab(action.tab);
       else if (action.kind === 'help') setHelp((v) => !v);
@@ -282,11 +286,11 @@ export function Shell() {
           <Stack stack={stacks[t]} split={false} />
         </div>
       ))}
-      {stack.length === 0 && <TabBar />}
+      {stack.length === 0 && tab !== 'ai' && <TabBar />}
       <UnreadBadge />
       <HuddleLayer />
-        <OfflinePill />
-        <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
+      <OfflinePill />
+      <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
     </div>
   );
 }

@@ -74,7 +74,7 @@ export const useSplit = () => useLayout((s) => s.split);
 export const useListWidth = () => useLayout((s) => listColumnWidth(s.width, s.kind));
 
 /** Tabs whose root is a list: on split and wide windows the list stays visible next to the open item. */
-export const SPLIT_TABS = new Set(['home', 'chats', 'tasks', 'notes']);
+export const SPLIT_TABS = new Set(['home', 'chats', 'tasks', 'notes', 'activity']);
 
 export const isSplit = (tab) => useLayout.getState().split && SPLIT_TABS.has(tab);
 

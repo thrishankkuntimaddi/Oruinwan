@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Hash, Lock, Megaphone, BellOff, Search, SquarePen, Compass, MessageCirclePlus, Bot, Bookmark } from 'lucide-react';
+import { useMemo } from 'react';
+import { Hash, Lock, Megaphone, BellOff, SquarePen, Compass, MessageCirclePlus, Bot } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
 import { useAgents, useChannels, useDms } from '../../data/hooks.js';
@@ -7,10 +7,10 @@ import { api, useSession } from '../../data/session.js';
 import { toast } from '../../lib/bus.js';
 import { invalidate } from '../../data/query.js';
 import { Body, Screen } from '../../ui/Screen.jsx';
-import { IconButton } from '../../ui/Button.jsx';
+import { Fab } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { Segmented, SearchField } from '../../ui/Controls.jsx';
+import { Segmented } from '../../ui/Controls.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
@@ -37,7 +37,7 @@ export function ChannelTile({ channel, size = 44 }) {
   );
 }
 
-function UnreadPill({ unread, mentions }) {
+export function UnreadPill({ unread, mentions }) {
   if (mentions) {
     return <span className="rounded-full bg-danger px-1.5 text-[11px] font-bold leading-5 text-white">@{mentions}</span>;
   }
@@ -45,7 +45,7 @@ function UnreadPill({ unread, mentions }) {
   return <span className="min-w-5 rounded-full bg-gold px-1.5 text-center text-[11px] font-bold leading-5 text-on-accent">{unread > 99 ? '99+' : unread}</span>;
 }
 
-function ConversationRow({ kind, item }) {
+export function ConversationRow({ kind, item }) {
   const unread = item.unread > 0 && !item.muted;
   const title = kind === 'channel' ? item.name : item.user?.name;
   const selected = useIsOpen('conversation', item.id);
@@ -54,12 +54,13 @@ function ConversationRow({ kind, item }) {
       type="button"
       onClick={() => openConversation(kind, item.id)}
       aria-current={selected ? 'true' : undefined}
+      data-unread={unread ? 'true' : undefined}
       className={cx('flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
     >
       {kind === 'channel' ? <ChannelTile channel={item} /> : item.isGroup ? <GroupTile /> : <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="md" presence={item.user?.presence} className="m-0.5" />}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
-          <span className={cx('min-w-0 flex-1 truncate text-[15px]', unread ? 'font-semibold text-text' : 'text-text')}>
+          <span className={cx('min-w-0 flex-1 truncate text-[15px]', unread ? 'font-bold text-text' : 'text-text')}>
             {title}
           </span>
           {item.lastAt && <span className={cx('shrink-0 text-[11px]', unread ? 'text-accent-ink' : 'text-text-3')}>{shortAgo(item.lastAt)}</span>}
@@ -81,78 +82,108 @@ function ConversationRow({ kind, item }) {
   );
 }
 
-function GroupTitle({ children }) {
-  return <h2 className="px-4 pt-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">{children}</h2>;
+function GroupTitle({ children, count }) {
+  return (
+    <h2 className="flex items-center gap-2 px-4 pt-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">
+      {children}
+      {count > 0 && <span className="font-medium normal-case tracking-normal text-accent-ink">{count} unread</span>}
+    </h2>
+  );
+}
+
+export const isUnread = (c) => c.unread > 0 && !c.muted;
+
+/** Unread conversations first (newest first among them), then the rest by last activity. */
+export function sortConversations(list) {
+  return [...list].sort((a, b) => Number(isUnread(b)) - Number(isUnread(a)) || (b.lastAt || '').localeCompare(a.lastAt || ''));
+}
+
+/**
+ * Joined channels, people DMs and agent DMs, each sorted with unread first. Every conversation
+ * is in exactly one of them: unread ones are highlighted in place, never moved out of their section.
+ */
+export function chatSections(channels = [], dms = []) {
+  return {
+    channels: sortConversations(channels.filter((c) => c.isMember)),
+    people: sortConversations(dms.filter((d) => !d.agentId)),
+    agentDms: sortConversations(dms.filter((d) => d.agentId)),
+  };
+}
+
+/** One agent, with its DM's last message and unread count once you've talked to it. */
+function AgentRow({ agent, dm, onOpen }) {
+  const unread = dm ? isUnread(dm) : false;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2"
+      data-testid={`agent-${agent.id}`}
+      data-unread={unread ? 'true' : undefined}
+    >
+      <img src={agent.icon} alt="" className="h-11 w-11 shrink-0 rounded-xl" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span className={cx('min-w-0 flex-1 truncate text-[15px]', unread ? 'font-bold' : 'font-medium')}>{agent.name}</span>
+          {dm?.lastAt && <span className={cx('shrink-0 text-[11px]', unread ? 'text-accent-ink' : 'text-text-3')}>{shortAgo(dm.lastAt)}</span>}
+        </span>
+        <span className="mt-0.5 flex items-center gap-2">
+          <span className={cx('min-w-0 flex-1 truncate text-[13px]', unread ? 'text-text-2' : 'text-text-3')}>
+            {dm?.lastText ? plainPreview(dm.lastText, 90) : agent.tagline || agent.maker}
+          </span>
+          {unread && <UnreadPill unread={dm.unread} />}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/** Opens (or starts) the DM with an AI agent. */
+export async function chatWithAgent(agent) {
+  try {
+    const id = await api().openAgentDm(useSession.getState().workspaceId, agent.id);
+    invalidate('dms');
+    openConversation('dm', id);
+  } catch (err) {
+    toast(err.message || `Couldn't open ${agent.name}`, 'danger');
+  }
 }
 
 export function ChatsScreen() {
   const segment = useChatsUi((s) => s.segment);
   const setSegment = useChatsUi((s) => s.setSegment);
-  const [query, setQuery] = useState('');
   const { data: channels, loading: cLoading } = useChannels();
   const { data: dms, loading: dLoading } = useDms();
   const { data: agents } = useAgents();
 
-  const q = query.trim().toLowerCase();
-  const joined = useMemo(
-    () =>
-      (channels || [])
-        .filter((c) => c.isMember && (!q || c.name.toLowerCase().includes(q)))
-        .sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || '')),
-    [channels, q],
-  );
-  // Conversations with AI agents are listed under Agents, not with people.
-  const people = useMemo(() => (dms || []).filter((d) => !d.agentId && (!q || d.user?.name?.toLowerCase().includes(q))), [dms, q]);
-  const agentList = useMemo(() => (agents || []).filter((a) => !q || a.name.toLowerCase().includes(q)), [agents, q]);
-  const chatWithAgent = async (agent) => {
-    try {
-      const id = await api().openAgentDm(useSession.getState().workspaceId, agent.id);
-      invalidate('dms');
-      openConversation('dm', id);
-    } catch (err) {
-      toast(err.message || `Couldn't open ${agent.name}`, 'danger');
-    }
-  };
+  const { channels: joined, people, agentDms } = useMemo(() => chatSections(channels || [], dms || []), [channels, dms]);
+  const agentList = useMemo(() => {
+    const dmOf = new Map(agentDms.map((d) => [d.agentId, d]));
+    const hasUnread = (x) => Number(Boolean(x.dm && isUnread(x.dm)));
+    return (agents || []).map((a) => ({ agent: a, dm: dmOf.get(a.id) })).sort((x, y) => hasUnread(y) - hasUnread(x));
+  }, [agents, agentDms]);
   const notJoined = (channels || []).filter((c) => !c.isMember).length;
 
-  const unreadAll = useMemo(
-    () =>
-      [
-        ...joined.filter((c) => c.unread > 0 && !c.muted).map((c) => ({ kind: 'channel', item: c })),
-        ...people.filter((d) => d.unread > 0).map((d) => ({ kind: 'dm', item: d })),
-      ].sort((a, b) => (b.item.lastAt || '').localeCompare(a.item.lastAt || '')),
-    [joined, people],
-  );
-
-  const channelUnread = joined.filter((c) => !c.muted).reduce((a, c) => a + (c.unread || 0), 0);
-  const dmUnread = people.reduce((a, d) => a + (d.unread || 0), 0);
+  const sum = (list) => list.filter(isUnread).reduce((a, c) => a + (c.unread || 0), 0);
   const loading = (cLoading && !channels) || (dLoading && !dms);
 
-  const showChannels = segment !== 'dms';
-  const showDms = segment !== 'channels';
-  const unreadIds = new Set(unreadAll.map((u) => u.item.id));
+  const showChannels = segment === 'all' || segment === 'channels';
+  const showDms = segment === 'all' || segment === 'dms';
+  const showAgents = segment === 'all' || segment === 'agents';
 
   return (
     <Screen>
-      <TabHeader
-        title="Chats"
-        actions={
-          <>
-            <IconButton icon={Search} label="Search messages" onClick={() => nav.push('search')} />
-            <IconButton icon={Bookmark} label="Saved items and reminders" onClick={() => nav.push('saved')} />
-            <IconButton icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
-          </>
-        }
-      >
-        <div className="space-y-2.5 px-4 pb-3">
-          <SearchField value={query} onChange={setQuery} placeholder="Find a channel or person" />
+      <TabHeader title="Chats">
+        <div className="px-4 pb-3">
           <Segmented
+            label="Show"
             value={segment}
             onChange={setSegment}
             options={[
               { value: 'all', label: 'All' },
-              { value: 'channels', label: 'Channels', count: channelUnread },
-              { value: 'dms', label: 'Direct', count: dmUnread },
+              { value: 'channels', label: 'Channels', count: sum(joined) },
+              { value: 'dms', label: 'DMs', count: sum(people) },
+              { value: 'agents', label: 'Agents', count: sum(agentDms) },
             ]}
           />
         </div>
@@ -163,23 +194,13 @@ export function ChatsScreen() {
           <SkeletonRows count={8} />
         ) : (
           <>
-            {segment === 'all' && unreadAll.length > 0 && !q && (
-              <>
-                <GroupTitle>Unread</GroupTitle>
-                {unreadAll.map(({ kind, item }) => (
-                  <ConversationRow key={item.id} kind={kind} item={item} />
-                ))}
-              </>
-            )}
             {showChannels && (
-              <>
-                <GroupTitle>Channels</GroupTitle>
-                {joined
-                  .filter((c) => segment !== 'all' || q || !unreadIds.has(c.id))
-                  .map((c) => (
-                    <ConversationRow key={c.id} kind="channel" item={c} />
-                  ))}
-                {!joined.length && <p className="px-4 py-3 text-sm text-text-2">{q ? 'No channels match.' : "You haven't joined any channels yet."}</p>}
+              <section aria-label="Channels">
+                <GroupTitle count={joined.filter(isUnread).length}>Channels</GroupTitle>
+                {joined.map((c) => (
+                  <ConversationRow key={c.id} kind="channel" item={c} />
+                ))}
+                {!joined.length && <p className="px-4 py-3 text-sm text-text-2">You haven&apos;t joined any channels yet.</p>}
                 <button
                   type="button"
                   onClick={() => nav.push('browseChannels')}
@@ -190,17 +211,14 @@ export function ChatsScreen() {
                   </span>
                   <span className="text-[15px] font-medium">Browse channels{notJoined ? ` · ${notJoined} more` : ''}</span>
                 </button>
-              </>
+              </section>
             )}
             {showDms && (
-              <>
-                <GroupTitle>Direct messages</GroupTitle>
-                {people
-                  .filter((d) => segment !== 'all' || q || !unreadIds.has(d.id))
-                  .map((d) => (
-                    <ConversationRow key={d.id} kind="dm" item={d} />
-                  ))}
-                {!people.length && q && <p className="px-4 py-3 text-sm text-text-2">No people match.</p>}
+              <section aria-label="Direct messages">
+                <GroupTitle count={people.filter(isUnread).length}>Direct messages</GroupTitle>
+                {people.map((d) => (
+                  <ConversationRow key={d.id} kind="dm" item={d} />
+                ))}
                 <button
                   type="button"
                   onClick={() => nav.push('newMessage')}
@@ -211,47 +229,34 @@ export function ChatsScreen() {
                   </span>
                   <span className="text-[15px] font-medium">New message</span>
                 </button>
-              </>
+              </section>
             )}
-            {showDms && agentList.length > 0 && (
-              <>
-                <GroupTitle>Agents</GroupTitle>
-                {agentList.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => chatWithAgent(a)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2"
-                    data-testid={`agent-${a.id}`}
-                  >
-                    <img src={a.icon} alt="" className="h-11 w-11 shrink-0 rounded-xl" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-medium">{a.name}</span>
-                      <span className="block truncate text-[13px] text-text-2">{a.tagline || a.maker}</span>
-                    </span>
-                  </button>
+            {showAgents && (agentList.length > 0 || segment === 'agents') && (
+              <section aria-label="Agents">
+                <GroupTitle count={agentDms.filter(isUnread).length}>Agents</GroupTitle>
+                {agentList.map(({ agent, dm }) => (
+                  <AgentRow key={agent.id} agent={agent} dm={dm} onOpen={() => (dm ? openConversation('dm', dm.id) : chatWithAgent(agent))} />
                 ))}
-                {!q && (
-                  <button
-                    type="button"
-                    onClick={() => nav.push('agents')}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-accent-ink active:bg-surface-2"
-                    data-testid="agents-manage"
-                  >
-                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-dashed border-line-strong">
-                      <Icon as={Bot} size={18} />
-                    </span>
-                    <span className="text-[15px] font-medium">Connect an agent</span>
-                  </button>
-                )}
-              </>
+                <button
+                  type="button"
+                  onClick={() => nav.push('agents')}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-accent-ink active:bg-surface-2"
+                  data-testid="agents-manage"
+                >
+                  <span className="grid h-11 w-11 place-items-center rounded-xl border border-dashed border-line-strong">
+                    <Icon as={Bot} size={18} />
+                  </span>
+                  <span className="text-[15px] font-medium">Connect an agent</span>
+                </button>
+              </section>
             )}
-            {!joined.length && !people.length && !q && (
+            {!joined.length && !people.length && segment === 'all' && (
               <EmptyState icon={Hash} title="No conversations yet" body="Join a channel or start a direct message." />
             )}
           </>
         )}
       </Body>
+      <Fab icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
     </Screen>
   );
 }

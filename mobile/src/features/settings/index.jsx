@@ -830,7 +830,7 @@ export function AiSettings() {
         </Section>
         <Section title="Your conversations">
           <RowGroup footer="Past AI conversations are saved to your account, so they're on all your devices. Only you can see them.">
-            <Row icon={MessageSquareText} title="Saved conversations" value={count == null ? '…' : String(count)} onClick={() => nav.setTab('ai')} />
+            <Row icon={MessageSquareText} title="Saved conversations" value={count == null ? '…' : String(count)} onClick={nav.openAi} />
             <Row icon={Eraser} danger title="Clear AI conversations" chevron={false} disabled={!count} onClick={() => setConfirm(true)} />
           </RowGroup>
         </Section>

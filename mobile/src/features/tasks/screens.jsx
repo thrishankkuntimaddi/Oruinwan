@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  LayoutGrid, List, Plus, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
+  LayoutGrid, List, Plus, Search, X, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -10,8 +10,8 @@ import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { PRIORITY_META, STATUS_META, TASK_PRIORITIES, TASK_TRANSITIONS } from '../../data/constants.js';
 import { prefs } from '../../native/storage.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
-import { Button, IconButton } from '../../ui/Button.jsx';
-import { Chips, Field } from '../../ui/Controls.jsx';
+import { Button, Fab, IconButton } from '../../ui/Button.jsx';
+import { Chips, Field, SearchField } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
@@ -111,6 +111,16 @@ const SORTS = {
   title: { label: 'A–Z', fn: (a, b) => a.title.localeCompare(b.title) },
 };
 
+/** Tasks whose title, key or description contain every word of the query. */
+export function searchTasks(tasks, query) {
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return tasks;
+  return tasks.filter((t) => {
+    const hay = `${t.title || ''} ${t.issueKey || ''} ${t.description || ''}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
 /** The tasks a view shows. "My tasks" is the web's: ones I created that are assigned to me. */
 export function filterView(tasks, view, me) {
   const open = (t) => !['done', 'cancelled'].includes(t.status);
@@ -156,15 +166,18 @@ export function TasksScreen() {
   const me = useSession((s) => s.user?.id);
   const { data, loading } = useTasks();
   const directory = useDirectory();
-  const [view, setView] = useState(() => prefs.get('tasks.view', 'mine'));
+  // All tasks by default; the last view picked is remembered.
+  const [view, setView] = useState(() => prefs.get('tasks.view', 'all'));
   const [layout, setLayout] = useState(() => prefs.get('tasks.layout', 'list'));
   const [sort, setSort] = useState(() => prefs.get('tasks.sort', 'due'));
   const [sortSheet, setSortSheet] = useState(false);
   const [create, setCreate] = useState(false);
   const [newMenu, setNewMenu] = useState(false);
   const [fromTemplate, setFromTemplate] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
 
-  const tasks = useMemo(() => filterView(data || [], view, me).sort(SORTS[sort].fn), [data, view, me, sort]);
+  const tasks = useMemo(() => searchTasks(filterView(data || [], view, me), query).sort(SORTS[sort].fn), [data, view, me, sort, query]);
   const groups = useMemo(() => {
     const order = view === 'done' ? ['done', 'cancelled'] : OPEN_ORDER;
     return order.map((s) => ({ status: s, items: tasks.filter((t) => t.status === s) })).filter((g) => g.items.length);
@@ -177,27 +190,44 @@ export function TasksScreen() {
 
   return (
     <Screen>
-      <TabHeader
-        title="Tasks"
-        actions={
-          <>
-            <IconButton icon={CalendarRange} label="Planning: sprints, milestones, time report, design reviews" onClick={() => nav.push('planning')} />
-            <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} onClick={() => setSortSheet(true)} />
+      <TabHeader title="Tasks">
+        {searching ? (
+          <div className="flex items-center gap-2 pr-2 pb-3 pl-4">
+            <SearchField value={query} onChange={setQuery} placeholder="Search tasks" className="flex-1" autoFocus />
             <IconButton
-              icon={layout === 'list' ? LayoutGrid : List}
-              label={layout === 'list' ? 'Show board' : 'Show list'}
-              onClick={() => pick('tasks.layout', layout === 'list' ? 'board' : 'list', setLayout)}
+              icon={X}
+              label="Close search"
+              size="sm"
+              onClick={() => {
+                setSearching(false);
+                setQuery('');
+              }}
             />
-          </>
-        }
-      >
-        <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="pb-3" />
+          </div>
+        ) : (
+          <div className="flex items-center pr-2 pb-3">
+            <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="min-w-0 flex-1 pr-2" />
+            <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
+              <IconButton icon={Search} label="Search tasks" size="sm" onClick={() => setSearching(true)} />
+              <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} size="sm" onClick={() => setSortSheet(true)} />
+              <IconButton icon={CalendarRange} label="Planning: sprints, milestones, time report, design reviews" size="sm" onClick={() => nav.push('planning')} />
+              <IconButton
+                icon={layout === 'list' ? LayoutGrid : List}
+                label={layout === 'list' ? 'Show board' : 'Show list'}
+                size="sm"
+                onClick={() => pick('tasks.layout', layout === 'list' ? 'board' : 'list', setLayout)}
+              />
+            </div>
+          </div>
+        )}
       </TabHeader>
       <Body tab="tasks" onRefresh={() => invalidate('tasks')}>
         {view === 'trash' ? (
           <TrashView />
         ) : loading ? (
           <SkeletonRows count={7} avatar={false} />
+        ) : !tasks.length && query.trim() ? (
+          <EmptyState icon={Search} title="No tasks match" body="Try another word, or look in a different view." />
         ) : !tasks.length ? (
           <EmptyState
             icon={SquareCheckBig}
@@ -224,15 +254,7 @@ export function TasksScreen() {
           ))
         )}
       </Body>
-      <button
-        type="button"
-        aria-label="New task"
-        onClick={() => setNewMenu(true)}
-        className="pressable absolute right-4 z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent"
-        style={{ bottom: 'calc(var(--sab) + 76px)' }}
-      >
-        <Icon as={Plus} size="lg" />
-      </button>
+      <Fab icon={Plus} label="New task" side="left" onClick={() => setNewMenu(true)} />
       <ActionSheet
         open={sortSheet}
         onClose={() => setSortSheet(false)}

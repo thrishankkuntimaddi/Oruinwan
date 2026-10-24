@@ -1,4 +1,4 @@
-import { House, MessagesSquare, Sparkles, SquareCheckBig, FileText } from 'lucide-react';
+import { Bell, House, MessagesSquare, SquareCheckBig, FileText } from 'lucide-react';
 import { useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
 import { useUnreadCounts, useTasks } from '../data/hooks.js';
@@ -19,18 +19,18 @@ export function useDueSoonCount() {
 export function TabBar() {
   const tab = useNav((s) => s.tab);
   const setTab = useNav((s) => s.setTab);
-  const aiOn = useFlag('ai');
   const notesOn = useFlag('notes');
   const unread = useUnreadCounts();
   const due = useDueSoonCount();
   const keyboardOpen = useKeyboard((s) => s.open);
 
+  // Home · Chats · Tasks · Notes · Activity. AI opens from every tab's header instead.
   const items = [
-    { id: 'home', label: 'Home', icon: House, dot: unread.notifications > 0 },
+    { id: 'home', label: 'Home', icon: House },
     { id: 'chats', label: 'Chats', icon: MessagesSquare, badge: unread.channels + unread.dms },
-    aiOn && { id: 'ai', label: 'AI', icon: Sparkles, hero: true },
     { id: 'tasks', label: 'Tasks', icon: SquareCheckBig, badge: due },
     notesOn && { id: 'notes', label: 'Notes', icon: FileText },
+    { id: 'activity', label: 'Activity', icon: Bell, badge: unread.notifications },
   ].filter(Boolean);
 
   if (keyboardOpen) return null;
@@ -43,30 +43,6 @@ export function TabBar() {
       <div className="mx-auto flex h-[60px] max-w-[520px] items-stretch">
         {items.map((it) => {
           const active = tab === it.id;
-          if (it.hero) {
-            return (
-              <button
-                key={it.id}
-                type="button"
-                aria-label="Oruinwan AI"
-                data-tour={it.id}
-                aria-current={active ? 'page' : undefined}
-                onClick={() => setTab(it.id)}
-                className="relative flex flex-1 flex-col items-center justify-end pb-1.5"
-              >
-                <span
-                  className={cx(
-                    'pressable absolute -top-4 grid h-[52px] w-[52px] place-items-center rounded-full ring-4 ring-bg/70',
-                    'bg-gold text-on-accent',
-                    active && 'scale-105',
-                  )}
-                >
-                  <Icon as={it.icon} size="lg" />
-                </span>
-                <span className={cx('text-[11px] font-medium', active ? 'text-accent-ink' : 'text-text-2')}>{it.label}</span>
-              </button>
-            );
-          }
           return (
             <button
               key={it.id}
