@@ -38,13 +38,30 @@ export function audioStreams(participants, { localStream, remoteStreams }) {
     return out;
 }
 
+// huddleId -> when someone else was first in the call with me (shared by the full and mini call).
+const answeredAt = new Map();
+
+/**
+ * When a DM or group-DM call was answered: null while it is still ringing. A DM call is a phone
+ * call: its clock starts when the other person picks up, not when I pressed Call.
+ */
+export function useAnsweredAt(huddleId, participants) {
+    const someoneElse = (participants || []).some(p => !p.isLocal);
+    if (huddleId && someoneElse && !answeredAt.has(huddleId)) answeredAt.set(huddleId, Date.now());
+    if (answeredAt.size > 20) answeredAt.delete(answeredAt.keys().next().value);
+    return huddleId ? answeredAt.get(huddleId) || null : null;
+}
+
 /** The call's name, time and kind, shared by the full and the mini call. */
 export function useCallHeader(ctx) {
     const call = ctx.selectedHuddle || ctx.panelCall || {};
-    const started = ctx.session?.startedAt || call.startTime;
+    const isDmCall = !!(call.dmId || ctx.callScope?.dmId);
+    const answered = useAnsweredAt(ctx.huddleId, ctx.participants);
+    const ringing = isDmCall && !answered;
+    const started = isDmCall ? answered : (ctx.session?.startedAt || call.startTime);
     const seconds = useCallClock(started);
     const title = callTitle({ ...call, channelName: call.channelName || ctx.session?.channelName });
-    return { title, seconds, call };
+    return { title, seconds, call, ringing };
 }
 
 /**
@@ -60,7 +77,7 @@ export default function CallScreen({ ctx, onPopOut }) {
         screenStream, startScreenShare, stopScreenShare, peerStates, handRaised, toggleHand, huddleId,
     } = ctx;
     const [showPeople, setShowPeople] = useState(false);
-    const { title, seconds } = useCallHeader(ctx);
+    const { title, seconds, ringing } = useCallHeader(ctx);
     const speaking = useSpeaking(audioStreams(participants, { localStream, remoteStreams }));
 
     const capture = useCallCapture();
@@ -101,7 +118,7 @@ export default function CallScreen({ ctx, onPopOut }) {
             <header className="cs-head">
                 <span className="hw-live-dot" />
                 <h2 className="cs-title">{title}</h2>
-                <span className="cs-time">{formatTime(seconds)}</span>
+                <span className="cs-time" data-testid="call-time">{ringing ? 'Calling…' : formatTime(seconds)}</span>
                 {sharing && <span className="cs-chip is-accent">Sharing your screen</span>}
                 {recording && <span className="cs-chip is-danger">Recording</span>}
                 {raised > 0 && <span className="cs-chip">{raised} {raised === 1 ? 'hand' : 'hands'} up</span>}

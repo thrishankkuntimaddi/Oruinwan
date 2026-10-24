@@ -1018,7 +1018,10 @@ async function enrichPollVoters(message) {
             ...plain,
             options: plain.options.map(opt => ({
                 ...opt,
-                votes: (opt.votes || []).map(v => ({ _id: v.toString(), username: names[v.toString()] || 'Unknown' })),
+                // Anonymous polls: no names (each app only needs to find its own vote).
+                votes: (opt.votes || []).map(v => (plain.anonymous
+                    ? { _id: v.toString() }
+                    : { _id: v.toString(), username: names[v.toString()] || 'Unknown' })),
             })),
         };
     } catch (err) {

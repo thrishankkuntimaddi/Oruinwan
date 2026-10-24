@@ -155,14 +155,28 @@ describe('meeting tabs', () => {
         await waitFor(() => expect(record.deleteActionItem).toHaveBeenCalledWith('a1'));
     });
 
-    it('adds and saves agenda items', async () => {
+    it('saves agenda items as soon as they are added, moved, edited or removed', async () => {
         const onSave = vi.fn().mockResolvedValue({});
         render(<AgendaTab meeting={base} onSave={onSave} />);
         fireEvent.change(screen.getByLabelText('New agenda item'), { target: { value: 'Launch date' } });
         fireEvent.keyDown(screen.getByLabelText('New agenda item'), { key: 'Enter' });
         expect(screen.getAllByTestId('agenda-item')).toHaveLength(1);
-        fireEvent.click(screen.getByText('Save agenda'));
         await waitFor(() => expect(onSave).toHaveBeenCalledWith([{ title: 'Launch date', notes: '', order: 0 }]));
+        fireEvent.change(screen.getByLabelText('New agenda item'), { target: { value: 'Budget' } });
+        fireEvent.keyDown(screen.getByLabelText('New agenda item'), { key: 'Enter' });
+        await waitFor(() => expect(onSave).toHaveBeenLastCalledWith([
+            { title: 'Launch date', notes: '', order: 0 }, { title: 'Budget', notes: '', order: 1 },
+        ]));
+        fireEvent.click(screen.getAllByLabelText('Move up')[0]);
+        await waitFor(() => expect(onSave.mock.lastCall[0].map((i) => i.title)).toEqual(['Budget', 'Launch date']));
+        fireEvent.click(screen.getAllByLabelText('Edit item')[0]);
+        fireEvent.change(screen.getByLabelText('Agenda item'), { target: { value: 'Budget review' } });
+        expect(onSave).toHaveBeenCalledTimes(3); // typing doesn't save each letter
+        fireEvent.keyDown(screen.getByLabelText('Agenda item'), { key: 'Enter' });
+        await waitFor(() => expect(onSave.mock.lastCall[0][0].title).toBe('Budget review'));
+        fireEvent.click(screen.getAllByLabelText('Remove item')[1]);
+        await waitFor(() => expect(onSave.mock.lastCall[0].map((i) => i.title)).toEqual(['Budget review']));
+        expect(screen.getByTestId('agenda-status').textContent).toContain('Saved');
     });
 
     it('overview offers Start / Join huddle and End for everyone', () => {

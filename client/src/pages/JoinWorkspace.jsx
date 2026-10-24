@@ -7,12 +7,30 @@ import logger from '../utils/logger';
 import AuthShell from '../components/public/AuthShell';
 import { AuthMark, AuthHead, AuthStatus, AuthLoading } from '../components/public/AuthParts';
 
-const { AlertCircle, ArrowRight, Users, Shield, Rocket, Hash, UserRound } = Icons;
+const { AlertCircle, ArrowRight, Users, Shield, Rocket, Hash, UserRound, Smartphone } = Icons;
 
 const workspaceIcon = (iconName) => {
     if (!iconName) return Rocket;
     return Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)] || Hash;
 };
+
+/**
+ * In a phone's browser, a link that opens this invitation in the Oruinwan app (when installed),
+ * so people who already use the app don't have to sign in again here. null elsewhere.
+ * Android: an intent link (falls back to this page when the app isn't installed). iOS: the
+ * oruinwan:// scheme.
+ */
+export function openInAppLink(token, { userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '', href = typeof window !== 'undefined' ? window.location.href : '' } = {}) {
+    if (!token || /Electron|OruinwanApp/i.test(userAgent)) return null;
+    const path = `join-workspace?token=${encodeURIComponent(token)}`;
+    if (/Android/i.test(userAgent)) {
+        const fallback = new URL(href || 'https://oruinwan.poelys.com/');
+        fallback.searchParams.set('inapp', 'no');
+        return `intent://${path}#Intent;scheme=oruinwan;package=com.oruinwan.app;S.browser_fallback_url=${encodeURIComponent(fallback.toString())};end`;
+    }
+    if (/iPhone|iPad|iPod/i.test(userAgent)) return `oruinwan://${path}`;
+    return null;
+}
 
 const JoinWorkspace = () => {
     const navigate = useNavigate();
@@ -102,6 +120,8 @@ const JoinWorkspace = () => {
 
     if (!workspaceDetails) return null;
 
+    // The app link, unless the app sent us back here (not installed) or this is the app itself.
+    const appLink = searchParams.get('inapp') === 'no' ? null : openInAppLink(token);
     const name = workspaceDetails.workspaceName;
     const role = workspaceDetails.role || 'member';
     const WsIcon = workspaceIcon(workspaceDetails.workspaceIcon);
@@ -135,7 +155,15 @@ const JoinWorkspace = () => {
             </dl>
 
             <div className="orw-auth-actions">
-                <button type="button" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block"
+                {appLink && (
+                    <>
+                        <a href={appLink} className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" data-testid="join-open-app">
+                            <Smartphone size={15} aria-hidden="true" /> Open in the Oruinwan app
+                        </a>
+                        <p className="orw-hint" style={{ textAlign: 'center' }}>Already use the app? Join there without signing in again.</p>
+                    </>
+                )}
+                <button type="button" className={`orw-btn ${appLink ? 'orw-btn--ghost' : 'orw-btn--primary'} orw-btn--lg orw-btn--block`}
                     onClick={handleJoin} disabled={joining} aria-busy={joining}>
                     {joining ? 'Joining…' : <>{user ? `Join ${name}` : 'Sign in to join'} <ArrowRight size={15} /></>}
                 </button>

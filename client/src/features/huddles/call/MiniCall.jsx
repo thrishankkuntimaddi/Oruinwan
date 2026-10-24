@@ -12,7 +12,7 @@ export { pickFeatured };
 /** The small call: one tile, the call name and time, and mute / camera / expand / leave. */
 export function MiniCallBody({ ctx, floating = false, onExpand, onPopOut, dragHandleProps = null }) {
     const { participants, muted, toggleMute, cameraOn, toggleCamera, localStream, remoteStreams, screenStream } = ctx;
-    const { title, seconds } = useCallHeader(ctx);
+    const { title, seconds, ringing } = useCallHeader(ctx);
     const speaking = useSpeaking(audioStreams(participants, { localStream, remoteStreams }));
     const lastRef = useRef(null);
     const featured = pickFeatured(participants, speaking, lastRef.current);
@@ -24,7 +24,7 @@ export function MiniCallBody({ ctx, floating = false, onExpand, onPopOut, dragHa
                 {!floating && <GripHorizontal size={13} className="cs-muted cs-grip" aria-hidden="true" />}
                 <span className="hw-live-dot" />
                 <span className="cs-mini-title">{title}</span>
-                <span className="cs-time">{formatTime(seconds)}</span>
+                <span className="cs-time">{ringing ? 'Calling…' : formatTime(seconds)}</span>
             </div>
             {featured && (
                 <ParticipantTile
@@ -107,12 +107,14 @@ export default function MiniCall({ ctx, onPopOut }) {
     }, []);
 
     return (
-        <div ref={boxRef} className="cs-mini" style={{ right: pos.right, bottom: pos.bottom }} role="region" aria-label="You are in a call">
+        // The whole box drags (not only its title strip); its buttons still click.
+        <div ref={boxRef} className="cs-mini" style={{ right: pos.right, bottom: pos.bottom }} role="region" aria-label="You are in a call"
+            data-testid="call-mini-box" title="Drag to move"
+            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
             <MiniCallBody
                 ctx={ctx}
                 onExpand={ctx.expandCall}
                 onPopOut={onPopOut}
-                dragHandleProps={{ onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, title: 'Drag to move' }}
             />
         </div>
     );

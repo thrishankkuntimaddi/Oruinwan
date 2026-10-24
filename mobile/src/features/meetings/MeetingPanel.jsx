@@ -257,37 +257,55 @@ function OverviewTab({ meeting, inCall }) {
 
 // ---------------------------------------------------------------- agenda
 
+/**
+ * Every change saves at once (add, remove, move, and an edit when you leave the field), so
+ * nothing is lost when the panel closes and everyone sees it straight away. A refresh from the
+ * server never overwrites what I'm typing or a save still on its way.
+ */
 function AgendaTab({ meeting }) {
   const [items, setItems] = useState(meeting.agenda);
   const [draft, setDraft] = useState('');
-  const [busy, setBusy] = useState(false);
-  useEffect(() => setItems(meeting.agenda), [meeting.agenda]);
-  const dirty = JSON.stringify(items) !== JSON.stringify(meeting.agenda);
-  const move = (i, d) =>
-    setItems((list) => {
-      const next = [...list];
-      const j = i + d;
-      if (j < 0 || j >= next.length) return list;
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
+  const [saving, setSaving] = useState(0);
+  const typing = useRef(false);
+  const pending = useRef(0);
+  const queue = useRef(Promise.resolve());
+  useEffect(() => {
+    if (!typing.current && pending.current === 0) setItems(meeting.agenda);
+  }, [meeting.agenda]);
+  const commit = (next) => {
+    setItems(next);
+    pending.current += 1;
+    setSaving((n) => n + 1);
+    queue.current = queue.current.then(async () => {
+      try {
+        const updated = await api().saveAgenda(meeting.id, next.filter((i) => i.title.trim()));
+        if (pending.current === 1 && !typing.current) setItems(updated.agenda);
+        setQueryData(meetingKey(meeting.id), (m) => (m ? { ...m, agenda: updated.agenda } : updated));
+      } catch (err) {
+        toast(err.message || "Couldn't save the agenda", 'danger');
+      } finally {
+        pending.current -= 1;
+        setSaving((n) => n - 1);
+      }
     });
+  };
+  const move = (i, d) => {
+    const j = i + d;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[i], next[j]] = [next[j], next[i]];
+    commit(next);
+  };
   const add = (e) => {
     e.preventDefault();
     if (!draft.trim()) return;
-    setItems((list) => [...list, { id: `new-${Date.now()}`, title: draft.trim(), notes: '' }]);
+    commit([...items, { id: `new-${Date.now()}`, title: draft.trim(), notes: '' }]);
     setDraft('');
   };
-  const save = async () => {
-    setBusy(true);
-    try {
-      const updated = await api().saveAgenda(meeting.id, items.filter((i) => i.title.trim()));
-      setQueryData(meetingKey(meeting.id), (m) => (m ? { ...m, agenda: updated.agenda } : updated));
-      toast('Agenda saved', 'success');
-    } catch (err) {
-      toast(err.message || "Couldn't save the agenda", 'danger');
-    } finally {
-      setBusy(false);
-    }
+  const finishEdit = () => {
+    if (!typing.current) return;
+    typing.current = false;
+    commit(items);
   };
   return (
     <>
@@ -298,12 +316,21 @@ function AgendaTab({ meeting }) {
             <input
               value={it.title}
               aria-label={`Agenda item ${i + 1}`}
-              onChange={(e) => setItems((list) => list.map((x) => (x.id === it.id ? { ...x, title: e.target.value } : x)))}
+              onChange={(e) => {
+                typing.current = true;
+                const title = e.target.value;
+                setItems((list) => list.map((x) => (x.id === it.id ? { ...x, title } : x)));
+              }}
+              onBlur={finishEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
+              enterKeyHint="done"
               className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none"
             />
             <IconButton icon={ArrowUp} size="sm" label="Move up" disabled={i === 0} onClick={() => move(i, -1)} />
             <IconButton icon={ArrowDown} size="sm" label="Move down" disabled={i === items.length - 1} onClick={() => move(i, 1)} />
-            <IconButton icon={X} size="sm" label="Remove" onClick={() => setItems((list) => list.filter((x) => x.id !== it.id))} />
+            <IconButton icon={X} size="sm" label="Remove" onClick={() => commit(items.filter((x) => x.id !== it.id))} />
           </div>
         ))}
         <form onSubmit={add} className="flex items-center gap-2 px-3 py-1.5">
@@ -311,15 +338,10 @@ function AgendaTab({ meeting }) {
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add an agenda item" aria-label="New agenda item" enterKeyHint="done" className="h-10 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-text-3" />
         </form>
       </div>
-      {dirty && (
-        <div className="mx-4 mt-3 flex gap-2.5">
-          <Button variant="secondary" block onClick={() => setItems(meeting.agenda)}>
-            Discard
-          </Button>
-          <Button block loading={busy} onClick={save}>
-            Save agenda
-          </Button>
-        </div>
+      {saving > 0 && (
+        <p className="mx-4 mt-2 text-xs text-text-3" role="status" data-testid="agenda-saving">
+          Saving…
+        </p>
       )}
     </>
   );
@@ -850,7 +872,11 @@ function WhiteboardTab({ meeting }) {
   const { state: collab, doc, peers } = useLiveDocument('whiteboard', meeting.id);
   const live = collab.mode !== 'rest';
   const view = collabView(collab, { kind: 'note' });
-  const readOnly = live && !view.editable;
+  // Only the server says "view only" (or the board was closed); a slow connection never stops
+  // drawing: strokes made before the board is live are kept here and added once it is.
+  const readOnly = live && (collab.mode === 'closed' || Boolean(collab.readOnly));
+  const synced = live && Boolean(doc) && collab.everSynced;
+  const [stuck, setStuck] = useState(false);
   const [strokes, setStrokes] = useState([]);
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState(PEN_COLORS[0]);
@@ -858,26 +884,47 @@ function WhiteboardTab({ meeting }) {
   const [saving, setSaving] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const current = useRef(null);
+  const unsynced = useRef([]); // strokes drawn before the live board was ready
 
-  // Without live editing: the saved strokes over REST.
+  // Live editing that hasn't started after a few seconds: offer saving over REST too.
   useEffect(() => {
-    if (live) return undefined;
+    if (!live || collab.everSynced) {
+      setStuck(false);
+      return undefined;
+    }
+    const t = setTimeout(() => setStuck(true), 8000);
+    return () => clearTimeout(t);
+  }, [live, collab.everSynced]);
+
+  // Until the live board is ready: the saved strokes over REST.
+  useEffect(() => {
+    if (synced) return undefined;
     let alive = true;
-    api().whiteboard(meeting.id).then((list) => alive && setStrokes(list)).catch(() => {});
+    api()
+      .whiteboard(meeting.id)
+      .then((list) => alive && setStrokes((mine) => [...(list || []), ...mine.filter((s) => unsynced.current.includes(s))]))
+      .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [live, meeting.id]);
+  }, [synced, meeting.id]);
 
-  // Live: the shared stroke list is the board.
+  // Live: the shared stroke list is the board (with anything drawn while it connected).
   useEffect(() => {
-    if (!live || !doc || !collab.everSynced) return undefined;
+    if (!synced) return undefined;
     const y = doc.getArray('strokes');
+    if (unsynced.current.length) {
+      const known = new Set(y.toArray().map((s) => s?.id).filter(Boolean));
+      const add = unsynced.current.filter((s) => !known.has(s.id));
+      unsynced.current = [];
+      if (add.length) doc.transact(() => y.push(add), LOCAL_ORIGIN);
+      setDirty(false);
+    }
     const pull = () => setStrokes(y.toArray());
     pull();
     y.observe(pull);
     return () => y.unobserve(pull);
-  }, [live, doc, collab.everSynced]);
+  }, [synced, doc]);
 
   useEffect(() => drawStrokes(canvasRef.current, strokes), [strokes]);
 
@@ -886,16 +933,17 @@ function WhiteboardTab({ meeting }) {
     const r = c.getBoundingClientRect();
     return roundPoint({ x: ((e.clientX - r.left) * BOARD_W) / (r.width || BOARD_W), y: ((e.clientY - r.top) * BOARD_H) / (r.height || BOARD_H) });
   };
-  const canDraw = !readOnly && (!live || collab.everSynced);
+  const canDraw = !readOnly;
   const eraseAt = (p) => {
     const hit = strokes.filter((s) => strokeHit(s, p, 14));
     if (!hit.length) return;
-    if (live && doc) {
+    if (synced) {
       const y = doc.getArray('strokes');
       doc.transact(() => {
         for (let i = y.length - 1; i >= 0; i--) if (hit.includes(y.get(i)) || (y.get(i)?.id && hit.some((h) => h.id === y.get(i).id))) y.delete(i, 1);
       }, LOCAL_ORIGIN);
     } else {
+      unsynced.current = unsynced.current.filter((s) => !hit.includes(s));
       setStrokes((list) => list.filter((s) => !hit.includes(s)));
       setDirty(true);
     }
@@ -934,19 +982,21 @@ function WhiteboardTab({ meeting }) {
     const s = current.current;
     current.current = null;
     if (!s || s.erasing) return;
-    // Shared when the pen lifts.
-    if (live && doc) doc.transact(() => doc.getArray('strokes').push([s]), LOCAL_ORIGIN);
+    // Shared when the pen lifts; drawn before the board is live: added once it is.
+    if (synced) doc.transact(() => doc.getArray('strokes').push([s]), LOCAL_ORIGIN);
     else {
+      if (live) unsynced.current.push(s);
       setStrokes((list) => [...list, s]);
       setDirty(true);
     }
   };
   const clear = () => {
     setConfirmClear(false);
-    if (live && doc) {
+    if (synced) {
       const y = doc.getArray('strokes');
       doc.transact(() => y.delete(0, y.length), LOCAL_ORIGIN);
     } else {
+      unsynced.current = [];
       setStrokes([]);
       setDirty(true);
     }
@@ -955,6 +1005,7 @@ function WhiteboardTab({ meeting }) {
     setSaving(true);
     try {
       await api().saveWhiteboard(meeting.id, strokes);
+      unsynced.current = [];
       setDirty(false);
       toast('Whiteboard saved', 'success');
     } catch (err) {
@@ -964,13 +1015,14 @@ function WhiteboardTab({ meeting }) {
     }
   };
 
-  const modeText = live
-    ? collab.mode === 'live'
-      ? readOnly
-        ? 'You can watch this board but not draw on it.'
-        : 'Live: everyone in this meeting sees strokes as you draw.'
-      : view.subtitle || 'Connecting…'
-    : `Not live: others see your drawing after you save.${dirty ? ' You have unsaved changes.' : ''}`;
+  const modeText = readOnly
+    ? 'You can watch this board but not draw on it.'
+    : synced
+      ? 'Live: everyone in this meeting sees strokes as you draw.'
+      : live && !stuck
+        ? `${view.subtitle || 'Connecting…'} You can draw now: your strokes are shared once it connects.`
+        : `Not live: others see your drawing after you save.${dirty ? ' You have unsaved changes.' : ''}`;
+  const offerSave = !synced && (!live || stuck);
 
   return (
     <div className="px-4">
@@ -1002,7 +1054,7 @@ function WhiteboardTab({ meeting }) {
           ))}
           <span className="flex-1" />
           <IconButton icon={Trash2} size="sm" label="Clear the board" disabled={!strokes.length} onClick={() => setConfirmClear(true)} />
-          {!live && (
+          {offerSave && (
             <Button size="sm" loading={saving} disabled={!dirty} onClick={save}>
               Save
             </Button>

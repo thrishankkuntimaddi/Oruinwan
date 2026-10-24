@@ -18,9 +18,36 @@ const SENDER_MIN = { type: 'user', fields: ['username', 'profilePicture'] };
 const MESSAGE_REFS = {
     sender: SENDER,
     'readBy.user': { type: 'user', fields: ['username'] },
+    // Who reacted, by name, so everyone can see it (not only a count).
+    'reactions.userId': SENDER_MIN,
     'parentId.sender': SENDER_MIN,
     'quotedMessageId.sender': SENDER_MIN,
 };
+
+/** Polls show who voted (by name) from the first load, not only after a live vote. Anonymous polls keep ids only. */
+async function withPollVoters(messages) {
+    const polls = (messages || []).filter((m) => m?.poll?.options?.length && !m.poll.anonymous);
+    if (polls.length) await hydrate(polls, { 'poll.options.votes': { type: 'user', fields: ['username'] } });
+}
+
+/**
+ * What a reaction change tells everyone in the conversation: the message's reactions with
+ * each person's name, and where the message is (so phones refresh the right conversation or
+ * thread instead of waiting for the next reload).
+ */
+async function reactionEvent(message, { messageId, userId, emoji }) {
+    const plain = { reactions: (message.reactions || []).map((r) => ({ userId: r.userId, emoji: r.emoji })) };
+    await hydrate(plain, { 'reactions.userId': SENDER_MIN });
+    return {
+        messageId: String(messageId),
+        userId: String(userId),
+        emoji,
+        reactions: plain.reactions,
+        channelId: message.channel ? String(message.channel) : null,
+        dmSessionId: message.dm ? String(message.dm) : null,
+        parentId: message.parentId ? String(message.parentId) : null,
+    };
+}
 
 /** Plain copy of a message document with its user references filled in. */
 async function messageForClient(message, refs = { sender: SENDER }) {
@@ -484,6 +511,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = combined.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
+        await withPollVoters(messagesWithCounts);
         if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
@@ -508,6 +536,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
+        await withPollVoters(messagesWithCounts);
         if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
@@ -543,6 +572,7 @@ async function fetchMessages(query, options = {}) {
 
         let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
         await hydrate(messagesWithCounts, MESSAGE_REFS);
+        await withPollVoters(messagesWithCounts);
         if (populateReplies) messagesWithCounts = await attachThreadInfo(messagesWithCounts);
 
         return {
@@ -1096,12 +1126,7 @@ async function addReaction(messageId, userId, emoji, io) {
         : `dm:${message.dm}`;
 
     if (io) {
-        io.to(room).emit('message:reaction_added', {
-            messageId,
-            userId,
-            emoji,
-            reactions: message.reactions
-        });
+        io.to(room).emit('message:reaction_added', await reactionEvent(message, { messageId, userId, emoji }));
     }
 
     if (message.sender && String(message.sender) !== String(userId) && message.workspace) {
@@ -1136,12 +1161,7 @@ async function removeReaction(messageId, userId, emoji, io) {
         : `dm:${message.dm}`;
 
     if (io) {
-        io.to(room).emit('message:reaction_removed', {
-            messageId,
-            userId,
-            emoji,
-            reactions: message.reactions
-        });
+        io.to(room).emit('message:reaction_removed', await reactionEvent(message, { messageId, userId, emoji }));
     }
 
     return message;

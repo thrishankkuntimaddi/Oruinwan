@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOptionalSocket } from '../../contexts/SocketContext';
-import { retainMeetingRoom, releaseMeetingRoom } from '../huddles/capture/meetingRoom';
+import { retainMeetingRoom, releaseAndLeave } from '../huddles/capture/meetingRoom';
 import { meetingIdFromHuddleId } from '../huddles/HuddleContext';
 import { meetingApi } from './meetingApi';
 import { meetingErrorKind, errorText, patchMeeting, normaliseSummary } from './meetingModel';
@@ -98,7 +98,7 @@ export function useMeetingRecord(meetingId, { enabled = true } = {}) {
             cancelled = true;
             events.forEach(([e, fn]) => socket.off(e, fn));
             // The call holding this meeting may still need the room.
-            if (releaseMeetingRoom(meetingId)) setTimeout(() => socket.emit('meeting:leave', { meetingId }), 0);
+            releaseAndLeave(socket, meetingId);
         };
     }, [socket, meetingId, enabled, patch, load]);
 

@@ -17,7 +17,7 @@ import { clearMessageIndex, forgetMessage, indexMessages, nameConversation, sear
 import { attachmentDoc, attachmentMessageBody, clearMediaCache, mapAttachment, mediaUrl, uploadFile } from './attachments.js';
 import { fileIconKind } from '../../lib/files.js';
 import { mapSharedFile, sharedQuery } from '../../features/files/filesUi.js';
-import { chatsAdapter, messageExtras } from './adapter.chats.js';
+import { chatsAdapter, mapReactions, mapReactorNames, messageExtras } from './adapter.chats.js';
 import { workAdapter } from './adapter.work.js';
 import { roadmapAdapter } from './adapter.roadmap.js';
 import { designAdapter } from './adapter.design.js';
@@ -158,14 +158,6 @@ function mapChannel(c) {
   };
 }
 
-function mapReactions(list) {
-  const out = {};
-  for (const r of list || []) {
-    if (!r?.emoji) continue;
-    (out[r.emoji] ||= []).push(idOf(r.userId || r.user));
-  }
-  return out;
-}
 
 async function mapMessage(conv, m) {
   const { text, state } = await readMessage(conv, m);
@@ -184,6 +176,7 @@ function toAppMessage(conv, m, text, state) {
     state,
     at: m.createdAt,
     reactions: mapReactions(m.reactions),
+    reactorNames: mapReactorNames(m.reactions),
     replyCount: m.replyCount || 0,
     replyUserIds: (m.threadParticipants || []).map(idOf),
     lastReplyAt: m.lastReplyAt || null,

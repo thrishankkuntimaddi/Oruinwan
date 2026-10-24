@@ -165,6 +165,8 @@ if (!processRole.serves.http) {
 // Public icons (Oruinwan AI, agent avatars) are shown by the phone and desktop apps, which run on
 // another origin: let them load these images (everything else stays same-origin).
 app.use('/icons', (req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); });
+// Lets phones open invitation links in the Oruinwan app instead of the browser.
+app.use(require('./src/shared/routes/wellKnown').wellKnownRouter());
 app.use(express.static(path.join(__dirname, "../dist")));
 
 const requireAuth = require("./src/shared/middleware/auth");

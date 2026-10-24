@@ -20,3 +20,17 @@ export function releaseMeetingRoom(meetingId) {
 }
 
 export const meetingRoomHolders = (meetingId) => holders.get(String(meetingId)) || 0;
+
+/**
+ * Release my hold and leave the room once nobody holds it. The leave waits a moment and is
+ * skipped if someone took the room again meanwhile: a re-render releases and re-joins in the
+ * same moment, and a leave sent after that join took the person out of the room, so they
+ * stopped seeing live agenda, notes and transcript changes.
+ */
+export function releaseAndLeave(socket, meetingId) {
+    if (!releaseMeetingRoom(meetingId)) return;
+    const id = String(meetingId);
+    setTimeout(() => {
+        if (!holders.get(id)) socket?.emit('meeting:leave', { meetingId });
+    }, 0);
+}

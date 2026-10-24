@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, Hand, X, Monitor, Pin, PinOff } from 'lucide-react';
 
 /** 1:05 or 1:02:03. */
@@ -43,12 +43,42 @@ export function videoOn(p, { cameraOn, screenStream }) {
  *
  * `size` ({ w, h }) sizes the tile from the layout; without it the tile is 16:9 (mini call).
  */
+/**
+ * True while the stream has a video track that is actually delivering frames. A remote track
+ * is "muted" until its first frames arrive and again when the sender stops sending (camera off,
+ * screen share ended), and showing a <video> then is a black tile; show the initials instead.
+ */
+export function useLiveVideo(stream) {
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        if (!stream) return undefined;
+        const bump = () => setTick(t => t + 1);
+        let tracks = [];
+        const watch = () => {
+            tracks.forEach(t => { t.removeEventListener?.('mute', bump); t.removeEventListener?.('unmute', bump); t.removeEventListener?.('ended', bump); });
+            tracks = stream.getVideoTracks();
+            tracks.forEach(t => { t.addEventListener?.('mute', bump); t.addEventListener?.('unmute', bump); t.addEventListener?.('ended', bump); });
+            bump();
+        };
+        watch();
+        stream.addEventListener?.('addtrack', watch);
+        stream.addEventListener?.('removetrack', watch);
+        return () => {
+            stream.removeEventListener?.('addtrack', watch);
+            stream.removeEventListener?.('removetrack', watch);
+            tracks.forEach(t => { t.removeEventListener?.('mute', bump); t.removeEventListener?.('unmute', bump); t.removeEventListener?.('ended', bump); });
+        };
+    }, [stream]);
+    return !!stream && stream.getVideoTracks().some(t => (t.readyState ?? 'live') === 'live' && !t.muted);
+}
+
 export function ParticipantTile({
     participant, stream, showVideo, mirror, connection, speaking = false, compact = false,
     size = null, fit = 'cover', visible = true, pinned = false, onPin = null, screen = false, testId,
 }) {
     const ref = useRef(null);
-    const hasVideo = visible && showVideo && !!stream && stream.getVideoTracks().length > 0;
+    const live = useLiveVideo(stream);
+    const hasVideo = visible && showVideo && !!stream && live;
     const name = participant.username || 'Guest';
     const label = participant.isLocal ? 'You' : name;
     const isAudioOn = participant.audioEnabled !== false;

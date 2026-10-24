@@ -94,8 +94,18 @@ async function verifyScopeMembership(socket, { channelId, dmId, workspaceId }) {
     const uid = String(socket.user.id);
     if (channelId) {
         const Channel = require('../../features/channels/channel.model');
-        const channel = await Channel.findById(channelId).select('members name workspace');
-        if (!channel || !channel.isMember(uid)) return { ok: false, message: 'Not a member of this channel' };
+        // isPrivate/isDefault are needed by isMember: without them every channel looked public.
+        const channel = await Channel.findById(channelId).select('members name workspace isPrivate isDefault');
+        if (!channel) return { ok: false, message: 'Not a member of this channel' };
+        const listed = (channel.members || []).some(m => String(m?.user?._id || m?.user || m) === uid);
+        if (!listed) {
+            // A public channel is open to everyone in its workspace; a private one only to its members.
+            if (!channel.isMember(uid)) return { ok: false, message: 'Not a member of this channel' };
+            const access = channel.workspace
+                ? await require('../../identity').workspaces.membership(String(channel.workspace), uid).catch(() => null)
+                : null;
+            if (!access?.member) return { ok: false, message: 'Not a member of this channel' };
+        }
         return {
             ok: true,
             scope: { channelId: String(channelId), workspaceId: channel.workspace ? String(channel.workspace) : null, planWorkspaceId: channel.workspace ? String(channel.workspace) : null },
@@ -331,6 +341,7 @@ function endHuddle(io, huddleId, reason = 'ended', { registry = defaultRegistry,
 // huddleId -> promise of its meeting record id while the run's start is being recorded.
 const pendingMeeting = new Map();
 const MEETING_LINK_WAIT_MS = 3000;
+const START_MEETING_WAIT_MS = 300;
 
 /** Record a new run and resolve its meeting record id (null when unknown in time). */
 function startRun(registry, history, huddle) {
@@ -349,13 +360,13 @@ function startRun(registry, history, huddle) {
 }
 
 /** The huddle's meeting record id: known already, else wait (briefly) for its start to be recorded. */
-async function meetingIdFor(registry, huddleId) {
+async function meetingIdFor(registry, huddleId, waitMs = MEETING_LINK_WAIT_MS) {
     const known = registry.get(huddleId)?.meetingId;
     if (known) return known;
     const pending = pendingMeeting.get(huddleId);
     if (!pending) return null;
     let timer;
-    const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(null), MEETING_LINK_WAIT_MS); if (timer.unref) timer.unref(); });
+    const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(null), waitMs); if (timer.unref) timer.unref(); });
     const id = await Promise.race([pending, timeout]);
     clearTimeout(timer);
     return id || registry.get(huddleId)?.meetingId || null;
@@ -477,8 +488,10 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
                 }, emptyTimeoutMs);
                 if (timer.unref) timer.unref();
             }
-            // Every call has a meeting record; clients open its page with this id.
-            const meetingId = await meetingIdFor(registry, huddleId);
+            // Every call has a meeting record; clients open its page with this id. Ringing must
+            // not wait for it (the other person would be rung seconds late): wait a moment only,
+            // the id also comes with the roster and huddle:joined once people are in.
+            const meetingId = await meetingIdFor(registry, huddleId, START_MEETING_WAIT_MS);
 
             const scope = registryScope(check.scope);
             const payload = {

@@ -22,7 +22,8 @@
             </intent-filter>
             <!-- Workspace invitation links open the join screen (src/lib/invite.js). The web host comes
                  from ORUINWAN_WEB_HOST at build time (app/build.gradle). Verified App Links also need
-                 https://<host>/.well-known/assetlinks.json; without it Android asks which app to use. -->
+                 https://<host>/.well-known/assetlinks.json (served by server/src/shared/routes/wellKnown.js,
+                 with this app's signing-key fingerprints); without it Android 12+ opens the browser. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

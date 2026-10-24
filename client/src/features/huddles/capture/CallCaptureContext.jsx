@@ -10,7 +10,7 @@ import {
 } from './captions';
 import { getSpeechRecognition, speechErrorInfo, speechSupport } from './speechSupport';
 import { MAX_RECORDING_BYTES, baseMime, canRecord, pickRecorderMime, recordingFileName } from './recorderMime';
-import { retainMeetingRoom, releaseMeetingRoom } from './meetingRoom';
+import { retainMeetingRoom, releaseAndLeave } from './meetingRoom';
 
 /**
  * Recording, live captions and the consent notices of the app-wide call.
@@ -84,7 +84,7 @@ export function CallCaptureProvider({ children }) {
         socket.on('connect', join);
         return () => {
             socket.off('connect', join);
-            if (releaseMeetingRoom(meetingId)) socket.emit('meeting:leave', { meetingId });
+            releaseAndLeave(socket, meetingId);
         };
     }, [socket, meetingId]);
 

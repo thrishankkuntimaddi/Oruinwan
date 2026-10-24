@@ -35,6 +35,7 @@ import { useCallExtras } from './callExtras.js';
 import { clampPage, orderForGrid, pageCapacity, pageCount, pageOf, pickSpeaker, resolveView } from './callLayout.js';
 import { DuoView, GridView, PageDots, SoloView, StageView, VideoEl, liveVideo, resetSelfCorner, streamOf, useElementSize } from './CallStage.jsx';
 import {
+  callClockStart,
   leave,
   screenShareSupported,
   setCallView,
@@ -328,7 +329,7 @@ function FullCall({ title }) {
               </span>
             )}
             <span className="truncate">
-              {connecting ? 'Connecting…' : `${participants.length} in call · ${clockSince(call?.startedAt || now, now)}`}
+              {connecting ? 'Connecting…' : !callClockStart(call) ? 'Calling…' : `${participants.length} in call · ${clockSince(callClockStart(call) || now, now)}`}
             </span>
           </span>
         </span>
@@ -483,7 +484,7 @@ function MiniCall({ title }) {
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <span className="min-w-0 flex-1">
           <span className="block truncate text-xs font-semibold">{title}</span>
-          <span className="block text-[11px] text-text-2 tabular-nums">{connecting ? 'Connecting…' : clockSince(call.startedAt, now)}</span>
+          <span className="block text-[11px] text-text-2 tabular-nums">{connecting ? 'Connecting…' : !callClockStart(call) ? 'Calling…' : clockSince(callClockStart(call), now)}</span>
         </span>
         <button
           type="button"

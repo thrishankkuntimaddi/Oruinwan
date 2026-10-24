@@ -4,18 +4,21 @@ import { api, useSession } from '../../data/session.js';
 import { getQueryData, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { uid } from '../../lib/id.js';
 import { on, toast } from '../../lib/bus.js';
-import { mapChecklist, mapPoll } from '../../data/live/adapter.chats.js';
+import { mapChecklist, mapPoll, mapReactions, mapReactorNames } from '../../data/live/adapter.chats.js';
 import { mentionsAI } from '../../lib/aiMention.js';
 import { withTranscripts } from '../../lib/aiPeople.js';
 import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
 import { enqueue, isNetworkError, isOffline, retryQueued, useQueuedMessages } from '../../data/outbox.js';
 
+/** One reaction per person (as the server keeps it): a new emoji replaces mine; the same one removes it. */
 function toggleReaction(m, emoji, me) {
-  const users = new Set(m.reactions?.[emoji] || []);
-  if (users.has(me)) users.delete(me);
-  else users.add(me);
-  const reactions = { ...m.reactions, [emoji]: [...users] };
-  if (!users.size) delete reactions[emoji];
+  const had = (m.reactions?.[emoji] || []).includes(me);
+  const reactions = {};
+  for (const [e, users] of Object.entries(m.reactions || {})) {
+    const rest = users.filter((u) => u !== me);
+    if (rest.length) reactions[e] = rest;
+  }
+  if (!had) reactions[emoji] = [...(reactions[emoji] || []), me];
   return { ...m, reactions };
 }
 
@@ -51,6 +54,9 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
       const id = p?.messageId && String(p.messageId);
       if (!id) return;
       if (event === 'poll:vote_updated' && p.poll) patchOne(id, (m) => ({ ...m, poll: mapPoll(p.poll, m.authorId) }));
+      // Someone reacted: show it now, with who it was, without waiting for a reload.
+      else if ((event === 'message:reaction_added' || event === 'message:reaction_removed') && Array.isArray(p.reactions))
+        patchOne(id, (m) => ({ ...m, reactions: mapReactions(p.reactions), reactorNames: { ...m.reactorNames, ...mapReactorNames(p.reactions) } }));
       else if (event === 'message:checklist_updated' && Array.isArray(p.checklist)) patchOne(id, (m) => ({ ...m, checklist: mapChecklist(p.checklist) }));
       else if (event === 'thread-resolved') {
         patchOne(id, (m) => ({ ...m, resolved: Boolean(p.isResolved) }));

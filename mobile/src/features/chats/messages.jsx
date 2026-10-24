@@ -104,31 +104,100 @@ function MessageBody({ m, onCancelUpload, me, directory }) {
   }
 }
 
-function Reactions({ m, me, onReact }) {
+/** Someone who reacted, for the "who reacted" sheet: me as "You", others from the directory. */
+export function reactorOf(id, { me, directory, names }) {
+  if (id === me) return { id, name: 'You', avatarUrl: directory?.[id]?.avatarUrl };
+  const u = directory?.[id];
+  return { id, name: u?.name || names?.[id] || 'Someone', avatarUrl: u?.avatarUrl };
+}
+
+/** "Asha and you", "Asha, Ravi and 3 others": who reacted, for screen readers. */
+export function reactorsLabel(people) {
+  const n = people.map((p) => (p.name === 'You' ? 'you' : p.name));
+  if (n.length <= 1) return n[0] || '';
+  if (n.length <= 3) return `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
+  return `${n.slice(0, 2).join(', ')} and ${n.length - 2} others`;
+}
+
+function Reactions({ m, me, directory, onReact }) {
+  const [who, setWho] = useState(null); // the emoji whose people are shown, or null
   const entries = Object.entries(m.reactions || {}).filter(([, users]) => users.length);
+  const press = useLongPress(() => setWho((w) => w || entries[0]?.[0] || null));
   if (!entries.length) return null;
+  const people = (users) => users.map((id) => reactorOf(id, { me, directory, names: m.reactorNames }));
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1.5">
-      {entries.map(([emoji, users]) => {
-        const mine = users.includes(me);
-        return (
-          <button
-            key={emoji}
-            type="button"
-            onClick={() => onReact(m.id, emoji)}
-            aria-pressed={mine}
-            aria-label={`${emoji} ${users.length}${mine ? ', including you' : ''}`}
-            className={cx(
-              'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
-              mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
-            )}
-          >
-            <span>{emoji}</span>
-            <span className="tabular-nums text-xs font-medium">{users.length}</span>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {/* A long press on the reactions shows who reacted; a tap adds or removes mine. */}
+      <div
+        className="mt-1.5 flex flex-wrap gap-1.5"
+        onPointerDown={(e) => {
+          e.stopPropagation(); // not the message's own long press (its actions)
+          press.onPointerDown(e);
+        }}
+        onPointerMove={press.onPointerMove}
+        onPointerUp={press.onPointerUp}
+        onPointerCancel={press.onPointerCancel}
+        onPointerLeave={press.onPointerLeave}
+      >
+        {entries.map(([emoji, users]) => {
+          const mine = users.includes(me);
+          return (
+            <button
+              key={emoji}
+              type="button"
+              data-testid="reaction-chip"
+              onClick={() => {
+                if (who) return;
+                onReact(m.id, emoji);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setWho(emoji);
+              }}
+              aria-pressed={mine}
+              aria-label={`${emoji} ${users.length}: ${reactorsLabel(people(users))}. Press and hold to see who reacted.`}
+              className={cx(
+                'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
+                mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+              )}
+            >
+              <span>{emoji}</span>
+              <span className="tabular-nums text-xs font-medium">{users.length}</span>
+            </button>
+          );
+        })}
+      </div>
+      <Sheet open={Boolean(who)} onClose={() => setWho(null)} title="Reactions">
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-2" role="tablist">
+          {entries.map(([emoji, users]) => (
+            <button
+              key={emoji}
+              type="button"
+              role="tab"
+              aria-selected={who === emoji}
+              onClick={() => setWho(emoji)}
+              className={cx(
+                'pressable inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-3 text-[14px]',
+                who === emoji ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+              )}
+            >
+              {emoji} <span className="tabular-nums text-xs font-medium">{users.length}</span>
+            </button>
+          ))}
+        </div>
+        <ul className="px-4 pb-4" data-testid="reaction-people">
+          {people(m.reactions?.[who] || []).map((p) => (
+            <li key={p.id} className="flex items-center gap-3 py-2">
+              <Avatar name={p.name === 'You' ? directory?.[me]?.name || 'You' : p.name} src={p.avatarUrl} size="sm" />
+              <span className="min-w-0 flex-1 truncate text-[15px]">{p.name}</span>
+              <span className="text-lg" aria-hidden>
+                {who}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
+    </>
   );
 }
 
@@ -216,7 +285,7 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
           </button>
         )}
         {m.pending && !m.upload && <span className="text-[11px] text-text-3">{m.queued ? 'Queued · sends when you’re back online' : 'Sending…'}</span>}
-        <Reactions m={m} me={me} onReact={onReact} />
+        <Reactions m={m} me={me} directory={directory} onReact={onReact} />
         {!hideThread && <ThreadSummary m={m} directory={directory} onOpen={() => onOpenThread(m)} />}
       </div>
       {/* Mouse users get the actions on hover; touch keeps the long press. */}

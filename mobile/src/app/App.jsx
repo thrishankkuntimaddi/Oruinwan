@@ -73,6 +73,8 @@ export function App() {
     onAppState((active) => {
       if (active) {
         api().onResume?.();
+        // A workspace joined meanwhile (an invitation accepted in the browser) shows up now.
+        if (useSession.getState().status === 'signed-in') useSession.getState().loadWorkspaces().catch(() => {});
         refreshRemoteConfig();
         checkForUpdate({ auto: true });
       }

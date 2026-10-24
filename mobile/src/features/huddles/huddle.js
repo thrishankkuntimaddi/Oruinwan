@@ -145,6 +145,7 @@ function closePeer(userId) {
     p.pc.onicecandidate = null;
     p.pc.ontrack = null;
     p.pc.onconnectionstatechange = null;
+    p.pc.onnegotiationneeded = null;
     p.pc.close();
     delete peers[userId];
   }
@@ -189,7 +190,7 @@ function teardown() {
 /** The background notification follows the call: title, mute and video. */
 function syncSession() {
   const { call, muted, cameraOn } = useHuddle.getState();
-  if (call) updateCallSession({ title: call.title, muted, video: cameraOn, startedAt: call.startedAt });
+  if (call) updateCallSession({ title: call.title, muted, video: cameraOn, startedAt: callClockStart(call) || call.startedAt });
 }
 
 function peerFor(userId, polite) {
@@ -228,6 +229,14 @@ function peerFor(userId, polite) {
     track.onended = bumpMedia;
     bumpMedia();
   };
+  // Any change that needs a new offer (a camera or screen added mid-call, or my video that the
+  // other side's first offer had no room for) is offered from here, on either side. With the
+  // polite/impolite roles in 'huddle:offer', two offers at once settle and the side that
+  // yielded offers again once things are stable.
+  pc.onnegotiationneeded = () => {
+    if (peers[userId] !== entry || entry.makingOffer || !useHuddle.getState().call) return;
+    offer(userId).catch(() => {});
+  };
   pc.onconnectionstatechange = () => {
     set((s) => ({ peerStates: { ...s.peerStates, [userId]: pc.connectionState } }));
     if (pc.connectionState === 'failed' && !entry.polite) offer(userId, { iceRestart: true }).catch(() => {});
@@ -263,15 +272,15 @@ function videoSender(pc) {
  */
 async function sendVideoTrack(track) {
   await Promise.all(
-    Object.entries(peers).map(async ([userId, entry]) => {
+    Object.values(peers).map(async (entry) => {
       const sender = videoSender(entry.pc);
       if (sender) {
         await sender.replaceTrack(track).catch(() => {});
         return;
       }
       if (!track) return;
+      // The new track is offered by onnegotiationneeded (see peerFor).
       entry.pc.addTrack(track, localStream || new MediaStream([track]));
-      await offer(userId).catch(() => {});
     }),
   );
 }
@@ -293,7 +302,20 @@ function upsert(p) {
     participants: s.participants.some((x) => x.userId === p.userId)
       ? s.participants.map((x) => (x.userId === p.userId ? { ...x, ...p } : x))
       : [...s.participants, p],
+    // Someone else is in: the call is answered (a DM call's clock starts now, see callClockStart).
+    ...(s.call && !s.call.answeredAt && !p.isLocal && String(p.userId) !== myId() ? { call: { ...s.call, answeredAt: Date.now() } } : {}),
   }));
+  syncSession();
+}
+
+/**
+ * When a call's clock starts: a DM or group-DM call is a phone call, timed from when the other
+ * person picks up (null while it still rings); a channel huddle from when I joined it.
+ */
+export function callClockStart(call) {
+  if (!call) return null;
+  if (call.scope?.dmId) return call.answeredAt || null;
+  return call.startedAt;
 }
 
 const patchParticipant = (userId, patch) =>
@@ -380,7 +402,9 @@ const handlers = {
     const collision = entry.makingOffer || entry.pc.signalingState !== 'stable';
     if (collision && !entry.polite) return;
     try {
-      if (collision) await entry.pc.setLocalDescription({ type: 'rollback' });
+      // Roll back only an offer that was really set; one still being made is offered again by
+      // onnegotiationneeded once this one settles.
+      if (collision && entry.pc.signalingState === 'have-local-offer') await entry.pc.setLocalDescription({ type: 'rollback' });
       await entry.pc.setRemoteDescription(p.offer);
       await flush(entry);
       await entry.pc.setLocalDescription(await entry.pc.createAnswer());
@@ -760,26 +784,46 @@ export async function switchCamera() {
     set({ facing: next });
     return;
   }
-  let cam;
-  try {
-    cam = await getUserMedia({ video: cameraConstraints(next) });
-  } catch {
-    toast('Could not switch the camera.', 'danger');
-    return;
-  }
-  const track = cam.getVideoTracks()[0];
-  if (!track || !localStream) {
-    cam.getTracks().forEach((t) => t.stop());
-    return;
-  }
+  // Most phones can't open two cameras at once: close the current one first, then open the
+  // other. "exact" asks for that camera specifically; some phones only take a preference.
   const old = localStream.getVideoTracks();
-  localStream.addTrack(track);
-  if (!screenStream) await sendVideoTrack(track);
   old.forEach((t) => {
     localStream.removeTrack(t);
     t.stop();
   });
-  set({ facing: next });
+  const open = async (facingMode) => {
+    for (const constraints of [{ ...cameraConstraints(facingMode), facingMode: { exact: facingMode } }, cameraConstraints(facingMode)]) {
+      try {
+        const cam = await getUserMedia({ video: constraints });
+        if (cam.getVideoTracks()[0]) return cam;
+        cam.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* try the next way */
+      }
+    }
+    return null;
+  };
+  let cam = await open(next);
+  let facingNow = next;
+  if (!cam) {
+    // Couldn't open the other camera: bring the one we had back.
+    cam = await open(facing);
+    facingNow = facing;
+    toast('Could not switch the camera.', 'danger');
+  }
+  const track = cam?.getVideoTracks()[0];
+  if (!track || !localStream || !useHuddle.getState().call) {
+    cam?.getTracks().forEach((t) => t.stop());
+    if (!track) {
+      set({ cameraOn: false });
+      announceVideo();
+    }
+    bumpMedia();
+    return;
+  }
+  localStream.addTrack(track);
+  if (!screenStream) await sendVideoTrack(track);
+  set({ facing: facingNow });
   bumpMedia();
 }
 

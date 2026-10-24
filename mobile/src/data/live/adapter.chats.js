@@ -30,6 +30,28 @@ export function mapPoll(p, sender) {
 }
 
 /** Checked state of each checklist item (the labels are in the encrypted text). */
+/** A message's reactions as { emoji: [userId] } (one entry per person per emoji). */
+export function mapReactions(list) {
+  const out = {};
+  for (const r of list || []) {
+    if (!r?.emoji) continue;
+    const id = idOf(r.userId || r.user);
+    if (!id || out[r.emoji]?.includes(id)) continue;
+    (out[r.emoji] ||= []).push(id);
+  }
+  return out;
+}
+
+/** Names of the people who reacted, when the server sent them (people outside my directory). */
+export function mapReactorNames(list) {
+  const out = {};
+  for (const r of list || []) {
+    const u = r?.userId || r?.user;
+    if (u && typeof u === 'object' && u.username) out[idOf(u)] = u.username;
+  }
+  return out;
+}
+
 export function mapChecklist(list) {
   return (list || []).map((i) => ({ checked: Boolean(i.checked), checkedBy: idOf(i.checkedBy), text: i.text || '' }));
 }

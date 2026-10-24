@@ -23,6 +23,7 @@ import { hasEditHistory } from '../../../../utils/messageActionUtils';
 import MessageMarkdown from '../../../../shared/components/messages/MessageMarkdown';
 import ProfileTrigger from '../../../profileCard/ProfileTrigger';
 import ThreadSummaryLink from './ThreadSummaryLink';
+import ReactionChips from './ReactionChips';
 import logger from '../../../../utils/logger';
 
 function DMMessageItem({
@@ -287,35 +288,7 @@ function DMMessageItem({
 
                 {}
                 {msg.reactions && msg.reactions.length > 0 && (
-                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
-                        {Object.entries(
-                            msg.reactions.reduce((acc, r) => {
-                                acc[r.emoji] = acc[r.emoji] || [];
-                                const uid = (r.userId?._id || r.userId)?.toString();
-                                acc[r.emoji].push(uid);
-                                return acc;
-                            }, {})
-                        ).map(([emoji, users]) => {
-                            const myReaction = users.includes(currentUserId?.toString());
-                            return (
-                                <button
-                                    key={emoji}
-                                    onClick={() => toggleReaction(emoji)}
-                                    style={{
-                                        padding: '1px 7px', borderRadius: '99px', fontSize: '13px', fontFamily: 'var(--font)',
-                                        backgroundColor: myReaction ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)',
-                                        border: `1px solid ${myReaction ? 'var(--accent)' : 'var(--border-default)'}`,
-                                        color: myReaction ? 'var(--accent)' : 'var(--text-secondary)',
-                                        cursor: 'pointer', transition: '120ms ease', outline: 'none',
-                                    }}
-                                    onMouseEnter={e => { if (!myReaction) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-                                    onMouseLeave={e => { if (!myReaction) e.currentTarget.style.borderColor = 'var(--border-default)'; }}
-                                >
-                                    {emoji} {users.length}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <ReactionChips reactions={msg.reactions} currentUserId={currentUserId} onToggle={(emoji) => toggleReaction(emoji)} />
                 )}
                 <ThreadSummaryLink count={count} participants={msg.threadParticipants} lastReplyAt={msg.lastReplyAt} onOpen={onOpenThread ? () => onOpenThread(msg.id) : null} />
 

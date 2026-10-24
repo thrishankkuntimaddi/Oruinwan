@@ -1,48 +1,73 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Edit3, Save, ArrowUp, ListOrdered } from 'lucide-react';
+import { Plus, Trash2, Edit3, ArrowUp, ListOrdered, Check } from 'lucide-react';
 import { Btn, EmptyState, IconBtn } from '../../../components/ui/page';
 import { useToast } from '../../../contexts/ToastContext';
 import { errorText } from '../meetingModel';
 
-/** Agenda: an ordered list everyone with the meeting open sees once saved. */
+const clean = (items) => items
+    .filter((it) => (it.title || '').trim())
+    .map((it, i) => ({ ...it, title: it.title.trim(), order: i }));
+
+/**
+ * Agenda: an ordered list everyone with the meeting open sees. Every change saves at once
+ * (adding, removing, moving, and an edit when you leave the field), so nothing is lost when
+ * the tab or the call panel closes, and others see it straight away.
+ */
 export default function AgendaTab({ meeting, onSave, readOnly = false }) {
     const { showToast } = useToast();
     const [items, setItems] = useState(meeting.agenda || []);
-    const [dirty, setDirty] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
     const [editing, setEditing] = useState(null);
-    const dirtyRef = useRef(false);
-    dirtyRef.current = dirty;
+    // Unsaved typing in an item, or a save on its way: don't let a refresh overwrite it.
+    const busyRef = useRef(0);
+    const typingRef = useRef(false);
+    const queueRef = useRef(Promise.resolve());
 
-    // Someone else saved: take theirs unless I have unsaved changes.
-    useEffect(() => { if (!dirtyRef.current) setItems(meeting.agenda || []); }, [meeting.agenda]);
+    // Someone else saved: take theirs unless I'm typing or saving.
+    useEffect(() => {
+        if (!typingRef.current && busyRef.current === 0) setItems(meeting.agenda || []);
+    }, [meeting.agenda]);
 
-    const change = (fn) => { setItems(fn); setDirty(true); };
+    const commit = (next) => {
+        setItems(next);
+        setSaved(false);
+        busyRef.current += 1;
+        setSaving(true);
+        // One save at a time, in order, so the last change is the one that stays.
+        queueRef.current = queueRef.current.then(async () => {
+            try {
+                await onSave(clean(next));
+                setSaved(true);
+            } catch (err) {
+                showToast(errorText(err, 'Could not save the agenda'), 'error');
+            } finally {
+                busyRef.current -= 1;
+                if (busyRef.current === 0) setSaving(false);
+            }
+        });
+        return queueRef.current;
+    };
+
     const add = () => {
         const t = newTitle.trim();
         if (!t) return;
-        change((prev) => [...prev, { title: t, notes: '', order: prev.length }]);
+        commit([...items, { title: t, notes: '', order: items.length }]);
         setNewTitle('');
     };
-    const move = (idx) => change((prev) => {
-        if (idx <= 0) return prev;
-        const next = prev.slice();
+    const move = (idx) => {
+        if (idx <= 0) return;
+        const next = items.slice();
         [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-        return next;
-    });
-
-    const save = async () => {
-        setSaving(true);
-        try {
-            await onSave(items.filter((it) => (it.title || '').trim()).map((it, i) => ({ ...it, title: it.title.trim(), order: i })));
-            setDirty(false);
-            showToast('Agenda saved', 'success');
-        } catch (err) {
-            showToast(errorText(err, 'Could not save the agenda'), 'error');
-        } finally {
-            setSaving(false);
-        }
+        commit(next);
+    };
+    const remove = (idx) => commit(items.filter((_, i) => i !== idx));
+    const finishEdit = () => {
+        setEditing(null);
+        if (!typingRef.current) return;
+        typingRef.current = false;
+        commit(items);
     };
 
     return (
@@ -64,8 +89,12 @@ export default function AgendaTab({ meeting, onSave, readOnly = false }) {
                             <div className="mt-grow">
                                 {editing === idx ? (
                                     <input className="gl-input" autoFocus value={item.title} aria-label="Agenda item"
-                                        onChange={(e) => change((prev) => prev.map((it, i) => (i === idx ? { ...it, title: e.target.value } : it)))}
-                                        onBlur={() => setEditing(null)} onKeyDown={(e) => { if (e.key === 'Enter') setEditing(null); }} />
+                                        onChange={(e) => {
+                                            typingRef.current = true;
+                                            const title = e.target.value;
+                                            setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, title } : it)));
+                                        }}
+                                        onBlur={finishEdit} onKeyDown={(e) => { if (e.key === 'Enter') finishEdit(); }} />
                                 ) : <p className="mt-item-text">{item.title}</p>}
                                 {item.notes && <p className="mt-muted" style={{ marginTop: 2 }}>{item.notes}</p>}
                             </div>
@@ -73,18 +102,17 @@ export default function AgendaTab({ meeting, onSave, readOnly = false }) {
                                 <span className="mt-item-tools">
                                     {idx > 0 && <IconBtn label="Move up" onClick={() => move(idx)}><ArrowUp size={13} /></IconBtn>}
                                     <IconBtn label="Edit item" onClick={() => setEditing(idx)}><Edit3 size={13} /></IconBtn>
-                                    <IconBtn label="Remove item" onClick={() => change((prev) => prev.filter((_, i) => i !== idx))}><Trash2 size={13} /></IconBtn>
+                                    <IconBtn label="Remove item" onClick={() => remove(idx)}><Trash2 size={13} /></IconBtn>
                                 </span>
                             )}
                         </div>
                     ))}
                 </div>
             )}
-            {!readOnly && (dirty || items.length > 0) && (
-                <div className="mt-row">
-                    <Btn variant={dirty ? 'primary' : undefined} icon={Save} onClick={save} loading={saving} disabled={!dirty}>Save agenda</Btn>
-                    {dirty && <span className="mt-muted">Unsaved changes</span>}
-                </div>
+            {!readOnly && (saving || saved) && (
+                <p className="mt-muted" role="status" data-testid="agenda-status">
+                    {saving ? 'Saving…' : <><Check size={12} aria-hidden="true" /> Saved for everyone</>}
+                </p>
             )}
         </div>
     );

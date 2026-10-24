@@ -680,12 +680,10 @@ exports.joinWorkspace = async (req, res) => {
     
     const io = req.app.get("io");
     if (io) {
-      io.to(workspaceRooms(workspace._id.toString())).emit("workspace-joined", {
-        workspaceId: workspace._id,
-        userId: userId,
-        username: user.username,
-        role: invite.role
-      });
+      const joined = { workspaceId: workspace._id, userId: userId, username: user.username, role: invite.role };
+      io.to(workspaceRooms(workspace._id.toString())).emit("workspace-joined", joined);
+      // My other devices (the phone app, when I accepted in the browser) show the new workspace now.
+      io.to(`user:${userId}`).emit("workspaces:changed", { reason: 'joined', workspaceId: String(workspace._id) });
     }
 
     return res.json({

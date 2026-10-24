@@ -18,6 +18,7 @@
 /* The meeting panel docks beside the call on wide screens, above it on narrow ones. */
 @media (min-width: 1000px) {
     body.hw-docked .cs-screen { right: var(--hw-dock-w); }
+    body.hw-docked .cs-mini { margin-right: var(--hw-dock-w); }
 }
 .hw-panel { z-index: 85; }
 .hw-ring { z-index: 90; }
@@ -166,7 +167,12 @@
 /* Mini call: a small box above the app you can drag anywhere. */
 .cs-mini {
     position: fixed;
+    /* Below the meeting panel (so it never covers the whiteboard or notes); beside it when the
+       panel is docked (see below), so it can't hide underneath and can always be dragged. */
     z-index: 75;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
     width: 300px;
     max-width: calc(100vw - 24px);
     border: 1px solid var(--lg-border, var(--border-default));
@@ -193,7 +199,11 @@
 /* The call in its own window: it fills the window. */
 .cs-floating-body { margin: 0; min-height: 100vh; background: var(--bg-base); overflow: hidden; }
 .cs-mini-body.is-floating { height: 100vh; box-sizing: border-box; }
-.cs-mini-body.is-floating .cs-mini-head { cursor: default; }
+.cs-mini:active { cursor: grabbing; }
+.cs-mini button { cursor: pointer; }
+/* The desktop app's pop-out window moves by its header too, not only the system title bar. */
+.cs-mini-body.is-floating .cs-mini-head { cursor: default; -webkit-app-region: drag; }
+.cs-mini-body.is-floating button { -webkit-app-region: no-drag; }
 .cs-mini-body.is-floating .cs-tile { flex: 1; aspect-ratio: auto; min-height: 0; }
 
 /* "In a call on another device · Move here". */

@@ -39,7 +39,8 @@ export function PollCard({ m, me, directory }) {
   const closed = !poll.active || expired;
   const mine = poll.options.reduce((acc, o, i) => (o.votes.some((v) => v.id === me) ? [...acc, i] : acc), []);
   const voted = mine.length > 0;
-  const showResults = voted || closed;
+  // Results are live for everyone (voted or not): a vote by anyone moves the bars for all.
+  const showResults = true;
   const total = poll.totalVotes || 0;
   const pending = Boolean(m.pending) || String(m.id).startsWith('tmp');
 

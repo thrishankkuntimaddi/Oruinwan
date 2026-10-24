@@ -80,6 +80,8 @@ export function connectRealtime(base) {
     socket.on(ev, changeEvent);
   }
   socket.on('new-dm-session', () => emit('data:changed', ['dms']));
+  // I joined a workspace on another device (an invitation accepted in the browser).
+  socket.on('workspaces:changed', () => emit('data:changed', ['workspaces']));
   // Group DMs: renamed, people added or removed, or I was removed.
   socket.on('dm:members_updated', () => emit('data:changed', ['dms']));
   socket.on('dm:removed', () => emit('data:changed', ['dms']));

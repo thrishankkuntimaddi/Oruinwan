@@ -124,6 +124,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
             entry.pc.onicecandidate = null;
             entry.pc.ontrack = null;
             entry.pc.onconnectionstatechange = null;
+            entry.pc.onnegotiationneeded = null;
             entry.pc.close();
             delete peersRef.current[userId];
         }
@@ -211,12 +212,23 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
         if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
         }
-        // Someone joining while I share my screen gets the screen, not the camera.
+        // Someone joining while I share my screen gets the screen, not the camera. In a voice
+        // call (or with the camera off) there is no video sender yet, so add the screen.
         const screenTrack = screenStreamRef.current?.getVideoTracks()[0];
         if (screenTrack) {
             const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-            sender?.replaceTrack(screenTrack).catch(err => logger.warn('[useHuddle] replaceTrack failed:', err?.message));
+            if (sender) sender.replaceTrack(screenTrack).catch(err => logger.warn('[useHuddle] replaceTrack failed:', err?.message));
+            else pc.addTrack(screenTrack, localStreamRef.current || screenStreamRef.current);
         }
+
+        // Any change that needs a new offer (a camera or screen added mid-call, or my video that
+        // the other side's first offer had no room for) is offered from here, on either side.
+        // With the polite/impolite roles in onOffer, two offers at once settle and the side
+        // that yielded offers again once things are stable.
+        pc.onnegotiationneeded = () => {
+            if (peersRef.current[targetUserId] !== entry || entry.makingOffer || !huddleIdRef.current) return;
+            sendOffer(targetUserId).catch(err => logger.warn('[useHuddle] renegotiation failed:', err?.message));
+        };
 
         pc.onicecandidate = ({ candidate }) => {
             if (candidate && socket && huddleIdRef.current) {
@@ -374,10 +386,10 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
                 return;
             }
             if (!track) return;
+            // The new track is offered by onnegotiationneeded (see getOrCreatePeer).
             entry.pc.addTrack(track, stream || new MediaStream([track]));
-            await sendOffer(userId).catch(err => logger.warn('[useHuddle] renegotiation failed:', err?.message));
         }));
-    }, [sendOffer]);
+    }, []);
 
     const toggleCamera = useCallback(async () => {
         const id = huddleIdRef.current;
@@ -523,7 +535,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket, o
                 // Both sides renegotiating at once: the impolite side keeps its own offer.
                 const collision = entry.makingOffer || entry.pc.signalingState !== 'stable';
                 if (collision && !entry.polite) return;
-                if (collision) await entry.pc.setLocalDescription({ type: 'rollback' });
+                // Roll back only an offer that was really set; one still being made is dropped by
+                // makingOffer and offered again by onnegotiationneeded once this one settles.
+                if (collision && entry.pc.signalingState === 'have-local-offer') await entry.pc.setLocalDescription({ type: 'rollback' });
                 await entry.pc.setRemoteDescription(offer);
                 await flushCandidates(entry);
                 const answer = await entry.pc.createAnswer();

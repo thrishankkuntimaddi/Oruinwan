@@ -88,7 +88,8 @@ export default function PollMessage({ msg, currentUserId }) {
         [options, me]
     );
     const hasVoted = myVotes.length > 0;
-    const showResults = hasVoted || closed;
+    // Results are live for everyone (voted or not): a vote by anyone moves the bars for all.
+    const showResults = true;
 
     const rows = useMemo(() => options.map((opt, i) => {
         const count = opt.votes?.length || 0;
