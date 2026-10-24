@@ -449,6 +449,35 @@ async function createDmKey(conv, opts) {
   return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
+/**
+ * Older keys made in a browser have no server copy, so members without their own copy could
+ * never be given one. Open each such key this account holds once: opening sends the server its
+ * copy (fetchConversationKey), and the server hands it to the members missing it.
+ */
+let healed = false;
+export async function healServerCopies() {
+  if (healed || !identity) return 0;
+  healed = true;
+  let list = [];
+  try {
+    list = (await api.get('/v2/conversations/escrow-needed'))?.conversations || [];
+  } catch {
+    return 0; // older server
+  }
+  let count = 0;
+  for (const { conversationId, conversationType } of list) {
+    if (!['dm', 'channel'].includes(conversationType)) continue;
+    const conv = { id: String(conversationId), kind: conversationType };
+    convKeys.delete(`${conv.kind}:${conv.id}`);
+    wrapped.delete(`${conv.kind}:${conv.id}`);
+    try {
+      await conversationKey(conv);
+      count += 1;
+    } catch { /* not openable here: another device of this account may do it */ }
+  }
+  return count;
+}
+
 export async function conversationKey(conv, opts = {}) {
   const id = `${conv.kind}:${conv.id}`;
   if (convKeys.has(id)) return convKeys.get(id);

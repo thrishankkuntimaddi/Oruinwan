@@ -18,7 +18,7 @@ jest.mock('../../../shared/redis', () => ({ getRedis: () => null }));
 jest.mock('../../security/totp', () => ({ verifyUserTotp: jest.fn(async (secret, otp) => otp === '123456') }));
 jest.mock('../../../identity/queries/auth', () => ({
   userDocs: {
-    findByEmail: jest.fn(async () => mockState.user),
+    findByEmail: jest.fn(async () => mockState.user), findForGoogle: jest.fn(async () => mockState.user),
     findById: jest.fn(async () => mockState.user),
     create: jest.fn(async (d) => ({ _id: 'new1', ...d, refreshTokens: [], roles: [], save: jest.fn(async () => {}) })),
   },
@@ -93,7 +93,7 @@ test('Google sign-in (web, desktop and Android all post here)', async () => {
 
 test('Google sign-up of a new account', async () => {
   const { userDocs } = require('../../../identity/queries/auth');
-  userDocs.findByEmail.mockResolvedValueOnce(null);
+  userDocs.findForGoogle.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
   const start = await run(auth.googleLogin, { accessToken: 'tok' });
   expect(start.body.needsSignup).toBe(true);
   checkSpy.mockResolvedValue({ over: false, limit: 4, devices: [] });

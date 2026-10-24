@@ -239,6 +239,19 @@ export const AuthProvider = ({ children }) => {
     currentUserIdRef.current = user ? (user._id || user.id || user.sub || null) : null;
   }, [user]);
 
+  // Once encryption is unlocked, give the server its copy of any older chat key only this
+  // account holds, so the other members can be handed the key without this person having to
+  // open each of those chats first.
+  useEffect(() => {
+    if (!encryptionReady || IS_SITE) return undefined;
+    const timer = setTimeout(() => {
+      import('../services/conversationKeyService')
+        .then(({ default: keys }) => keys.healServerCopies())
+        .catch((err) => logger.warn('[E2EE] Server copies not checked:', err?.message));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [encryptionReady]);
+
   const refreshUserKey = user ? (user._id || user.id || 'anon') : null;
   useEffect(() => {
     if (!refreshUserKey) {

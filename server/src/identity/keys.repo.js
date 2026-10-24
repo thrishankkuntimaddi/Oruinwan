@@ -98,6 +98,16 @@ const conversationKeys = {
         const { rows } = await query(`SELECT DISTINCT k.* FROM conversation_keys k JOIN conversation_key_members m ON m.conversation_key_id = k.id WHERE ${where}`, params);
         return hydrate(rows);
     },
+    /** Conversations whose key `userId` holds but the server has no copy of (older browser-made keys). */
+    async listWithoutServerCopy(userId, limit = 200) {
+        const { rows } = await query(
+            `SELECT k.conversation_id, k.conversation_type FROM conversation_keys k
+             JOIN conversation_key_members m ON m.conversation_key_id = k.id
+             WHERE m.user_id = $1 AND k.workspace_encrypted_key IS NULL LIMIT $2`,
+            [str(userId), limit]
+        );
+        return rows.map((r) => ({ conversationId: r.conversation_id, conversationType: r.conversation_type }));
+    },
     async listForWorkspace(workspaceId) {
         const { rows } = await query('SELECT * FROM conversation_keys WHERE workspace_id = $1', [str(workspaceId)]);
         return hydrate(rows);

@@ -190,7 +190,8 @@ exports.checkEmail = async (req, res) => {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        const exists = await identity.users.findByEmail(email.trim());
+        // Same rule as sign-up: main and secondary emails, and every spelling of a Gmail address.
+        const exists = await require('../../identity/queries/auth').emailTaken(email.trim());
 
         return res.json({
             exists: !!exists,

@@ -4,7 +4,7 @@ import {
   api, absolute, accessToken, configure, currentRefreshToken, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
 } from './http.js';
 import {
-  conversationKey, encryptText, forgetIdentity, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
+  conversationKey, encryptText, forgetIdentity, healServerCopies, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
   unlockWithWrappedUmek,
 } from './crypto.js';
 import { challengeError, signinAdapter } from './adapter.signin.js';
@@ -591,7 +591,10 @@ export const liveAdapter = {
   onWorkspace(id) {
     currentWs = id;
     joinWorkspace(id);
-    if (id && useE2ee.getState().status === 'ready') prefetchWorkspaceKeys(id);
+    if (id && useE2ee.getState().status === 'ready') {
+      prefetchWorkspaceKeys(id);
+      healServerCopies().catch(() => {});
+    }
   },
 
   async me() {

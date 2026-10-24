@@ -290,6 +290,28 @@ const userDocs = {
         const col = { google: 'google_id', github: 'github_id', linkedin: 'linkedin_id' }[provider];
         return col ? docFromRow(await findRow(`${col} = $1`, [String(providerId)])) : null;
     },
+    /**
+     * The account a Google sign-in belongs to: the one already linked to this Google account,
+     * else the one using the address as its main email, else as a verified secondary email,
+     * else the same Gmail mailbox written differently (dots, +tag, googlemail.com).
+     */
+    async findForGoogle({ googleId, email }) {
+        if (googleId) {
+            const linked = await userDocs.findByProvider('google', googleId);
+            if (linked) return linked;
+        }
+        if (!email) return null;
+        const byMain = await userDocs.findByEmail(email);
+        if (byMain) return byMain;
+        const { rows } = await query(
+            `SELECT u.* FROM user_emails e JOIN users u ON u.id = e.user_id
+             WHERE lower(e.email) = lower($1) AND e.verified = true LIMIT 1`, [String(email)]
+        );
+        if (rows[0]) return docFromRow(rows[0]);
+        const canonical = canonicalEmail(email);
+        if (!isGmail(canonical)) return null;
+        return docFromRow(await findRow(`${CANONICAL_SQL('email')} = $1 ORDER BY created_at LIMIT 1`, [canonical]));
+    },
     async findByRefreshTokenHash(hash) {
         const { rows } = await query('SELECT u.* FROM user_refresh_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = $1', [hash]);
         return docFromRow(rows[0]);
@@ -311,13 +333,40 @@ const userDocs = {
 
 /** Is `email` used as the main or a secondary address by someone other than `exceptUserId`? */
 async function emailTaken(email, exceptUserId = null) {
+    const params = [String(email).trim(), exceptUserId ? String(exceptUserId) : null];
     const { rows } = await query(
         `SELECT id FROM users WHERE lower(email) = lower($1) AND ($2::text IS NULL OR id <> $2)
          UNION SELECT user_id FROM user_emails WHERE lower(email) = lower($1) AND ($2::text IS NULL OR user_id <> $2) LIMIT 1`,
-        [String(email), exceptUserId ? String(exceptUserId) : null]
+        params
     );
-    return rows.length > 0;
+    if (rows.length > 0) return true;
+    // One Gmail mailbox has many spellings (j.smith, jsmith+work, googlemail.com): one account.
+    const canonical = canonicalEmail(email);
+    if (!isGmail(canonical)) return false;
+    const { rows: same } = await query(
+        `SELECT id FROM users WHERE ${CANONICAL_SQL('email')} = $1 AND ($2::text IS NULL OR id <> $2) LIMIT 1`,
+        [canonical, params[1]]
+    );
+    return same.length > 0;
 }
+
+/**
+ * Gmail ignores dots and anything after "+", and googlemail.com is gmail.com, so these are
+ * all one mailbox. Other providers' addresses are only lower-cased.
+ */
+function canonicalEmail(email) {
+    const e = String(email || '').trim().toLowerCase();
+    const at = e.lastIndexOf('@');
+    if (at < 1) return e;
+    let local = e.slice(0, at);
+    let domain = e.slice(at + 1);
+    if (domain === 'googlemail.com') domain = 'gmail.com';
+    if (domain === 'gmail.com') local = local.split('+')[0].replace(/\./g, '');
+    return `${local}@${domain}`;
+}
+const isGmail = (canonical) => canonical.endsWith('@gmail.com');
+// The same rule in SQL, for a column (indexed by migration 0015).
+const CANONICAL_SQL = (col) => `canonical_email(${col})`;
 
 // ── Companies (signup auto-join) ──────────────────────────────────────
 async function companyByAllowedEmail(email) {
@@ -541,4 +590,4 @@ const conversationKeyDocs = {
     },
 };
 
-module.exports = { conversationKeyDocs, loadAuthUser, setUserPaths, userDocs, emailTaken, companyByAllowedEmail, companyForAutoJoin, invites, expand, collapse, camelRow };
+module.exports = { conversationKeyDocs, loadAuthUser, setUserPaths, userDocs, emailTaken, canonicalEmail, companyByAllowedEmail, companyForAutoJoin, invites, expand, collapse, camelRow };

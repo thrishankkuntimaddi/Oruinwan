@@ -11,7 +11,7 @@ const mockState = { user: null };
 jest.mock('google-auth-library', () => ({ OAuth2Client: jest.fn(() => mockGoogle) }));
 jest.mock('axios', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../../../identity/queries/auth', () => ({
-  userDocs: { findByEmail: jest.fn(async () => mockState.user), create: jest.fn(async (d) => ({ _id: 'new1', ...d, refreshTokens: [], roles: [], save: jest.fn(async () => {}) })) },
+  userDocs: { findByEmail: jest.fn(async () => mockState.user), findForGoogle: jest.fn(async () => mockState.user), create: jest.fn(async (d) => ({ _id: 'new1', ...d, refreshTokens: [], roles: [], save: jest.fn(async () => {}) })) },
   emailTaken: jest.fn(async () => false), companyByAllowedEmail: jest.fn(async () => null), companyForAutoJoin: jest.fn(async () => null), invites: {},
 }));
 jest.mock('../../../identity', () => ({ companies: { findByDomain: jest.fn(async () => null), findById: jest.fn(async () => null) }, users: { findByUsername: jest.fn(async () => null) } }));
@@ -205,5 +205,68 @@ describe('desktop app: Google code exchange and its ID tokens', () => {
       idToken: 'id-tok',
       audience: ['our-app.apps.googleusercontent.com', 'desktop.apps.googleusercontent.com'],
     });
+  });
+});
+
+describe('one person, one account: Google finds and links the existing account', () => {
+  const { saveWithRetry } = require('../../../../utils/mongooseRetry');
+  beforeEach(() => {
+    mockGoogle.getTokenInfo.mockResolvedValue({ aud: 'our-app.apps.googleusercontent.com', sub: 'g-1' });
+  });
+
+  test('looks the account up by Google id and email, and links Google to an email+password account', async () => {
+    mockState.user = { ...mockState.user, googleId: null, googleAccount: false, authProvider: 'local' };
+    const res = await run({ accessToken: 'tok' });
+    expect(res.statusCode).toBe(200);
+    expect(userDocs.findForGoogle).toHaveBeenCalledWith({ googleId: 'g-1', email: 'a@example.com' });
+    expect(mockState.user.googleId).toBe('g-1');
+    expect(saveWithRetry).toHaveBeenCalled();
+    expect(userDocs.create).not.toHaveBeenCalled();
+  });
+
+  test('an unverified account is verified by Google and its unproven password is replaced', async () => {
+    mockState.user = { ...mockState.user, verified: false, passwordHash: 'typed-by-someone', authProvider: 'local', passwordSetAt: new Date() };
+    const res = await run({ accessToken: 'tok' });
+    expect(res.statusCode).toBe(200);
+    expect(mockState.user.verified).toBe(true);
+    expect(mockState.user.passwordHash).not.toBe('typed-by-someone');
+    expect(mockState.user.passwordSetAt).toBeUndefined();
+  });
+
+  test('confirming sign-up when the account already exists signs in to it, never a second account', async () => {
+    const existing = mockState.user;
+    userDocs.findForGoogle.mockResolvedValueOnce(null); // first look: no account yet
+    const { body } = await run({ accessToken: 'tok' });
+    expect(body.needsSignup).toBe(true);
+    // Meanwhile the account was made (another device, or a second tap on Create).
+    userDocs.findForGoogle.mockResolvedValueOnce(existing);
+    const res = await run({ signupToken: body.signupToken, username: 'Ada', dob: '1990-05-01' }, googleSignup);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.accessToken).toBeTruthy();
+    expect(userDocs.create).not.toHaveBeenCalled();
+  });
+
+  test('two submits at once: the loser signs in to the account the winner made', async () => {
+    userDocs.findForGoogle.mockResolvedValueOnce(null);
+    const { body } = await run({ accessToken: 'tok' });
+    userDocs.findForGoogle.mockResolvedValueOnce(null);
+    userDocs.create.mockRejectedValueOnce(Object.assign(new Error('duplicate key'), { code: '23505' }));
+    userDocs.findForGoogle.mockResolvedValueOnce(mockState.user);
+    const res = await run({ signupToken: body.signupToken, username: 'Ada', dob: '1990-05-01' }, googleSignup);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.accessToken).toBeTruthy();
+  });
+});
+
+describe('canonicalEmail: one Gmail mailbox, many spellings', () => {
+  const { canonicalEmail } = jest.requireActual('../../../identity/queries/auth');
+  test.each([
+    ['John.Smith@gmail.com', 'johnsmith@gmail.com'],
+    ['johnsmith+work@gmail.com', 'johnsmith@gmail.com'],
+    [' j.o.h.n.smith@GoogleMail.com ', 'johnsmith@gmail.com'],
+    ['First.Last@company.com', 'first.last@company.com'],
+    ['a+b@outlook.com', 'a+b@outlook.com'],
+  ])('%s → %s', (input, expected) => {
+    expect(canonicalEmail(input)).toBe(expected);
   });
 });

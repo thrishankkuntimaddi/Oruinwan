@@ -136,12 +136,15 @@ async function companyForNewEmail(emailLower) {
   };
 }
 
+const ACCOUNT_EXISTS = "An account with this email already exists. Sign in instead: use Continue with Google, or Forgot password to set a password.";
+
 exports.signup = async (req, res) => {
   logger.debug('signup invoked');
   try {
-    const { email, password, phone, phoneCode, inviteToken } = req.body;
+    const { password, phone, phoneCode, inviteToken } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim() : '';
 
-    if (!req.body.username || !email || !password)
+    if (!req.body.username || !email || typeof password !== 'string' || !password)
       return res.status(400).json({ message: "Missing required fields" });
 
     const nameCheck = checkUsername(req.body.username);
@@ -156,7 +159,7 @@ exports.signup = async (req, res) => {
     if (dobCheck.error) return res.status(400).json({ message: dobCheck.error });
 
     if (await emailTaken(email))
-      return res.status(409).json({ message: "Email already in use" });
+      return res.status(409).json({ message: ACCOUNT_EXISTS, code: 'ACCOUNT_EXISTS' });
 
     
     if (await identity.users.findByUsername(username))
@@ -194,6 +197,7 @@ exports.signup = async (req, res) => {
     };
 
     
+    let usedInvite = null;
     if (inviteToken) {
       const inviteHash = sha256(inviteToken);
       const invite = await invites.findUsable(inviteHash, emailLower);
@@ -213,8 +217,8 @@ exports.signup = async (req, res) => {
           workspacesToJoin.push(invite.workspace);
         }
 
-        
-        await invites.update(invite._id, { status: 'accepted', used: true, usedBy: null, usedAt: new Date() });
+        // Marked used once the account is saved, so a failed sign-up doesn't burn the invite.
+        usedInvite = invite;
       } else {
         
       }
@@ -322,7 +326,16 @@ exports.signup = async (req, res) => {
     const [style, seed] = AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
     user.profilePicture = `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=200`;
 
-    await saveWithRetry(user);
+    try {
+      await saveWithRetry(user);
+    } catch (saveErr) {
+      // A second submit of the same form, or the same email signing up twice at once.
+      if (saveErr?.code === '23505') return res.status(409).json({ message: ACCOUNT_EXISTS, code: 'ACCOUNT_EXISTS' });
+      throw saveErr;
+    }
+    if (usedInvite) {
+      await invites.update(usedInvite._id, { status: 'accepted', used: true, usedBy: null, usedAt: new Date() });
+    }
 
     
 
@@ -1581,7 +1594,7 @@ exports.googleLogin = async (req, res) => {
     }
     const { email, name, picture, googleId } = identityFromGoogle;
 
-    const user = await userDocs.findByEmail(email);
+    const user = await userDocs.findForGoogle({ googleId, email });
 
     // No account yet: don't create one silently. Hand back a short-lived sign-up ticket so the
     // app can say "you're creating a new account" and ask for the details every account needs.
@@ -1591,16 +1604,7 @@ exports.googleLogin = async (req, res) => {
       return res.json({ needsSignup: true, signupToken, email, name: name || '', picture: picture || null });
     }
 
-    const needsPasswordSetup = Boolean(user.googleAccount && !user.passwordHash);
-
-    // Same gates as password login: Google must not bypass suspension, deactivation, 2FA or the device limit.
-    const stop = await signInGates(user, null, { skipTotp: true });
-    if (stop) return res.status(stop.status).json(stop.body);
-    const extras = { message: "Google login success", isNewUser: false, needsPasswordSetup };
-    const blocked = await require('./signInFlow').gate(req, user, { kind: 'oauth', method: 'google', otp: req.body.otp, extras });
-    if (blocked) return res.status(blocked.status).json(blocked.body);
-
-    return issueSignInSession(req, res, user, { ...extras, method: 'google' });
+    return signInWithGoogle(req, res, user, googleId);
 
   } catch (_err) {
     logger.error("GOOGLE LOGIN ERROR:", _err);
@@ -1609,6 +1613,53 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.googleAuth = exports.googleLogin;
+
+/** Sign an existing account in with Google: link it, then the same gates as password login. */
+async function signInWithGoogle(req, res, user, googleId) {
+  await linkGoogleAccount(user, googleId);
+  // No "set a password" prompt after Google sign-in (owner's rule); Settings offers it.
+  const needsPasswordSetup = false;
+
+  // Google must not bypass suspension, deactivation, 2FA or the device limit.
+  const stop = await signInGates(user, null, { skipTotp: true });
+  if (stop) return res.status(stop.status).json(stop.body);
+  const extras = { message: "Google login success", isNewUser: false, needsPasswordSetup };
+  const blocked = await require('./signInFlow').gate(req, user, { kind: 'oauth', method: 'google', otp: req.body?.otp, extras });
+  if (blocked) return res.status(blocked.status).json(blocked.body);
+
+  return issueSignInSession(req, res, user, { ...extras, method: 'google' });
+}
+
+/**
+ * Google proved this person owns the account's email: remember the Google account so the
+ * next sign-in finds it even if the account's main email changes. An account that was never
+ * verified is verified now; its password was set by whoever typed it before the owner proved
+ * the address, so it is replaced (the owner can set their own from Settings or Forgot password).
+ */
+async function linkGoogleAccount(user, googleId) {
+  let changed = false;
+  if (googleId && !user.googleId) {
+    user.googleId = googleId;
+    changed = true;
+  }
+  if (!user.verified) {
+    user.verified = true;
+    user.verificationTokenHash = undefined;
+    user.verificationTokenExpires = undefined;
+    user.passwordHash = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
+    user.passwordSetAt = undefined;
+    user.authProvider = "google";
+    user.googleAccount = true;
+    changed = true;
+  }
+  if (!changed) return;
+  try {
+    await saveWithRetry(user);
+  } catch (err) {
+    // Linking is a convenience; never let it stop the sign-in.
+    logger.warn({ err: err.message, userId: String(user._id) }, 'Could not link the Google account');
+  }
+}
 
 const GOOGLE_SIGNUP_TTL_MS = 15 * 60 * 1000;
 function googleSignupKey(token) {
@@ -1635,32 +1686,49 @@ exports.googleSignup = async (req, res) => {
     const dobCheck = checkDob(req.body.dob);
     if (dobCheck.error) return res.status(400).json({ message: dobCheck.error });
 
-    if (await emailTaken(ticket.email)) {
+    // The account already exists (made meanwhile on another device, a second tap on Create, or
+    // under another spelling of the same Gmail address): Google proved who this is, so sign
+    // them in to it instead of sending them round the "Continue with Google" loop.
+    const existing = await userDocs.findForGoogle({ googleId: ticket.googleId, email: ticket.email });
+    if (existing) {
       await otpStore.delete(googleSignupKey(signupToken));
-      return res.status(409).json({ message: "An account with this email already exists. Continue with Google to sign in." });
+      return signInWithGoogle(req, res, existing, ticket.googleId);
     }
     if (await identity.users.findByUsername(nameCheck.username)) {
       return res.status(409).json({ message: "Username already in use" });
     }
 
-    await otpStore.delete(googleSignupKey(signupToken));
+    // Single use: of two submits racing past this point only one gets the ticket.
+    if (!(await otpStore.take(googleSignupKey(signupToken)))) {
+      const made = await userDocs.findForGoogle({ googleId: ticket.googleId, email: ticket.email });
+      if (made) return signInWithGoogle(req, res, made, ticket.googleId);
+      return res.status(400).json({ message: "This sign-up has expired. Continue with Google again." });
+    }
 
     // Same company auto-join as password sign-up: allow-listed email or verified company domain.
     const company = await companyForNewEmail(String(ticket.email).toLowerCase());
 
     const randomHash = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
-    const user = await userDocs.create({
-      ...(company ? { userType: "company", companyId: company.companyId, companyRole: company.companyRole } : {}),
-      username: nameCheck.username,
-      email: ticket.email,
-      verified: true,
-      googleId: ticket.googleId,
-      profilePicture: ticket.picture,
-      googleAccount: true,
-      authProvider: "google",
-      passwordHash: randomHash,
-      profile: { dob: dobCheck.dob },
-    });
+    let user;
+    try {
+      user = await userDocs.create({
+        ...(company ? { userType: "company", companyId: company.companyId, companyRole: company.companyRole } : {}),
+        username: nameCheck.username,
+        email: ticket.email,
+        verified: true,
+        googleId: ticket.googleId,
+        profilePicture: ticket.picture,
+        googleAccount: true,
+        authProvider: "google",
+        passwordHash: randomHash,
+        profile: { dob: dobCheck.dob },
+      });
+    } catch (createErr) {
+      if (createErr?.code !== '23505') throw createErr;
+      const made = await userDocs.findForGoogle({ googleId: ticket.googleId, email: ticket.email });
+      if (made) return signInWithGoogle(req, res, made, ticket.googleId);
+      return res.status(409).json({ message: "Username already in use" });
+    }
     if (company?.workspacesToJoin.length) {
       await joinWorkspacesOnSignup(user, company.workspacesToJoin, company.companyId);
       await saveWithRetry(user);

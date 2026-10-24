@@ -411,3 +411,19 @@ exports.rewrapKey = async (req, res) => {
         return handleError(res, err, 'REWRAP CONVERSATION KEY ERROR');
     }
 };
+
+/**
+ * GET /escrow-needed — conversations whose key I hold but the server has no copy of. Each
+ * device opens these once after sign-in and sends the server its copy (POST /:id/keys/escrow),
+ * so members who never got the key (joined later, or set up encryption later) are given it
+ * without waiting for the key holder to open that chat.
+ */
+exports.escrowNeeded = async (req, res) => {
+    try {
+        const { conversationKeys } = require('../../identity/keys.repo');
+        const conversations = await conversationKeys.listWithoutServerCopy(req.user.sub);
+        return res.json({ conversations });
+    } catch (err) {
+        return handleError(res, err, 'ESCROW NEEDED ERROR');
+    }
+};

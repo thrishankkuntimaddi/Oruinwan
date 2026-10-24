@@ -338,6 +338,33 @@ class ConversationKeyService {
             : unwrapKeyWithRSA(encryptedKey, privateKey);
     }
 
+    /**
+     * Older keys made in a browser have no server copy, so members without a copy of their own
+     * can never be given one. Open each such key I hold once; opening sends the server its copy
+     * (see fetchAndDecryptConversationKey), and the server hands it to the members missing it.
+     */
+    async healServerCopies() {
+        let list = [];
+        try {
+            const { data } = await api.get('/api/v2/conversations/escrow-needed');
+            list = Array.isArray(data?.conversations) ? data.conversations : [];
+        } catch {
+            return 0; // older server
+        }
+        let healed = 0;
+        for (const { conversationId, conversationType } of list) {
+            if (!['dm', 'channel'].includes(conversationType)) continue;
+            try {
+                this.conversationKeys.delete(`${conversationType}:${conversationId}`);
+                const key = await this.getConversationKey(conversationId, conversationType);
+                if (key instanceof CryptoKey) healed += 1;
+            } catch (err) {
+                logger.warn(`[E2EE] Could not open ${conversationType}:${conversationId} to add its server copy:`, err?.message);
+            }
+        }
+        return healed;
+    }
+
     _escrow(conversationId, conversationType, keyBytes) {
         try {
             const bytes = new Uint8Array(keyBytes);
