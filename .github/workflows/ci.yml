@@ -90,6 +90,9 @@ jobs:
           cache: yarn
           cache-dependency-path: yarn.lock
       - run: yarn install --frozen-lockfile
+      # The phone app's interface runs in the browser for the phone flows (21-phone-member-dms).
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: mobile
       - run: yarn playwright install --with-deps chromium
         working-directory: e2e
       - run: yarn workspace e2e test

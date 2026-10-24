@@ -97,10 +97,30 @@ export async function restoreIdentity(userId) {
   if (cached?.privateKey) {
     identity = { userId, ...cached };
     setE2ee('ready');
+    checkIdentityCurrent(userId).catch(() => {});
     return true;
   }
   setE2ee('password_required');
   return false;
+}
+
+/**
+ * The saved key is for an identity the account has since replaced (set up again on another
+ * device, or moved to automatic unlock there): it can't open any new conversation key. Drop it
+ * and unlock the account's current identity. Offline or on any error, keep what we have.
+ */
+export async function checkIdentityCurrent(userId) {
+  const mine = identity;
+  if (!mine?.publicKeyPem || mine.userId !== userId) return false;
+  const state = await api.get('/v2/crypto/identity');
+  if (!state?.identityPublicKey || state.identityPublicKey === mine.publicKeyPem || identity !== mine) return false;
+  identity = null;
+  convKeys.clear();
+  wrapped.clear();
+  await cacheDelete(`id:${userId}`);
+  setE2ee('password_required');
+  await unlockIdentity(userId);
+  return true;
 }
 
 async function uploadPublicKey(pem, algorithm, version = 1) {
@@ -383,10 +403,70 @@ export async function prefetchWorkspaceKeys(workspaceId) {
   }
 }
 
-export async function conversationKey(conv, _opts = {}) {
+/** Participant ids and workspace of a DM: from its details, else from what the caller knows. */
+async function dmMembers(conv, opts) {
+  try {
+    const data = await api.get(`/v2/dm/${conv.id}`);
+    const ids = (data?.dm?.participants || []).map((p) => String(p?._id || p)).filter(Boolean);
+    if (ids.length) return { ids, workspaceId: data.dm.workspaceId || opts.workspaceId };
+  } catch {
+    /* older server: no details endpoint */
+  }
+  const ids = (opts.participantIds || []).map(String).filter(Boolean);
+  if (identity && !ids.includes(String(identity.userId))) ids.push(String(identity.userId));
+  return { ids, workspaceId: opts.workspaceId };
+}
+
+/**
+ * A DM the server has no key for (a server older than the app, or making it failed there):
+ * make the key here for every participant, then give the server its copy (escrow) so anyone
+ * without a copy, now or later, can be given one. If someone made it first, use theirs.
+ */
+async function createDmKey(conv, opts) {
+  const { ids, workspaceId } = await dmMembers(conv, opts);
+  if (!ids.length || !workspaceId) return null;
+  const { publicKeys = [] } = (await api.post('/v2/identity/public-keys', { userIds: ids })) || {};
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const encryptedKeys = [];
+  for (const { userId, publicKey, algorithm } of publicKeys) {
+    if (!isRsa(algorithm) || !publicKey) continue;
+    try {
+      const der = fromB64(String(publicKey).replace(/-----[^-]+-----/g, ''));
+      const pub = await subtle.importKey('spki', der, RSA, false, ['encrypt']);
+      encryptedKeys.push({ userId: String(userId), encryptedKey: toB64(await subtle.encrypt({ name: 'RSA-OAEP' }, pub, raw)), algorithm: IDENTITY_ALGORITHM });
+    } catch {
+      /* that person gets a copy from the server copy later */
+    }
+  }
+  if (!encryptedKeys.some((k) => k.userId === String(identity.userId))) return null;
+  try {
+    await api.post(`/v2/conversations/${conv.id}/keys`, { conversationType: 'dm', workspaceId, encryptedKeys });
+  } catch (err) {
+    if (err.status === 409) return null; // someone made it first: the caller fetches theirs
+    throw err;
+  }
+  api.post(`/v2/conversations/${conv.id}/keys/escrow`, { type: 'dm', key: toB64(raw) }).catch(() => {});
+  return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+export async function conversationKey(conv, opts = {}) {
   const id = `${conv.kind}:${conv.id}`;
   if (convKeys.has(id)) return convKeys.get(id);
   if (!identity) throw Object.assign(new Error('Locked'), { code: 'LOCKED' });
+  try {
+    return await fetchConversationKey(conv, id);
+  } catch (err) {
+    if (err.code !== 'NOT_INITIALIZED' || conv.kind !== 'dm' || !opts.create) throw err;
+    const made = await createDmKey(conv, opts).catch(() => null);
+    if (made) {
+      convKeys.set(id, made);
+      return made;
+    }
+    return fetchConversationKey(conv, id);
+  }
+}
+
+async function fetchConversationKey(conv, id) {
 
   let entry = wrapped.get(id);
   if (!entry) {

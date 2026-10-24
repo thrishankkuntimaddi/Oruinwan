@@ -3,8 +3,39 @@ const crypto = require('crypto');
 // Keys live in PostgreSQL next to the users they belong to (identity/keys.repo); the
 // document adapter keeps the push-then-save style this service is written in.
 const { conversationKeyDocs: ConversationKey } = require('../../identity/queries/auth');
-const { identityKeys: UserIdentityKey } = require('../../identity');
+const identityStore = require('../../identity');
 const cryptoUtils = require('./cryptoUtils');
+
+// The public key to wrap conversation keys for. The key saved with someone's encryption setup
+// (cryptoState) is the one their devices open keys with, so it comes first; the separately
+// published key (identityKeys) covers accounts without one. That publish is a second request
+// from the app, and when it failed the person could never be given any DM or channel key.
+const isRsaKey = (algorithm) => !algorithm || /^RSA/i.test(algorithm);
+const fromState = (s) => (s?.identityPublicKey && isRsaKey(s.algorithm)
+    ? { userId: String(s.userId), publicKey: s.identityPublicKey, algorithm: s.algorithm || 'RSA-2048', version: s.version || 1 }
+    : null);
+const UserIdentityKey = {
+    async findByUserId(userId) {
+        const state = identityStore.cryptoState?.findByUserId
+            ? fromState(await identityStore.cryptoState.findByUserId(userId))
+            : null;
+        return state || identityStore.identityKeys.findByUserId(userId);
+    },
+    async batchFindByUserIds(userIds) {
+        const byUser = new Map();
+        const states = identityStore.cryptoState?.batchFindByUserIds
+            ? await identityStore.cryptoState.batchFindByUserIds(userIds)
+            : [];
+        for (const s of states) {
+            const k = fromState(s);
+            if (k) byUser.set(k.userId, k);
+        }
+        for (const k of await identityStore.identityKeys.batchFindByUserIds(userIds)) {
+            if (k?.publicKey && !byUser.has(String(k.userId))) byUser.set(String(k.userId), k);
+        }
+        return [...byUser.values()];
+    },
+};
 
 async function storeConversationKeys(params) {
     const { conversationId, conversationType, workspaceId, createdBy, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag, session } = params;
@@ -952,6 +983,7 @@ async function rewrapForUser(conversationId, conversationType, userId) {
 }
 
 module.exports = {
+    publicKeys: UserIdentityKey,
     distributeToMissingMembers,
     escrowConversationKey,
     rewrapForUser,

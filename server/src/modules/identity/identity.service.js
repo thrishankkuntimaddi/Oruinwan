@@ -14,9 +14,13 @@ async function storePublicKey(userId, publicKey, algorithm, version = 1) {
     }
 }
 
+// Same keys the server wraps conversation keys for: the one saved with the person's encryption
+// setup first, then the separately published one (conversationKeys.service publicKeys).
+const publicKeys = () => require('../conversations/conversationKeys.service').publicKeys;
+
 async function getPublicKey(userId) {
     try {
-        const keyDoc = await identityKeys.findByUserId(userId);
+        const keyDoc = await publicKeys().findByUserId(userId);
         return keyDoc;
     } catch (error) {
         logger.error('Failed to fetch public key:', error);
@@ -26,7 +30,7 @@ async function getPublicKey(userId) {
 
 async function batchGetPublicKeys(userIds) {
     try {
-        const keyDocs = await identityKeys.batchFindByUserIds(userIds);
+        const keyDocs = await publicKeys().batchFindByUserIds(userIds);
         return keyDocs;
     } catch (error) {
         logger.error('Failed to batch fetch public keys:', error);
@@ -36,8 +40,8 @@ async function batchGetPublicKeys(userIds) {
 
 async function hasPublicKey(userId) {
     try {
-        const keyDoc = await identityKeys.findByUserId(userId);
-        return keyDoc !== null;
+        const keyDoc = await publicKeys().findByUserId(userId);
+        return Boolean(keyDoc);
     } catch (error) {
         logger.error('Failed to check public key:', error);
         return false;

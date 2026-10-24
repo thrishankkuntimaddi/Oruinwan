@@ -1,5 +1,5 @@
 import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
-import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
+import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519, importPublicKeyPEM } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
 import api from './api';
 import logger from '../utils/logger';
@@ -274,6 +274,62 @@ class ConversationKeyService {
         // once (in the background) so the server can hand it to every member.
         if (data.serverCopy === false) this._escrow(conversationId, conversationType, conversationKeyBytes);
         return conversationKey;
+    }
+
+    /**
+     * A DM the server has no key for (a server older than this app, or making it failed there).
+     * Make the key here for every participant, then give the server its protected copy (escrow)
+     * so anyone without a copy, now or later, can still be given one. If someone else made the
+     * key in the meantime, use theirs. Returns the CryptoKey, or null when it can't be made.
+     */
+    async createDMKey(conversationId, workspaceId) {
+        const cacheKey = `dm:${conversationId}`;
+        try {
+            const { ids: participants, workspaceId: dmWorkspaceId } = await this._dmParticipants(conversationId, workspaceId);
+            const ws = dmWorkspaceId || workspaceId;
+            if (!participants.length || !ws) return null;
+            await this._loadPublicKeys(participants);
+            const { conversationKey } = await this.createAndStoreConversationKey(conversationId, 'dm', ws, participants);
+            this._escrow(conversationId, 'dm', await exportKey(conversationKey));
+            return conversationKey;
+        } catch (err) {
+            logger.warn(`[E2EE] Could not make the key for ${cacheKey} here:`, err?.message);
+            this.conversationKeys.delete(cacheKey);
+            const theirs = await this.getConversationKey(conversationId, 'dm').catch(() => null);
+            return theirs instanceof CryptoKey ? theirs : null;
+        }
+    }
+
+    // Participant ids (and workspace) of a DM: from its details (newer servers), else from my DM list.
+    async _dmParticipants(conversationId, workspaceId) {
+        try {
+            const { data } = await api.get(`/api/v2/dm/${conversationId}`);
+            const ids = (data?.dm?.participants || []).map((p) => String(p?._id || p)).filter(Boolean);
+            if (ids.length) return { ids, workspaceId: data.dm.workspaceId || workspaceId };
+        } catch { /* older server: no details endpoint */ }
+        if (!workspaceId) return { ids: [], workspaceId };
+        const { data } = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
+        const session = (data?.sessions || []).find((s) => String(s.id) === String(conversationId));
+        if (!session) return { ids: [], workspaceId };
+        const me = getCurrentUserId();
+        const others = session.isGroup
+            ? (session.members || []).map((m) => String(m?._id || m))
+            : [String(session.otherUserId?._id || session.otherUserId || '')];
+        return { ids: [...new Set([me, ...others].filter(Boolean))], workspaceId };
+    }
+
+    // Public keys through the signed-in API client (it attaches and refreshes the token).
+    async _loadPublicKeys(userIds) {
+        const missing = userIds.filter((id) => !identityKeyService.publicKeysCache.has(id));
+        if (!missing.length) return;
+        const { data } = await api.post('/api/v2/identity/public-keys', { userIds: missing });
+        for (const { userId, publicKey, algorithm } of data?.publicKeys || []) {
+            try {
+                identityKeyService.publicKeysCache.set(String(userId), { publicKey: await importPublicKeyPEM(publicKey, algorithm), algorithm });
+            } catch (err) {
+                logger.warn(`[E2EE] Public key of ${userId} did not import:`, err?.message);
+            }
+        }
     }
 
     async _unwrap({ encryptedKey, ephemeralPublicKey, algorithm }, privateKey) {

@@ -64,6 +64,8 @@ async function main() {
     FEATURES_ENABLED: '',
     STORAGE_DRIVER: 'local',
     LOCAL_UPLOAD_DIR: path.join(__dirname, '..', '.auth', 'uploads'),
+    // "Continue with Google" without Google: tokens reading "e2e-google:<email>" (test only).
+    NODE_OPTIONS: `--require ${path.join(__dirname, 'google-stub.js')}`,
   };
 
   // Blank every other key in a developer's server/.env, so dotenv cannot fill

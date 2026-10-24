@@ -362,6 +362,9 @@ jobs:
           # Never pick up a signing identity from the runner: Mac builds are ad-hoc signed
           # (mac.identity "-" in package.json), Windows builds are unsigned.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # electron-builder skips all signing on pull requests, so the ad-hoc signature (and the
+          # "Check the Mac app" step) failed there. No certificate is involved: only "-".
+          CSC_FOR_PULL_REQUEST: 'true'
         run: |
           VERSION=$(node -p "require('../mobile/package.json').version")
           npm run bundle

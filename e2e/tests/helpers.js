@@ -24,6 +24,30 @@ async function login(page, userKey) {
   await page.waitForURL(/\/workspaces/);
 }
 
+/**
+ * "Continue with Google" without Google: Google's sign-in script is replaced by a fake that
+ * hands the app a token the E2E server accepts for this email (scripts/google-stub.js). The
+ * rest is the app's real Google path (server sign-in, then automatic unlock of the keys).
+ */
+async function loginWithGoogle(page, userKey) {
+  const user = E2E.users[userKey];
+  await page.context().route(/accounts\.google\.com\/gsi\/client/, (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: `window.google = { accounts: {
+      oauth2: {
+        initTokenClient: (cfg) => ({ requestAccessToken: () => setTimeout(() => cfg.callback({
+          access_token: ${JSON.stringify(`e2e-google:${user.email}`)}, token_type: 'Bearer', expires_in: 3600, scope: cfg.scope }), 0) }),
+        initCodeClient: () => ({ requestCode() {} }),
+        hasGrantedAllScopes: () => true,
+      },
+      id: { initialize() {}, prompt() {}, renderButton() {}, disableAutoSelect() {}, cancel() {} },
+    } };`,
+  }));
+  await page.goto('/login');
+  await page.getByTestId('continue-with-google').click();
+  await page.waitForURL(/\/workspaces/);
+}
+
 /** From /workspaces, open the seeded workspace by clicking it. */
 async function openWorkspace(page) {
   if (process.env.E2E_DEBUG) {
@@ -67,7 +91,7 @@ async function headerMenu(page, label) {
   await page.getByRole('button', { name: label, exact: true }).click();
 }
 
-module.exports = { E2E, seedData, login, openWorkspace, waitForComposerReady, openDm, sendText, headerMenu };
+module.exports = { E2E, seedData, login, loginWithGoogle, openWorkspace, waitForComposerReady, openDm, sendText, headerMenu };
 
 /** Run a read-only query against the E2E database (for assertions the UI cannot show). */
 async function withDb(fn) {
