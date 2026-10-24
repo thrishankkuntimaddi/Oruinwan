@@ -63,6 +63,7 @@ const LABELS = {
   list_my_tasks: 'Read your tasks', update_task_status: 'Updated a task', create_note: 'Created a note', list_recent_notes: 'Read your notes',
   search_workspace: 'Searched the workspace', schedule_meeting: 'Scheduled a meeting', search_messages_with_person: 'Searched your messages',
   remember_about_user: 'Saved to memory', forget_about_user: 'Updated memory',
+  create_thread: 'Started a thread', reply_in_thread: 'Replied in a thread', append_to_note: 'Updated a note', set_reminder: 'Set a reminder',
 };
 
 /**

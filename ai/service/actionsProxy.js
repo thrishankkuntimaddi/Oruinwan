@@ -8,7 +8,7 @@
  *
  *   POST {API_INTERNAL_URL}/api/internal/ai-actions/:name
  *   Authorization: Bearer {AI_SERVICE_TOKEN}
- *   { args, ctx: { userId, workspaceId } }      -> { result }
+ *   { args, ctx: { userId, workspaceId, shared?, channelId?, conversation? } } -> { result }
  *
  * Only ids cross the wire: never a request, socket or provider object.
  */
@@ -17,8 +17,19 @@ const { ACTION_FOR } = require('../tools/registry');
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
+const idOrNull = (v) => (v != null && v !== '' ? String(v) : null);
+
 function plainCtx(ctx = {}) {
-  return { userId: ctx.userId != null ? String(ctx.userId) : null, workspaceId: ctx.workspaceId != null ? String(ctx.workspaceId) : null };
+  const out = { userId: idOrNull(ctx.userId), workspaceId: idOrNull(ctx.workspaceId) };
+  // A shared conversation (the assistant was @mentioned): what everyone there may see, and where
+  // its threads / replies go by default. The API re-checks membership for all of it.
+  if (ctx.shared) out.shared = true;
+  if (ctx.channelId) out.channelId = String(ctx.channelId);
+  const c = ctx.conversation;
+  if (c && c.id) {
+    out.conversation = { id: String(c.id), type: c.type === 'dm' ? 'dm' : 'channel', parentId: idOrNull(c.parentId), triggerMessageId: idOrNull(c.triggerMessageId) };
+  }
+  return out;
 }
 
 /**

@@ -57,6 +57,9 @@ describe('mentions', () => {
     expect(mentionTextFor('@ana and @ben, also @nobody and email x@ana.com @channel', names)).toBe('@ana @ben @channel');
     expect(mentionTextFor('@here please', names, { allowBroadcast: false })).toBe('');
     expect(mentionTextFor('no mentions', names)).toBe('');
+    // @everyone is sent too (the server treats it as @channel), only when broadcasts are allowed.
+    expect(mentionTextFor('heads up @everyone', names)).toBe('@everyone');
+    expect(mentionTextFor('heads up @everyone', names, { allowBroadcast: false })).toBe('');
   });
 });
 

@@ -20,6 +20,7 @@ const TOOL_PROGRESS = {
     list_my_tasks: 'Reading tasks', update_task_status: 'Updating a task', create_note: 'Creating a note', list_recent_notes: 'Reading notes',
     search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling a meeting',
     search_messages_with_person: 'Searching your messages',
+    create_thread: 'Starting a thread', reply_in_thread: 'Replying in the thread', append_to_note: 'Updating a note', set_reminder: 'Setting a reminder',
     remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 

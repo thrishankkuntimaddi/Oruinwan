@@ -34,6 +34,7 @@ const ACTION_LABELS = {
   list_my_tasks: 'listed tasks', update_task_status: 'updated task', create_note: 'created note', list_recent_notes: 'listed notes',
   search_workspace: 'searched workspace', schedule_meeting: 'scheduled meeting',
   search_messages_with_person: 'searched your messages',
+  create_thread: 'started thread', reply_in_thread: 'replied in thread', append_to_note: 'updated note', set_reminder: 'set reminder',
   remember_about_user: 'saved to memory', forget_about_user: 'removed from memory',
 };
 
@@ -44,6 +45,7 @@ const TOOL_PROGRESS = {
   list_my_tasks: 'Reading your tasks', update_task_status: 'Updating the task', create_note: 'Creating the note', list_recent_notes: 'Reading your notes',
   search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling the meeting',
   search_messages_with_person: 'Searching your messages',
+  create_thread: 'Starting the thread', reply_in_thread: 'Replying in the thread', append_to_note: 'Updating the note', set_reminder: 'Setting the reminder',
   remember_about_user: 'Saving to memory', forget_about_user: 'Updating memory',
 };
 

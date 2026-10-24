@@ -437,7 +437,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     attachments: [],
                     clientTempId: tempId,
                     // Plain mention handles only (@name, @here, @channel), so mentions notify.
-                    mentionText: mentionText || (replyText.match(/@[\w.-]+/g) || []).join(' '),
+                    mentionText: ((mentionText || replyText).match(/@[\w.-]+/g) || []).join(' '),
                 });
 
             // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
