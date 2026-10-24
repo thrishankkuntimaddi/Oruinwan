@@ -20,8 +20,9 @@ const express = require('express');
 // The key GitHub release builds (APK downloads) are signed with: CN=Oruinwan, O=Oruinwan, C=IN.
 const RELEASE_CERT_SHA256 = '95:E2:DE:0F:29:7D:8D:22:D2:28:06:45:EB:F6:C0:20:EA:82:48:2E:2A:D2:5E:FD:FE:88:9B:AF:54:93:F7:E5';
 
-// The app's link paths (mobile/android/app/src/main/AndroidManifest.xml, mobile/src/lib/invite.js).
-const APP_PATHS = ['/join-workspace*', '/join/*', '/invite/*'];
+// The app's link paths (mobile/android/app/src/main/AndroidManifest.xml, mobile/src/lib/invite.js,
+// and shared message/thread links: mobile/src/lib/shareContent.js).
+const APP_PATHS = ['/join-workspace*', '/join/*', '/invite/*', '/workspace/*/channel/*', '/workspace/*/dm/*'];
 
 /** "95e2de0f…" or "95:E2:…" → "95:E2:…" (the form assetlinks.json uses). */
 function normalizeFingerprint(fp) {

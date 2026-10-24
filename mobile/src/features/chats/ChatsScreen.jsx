@@ -18,6 +18,7 @@ import { plainPreview } from '../../ui/Markdown.jsx';
 import { useChatsUi, openConversation } from './chatsUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
 import { GroupTile } from './groupScreens.jsx';
+import { chatSections } from './chatGroups.js';
 
 export function channelGlyph(c) {
   if (c?.broadcast) return Megaphone;
@@ -94,15 +95,11 @@ export function ChatsScreen() {
   const { data: agents } = useAgents();
 
   const q = query.trim().toLowerCase();
-  const joined = useMemo(
-    () =>
-      (channels || [])
-        .filter((c) => c.isMember && (!q || c.name.toLowerCase().includes(q)))
-        .sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || '')),
-    [channels, q],
-  );
+  // Every conversation stays in its own section; Unread only mirrors the unread ones (chatGroups.js).
   // Conversations with AI agents are listed under Agents, not with people.
-  const people = useMemo(() => (dms || []).filter((d) => !d.agentId && (!q || d.user?.name?.toLowerCase().includes(q))), [dms, q]);
+  const sections = useMemo(() => chatSections({ channels, dms, query: q }), [channels, dms, q]);
+  const joined = sections.channels;
+  const people = sections.dms;
   const agentList = useMemo(() => (agents || []).filter((a) => !q || a.name.toLowerCase().includes(q)), [agents, q]);
   const chatWithAgent = async (agent) => {
     try {
@@ -115,14 +112,7 @@ export function ChatsScreen() {
   };
   const notJoined = (channels || []).filter((c) => !c.isMember).length;
 
-  const unreadAll = useMemo(
-    () =>
-      [
-        ...joined.filter((c) => c.unread > 0 && !c.muted).map((c) => ({ kind: 'channel', item: c })),
-        ...people.filter((d) => d.unread > 0).map((d) => ({ kind: 'dm', item: d })),
-      ].sort((a, b) => (b.item.lastAt || '').localeCompare(a.item.lastAt || '')),
-    [joined, people],
-  );
+  const unreadAll = sections.unread;
 
   const channelUnread = joined.filter((c) => !c.muted).reduce((a, c) => a + (c.unread || 0), 0);
   const dmUnread = people.reduce((a, d) => a + (d.unread || 0), 0);
@@ -130,7 +120,6 @@ export function ChatsScreen() {
 
   const showChannels = segment !== 'dms';
   const showDms = segment !== 'channels';
-  const unreadIds = new Set(unreadAll.map((u) => u.item.id));
 
   return (
     <Screen>
@@ -174,11 +163,9 @@ export function ChatsScreen() {
             {showChannels && (
               <>
                 <GroupTitle>Channels</GroupTitle>
-                {joined
-                  .filter((c) => segment !== 'all' || q || !unreadIds.has(c.id))
-                  .map((c) => (
-                    <ConversationRow key={c.id} kind="channel" item={c} />
-                  ))}
+                {joined.map((c) => (
+                  <ConversationRow key={c.id} kind="channel" item={c} />
+                ))}
                 {!joined.length && <p className="px-4 py-3 text-sm text-text-2">{q ? 'No channels match.' : "You haven't joined any channels yet."}</p>}
                 <button
                   type="button"
@@ -195,11 +182,9 @@ export function ChatsScreen() {
             {showDms && (
               <>
                 <GroupTitle>Direct messages</GroupTitle>
-                {people
-                  .filter((d) => segment !== 'all' || q || !unreadIds.has(d.id))
-                  .map((d) => (
-                    <ConversationRow key={d.id} kind="dm" item={d} />
-                  ))}
+                {people.map((d) => (
+                  <ConversationRow key={d.id} kind="dm" item={d} />
+                ))}
                 {!people.length && q && <p className="px-4 py-3 text-sm text-text-2">No people match.</p>}
                 <button
                   type="button"

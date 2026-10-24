@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, Check, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
@@ -15,6 +15,7 @@ import LiveHuddleMark from '../../../features/huddles/components/LiveHuddleMark'
 import { usePlan } from '../../../features/plan/usePlan';
 import { planBlock, blockedButtonProps, emitPlanLimit } from '../../../features/plan/planLimit';
 import '../../../features/plan/plan.css';
+import { missingUnreadIds, idsToReloadFor } from '../../../features/notifications/unreadListSync';
 
 const ChannelsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -43,6 +44,9 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
     
     const [channels, setChannels] = useState([]);
     const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+    const [reloadKey, setReloadKey] = useState(0);
+    const hasChannelsRef = useRef(false);
+    hasChannelsRef.current = channels.length > 0;
 
     
     useEffect(() => {
@@ -50,8 +54,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
             if (!workspaceId) return;
 
             try {
-                setIsLoadingChannels(true);
-                
+                if (!hasChannelsRef.current) setIsLoadingChannels(true); // quiet refresh when a list is already shown
+
                 const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
 
                 
@@ -80,7 +84,18 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         };
 
         fetchChannels();
-    }, [workspaceId]);
+    }, [workspaceId, reloadKey]);
+
+    // A channel with unread messages that isn't listed (I was just added to it): reload so it
+    // shows under Channels, not only in the unread counts.
+    const conversationUnread = notif?.conversationUnread;
+    const triedMissingRef = useRef(new Set());
+    useEffect(() => { triedMissingRef.current = new Set(); }, [workspaceId]);
+    useEffect(() => {
+        if (isLoadingChannels || !workspaceId) return;
+        const missing = missingUnreadIds(conversationUnread, 'channel', channels.map(c => c.id));
+        if (idsToReloadFor(missing, triedMissingRef.current).length) setReloadKey(k => k + 1);
+    }, [conversationUnread, channels, isLoadingChannels, workspaceId]);
 
     
     useEffect(() => {

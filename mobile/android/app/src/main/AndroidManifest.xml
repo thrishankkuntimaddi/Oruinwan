@@ -33,6 +33,10 @@
                 <data android:pathPrefix="/join-workspace" />
                 <data android:pathPrefix="/join/" />
                 <data android:pathPrefix="/invite/" />
+                <!-- Shared message and thread links (src/lib/shareContent.js). Only conversation
+                     links: other /workspace/ pages the app opens in the browser stay there. -->
+                <data android:pathPattern="/workspace/.*/channel/.*" />
+                <data android:pathPattern="/workspace/.*/dm/.*" />
             </intent-filter>
             <!-- oruinwan://join/<token> and oruinwan://join-workspace?token=… -->
             <intent-filter>

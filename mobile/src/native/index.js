@@ -202,6 +202,27 @@ export async function shareLink({ title, text, url }) {
 }
 
 /**
+ * Shares text (a message, a thread transcript) through the system share sheet; copies it when
+ * there is none. Returns 'shared' | 'copied' | 'cancelled' | 'failed'.
+ */
+export async function shareText({ title, text }) {
+  try {
+    if (isNative) {
+      if ((await Share.canShare()).value) {
+        await Share.share({ title, text, dialogTitle: title });
+        return 'shared';
+      }
+    } else if (typeof navigator !== 'undefined' && navigator.share) {
+      await navigator.share({ title, text });
+      return 'shared';
+    }
+  } catch (err) {
+    if (/cancel|abort/i.test(String(err?.message || err?.name))) return 'cancelled';
+  }
+  return (await copyText(text)) ? 'copied' : 'failed';
+}
+
+/**
  * Saves a JSON document for the person: a download in a browser or the desktop app, the share
  * sheet on phones and tablets (Files, Drive, Mail…). Returns 'saved' | 'shared' | 'copied' | 'cancelled'.
  */

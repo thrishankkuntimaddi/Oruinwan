@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { channelService } from "../services/channelService";
 import { messageService } from "../services/messageService";
 import api from '@services/api';
@@ -28,6 +28,8 @@ export default function ContactsProvider({ children }) {
   const [error, setError] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const { socket } = useSocket();
+  const dmIdsRef = useRef(new Set());
+  dmIdsRef.current = new Set(dms.map((d) => String(d.id)));
 
   const loadAllData = useCallback(async (workspaceId) => {
     try {
@@ -234,6 +236,18 @@ export default function ContactsProvider({ children }) {
       if (currentWsId) loadAllData(currentWsId);
     };
 
+    // A message in a DM this list doesn't have yet (someone just started it): reload once, so it
+    // is listed with the other DMs and not only counted as unread.
+    const reloadedFor = new Set();
+    const handleNewMessage = (msg) => {
+      const dmId = String(msg?.dm?._id || msg?.dm || '');
+      if (!dmId || reloadedFor.has(dmId) || dmIdsRef.current.has(dmId)) return;
+      reloadedFor.add(dmId);
+      const currentWsId = getCurrentWorkspaceId();
+      if (currentWsId) loadAllData(currentWsId);
+    };
+    socket.on('new-message', handleNewMessage);
+
     socket.on('channel-created', handleChannelCreated);
     socket.on('channel-updated', handleChannelUpdated);
     socket.on('channel-deleted', handleChannelDeleted);
@@ -250,6 +264,7 @@ export default function ContactsProvider({ children }) {
     socket.on('channel-privacy-changed', handlePrivacyChanged);
 
     return () => {
+      socket.off('new-message', handleNewMessage);
       socket.off('channel-created', handleChannelCreated);
       socket.off('channel-updated', handleChannelUpdated);
       socket.off('channel-deleted', handleChannelDeleted);
