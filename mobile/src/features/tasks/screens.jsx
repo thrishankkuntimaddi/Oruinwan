@@ -24,6 +24,7 @@ import { toast } from '../../lib/bus.js';
 import { useFlag } from '../../config/flags.js';
 import { TaskRow, StatusIcon } from './TaskRow.jsx';
 import { TaskExtras } from './TaskExtras.jsx';
+import { TaskDiscussionSection } from './TaskDiscussion.jsx';
 import { BlockersSheet } from './BlockersSheet.jsx';
 import { blockersOf } from '../../data/live/adapter.work.js';
 import { TemplatePickerSheet } from './PlanningScreen.jsx';
@@ -491,6 +492,7 @@ export function TaskScreen({ id }) {
             </Button>
           )}
         </Section>
+        <TaskDiscussionSection id={id} title={task.title} />
         <TaskExtras id={id} />
       </Body>
 

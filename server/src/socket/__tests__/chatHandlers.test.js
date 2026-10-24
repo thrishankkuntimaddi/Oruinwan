@@ -113,4 +113,17 @@ describe('socket send-message authorization', () => {
     expect(socket.emit).toHaveBeenCalledWith('message-sent', expect.objectContaining({ clientTempId: 't5', duplicate: true, clientMessageId: 'queued-0001' }));
     expect(roomEmit).not.toHaveBeenCalledWith('new-message', expect.anything());
   });
+
+  it('refuses a reply to a locked thread with THREAD_LOCKED', async () => {
+    const Message = require('../../modules/messages/message.model');
+    Channel.findById.mockReturnValue(q({ _id: 'ch1', workspace: null, company: 'co1', members: [{ user: USER }] }));
+    Message.findById.mockReturnValue(q({ _id: 'p1', channel: 'ch1', parentId: null, threadLockedAt: new Date(), threadLockedByName: 'dana' }));
+
+    await handlers['send-message']({ channelId: 'ch1', parentId: 'p1', ciphertext: 'x', messageIv: 'y', clientTempId: 't6' });
+
+    expect(messagesService.createMessage).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith('send-error', {
+      clientTempId: 't6', code: 'THREAD_LOCKED', message: 'This thread was locked by dana. New replies are turned off.',
+    });
+  });
 });

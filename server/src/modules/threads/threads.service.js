@@ -159,7 +159,20 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
     const autoFollow = [String(replierId), ...mentionedIds];
     // replyCount is the value before this reply was counted.
     if ((parent.replyCount || 0) === 0 && parent.sender) autoFollow.push(String(parent.sender._id || parent.sender));
-    await Message.updateOne({ _id: parent._id }, { $addToSet: { followers: { $each: autoFollow } } });
+    // DMs and group DMs: everyone in the conversation follows its threads from the first reply
+    // (and may unfollow afterwards), the way Slack treats DM threads.
+    if ((parent.replyCount || 0) === 0 && parent.dm) {
+        try {
+            const DMSession = require('../../../models/DMSession');
+            const dm = await DMSession.findById(parent.dm._id || parent.dm).select('participants').lean();
+            (dm?.participants || []).forEach((p) => autoFollow.push(String(p._id || p)));
+        } catch (err) {
+            logger.warn({ err: err.message }, '[threads] DM participants not auto-followed');
+        }
+    }
+    await Message.updateOne({ _id: parent._id }, { $addToSet: { followers: { $each: [...new Set(autoFollow)] } } });
+    // Replying reads the thread for the replier (their own reply is never unread).
+    require('./threadControls').markRead(parent._id, replierId).catch(() => {});
     if (replyId && mentionedIds.length > 0) {
         await Message.updateOne({ _id: replyId }, { $set: { mentions: mentionedIds } }).catch(() => {});
     }

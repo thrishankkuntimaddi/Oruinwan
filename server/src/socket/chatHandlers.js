@@ -386,10 +386,12 @@ module.exports = function registerChatHandlers(io, socket) {
       const parentId = rawParentId || replyTo || null;
       let parentDoc = null;
       if (parentId) {
-        parentDoc = await Message.findById(parentId).select("channel dm parentId sender replyCount workspace").lean();
+        parentDoc = await Message.findById(parentId).select("channel dm parentId sender replyCount workspace threadLockedAt threadLockedByName").lean();
         const sameConv = parentDoc && (targetChannel ? sameId(parentDoc.channel, targetChannel) : sameId(parentDoc.dm, targetDM));
         if (!sameConv) return fail("INVALID_PARENT", "Parent message not found in this conversation");
         if (parentDoc.parentId) return fail("INVALID_PARENT", "Reply in the original thread instead");
+        const locked = require("../modules/threads/threadControls").lockedError(parentDoc);
+        if (locked) return fail(locked.code, locked.message);
         if (workspace) {
           const { isFeatureEnabled } = require("../shared/workspaceFeatures");
           if (!(await isFeatureEnabled(workspace, "threads"))) return fail("FEATURE_DISABLED", "Threads are turned off in this workspace.");
@@ -622,11 +624,10 @@ module.exports = function registerChatHandlers(io, socket) {
       const isOwnMessage = sameId(message.sender, userId);
       let isAdmin = false;
 
-      // Admin rights derive from the message's own channel -> workspace, never from client input.
-      if (ctx.channel && ctx.channel.workspace) {
-        const workspace = await identity.workspaces.findById(ctx.channel.workspace);
-        const member = workspace?.members?.find(m => sameId(extractMemberId(m), userId));
-        isAdmin = !!member && (member.role === "admin" || member.role === "owner");
+      // Admin rights derive from the message's own channel -> workspace, never from client input:
+      // channel admins, the channel's creator and workspace owners/admins.
+      if (!isOwnMessage && message.channel) {
+        isAdmin = await require("../modules/threads/threadControls").canModerateThread(message, userId).catch(() => false);
       }
 
       const hideLocally = async () => {

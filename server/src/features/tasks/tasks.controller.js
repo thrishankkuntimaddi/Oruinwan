@@ -341,6 +341,53 @@ async function addWatcher(req, res) {
     }
 }
 
+// ── Discussion tab (tasks.discussion.js) ──
+
+const discussion = () => require('./tasks.discussion');
+const ioOf = (req) => req.io || req.app?.get?.('io') || null;
+
+async function getDiscussion(req, res) {
+    try {
+        return res.json(await discussion().getDiscussion(req.user.sub, req.params.id));
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+async function postDiscussionComment(req, res) {
+    try {
+        const { text, attachments } = req.body || {};
+        const result = await discussion().postComment(req.user.sub, req.params.id, { text, attachments }, ioOf(req));
+        return res.status(201).json(result);
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+async function deleteDiscussionComment(req, res) {
+    try {
+        return res.json(await discussion().deleteComment(req.user.sub, req.params.id, req.params.commentId, ioOf(req)));
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+async function addDiscussionParticipants(req, res) {
+    try {
+        return res.json(await discussion().addParticipants(req.user.sub, req.params.id, req.body?.userIds, ioOf(req)));
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
+async function removeDiscussionParticipant(req, res) {
+    try {
+        return res.json(await discussion().removeParticipant(req.user.sub, req.params.id, req.params.userId, ioOf(req)));
+    } catch (error) {
+        return handleError(res, error);
+    }
+}
+
 async function removeWatcher(req, res) {
     try {
         const result = await tasksService.removeWatcher(req.user.sub, req.params.id);
@@ -430,6 +477,11 @@ module.exports = {
     removeLink,
     addWatcher,
     removeWatcher,
+    getDiscussion,
+    postDiscussionComment,
+    deleteDiscussionComment,
+    addDiscussionParticipants,
+    removeDiscussionParticipant,
     addDependency,
     startTimer,
     stopTimer,

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-    X, Loader2, Eye, Activity, ChevronRight, Plus, ArrowRight, User, Tag, AlertTriangle, Check, Trash2,
+    X, Loader2, Eye, Activity, ChevronRight, Plus, ArrowRight, User, Tag, AlertTriangle, Check, Trash2, MessagesSquare,
 } from 'lucide-react';
+import TaskDiscussion, { TaskLinkedThread } from '../../../../../components/tasksComp/TaskDiscussion';
 import api from '@services/api';
 import {
     TRANSITIONS, STATUS_META, PRIORITIES, PRIORITY_META, statusLabel,
@@ -162,7 +163,7 @@ export default function ChannelTaskDetail({
             </div>
 
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
-                {[{ key: 'details', label: 'Details', icon: <Eye size={12} /> }, { key: 'activity', label: 'Activity', icon: <Activity size={12} /> }].map((t) => (
+                {[{ key: 'details', label: 'Details', icon: <Eye size={12} /> }, { key: 'discussion', label: 'Discussion', icon: <MessagesSquare size={12} /> }, { key: 'activity', label: 'Activity', icon: <Activity size={12} /> }].map((t) => (
                     <button key={t.key} type="button" onClick={() => setTab(t.key)} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 12, fontWeight: 500, fontFamily: FONT,
                         color: tab === t.key ? 'var(--accent)' : 'var(--text-secondary)', background: 'none', border: 'none',
@@ -171,8 +172,11 @@ export default function ChannelTaskDetail({
                 ))}
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                {tab === 'activity' ? (
+            <div style={{ flex: 1, minHeight: 0, overflowY: tab === 'discussion' ? 'hidden' : 'auto' }}>
+                {tab === 'discussion' ? (
+                    <TaskDiscussion taskId={task.id} workspaceId={task.workspace?._id || task.workspace || null}
+                        members={members} currentUserId={currentUserId} />
+                ) : tab === 'activity' ? (
                     <div style={{ padding: 16 }}><ActivityLog taskId={task.id} /></div>
                 ) : (
                     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -193,6 +197,13 @@ export default function ChannelTaskDetail({
                                 </p>
                             )}
                         </div>
+
+                        {task.linkedMessage && (
+                            <div>
+                                <p style={{ ...sectionLabel, margin: '0 0 6px' }}>Linked thread</p>
+                                <TaskLinkedThread taskId={task.id} workspaceId={task.workspace?._id || task.workspace || null} />
+                            </div>
+                        )}
 
                         {task.status === 'blocked' && (
                             <div style={{

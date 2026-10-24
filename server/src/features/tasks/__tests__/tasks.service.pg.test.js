@@ -36,6 +36,7 @@ jest.mock('../../../modules/notifications/notificationService', () => new Proxy(
 jest.mock('../../../modules/notifications/notificationEventEmitter', () => ({ emit: jest.fn() }));
 jest.mock('../../channels/channel.model.js', () => ({}));
 jest.mock('../../../modules/messages/message.model.js', () => ({}));
+jest.mock('../tasks.discussion', () => ({ recordActivity: jest.fn(), isExplicitParticipant: jest.fn(async () => false) }));
 
 const identity = require('../../../identity');
 const repo = require('../tasks.repository');
@@ -220,5 +221,24 @@ describe('dependencies and workload (pg)', () => {
         repo.workload = jest.fn(async () => [{ userId: BOB, count: 2, estimatedHours: '4.5', unestimated: 1 }]);
         const { workload } = await service.getWorkload(ALICE, WS);
         expect(workload).toEqual([expect.objectContaining({ userId: BOB, count: 2, estimatedHours: 4.5, unestimated: 1 })]);
+    });
+});
+
+describe('task discussion hooks (pg)', () => {
+    const discussion = require('../tasks.discussion');
+
+    test('logged task activity is handed to the discussion (automatic entries)', async () => {
+        seed({ status: 'done' });
+        await service.revokeTask(ALICE, TASK, {});
+        expect(discussion.recordActivity).toHaveBeenCalledWith(TASK, ALICE, 'all_assignees_changed', expect.objectContaining({ field: 'assignedTo', to: [ALICE] }));
+    });
+
+    test('someone added to the discussion may open a private task; others may not', async () => {
+        seed();
+        await expect(service.getTask(CAROL, TASK)).rejects.toMatchObject({ statusCode: 403 });
+        discussion.isExplicitParticipant.mockResolvedValueOnce(true);
+        const { task } = await service.getTask(CAROL, TASK);
+        expect(task._id).toBe(TASK);
+        expect(discussion.isExplicitParticipant).toHaveBeenLastCalledWith(TASK, CAROL);
     });
 });

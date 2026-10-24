@@ -53,3 +53,40 @@ test('a missing message is a 404, not a server error', async () => {
     Message.findById.mockResolvedValue(null);
     await expect(messagesService.deleteMessage(REPLY, ME, null)).rejects.toMatchObject({ status: 404 });
 });
+
+describe('who may delete someone else\'s reply for everyone', () => {
+    const Channel = require('../../../features/channels/channel.model.js');
+    const identity = require('../../../identity');
+    const OTHER = oid(2);
+    const WS = oid(30);
+    const reply = () => ({ _id: REPLY, parentId: PARENT, channel: CHANNEL, sender: OTHER, hiddenFor: [], save: jest.fn().mockResolvedValue() });
+
+    beforeEach(() => {
+        Message.countDocuments.mockResolvedValue(0);
+        Message.findOne.mockImplementation(() => query(null));
+        identity.workspaces.membership = jest.fn().mockResolvedValue({ member: true, isAdmin: false });
+    });
+
+    test('a channel admin can', async () => {
+        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [ME], createdBy: OTHER, workspace: WS }) }) }));
+        const doc = reply();
+        Message.findById.mockResolvedValue(doc);
+        await messagesService.deleteMessage(REPLY, ME, null, 'everyone');
+        expect(doc.isDeletedUniversally).toBe(true);
+    });
+
+    test('a workspace owner/admin can', async () => {
+        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [], createdBy: OTHER, workspace: WS }) }) }));
+        identity.workspaces.membership.mockResolvedValue({ member: true, isAdmin: true });
+        const doc = reply();
+        Message.findById.mockResolvedValue(doc);
+        await messagesService.deleteMessage(REPLY, ME, null, 'everyone');
+        expect(doc.isDeletedUniversally).toBe(true);
+    });
+
+    test('a plain member cannot', async () => {
+        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [], createdBy: OTHER, workspace: WS }) }) }));
+        Message.findById.mockResolvedValue(reply());
+        await expect(messagesService.deleteMessage(REPLY, ME, null, 'everyone')).rejects.toMatchObject({ status: 403 });
+    });
+});

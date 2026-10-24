@@ -63,6 +63,7 @@ const PREF_KEY_BY_TYPE = {
     huddle_started: 'message',
     missed_call: 'message',
     thread_reply: 'threadReply',
+    thread_added: 'threadReply',
     task_assigned: 'task',
     task_comment: 'task',
     task_status: 'task',
@@ -397,6 +398,18 @@ async function taskComment(io, { recipientId, commenterUsername, workspaceId, ta
     });
 }
 
+/** "X added you to a task discussion" (the task's Discussion tab). */
+async function taskDiscussionAdded(io, { recipientIds, adderUsername, workspaceId, taskTitle, taskId }) {
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'task_comment',
+        title: `${adderUsername} added you to a task discussion`,
+        body: taskTitle,
+        link: taskLink(workspaceId, taskId),
+        meta: { adderUsername, taskTitle, taskId, kind: 'discussion_added' },
+    });
+}
+
 async function taskStatusChanged(io, { recipientIds, changerUsername, workspaceId, taskTitle, taskId, from, to }) {
     return createMany(io, recipientIds, {
         workspaceId,
@@ -561,6 +574,19 @@ async function threadReply(io, { followerIds, senderUsername, workspaceId, chann
     });
 }
 
+/** "X added you to a thread": the person now follows it and gets its replies. */
+async function threadAdded(io, { recipientIds, adderUsername, workspaceId, channelId, dmSessionId, channelName, parentMessageId }) {
+    if (!recipientIds || recipientIds.length === 0) return [];
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'thread_added',
+        title: `${adderUsername} added you to a thread`,
+        body: channelName ? `in #${channelName}` : 'View thread',
+        link: channelId ? `/channel/${channelId}?thread=${parentMessageId}` : (dmSessionId ? `/dm/${dmSessionId}?thread=${parentMessageId}` : null),
+        meta: { adderUsername, senderUsername: adderUsername, channelId, dmSessionId, channelName, parentMessageId },
+    });
+}
+
 module.exports = {
     PREF_KEY_BY_TYPE,
     TASK_STATUS_LABELS,
@@ -580,6 +606,7 @@ module.exports = {
     reaction,
     taskAssigned,
     taskComment,
+    taskDiscussionAdded,
     taskStatusChanged,
     taskUpdated,
     taskRemoved,
@@ -593,4 +620,5 @@ module.exports = {
     mergeLegacyChatNotifications,
     scheduleCreated,
     threadReply,
+    threadAdded,
 };

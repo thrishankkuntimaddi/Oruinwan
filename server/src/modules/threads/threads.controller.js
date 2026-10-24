@@ -40,10 +40,22 @@ exports.getChannelThreads = async (req, res) => {
             query.createdAt = { $gte: new Date(userJoinedAt) };
         }
 
+        if (req.query?.filter === 'following') query.followers = userId;
+
         const threads = await Message.find(query)
             .sort({ lastReplyAt: -1, createdAt: -1 }) 
             .lean();
         await hydrate(threads, { sender: SENDER });
+
+        // Per thread for the caller: following, unread replies since they last read it, lock.
+        const controls = require('./threadControls');
+        const followed = threads.filter((t) => (t.followers || []).some((f) => String(f) === String(userId)));
+        const unread = await controls.unreadCounts(userId, followed.map((t) => t._id)).catch(() => ({}));
+        for (const t of threads) {
+            t.following = (t.followers || []).some((f) => String(f) === String(userId));
+            t.unread = t.following ? (unread[String(t._id)] || 0) : 0;
+            Object.assign(t, controls.lockInfo(t));
+        }
 
         return res.json({
             threads,
@@ -115,11 +127,17 @@ exports.getThread = async (req, res) => {
             resolvedBy = u ? { _id: u._id, username: u.username } : null;
         }
 
+        const controls = require('./threadControls');
+        const permissions = await controls.threadPermissions(parentMessage, userId).catch(() => ({ canModerate: false, canLock: false }));
+        controls.markRead(messageId, userId).catch(() => {});
+
         return res.json({
             parent: parentMessage,
             replies,
             count: replies.length,
             participants,
+            lock: controls.lockInfo(parentMessage),
+            permissions,
             resolved: !!parentMessage.resolvedThreadAt,
             resolvedThreadAt: parentMessage.resolvedThreadAt || null,
             resolvedBy,
@@ -155,6 +173,9 @@ exports.postThreadReply = async (req, res) => {
 
         const access = await checkThreadAccess(parentMessage, userId, { forWrite: true });
         if (!access.ok) return res.status(access.status).json({ message: access.error });
+
+        const locked = require('./threadControls').lockedError(parentMessage);
+        if (locked) return res.status(403).json({ code: locked.code, message: locked.message });
 
         // Same check as channel and DM messages: only files the sender uploaded and can read,
         // since a file referenced by a message becomes readable to that conversation.
@@ -372,5 +393,79 @@ exports.summarizeThread = async (req, res) => {
         if (require('../../shared/plans').sendPlanLimit(res, err)) return;
         logger.error('[THREADS] summarizeThread error:', err);
         return res.status(500).json({ message: 'Thread summary failed', error: err.message });
+    }
+};
+
+// ── Lock, followers and the Threads view (threadControls.js) ─────────────────
+
+const sendControlError = (res, err) => res.status(err.status || 500).json({ message: err.status ? err.message : 'Server error', ...(err.code ? { code: err.code } : {}) });
+
+exports.lockThread = async (req, res) => {
+    try {
+        const io = req.app?.get('io');
+        const result = await require('./threadControls').setLock(req.params.messageId, req.user.sub, true, io);
+        return res.json(result);
+    } catch (err) {
+        if (!err.status) logger.error('[THREADS] lock error:', err);
+        return sendControlError(res, err);
+    }
+};
+
+exports.unlockThread = async (req, res) => {
+    try {
+        const io = req.app?.get('io');
+        const result = await require('./threadControls').setLock(req.params.messageId, req.user.sub, false, io);
+        return res.json(result);
+    } catch (err) {
+        if (!err.status) logger.error('[THREADS] unlock error:', err);
+        return sendControlError(res, err);
+    }
+};
+
+exports.listFollowers = async (req, res) => {
+    try {
+        return res.json(await require('./threadControls').listFollowers(req.params.messageId, req.user.sub));
+    } catch (err) {
+        if (!err.status) logger.error('[THREADS] followers error:', err);
+        return sendControlError(res, err);
+    }
+};
+
+exports.addFollowers = async (req, res) => {
+    try {
+        const io = req.app?.get('io');
+        const result = await require('./threadControls').addFollowers(req.params.messageId, req.user.sub, req.body?.userIds, io);
+        return res.json(result);
+    } catch (err) {
+        if (!err.status) logger.error('[THREADS] add followers error:', err);
+        return sendControlError(res, err);
+    }
+};
+
+exports.removeFollower = async (req, res) => {
+    try {
+        const result = await require('./threadControls').removeFollower(req.params.messageId, req.user.sub, req.params.userId);
+        return res.json(result);
+    } catch (err) {
+        if (!err.status) logger.error('[THREADS] remove follower error:', err);
+        return sendControlError(res, err);
+    }
+};
+
+/** GET /api/threads/following?workspaceId=&channelId= : threads I follow, with unread counts. */
+exports.getFollowedThreads = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const threads = await require('./threadControls').followedThreads(userId, {
+            workspaceId: req.query?.workspaceId || null,
+            channelId: req.query?.channelId || null,
+            limit: req.query?.limit,
+        });
+        await hydrate(threads, { sender: SENDER });
+        const unreadTotal = threads.reduce((n, t) => n + (t.unread || 0), 0);
+        return res.json({ threads, count: threads.length, unreadTotal });
+    } catch (err) {
+        logger.error('[THREADS] followed threads error:', err);
+        return res.status(500).json({ message: 'Server error' });
     }
 };

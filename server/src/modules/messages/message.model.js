@@ -209,6 +209,12 @@ const MessageSchema = new mongoose.Schema({
   resolvedThreadAt: { type: Date, default: null },
   resolvedBy:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
+  // Locked thread (on the parent): no new replies until a channel admin, a workspace admin or
+  // the thread's starter unlocks it. threadLockedByName keeps "Locked by …" readable.
+  threadLockedAt:     { type: Date, default: null },
+  threadLockedBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  threadLockedByName: { type: String, default: null },
+
   
   
   linkedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
@@ -252,6 +258,8 @@ MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
 MessageSchema.index({ workspace: 1, createdAt: -1 }); 
 MessageSchema.index({ platformSession: 1, createdAt: -1 });
 MessageSchema.index({ parentId: 1 }); 
+// The Threads view: threads a person follows, latest activity first.
+MessageSchema.index({ followers: 1, lastReplyAt: -1 }, { partialFilterExpression: { replyCount: { $gt: 0 } } });
 MessageSchema.index({ createdAt: -1 });
 
 MessageSchema.index({ channel: 1, _id: 1 });

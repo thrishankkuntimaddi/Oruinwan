@@ -13,6 +13,7 @@ export const NOTIFICATION_TYPE_META = {
     mention:           { label: 'Mention',     Icon: AtSign,         color: 'var(--accent)',          tab: 'mentions' },
     dm:                { label: 'Message',     Icon: MessageCircle,  color: 'var(--text-secondary)',  tab: 'messages' },
     thread_reply:      { label: 'Thread',      Icon: GitBranch,      color: 'var(--text-secondary)',  tab: 'messages' },
+    thread_added:      { label: 'Thread',      Icon: UserPlus,       color: 'var(--accent)',          tab: 'messages' },
     reaction:          { label: 'Reaction',    Icon: Smile,          color: 'var(--text-secondary)',  tab: 'all' },
     task_assigned:     { label: 'Task',        Icon: Check,          color: 'var(--state-success)',   tab: 'tasks' },
     task_comment:      { label: 'Task',        Icon: MessageCircle,  color: 'var(--text-secondary)',  tab: 'tasks' },

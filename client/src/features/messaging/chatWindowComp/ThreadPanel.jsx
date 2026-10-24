@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import api from '@services/api';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
-import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2, Share2, Copy, Link2 } from "lucide-react";
+import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2, Share2, Copy, Link2, Lock, LockOpen, UserPlus } from "lucide-react";
 import { MessageMoreMenu } from "./messages/MessageToolbarParts";
 import { webBase, threadLink, threadTranscript as buildThreadTranscript, threadTitle, shareableBody, senderOf, copyToClipboard, shareOrCopy } from "../../../utils/shareContent";
+import ThreadPeopleModal from "./modals/ThreadPeopleModal";
 import { split } from "../../split/splitStore";
 import ThreadSummaryModal from "./modals/ThreadSummaryModal";
 import FooterInput from "./footer/footerInput";
@@ -58,6 +59,11 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     const [threadMeta, setThreadMeta] = useState({ participants: [], resolved: false, resolvedBy: null });
     const [showSummary, setShowSummary] = useState(false);
     const [resolving, setResolving] = useState(false);
+    // Lock state and what I may do here (channel admins moderate; the starter may lock).
+    const [lock, setLock] = useState({ locked: false, lockedBy: null, lockedAt: null });
+    const [permissions, setPermissions] = useState({ canModerate: false, canLock: false });
+    const [locking, setLocking] = useState(false);
+    const [showPeople, setShowPeople] = useState(false);
     const repliesEndRef = useRef(null);
 
     const formatTime = (iso) => fmtTime(iso);
@@ -160,6 +166,33 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setResolving(false);
         }
     }, [messageId, resolving, currentUserId]);
+
+    const toggleLock = useCallback(async () => {
+        if (!messageId || locking) return;
+        setLocking(true);
+        try {
+            const { data } = lock.locked
+                ? await api.delete(`/api/threads/${messageId}/lock`)
+                : await api.post(`/api/threads/${messageId}/lock`);
+            setLock({ locked: !!data.locked, lockedBy: data.lockedBy || null, lockedAt: data.lockedAt || null });
+            showToast(data.locked ? 'Thread locked. No new replies until it is unlocked.' : 'Thread unlocked', 'success');
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Could not change the thread lock', 'error');
+        } finally {
+            setLocking(false);
+        }
+    }, [messageId, locking, lock.locked, showToast]);
+
+    // Someone locked or unlocked this thread.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const onLocked = (data) => {
+            if (String(data?.messageId) !== String(messageId)) return;
+            setLock({ locked: !!data.locked, lockedBy: data.lockedBy || null, lockedAt: data.lockedAt || null });
+        };
+        socket.on('thread:locked', onLocked);
+        return () => socket.off('thread:locked', onLocked);
+    }, [socket, messageId]);
 
     useEffect(() => {
         if (!socket) return undefined;
@@ -286,6 +319,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 resolved: !!res.data.resolved,
                 resolvedBy: res.data.resolvedBy || null,
             });
+            if (res.data.lock) setLock(res.data.lock);
+            if (res.data.permissions) setPermissions(res.data.permissions);
         } catch (err) {
             logger.error("Load thread failed:", err);
         } finally {
@@ -591,7 +626,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     };
 
     const deleteReply = async (reply) => {
-        if (!window.confirm('Delete this reply for everyone?')) return;
+        const mine = String(reply.sender?._id || reply.senderId || '') === String(currentUserId);
+        if (!window.confirm(mine ? 'Delete this reply for everyone?' : `Delete ${reply.sender?.username || 'this person'}'s reply for everyone?`)) return;
         try {
             await api.delete(`/api/v2/messages/${reply._id}`, { data: { scope: 'everyone' } });
             setReplies(prev => prev.filter(r => r._id !== reply._id));
@@ -758,6 +794,29 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 >
                                     {threadMeta.resolved ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
                                 </button>
+                                {permissions.canLock && (
+                                    <button
+                                        type="button"
+                                        data-testid="thread-lock-toggle"
+                                        onClick={toggleLock}
+                                        disabled={locking}
+                                        title={lock.locked ? 'Unlock thread (allow new replies)' : 'Lock thread (no new replies)'}
+                                        aria-label={lock.locked ? 'Unlock thread' : 'Lock thread'}
+                                        style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', cursor: locking ? 'not-allowed' : 'pointer', display: 'flex', color: lock.locked ? 'var(--accent)' : 'var(--text-muted)' }}
+                                    >
+                                        {lock.locked ? <LockOpen size={14} /> : <Lock size={14} />}
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    data-testid="thread-people-button"
+                                    onClick={() => setShowPeople(true)}
+                                    title="People in this thread: add or remove followers"
+                                    aria-label="People in this thread"
+                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
+                                >
+                                    <UserPlus size={14} />
+                                </button>
                                 <button
                                     onClick={toggleFollow}
                                     disabled={followLoading}
@@ -824,6 +883,11 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     {threadMeta.resolved && (
                         <div data-testid="thread-resolved" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '11px', color: 'var(--state-success)', backgroundColor: 'rgba(90,186,138,0.08)', borderBottom: '1px solid var(--border-subtle)', fontFamily: FONT }}>
                             <CheckCircle2 size={12} /> Resolved{threadMeta.resolvedBy?.username ? ` by ${threadMeta.resolvedBy.username}` : ''}
+                        </div>
+                    )}
+                    {lock.locked && (
+                        <div data-testid="thread-locked" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '11px', color: 'var(--accent)', backgroundColor: 'rgba(184,149,106,0.08)', borderBottom: '1px solid var(--border-subtle)', fontFamily: FONT }}>
+                            <Lock size={12} /> Locked{lock.lockedBy?.username ? ` by ${String(lock.lockedBy._id) === String(currentUserId) ? 'you' : lock.lockedBy.username}` : ''}. New replies are turned off.
                         </div>
                     )}
 
@@ -965,11 +1029,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             <ProfileTrigger userId={senderIdOf(reply)} username={senderName}><span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span></ProfileTrigger>
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
                                                             {reply.editedAt && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>(edited)</span>}
-                                                            {String(senderIdOf(reply)) === String(currentUserId) && !String(reply._id).startsWith('temp-') && editingId !== reply._id && (
+                                                            {(String(senderIdOf(reply)) === String(currentUserId) || permissions.canModerate) && !String(reply._id).startsWith('temp-') && editingId !== reply._id && (
                                                                 <span className="thread-reply-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '2px' }}>
-                                                                    <button type="button" className="gl-icon-btn" title="Edit reply" aria-label="Edit reply" onClick={() => startEdit(reply)} style={{ width: 22, height: 22 }}>
-                                                                        <Pencil size={11} />
-                                                                    </button>
+                                                                    {String(senderIdOf(reply)) === String(currentUserId) && (
+                                                                        <button type="button" className="gl-icon-btn" title="Edit reply" aria-label="Edit reply" onClick={() => startEdit(reply)} style={{ width: 22, height: 22 }}>
+                                                                            <Pencil size={11} />
+                                                                        </button>
+                                                                    )}
                                                                     <button type="button" className="gl-icon-btn" title="Delete reply" aria-label="Delete reply" onClick={() => deleteReply(reply)} style={{ width: 22, height: 22, color: 'var(--state-danger)' }}>
                                                                         <Trash2 size={11} />
                                                                     </button>
@@ -1012,7 +1078,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 </div>
                             </div>
 
-                            {}
+                            {lock.locked ? (
+                                <div data-testid="thread-locked-composer" style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: FONT }}>
+                                    <Lock size={13} style={{ color: 'var(--accent)' }} />
+                                    <span style={{ flex: 1 }}>This thread is locked{lock.lockedBy?.username ? ` by ${lock.lockedBy.username}` : ''}. You can still read it.</span>
+                                    {permissions.canLock && <button type="button" className="gl-btn" onClick={toggleLock} disabled={locking}>Unlock</button>}
+                                </div>
+                            ) : (
                             <FooterInput
                                 newMessage={newReply}
                                 setNewMessage={setNewReply}
@@ -1034,9 +1106,20 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 setShowEmoji={() => { }}
                                 onPickEmoji={(emoji) => setNewReply(prev => prev + emoji.native)}
                             />
+                            )}
                         </>
                     )}
                 </>
+            )}
+            {showPeople && (
+                <ThreadPeopleModal
+                    messageId={messageId}
+                    members={mentionMembers}
+                    currentUserId={currentUserId}
+                    showToast={showToast}
+                    onClose={() => setShowPeople(false)}
+                    onChanged={({ followerCount: count, followingMe }) => setInitialFollowStatus({ following: followingMe, followerCount: count })}
+                />
             )}
             {showSummary && (
                 <ThreadSummaryModal

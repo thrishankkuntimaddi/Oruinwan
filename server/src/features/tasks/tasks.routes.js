@@ -57,6 +57,13 @@ router.post('/:id/watchers', tasksController.addWatcher);
 
 router.delete('/:id/watchers', tasksController.removeWatcher);
 
+// Discussion tab: comments + automatic status / assignee / due-date entries, people, linked thread.
+router.get('/:id/discussion', tasksController.getDiscussion);
+router.post('/:id/discussion', tasksController.postDiscussionComment);
+router.delete('/:id/discussion/:commentId', tasksController.deleteDiscussionComment);
+router.post('/:id/participants', tasksController.addDiscussionParticipants);
+router.delete('/:id/participants/:userId', tasksController.removeDiscussionParticipant);
+
 router.post('/:id/dependency', tasksController.addDependency);
 
 router.delete('/:id/dependency/:dependencyId', tasksController.removeDependency);

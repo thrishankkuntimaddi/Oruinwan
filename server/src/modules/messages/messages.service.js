@@ -1033,15 +1033,11 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     const isSender = String(message.sender?._id || message.sender) === userId.toString();
 
     
+    // Channel admins, the channel's creator and workspace owners/admins moderate a channel
+    // (same rule as the socket path and thread locks: threads/threadControls.canModerateThread).
     let isChannelAdmin = false;
     if (!isSender && message.channel) {
-        const Channel = require('../../features/channels/channel.model');
-        const channel = await Channel.findById(message.channel).select('admins createdBy').lean();
-        if (channel) {
-            const adminIds = (channel.admins || []).map(id => id.toString());
-            isChannelAdmin = adminIds.includes(userId.toString()) ||
-                channel.createdBy?.toString() === userId.toString();
-        }
+        isChannelAdmin = await require('../threads/threadControls').canModerateThread(message, userId).catch(() => false);
     }
 
     if (!isSender && !isChannelAdmin) {
@@ -1246,7 +1242,7 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     if (title.length > 500) throw httpError(400, 'title is too long');
 
     const message = await loadAccessibleMessage(Message, messageId, userId, {
-        select: 'channel dm workspace company sender linkedTaskId isDeletedUniversally',
+        select: 'channel dm workspace company sender linkedTaskId isDeletedUniversally parentId',
         lean: true,
     });
     if (message.isDeletedUniversally) throw httpError(400, 'Cannot convert a deleted message');
@@ -1318,6 +1314,11 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
     } catch (err) {
         logger.warn({ err }, '[convertToTask] activity not recorded');
     }
+
+    // The thread shows "Task created: …" and the task's discussion links back to the thread.
+    require('../../features/tasks/tasks.discussion')
+        .linkTaskToThread({ task, message, userId, io })
+        .catch(() => {});
 
     const room = roomFor(message);
     if (io && room) {

@@ -14,7 +14,7 @@ import { toast } from '../../lib/bus.js';
 import { clock, dayLabel, shortAgo } from '../../lib/time.js';
 import { reminderLabel } from '../../lib/reminders.js';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
-import { SearchField } from '../../ui/Controls.jsx';
+import { Chips, SearchField } from '../../ui/Controls.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Row, RowGroup } from '../../ui/List.jsx';
@@ -153,22 +153,35 @@ function PinnedSheet({ open, onClose, conv, directory, onJump }) {
 
 function ThreadsSheet({ open, onClose, conv, directory }) {
   const { data, error } = useQuery(open && api().channelThreads && `threads:${conv.id}`, () => api().channelThreads(conv.id), { staleMs: 10_000 });
+  // All threads here, or only the ones I follow (with unread replies first in the line).
+  const [filter, setFilter] = useState('all');
+  const list = data && filter === 'following' ? data.filter((m) => m.following) : data;
+  const unread = (data || []).reduce((n, m) => n + (m.following ? m.unread || 0 : 0), 0);
   const openThread = (m) => {
     onClose();
+    if (m.unread) setQueryData(`threads:${conv.id}`, (l) => l?.map((t) => (t.id === m.id ? { ...t, unread: 0 } : t)));
     nav.push('thread', { kind: conv.kind, convId: conv.id, messageId: m.id });
   };
   return (
     <Sheet open={open} onClose={onClose} title="Threads" full>
+      <Chips
+        className="pb-3"
+        value={filter}
+        onChange={setFilter}
+        options={[{ value: 'all', label: 'All' }, { value: 'following', label: unread ? `Following · ${unread} new` : 'Following' }]}
+      />
       {error && !data ? (
         <EmptyState icon={MessagesSquare} title="Couldn't load" body={error.message} />
       ) : (
         <MessageRows
-          list={data}
+          list={list}
           conv={conv}
           directory={directory}
-          meta={(m) => [`${m.replyCount || 0} ${m.replyCount === 1 ? 'reply' : 'replies'}`, m.lastReplyAt && `last ${shortAgo(m.lastReplyAt)}`, m.resolved && 'resolved'].filter(Boolean).join(' · ')}
+          meta={(m) => [m.unread ? `${m.unread} new` : null, `${m.replyCount || 0} ${m.replyCount === 1 ? 'reply' : 'replies'}`, m.lastReplyAt && `last ${shortAgo(m.lastReplyAt)}`, m.locked && 'locked', m.resolved && 'resolved'].filter(Boolean).join(' · ')}
           onOpen={openThread}
-          empty={<EmptyState icon={MessagesSquare} title="No threads yet" body="Long-press a message and choose Reply in thread." />}
+          empty={filter === 'following'
+            ? <EmptyState icon={MessagesSquare} title="No followed threads" body="Threads you start, reply to or are mentioned in show up here." />
+            : <EmptyState icon={MessagesSquare} title="No threads yet" body="Long-press a message and choose Reply in thread." />}
         />
       )}
     </Sheet>

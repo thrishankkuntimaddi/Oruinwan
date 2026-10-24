@@ -178,3 +178,45 @@ describe('recountThread', () => {
         expect(io.emitted).toEqual([{ room: `dm:${oid(7)}`, event: 'message-updated', payload: { messageId: PARENT, channelId: null, dmId: oid(7), updates: { replyCount: 2, lastReplyAt: last.toISOString() } } }]);
     });
 });
+
+describe('locked threads over HTTP', () => {
+    it('a reply to a locked thread is refused with 403 THREAD_LOCKED and nothing is stored', async () => {
+        Message.findById.mockImplementation(() => query(parentDoc({ threadLockedAt: new Date(), threadLockedBy: ALICE, threadLockedByName: 'alice' })));
+        const res = await call('POST', `/api/threads/${PARENT}`, BOB, { ciphertext: 'x', messageIv: 'y' });
+        expect(res.status).toBe(403);
+        expect(res.body).toEqual({ code: 'THREAD_LOCKED', message: 'This thread was locked by alice. New replies are turned off.' });
+        expect(Message.create).not.toHaveBeenCalled();
+    });
+
+    it('reading a thread says whether it is locked and what the reader may do', async () => {
+        const lockedAt = new Date('2026-10-20T10:00:00Z');
+        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }], admins: [ALICE], isPrivate: true, workspace: null, name: 'general' }));
+        Message.findById.mockImplementation(() => query(parentDoc({ sender: BOB, threadLockedAt: lockedAt, threadLockedBy: ALICE, threadLockedByName: 'alice' })));
+        Message.find.mockImplementation(() => query([]));
+
+        const asAdmin = await call('GET', `/api/threads/${PARENT}`, ALICE);
+        expect(asAdmin.body.lock).toEqual({ locked: true, lockedAt: lockedAt.toISOString(), lockedBy: { _id: ALICE, username: 'alice' } });
+        expect(asAdmin.body.permissions).toEqual({ canModerate: true, canLock: true });
+
+        const asStarter = await call('GET', `/api/threads/${PARENT}`, BOB);
+        expect(asStarter.body.permissions).toEqual({ canModerate: false, canLock: true });
+    });
+
+    it('a member who did not start the thread cannot lock it; a channel admin can', async () => {
+        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }, { user: STRANGER }], admins: [ALICE], isPrivate: true, workspace: null, name: 'general' }));
+        Message.findById.mockImplementation(() => query(parentDoc({ sender: BOB })));
+        Message.findByIdAndUpdate.mockImplementation((id, update) => query(parentDoc({ ...update.$set })));
+
+        const denied = await call('POST', `/api/threads/${PARENT}/lock`, STRANGER, {});
+        expect(denied.status).toBe(403);
+
+        const io = makeIo();
+        const ok = await call('POST', `/api/threads/${PARENT}/lock`, ALICE, {}, io);
+        expect(ok.status).toBe(200);
+        expect(ok.body).toMatchObject({ locked: true, lockedBy: { _id: ALICE, username: 'alice' } });
+        expect(io.emitted).toEqual([expect.objectContaining({ room: `channel:${CHANNEL}`, event: 'thread:locked' })]);
+
+        const unlocked = await call('DELETE', `/api/threads/${PARENT}/lock`, ALICE, null, io);
+        expect(unlocked.body).toMatchObject({ locked: false, lockedBy: null });
+    });
+});

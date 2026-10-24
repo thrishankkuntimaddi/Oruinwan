@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     X, Eye, Activity, Plus, CheckCircle2, Tag, Loader2, ArrowRight, User, Edit2, Calendar, Trash2,
-    Link2, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest,
+    Link2, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest, MessagesSquare,
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -14,6 +14,7 @@ import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
 import { SubtasksSection, DependenciesSection, TimeTrackingSection, RepeatSection, MilestoneSection } from './TaskDetailSections';
 import { RepeatBadge } from './RepeatPicker';
 import { AttachFromApps, usePickerTypes } from '../../features/integrations/CloudPicker';
+import TaskDiscussion, { TaskLinkedThread } from './TaskDiscussion';
 
 const Section = ({ label, icon, action, children }) => (
     <section>
@@ -231,7 +232,7 @@ export default function WorkspaceTaskDetailPanel({
             </div>
 
             <div role="tablist" style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
-                {[{ key: 'details', label: 'Details', icon: <Eye size={12} /> }, { key: 'activity', label: 'Activity', icon: <Activity size={12} /> }].map((t) => (
+                {[{ key: 'details', label: 'Details', icon: <Eye size={12} /> }, { key: 'discussion', label: 'Discussion', icon: <MessagesSquare size={12} /> }, { key: 'activity', label: 'Activity', icon: <Activity size={12} /> }].map((t) => (
                     <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t.key ? 'var(--accent)' : 'transparent'}`, color: tab === t.key ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: FONT }}>
                         {t.icon} {t.label}
@@ -239,8 +240,11 @@ export default function WorkspaceTaskDetailPanel({
                 ))}
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'thin' }}>
-                {tab === 'activity' ? (
+            <div style={{ flex: 1, minHeight: 0, overflowY: tab === 'discussion' ? 'hidden' : 'auto', scrollbarWidth: 'thin' }}>
+                {tab === 'discussion' ? (
+                    <TaskDiscussion taskId={task.id} workspaceId={aiWorkspaceId || (task.workspace?._id || task.workspace) || null}
+                        members={members} currentUserId={can.userId} showToast={showToast} />
+                ) : tab === 'activity' ? (
                     <div style={{ padding: '16px' }}><ActivityLog taskId={task.id} /></div>
                 ) : (
                     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -421,6 +425,12 @@ export default function WorkspaceTaskDetailPanel({
                             <Section label={`Linked items${task.externalLinks?.length ? ` (${task.externalLinks.length})` : ''}`} icon={<GitPullRequest size={10} />}>
                                 <LinkedPullRequests links={task.externalLinks || []} workspaceId={aiWorkspaceId} />
                                 <AttachFromApps workspaceId={aiWorkspaceId} taskId={task._id || task.id} types={pickerTypes} />
+                            </Section>
+                        )}
+
+                        {task.linkedMessage && (
+                            <Section label="Linked thread" icon={<MessagesSquare size={10} />}>
+                                <TaskLinkedThread taskId={task.id} workspaceId={aiWorkspaceId || (task.workspace?._id || task.workspace) || null} />
                             </Section>
                         )}
 

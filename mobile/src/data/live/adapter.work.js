@@ -17,7 +17,7 @@
 //   security  /auth/2fa/{setup,verify-setup,disable}, /v2/devices
 import { ApiError, NETWORK_MESSAGE, absolute, accessToken, api, refreshSession, serverUrl } from './http.js';
 import { socketRequest, socketEmit } from './realtime.js';
-import { conversationKey, decryptPayload, encryptText } from './crypto.js';
+import { conversationKey, decryptPayload, encryptText, readMessage } from './crypto.js';
 import { clientPlatform } from '../../native/index.js';
 import { fileIconKind } from '../../lib/files.js';
 
@@ -373,6 +373,58 @@ function mapAuditLog(l) {
   };
 }
 
+export function mapDiscussionEntry(e) {
+  if (!e) return null;
+  return {
+    id: idOf(e),
+    kind: e.kind,
+    author: e.author ? { id: idOf(e.author), username: e.author.username || null, avatarUrl: absolute(e.author.profilePicture) } : null,
+    text: e.text || '',
+    mentions: (e.mentions || []).map(String),
+    attachments: (e.attachments || []).map((a) => ({ url: absolute(a.url), name: a.name || 'Attachment' })),
+    event: e.event || null,
+    at: e.createdAt,
+  };
+}
+
+async function mapLinkedThread(t) {
+  if (!t) return null;
+  if (t.restricted) return { messageId: idOf(t.messageId), restricted: true };
+  const conv = t.channelId ? { kind: 'channel', id: String(t.channelId) } : { kind: 'dm', id: String(t.dmId) };
+  const read = async (m) => {
+    if (!m) return null;
+    let text = '';
+    try {
+      const r = await readMessage(conv, m);
+      text = r.state === 'ok' ? r.text : r.state === 'deleted' ? 'This message was deleted.' : r.state === 'attachment' ? '📎 Attachment' : 'Encrypted message';
+    } catch {
+      text = 'Encrypted message';
+    }
+    return { id: idOf(m), sender: m.sender?.username || 'Someone', senderId: idOf(m.sender), text, at: m.createdAt };
+  };
+  return {
+    messageId: idOf(t.messageId),
+    convKind: conv.kind,
+    convId: conv.id,
+    channelName: t.channelName || null,
+    replyCount: t.replyCount || 0,
+    locked: Boolean(t.locked),
+    parent: await read(t.parent),
+    replies: (await Promise.all((t.latestReplies || []).map(read))).filter(Boolean),
+  };
+}
+
+export async function mapDiscussion(d) {
+  return {
+    resolved: Boolean(d?.resolved),
+    resolvedAt: d?.resolvedAt || null,
+    participants: (d?.participants || []).map((p) => ({ id: idOf(p), username: p.username || null, avatarUrl: absolute(p.profilePicture), roles: p.roles || [] })),
+    entries: (d?.entries || []).map(mapDiscussionEntry),
+    permissions: { canComment: Boolean(d?.permissions?.canComment), canAddPeople: Boolean(d?.permissions?.canAddPeople), canModerate: Boolean(d?.permissions?.canModerate) },
+    linkedThread: await mapLinkedThread(d?.linkedThread),
+  };
+}
+
 export const workAdapter = {
   // ---- offline message queue (data/outbox.js)
   /**
@@ -451,6 +503,29 @@ export const workAdapter = {
   async removeDependency(id, dependencyId) {
     const data = await api.del(`/v2/tasks/${id}/dependency/${dependencyId}`);
     return (data?.dependencies || []).map(idOf);
+  },
+  // ---- task discussion (the Discussion tab)
+  /**
+   * { resolved, resolvedAt, participants: [{ id, username, avatarUrl, roles }], entries, permissions,
+   *   linkedThread: { messageId, convKind, convId, channelName, replyCount, locked, parent, replies } | null }.
+   * Linked-thread messages are decrypted here with the conversation's key.
+   */
+  async taskDiscussion(id) {
+    return mapDiscussion(await api.get(`/v2/tasks/${id}/discussion`));
+  },
+  async postTaskComment(id, text) {
+    const data = await api.post(`/v2/tasks/${id}/discussion`, { text });
+    return mapDiscussionEntry(data.entry);
+  },
+  async deleteTaskComment(id, commentId) {
+    await api.del(`/v2/tasks/${id}/discussion/${commentId}`);
+  },
+  async addTaskParticipants(id, userIds) {
+    const data = await api.post(`/v2/tasks/${id}/participants`, { userIds });
+    return (data.added || []).map(String);
+  },
+  async removeTaskParticipant(id, userId) {
+    await api.del(`/v2/tasks/${id}/participants/${userId}`);
   },
   /** linkType: blocks | is_blocked_by | relates_to | duplicates | is_duplicated_by. */
   async linkTask(id, linkedTaskId, linkType) {

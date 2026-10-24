@@ -99,7 +99,9 @@ async function _loadTaskForUser(userId, taskId, { allowDeleted = false, allowMan
         }
     }
 
-    const canView = canViewTask(task, userId, userChannels);
+    let canView = canViewTask(task, userId, userChannels);
+    // People added to the task's discussion by its creator or an assignee may open it.
+    if (!canView) canView = await require('./tasks.discussion').isExplicitParticipant(task._id, userId);
     if (!canView && !(allowManager && isManager)) {
         throw httpError(403, "You don't have permission to view this task");
     }
@@ -142,6 +144,8 @@ async function _logActivity(taskId, userId, action, extra = {}, req) {
     } catch (err) {
         logger.warn({ err }, `[tasks] activity '${action}' not recorded`);
     }
+    // Status, assignee, due date and priority changes also appear in the task's discussion.
+    require('./tasks.discussion').recordActivity(taskId, userId, action, extra);
 }
 
 /**
@@ -1552,7 +1556,43 @@ async function applyExternalUpdateWithEvents(taskId, opts = {}, io = null) {
     return result;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// For the task discussion (tasks.discussion.js), on whichever store holds tasks
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** { task (plain object), isManager } or throws 403/404 like getTask. */
+async function loadTaskForDiscussion(userId, taskId) {
+    if (onPg()) {
+        const { task, isManager } = await pg().loadTaskForUser(userId, taskId, { allowManager: true });
+        return { task, isManager };
+    }
+    const { task, isManager } = await _loadTaskForUser(userId, taskId, { allowManager: true });
+    return { task: typeof task.toObject === 'function' ? task.toObject() : task, isManager };
+}
+
+/** The stored task, no access checks (null when missing). */
+async function loadRawTask(taskId) {
+    if (!isObjectId(String(taskId))) return null;
+    if (onPg()) return require('./tasks.repository').findById(taskId);
+    return Task.findById(taskId).lean();
+}
+
+/** Add / remove watchers on behalf of the discussion (access is checked by the caller). */
+async function setWatchers(taskId, { add = [], remove = [] } = {}) {
+    if (onPg()) {
+        const repo = require('./tasks.repository');
+        for (const id of add) await repo.addWatcher(taskId, id);
+        for (const id of remove) await repo.removeWatcher(taskId, id);
+        return;
+    }
+    if (add.length) await Task.updateOne({ _id: taskId }, { $addToSet: { watchers: { $each: add } } });
+    if (remove.length) await Task.updateOne({ _id: taskId }, { $pull: { watchers: { $in: remove } } });
+}
+
 module.exports = {
+    _loadTaskForDiscussion: loadTaskForDiscussion,
+    _loadRawTask: loadRawTask,
+    _setWatchers: setWatchers,
     getTasks,
     getTask,
     createTask: createTaskWithEvents,

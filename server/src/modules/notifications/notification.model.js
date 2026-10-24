@@ -21,6 +21,7 @@ const NOTIFICATION_TYPES = [
     'meeting_recap',     // a call ended: "Meeting ended · View recap" (link to the meeting page)
     'reaction',          
     'thread_reply',      
+    'thread_added',      // someone added you as a follower of a thread
     'integration_alert', 
     'ai_suggestion',     
     'digest',            

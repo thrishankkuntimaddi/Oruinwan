@@ -59,6 +59,8 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
         } catch (err) {
             logger.warn({ err }, `[tasks:pg] activity '${action}' not recorded`);
         }
+        // Status, assignee, due date and priority changes also appear in the task's discussion.
+        require('./tasks.discussion').recordActivity(taskId, userId, action, extra);
     }
 
     /** Same checks as _loadTaskForUser in tasks.service.js. */
@@ -78,7 +80,9 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
             isManager = isWorkspaceAdmin(workspace, userId);
             if (task.visibility === 'channel' && task.channel) userChannels = await getUserChannels(userId, task.workspace);
         }
-        const canView = canViewTask(task, userId, userChannels);
+        let canView = canViewTask(task, userId, userChannels);
+        // People added to the task's discussion by its creator or an assignee may open it.
+        if (!canView) canView = await require('./tasks.discussion').isExplicitParticipant(task._id, userId);
         if (!canView && !(allowManager && isManager)) throw httpError(403, "You don't have permission to view this task");
         return { task, workspace, isManager, canView };
     }

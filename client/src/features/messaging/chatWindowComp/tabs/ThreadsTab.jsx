@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ArrowRight, Search, ListFilter } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MessageSquare, ArrowRight, Search, ListFilter, Bell, Lock } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
 import api from '@services/api';
 import { formatTime } from '../helpers/helpers';
@@ -12,6 +12,9 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [selectedThread, setSelectedThread] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    // 'all' threads in the channel, or only the ones I follow (with unread counts).
+    const [filter, setFilter] = useState('all');
+    const selectedRef = useRef(null);
 
     const fetchThreads = useCallback(async () => {
         setLoading(true);
@@ -69,27 +72,45 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
             setThreads(prev => {
                 const thread = prev.find(t => t._id === parentId);
                 if (!thread) return prev;
-                const updated = { ...thread, lastReplyAt: reply.createdAt, lastReplyUser: reply.sender };
+                const fromOther = String(reply?.sender?._id || reply?.sender || '') !== String(currentUserId);
+                const open = selectedRef.current === parentId;
+                const unread = thread.following && fromOther && !open ? (thread.unread || 0) + 1 : (thread.unread || 0);
+                const updated = { ...thread, unread, lastReplyAt: reply.createdAt, lastReplyUser: reply.sender };
                 const others = prev.filter(t => t._id !== parentId);
                 return [updated, ...others];
             });
         };
 
+        const handleLocked = (data) => {
+            setThreads(prev => prev.map(t => (t._id === data?.messageId ? { ...t, locked: !!data.locked, lockedBy: data.lockedBy || null } : t)));
+        };
+
+        socket.on('thread:locked', handleLocked);
         socket.on('thread:created', handleThreadCreated);
         socket.on('message-updated', handleMessageUpdated);
         socket.on('thread-reply', handleThreadReply);
 
         return () => {
+            socket.off('thread:locked', handleLocked);
             socket.off('thread:created', handleThreadCreated);
             socket.off('message-updated', handleMessageUpdated);
             socket.off('thread-reply', handleThreadReply);
         };
-    }, [socket, channelId]);
+    }, [socket, channelId, currentUserId]);
 
     const filteredThreads = threads.filter(t => {
+        if (filter === 'following' && !t.following) return false;
         const text = t.decryptedContent || t.payload?.text || t.text || '';
         return text.toLowerCase().includes(searchTerm.toLowerCase());
     });
+    const unreadFollowing = threads.reduce((n, t) => n + (t.following ? (t.unread || 0) : 0), 0);
+
+    // Opening a thread reads it (the server records that too).
+    selectedRef.current = selectedThread?._id || null;
+    const openThread = (thread) => {
+        setSelectedThread(thread);
+        if (thread.unread) setThreads(prev => prev.map(t => (t._id === thread._id ? { ...t, unread: 0 } : t)));
+    };
 
     return (
         <div style={{ display: 'flex', width: '100%', height: '100%', backgroundColor: 'var(--bg-base)' }}>
@@ -117,6 +138,25 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                             {threads.length}
                         </span>
                     </h2>
+
+                    <div role="tablist" aria-label="Which threads" style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+                        {[{ key: 'all', label: 'All' }, { key: 'following', label: 'Following' }].map(f => (
+                            <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} data-testid={`threads-filter-${f.key}`}
+                                onClick={() => setFilter(f.key)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '2px',
+                                    fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                    border: `1px solid ${filter === f.key ? 'var(--border-accent)' : 'var(--border-default)'}`,
+                                    backgroundColor: filter === f.key ? 'var(--bg-active)' : 'transparent',
+                                    color: filter === f.key ? 'var(--accent)' : 'var(--text-secondary)',
+                                }}>
+                                {f.key === 'following' && <Bell size={10} />}{f.label}
+                                {f.key === 'following' && unreadFollowing > 0 && (
+                                    <span data-testid="threads-following-unread" style={{ minWidth: 16, padding: '0 4px', borderRadius: '8px', backgroundColor: 'var(--accent)', color: 'var(--bg-base)', fontSize: '10px', lineHeight: '16px', textAlign: 'center' }}>{unreadFollowing}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
 
                     <div style={{ position: 'relative' }}>
                         <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={13} />
@@ -164,7 +204,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                     ) : filteredThreads.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 16px', opacity: 0.4 }}>
                             <ListFilter size={40} style={{ margin: '0 auto 8px', color: 'var(--text-muted)' }} />
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>No threads found</p>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{filter === 'following' ? 'You don’t follow any threads here yet' : 'No threads found'}</p>
                         </div>
                     ) : (
                         filteredThreads.map(thread => {
@@ -172,7 +212,8 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                             return (
                                 <div
                                     key={thread._id}
-                                    onClick={() => setSelectedThread(thread)}
+                                    data-testid="threads-tab-row"
+                                    onClick={() => openThread(thread)}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '10px',
                                         padding: '10px 12px', marginBottom: '2px',
@@ -227,7 +268,15 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                         </p>
                                     </div>
 
-                                    {}
+                                    {thread.locked && <Lock size={11} aria-label="Locked" style={{ flexShrink: 0, color: 'var(--text-muted)' }} />}
+                                    {thread.following && thread.unread > 0 && (
+                                        <span data-testid="thread-unread" title={`${thread.unread} unread ${thread.unread === 1 ? 'reply' : 'replies'}`} style={{
+                                            flexShrink: 0, minWidth: 18, padding: '0 5px', borderRadius: '9px',
+                                            backgroundColor: 'var(--accent)', color: 'var(--bg-base)',
+                                            fontSize: '10px', fontWeight: 700, lineHeight: '18px', textAlign: 'center',
+                                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                        }}>{thread.unread}</span>
+                                    )}
                                     <span style={{
                                         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px',
                                         padding: '2px 6px', borderRadius: '2px',

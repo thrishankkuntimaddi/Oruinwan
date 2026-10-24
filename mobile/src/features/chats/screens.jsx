@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
-  Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw,
+  Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
 } from 'lucide-react';
+import { ThreadPeopleSheet } from './ThreadPeopleSheet.jsx';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useAssistants, useChannels, useDirectory, useDms, useMembers } from '../../data/hooks.js';
@@ -464,6 +465,20 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
     }
   };
 
+  // Channel admins, workspace admins and the thread's starter lock it (no new replies).
+  const toggleLock = async () => {
+    const next = !info?.locked;
+    try {
+      const r = await api().lockThread(messageId, next);
+      convo.patchMeta({ locked: r.locked, lockedBy: r.lockedBy });
+      invalidate('threads:');
+      toast(r.locked ? 'Thread locked. No new replies until it is unlocked.' : 'Thread unlocked');
+    } catch (err) {
+      toast(err.message || 'Could not change the thread lock', 'danger');
+    }
+  };
+  const lockedByName = info?.lockedBy ? (info.lockedBy.id === me ? 'you' : directory[info.lockedBy.id]?.name || info.lockedBy.username) : null;
+
   const summaryOptions = useMemo(
     () => [
       {
@@ -508,6 +523,11 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
             <Icon as={CheckCircle2} size={13} /> Resolved{resolvedBy ? ` by ${resolvedBy}` : ''}
           </span>
         )}
+        {info?.locked && (
+          <span data-testid="thread-locked" className="inline-flex items-center gap-1 text-accent-ink">
+            <Icon as={Lock} size={13} /> Locked{lockedByName ? ` by ${lockedByName}` : ''}
+          </span>
+        )}
       </div>
     </div>
   ) : null;
@@ -540,6 +560,17 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         onOpenThread={() => {}}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
       />
+      {info?.locked ? (
+        <div data-testid="thread-locked-composer" className="flex items-center gap-2 border-t border-line-soft px-4 py-3 text-sm text-text-2">
+          <Icon as={Lock} size={15} />
+          <span className="flex-1">This thread is locked{lockedByName ? ` by ${lockedByName}` : ''}. You can still read it.</span>
+          {info.canLock && (
+            <button type="button" className="text-[13px] font-medium text-accent-ink" onClick={toggleLock}>
+              Unlock
+            </button>
+          )}
+        </div>
+      ) : (
       <Composer
         placeholder={info?.resolved ? 'Reply in this resolved thread' : 'Reply in thread'}
         onPlus={() => setAttach(true)}
@@ -558,6 +589,7 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
           } else convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text) });
         }}
       />
+      )}
       {tools.actions}
       {pickers.inputs}
       <ComposerPlusSheet open={attach} onClose={() => setAttach(false)} onPick={pickers.pick} title="Add to reply" />
@@ -568,6 +600,8 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         actions={[
           { label: info?.following ? 'Unfollow thread' : 'Follow thread', icon: info?.following ? BellOff : Bell, hint: 'Get notified about new replies', onSelect: follow },
           { label: info?.resolved ? 'Reopen thread' : 'Mark as resolved', icon: info?.resolved ? RotateCcw : CheckCircle2, onSelect: resolve },
+          info?.canLock && { label: info.locked ? 'Unlock thread' : 'Lock thread', icon: info.locked ? LockOpen : Lock, hint: info.locked ? 'Allow new replies again' : 'No new replies; everyone can still read it', onSelect: toggleLock },
+          { label: 'Add people', icon: UserPlus, hint: 'They follow the thread and are notified', onSelect: () => setTimeout(() => setSheet('followers'), 220) },
           { label: 'People in this thread', icon: Users, onSelect: () => setTimeout(() => setSheet('people'), 220) },
           { label: 'Share thread', icon: Share2, hint: 'The replies as text, with a link', onSelect: () => share.send(threadTitle(kind, label), threadText()) },
           { label: 'Copy thread', icon: Copy, onSelect: () => share.copy(threadText(), 'Thread copied') },
@@ -576,6 +610,7 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         ]}
       />
       <ParticipantsSheet open={sheet === 'people'} onClose={() => setSheet(null)} participants={info?.participants || []} directory={directory} />
+      <ThreadPeopleSheet open={sheet === 'followers'} onClose={() => setSheet(null)} messageId={messageId} onChanged={() => invalidate(`messages:${convId}`)} />
       <SummarySheet open={sheet === 'summary'} onClose={() => setSheet(null)} title="Thread summary" options={summaryOptions} />
     </Screen>
   );

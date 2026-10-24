@@ -211,6 +211,8 @@ function mapTask(t) {
     blockedReason: t.blockedReason || null,
     updatedAt: t.updatedAt,
     channelId: idOf(t.channel),
+    // Created from a message (convert to task): the task's Linked thread.
+    linkedMessage: idOf(t.linkedMessage) || null,
   };
 }
 

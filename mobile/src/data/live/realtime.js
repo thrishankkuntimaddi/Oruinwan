@@ -87,6 +87,10 @@ export function connectRealtime(base) {
   socket.on('dm:removed', () => emit('data:changed', ['dms']));
   for (const ev of ['channel-created', 'channel-updated', 'channel-deleted', 'channel-member-added']) socket.on(ev, () => emit('data:changed', ['channels']));
   for (const ev of ['task-created', 'task-updated', 'task-assigned', 'task-removed']) socket.on(ev, () => emit('data:changed', ['tasks', 'task:']));
+  // A task's Discussion tab: comments and automatic entries.
+  for (const ev of ['task:discussion', 'task:discussion-removed']) socket.on(ev, (p) => emit('data:changed', [p?.taskId ? `taskdisc:${p.taskId}` : 'taskdisc:']));
+  // Threads views: lock state.
+  socket.on('thread:locked', () => emit('data:changed', ['threads:']));
   for (const ev of ['note-created', 'note-updated', 'note-deleted', 'note-shared']) socket.on(ev, () => emit('data:changed', ['notes', 'note:']));
   // Patch the cached list in place (a refetch per event made the list jump and flood).
   for (const ev of NOTIFICATION_EVENTS) socket.on(ev, (p) => applyNotificationEvent(ev, p));

@@ -288,7 +288,33 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
         resolvedBy: data.resolvedBy ? { id: idOf(data.resolvedBy), username: data.resolvedBy.username } : null,
         following: Boolean(data.followStatus?.following),
         followerCount: data.followStatus?.followerCount || 0,
+        locked: Boolean(data.lock?.locked),
+        lockedBy: data.lock?.lockedBy ? { id: idOf(data.lock.lockedBy), username: data.lock.lockedBy.username || null } : null,
+        canLock: Boolean(data.permissions?.canLock),
+        canModerate: Boolean(data.permissions?.canModerate),
       };
+    },
+    /** Lock (no new replies) or unlock a thread: channel admins, workspace admins, or its starter. */
+    async lockThread(parentId, locked) {
+      const data = locked ? await api.post(`/threads/${parentId}/lock`, {}) : await api.del(`/threads/${parentId}/lock`);
+      return { locked: Boolean(data?.locked), lockedBy: data?.lockedBy ? { id: idOf(data.lockedBy), username: data.lockedBy.username || null } : null };
+    },
+    /** { followers: [{ id, username, avatarUrl }], canModerate }. */
+    async threadFollowers(parentId) {
+      const data = await api.get(`/threads/${parentId}/followers`);
+      return {
+        followers: (data.followers || []).map((f) => ({ id: idOf(f), username: f.username || null, avatarUrl: absolute(f.profilePicture) })),
+        canModerate: Boolean(data.canModerate),
+      };
+    },
+    /** Adds people who can see the conversation; they're notified. Returns { added, skipped }. */
+    async addThreadFollowers(parentId, userIds) {
+      const data = await api.post(`/threads/${parentId}/followers`, { userIds });
+      return { added: (data.added || []).map(String), skipped: (data.skipped || []).map(String), followerCount: data.followerCount ?? null };
+    },
+    async removeThreadFollower(parentId, userId) {
+      const data = await api.del(`/threads/${parentId}/followers/${userId}`);
+      return { followerCount: data?.followerCount ?? null };
     },
     async followThread(parentId, follow) {
       const data = follow ? await api.post(`/threads/${parentId}/follow`, {}) : await api.del(`/threads/${parentId}/follow`);
@@ -340,7 +366,12 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
     async channelThreads(channelId) {
       const conv = { kind: 'channel', id: channelId };
       const data = await api.get(`/threads/channels/${channelId}/threads`);
-      const list = await Promise.all((data.threads || []).map((m) => mapMessage(conv, m)));
+      const list = await Promise.all((data.threads || []).map(async (m) => ({
+        ...(await mapMessage(conv, m)),
+        following: Boolean(m.following),
+        unread: m.unread || 0,
+        locked: Boolean(m.locked),
+      })));
       return list.sort((a, b) => String(b.lastReplyAt || b.at || '').localeCompare(String(a.lastReplyAt || a.at || '')));
     },
 
