@@ -337,6 +337,11 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
       const data = await api.post('/ai/conversation', { workspaceId, messages: messages.slice(-200), mode, title });
       return data.text || '';
     },
+    /** A question about a conversation, answered from its messages (decrypted here). */
+    async askAboutConversation(workspaceId, messages, question, { title } = {}) {
+      const data = await api.post('/ai/conversation', { workspaceId, messages: messages.slice(-200), mode: 'question', question, title });
+      return data.text || '';
+    },
     async smartReplies(workspaceId, messages) {
       const data = await api.post('/ai/smart-replies', { workspaceId, messages: messages.slice(-8) });
       return (data.suggestions || []).filter((s) => typeof s === 'string' && s.trim()).slice(0, 3);

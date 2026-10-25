@@ -28,9 +28,42 @@ import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
 import { SWIPE_TRIGGER, useRowGestures } from './messageGestures.js';
 import { ScheduleSheet } from './ScheduleSheet.jsx';
 import { clearDraft, draftFor, saveDraft } from './drafts.js';
+import { hasFormatting, highlightSegments } from './composerHighlight.js';
 import { useSession } from '../../data/session.js';
 
 const GROUP_GAP = 5 * 60_000;
+
+// How each kind of segment looks under the text box. Nothing here changes a character's width.
+const SEGMENT_CLASS = {
+  mark: 'text-text-3/45',
+  bold: '[-webkit-text-stroke:0.45px_currentColor]',
+  italic: '[font-style:oblique_9deg]',
+  strike: 'line-through decoration-text-2',
+  code: 'rounded-[4px] bg-surface-3 text-accent-ink',
+  mention: 'rounded-[4px] bg-accent/12 text-accent-ink',
+  quote: 'text-text-2',
+};
+const segmentClass = (kind) => (kind ? kind.split(' ').map((k) => SEGMENT_CLASS[k] || '').join(' ') : '');
+
+/** The formatted copy of the composer's text, drawn under the (transparent) text box. */
+function ComposerHighlight({ text, scrollRef }) {
+  return (
+    <div
+      ref={scrollRef}
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden py-2 text-[15px] leading-6 break-words whitespace-pre-wrap text-text"
+      data-testid="composer-highlight"
+    >
+      {highlightSegments(text).map((seg, i) => (
+        <span key={i} className={segmentClass(seg.kind)}>
+          {seg.text}
+        </span>
+      ))}
+      {/* A trailing newline needs a character after it to take up its line. */}
+      {text.endsWith('\n') ? ' ' : null}
+    </div>
+  );
+}
 
 /** Long press (touch), or right-click with a mouse. */
 export function useLongPress(callback, ms = 420) {
@@ -434,6 +467,7 @@ export function AiLiveReply({ reply }) {
 
 export function MessageList({
   items, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, header, footer, loading, highlightId, onSwipeReply, onTapMessage, onDoubleTap, receipt, onDayTap, onJumpTo, onReachTop,
+  topInset = 0,
 }) {
   const ref = useRef(null);
   const content = useRef(null);
@@ -504,7 +538,7 @@ export function MessageList({
         }}
         className="h-full overflow-y-auto overscroll-contain pb-3"
       >
-        <div ref={content}>
+        <div ref={content} style={topInset ? { paddingTop: topInset } : undefined}>
           {header}
           {loading && (
             <div className="grid place-items-center py-10 text-text-2">
@@ -524,7 +558,7 @@ export function MessageList({
             return (
               <Fragment key={m.id}>
                 {newDay && (
-                  <div className="pointer-events-none sticky top-1.5 z-[1] flex justify-center py-1.5">
+                  <div className="pointer-events-none sticky z-[1] flex justify-center py-1.5" style={{ top: 6 + topInset }}>
                     {/* Tap the date to jump to another day. */}
                     <button
                       type="button"
@@ -721,6 +755,8 @@ export function Composer({
   const [emoji, setEmoji] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const sendPress = useRef(null);
+  const overlayRef = useRef(null);
+  const styled = hasFormatting(text);
   // The selection when focus left the box (for a link typed in its own field, or an emoji).
   const savedSel = useRef(null);
   const selection = () => {
@@ -908,21 +944,31 @@ export function Composer({
             <Icon as={Type} size={18} />
           </button>
           <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input pr-1 pl-4 focus-within:border-accent/70">
-            <textarea
-              ref={ref}
-              rows={1}
-              value={text}
-              autoFocus={autoFocus}
-              onChange={(e) => {
-                setText(e.target.value);
-                setCaret(e.target.selectionStart ?? e.target.value.length);
-              }}
-              onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
-              onKeyDown={onKeyDown}
-              placeholder={placeholder}
-              enterKeyHint="enter"
-              className="block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3"
-            />
+            <div className="relative min-w-0 flex-1">
+              {styled && <ComposerHighlight text={text} scrollRef={overlayRef} />}
+              <textarea
+                ref={ref}
+                rows={1}
+                value={text}
+                autoFocus={autoFocus}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setCaret(e.target.selectionStart ?? e.target.value.length);
+                }}
+                onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
+                onScroll={(e) => {
+                  if (overlayRef.current) overlayRef.current.scrollTop = e.currentTarget.scrollTop;
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={placeholder}
+                enterKeyHint="enter"
+                className={cx(
+                  'relative block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3',
+                  // Formatted text shows through from underneath; the caret and selection stay.
+                  styled && 'text-transparent caret-[rgb(var(--c-text))] selection:bg-accent/25',
+                )}
+              />
+            </div>
             <button
               type="button"
               aria-label="Emoji"

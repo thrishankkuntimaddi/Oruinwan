@@ -74,7 +74,8 @@ exports.getThread = async (req, res) => {
         const { messageId } = req.params;
         const userId = req.user.sub;
 
-        const parentMessage = await Message.findById(messageId).lean();
+        // The quoted message comes along (a swipe-to-reply), so apps can show it on the parent and replies.
+        const parentMessage = await Message.findById(messageId).populate('quotedMessageId').lean();
         if (!parentMessage) {
             return res.status(404).json({ message: "Message not found" });
         }
@@ -93,7 +94,9 @@ exports.getThread = async (req, res) => {
         // Replies deleted for everyone, or hidden by this user, are left out.
         const replies = await Message.find({ parentId: messageId, ...LIVE_REPLY, hiddenFor: { $ne: userId } })
             .sort({ createdAt: 1 })
+            .populate('quotedMessageId')
             .lean();
+        await hydrate([parentMessage, ...replies].map((m) => m.quotedMessageId).filter((q) => q && typeof q === 'object'), { sender: SENDER });
         await hydrate(replies, { sender: SENDER });
 
         const followerStrings = (parentMessage.followers || []).map(String);
@@ -162,7 +165,8 @@ exports.postThreadReply = async (req, res) => {
             return res.status(400).json({ message: "Encrypted payload required (ciphertext + messageIv)" });
         }
 
-        const parentMessage = await Message.findById(messageId).lean();
+        // The quoted message comes along (a swipe-to-reply), so apps can show it on the parent and replies.
+        const parentMessage = await Message.findById(messageId).populate('quotedMessageId').lean();
         if (!parentMessage) {
             return res.status(404).json({ message: "Parent message not found" });
         }

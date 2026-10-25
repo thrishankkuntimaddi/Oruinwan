@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
+  ChevronDown, Headphones, Video, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
 } from 'lucide-react';
 import { ThreadPeopleSheet } from './ThreadPeopleSheet.jsx';
 import { nav } from '../../app/nav.js';
@@ -35,10 +35,12 @@ import { E2eeBanner } from './E2eeBanner.jsx';
 import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote, isPlanLimit } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
-import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
+import { HuddleBanner, HuddleButton, useHuddlesAvailable } from '../huddles/HuddlesScreen.jsx';
+import { startHuddle } from '../huddles/huddle.js';
 import { GroupTile } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
 import { DayJumpSheet } from './DayJumpSheet.jsx';
+import { AiIsland } from './AiIsland.jsx';
 import { QUICK_REACTIONS } from '../../data/constants.js';
 import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
 import { EllipsisVertical, Share2, Copy, Link2 } from 'lucide-react';
@@ -305,6 +307,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const mentions = useMentions({ kind, id, meta, me });
   const recent = useMemo(() => (aiOn && !meta?.agentId ? transcript(convo.items, directory, me, 8) : null), [aiOn, meta?.agentId, convo.items, directory, me]);
 
+  const showIsland = aiOn && !meta?.agentId && convo.items.length > 0;
   const isAdmin = ['admin', 'owner'].includes(workspace?.role);
   const readOnly = kind === 'channel' && meta?.broadcast && !isAdmin;
   const notMember = kind === 'channel' && meta && !meta.isMember;
@@ -397,13 +400,14 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         border
         actions={
           <>
-            {aiOn && !meta?.agentId && api().summarizeConversation && <IconButton icon={Sparkles} label="Summarize with AI" onClick={() => setSheet('summary')} />}
             {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
             <IconButton icon={EllipsisVertical} label="More options" data-testid="conversation-menu" onClick={() => setSheet('menu')} />
           </>
         }
       />
       {!meta?.agentId && <HuddleBanner scope={huddleScope} title={label} />}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      {showIsland && <AiIsland title={label} transcript={() => transcript(convo.items, directory, me).map(({ sender, text }) => ({ sender, text }))} />}
       <MessageList
         items={convo.items}
         directory={directory}
@@ -426,9 +430,11 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         }}
         onJumpTo={extras.jumpToMessage}
         onReachTop={convo.hasMore ? convo.loadOlder : null}
+        topInset={showIsland ? 40 : 0}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
         highlightId={jumpTo || highlight}
       />
+      </div>
       <E2eeBanner className="mb-2" />
       {notMember ? (
         <div className="shrink-0 border-t border-line-soft bg-bg px-4 pt-3 pb-safe">
@@ -838,12 +844,15 @@ export function ChannelInfoScreen({ id }) {
   );
 }
 
+/** Someone's page: who they are, how to reach them, and Message / Voice / Video in one tap. */
 export function ProfileScreen({ userId }) {
   const directory = useDirectory();
   const me = useSession((s) => s.user?.id);
   const ws = useSession((s) => s.workspaceId);
+  const { data: dms } = useDms();
+  const huddlesOn = useHuddlesAvailable();
   const user = directory[userId];
-  const [opening, setOpening] = useState(false);
+  const [opening, setOpening] = useState(null);
   if (!user) {
     return (
       <Screen>
@@ -852,19 +861,33 @@ export function ProfileScreen({ userId }) {
       </Screen>
     );
   }
-  const message = async () => {
-    setOpening(true);
+  const dmId = async () => {
+    const existing = (dms || []).find((d) => !d.isGroup && !d.agentId && d.user?.id === userId);
+    if (existing) return existing.id;
+    const id = await api().openDm(ws, userId);
+    invalidate('dms');
+    return id;
+  };
+  const act = (what) => async () => {
+    setOpening(what);
     try {
-      const dmId = await api().openDm(ws, userId);
-      invalidate('dms');
-      nav.pop();
-      openConversation('dm', dmId);
+      const id = await dmId();
+      if (what === 'message') {
+        nav.replace('conversation', { kind: 'dm', id });
+        return;
+      }
+      await startHuddle({ dmId: id }, user.name, { video: what === 'video' });
     } catch (err) {
-      toast(err.message || 'Could not open the conversation', 'danger');
+      toast(err.message || 'That didn’t work', 'danger');
     } finally {
-      setOpening(false);
+      setOpening(null);
     }
   };
+  const actions = [
+    { id: 'message', label: 'Message', icon: MessageCircle },
+    huddlesOn && { id: 'voice', label: 'Voice', icon: Headphones },
+    huddlesOn && { id: 'video', label: 'Video', icon: Video },
+  ].filter(Boolean);
   return (
     <Screen>
       <Header title="" />
@@ -877,14 +900,26 @@ export function ProfileScreen({ userId }) {
             <Icon as={Clock} size={13} /> {PRESENCE_TEXT[user.presence] || 'Offline'}
           </p>
           {userId !== me && (
-            <Button className="mt-5 w-full max-w-xs" icon={MessageCircle} loading={opening} onClick={message}>
-              Message
-            </Button>
+            <div className="mt-5 grid w-full max-w-sm gap-2" style={{ gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))` }}>
+              {actions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={act(a.id)}
+                  disabled={Boolean(opening)}
+                  className="pressable flex flex-col items-center gap-1.5 rounded-card border border-line-soft bg-surface py-3 text-[13px] font-medium text-accent-ink disabled:opacity-60"
+                  data-testid={`profile-${a.id}`}
+                >
+                  {opening === a.id ? <Spinner /> : <Icon as={a.icon} size={20} />}
+                  {a.label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         <Section title="Contact">
           <RowGroup>
-            {user.email && <Row icon={Mail} title="Email" value={user.email} />}
+            {user.email && <Row icon={Mail} title="Email" value={user.email} onClick={() => copyText(user.email).then((ok) => ok && toast('Email copied'))} />}
             {user.username && <Row icon={AtSign} title="Username" value={`@${user.username}`} />}
             {user.about && <Row icon={Info} title="About" subtitle={user.about} multiline />}
           </RowGroup>

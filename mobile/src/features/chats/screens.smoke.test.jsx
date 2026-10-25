@@ -127,7 +127,9 @@ describe.each(Object.keys(LAYOUTS))('chat screens (%s layout)', (layout) => {
   it('summarizes the channel with AI', async () => {
     render(<ConversationScreen kind="channel" id="c1" />);
     await screen.findByTestId('poll-card');
-    fireEvent.click(screen.getByRole('button', { name: 'Summarize with AI' }));
+    // From + in the composer (the header keeps just the huddle and ⋮ buttons).
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.click(await screen.findByText('Summarize with AI'));
     expect(await screen.findByText('A short summary')).toBeTruthy();
     expect(fake.summarizeConversation).toHaveBeenCalledWith('w1', expect.any(Array), expect.objectContaining({ title: '#general' }));
   });

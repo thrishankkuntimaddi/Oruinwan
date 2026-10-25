@@ -26,6 +26,7 @@ function query(value) {
     const q = {
         select: jest.fn(() => q),
         sort: jest.fn(() => q),
+        populate: jest.fn(() => q),
         lean: jest.fn(() => q),
         then: (res, rej) => Promise.resolve(typeof value === 'function' ? value() : value).then(res, rej),
     };
