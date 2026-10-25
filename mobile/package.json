@@ -1,6 +1,6 @@
 {
   "name": "oruinwan-mobile",
-  "version": "2.3.7",
+  "version": "2.3.8",
   "private": true,
   "type": "module",
   "description": "Oruinwan for Android and iOS phones and tablets, in a Capacitor shell",
