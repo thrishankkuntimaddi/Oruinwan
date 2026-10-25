@@ -135,13 +135,13 @@ function ConversationStream({
     
     const minDateString = useMemo(() => {
         const channelCreated = channelCreatedAt ? new Date(channelCreatedAt) : new Date();
-        const joined = userJoinedAt ? new Date(userJoinedAt) : channelCreated;
-        const start = joined > channelCreated ? joined : channelCreated;
+        // The whole history is readable, so "jump to date" starts when the channel began.
+        const start = channelCreated;
         const year = start.getFullYear();
         const month = String(start.getMonth() + 1).padStart(2, '0');
         const day = String(start.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-    }, [channelCreatedAt, userJoinedAt]);
+    }, [channelCreatedAt]);
 
     const maxDateString = useMemo(() => {
         const today = new Date();

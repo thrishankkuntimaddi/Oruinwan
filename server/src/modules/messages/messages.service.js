@@ -801,7 +801,6 @@ async function getChannelLastMessages(userId, channels) {
     const out = new Map();
     const mine = (channels || []).filter(ch => (ch.members || []).some(m => memberIdOf(m) === String(userId)));
     await Promise.all(mine.map(async (ch) => {
-        const me = ch.members.find(m => memberIdOf(m) === String(userId));
         const last = await Message.findOne({
             channel: ch._id,
             parentId: null,
@@ -809,7 +808,6 @@ async function getChannelLastMessages(userId, channels) {
             isDeleted: { $ne: true },
             isDeletedUniversally: { $ne: true },
             hiddenFor: { $ne: userId },
-            ...(me?.joinedAt ? { createdAt: { $gte: new Date(me.joinedAt) } } : {}),
         })
             .sort({ createdAt: -1 })
             .select('_id payload type text createdAt sender')

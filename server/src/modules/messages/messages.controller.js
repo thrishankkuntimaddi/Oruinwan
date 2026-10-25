@@ -533,7 +533,9 @@ exports.getChannelMessages = async (req, res) => {
                 after,
                 around,
                 populateReplies: true,
-                userJoinedAt,
+                // Everyone in a channel reads its whole history, however recently they joined
+                // (Slack-like). userJoinedAt is still returned below for the "You joined" marker.
+                userJoinedAt: null,
                 userId   
             }
         );

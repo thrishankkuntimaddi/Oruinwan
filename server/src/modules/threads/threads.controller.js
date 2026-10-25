@@ -36,9 +36,7 @@ exports.getChannelThreads = async (req, res) => {
         };
 
         
-        if (userJoinedAt) {
-            query.createdAt = { $gte: new Date(userJoinedAt) };
-        }
+        // Every thread in the channel, including ones from before this person joined.
 
         if (req.query?.filter === 'following') query.followers = userId;
 
