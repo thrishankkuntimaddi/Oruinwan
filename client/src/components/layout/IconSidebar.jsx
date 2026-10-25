@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../features/notifications/NotificationsContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight, BookOpen, FolderOpen } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Briefcase, Shield, Video, Settings, Settings2, Bot, ChevronDown, Plus, ArrowRight, BookOpen, FolderOpen, LayoutGrid } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 import { WorkspaceIcon } from "../../utils/workspaceIcons";
 import "./shell.css";
@@ -27,6 +27,8 @@ const IconSidebar = ({ onProfileClick }) => {
 
     const workspaceId = activeWorkspace?.id;
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+    const [showMore, setShowMore] = useState(false);
+    const moreRef = useRef(null);
     // Free plan: workspaces you created (loaded when the switcher opens).
     const { plan: userPlan } = usePlan(showWorkspaceMenu ? null : false);
     const createBlock = planBlock(userPlan, 'workspaces.create');
@@ -39,17 +41,18 @@ const IconSidebar = ({ onProfileClick }) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setShowWorkspaceMenu(false);
             }
+            if (moreRef.current && !moreRef.current.contains(event.target)) setShowMore(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     useEffect(() => {
-        if (!showWorkspaceMenu) return undefined;
-        const onKey = (e) => { if (e.key === 'Escape') setShowWorkspaceMenu(false); };
+        if (!showWorkspaceMenu && !showMore) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') { setShowWorkspaceMenu(false); setShowMore(false); } };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [showWorkspaceMenu]);
+    }, [showWorkspaceMenu, showMore]);
 
     const isActive = (itemPath) => {
         if (!workspaceId) return false;
@@ -75,21 +78,27 @@ const IconSidebar = ({ onProfileClick }) => {
         ...(features.tasks ? [{ icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" }] : []),
         ...(features.notes ? [{ icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" }] : []),
         ...(features.huddles ? [{ icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" }] : []),
+        // Everything below lives under More, so the rail keeps to the places used all day.
         // Files: everything shared with you in channels and DMs, plus workspace uploads.
-        { icon: <FolderOpen size={19} strokeWidth={2} />, path: "/files", label: "Files" },
+        { icon: <FolderOpen size={19} strokeWidth={2} />, path: "/files", label: "Files", more: true },
         // Knowledge (pages, handbook, graph) had no entry on the desktop rail, so it was only
         // reachable from search or a typed URL.
-        { icon: <BookOpen size={19} strokeWidth={2} />, path: "/knowledge", label: "Knowledge" },
+        { icon: <BookOpen size={19} strokeWidth={2} />, path: "/knowledge", label: "Knowledge", more: true },
         // Agents & tools: AI agents (Claude, ChatGPT…), workflows and apps.
-        { icon: <Bot size={19} strokeWidth={2} />, path: "/agents", label: "Agents & tools", also: ["/apps", "/automations"] },
-        ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates" }] : []),
+        { icon: <Bot size={19} strokeWidth={2} />, path: "/agents", label: "Agents & tools", also: ["/apps", "/automations"], more: true },
+        ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates", more: true }] : []),
         // Workspace Admin: this workspace's owner and admins (company consoles stay below).
-        ...(["owner", "admin"].includes(activeWorkspace?.role) || activeWorkspace?.isOwner ? [{ icon: <Settings2 size={19} strokeWidth={2} />, path: "/admin", label: "Workspace admin" }] : []),
+        ...(["owner", "admin"].includes(activeWorkspace?.role) || activeWorkspace?.isOwner ? [{ icon: <Settings2 size={19} strokeWidth={2} />, path: "/admin", label: "Workspace admin", more: true }] : []),
         // Company console: owners (and co-owners) land on the owner console, admins on the admin one.
-        ...(isCompanyOwner(user) ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/owner/dashboard", label: "Owner console", absolute: true }]
-            : user?.companyRole === 'admin' ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/admin/dashboard", label: "Admin console", absolute: true }] : []),
-        ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [{ icon: <Briefcase size={19} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true }] : []),
+        ...(isCompanyOwner(user) ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/owner/dashboard", label: "Owner console", absolute: true, more: true }]
+            : user?.companyRole === 'admin' ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/admin/dashboard", label: "Admin console", absolute: true, more: true }] : []),
+        ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [{ icon: <Briefcase size={19} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true, more: true }] : []),
     ];
+    const targetOf = (item) => (item.absolute ? item.path : (workspaceId ? `/workspace/${workspaceId}${item.path}` : '/workspaces'));
+    const moreItems = navItems.filter((i) => i.more);
+    // A More page that's open shows on the rail too, so you can see where you are.
+    const railItems = navItems.filter((i) => !i.more || isActive(i.path));
+    const moreActive = moreItems.some((i) => isActive(i.path));
 
 
     const badge = (n) => (n > 0 ? <span className="gl-shell-badge">{n > 99 ? '99+' : n}</span> : null);
@@ -163,10 +172,8 @@ const IconSidebar = ({ onProfileClick }) => {
 
             {/* Sections */}
             <div className="gl-shell-rail-nav">
-                {navItems.map((item) => {
-                    const targetPath = item.absolute
-                        ? item.path
-                        : (workspaceId ? `/workspace/${workspaceId}${item.path}` : '/workspaces');
+                {railItems.map((item) => {
+                    const targetPath = targetOf(item);
                     const active = isActive(item.path);
                     const count = badgeFor(item.path);
 
@@ -188,6 +195,41 @@ const IconSidebar = ({ onProfileClick }) => {
                         </div>
                     );
                 })}
+                {moreItems.length > 0 && (
+                    <div className="gl-shell-tip-host" ref={moreRef} style={{ position: 'relative' }}>
+                        <button
+                            type="button"
+                            className={`gl-shell-rail-btn${moreActive || showMore ? ' is-active' : ''}`}
+                            onClick={() => setShowMore((v) => !v)}
+                            title="More"
+                            aria-label="More: files, knowledge, agents and tools"
+                            aria-haspopup="menu"
+                            aria-expanded={showMore}
+                            data-tour="agents"
+                        >
+                            <LayoutGrid size={19} strokeWidth={2} />
+                        </button>
+                        {!showMore && <span className="gl-shell-tip" aria-hidden="true">More</span>}
+                        {showMore && (
+                            <div className="gl-card gl-shell-popover" role="menu" style={{ left: '46px', top: 0, width: '220px' }}>
+                                <div className="gl-shell-menu">
+                                    {moreItems.map((item) => (
+                                        <button
+                                            key={item.path}
+                                            type="button"
+                                            role="menuitem"
+                                            className={`gl-shell-menu-item${isActive(item.path) ? ' is-active' : ''}`}
+                                            onClick={() => { setShowMore(false); navigate(targetOf(item)); }}
+                                        >
+                                            <span style={{ display: 'inline-flex', width: 22, justifyContent: 'center', color: 'var(--text-secondary)' }}>{item.icon}</span>
+                                            <span>{item.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Settings + profile */}

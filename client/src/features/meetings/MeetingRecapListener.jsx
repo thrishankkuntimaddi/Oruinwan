@@ -44,7 +44,7 @@ export default function MeetingRecapListener({ workspaceId }) {
             seen.current.add(notice.key);
             // Sent to my user room and the meeting room: one notice per meeting.
             setTimeout(() => seen.current.delete(notice.key), 60000);
-            showToast(notice.message, 'info', 10000, { title: notice.title, key: notice.key, onClick: () => navigate(notice.href) });
+            showToast(notice.message, 'info', 5000, { title: notice.title, key: notice.key, onClick: () => navigate(notice.href) });
         };
         socket.on('meeting:ended', onEnded);
         return () => socket.off('meeting:ended', onEnded);

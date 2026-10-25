@@ -3,7 +3,7 @@
 // task layout is in the URL, and every screen uses the same note type names.
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const WS = 'a'.repeat(24);
@@ -40,6 +40,16 @@ describe('workspace rail', () => {
     it('lists Files on the desktop rail and highlights it on file pages', () => {
         rail(`/workspace/${WS}/files/${'d'.repeat(24)}`);
         expect(screen.getByRole('button', { name: 'Files' }).getAttribute('aria-current')).toBe('page');
+    });
+
+    it('keeps Files, Knowledge and Agents under More until one of them is open', () => {
+        rail(`/workspace/${WS}/home`);
+        expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Knowledge' })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^More/ }));
+        expect(screen.getByRole('menuitem', { name: /Files/ })).toBeTruthy();
+        expect(screen.getByRole('menuitem', { name: /Knowledge/ })).toBeTruthy();
+        expect(screen.getByRole('menuitem', { name: /Agents & tools/ })).toBeTruthy();
     });
 
     it('highlights Tasks on design review pages', () => {

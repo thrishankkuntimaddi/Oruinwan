@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
     Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff, Users, PanelRight, Hand,
-    Captions, Circle, Minimize2, PictureInPicture2,
+    Captions, Circle, Minimize2, PictureInPicture2, UserPlus,
 } from 'lucide-react';
+import AddPeopleDialog from './AddPeopleDialog';
 import { useToast } from '../../../contexts/ToastContext';
 import { useCallCapture } from '../capture/CallCaptureContext';
 import { callTitle } from '../HuddleContext';
@@ -77,6 +78,7 @@ export default function CallScreen({ ctx, onPopOut }) {
         screenStream, startScreenShare, stopScreenShare, peerStates, handRaised, toggleHand, huddleId,
     } = ctx;
     const [showPeople, setShowPeople] = useState(false);
+    const [adding, setAdding] = useState(false);
     const { title, seconds, ringing } = useCallHeader(ctx);
     const speaking = useSpeaking(audioStreams(participants, { localStream, remoteStreams }));
 
@@ -126,8 +128,10 @@ export default function CallScreen({ ctx, onPopOut }) {
                 <span className="cs-sub">
                     {anyVideo ? 'Video call' : 'Voice call'} · {count} {count === 1 ? 'participant' : 'participants'}
                 </span>
+                <DockButton small testId="call-add-people" icon={UserPlus} label="Add people to the call" onClick={() => setAdding(true)} />
                 <DockButton small testId="call-minimise" icon={Minimize2} label="Minimise (Esc)" onClick={ctx.minimiseCall} />
             </header>
+            {adding && <AddPeopleDialog huddleId={huddleId} inCall={participants} onClose={() => setAdding(false)} />}
 
             <div className="cs-body">
                 <main className="cs-stage">
