@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
+  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, BellRing, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -13,6 +13,8 @@ import { IconButton, Button, Fab } from '../../ui/Button.jsx';
 import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { actionItemsBlock, summaryBlock } from './noteAi.js';
+import { NotePages } from './NotePages.jsx';
+import { ScheduleSheet } from '../chats/ScheduleSheet.jsx';
 import { useWebUrl } from '../../data/live/webUrl.js';
 import { copyText } from '../../native/index.js';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
@@ -282,6 +284,7 @@ export function NoteScreen({ id, fresh }) {
   const [typeSheet, setTypeSheet] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reminding, setReminding] = useState(false);
   const [aiBusy, setAiBusy] = useState(null);
   const server = useSession((s) => s.server);
   const webBase = useWebUrl(server);
@@ -457,6 +460,7 @@ export function NoteScreen({ id, fresh }) {
           autoFocus={fresh}
           className="w-full bg-transparent text-[26px] font-bold leading-tight tracking-tight outline-none placeholder:text-text-3"
         />
+        <NotePages note={note} canEdit={canEdit && !note.archived} />
         <CollabBanner text={view.banner} tone={collab.mode === 'closed' ? 'locked' : 'offline'} />
         {collab.message && <CollabBanner text={collab.message} tone="locked" />}
         {note.archived && (
@@ -509,20 +513,21 @@ export function NoteScreen({ id, fresh }) {
           aiOn && contentEditable && api().noteAssist && { label: 'Pull out action items', hint: 'Added as a checklist at the end', icon: ListTodo, onSelect: () => runAi('extract') },
           aiOn && contentEditable && api().noteAssist && { label: 'Fix spelling and grammar', icon: SpellCheck, onSelect: () => runAi('proofread') },
           aiOn && { label: 'Discuss with AI', hint: 'Ask questions about this note', icon: MessageSquareText, onSelect: () => askAiAbout(`About my note "${note.title}":\n\n${htmlToText(editorRef.current?.innerHTML || note.content, 3000)}\n\n`) },
+          api().remindNote && { label: 'Remind me', hint: 'Get a notification about this note later', icon: BellRing, onSelect: () => setTimeout(() => setReminding(true), 220) },
           note.ownerId === me && { label: 'Share…', hint: note.visibility === 'workspace' ? 'Shared with the whole workspace' : (note.sharedWith || []).length ? `Shared with ${(note.sharedWith || []).length}` : 'Only you', icon: Users, onSelect: () => setTimeout(() => setShare(true), 220) },
           webBase && { label: 'Copy link', icon: Link2, onSelect: async () => ((await copyText(`${webBase}/workspace/${ws}/notes/${id}`)) ? toast('Link copied') : toast("Couldn't copy", 'danger')) },
           { label: 'Duplicate', icon: Copy, onSelect: duplicate },
           note.archived
             ? { label: 'Restore note', icon: ArchiveRestore, onSelect: async () => { await api().archiveNote(id, false); invalidate('notes', `note:${id}`); toast('Note restored'); } }
             : note.ownerId === me && { label: 'Archive note', icon: Archive, onSelect: () => setConfirmArchive(true) },
-          note.ownerId === me && api().deleteNote && { label: 'Delete note', icon: Trash2, danger: true, onSelect: () => setConfirmDelete(true) },
+          note.ownerId === me && api().deleteNote && { label: note.parentId ? 'Delete this page' : 'Delete note', icon: Trash2, danger: true, onSelect: () => setConfirmDelete(true) },
         ]}
       />
       <Dialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Delete this note?"
-        body="It's deleted for everyone it was shared with. This can't be undone. Archive it instead to keep it out of the way."
+        title={note.parentId ? 'Delete this page?' : 'Delete this note?'}
+        body={note.parentId ? "The page is deleted for everyone. The note's other pages stay." : `It's deleted for everyone it was shared with${(note.pages || []).length > 1 ? ', with all its pages' : ''}. This can't be undone. Archive it instead to keep it out of the way.`}
         confirmLabel="Delete"
         danger
         onConfirm={async () => {
@@ -530,11 +535,30 @@ export function NoteScreen({ id, fresh }) {
           try {
             await api().deleteNote(id);
             setQueryData(`notes:${ws}`, (l) => l?.filter((n) => n.id !== id));
-            invalidate('notes');
-            nav.pop();
-            toast('Note deleted');
+            invalidate('notes', note.parentId ? `note:${note.parentId}` : 'note:');
+            if (note.parentId) nav.replace('note', { id: note.parentId });
+            else nav.pop();
+            toast(note.parentId ? 'Page deleted' : 'Note deleted');
           } catch (err) {
             toast(err.message || 'Could not delete', 'danger');
+          }
+        }}
+      />
+      <ScheduleSheet
+        open={reminding}
+        onClose={() => setReminding(false)}
+        title="Remind me about this note"
+        verb="Remind me"
+        preview={titleRef.current || note.title}
+        footnote="You'll get a notification (and a phone alert) at that time. It also shows in Activity → Calendar."
+        onPick={async (when) => {
+          setReminding(false);
+          try {
+            await api().remindNote(id, when);
+            invalidate('noteReminders:');
+            toast(`I'll remind you ${when.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`, 'success');
+          } catch (err) {
+            toast(err.message || 'Could not set the reminder', 'danger');
           }
         }}
       />

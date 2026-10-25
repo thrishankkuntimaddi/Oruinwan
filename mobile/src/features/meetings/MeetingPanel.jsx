@@ -3,7 +3,7 @@
 // tabs, names and order as the web. Used by the meeting screen and by the in-call Meeting panel.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, CalendarClock, Captions, Check, Disc, Eraser, ExternalLink, FileText, ListTodo, Lock, Pen, Pencil,
+  ArrowDown, ArrowUp, CalendarClock, ChevronLeft, ChevronRight, Captions, Check, Disc, Eraser, ExternalLink, FileText, ListTodo, Lock, Pen, Pencil,
   Phone, PhoneOff, Plus, Radio, Sparkles, StickyNote, Trash2, Users, Wand2, X,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -112,7 +112,7 @@ export function MeetingTabContent({ meeting, tab, inCall = false }) {
     case 'summary':
       return <SummaryActionsTab meeting={meeting} />;
     case 'whiteboard':
-      return <WhiteboardTab meeting={meeting} />;
+      return <WhiteboardPages meeting={meeting} />;
     case 'brainstorm':
       return <BrainstormTab meeting={meeting} />;
     default:
@@ -886,9 +886,82 @@ function drawStrokes(canvas, strokes) {
   }
 }
 
-function WhiteboardTab({ meeting }) {
+/**
+ * A whiteboard with pages: page 1 is the meeting's board, + adds another. Arrows (or swiping
+ * the page strip) move between pages; each page syncs live on its own.
+ */
+function WhiteboardPages({ meeting }) {
+  const { data: pages, refetch } = useQuery(api().whiteboardPages && `wbpages:${meeting.id}`, () => api().whiteboardPages(meeting.id), { staleMs: 30_000 });
+  const list = pages?.length ? pages : [{ id: meeting.id, title: 'Page 1' }];
+  const [current, setCurrent] = useState(meeting.id);
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const index = Math.max(0, list.findIndex((p) => p.id === current));
+  const page = list[index] || list[0];
+  // Someone else added or removed a page: refresh the strip.
+  useEffect(() => on('socket', ({ event, payload } = {}) => event === 'whiteboard:pages' && String(payload?.meetingId) === String(meeting.id) && refetch?.()), [meeting.id, refetch]);
+  const add = async () => {
+    setBusy(true);
+    try {
+      const created = await api().addWhiteboardPage(meeting.id);
+      setQueryData(`wbpages:${meeting.id}`, (l) => [...(l || list), created]);
+      setCurrent(created.id);
+    } catch (err) {
+      toast(err.message || 'Could not add a page', 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    setConfirmDelete(false);
+    try {
+      await api().deleteWhiteboardPage(meeting.id, page.id);
+      setQueryData(`wbpages:${meeting.id}`, (l) => (l || list).filter((p) => p.id !== page.id));
+      setCurrent(list[index - 1]?.id || meeting.id);
+    } catch (err) {
+      toast(err.message || 'Could not delete the page', 'danger');
+    }
+  };
+  const swipe = useRef(null);
+  return (
+    <div>
+      <div
+        className="mb-2 flex items-center gap-1.5"
+        data-testid="whiteboard-pages"
+        onTouchStart={(e) => (swipe.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          const dx = e.changedTouches[0].clientX - (swipe.current ?? e.changedTouches[0].clientX);
+          if (Math.abs(dx) > 60) setCurrent((list[index + (dx < 0 ? 1 : -1)] || page).id);
+          swipe.current = null;
+        }}
+      >
+        <IconButton icon={ChevronLeft} label="Previous page" size="sm" disabled={index === 0} onClick={() => setCurrent(list[index - 1].id)} />
+        <div className="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+          {list.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setCurrent(p.id)}
+              aria-current={p.id === page.id ? 'page' : undefined}
+              className={cx('h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p.id === page.id ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+            >
+              {p.title || `Page ${i + 1}`}
+            </button>
+          ))}
+        </div>
+        <IconButton icon={ChevronRight} label="Next page" size="sm" disabled={index >= list.length - 1} onClick={() => setCurrent(list[index + 1].id)} />
+        <IconButton icon={Plus} label="Add a page" size="sm" disabled={busy} onClick={add} data-testid="whiteboard-add-page" />
+        {page.id !== meeting.id && <IconButton icon={Trash2} label="Delete this page" size="sm" onClick={() => setConfirmDelete(true)} />}
+      </div>
+      <WhiteboardTab key={page.id} meeting={meeting} boardId={page.id} />
+      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title={`Delete ${page.title || 'this page'}?`} body="Its drawing is deleted for everyone. Other pages stay." confirmLabel="Delete" danger onConfirm={remove} />
+    </div>
+  );
+}
+
+function WhiteboardTab({ meeting, boardId = meeting.id }) {
   const canvasRef = useRef(null);
-  const { state: collab, doc, peers } = useLiveDocument('whiteboard', meeting.id);
+  const { state: collab, doc, peers } = useLiveDocument('whiteboard', boardId);
   const live = collab.mode !== 'rest';
   const view = collabView(collab, { kind: 'note' });
   // Only the server says "view only" (or the board was closed); a slow connection never stops
@@ -920,13 +993,13 @@ function WhiteboardTab({ meeting }) {
     if (synced) return undefined;
     let alive = true;
     api()
-      .whiteboard(meeting.id)
+      .whiteboard(meeting.id, boardId)
       .then((list) => alive && setStrokes((mine) => [...(list || []), ...mine.filter((s) => unsynced.current.includes(s))]))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [synced, meeting.id]);
+  }, [synced, meeting.id, boardId]);
 
   // Live: the shared stroke list is the board (with anything drawn while it connected).
   useEffect(() => {
@@ -1023,7 +1096,7 @@ function WhiteboardTab({ meeting }) {
   const save = async () => {
     setSaving(true);
     try {
-      await api().saveWhiteboard(meeting.id, strokes);
+      await api().saveWhiteboard(meeting.id, strokes, boardId);
       unsynced.current = [];
       setDirty(false);
       toast('Whiteboard saved', 'success');

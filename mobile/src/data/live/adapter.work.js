@@ -786,12 +786,24 @@ export const workAdapter = {
     return { added: Array.isArray(data.added) ? data.added.length : Number(data.added) || 0, actionItems: (data.meeting?.actionItems || []).map(mapActionItem) };
   },
   /** Whiteboard strokes saved over REST (used when live editing is unavailable). */
-  async whiteboard(meetingId) {
-    const data = await api.get(`/v2/collaboration/whiteboard/${meetingId}`);
-    return data?.strokes || [];
+  /** A whiteboard page's strokes: page 1 is the meeting's board (no pageId). */
+  async whiteboard(meetingId, pageId = null) {
+    const data = await api.get(pageId && pageId !== meetingId ? `/v2/collaboration/whiteboard/${meetingId}/pages/${pageId}` : `/v2/collaboration/whiteboard/${meetingId}`);
+    return data.strokes || [];
   },
-  async saveWhiteboard(meetingId, strokes) {
-    await api.post(`/v2/collaboration/whiteboard/${meetingId}`, { strokes });
+  async saveWhiteboard(meetingId, strokes, pageId = null) {
+    await api.post(pageId && pageId !== meetingId ? `/v2/collaboration/whiteboard/${meetingId}/pages/${pageId}` : `/v2/collaboration/whiteboard/${meetingId}`, { strokes });
+  },
+  /** [{ id, title }]: page 1 has the meeting's id. */
+  async whiteboardPages(meetingId) {
+    const data = await api.get(`/v2/collaboration/whiteboard/${meetingId}/pages`);
+    return data.pages || [{ id: meetingId, title: 'Page 1' }];
+  },
+  async addWhiteboardPage(meetingId) {
+    return (await api.post(`/v2/collaboration/whiteboard/${meetingId}/pages`, {})).page;
+  },
+  async deleteWhiteboardPage(meetingId, pageId) {
+    await api.del(`/v2/collaboration/whiteboard/${meetingId}/pages/${pageId}`);
   },
   /** Free slots for these people: [{ start, end, minutes, note }]. */
   async suggestTimes({ participantIds = [], minutes = 30 } = {}) {

@@ -11,7 +11,7 @@ export { dayKey };
  * events: [{ id, kind: 'meeting' | 'huddle' | 'task' | 'reminder' | 'scheduled', title, at, end?, allDay?, ref }]
  * sorted by time.
  */
-export function calendarEvents({ meetings = [], tasks = [], reminders = [], scheduled = [], me } = {}) {
+export function calendarEvents({ meetings = [], tasks = [], reminders = [], noteReminders = [], scheduled = [], me } = {}) {
   const out = [];
   for (const m of meetings) {
     const at = m.start || m.startedAt;
@@ -26,6 +26,10 @@ export function calendarEvents({ meetings = [], tasks = [], reminders = [], sche
   for (const r of reminders) {
     if (!r.at) continue;
     out.push({ id: `r:${r.id}`, kind: 'reminder', title: r.note || (r.message?.text ? `Reminder: ${String(r.message.text).slice(0, 60)}` : 'Reminder'), at: r.at, ref: r });
+  }
+  for (const r of noteReminders) {
+    if (!r.remindAt) continue;
+    out.push({ id: `n:${r.id}`, kind: 'reminder', title: `Note: ${r.noteTitle || 'Note'}`, at: r.remindAt, ref: { noteId: r.noteId } });
   }
   for (const s of scheduled) {
     if (!s.sendAt) continue;

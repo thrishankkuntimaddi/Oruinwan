@@ -297,6 +297,9 @@ function mapNote(n) {
     sharedWith: (n.sharedWith || []).map((s) => idOf(s.user || s)),
     visibility: n.isPublic ? 'workspace' : n.sharedWith?.length ? 'shared' : 'private',
     updatedAt: n.updatedAt,
+    // Pages: the first page is the note in the list; each page is its own note.
+    parentId: idOf(n.parentNote) || null,
+    pages: Array.isArray(n.pages) ? n.pages.map((p, i) => ({ id: idOf(p), title: p.title || `Page ${i + 1}` })) : null,
   };
 }
 
@@ -1007,8 +1010,25 @@ export const liveAdapter = {
     const data = await api.post('/ai/notes/assist', { action, text: String(text).slice(0, 40_000), title });
     return data.text || '';
   },
+  /** A new page in a note (after its last page). Resolves with the new page (a note). */
+  async addNotePage(ws, noteId, { title } = {}) {
+    const data = await api.post('/v2/notes', { workspaceId: ws, parentNoteId: noteId, ...(title ? { title } : {}) });
+    return mapNote(data.note);
+  },
+  async remindNote(id, remindAt, note = '') {
+    const data = await api.post(`/v2/notes/${id}/remind`, { remindAt: new Date(remindAt).toISOString(), note });
+    return data.reminder;
+  },
+  /** My pending note reminders: [{ id, noteId, noteTitle, remindAt, note }]. */
+  async noteReminders(ws) {
+    const data = await api.get('/v2/notes/reminders', { workspaceId: ws });
+    return data.reminders || [];
+  },
+  async cancelNoteReminder(id) {
+    await api.del(`/v2/notes/reminders/${id}`);
+  },
   async deleteNote(id) {
-    await api.del(`/v2/notes/${id}`);
+    await api.del(`/v2/notes/${id}?permanent=true`); // without it the server only archives
   },
   async archiveNote(id, archived = true) {
     return this.updateNote(id, { archived });

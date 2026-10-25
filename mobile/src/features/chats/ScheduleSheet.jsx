@@ -31,7 +31,7 @@ const localInput = (d) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-export function ScheduleSheet({ open, onClose, onPick, preview }) {
+export function ScheduleSheet({ open, onClose, onPick, preview, title = 'Send later', footnote = 'It stays encrypted. Find it under Drafts & scheduled in the side panel, where you can change or cancel it.', verb = 'Send' }) {
   const [custom, setCustom] = useState('');
   useEffect(() => {
     if (open) setCustom(localInput(new Date(Date.now() + 2 * 3600_000)));
@@ -40,7 +40,7 @@ export function ScheduleSheet({ open, onClose, onPick, preview }) {
   const customDate = custom ? new Date(custom) : null;
   const customOk = customDate && customDate.getTime() > Date.now() + 60_000;
   return (
-    <Sheet open={open} onClose={onClose} title="Send later">
+    <Sheet open={open} onClose={onClose} title={title}>
       {preview && <p className="mx-5 mb-2 line-clamp-2 rounded-xl bg-surface-2 px-3 py-2 text-[13px] text-text-2">{preview}</p>}
       <div className="px-2">
         {choices.map((c) => (
@@ -59,9 +59,9 @@ export function ScheduleSheet({ open, onClose, onPick, preview }) {
       <div className="space-y-3 px-5 pt-2 pb-4">
         <Field label="Pick a date and time" type="datetime-local" value={custom} onChange={(e) => setCustom(e.target.value)} icon={CalendarClock} />
         <Button block variant="secondary" disabled={!customOk} onClick={() => customOk && onPick(customDate)}>
-          {customOk ? `Send ${fmt(customDate)}` : 'Pick a time in the future'}
+          {customOk ? `${verb} ${fmt(customDate)}` : 'Pick a time in the future'}
         </Button>
-        <p className="text-[12px] text-text-3">It stays encrypted. Find it under Drafts & scheduled in the side panel, where you can change or cancel it.</p>
+        {footnote && <p className="text-[12px] text-text-3">{footnote}</p>}
       </div>
     </Sheet>
   );

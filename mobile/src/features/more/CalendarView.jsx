@@ -24,6 +24,7 @@ const KIND = {
 function openEvent(e) {
   if (e.kind === 'meeting' || e.kind === 'huddle') nav.push('meeting', { id: e.ref.id });
   else if (e.kind === 'task') nav.push('task', { id: e.ref.id });
+  else if (e.kind === 'reminder' && e.ref.noteId) nav.push('note', { id: e.ref.noteId });
   else if (e.kind === 'reminder') openStoredMessage(e.ref.conv, e.ref.message);
   else if (e.kind === 'scheduled') nav.push('outgoing', { tab: 'scheduled' });
 }
@@ -35,6 +36,7 @@ export function CalendarView() {
   const upcoming = useQuery(ws && api().meetingsPage && `calendar:upcoming:${ws}`, () => api().meetingsPage(ws, { status: 'upcoming', limit: 100 }), { staleMs: 60_000 });
   const past = useQuery(ws && api().meetingsPage && `calendar:past:${ws}`, () => api().meetingsPage(ws, { status: 'past', limit: 60 }), { staleMs: 60_000 });
   const reminders = useQuery(ws && `reminders:${ws}`, () => api().reminders(ws), { staleMs: 60_000 });
+  const noteReminders = useQuery(api().noteReminders && ws && `noteReminders:${ws}`, () => api().noteReminders(ws), { staleMs: 60_000 });
   const scheduled = useQuery(api().scheduledMessages && ws && `scheduled:${ws}`, () => api().scheduledMessages(ws), { staleMs: 60_000 });
   const today = new Date();
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
@@ -46,10 +48,11 @@ export function CalendarView() {
         meetings: [...(upcoming.data?.meetings || []), ...(past.data?.meetings || [])],
         tasks: tasks || [],
         reminders: reminders.data || [],
+        noteReminders: noteReminders.data || [],
         scheduled: scheduled.data || [],
         me,
       }),
-    [upcoming.data, past.data, tasks, reminders.data, scheduled.data, me],
+    [upcoming.data, past.data, tasks, reminders.data, noteReminders.data, scheduled.data, me],
   );
   const byDay = useMemo(() => eventsByDay(events), [events]);
   const dayEvents = byDay.get(selected) || [];

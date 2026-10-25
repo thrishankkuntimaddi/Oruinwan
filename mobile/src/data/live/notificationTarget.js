@@ -5,7 +5,7 @@
 /** Server notification type → the app's kind (icon, filters). Task types map to 'task' separately. */
 export const NOTIF_TYPE = {
   mention: 'mention', dm: 'dm', direct_message: 'dm', thread_reply: 'thread', thread_added: 'thread', reaction: 'reaction',
-  meeting_reminder: 'meeting', schedule_created: 'meeting', huddle_started: 'meeting', meeting_recap: 'meeting', note_shared: 'note',
+  meeting_reminder: 'meeting', schedule_created: 'meeting', huddle_started: 'meeting', meeting_recap: 'meeting', note_shared: 'note', note_reminder: 'note',
   design_review: 'design', ai_suggestion: 'ai',
 };
 
