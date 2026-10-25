@@ -57,3 +57,40 @@ Socket `huddle:invite { huddleId, userIds }` with an acknowledgement `{ ok, invi
 Only someone in the call may invite, and only members of the call's workspace can be invited.
 They get `huddle:ring` (and a phone push) with `invited: true`, and `huddle:join` lets them in
 even when they aren't in the call's DM or channel. The call's room gets `huddle:invited`.
+
+## Note pages (3.1.1)
+
+A note can have more pages. Each page is a Note with `parentNote` (the first page) and
+`pageOrder`. `GET /api/v2/notes` lists first pages only; `GET /api/v2/notes/:id` adds
+`pages: [{ _id, title, pageOrder }]` (first page first). Add one with
+`POST /api/v2/notes { workspaceId, parentNoteId, title? }` (anyone who may edit the note;
+max 100 pages). Pages take the first page's sharing; sharing, archive and permanent delete
+of the first page apply to all its pages. `PUT /api/v2/notes/:id { pageOrder }` reorders a page.
+
+## Note reminders (3.1.1)
+
+```
+POST   /api/v2/notes/:id/remind        { remindAt, note? } → { reminder }   (one per person per note)
+GET    /api/v2/notes/reminders?workspaceId=               → { reminders: [{ id, noteId, noteTitle, remindAt, note }] }
+DELETE /api/v2/notes/reminders/:reminderId
+```
+
+The reminders job (every minute) turns due ones into a `note_reminder` notification
+(Activity and a phone push), each claimed once.
+
+## Whiteboard pages (3.1.1)
+
+Page 1 is the meeting's board (`/api/v2/collaboration/whiteboard/:meetingId`, live docId =
+meetingId). More pages:
+
+```
+GET    /api/v2/collaboration/whiteboard/:meetingId/pages            → { pages: [{ id, title, order }] }
+POST   /api/v2/collaboration/whiteboard/:meetingId/pages  { title? } → { page }   (max 30)
+PATCH  /api/v2/collaboration/whiteboard/:meetingId/pages/:pageId { title }
+DELETE /api/v2/collaboration/whiteboard/:meetingId/pages/:pageId
+GET    /api/v2/collaboration/whiteboard/:meetingId/pages/:pageId    → { strokes }
+POST   /api/v2/collaboration/whiteboard/:meetingId/pages/:pageId { strokes }
+```
+
+Each page syncs live with `collab:join { docType: 'whiteboard', docId: <pageId> }`; access is
+the meeting's. Changes to the page list emit `whiteboard:pages { meetingId }` to the meeting room.
