@@ -48,9 +48,15 @@ test('the job sends due messages through the normal send path, as their author, 
     const doc = { _id: oid(99), user: ME, workspace: WS, kind: 'channel', conversation: CH, body: { ...enc, type: 'message' }, status: 'scheduled', save: jest.fn() };
     ScheduledMessage.find.mockReturnValue({ sort: () => ({ limit: async () => [doc] }) });
     ScheduledMessage.findOneAndUpdate.mockResolvedValueOnce({ ...doc, status: 'sending', save: doc.save });
-    const io = { to: jest.fn(() => ({ emit: jest.fn() })) };
+    const room = { emit: jest.fn() };
+    room.to = jest.fn(() => room);
+    const io = { to: jest.fn(() => room) };
     const n = await service.sendDue(io);
     expect(n).toBe(1);
+    // The author's apps hear it was sent (web and phone rooms), so their lists update live.
+    expect(io.to).toHaveBeenCalledWith(`user_${ME}`);
+    expect(room.to).toHaveBeenCalledWith(`user:${ME}`);
+    expect(room.emit).toHaveBeenCalledWith('scheduled-message:sent', expect.objectContaining({ id: String(oid(99)) }));
     const req = mockSendChannel.mock.calls[0][0];
     expect(req.user.sub).toBe(ME);
     expect(req.body).toMatchObject({ ...enc, channelId: CH, clientMessageId: `sched-${oid(99)}` });
@@ -64,7 +70,10 @@ test('a send the server refuses is marked failed with the reason', async () => {
     const claimed = { _id: oid(98), user: ME, workspace: WS, kind: 'channel', conversation: CH, body: enc, status: 'sending', save: saved };
     ScheduledMessage.find.mockReturnValue({ sort: () => ({ limit: async () => [claimed] }) });
     ScheduledMessage.findOneAndUpdate.mockResolvedValueOnce(claimed);
-    await service.sendDue({ to: () => ({ emit: jest.fn() }) });
+    const room = { emit: jest.fn() };
+    room.to = () => room;
+    await service.sendDue({ to: () => room });
+    expect(room.emit).toHaveBeenCalledWith('scheduled-message:failed', expect.objectContaining({ error: 'Not a channel member' }));
     expect(claimed.status).toBe('failed');
     expect(claimed.error).toBe('Not a channel member');
 });

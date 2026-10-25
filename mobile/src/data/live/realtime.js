@@ -96,6 +96,13 @@ export function connectRealtime(base) {
   // Patch the cached list in place (a refetch per event made the list jump and flood).
   for (const ev of NOTIFICATION_EVENTS) socket.on(ev, (p) => applyNotificationEvent(ev, p));
   socket.on('workspace-updated', () => emit('data:changed', ['workspaces']));
+  // Send later: the server sent one (or couldn't): the Scheduled and Sent lists update live, and a
+  // failure says why (it stays in Scheduled to retry or edit).
+  socket.on('scheduled-message:sent', () => emit('data:changed', ['scheduled:', 'sent:']));
+  socket.on('scheduled-message:failed', (p) => {
+    emit('data:changed', ['scheduled:']);
+    emit('toast', { message: `A scheduled message wasn't sent${p?.error ? `: ${p.error}` : ''}. It's in Scheduled to try again.`, tone: 'danger', id: `sched-${p?.id || ''}` });
+  });
   // Free-plan limits (features/plan): today's AI count after each request, and an invitee who
   // couldn't join my workspace because they reached their own limit.
   socket.on('plan:ai_usage', (p) => emit('plan:ai_usage', p));

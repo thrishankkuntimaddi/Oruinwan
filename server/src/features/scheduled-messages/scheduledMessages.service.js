@@ -151,14 +151,14 @@ async function runOne(doc, io) {
         claimed.sentMessageId = mongoose.isValidObjectId(String(sentId)) ? sentId : null;
         claimed.error = null;
         await claimed.save();
-        if (io) io.to(`user_${claimed.user}`).emit('scheduled-message:sent', { id: String(claimed._id), messageId: claimed.sentMessageId ? String(claimed.sentMessageId) : null });
+        if (io) io.to(`user_${claimed.user}`).to(`user:${claimed.user}`).emit('scheduled-message:sent', { id: String(claimed._id), messageId: claimed.sentMessageId ? String(claimed.sentMessageId) : null });
         return { ok: true, messageId: claimed.sentMessageId ? String(claimed.sentMessageId) : null };
     } catch (err) {
         claimed.status = 'failed';
         claimed.error = String(err.message || 'Could not send').slice(0, 300);
         await claimed.save();
         logger.warn(`[SCHEDULED] ${claimed._id} failed: ${claimed.error}`);
-        if (io) io.to(`user_${claimed.user}`).emit('scheduled-message:failed', { id: String(claimed._id), error: claimed.error });
+        if (io) io.to(`user_${claimed.user}`).to(`user:${claimed.user}`).emit('scheduled-message:failed', { id: String(claimed._id), error: claimed.error });
         return { ok: false, error: claimed.error };
     }
 }
