@@ -25,7 +25,7 @@ function WorkspaceCard({ ws, unread, onOpen }) {
         >
             <div className="gl-wsp-card__top">
                 <span className={`gl-wsp-tile${ws.color ? '' : ' is-plain'}`} style={ws.color ? { background: ws.color } : undefined} aria-hidden="true">
-                    <WorkspaceIcon icon={ws.icon} size={20} />
+                    <WorkspaceIcon icon={ws.icon} logo={ws.profile?.logoUrl} size={20} />
                 </span>
                 <span className="gl-wsp-badges">
                     {status && (
@@ -61,7 +61,7 @@ export function ArchivedCard({ ws, onRestore, restoring = false }) {
         <div className="gl-card gl-wsp-card is-suspended" data-testid="ws-archived" style={ws.color ? { '--wsp-tint': ws.color } : undefined}>
             <div className="gl-wsp-card__top">
                 <span className={`gl-wsp-tile${ws.color ? '' : ' is-plain'}`} style={ws.color ? { background: ws.color } : undefined} aria-hidden="true">
-                    <WorkspaceIcon icon={ws.icon} size={20} />
+                    <WorkspaceIcon icon={ws.icon} logo={ws.profile?.logoUrl} size={20} />
                 </span>
                 <span className="gl-wsp-badges">
                     <span className="gl-wsp-badge is-warn"><Archive size={11} /> Archived</span>

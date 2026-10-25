@@ -83,6 +83,9 @@ router.post('/:id/invite', ...memberGatePersonal, lifecycle.requireInviteRight, 
 // New members join default channels automatically and can't leave them.
 router.put('/:workspaceId/channels/:channelId/default', ...adminGatePersonal, lifecycle.setDefaultChannel);
 
+// Workspace profile images (logo, cover); the text fields go through PUT /:id { profile }.
+router.use(require('./workspaceProfile').profileImageRouter(adminGatePersonal));
+
 router.get('/:workspaceId/invites', ...adminGatePersonal, workspaceAdminController.getWorkspaceInvites);
 router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGatePersonal, workspaceAdminController.revokeInvite);
 router.post('/:workspaceId/invites/:inviteId/resend', ...adminGatePersonal, workspaceAdminController.resendInvite);

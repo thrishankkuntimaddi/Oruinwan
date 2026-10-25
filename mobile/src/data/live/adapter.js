@@ -150,6 +150,14 @@ function mapWorkspace(w) {
     rules: w.rules || '',
     settings: w.settings || {},
     plan: w.plan || null,
+    // Workspace profile: logo and cover images (full URLs), tagline, website, location.
+    profile: {
+      logoUrl: absolute(w.profile?.logoUrl) || null,
+      coverUrl: absolute(w.profile?.coverUrl) || null,
+      tagline: w.profile?.tagline || '',
+      website: w.profile?.website || '',
+      location: w.profile?.location || '',
+    },
     unread: w.unreadCount || 0,
   };
 }

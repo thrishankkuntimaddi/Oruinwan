@@ -48,7 +48,7 @@ const WorkspaceHeader = ({
             >
                 <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px', backgroundImage: 'var(--gl-glass)' }}>
                     <span className="gl-shell-ws-tile" style={{ width: '34px', height: '34px', backgroundColor: activeWorkspace?.color || 'var(--accent)' }}>
-                        <WorkspaceIcon icon={activeWorkspace?.icon} size={17} />
+                        <WorkspaceIcon icon={activeWorkspace?.icon} logo={activeWorkspace?.profile?.logoUrl} size={17} />
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: 650, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
@@ -102,7 +102,7 @@ const WorkspaceHeader = ({
                                     onClick={() => { setShowWorkspaceMenu(false); setActiveWorkspace?.(ws); navigate(`/workspace/${ws.id}/home`); }}
                                 >
                                     <span className="gl-shell-ws-tile" style={{ width: '18px', height: '18px', background: ws.color || 'var(--accent)' }}>
-                                        <WorkspaceIcon icon={ws.icon} size={11} />
+                                        <WorkspaceIcon icon={ws.icon} logo={ws.profile?.logoUrl} size={11} />
                                     </span>
                                     <span>{ws.name}</span>
                                 </button>

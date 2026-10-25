@@ -5,6 +5,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import logger from '../../../utils/logger';
 import { WORKSPACE_ICON_OPTIONS, WorkspaceIcon, DEFAULT_WORKSPACE_COLOR } from '../../../utils/workspaceIcons';
 import { Btn, Chip, Confirm, Field, Panel, EmptyState, LoadingState } from '../../ui/page';
+import WorkspaceProfilePanel from './WorkspaceProfilePanel';
 import './generalTab.css';
 
 const RULES_MAX = 5000;
@@ -174,7 +175,7 @@ const GeneralTab = ({
                     >
                         <div className="wsg-id">
                             <span className="wsg-tile wsg-tile--lg" style={{ backgroundColor: currentColor }}>
-                                <WorkspaceIcon icon={activeWorkspace?.icon} size={28} />
+                                <WorkspaceIcon icon={activeWorkspace?.icon} logo={activeWorkspace?.profile?.logoUrl} size={28} />
                             </span>
                             <div style={{ minWidth: 0 }}>
                                 <h3 className="wsg-name wsg-name--lg">{workspaceName}</h3>
@@ -185,6 +186,8 @@ const GeneralTab = ({
                             </div>
                         </div>
                     </Panel>
+
+                    <WorkspaceProfilePanel workspace={activeWorkspace} isAdmin={isAdmin} onChanged={refreshWorkspace} />
 
                     {loadingStats ? (
                         <Panel><LoadingState label="Loading workspace details…" /></Panel>

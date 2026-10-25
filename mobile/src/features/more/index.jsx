@@ -397,10 +397,26 @@ export function WorkspaceScreen() {
     <Screen>
       <Header title="Workspace" />
       <Body>
-        <div className="flex flex-col items-center px-6 pb-2 text-center">
-          <WorkspaceTile workspace={workspace} size={72} />
+        {workspace.profile?.coverUrl && (
+          <div className="mx-4 mt-2 h-28 overflow-hidden rounded-card border border-line-soft" data-testid="workspace-cover">
+            <img src={workspace.profile.coverUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+        )}
+        <div className={cx('flex flex-col items-center px-6 pb-2 text-center', workspace.profile?.coverUrl && '-mt-9')}>
+          <WorkspaceTile workspace={workspace} size={72} className={workspace.profile?.coverUrl ? 'ring-4 ring-[var(--bg)]' : undefined} />
           <h1 className="mt-4 text-2xl font-bold">{workspace.name}</h1>
+          {workspace.profile?.tagline && <p className="mt-1 text-[15px] font-medium">{workspace.profile.tagline}</p>}
           {workspace.description && <p className="mt-1 text-sm text-text-2">{workspace.description}</p>}
+          {(workspace.profile?.website || workspace.profile?.location) && (
+            <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-text-2">
+              {workspace.profile.website && (
+                <button type="button" className="text-accent-ink" onClick={() => openExternal(workspace.profile.website)}>
+                  {workspace.profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                </button>
+              )}
+              {workspace.profile.location && <span>{workspace.profile.location}</span>}
+            </p>
+          )}
           <p className="mt-2 text-xs text-text-3">
             {workspace.role ? `${workspace.role.charAt(0).toUpperCase()}${workspace.role.slice(1)}` : 'Member'} · {members?.length ?? workspace.memberCount ?? '–'} members ·{' '}
             {(channels || []).length} channels

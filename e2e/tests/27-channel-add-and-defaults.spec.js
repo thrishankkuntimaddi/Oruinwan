@@ -5,7 +5,16 @@
 // channels keep the whole workspace (nobody is removed from them).
 
 const { test, expect } = require('@playwright/test');
-const { E2E, seedData, login } = require('./helpers');
+const { E2E, seedData, login, withDb } = require('./helpers');
+
+// Channels these tests make are removed afterwards: the seeded workspace is on the free plan
+// (10 channels), and later tests create channels of their own.
+const made = [];
+test.afterAll(async () => {
+  if (!made.length) return;
+  const { ObjectId } = require(require.resolve('mongodb', { paths: [require('path').join(__dirname, '..', '..', 'server')] }));
+  await withDb((db) => db.collection('channels').deleteMany({ _id: { $in: made.map((id) => new ObjectId(id)) } }));
+});
 
 const token = (page) => page.evaluate(() => localStorage.getItem('accessToken'));
 
@@ -32,7 +41,9 @@ async function createChannel(who, name, { isPrivate = false, members = [] } = {}
   const res = await who.call('post', '/api/channels', { name, workspaceId: ws(), isPrivate, memberIds: members.map(id) });
   expect(res.status(), await res.text()).toBeLessThan(300);
   const body = await res.json();
-  return String(body.channel?._id || body.channel?.id || body._id || body.id);
+  const channelId = String(body.channel?._id || body.channel?.id || body._id || body.id);
+  made.push(channelId);
+  return channelId;
 }
 
 test('a workspace admin adds a member to a private channel straight away; outsiders cannot be added', async ({ browser }) => {
@@ -69,8 +80,8 @@ test('a default channel holds the whole workspace: everyone is added and nobody 
   const alice = await api(browser, 'alice');
   const channelId = await createChannel(alice, `everyone-${t}`);
 
-  const made = await alice.call('put', `/api/workspaces/${ws()}/channels/${channelId}/default`, { isDefault: true });
-  expect(made.status(), await made.text()).toBe(200);
+  const turnedOn = await alice.call('put', `/api/workspaces/${ws()}/channels/${channelId}/default`, { isDefault: true });
+  expect(turnedOn.status(), await turnedOn.text()).toBe(200);
 
   const bob = await api(browser, 'bob');
   const mine = (await channelsOf(bob)).find((c) => String(c._id || c.id) === channelId);

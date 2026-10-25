@@ -102,11 +102,13 @@ function messageFrom(data, status) {
 
 async function send(method, url, body, auth) {
   const headers = { ...HEADERS, 'x-device-id': deviceId() };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  // FormData (an image upload) goes as multipart; the browser sets its own Content-Type.
+  const form = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !form) headers['Content-Type'] = 'application/json';
   if (auth && tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
   let res;
   try {
-    res = await fetch(url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+    res = await fetch(url, { method, headers, body: form ? body : body !== undefined ? JSON.stringify(body) : undefined });
   } catch {
     throw new ApiError(NETWORK_MESSAGE, 0, null);
   }

@@ -5,7 +5,7 @@ export function WorkspaceTile({ workspace, size = 32, className }) {
   return (
     <span
       aria-hidden
-      className={cx('inline-grid shrink-0 place-items-center rounded-[9px] font-bold text-white', className)}
+      className={cx('inline-grid shrink-0 place-items-center overflow-hidden rounded-[9px] font-bold text-white', className)}
       style={{
         width: size,
         height: size,
@@ -14,7 +14,11 @@ export function WorkspaceTile({ workspace, size = 32, className }) {
         boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.18)',
       }}
     >
-      {name.trim().charAt(0).toUpperCase()}
+      {workspace?.profile?.logoUrl ? (
+        <img src={workspace.profile.logoUrl} alt="" draggable={false} className="h-full w-full rounded-[inherit] object-cover" />
+      ) : (
+        name.trim().charAt(0).toUpperCase()
+      )}
     </span>
   );
 }

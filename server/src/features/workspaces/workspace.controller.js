@@ -79,6 +79,7 @@ function inviteProblem(invite, now = new Date()) {
   return null;
 }
 
+const { publicProfile, profileTextPatch } = require('./workspaceProfile');
 exports._internal = { pickSafeSettings, countActiveMembers, projectChannelName, inviteProblem };
 
 exports.createWorkspace = async (req, res) => {
@@ -306,6 +307,7 @@ exports.listMyWorkspaces = async (req, res) => {
         settings: pickSafeSettings(workspace.settings),
         type: workspace.type,
         plan: workspace.plan || null,
+        profile: publicProfile(workspace),
         role,
         membershipStatus: status || 'active',
         memberCount: countActiveMembers(workspace.members),
@@ -552,6 +554,7 @@ exports.getInviteDetails = async (req, res) => {
       workspaceDescription: workspace.description,
       workspaceIcon: workspace.icon,
       workspaceColor: workspace.color || "#2563eb",
+      workspaceProfile: publicProfile(workspace),
       invitedBy: invite.invitedBy ? invite.invitedBy.username : 'Someone',
       memberCount,
       role: invite.role
@@ -1208,6 +1211,11 @@ exports.updateWorkspace = async (req, res) => {
     if (description !== undefined && description !== null && typeof description !== 'string') {
       return res.status(400).json({ message: "description must be a string" });
     }
+    if (typeof description === 'string' && description.length > 1000) {
+      return res.status(400).json({ message: "description must be at most 1000 characters" });
+    }
+    const profileText = profileTextPatch(body.profile);
+    if (profileText.error) return res.status(400).json({ message: profileText.error });
 
     let workspace = await identity.workspaces.findById(id);
     if (!workspace) {
@@ -1225,6 +1233,7 @@ exports.updateWorkspace = async (req, res) => {
     if (description !== undefined) patch.description = description || "";
     if (body.rules !== undefined) patch.rules = body.rules || "";
     if (Object.keys(incoming).length) patch.settings = { $merge: true, ...incoming };
+    if (profileText.patch && Object.keys(profileText.patch).length) patch.profile = { $merge: true, ...profileText.patch };
 
     workspace = await identity.workspaces.update(id, patch);
 
@@ -1238,7 +1247,8 @@ exports.updateWorkspace = async (req, res) => {
         color: workspace.color,
         description: workspace.description,
         rules: workspace.rules || "",
-        settings: safeSettings
+        settings: safeSettings,
+        profile: publicProfile(workspace)
       });
     }
 
@@ -1251,7 +1261,8 @@ exports.updateWorkspace = async (req, res) => {
         color: workspace.color,
         description: workspace.description,
         rules: workspace.rules || "",
-        settings: safeSettings
+        settings: safeSettings,
+        profile: publicProfile(workspace)
       }
     });
   } catch (err) {

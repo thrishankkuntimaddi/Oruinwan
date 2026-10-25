@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_BASE } from '../services/api';
 import {
     Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp,
     Lightbulb, Flame, Target, Trophy, Sparkles, Folder,
@@ -53,8 +54,22 @@ function isCustomEmoji(icon) {
         && !BY_ID[icon] && !ALIASES[icon] && /\p{Extended_Pictographic}/u.test(icon);
 }
 
-/** Renders a workspace's icon at the given size. */
-export function WorkspaceIcon({ icon, size = 18, strokeWidth, style }) {
+/** A workspace logo's address: stored files come from the API (also from the desktop app). */
+export function workspaceLogoSrc(url) {
+    if (!url) return null;
+    return url.startsWith('/') ? `${API_BASE}${url}` : url;
+}
+
+/**
+ * Renders a workspace's icon at the given size, or its uploaded logo (workspace profile), which
+ * fills the tile around it.
+ */
+export function WorkspaceIcon({ icon, logo, size = 18, strokeWidth, style }) {
+    const logoSrc = workspaceLogoSrc(logo);
+    if (logoSrc) {
+        return <img src={logoSrc} alt="" aria-hidden="true" draggable={false}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit', display: 'block', ...style }} />;
+    }
     if (isCustomEmoji(icon)) {
         return <span aria-hidden="true" style={{ fontSize: Math.round(size * 0.95), lineHeight: 1, ...style }}>{icon}</span>;
     }

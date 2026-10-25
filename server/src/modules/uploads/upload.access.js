@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 // Folders whose objects are meant to be visible to any authenticated user
 // (avatars and company logos are rendered next to names across the app).
-const SHARED_PREFIXES = ['profiles/', 'company-logos/'];
+const SHARED_PREFIXES = ['profiles/', 'company-logos/', 'workspace-profiles/'];
 
 /**
  * Avatars and logos are rendered by plain <img> tags, which cannot send an Authorization

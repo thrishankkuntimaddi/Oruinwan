@@ -119,7 +119,7 @@ const IconSidebar = ({ onProfileClick }) => {
                     aria-expanded={showWorkspaceMenu}
                     style={{ backgroundColor: activeWorkspace?.color || 'var(--accent)' }}
                 >
-                    <WorkspaceIcon icon={activeWorkspace?.icon} size={18} />
+                    <WorkspaceIcon icon={activeWorkspace?.icon} logo={activeWorkspace?.profile?.logoUrl} size={18} />
                     <span className="gl-shell-ws-btn-caret" aria-hidden="true"><ChevronDown size={8} /></span>
                 </button>
 
@@ -148,7 +148,7 @@ const IconSidebar = ({ onProfileClick }) => {
                                         onClick={() => { setActiveWorkspace(ws); setShowWorkspaceMenu(false); navigate(`/workspace/${ws.id}/home`); }}
                                     >
                                         <span className="gl-shell-ws-tile" style={{ width: '22px', height: '22px', backgroundColor: ws.color || 'var(--accent)' }}>
-                                            <WorkspaceIcon icon={ws.icon} size={13} />
+                                            <WorkspaceIcon icon={ws.icon} logo={ws.profile?.logoUrl} size={13} />
                                         </span>
                                         <span>{ws.name}</span>
                                         {current && <span className="gl-shell-dot" aria-hidden="true" />}

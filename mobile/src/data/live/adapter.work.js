@@ -995,15 +995,27 @@ export const workAdapter = {
     if (channelCreation) settings.allowMemberChannelCreation = channelCreation === 'member';
     await api.put(`/workspaces/${ws}`, { settings });
   },
-  /** Name (renamed separately: names are unique per member), description and rules. */
-  async updateWorkspaceInfo(ws, { name, description, rules } = {}, current = {}) {
+  /** Name (renamed separately: names are unique per member), description, rules and profile text. */
+  async updateWorkspaceInfo(ws, { name, description, rules, tagline, website, location } = {}, current = {}) {
     if (typeof name === 'string' && name.trim() && name.trim() !== current.name) {
       await api.put(`/workspaces/${ws}/rename`, { name: name.trim() });
     }
     const body = {};
     if (typeof description === 'string' && description !== (current.description || '')) body.description = description;
     if (typeof rules === 'string' && rules !== (current.rules || '')) body.rules = rules;
+    const profile = {};
+    for (const [k, v] of Object.entries({ tagline, website, location })) {
+      if (typeof v === 'string' && v !== (current.profile?.[k] || '')) profile[k] = v;
+    }
+    if (Object.keys(profile).length) body.profile = profile;
     if (Object.keys(body).length) await api.put(`/workspaces/${ws}`, body);
+  },
+  /** Workspace logo or cover image (kind: 'logo' | 'cover'); null removes it. */
+  async setWorkspaceImage(ws, kind, file) {
+    if (!file) return api.del(`/workspaces/${ws}/profile/${kind}`);
+    const form = new FormData();
+    form.append('image', file, file.name || `${kind}.jpg`);
+    return api.post(`/workspaces/${ws}/profile/${kind}`, form);
   },
   async changeMemberRole(ws, userId, role) {
     await api.post(`/workspaces/${ws}/members/${userId}/change-role`, { newRole: role });

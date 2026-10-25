@@ -61,4 +61,10 @@ describe('admin helpers', () => {
     expect(workspaceInfoChanges(ws, { name: 'Acme Co', description: 'Hi', rules: 'Be kind' })).toEqual({ name: 'Acme Co', description: 'Hi' });
     expect(workspaceInfoChanges(ws, { name: '  ', rules: '' })).toEqual({ rules: '' });
   });
+  it('saves the profile text that changed', () => {
+    const ws = { name: 'Acme', profile: { tagline: 'We ship', website: '', location: 'Pune' } };
+    expect(workspaceInfoChanges(ws, { name: 'Acme', tagline: 'We ship', website: '', location: 'Pune' })).toEqual({});
+    expect(workspaceInfoChanges(ws, { name: 'Acme', tagline: 'We ship fast', website: 'acme.dev', location: 'Pune' })).toEqual({ tagline: 'We ship fast', website: 'acme.dev' });
+    expect(workspaceInfoChanges({ name: 'Acme' }, { name: 'Acme', location: 'Remote' })).toEqual({ location: 'Remote' });
+  });
 });

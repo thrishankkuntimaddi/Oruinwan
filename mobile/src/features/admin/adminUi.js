@@ -121,5 +121,9 @@ export function workspaceInfoChanges(current = {}, form = {}) {
   for (const k of ['description', 'rules']) {
     if (typeof form[k] === 'string' && form[k] !== (current[k] || '')) out[k] = form[k];
   }
+  // Profile text (workspace.profile).
+  for (const k of ['tagline', 'website', 'location']) {
+    if (typeof form[k] === 'string' && form[k] !== (current.profile?.[k] || '')) out[k] = form[k];
+  }
   return out;
 }
