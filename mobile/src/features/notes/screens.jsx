@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
+  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -12,6 +12,9 @@ import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { IconButton, Button, Fab } from '../../ui/Button.jsx';
 import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
+import { actionItemsBlock, summaryBlock } from './noteAi.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { copyText } from '../../native/index.js';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
@@ -278,6 +281,10 @@ export function NoteScreen({ id, fresh }) {
   const [share, setShare] = useState(false);
   const [typeSheet, setTypeSheet] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [aiBusy, setAiBusy] = useState(null);
+  const server = useSession((s) => s.server);
+  const webBase = useWebUrl(server);
   const editorRef = useRef(null);
   const titleRef = useRef('');
   const loadedRef = useRef(false);
@@ -357,6 +364,41 @@ export function NoteScreen({ id, fresh }) {
     if (e.clientX - rect.left < 28) {
       li.setAttribute('data-checked', li.getAttribute('data-checked') === 'true' ? 'false' : 'true');
       edited();
+    }
+  };
+
+  /** AI help written into the note: a summary on top, action items at the end, or a proofread. */
+  const runAi = async (action) => {
+    const el = editorRef.current;
+    const text = htmlToText(el?.innerHTML || note?.content || '', 40_000);
+    if (!text.trim()) {
+      toast('Write something first, then ask AI to help.');
+      return;
+    }
+    setAiBusy(action === 'summarize' ? 'Summarizing…' : action === 'extract' ? 'Finding action items…' : 'Checking spelling and grammar…');
+    try {
+      const md = await api().noteAssist(action, text, { title: titleRef.current || note?.title });
+      if (!el || !md.trim()) throw new Error('No answer came back.');
+      if (action === 'summarize') el.innerHTML = sanitizeHtml(summaryBlock(md)) + el.innerHTML;
+      else if (action === 'extract') el.innerHTML = el.innerHTML + sanitizeHtml(actionItemsBlock(md));
+      else el.innerHTML = sanitizeHtml(md.split(/\n{2,}/).map((p) => `<p>${p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</p>`).join(''));
+      edited();
+      toast(action === 'summarize' ? 'Summary added at the top' : action === 'extract' ? 'Action items added at the end' : 'Corrected', 'success');
+    } catch (err) {
+      toast(err.message || 'Oruinwan AI could not help with that', 'danger');
+    } finally {
+      setAiBusy(null);
+    }
+  };
+
+  const duplicate = async () => {
+    try {
+      const copy = await api().createNote(ws, { title: `${titleRef.current || note.title} (copy)`, type: note.type, content: sanitizeHtml(editorRef.current?.innerHTML || note.content) });
+      invalidate('notes');
+      nav.replace('note', { id: copy.id });
+      toast('Duplicated');
+    } catch (err) {
+      toast(err.message || 'Could not duplicate', 'danger');
     }
   };
 
@@ -451,19 +493,50 @@ export function NoteScreen({ id, fresh }) {
           ))}
         </div>
       )}
+      {aiBusy && (
+        <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4" style={{ top: 'calc(var(--sat) + 64px)' }} role="status">
+          <span className="glass flex items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] text-text-2">
+            <Icon as={Sparkles} size={14} className="text-accent-ink" /> {aiBusy}
+          </span>
+        </div>
+      )}
       <ActionSheet
         open={menu}
         onClose={() => setMenu(false)}
+        title={note.title}
         actions={[
-          aiOn && {
-            label: 'Summarize with AI',
-            icon: Sparkles,
-            onSelect: () => askAiAbout(`Summarize my note "${note.title}" and list its action items:\n\n${htmlToText(editorRef.current?.innerHTML || note.content, 3000)}`),
-          },
+          aiOn && contentEditable && api().noteAssist && { label: 'Summarize into this note', hint: 'A short summary goes on top', icon: Sparkles, onSelect: () => runAi('summarize') },
+          aiOn && contentEditable && api().noteAssist && { label: 'Pull out action items', hint: 'Added as a checklist at the end', icon: ListTodo, onSelect: () => runAi('extract') },
+          aiOn && contentEditable && api().noteAssist && { label: 'Fix spelling and grammar', icon: SpellCheck, onSelect: () => runAi('proofread') },
+          aiOn && { label: 'Discuss with AI', hint: 'Ask questions about this note', icon: MessageSquareText, onSelect: () => askAiAbout(`About my note "${note.title}":\n\n${htmlToText(editorRef.current?.innerHTML || note.content, 3000)}\n\n`) },
+          note.ownerId === me && { label: 'Share…', hint: note.visibility === 'workspace' ? 'Shared with the whole workspace' : (note.sharedWith || []).length ? `Shared with ${(note.sharedWith || []).length}` : 'Only you', icon: Users, onSelect: () => setTimeout(() => setShare(true), 220) },
+          webBase && { label: 'Copy link', icon: Link2, onSelect: async () => ((await copyText(`${webBase}/workspace/${ws}/notes/${id}`)) ? toast('Link copied') : toast("Couldn't copy", 'danger')) },
+          { label: 'Duplicate', icon: Copy, onSelect: duplicate },
           note.archived
             ? { label: 'Restore note', icon: ArchiveRestore, onSelect: async () => { await api().archiveNote(id, false); invalidate('notes', `note:${id}`); toast('Note restored'); } }
-            : note.ownerId === me && { label: 'Archive note', icon: Archive, danger: true, onSelect: () => setConfirmArchive(true) },
+            : note.ownerId === me && { label: 'Archive note', icon: Archive, onSelect: () => setConfirmArchive(true) },
+          note.ownerId === me && api().deleteNote && { label: 'Delete note', icon: Trash2, danger: true, onSelect: () => setConfirmDelete(true) },
         ]}
+      />
+      <Dialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Delete this note?"
+        body="It's deleted for everyone it was shared with. This can't be undone. Archive it instead to keep it out of the way."
+        confirmLabel="Delete"
+        danger
+        onConfirm={async () => {
+          setConfirmDelete(false);
+          try {
+            await api().deleteNote(id);
+            setQueryData(`notes:${ws}`, (l) => l?.filter((n) => n.id !== id));
+            invalidate('notes');
+            nav.pop();
+            toast('Note deleted');
+          } catch (err) {
+            toast(err.message || 'Could not delete', 'danger');
+          }
+        }}
       />
       <ActionSheet
         open={typeSheet}

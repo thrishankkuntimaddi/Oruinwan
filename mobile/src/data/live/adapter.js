@@ -1002,6 +1002,14 @@ export const liveAdapter = {
     const data = await api.put(`/v2/notes/${id}`, body);
     return mapNote(data.note || data);
   },
+  /** AI on a note's text: action 'summarize' | 'extract' | 'proofread' | … → Markdown text. */
+  async noteAssist(action, text, { title } = {}) {
+    const data = await api.post('/ai/notes/assist', { action, text: String(text).slice(0, 40_000), title });
+    return data.text || '';
+  },
+  async deleteNote(id) {
+    await api.del(`/v2/notes/${id}`);
+  },
   async archiveNote(id, archived = true) {
     return this.updateNote(id, { archived });
   },

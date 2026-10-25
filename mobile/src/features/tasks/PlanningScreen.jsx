@@ -40,6 +40,17 @@ export const PLANNING_VIEWS = [
 ];
 const VIEWS = PLANNING_VIEWS;
 
+/** One line under the tabs saying what each planning view is for. */
+export const PLANNING_HELP = {
+  sprints: 'A sprint is a fixed stretch of work (often 2 weeks). Put tasks in it, start it, and see what got done when it ends.',
+  milestones: 'A milestone is a goal with a date, like “Beta launch”. Link tasks to it to see how close you are.',
+  timeline: 'Every open task on a calendar line by its due date, so you can spot crunches early.',
+  workload: 'How many open tasks each person has, so work can be shared fairly.',
+  time: 'Time logged on tasks, per person and per task.',
+  reviews: 'Designs shared for feedback: comments and approvals in one place.',
+  templates: 'Reusable tasks (title, details, subtasks) for work you do again and again.',
+};
+
 const SPRINT_STATUS = { planning: 'Planning', active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const MILESTONE_STATUS = { not_started: 'Not started', in_progress: 'In progress', at_risk: 'At risk', completed: 'Completed' };
 const MILESTONE_TONE = { not_started: 'text-text-2', in_progress: 'text-info', at_risk: 'text-warning', completed: 'text-success' };
@@ -818,7 +829,10 @@ export function PlanningScreen({ initial }) {
   return (
     <Screen>
       <Header title="Planning" subtitle="Sprints, milestones, time and design reviews">
-        <Chips options={VIEWS} value={view} onChange={pick} className="pb-3" />
+        <Chips options={VIEWS} value={view} onChange={pick} className="pb-2" />
+        <p className="px-4 pb-3 text-[12px] leading-snug text-text-2" data-testid="planning-help">
+          {PLANNING_HELP[view]}
+        </p>
       </Header>
       <Body fluid={view === 'timeline'} onRefresh={() => invalidate('planning', 'sprints', 'milestones', 'workload', 'templates', 'timereport', 'designReviews')}>
         {view === 'sprints' && <SprintsView tasks={tasks || []} />}

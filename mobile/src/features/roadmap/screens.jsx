@@ -209,6 +209,9 @@ export function RoadmapScreen({ section }) {
         </TabHeader>
       ) : (
         <Header title="Roadmap" subtitle="What's planned, by quarter" actions={add}>
+          <p className="px-4 pb-2 text-[12px] leading-snug text-text-2" data-testid="roadmap-help">
+            The roadmap is the big picture everyone can see: the major pieces of work, the quarter they're planned for and how they're going. Admins add items; link tasks and milestones to track progress.
+          </p>
           <div className="flex items-center gap-2 pb-2">
             {filters}
             {wide && (

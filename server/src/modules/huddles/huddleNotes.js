@@ -169,8 +169,23 @@ function actionItems(content) {
     return block ? parseItems(block.content) : [];
 }
 
+/**
+ * True when nobody wrote anything: every paragraph is empty and every checklist has no items
+ * (headings don't count, they come from the template). Such a note isn't kept after the call.
+ */
+function isBlankNote(content) {
+    const blocks = parseBlocks(content);
+    return blocks.every((b) => {
+        if (b.type === 'heading' || b.type === 'divider') return true;
+        if (b.type === 'checklist') return parseItems(b.content).every((it) => !String(it?.text || '').trim());
+        const text = String(b.content || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+        return !text;
+    });
+}
+
 module.exports = {
     ACTIONS_BLOCK_ID,
+    isBlankNote,
     NoteOpError,
     applyOp,
     actionItems,

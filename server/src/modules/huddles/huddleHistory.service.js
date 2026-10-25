@@ -167,13 +167,16 @@ function createRecorder({
 
         ended(huddleId) {
             meetingOf.delete(huddleId);
-            return write(huddleId, 'end', () => {
+            return write(huddleId, 'end', async () => {
                 const at = now();
-                return model().updateOne(
+                const result = await model().updateOne(
                     { huddleId, endedAt: null },
                     { $set: { endedAt: at, 'participants.$[p].leftAt': at } },
                     { arrayFilters: [{ 'p.leftAt': null }] },
                 );
+                // Notes opened during the call but never written in aren't kept.
+                await dropBlankNotes(model(), huddleId).catch((err) => logger.warn?.('[huddle] blank-note cleanup failed:', err?.message));
+                return result;
             });
         },
 
@@ -192,6 +195,18 @@ function createRecorder({
         /** Resolves once every queued write for this huddle has finished. */
         whenIdle: (huddleId) => queue.idle(huddleId),
     };
+}
+
+/** Deletes the shared notes of a huddle's latest run when nobody wrote anything in them. */
+async function dropBlankNotes(Session, huddleId) {
+    const run = await Session.findOne({ huddleId, notes: { $ne: null } }).sort({ startedAt: -1 }).select('_id notes').lean();
+    if (!run?.notes) return false;
+    const Note = lazy.Note();
+    const note = await Note.findById(run.notes).select('content').lean();
+    if (!note || !notes.isBlankNote(note.content)) return false;
+    await Note.deleteOne({ _id: run.notes });
+    await Session.updateOne({ _id: run._id }, { $set: { notes: null } });
+    return true;
 }
 
 const recorder = createRecorder({ meetingLink: defaultMeetingLink });
