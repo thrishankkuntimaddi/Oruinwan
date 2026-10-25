@@ -58,6 +58,7 @@ import { webBase, messageLink as buildMessageLink, messageShareText, shareableBo
 
 // Pull request viewer (loaded on first use; carries the syntax highlighter).
 const CodeReviewPanel = lazy(() => import('../../integrations/codeReview/CodeReviewPanel'));
+const AskAiPanel = lazy(() => import('./AskAiPanel'));
 
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
@@ -204,6 +205,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     const [showBookmarks, setShowBookmarks] = useState(false);
     const [showPinned, setShowPinned] = useState(false);
+    // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
+    const [showAskAi, setShowAskAi] = useState(false);
     const [showChecklistModal, setShowChecklistModal] = useState(false);
     const [showReminders, setShowReminders] = useState(false);
     // Pull request open in the code-review side panel: { repo, number, messageId?, … } | null.
@@ -1728,7 +1731,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         : null;
 
     return (
-        <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            {showAskAi && (
+                <Suspense fallback={null}>
+                    <AskAiPanel
+                        events={conversation.events}
+                        title={chat?.type === 'channel' ? `#${chat?.name || 'channel'}` : (chat?.name || chat?.username || 'this chat')}
+                        workspaceId={workspaceId || chat?.workspaceId}
+                        onClose={() => setShowAskAi(false)}
+                    />
+                </Suspense>
+            )}
             <Header
                 chat={chat}
                 onClose={onClose}
@@ -1760,6 +1773,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onStartVideoCall={features.huddles ? () => startOrJoinCall(true) : undefined}
                 huddleActive={huddle.active}
                 onShowBookmarks={() => (showBookmarks ? setShowBookmarks(false) : openSidePanel('bookmarks'))}
+                onAskAi={!chat?.isAgent ? () => setShowAskAi((v) => !v) : undefined}
                 onShowReminders={() => (showReminders ? setShowReminders(false) : openSidePanel('reminders'))}
                 onShowPinned={(chat?.type === 'channel' || chat?.type === 'dm') ? () => (showPinned ? setShowPinned(false) : openSidePanel('pinned')) : undefined}
             />

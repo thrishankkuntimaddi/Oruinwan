@@ -1,7 +1,7 @@
 // A small "Ask AI" pill at the top of a conversation, like a dynamic island: tap it, ask about
 // this conversation, and the answer appears right there. Swipe it up (or tap ×) to close.
 // The question goes with the messages decrypted on this device (nothing else is uploaded).
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -10,6 +10,8 @@ import { Spinner } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 
 const SUGGESTIONS = ['What did I miss?', 'Any decisions?', 'What is open for me?'];
+// The pill shows in full this long when a conversation opens, then shrinks to a small button.
+export const ISLAND_FULL_MS = 4000;
 
 export function AiIsland({ transcript, title }) {
   const ws = useSession((s) => s.workspaceId);
@@ -20,6 +22,13 @@ export function AiIsland({ transcript, title }) {
   const [dy, setDy] = useState(0);
   const drag = useRef(null);
   const input = useRef(null);
+  // Full "Ask AI about this chat" pill at first, then a small sparkle in the corner (it covered
+  // the newest messages when it stayed).
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCompact(true), ISLAND_FULL_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   const close = () => {
     setOpen(false);
@@ -46,6 +55,25 @@ export function AiIsland({ transcript, title }) {
   };
 
   if (!api().askAboutConversation) return null;
+
+  if (!open && compact) {
+    return (
+      <div className="pointer-events-none absolute right-3 top-2 z-[5]">
+        <button
+          type="button"
+          aria-label="Ask AI about this chat"
+          onClick={() => {
+            setOpen(true);
+            setTimeout(() => input.current?.focus(), 60);
+          }}
+          className="glass pointer-events-auto pressable grid h-9 w-9 place-items-center rounded-full border text-accent-ink shadow-md animate-fade-in"
+          data-testid="ai-island"
+        >
+          <Icon as={Sparkles} size={16} />
+        </button>
+      </div>
+    );
+  }
 
   if (!open) {
     return (

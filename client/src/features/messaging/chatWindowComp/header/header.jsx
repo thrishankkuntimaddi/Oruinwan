@@ -23,6 +23,7 @@ import { Pin, AlarmClock,
   Radio,
   PhoneOff,
   Bookmark,
+  Sparkles,
 } from "lucide-react";
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { Avatar, Input } from "../../../../shared/components/ui";
@@ -61,6 +62,7 @@ export default function Header({
   onStartHuddle,
   huddleActive = false,
   onShowBookmarks,
+  onAskAi,
   onShowPinned,
   onStartVideoCall,
   onShowReminders,
@@ -386,6 +388,23 @@ export default function Header({
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                   <AlarmClock size={18} />
+                </button>
+              )}
+
+              {onAskAi && (
+                <button
+                  className="hdr-extra"
+                  title="Ask AI about this chat"
+                  aria-label="Ask AI about this chat"
+                  data-testid="ask-ai-button"
+                  onClick={onAskAi}
+                  style={{
+                    padding: '6px', borderRadius: '2px', background: 'none',
+                    border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    color: 'var(--accent)', transition: 'color 150ms ease',
+                  }}
+                >
+                  <Sparkles size={18} />
                 </button>
               )}
 
