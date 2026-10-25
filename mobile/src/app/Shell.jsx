@@ -27,6 +27,7 @@ import { SHORTCUTS, shortcutFor } from './shortcuts.js';
 import { useOutbox } from '../data/outbox.js';
 import { SidePanel, useEdgeBack, useEdgeSwipe } from './SidePanel.jsx';
 import { AiFab } from './AiFab.jsx';
+import { QuickAi } from './QuickAi.jsx';
 import { EXTRA_TABS, useTabBar } from './tabBarPrefs.js';
 import { TabRootContext } from '../ui/Screen.jsx';
 
@@ -208,6 +209,7 @@ function SplitTab({ tab, stack }) {
       <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
         <Root tab={tab} />
         <AiFab tab={tab} />
+        <QuickAi />
         <TabBar />
       </section>
       <DetailPane tab={tab} stack={stack} />
@@ -309,6 +311,7 @@ export function Shell() {
         </div>
       ))}
       <AiFab tab={tab} hidden={stack.length > 0} />
+      <QuickAi />
       {stack.length === 0 && tab !== 'ai' && <TabBar />}
       <UnreadBadge />
       <HuddleLayer />

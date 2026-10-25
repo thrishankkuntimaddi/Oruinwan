@@ -82,7 +82,11 @@ export function IconButton({ icon, label, onClick, className, badge, tone = 'def
  * square in a bottom corner, clear of the tab bar and the home indicator. Wide windows have no
  * tab bar, so there it sits lower.
  */
-export function Fab({ icon, label, onClick, side = 'right', className, ...rest }) {
+/**
+ * The tab's main action, bottom right: an icon with its label ("New task", "New note"), so it
+ * says what it does (and doesn't look like the AI button above it). `compact` shows the icon only.
+ */
+export function Fab({ icon, label, onClick, side = 'right', className, compact = false, ...rest }) {
   const wide = useWide();
   return (
     <button
@@ -91,14 +95,16 @@ export function Fab({ icon, label, onClick, side = 'right', className, ...rest }
       title={label}
       onClick={onClick}
       className={cx(
-        'pressable absolute z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent shadow-lg',
+        'pressable absolute z-10 flex h-14 items-center justify-center gap-2 rounded-2xl bg-gold text-on-accent shadow-lg',
+        compact ? 'w-14' : 'px-5',
         side === 'left' ? 'left-4' : 'right-4',
         className,
       )}
       style={{ bottom: wide ? 'calc(var(--sab) + 20px)' : 'calc(var(--sab) + 76px)' }}
       {...rest}
     >
-      <Icon as={icon} size="lg" />
+      <Icon as={icon} size={compact ? 'lg' : 'md'} />
+      {!compact && <span className="text-[15px] font-semibold">{label}</span>}
     </button>
   );
 }

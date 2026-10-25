@@ -161,14 +161,30 @@ describe('tab header', () => {
     expect(screen.queryByRole('searchbox')).toBeNull();
   });
 
-  it('the AI button is small above + on Chats, Tasks and Notes and full size on Home and Activity', async () => {
+  it('the AI button is small above the tab button on Chats, Tasks and Notes and full size on Home and Activity; it opens the quick AI window', async () => {
     const { AiFab } = await import('./AiFab.jsx');
+    const { useQuickAi } = await import('./QuickAi.jsx');
     const { rerender } = render(<AiFab tab="chats" />);
     expect(screen.getByRole('button', { name: 'Oruinwan AI' }).dataset.size).toBe('small');
     rerender(<AiFab tab="home" />);
     expect(screen.getByRole('button', { name: 'Oruinwan AI' }).dataset.size).toBe('big');
+    // The same face on every tab.
+    expect(screen.getByTestId('ai-eyes')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Oruinwan AI' }));
-    expect(useNav.getState().tab).toBe('ai');
+    expect(useQuickAi.getState().open).toBe(true);
+    expect(useNav.getState().tab).not.toBe('ai');
+    useQuickAi.getState().hide();
+  });
+
+  it('the eyes look toward a touch, a little', async () => {
+    const { lookOffset } = await import('./AiEyes.jsx');
+    const right = lookOffset(100, 100, 400, 100);
+    expect(right.x).toBeGreaterThan(2);
+    expect(Math.abs(right.y)).toBeLessThan(0.01);
+    const near = lookOffset(100, 100, 100, 110);
+    expect(near.y).toBeGreaterThan(0);
+    expect(near.y).toBeLessThan(1);
+    expect(lookOffset(5, 5, 5, 5)).toEqual({ x: 0, y: 0 });
   });
 });
 
