@@ -167,6 +167,8 @@ if (!processRole.serves.http) {
 app.use('/icons', (req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); });
 // Lets phones open invitation links in the Oruinwan app instead of the browser.
 app.use(require('./src/shared/routes/wellKnown').wellKnownRouter());
+// Phones get the phone app's interface (dist/m/, the same UI as the Android app).
+app.use(require('./src/shared/routes/phoneWebUi').phoneWebUi({ distDir: path.join(__dirname, '../dist') }));
 app.use(express.static(path.join(__dirname, "../dist")));
 
 const requireAuth = require("./src/shared/middleware/auth");

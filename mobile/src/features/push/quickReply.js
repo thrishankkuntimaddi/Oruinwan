@@ -55,6 +55,13 @@ export async function handleNotification(data = {}, action = null) {
     }
     return;
   }
+  // A ringing call tapped in a browser (Web Push): the incoming-call screen, if it still rings.
+  if (data?.type === 'call' && data.call) {
+    const call = typeof data.call === 'string' ? JSON.parse(data.call) : data.call;
+    const { receiveRing } = await import('../huddles/incomingCall.js');
+    receiveRing(call);
+    return;
+  }
   if (plan.kind !== 'reply' || !plan.text) {
     openPush(data);
     return;

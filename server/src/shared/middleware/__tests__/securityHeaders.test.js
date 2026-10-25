@@ -34,7 +34,8 @@ test('the web app may call its API on another address and use live updates', asy
 
 test('Google sign-in and decrypted images are allowed; inline scripts are not', async () => {
   const csp = policy(await get());
-  expect(csp['script-src']).toEqual(["'self'", 'https://accounts.google.com']);
+  // WebAssembly may compile (the phone interface's QR scanner); eval and inline scripts stay off.
+  expect(csp['script-src']).toEqual(["'self'", "'wasm-unsafe-eval'", 'https://accounts.google.com']);
   expect(csp['img-src']).toEqual(expect.arrayContaining(['blob:', 'data:']));
   expect(csp['object-src']).toEqual(["'none'"]);
 });

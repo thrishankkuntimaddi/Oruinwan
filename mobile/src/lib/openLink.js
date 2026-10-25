@@ -23,6 +23,22 @@ export function unwrapOpenLink(input) {
 }
 
 /**
+ * The website sends phones to the app as /m/?open=<page> (server: phoneWebUi): that page as
+ * an /open link on this site (https://<web>/open/<page>), else null.
+ */
+export function browserStartLink(location) {
+  let page;
+  try {
+    page = new URL(location.href).searchParams.get('open');
+  } catch {
+    return null;
+  }
+  if (!page || !page.startsWith('/') || page.startsWith('//')) return null;
+  const inner = page.startsWith('/open/') || page === '/open' ? page.slice('/open'.length) || '/' : page;
+  return `${new URL(location.href).origin}/open${inner}`;
+}
+
+/**
  * The screen for an app page the other link handlers don't cover: [tab] or [tab, screen].
  * null means just open the app where it is.
  */

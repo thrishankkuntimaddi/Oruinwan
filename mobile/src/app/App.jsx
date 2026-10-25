@@ -21,6 +21,7 @@ import { ReminderLayer } from '../features/chats/ReminderLayer.jsx';
 import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 import { finishBackupLink } from '../features/settings/backupInfo.js';
 import { openConversationLink, openPageLink } from '../features/home/openTarget.js';
+import { browserStartLink } from '../lib/openLink.js';
 import { BackupRestoreOffer } from '../features/settings/backup.jsx';
 import { PlanLayer } from '../features/plan/UpgradeSheet.jsx';
 import { ApprovalHost } from '../features/auth/ApprovalHost.jsx';
@@ -91,8 +92,16 @@ export function App() {
   // browser, this page opened as /join-workspace?token=…
   useEffect(() => {
     const here = window.location;
+    // The app's own address in a browser (/ in the preview, /m/ on the website).
+    const home = new URL('./', here.href).pathname;
     if (/\/(join-workspace|join|invite)\b/.test(here.pathname) && useSession.getState().openInvite(here.href)) {
-      window.history.replaceState(null, '', '/');
+      window.history.replaceState(null, '', home);
+    }
+    // A phone opening the website lands here with the page it asked for (server: phoneWebUi).
+    const asked = browserStartLink(here);
+    if (asked) {
+      openPageLink(asked);
+      window.history.replaceState(null, '', home);
     }
     let off = () => {};
     // oruinwan://sso?code=… finishes a company SSO sign-in; other links are invitations.

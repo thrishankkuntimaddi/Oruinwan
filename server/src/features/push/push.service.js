@@ -7,6 +7,9 @@ const logger = require('../../../utils/logger');
 //   iPhone:  Apple Push Notification service, token auth. Set APNS_KEY (the .p8 contents, or
 //            APNS_KEY_FILE), APNS_KEY_ID, APNS_TEAM_ID and APNS_BUNDLE_ID; APNS_PRODUCTION=true
 //            for App Store / TestFlight builds.
+//   Browsers (the phone app's interface on the website): Web Push with VAPID keys. Set
+//            WEB_PUSH_PUBLIC_KEY and WEB_PUSH_PRIVATE_KEY (`npx web-push generate-vapid-keys`)
+//            and optionally WEB_PUSH_SUBJECT (mailto: or https: contact for push services).
 // Without them, nothing is sent and nothing fails. Tokens the services reject as gone are removed.
 
 const fs = require('fs');
@@ -205,16 +208,58 @@ function isMessagePush(data) {
   return Boolean(data && MESSAGE_PUSH_TYPES.has(data.type) && (data.channelId || data.dmSessionId || data.conversationId));
 }
 
+// ── Web Push (browsers) ─────────────────────────────────────────────────────
+
+function webPushConfig(env = process.env) {
+  const publicKey = String(env.WEB_PUSH_PUBLIC_KEY || '').trim();
+  const privateKey = String(env.WEB_PUSH_PRIVATE_KEY || '').trim();
+  if (!publicKey || !privateKey) return null;
+  const subject = String(env.WEB_PUSH_SUBJECT || '').trim() || 'mailto:admin@poelys.com';
+  return { publicKey, privateKey, subject };
+}
+
+/**
+ * The browser's subscription is stored as the token (its JSON). The service worker (mobile/public/
+ * sw.js) shows `{ title, body, data, tag }`: one notification per conversation or call (tag).
+ * -> 'sent' | 'gone' (the browser unsubscribed) | 'failed'
+ */
+async function sendWebPush(token, { title, body, data = {}, tag, ttlSeconds = null, urgency = 'normal' }) {
+  const cfg = webPushConfig();
+  if (!cfg) return 'failed';
+  let subscription;
+  try {
+    subscription = JSON.parse(token);
+  } catch {
+    return 'gone';
+  }
+  if (!subscription?.endpoint) return 'gone';
+  try {
+    const webpush = require('web-push');
+    await webpush.sendNotification(subscription, JSON.stringify({ title, body, data, tag }), {
+      vapidDetails: { subject: cfg.subject, publicKey: cfg.publicKey, privateKey: cfg.privateKey },
+      TTL: ttlSeconds ?? 24 * 60 * 60,
+      urgency,
+    });
+    return 'sent';
+  } catch (err) {
+    if (err?.statusCode === 404 || err?.statusCode === 410) return 'gone';
+    logger.warn({ status: err?.statusCode, err: err?.body || err?.message }, '[Push] Web push failed');
+    return 'failed';
+  }
+}
+
 // ── Sending ─────────────────────────────────────────────────────────────────
 
 function isConfigured() {
-  return { android: Boolean(fcmConfig()), ios: Boolean(apnsConfig()) };
+  const web = webPushConfig();
+  return { android: Boolean(fcmConfig()), ios: Boolean(apnsConfig()), web: Boolean(web), webKey: web?.publicKey || null };
 }
 
 /** Which service a registered device token goes through. */
 function serviceFor(entry) {
   if (entry.platform === 'ios') return 'apns';
   if (entry.platform === 'android') return 'fcm';
+  if (entry.platform === 'web') return 'webpush';
   return null; // old Expo tokens and unknown platforms are no longer delivered
 }
 
@@ -245,6 +290,7 @@ async function sendToUser(userId, title, body, data = {}) {
     await deliver(userId, async (service, entry) => {
       if (service === 'fcm') return sendFcm(entry.token, message);
       if (service === 'apns') return sendApns(entry.token, message);
+      if (service === 'webpush') return sendWebPush(entry.token, { ...message, tag: conversationId ? String(conversationId) : undefined });
       return 'gone';
     });
   } catch (err) {
@@ -282,6 +328,10 @@ async function sendCallToUser(userId, type, payload = {}) {
         if (!isCall) return 'sent';
         return sendApns(entry.token, { title, body, data, ttlSeconds: CALL_TTL_SECONDS });
       }
+      // Browsers: a ringing call shows until answered; its end replaces it (same tag) and closes it.
+      if (service === 'webpush') {
+        return sendWebPush(entry.token, { title, body, data, tag: `call:${payload.huddleId}`, ttlSeconds: CALL_TTL_SECONDS, urgency: 'high' });
+      }
       return 'gone';
     });
   } catch (err) {
@@ -289,4 +339,4 @@ async function sendCallToUser(userId, type, payload = {}) {
   }
 }
 
-module.exports = { sendToUser, sendCallToUser, isConfigured, _internal: { isMessagePush, MESSAGE_CATEGORY, fcmConfig, fcmMessage, apnsConfig, stringData, serviceFor, sendFcm, sendApns } };
+module.exports = { sendToUser, sendCallToUser, isConfigured, _internal: { isMessagePush, MESSAGE_CATEGORY, fcmConfig, fcmMessage, apnsConfig, webPushConfig, stringData, serviceFor, sendFcm, sendApns, sendWebPush } };

@@ -384,7 +384,7 @@ export const useSession = create((set, get) => ({
     try {
       const status = await adapter.pushStatus();
       if (!status?.[pushPlatform]) return 'unavailable';
-      const token = await enablePush({ ask });
+      const token = await enablePush({ ask, webKey: status.webKey });
       if (!token) return 'off';
       await adapter.registerPushToken(token, pushPlatform);
       return 'on';

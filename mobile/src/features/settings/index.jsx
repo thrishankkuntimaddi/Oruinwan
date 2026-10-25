@@ -14,7 +14,7 @@ import { useAppearance, TEXT_SIZES } from '../../app/theme.js';
 import { useUpdate, checkForUpdate, revertToBuiltInUi } from '../../update/updater.js';
 import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
-import { firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
+import { ANDROID_APK, firebaseConfig, RELEASES_PAGE, REPO, BUILD_TIME } from '../../config/env.js';
 import { prefs } from '../../native/storage.js';
 import { deviceNoun, isAndroid, isDesktop, isIOS, isPlayStore, isWeb, onAppState, openExternal, platformLabel } from '../../native/index.js';
 import { usePushState } from '../push/usePushState.js';
@@ -186,7 +186,14 @@ export function SettingsScreen({ confirmSignOut = false }) {
               onClick={() => nav.push('settings.updates')}
             />
             <Row icon={Database} tile="accent" title="Data & storage" onClick={() => nav.push('settings.data')} />
-            {labs && <Row icon={FlaskConical} tile="accent" title="Labs" subtitle="Feature flags on this device" onClick={() => nav.push('settings.updates')} />}
+            {/* The website on a phone (this UI in a browser): the Android app, or the full website. */}
+            {isWeb && /Android/i.test(navigator.userAgent) && (
+              <Row icon={Smartphone} tile="accent" title="Get the Android app" subtitle="Notifications and calls even when it's closed" onClick={() => openExternal(ANDROID_APK)} />
+            )}
+            {isWeb && (
+              <Row icon={Monitor} tile="accent" title="Use the full website" subtitle="The computer layout, in this browser" onClick={() => window.location.assign('/?web=1')} />
+            )}
+            {labs &&<Row icon={FlaskConical} tile="accent" title="Labs" subtitle="Feature flags on this device" onClick={() => nav.push('settings.updates')} />}
           </RowGroup>
         </Section>
 

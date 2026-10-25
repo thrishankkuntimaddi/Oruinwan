@@ -18,7 +18,8 @@ function contentSecurityPolicy() {
     useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", GOOGLE],
+      // 'wasm-unsafe-eval': WebAssembly only (the QR scanner in the phone interface, /m/); no eval.
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'", GOOGLE],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', GOOGLE],
       fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],

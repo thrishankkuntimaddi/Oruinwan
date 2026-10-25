@@ -1,4 +1,17 @@
-import { screenForPage, unwrapOpenLink } from './openLink.js';
+import { browserStartLink, screenForPage, unwrapOpenLink } from './openLink.js';
+
+describe('a phone opening the website', () => {
+  const at = (href) => ({ href });
+  it('opens the page it asked for', () => {
+    expect(browserStartLink(at('https://oruinwan.poelys.com/m/?open=%2Fjoin-workspace%3Ftoken%3Dabc'))).toBe('https://oruinwan.poelys.com/open/join-workspace?token=abc');
+    expect(browserStartLink(at('https://oruinwan.poelys.com/m/?open=%2Fopen%2Fnotifications'))).toBe('https://oruinwan.poelys.com/open/notifications');
+  });
+  it('ignores anything that is not a page of this site', () => {
+    expect(browserStartLink(at('https://oruinwan.poelys.com/m/'))).toBeNull();
+    expect(browserStartLink(at('https://oruinwan.poelys.com/m/?open=%2F%2Fevil.example.com'))).toBeNull();
+    expect(browserStartLink(at('https://oruinwan.poelys.com/m/?open=https%3A%2F%2Fevil.example.com'))).toBeNull();
+  });
+});
 
 describe('email buttons that open the app', () => {
   it('unwraps https://<web>/open/<page> to the plain link', () => {

@@ -7,6 +7,8 @@ jest.mock('../../../identity', () => ({
   users: { findById: jest.fn(async () => mockUser), update: jest.fn(async () => {}) },
 }));
 jest.mock('axios', () => ({ post: jest.fn() }));
+const mockWebPush = jest.fn(async () => ({ statusCode: 201 }));
+jest.mock('web-push', () => ({ sendNotification: (...a) => mockWebPush(...a) }));
 
 // A fake HTTP/2 connection to Apple that records each request and answers 200.
 const mockApnsRequests = [];
@@ -48,12 +50,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   delete process.env.FIREBASE_SERVICE_ACCOUNT;
   delete process.env.APNS_KEY;
+  delete process.env.WEB_PUSH_PUBLIC_KEY;
+  delete process.env.WEB_PUSH_PRIVATE_KEY;
   mockUser.deviceTokens = [];
 });
 
 test('sends nothing and fails nothing when push is not set up', async () => {
   mockUser.deviceTokens = [{ token: 'a'.repeat(40), platform: 'android' }];
-  expect(push.isConfigured()).toEqual({ android: false, ios: false });
+  expect(push.isConfigured()).toEqual({ android: false, ios: false, web: false, webKey: null });
   await push.sendToUser('u1', 'Hi', 'There');
   expect(axios.post).not.toHaveBeenCalled();
 });
@@ -189,5 +193,45 @@ describe('call pushes', () => {
     const message = axios.post.mock.calls[0][1].message;
     expect(message.notification).toBeUndefined();
     expect(message.data).toMatchObject({ type: 'call_cancel', huddleId: 'h1', reason: 'answered_elsewhere' });
+  });
+});
+
+describe('browsers (Web Push)', () => {
+  const sub = JSON.stringify({ endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: 'p', auth: 'a' } });
+  const setUp = () => {
+    process.env.WEB_PUSH_PUBLIC_KEY = 'BPublicKey';
+    process.env.WEB_PUSH_PRIVATE_KEY = 'privateKey';
+    mockUser.deviceTokens = [{ token: sub, platform: 'web' }];
+    mockWebPush.mockReset();
+    mockWebPush.mockResolvedValue({ statusCode: 201 });
+  };
+
+  test('the app learns the public key, and messages go out one per conversation', async () => {
+    setUp();
+    expect(push.isConfigured()).toMatchObject({ web: true, webKey: 'BPublicKey' });
+    await push.sendToUser('u1', 'Priya in #general', 'New message', { channelId: 'c1', type: 'channel_message' });
+    expect(mockWebPush).toHaveBeenCalledTimes(1);
+    const [subscription, payload, opts] = mockWebPush.mock.calls[0];
+    expect(subscription.endpoint).toMatch(/fcm\/send\/abc$/);
+    expect(JSON.parse(payload)).toMatchObject({ title: 'Priya in #general', body: 'New message', tag: 'c1', data: { channelId: 'c1' } });
+    expect(opts.vapidDetails).toMatchObject({ publicKey: 'BPublicKey', privateKey: 'privateKey', subject: 'mailto:admin@poelys.com' });
+  });
+
+  test('a ringing call is urgent and expires with the ring; its end replaces it', async () => {
+    setUp();
+    await push.sendCallToUser('u1', 'call', { huddleId: 'h1', kind: 'dm', from: { name: 'Ben' }, video: false });
+    const [, payload, opts] = mockWebPush.mock.calls[0];
+    expect(JSON.parse(payload)).toMatchObject({ title: 'Ben', body: 'Incoming voice call', tag: 'call:h1', data: { type: 'call', huddleId: 'h1' } });
+    expect(opts).toMatchObject({ TTL: 45, urgency: 'high' });
+    await push.sendCallToUser('u1', 'call_cancel', { huddleId: 'h1' });
+    expect(JSON.parse(mockWebPush.mock.calls[1][1])).toMatchObject({ tag: 'call:h1', data: { type: 'call_cancel' } });
+  });
+
+  test('a subscription the browser dropped is removed', async () => {
+    setUp();
+    mockWebPush.mockRejectedValue(Object.assign(new Error('gone'), { statusCode: 410 }));
+    const identity = require('../../../identity');
+    await push.sendToUser('u1', 'Hi', 'There');
+    expect(identity.users.update).toHaveBeenCalledWith('u1', { deviceTokens: [] });
   });
 });

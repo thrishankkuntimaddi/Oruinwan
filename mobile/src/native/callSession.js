@@ -3,6 +3,7 @@
 // Pixel 8". Native side: android/app/src/main/java/com/oruinwan/app/CallSessionPlugin.java.
 // Everything is a safe no-op where the plugin isn't there (the web build, iOS, tests).
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { startWebRinging, stopWebRinging } from './webRinger.js';
 
 const CallSession = registerPlugin('CallSession');
 
@@ -78,8 +79,9 @@ export const openFullScreenCallSettings = () => quietly(() => CallSession.openFu
 // ---------------------------------------------------------------- incoming calls
 
 /** The phone's ringtone and vibration while the incoming-call screen shows. */
-export const startRinging = () => quietly(() => CallSession.startRinging());
-export const stopRinging = () => quietly(() => CallSession.stopRinging());
+// In a browser (the website on a phone) a Web Audio ringtone stands in (webRinger.js).
+export const startRinging = () => (hasCallSession() ? quietly(() => CallSession.startRinging()) : Promise.resolve(startWebRinging()));
+export const stopRinging = () => (hasCallSession() ? quietly(() => CallSession.stopRinging()) : Promise.resolve(stopWebRinging()));
 
 /** Rings with the system's call notification (used when the app is in the background). */
 export const showIncomingNotification = (call) => quietly(async () => Boolean((await CallSession.showIncoming({ call }))?.shown));

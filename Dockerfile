@@ -31,6 +31,22 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN yarn workspace client build
 
+# ---- phone interface for phone browsers (mobile/, served at /m/ by server/phoneWebUi) ------
+FROM node:22-slim AS phone
+WORKDIR /app
+COPY mobile/package.json mobile/package-lock.json mobile/
+RUN cd mobile && npm ci --ignore-scripts --no-audit --no-fund
+COPY platform platform
+# (It bundles a few web-client files: icons, help docs.)
+COPY client client
+COPY mobile mobile
+# Same address rules as the web app: its API address, else the server it was loaded from.
+ARG VITE_BACKEND_URL=""
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_SERVER_URL=$VITE_BACKEND_URL VITE_SAME_ORIGIN=1 VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV NODE_OPTIONS=--max-old-space-size=1536
+RUN cd mobile && npx vite build --outDir /app/phone-dist
+
 # ---- server dependencies (production only, versions from yarn.lock) ---------------------
 FROM node:22-slim AS deps
 WORKDIR /app
@@ -51,6 +67,7 @@ COPY ai ./ai
 COPY platform ./platform
 COPY server ./server
 COPY --from=web /app/dist ./dist
+COPY --from=phone /app/phone-dist ./dist/m
 RUN mkdir -p server/uploads && chown -R node:node server/uploads
 USER node
 WORKDIR /app/server

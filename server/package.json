@@ -48,6 +48,7 @@
     "socket.io": "^4.8.1",
     "twilio": "^5.11.1",
     "ua-parser-js": "^2.0.8",
+    "web-push": "3.6.7",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.27"

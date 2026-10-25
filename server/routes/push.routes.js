@@ -12,7 +12,8 @@ router.get('/status', requireAuth, (req, res) => {
   res.json(require('../src/features/push/push.service').isConfigured());
 });
 
-const PLATFORMS = ['android', 'ios'];
+// 'web': a browser's Web Push subscription (JSON), from the phone app's interface on the website.
+const PLATFORMS = ['android', 'ios', 'web'];
 const MAX_TOKENS_PER_USER = 10;
 
 router.post('/register', requireAuth, async (req, res) => {
