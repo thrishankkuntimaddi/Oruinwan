@@ -27,6 +27,8 @@ import { isStoredFile } from "./notesComponents/blocks/mediaUtils";
 import EmptyState from "./notesComponents/ui/EmptyState";
 import NoteInfoModal from "./notesComponents/ui/NoteInfoModal";
 import ShareNoteModal from "./notesComponents/ui/ShareNoteModal";
+import NotePagesBar from './notesComponents/ui/NotePagesBar';
+import RemindNoteModal from './notesComponents/ui/RemindNoteModal';
 import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
 import { useAIContext } from "../../contexts/AIContext";
@@ -41,7 +43,7 @@ import { readBlocks, applyBlocksToY, LOCAL_ORIGIN } from "../../lib/collab/noteB
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
     Info, Clock, Tag, X, Plus, History, GripVertical, Users, Eye, Globe,
-    Star, Archive, ArchiveRestore, Loader2, AlertCircle, Lock, ArrowLeft,
+    Star, Archive, ArchiveRestore, Loader2, AlertCircle, Lock, ArrowLeft, BellRing,
     Type, Heading1, Code2, CheckSquare, ChevronRight, Minus, Table2, Image as ImageIcon, Paperclip,
 } from "lucide-react";
 
@@ -168,6 +170,7 @@ const Notes = () => {
     const [showShareTooltip, setShowShareTooltip] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showRemind, setShowRemind] = useState(false);
     const [showAI, setShowAI] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
@@ -634,6 +637,7 @@ ${blockHtml}
         { label: 'Download as PDF', Icon: Download, action: handleDownloadPDF },
         { label: showShareTooltip ? 'Link copied' : 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); } },
         { label: 'Note details', Icon: Info, action: () => { setShowInfoModal(true); setShowMenu(false); } },
+        { label: 'Remind me', Icon: BellRing, action: () => { setShowRemind(true); setShowMenu(false); } },
     ].filter(Boolean);
 
     const QUICK_BLOCKS = [
@@ -757,6 +761,7 @@ ${blockHtml}
                         ) : (
                             <h1 className="nt-title">{title || 'Untitled'}</h1>
                         )}
+                        <NotePagesBar key={id} noteId={id} workspaceId={workspaceId} canEdit={canEdit && !note.isArchived} title={title} />
 
                         {/* Tags (owner only) */}
                         <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
@@ -858,6 +863,7 @@ ${blockHtml}
                     onShare={handleShareModalSave}
                 />
             )}
+            {showRemind && <RemindNoteModal noteId={id} title={title} onClose={() => setShowRemind(false)} />}
             <Confirm
                 open={isDeleteModalOpen}
                 title={`Delete “${title || 'Untitled'}”?`}

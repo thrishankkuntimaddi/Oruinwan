@@ -42,7 +42,9 @@ const toolBtn = (active) => ({
  * and everyone sees each other's pointers. Without a live connection it falls
  * back to drawing locally and saving over REST.
  */
-const Whiteboard = ({ meetingId }) => {
+const Whiteboard = ({ meetingId, boardId = meetingId }) => {
+    // Page 1 is the meeting's board; other pages have their own id (and REST path).
+    const restPath = boardId && boardId !== meetingId ? `/api/v2/collaboration/whiteboard/${meetingId}/pages/${boardId}` : `/api/v2/collaboration/whiteboard/${meetingId}`;
     const canvasRef = useRef(null);
     const { showToast } = useToast();
     const [dirty, setDirty] = useState(false);
@@ -62,7 +64,7 @@ const Whiteboard = ({ meetingId }) => {
     const [saving, setSaving] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
 
-    const collab = useCollabDoc('whiteboard', meetingId, { enabled: !!meetingId });
+    const collab = useCollabDoc('whiteboard', boardId, { enabled: !!boardId });
     const live = collab.live;
     const doc = collab.doc;
     const readOnly = live && collab.readOnly;
@@ -71,13 +73,13 @@ const Whiteboard = ({ meetingId }) => {
 
     useEffect(() => {
         if (!meetingId) return;
-        api.get(`/api/v2/collaboration/whiteboard/${meetingId}`)
+        api.get(restPath)
             .then(({ data }) => {
                 // The live doc wins once it is synced.
                 if (data.strokes?.length) setStrokes((prev) => (prev.length ? prev : data.strokes));
             })
             .catch((err) => showToast(err?.response?.data?.message || 'Could not load the whiteboard', 'error'));
-    }, [meetingId, showToast]);
+    }, [meetingId, restPath, showToast]);
 
     // Live: the shared stroke list is the board.
     useEffect(() => {
@@ -215,7 +217,7 @@ const Whiteboard = ({ meetingId }) => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.post(`/api/v2/collaboration/whiteboard/${meetingId}`, { strokes });
+            await api.post(restPath, { strokes });
             setDirty(false);
             setSavedAt(new Date());
         } catch (err) {

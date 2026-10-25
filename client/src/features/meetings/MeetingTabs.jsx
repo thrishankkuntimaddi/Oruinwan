@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutList, ListOrdered, NotebookPen, Captions, ListChecks, PenTool, StickyNote, MessageSquare } from 'lucide-react';
-import Whiteboard from '../../components/meetingsComp/Whiteboard';
+import WhiteboardPages from '../../components/meetingsComp/WhiteboardPages';
 import BrainstormBoard from '../../components/meetingsComp/BrainstormBoard';
 import OverviewTab from './tabs/OverviewTab';
 import AgendaTab from './tabs/AgendaTab';
@@ -84,7 +84,7 @@ export function MeetingTabContent({ tab, meeting, record, transcript, workspaceI
         case 'summary':
             return <SummaryTab meeting={meeting} workspaceId={workspaceId} record={record} transcript={transcript} myId={myId} compact={compact} />;
         case 'whiteboard':
-            return <div data-testid="meeting-tab-whiteboard" style={{ height: compact ? 460 : 'min(70vh, 640px)' }}><Whiteboard meetingId={String(meeting.id || meeting._id)} /></div>;
+            return <div data-testid="meeting-tab-whiteboard" style={{ height: compact ? 460 : 'min(70vh, 640px)' }}><WhiteboardPages meetingId={String(meeting.id || meeting._id)} /></div>;
         case 'brainstorm':
             return <div data-testid="meeting-tab-brainstorm"><BrainstormBoard meetingId={String(meeting.id || meeting._id)} liveReady={record.roomJoined} /></div>;
         default:

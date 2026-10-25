@@ -23,7 +23,7 @@ const idOf = (v) => String(v?._id || v?.id || v || '');
 const clock = (d) => new Date(d).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 /** Server rows → [{ id, kind, title, at, end, allDay, href }] for the calendar, by time. */
-export function toCalendarEvents({ meetings = [], tasks = [], reminders = [], scheduled = [], me, workspaceId }) {
+export function toCalendarEvents({ meetings = [], tasks = [], reminders = [], noteReminders = [], scheduled = [], me, workspaceId }) {
     const out = [];
     for (const m of meetings) {
         const at = m.scheduledStart || m.startTime || m.startedAt;
@@ -39,6 +39,10 @@ export function toCalendarEvents({ meetings = [], tasks = [], reminders = [], sc
     for (const r of reminders) {
         if (!r.remindAt) continue;
         out.push({ id: `r:${idOf(r)}`, kind: 'reminder', title: r.note || 'Message reminder', at: r.remindAt, href: null });
+    }
+    for (const r of noteReminders) {
+        if (!r.remindAt) continue;
+        out.push({ id: `n:${r.id}`, kind: 'reminder', title: `Note: ${r.noteTitle || 'Note'}`, at: r.remindAt, href: `/workspace/${workspaceId}/notes/${r.noteId}` });
     }
     for (const s of scheduled) {
         if (!s.sendAt) continue;
@@ -78,13 +82,15 @@ export default function ActivityCalendar({ workspaceId }) {
             get('/v2/tasks', { workspaceId }),
             get('/v2/messages/reminders'),
             get('/v2/scheduled-messages', { workspaceId }),
-        ]).then(([up, past, tasks, reminders, scheduled]) => {
+            get('/v2/notes/reminders', { workspaceId }),
+        ]).then(([up, past, tasks, reminders, scheduled, noteReminders]) => {
             if (gone) return;
             setData({
                 meetings: [...(up?.meetings || []), ...(past?.meetings || [])],
                 tasks: tasks?.tasks || [],
                 reminders: reminders?.reminders || [],
                 scheduled: scheduled?.scheduled || [],
+                noteReminders: noteReminders?.reminders || [],
             });
         });
         return () => { gone = true; };

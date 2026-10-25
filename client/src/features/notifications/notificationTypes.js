@@ -23,6 +23,7 @@ export const NOTIFICATION_TYPE_META = {
     task_removed:      { label: 'Task',        Icon: Trash2,         color: 'var(--state-danger)',    tab: 'tasks' },
     task_transfer:     { label: 'Transfer',    Icon: ExternalLink,   color: 'var(--accent)',          tab: 'tasks' },
     note_shared:       { label: 'Note',        Icon: FileText,       color: 'var(--text-secondary)',  tab: 'all' },
+    note_reminder:     { label: 'Reminder',    Icon: FileText,       color: 'var(--accent)',          tab: 'all' },
     design_review:     { label: 'Review',      Icon: PenTool,        color: 'var(--accent)',          tab: 'all' },
     member_joined:     { label: 'Team',        Icon: UserPlus,       color: 'var(--state-success)',   tab: 'team' },
     channel_pinned:    { label: 'Channel',     Icon: Pin,            color: 'var(--accent)',          tab: 'all' },
