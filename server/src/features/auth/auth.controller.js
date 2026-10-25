@@ -941,7 +941,7 @@ exports.forgotPassword = async (req, res) => {
 
     return res.json({ message: "Reset link sent if account exists" });
   } catch (_err) {
-    logger.error("FORGOT ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "FORGOT ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -971,7 +971,7 @@ exports.resetPassword = async (req, res) => {
     return res.json({ message: "Password reset successful" });
 
   } catch (_err) {
-    logger.error("RESET ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "RESET ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1028,7 +1028,7 @@ exports.getMe = async (req, res) => {
     }
     return res.json(userObject);
   } catch (_err) {
-    logger.error("GET ME ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "GET ME ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1435,7 +1435,7 @@ exports.updatePassword = async (req, res) => {
     return res.json({ message: "Password updated", otherSessionsRevoked: revoked });
 
   } catch (_err) {
-    logger.error("PASSWORD ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "PASSWORD ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1495,7 +1495,7 @@ exports.setPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    logger.error("SET PASSWORD ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "SET PASSWORD ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1607,7 +1607,7 @@ exports.googleLogin = async (req, res) => {
     return signInWithGoogle(req, res, user, googleId);
 
   } catch (_err) {
-    logger.error("GOOGLE LOGIN ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "GOOGLE LOGIN ERROR");
     return res.status(500).json({ message: "Google login failed" });
   }
 };
@@ -1739,7 +1739,7 @@ exports.googleSignup = async (req, res) => {
     if (blocked) return res.status(blocked.status).json(blocked.body);
     return issueSignInSession(req, res, user, { ...extras, method: 'google' });
   } catch (_err) {
-    logger.error("GOOGLE SIGNUP ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "GOOGLE SIGNUP ERROR");
     return res.status(500).json({ message: "Sign-up failed" });
   }
 };
@@ -1776,7 +1776,7 @@ exports.resendSignupVerification = async (req, res) => {
     }
     return res.json(generic);
   } catch (_err) {
-    logger.error("RESEND VERIFICATION ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "RESEND VERIFICATION ERROR");
     return res.json(generic);
   }
 };
@@ -1952,7 +1952,7 @@ exports.getSessions = async (req, res) => {
 
     res.json(sessions);
   } catch (_err) {
-    logger.error("GET SESSIONS ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "GET SESSIONS ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1976,7 +1976,7 @@ exports.revokeSession = async (req, res) => {
 
     res.json({ message: "Session revoked", current: isCurrent });
   } catch (_err) {
-    logger.error("REVOKE SESSION ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "REVOKE SESSION ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1997,7 +1997,7 @@ exports.revokeOtherSessions = async (req, res) => {
 
     res.json({ message: "All other sessions revoked", revoked });
   } catch (_err) {
-    logger.error("REVOKE OTHERS ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "REVOKE OTHERS ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2088,7 +2088,7 @@ exports.addEmail = async (req, res) => {
     res.json(response);
 
   } catch (_err) {
-    logger.error("ADD EMAIL ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "ADD EMAIL ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2144,7 +2144,7 @@ exports.verifyEmailCode = async (req, res) => {
     });
 
   } catch (_err) {
-    logger.error("VERIFY EMAIL ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "VERIFY EMAIL ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2201,7 +2201,7 @@ exports.resendVerification = async (req, res) => {
     }
 
   } catch (_err) {
-    logger.error("RESEND VERIFICATION ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "RESEND VERIFICATION ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2247,7 +2247,7 @@ exports.setPrimaryEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    logger.error("SET PRIMARY EMAIL ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "SET PRIMARY EMAIL ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2290,7 +2290,7 @@ exports.deleteEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    logger.error("DELETE EMAIL ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "DELETE EMAIL ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2328,7 +2328,7 @@ exports.skipPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    logger.error("SKIP PASSWORD ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "SKIP PASSWORD ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -2413,7 +2413,7 @@ exports.getUsersList = async (req, res) => {
 
     res.json({ users });
   } catch (_err) {
-    logger.error("GET USERS ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "GET USERS ERROR");
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -2462,7 +2462,7 @@ exports.deactivateAccount = async (req, res) => {
       deactivated: true
     });
   } catch (_err) {
-    logger.error("DEACTIVATE ACCOUNT ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "DEACTIVATE ACCOUNT ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -2523,7 +2523,7 @@ exports.verifyReactivationOTP = async (req, res) => {
 
     return finishPasswordLogin(req, res, user, { signIn: { method: 'reactivation' } });
   } catch (_err) {
-    logger.error("VERIFY REACTIVATION OTP ERROR:", _err);
+    logger.error({ err: _err?.message, code: _err?.code, stack: _err?.stack }, "VERIFY REACTIVATION OTP ERROR");
     return res.status(500).json({ message: "Server error" });
   }
 };
