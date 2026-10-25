@@ -31,9 +31,24 @@ export const useNav = create((set, get) => ({
   prev: 'home', // the tab to return to when leaving AI
   stacks: emptyStacks(),
   overlays: [], // [{ id, close }]
+  // The tab bar's drawer (drag the line above the bar up): open, and what it opened last, so
+  // Back from that place comes back to the drawer instead of Home ({ tab, depth, from }).
+  drawerOpen: false,
+  drawerReturn: null,
+
+  setDrawerOpen(open) {
+    set({ drawerOpen: Boolean(open) });
+  },
+
+  /** Called right after the drawer opened a place: remember where Back should bring it back. */
+  openedFromDrawer(from) {
+    const { tab, stacks } = get();
+    set({ drawerOpen: false, drawerReturn: { tab, depth: stacks[tab].length, from } });
+  },
 
   setTab(tab) {
     const { tab: current, stacks } = get();
+    if (get().drawerReturn) set({ drawerReturn: null });
     if (tab === current) {
       // Tapping the active tab returns to its root, as on iOS/Android.
       if (stacks[tab].length) set({ stacks: { ...stacks, [tab]: [] } });
@@ -71,11 +86,16 @@ export const useNav = create((set, get) => ({
   },
 
   pop() {
-    const { tab, stacks } = get();
+    const { tab, stacks, drawerReturn } = get();
     if (!stacks[tab].length) return false;
     const top = stacks[tab][stacks[tab].length - 1];
     const next = { ...stacks, [tab]: stacks[tab].slice(0, -1) };
-    set(top.from && top.from !== tab && TABS.includes(top.from) ? { tab: top.from, stacks: next } : { stacks: next });
+    // Leaving the screen the drawer opened: the drawer comes back.
+    const toDrawer = drawerReturn && drawerReturn.tab === tab && drawerReturn.depth > 0 && stacks[tab].length === drawerReturn.depth;
+    set({
+      ...(top.from && top.from !== tab && TABS.includes(top.from) ? { tab: top.from, stacks: next } : { stacks: next }),
+      ...(toDrawer ? { drawerOpen: true, drawerReturn: null } : {}),
+    });
     return true;
   },
 
@@ -93,7 +113,7 @@ export const useNav = create((set, get) => ({
   },
 
   resetAll() {
-    set({ tab: 'home', prev: 'home', stacks: emptyStacks(), overlays: [] });
+    set({ tab: 'home', prev: 'home', stacks: emptyStacks(), overlays: [], drawerOpen: false, drawerReturn: null });
   },
 
   pushOverlay(id, close) {
@@ -113,6 +133,12 @@ export const useNav = create((set, get) => ({
     if (get().pop()) return true;
     if (tab === 'ai') {
       get().leaveAi();
+      return true;
+    }
+    // A place the drawer opened as a tab (Files, Knowledge, Huddles): back to the drawer.
+    const ret = get().drawerReturn;
+    if (ret && ret.tab === tab && ret.depth === 0) {
+      set({ tab: ret.from && TABS.includes(ret.from) ? ret.from : 'home', drawerOpen: true, drawerReturn: null });
       return true;
     }
     if (tab !== 'home') {

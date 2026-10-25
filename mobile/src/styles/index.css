@@ -450,3 +450,14 @@
 }
 .prose-oru [contenteditable]:focus { outline: none; }
 .editor-empty:empty::before { content: attr(data-placeholder); color: rgb(var(--c-text-3)); pointer-events: none; }
+
+/* The tab bar's drawer hint (app/TabBar.jsx): a gentle upward nudge, now and then. */
+@keyframes nudge-up {
+  0%, 70%, 100% { transform: translateY(-50%); }
+  80% { transform: translateY(calc(-50% - 4px)); }
+  90% { transform: translateY(-50%); }
+}
+.animate-nudge-up { animation: nudge-up 2.6s ease-in-out 1.5s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-nudge-up { animation: none; }
+}

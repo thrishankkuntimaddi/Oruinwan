@@ -74,12 +74,14 @@ function Missing({ name }) {
 }
 
 function TabRoot({ tab }) {
+  // Opened from the drawer (not on the bar), Files, Knowledge and Huddles keep a Back button.
+  const onBar = useTabBar((s) => s.items.includes(tab));
   if (tab === 'home') return <HomeScreen />;
   const Comp = TAB_ROOTS[tab];
   if (!Comp) return <Missing name={tab} />;
   // Files, Knowledge and Huddles can be tabs too: their screens drop the Back button there.
   return EXTRA_TABS.includes(tab) ? (
-    <TabRootContext.Provider value>
+    <TabRootContext.Provider value={onBar}>
       <Comp />
     </TabRootContext.Provider>
   ) : (

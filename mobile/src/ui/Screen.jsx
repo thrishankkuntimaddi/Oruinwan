@@ -24,7 +24,7 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
     <header className={cx('glass-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">
         {leading ||
-          (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || pop} /> : <span className="w-2" />)}
+          (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || (() => pop() || useNav.getState().back())} /> : <span className="w-2" />)}
         <div className={cx('min-w-0 flex-1', showBack ? 'pl-1' : 'pl-2')}>
           {!large && (
             <>

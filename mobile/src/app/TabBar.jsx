@@ -4,7 +4,8 @@
 // Settings — and Edit, which picks the five places on the bar (app/tabBarPrefs.js).
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Bookmark, Bot, Check, Pencil, Plug, Settings, Workflow } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bookmark, Bot, Check, ChevronDown, ChevronUp, Pencil, Plug, Settings, Workflow } from 'lucide-react';
+import { prefs } from '../native/storage.js';
 import { nav, useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
 import { useUnreadCounts, useTasks } from '../data/hooks.js';
@@ -128,7 +129,16 @@ export function TabBar() {
   const due = useDueSoonCount();
   const keyboardOpen = useKeyboard((s) => s.open);
   const bar = useTabBar((s) => s.items);
-  const [open, setOpen] = useState(false);
+  const open = useNav((s) => s.drawerOpen);
+  // The arrow stops nudging once the drawer has been opened on this device.
+  const [seenDrawer, setSeenDrawer] = useState(() => Boolean(prefs.get('tabbar.drawerSeen')));
+  useEffect(() => {
+    if (open && !seenDrawer) {
+      prefs.set('tabbar.drawerSeen', true);
+      setSeenDrawer(true);
+    }
+  }, [open, seenDrawer]);
+  const setOpen = (v) => useNav.getState().setDrawerOpen(typeof v === 'function' ? v(useNav.getState().drawerOpen) : v);
   const [pull, setPull] = useState(0); // drawer height while dragging
   const [editing, setEditing] = useState(false);
   const drag = useRef(null);
@@ -163,9 +173,12 @@ export function TabBar() {
     if (next !== open) tap('select');
     setOpen(next);
   };
-  const go = (fn) => {
+  // Opening a place from the drawer: Back from it brings the drawer back (nav.js drawerReturn).
+  const go = (fn, { remember = true } = {}) => {
+    const from = useNav.getState().tab;
     setOpen(false);
     fn();
+    if (remember) useNav.getState().openedFromDrawer(from);
   };
 
   return (
@@ -190,6 +203,18 @@ export function TabBar() {
           className="absolute inset-x-0 -top-3 z-10 flex h-6 touch-none cursor-grab items-center justify-center"
         >
           <span className={cx('h-1 w-10 rounded-full bg-line-strong transition-colors', open && 'bg-accent')} />
+          {/* The hint: a small tab at the right end of the line (away from the middle tab), pointing
+              up while closed and down while open; it nudges until the drawer has been opened once. */}
+          <span
+            aria-hidden
+            data-testid="tabbar-handle-arrow"
+            className={cx(
+              'absolute right-3 top-1/2 grid h-5 w-7 -translate-y-1/2 place-items-center rounded-full border border-[var(--glass-border)] bg-surface text-text-2 shadow-sm',
+              !open && !seenDrawer && 'animate-nudge-up',
+            )}
+          >
+            <Icon as={open ? ChevronDown : ChevronUp} size={14} />
+          </span>
         </div>
         <div
           className="overflow-hidden"
@@ -214,7 +239,7 @@ export function TabBar() {
                 <span className="text-[11px] font-medium">{m.label}</span>
               </button>
             ))}
-            <button type="button" onClick={() => go(() => setEditing(true))} className="pressable flex flex-col items-center gap-1.5 rounded-xl py-2.5 text-accent-ink" tabIndex={open ? 0 : -1} data-testid="tabbar-edit">
+            <button type="button" onClick={() => go(() => setEditing(true), { remember: false })} className="pressable flex flex-col items-center gap-1.5 rounded-xl py-2.5 text-accent-ink" tabIndex={open ? 0 : -1} data-testid="tabbar-edit">
               <span className="grid h-11 w-11 place-items-center rounded-2xl border border-dashed border-accent/60">
                 <Icon as={Pencil} size={18} />
               </span>
