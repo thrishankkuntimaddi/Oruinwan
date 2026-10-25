@@ -951,7 +951,8 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
     // The list replaces the employee's workspaces: join the new ones, leave the rest.
     const wanted = new Set(workspaceIds.map(String));
     const existingIds = employee.workspaces.map(w => String(w.workspace));
-    for (const id of wanted) if (!existingIds.includes(id)) await identity.workspaces.addMember(id, employee._id, { role: 'member' });
+    const { addUserToWorkspace } = require('../workspaces/addToWorkspace');
+    for (const id of wanted) if (!existingIds.includes(id)) await addUserToWorkspace(id, employee._id, { role: 'member' });
     for (const id of existingIds) if (!wanted.has(id)) await identity.workspaces.removeMember(id, employee._id, { by: req.user.sub || req.user._id });
     employee.workspaces = [
       ...employee.workspaces.filter(w => wanted.has(String(w.workspace))),

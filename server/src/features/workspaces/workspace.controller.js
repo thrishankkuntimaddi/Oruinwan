@@ -305,6 +305,7 @@ exports.listMyWorkspaces = async (req, res) => {
         rules: workspace.rules || "",
         settings: pickSafeSettings(workspace.settings),
         type: workspace.type,
+        plan: workspace.plan || null,
         role,
         membershipStatus: status || 'active',
         memberCount: countActiveMembers(workspace.members),
@@ -803,7 +804,18 @@ exports.getWorkspaceChannels = async (req, res) => {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    
+    // Anyone added to the workspace by a path that skipped them (older company-dashboard adds)
+    // is put into the default channels now.
+    const myMembership = workspace.members.find(m => String(m.user) === String(userId));
+    if ((myMembership?.status || 'active') === 'active') {
+      try {
+        const { joinMissingDefaultChannels } = require('./addToWorkspace');
+        await joinMissingDefaultChannels(workspaceId, userId);
+      } catch (err) {
+        logger.warn({ err: err.message, workspaceId }, 'default channel catch-up failed');
+      }
+    }
+
     const allChannels = await Channel.find({ workspace: workspaceId })
       .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents lastMessageAt mutedBy postingPolicy')
       .sort({ isDefault: -1, createdAt: 1 }) 

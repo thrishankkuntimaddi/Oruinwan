@@ -104,7 +104,7 @@ function DMMessageItem({
         const textMap = {
             member_joined: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}`,
             member_left: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}`,
-            member_invited: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMeFn(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
+            member_invited: () => `${name(sd.inviterId, sd.inviterName)} added ${isMeFn(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
             member_removed: () => `${name(sd.removedById, sd.removedByName)} removed ${isMeFn(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
             channel_created: () => `${name(sd.userId, sd.userName)} created this channel`,
             channel_renamed: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}`,

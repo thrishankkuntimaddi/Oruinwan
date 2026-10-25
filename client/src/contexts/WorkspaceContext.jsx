@@ -18,6 +18,7 @@ function mapWorkspace(ws) {
         memberCount: ws.memberCount,
         rules: ws.rules || '',
         settings: ws.settings || {},
+        plan: ws.plan || null,
         role: ws.isOwner ? 'owner' : ws.role,
         isOwner: !!ws.isOwner,
         membershipStatus: ws.membershipStatus || 'active',

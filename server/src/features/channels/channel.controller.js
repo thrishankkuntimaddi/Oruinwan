@@ -303,20 +303,26 @@ exports.inviteToChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    
+    // Adding puts the person straight into the channel (no invitation to accept).
+    // Workspace owners and admins may add to any channel; channel admins to theirs;
+    // members of a public channel to that channel.
+    const workspace = await identity.workspaces.findById(channel.workspace);
+    const activeIn = (uid) => (workspace?.members || []).find(
+      (m) => String(m.user) === String(uid) && (m.status || 'active') === 'active'
+    );
+    const myRole = activeIn(userId)?.role;
+    const workspaceAdmin = myRole === 'owner' || myRole === 'admin';
     if (channel.isPrivate) {
-      
-      if (!channel.isAdmin(userId)) {
+      if (!workspaceAdmin && !channel.isAdmin(userId)) {
         return res.status(403).json({
-          message: "Only channel admins can invite members to private channels"
+          message: "Only channel admins can add people to private channels"
         });
       }
-    } else {
-      
-      const isUserMember = isMember(channel.members, userId);
-      if (!isUserMember) {
-        return forbidden(res, "Not a channel member");
-      }
+    } else if (!workspaceAdmin && !isMember(channel.members, userId)) {
+      return forbidden(res, "Not a channel member");
+    }
+    if (!activeIn(inviteeId)) {
+      return res.status(400).json({ message: "Add them to the workspace first" });
     }
 
     
@@ -371,7 +377,8 @@ exports.inviteToChannel = async (req, res) => {
         channelId,
         userId: inviteeId,
       });
-      io.to(`user_${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
+      // The person added isn't in the channel's room yet: tell them directly (web and phone).
+      io.to(`user_${inviteeId}`).to(`user:${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
     }
 
     
@@ -422,6 +429,8 @@ exports.removeChannelMember = async (req, res) => {
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can remove members" });
     }
+    // Default channels hold the whole workspace (new members are added, nobody leaves).
+    if (channel.isDefault) return res.status(400).json({ message: "Everyone in the workspace is in default channels. Turn off 'Default channel' for this channel first." });
 
     
     if (await isWorkspaceOwner(victimId, channel.workspace) && !await isWorkspaceOwner(userId, channel.workspace)) {
@@ -1121,9 +1130,11 @@ exports.removeMember = async (req, res) => {
     }
 
     
-    if (!channel.isAdmin(userId)) {
+    if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only admins can remove members" });
     }
+    // Default channels hold the whole workspace (new members are added, nobody leaves).
+    if (channel.isDefault) return res.status(400).json({ message: "Everyone in the workspace is in default channels. Turn off 'Default channel' for this channel first." });
 
     
     if (String(channel.createdBy) === String(targetUserId)) {

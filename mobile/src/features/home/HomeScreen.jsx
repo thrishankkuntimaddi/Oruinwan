@@ -4,11 +4,11 @@
 import { useMemo, useState } from 'react';
 import {
   Bookmark, BookOpen, Check, ChevronRight, Clock3, Download, FileText, FolderOpen, Hash, Headphones, Lock, Megaphone, MessageCircle, Pencil, PenLine, Plug, Plus, Send, Sparkles,
-  SquareCheckBig, Users, Workflow,
+  SquareCheckBig, UserPlus, Users, Workflow,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
-import { api, useSession } from '../../data/session.js';
+import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useChannels, useDirectory, useDms, useNotes, useNotifications, useTasks, useUnreadCounts } from '../../data/hooks.js';
 import { invalidate, useQuery } from '../../data/query.js';
 import { useFlags } from '../../config/flags.js';
@@ -32,6 +32,7 @@ import { groupActivity } from './activityGroups.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { draftsIn, useDrafts } from '../chats/drafts.js';
 import { MAX_QUICK, quickJumpItems, setQuickJump, useQuickJump } from './quickJump.js';
+import { InviteSheet, canInvite } from '../workspace/InviteSheet.jsx';
 
 /** The most recent conversations, channels and DMs mixed, newest first. */
 export function recentConversations(channels = [], dms = [], count = 5) {
@@ -216,6 +217,9 @@ export function HomeScreen() {
   const customQuick = useQuickJump((s) => s.items);
   const [activityFilter, setActivityFilter] = useState('all');
   const [editingQuick, setEditingQuick] = useState(false);
+  const workspace = useWorkspace();
+  const mode = useSession((s) => s.mode);
+  const [inviting, setInviting] = useState(false);
 
   // Same cache keys as the Saved, Huddles and Drafts & sent screens, so opening them is instant.
   const saved = useQuery(ws && `saved:${ws}`, () => api().savedMessages(ws), { staleMs: 60_000 });
@@ -307,6 +311,9 @@ export function HomeScreen() {
           <MiniCard testId="home-drafts" icon={PenLine} label="Drafts" value={draftCount} detail="Unsent messages" onClick={() => nav.push('outgoing', { tab: 'drafts' })} />
           <MiniCard testId="home-scheduled" icon={Clock3} label="Scheduled" value={scheduledCount} detail="Send later" onClick={() => nav.push('outgoing', { tab: 'scheduled' })} />
           <MiniCard testId="home-sent" icon={Send} label="Sent" value="›" detail="Your messages" onClick={() => nav.push('outgoing', { tab: 'sent' })} />
+          {mode === 'live' && canInvite(workspace) && (
+            <MiniCard testId="home-invite" icon={UserPlus} label="Invite" value="+" detail="Add people to the team" onClick={() => setInviting(true)} />
+          )}
           {flags.ai && <MiniCard testId="home-ai" icon={Sparkles} label="Ask AI" value="✦" detail="Draft or catch up" onClick={() => nav.openAi()} />}
         </div>
 
@@ -384,6 +391,7 @@ export function HomeScreen() {
         )}
       </Body>
       <QuickJumpEditor key={editingQuick ? 'open' : 'closed'} open={editingQuick} onClose={() => setEditingQuick(false)} channels={channels || []} dms={dms || []} current={quick} />
+      <InviteSheet open={inviting} onClose={() => setInviting(false)} workspace={workspace} />
     </Screen>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Check, Settings2, Globe, Link2, Plus } from 'lucide-react';
-import { useSession } from '../../data/session.js';
+import { Check, Settings2, Globe, Link2, Plus, UserPlus } from 'lucide-react';
+import { useSession, useWorkspace } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
 import { Sheet } from '../../ui/Overlay.jsx';
 import { Badge } from '../../ui/Feedback.jsx';
@@ -9,6 +9,7 @@ import { WorkspaceTile } from './WorkspaceTile.jsx';
 import { toast } from '../../lib/bus.js';
 import { JoinWithLinkSheet } from './JoinWorkspace.jsx';
 import { usePlanBlock } from '../plan/plan.js';
+import { InviteSheet, canInvite } from './InviteSheet.jsx';
 
 export function WorkspaceSheet({ open, onClose }) {
   const workspaces = useSession((s) => s.workspaces);
@@ -18,6 +19,9 @@ export function WorkspaceSheet({ open, onClose }) {
   const { blocked: createBlocked } = usePlanBlock(current, 'workspaces.create');
   const openCreate = useSession((s) => s.openCreateWorkspace);
   const [joinLink, setJoinLink] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const workspace = useWorkspace();
+  const mode = useSession((s) => s.mode);
 
   return (
     <>
@@ -53,6 +57,19 @@ export function WorkspaceSheet({ open, onClose }) {
           ))}
         </div>
         <div className="mx-4 mb-4 mt-1 overflow-hidden rounded-card border border-line-soft divide-y divide-line-soft">
+          {mode === 'live' && canInvite(workspace) && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                setInviting(true);
+              }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
+            >
+              <Icon as={UserPlus} size="sm" className="text-text-2" />
+              <span className="text-[15px]">{`Invite people to ${workspace.name}`}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -98,6 +115,7 @@ export function WorkspaceSheet({ open, onClose }) {
         </div>
       </Sheet>
       <JoinWithLinkSheet open={joinLink} onClose={() => setJoinLink(false)} />
+      <InviteSheet open={inviting} onClose={() => setInviting(false)} workspace={workspace} />
     </>
   );
 }

@@ -228,7 +228,8 @@ exports.updateWorkspaceAllocation = async (req, res) => {
             if (workspace.members.some(m => m.status === 'active' && String(m.user) === String(targetId))) {
                 return res.json({ message: "Already a member" });
             }
-            await identity.workspaces.addMember(workspace._id, targetId, { role: 'member' });
+            // Same as joining by invite: membership plus the workspace's default channels.
+            await require('../workspaces/addToWorkspace').addUserToWorkspace(workspace._id, targetId, { role: 'member' });
         } else {
             await identity.workspaces.removeMember(workspace._id, targetId, { by: req.user.sub });
         }

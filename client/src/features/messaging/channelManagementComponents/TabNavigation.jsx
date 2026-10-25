@@ -4,7 +4,7 @@ import { useFlag } from '../../../contexts/FeatureFlagsContext';
 const TABS = [
     { key: 'members', label: 'Members', alwaysShow: true },
     { key: 'settings', label: 'Manage Channel', adminOnly: true },
-    { key: 'invite', label: 'Invite People', adminOnly: true },
+    { key: 'invite', label: 'Add people', adminOnly: true },
     { key: 'integrations', label: 'Integrations', alwaysShow: true, flag: 'integrations' },
 ];
 

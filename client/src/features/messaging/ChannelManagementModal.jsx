@@ -53,7 +53,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     const isPromotedAdmin = channel?.admins && Array.isArray(channel.admins)
         ? channel.admins.some(a => String(a?._id || a) === String(currentUserId))
         : false;
-    const isAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
+    // Workspace owners and admins manage every channel; channel admins manage theirs.
+    const isAdmin = isWorkspaceAdmin || (!isDefaultChannel && (isChannelCreator || isPromotedAdmin));
 
     const loadMembers = useCallback(async () => {
         if (!channel?.id) return;
@@ -115,8 +116,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             await api.post(`/api/channels/${channel.id}/invite`, { userId });
             loadMembers();
         } catch (err) {
-            logger.error("Invite failed:", err);
-            showToast(err?.response?.data?.message || "Invite failed", "error");
+            logger.error("Add to channel failed:", err);
+            showToast(err?.response?.data?.message || "Couldn't add them to the channel", "error");
         } finally {
             setLoading(false);
         }

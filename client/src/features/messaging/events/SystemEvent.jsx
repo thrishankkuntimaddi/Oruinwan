@@ -69,7 +69,7 @@ function SystemEvent({ event, currentUserId }) {
     const textMap = {
         member_joined: () => `${who(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}`,
         member_left: () => `${who(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}`,
-        member_invited: () => `${who(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')}`,
+        member_invited: () => `${who(sd.inviterId, sd.inviterName)} added ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')}`,
         member_removed: () => `${who(sd.removedById || sd.removedByUserId, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
         channel_created: () => `${who(sd.userId, sd.userName)} created this channel`,
         channel_renamed: () => `${who(sd.userId, sd.userName)} renamed the channel to #${sd.newName || 'new name'}`,

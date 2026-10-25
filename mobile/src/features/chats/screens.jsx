@@ -751,8 +751,14 @@ export function ChannelInfoScreen({ id }) {
   const { data: channels } = useChannels();
   const directory = useDirectory();
   const channel = (channels || []).find((c) => c.id === id);
+  const workspace = useWorkspace();
+  const me = useSession((s) => s.user?.id);
+  const { data: people } = useMembers();
   const [leave, setLeave] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [picked, setPicked] = useState([]);
+  const [query, setQuery] = useState('');
 
   if (!channel) {
     return (
@@ -763,6 +769,39 @@ export function ChannelInfoScreen({ id }) {
     );
   }
   const members = (channel.memberIds || []).map((m) => directory[m]).filter(Boolean);
+  // Same rule as the server: workspace owners/admins add to any channel, channel admins to
+  // theirs, and members of a public channel to it.
+  const workspaceAdmin = ['owner', 'admin'].includes(workspace?.role);
+  const channelAdmin = (channel.adminIds || []).includes(me);
+  const inChannel = (channel.memberIds || []).includes(me);
+  const canAdd = workspaceAdmin || (channel.private ? channelAdmin : inChannel);
+  const inIds = new Set(channel.memberIds || []);
+  const candidates = searchPeople((people || []).filter((u) => !inIds.has(u.id) && !u.bot && !u.deactivated), query);
+
+  const addPeople = async () => {
+    setBusy(true);
+    try {
+      await api().addChannelMembers(id, picked);
+      invalidate('channels');
+      toast(picked.length === 1 ? `Added to #${channel.name}` : `${picked.length} people added to #${channel.name}`);
+      setAdding(false);
+    } catch (err) {
+      toast(err.message || 'Could not add them', 'danger');
+      invalidate('channels');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setDefault = async (on) => {
+    try {
+      await api().setChannelDefault(workspace.id, id, on);
+      invalidate('channels');
+      toast(on ? `Everyone in the workspace is now in #${channel.name}` : `#${channel.name} is no longer a default channel`);
+    } catch (err) {
+      toast(err.message || 'Could not change it', 'danger');
+    }
+  };
 
   const setMuted = async (muted) => {
     setQueryData(`channels:${useSession.getState().workspaceId}`, (list) => list?.map((c) => (c.id === id ? { ...c, muted } : c)));
@@ -797,8 +836,29 @@ export function ChannelInfoScreen({ id }) {
             />
           </RowGroup>
         </Section>
+        {workspaceAdmin && !channel.private && (
+          <Section title="Admin">
+            <RowGroup footer="Everyone who joins the workspace is added to default channels automatically.">
+              <Row
+                icon={Users}
+                tile="accent"
+                title="Default channel"
+                trailing={<Toggle checked={Boolean(channel.isDefault)} onChange={setDefault} label="Default channel" />}
+              />
+            </RowGroup>
+          </Section>
+        )}
         <Section title={`Members · ${members.length}`}>
           <RowGroup>
+            {canAdd && (
+              <Row
+                icon={UserPlus}
+                tile="accent"
+                title="Add people"
+                subtitle="They're added right away"
+                onClick={() => { setPicked([]); setQuery(''); setAdding(true); }}
+              />
+            )}
             {members.slice(0, 50).map((u) => (
               <Row
                 key={u.id}
@@ -816,6 +876,35 @@ export function ChannelInfoScreen({ id }) {
           </RowGroup>
         </Section>
       </Body>
+      <Sheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        title={`Add people to #${channel.name}`}
+        footer={<Button block loading={busy} disabled={picked.length === 0} onClick={addPeople}>Add {picked.length || ''}</Button>}
+      >
+        <div className="px-4 pb-2">
+          <SearchField value={query} onChange={setQuery} placeholder="Search people" />
+        </div>
+        <div className="px-2 pb-4">
+          {candidates.length ? (
+            <RowGroup>
+              {candidates.map((u) => (
+                <Row
+                  key={u.id}
+                  leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" />}
+                  title={u.name}
+                  subtitle={u.title || u.email}
+                  trailing={picked.includes(u.id) ? <Icon as={Check} size="sm" className="text-accent-ink" /> : null}
+                  chevron={false}
+                  onClick={() => setPicked((list) => (list.includes(u.id) ? list.filter((x) => x !== u.id) : [...list, u.id]))}
+                />
+              ))}
+            </RowGroup>
+          ) : (
+            <EmptyState icon={Users} title={query ? 'Nobody found' : 'Everyone is already here'} body={query ? null : 'Invite people to the workspace first.'} />
+          )}
+        </div>
+      </Sheet>
       <Dialog
         open={leave}
         onClose={() => setLeave(false)}

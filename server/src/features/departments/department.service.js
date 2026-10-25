@@ -213,7 +213,7 @@ async function assignMembers(departmentId, companyId, userIds, action) {
             const ws = await identity.workspaces.findById(dept.defaultWorkspaceId);
             const already = new Set((ws?.members || []).filter((m) => m.status === 'active').map((m) => m.user));
             for (const uid of userIds) {
-                if (!already.has(String(uid))) await identity.workspaces.addMember(dept.defaultWorkspaceId, uid, { role: 'member' });
+                if (!already.has(String(uid))) await require('../workspaces/addToWorkspace').addUserToWorkspace(dept.defaultWorkspaceId, uid, { role: 'member' });
             }
         }
     } else {

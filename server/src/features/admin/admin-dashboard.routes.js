@@ -329,22 +329,9 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
         }
 
         
-        // One membership row serves both the workspace's member list and the user's workspaces.
-        await identity.workspaces.addMember(workspaceId, targetUserId, { role });
-
-        
-        const Channel = require('../channels/channel.model.js');
-        const defaultChannels = await Channel.find({ workspace: workspaceId, isDefault: true });
-        for (const channel of defaultChannels) {
-            const isChanMember = channel.members.some(m => {
-                const mid = m.user ? m.user.toString() : m.toString();
-                return mid === String(targetUserId);
-            });
-            if (!isChanMember) {
-                channel.members.push({ user: targetUserId, joinedAt: new Date() });
-                await channel.save();
-            }
-        }
+        // One membership row serves both the workspace's member list and the user's workspaces;
+        // the helper also puts them in the default channels and shares those channels' keys.
+        await require('../workspaces/addToWorkspace').addUserToWorkspace(workspaceId, targetUserId, { role });
 
         res.json({
             message: `${targetUser.username} added to workspace successfully`,

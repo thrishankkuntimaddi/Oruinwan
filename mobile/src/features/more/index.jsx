@@ -24,7 +24,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
-import { openExternal, shareLink } from '../../native/index.js';
+import { openExternal } from '../../native/index.js';
 import { fileIconKind, formatBytes, previewKind } from '../../lib/files.js';
 import { downloadFile, openFile } from '../media/media.js';
 import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, messageTarget, whereLabel } from '../files/filesUi.js';
@@ -32,6 +32,7 @@ import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { groupActivity } from '../home/activityGroups.js';
 import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
+import { InviteSheet, canInvite } from '../workspace/InviteSheet.jsx';
 import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
@@ -375,18 +376,6 @@ export function IntegrationsScreen() {
 
 // ---------------------------------------------------------------- Workspace
 
-/** Shares a team invite link through the system share sheet. */
-async function invite(workspace) {
-  try {
-    const url = await api().teamInviteLink(workspace.id);
-    if (!url) return toast("Couldn't create an invite link", 'danger');
-    const result = await shareLink({ title: `Join ${workspace.name} on Oruinwan`, text: `Join ${workspace.name} on Oruinwan`, url });
-    if (result === 'copied') toast('Invite link copied');
-  } catch (err) {
-    toast(err.message || "Couldn't create an invite link", 'danger');
-  }
-}
-
 export function WorkspaceScreen() {
   const workspace = useWorkspace();
   const mode = useSession((s) => s.mode);
@@ -394,6 +383,7 @@ export function WorkspaceScreen() {
   const { data: channels } = useChannels();
   // The free plan's people per workspace (pending invites count too).
   const { plan, blocked: inviteBlocked } = usePlanBlock(workspace?.id, 'members.perWorkspace');
+  const [inviting, setInviting] = useState(false);
   if (!workspace) {
     return (
       <Screen>
@@ -418,12 +408,12 @@ export function WorkspaceScreen() {
         </div>
         <Section title="This workspace">
           <RowGroup>
-            {mode === 'live' && isAdmin && (
+            {mode === 'live' && canInvite(workspace) && (
               <Row
                 icon={UserPlus}
                 title="Invite people"
-                subtitle={inviteBlocked ? 'Free plan limit reached' : 'Share a link to join this workspace'}
-                onClick={() => invite(workspace)}
+                subtitle={inviteBlocked ? 'Free plan limit reached' : 'Share a link or send email invitations'}
+                onClick={() => setInviting(true)}
                 disabled={inviteBlocked}
               />
             )}
@@ -434,7 +424,7 @@ export function WorkspaceScreen() {
               <Row icon={Shield} title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
             )}
           </RowGroup>
-          {inviteBlocked && isAdmin && <PlanLimitNote className="mx-4 mt-2">{blockedNote(plan, 'members.perWorkspace')}</PlanLimitNote>}
+          {inviteBlocked && canInvite(workspace) && <PlanLimitNote className="mx-4 mt-2">{blockedNote(plan, 'members.perWorkspace')}</PlanLimitNote>}
         </Section>
         <Section title={`Members${members ? ` · ${members.length}` : ''}`}>
           {loading ? (
@@ -455,6 +445,7 @@ export function WorkspaceScreen() {
           )}
         </Section>
       </Body>
+      <InviteSheet open={inviting} onClose={() => setInviting(false)} workspace={workspace} />
     </Screen>
   );
 }

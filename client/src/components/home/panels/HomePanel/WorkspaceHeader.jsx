@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, UserPlus, Settings, Edit3, LogOut, Plus, ArrowLeftRight } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
-import { useToast } from '../../../../contexts/ToastContext';
 import { WorkspaceIcon } from '../../../../utils/workspaceIcons';
 import '../../../layout/shell.css';
 import { usePlan } from '../../../../features/plan/usePlan';
@@ -20,7 +19,6 @@ const WorkspaceHeader = ({
 }) => {
     const navigate = useNavigate();
     const { activeWorkspace, workspaces = [], setActiveWorkspace } = useWorkspace();
-    const { showToast } = useToast();
     const [showSwitch, setShowSwitch] = useState(false);
     // Free plan: loaded when the menu opens.
     const { plan } = usePlan(showWorkspaceMenu ? (activeWorkspace?.id || null) : false);
@@ -39,6 +37,8 @@ const WorkspaceHeader = ({
 
     const userRole = activeWorkspace?.role?.toLowerCase() || '';
     const isAdmin = userRole === 'admin' || userRole === 'owner';
+    // The server's rule: owners and admins always; members when the workspace lets them.
+    const canInvite = isAdmin || activeWorkspace?.plan === 'enterprise' || activeWorkspace?.settings?.membersMayInvite === true;
 
     return (
         <>
@@ -61,14 +61,9 @@ const WorkspaceHeader = ({
                 </div>
 
                 <div className="gl-shell-menu">
-                    {isAdmin && (
+                    {canInvite && (
                         <button type="button" role="menuitem" className="gl-shell-menu-item"
-                            onClick={() => {
-                                const canInvite = isAdmin || activeWorkspace?.plan === 'enterprise' || activeWorkspace?.settings?.membersMayInvite === true;
-                                if (!canInvite) { showToast('Member invitations are disabled', 'warning'); return; }
-                                setShowInviteModal(true); setShowWorkspaceMenu(false);
-                            }}
-                            disabled={!isAdmin && !(activeWorkspace?.plan === 'enterprise' || activeWorkspace?.settings?.membersMayInvite === true)}
+                            onClick={() => { setShowInviteModal(true); setShowWorkspaceMenu(false); }}
                         >
                             <UserPlus size={14} />
                             Invite people

@@ -149,6 +149,7 @@ function mapWorkspace(w) {
     isOwner: Boolean(w.isOwner) || w.role === 'owner',
     rules: w.rules || '',
     settings: w.settings || {},
+    plan: w.plan || null,
     unread: w.unreadCount || 0,
   };
 }
@@ -168,6 +169,8 @@ function mapChannel(c) {
     mentions: c.mentionCount || 0,
     memberCount: memberIds.length || c.memberCount || 0,
     memberIds,
+    // Who manages the channel (with workspace owners/admins): its creator and promoted admins.
+    adminIds: [idOf(c.createdBy), ...(c.admins || []).map(idOf)].filter(Boolean),
     lastAt: c.lastMessageAt || null,
     // Media labels come as text; text messages come encrypted (decrypted in channels()).
     lastText: previewLabel(c),
@@ -725,6 +728,14 @@ export const liveAdapter = {
   },
   async leaveChannel(id) {
     await api.post(`/channels/${id}/exit`);
+  },
+  /** Put workspace members straight into a channel (no invitation to accept). */
+  async addChannelMembers(id, userIds) {
+    for (const userId of userIds) await api.post(`/channels/${id}/invite`, { userId });
+  },
+  /** Default channels: everyone who joins the workspace is added to them (admins only). */
+  async setChannelDefault(ws, id, isDefault) {
+    return api.put(`/workspaces/${ws}/channels/${id}/default`, { isDefault });
   },
   /** My pinned (max 3) and archived chats: [{ kind, id, pinnedAt, archivedAt }]. */
   async conversationPrefs(ws) {

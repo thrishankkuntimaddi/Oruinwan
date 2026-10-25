@@ -81,7 +81,8 @@ export default function Header({
     ? chat.admins.some(a => String(a?._id || a) === String(currentUserId))
     : false;
 
-  const isChannelAdmin = isDefaultChannel ? isWorkspaceAdmin : (isChannelCreator || isPromotedAdmin);
+  // Workspace owners and admins manage every channel; channel admins manage theirs.
+  const isChannelAdmin = isWorkspaceAdmin || (!isDefaultChannel && (isChannelCreator || isPromotedAdmin));
 
   const compactItems = compactHeaderActions({
     chat, isGroup, huddleActive, onStartHuddle, onStartVideoCall, onCreatePoll, onShowReminders, onShowPinned, onShowBookmarks,

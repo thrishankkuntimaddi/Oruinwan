@@ -5,8 +5,9 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   Activity, Archive, BarChart3, Building2, ClipboardCheck, Copy, Crown, Download, FileJson, Gauge, Gavel, Hash, LayoutTemplate, Lock, LogOut, Megaphone, Network,
-  ScrollText, Settings2, ShieldCheck, SlidersHorizontal, ToggleRight, Trash2, Upload, Users, UsersRound,
+  ScrollText, Settings2, ShieldCheck, SlidersHorizontal, ToggleRight, Trash2, Upload, UserPlus, Users, UsersRound,
 } from 'lucide-react';
+import { InviteSheet } from '../workspace/InviteSheet.jsx';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -82,6 +83,7 @@ function ErrorState({ error }) {
 export function AdminScreen() {
   const { workspace, ok } = useAdminGuard();
   const { data: company } = useCompany();
+  const [inviting, setInviting] = useState(false);
   if (!ok) return <NotAdmin />;
   const hasCompany = Boolean(company?.companyId);
   const companyAdmin = isCompanyAdmin(company);
@@ -101,6 +103,7 @@ export function AdminScreen() {
         </Section>
         <Section title="People">
           <RowGroup>
+            <Row icon={UserPlus} tile="accent" title="Invite people" subtitle="Share a link or send email invitations" onClick={() => setInviting(true)} />
             <Row icon={Users} tile="accent" title="Directory" subtitle="Search members and employees" onClick={() => nav.push('admin.directory')} />
             <Row icon={Network} tile="accent" title="Org chart" disabled={!hasCompany} subtitle={hasCompany ? 'Who reports to whom' : 'Company accounts only'} onClick={hasCompany ? () => nav.push('admin.org') : undefined} />
             <Row icon={UsersRound} tile="accent" title="Departments & teams" disabled={!hasCompany} subtitle={hasCompany ? 'Company structure' : 'Company accounts only'} onClick={hasCompany ? () => nav.push('admin.departments') : undefined} />
@@ -120,6 +123,7 @@ export function AdminScreen() {
           </RowGroup>
         </Section>
       </Body>
+      <InviteSheet open={inviting} onClose={() => setInviting(false)} workspace={workspace} />
     </Screen>
   );
 }
