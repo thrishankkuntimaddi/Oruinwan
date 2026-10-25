@@ -13,7 +13,9 @@ import {
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { Chips, SearchField } from '../../ui/Controls.jsx';
+import { Chips, SearchField, Segmented } from '../../ui/Controls.jsx';
+import { prefs } from '../../native/storage.js';
+import { CalendarView } from './CalendarView.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
@@ -55,12 +57,23 @@ export function ActivityScreen() {
   return <NotificationsScreen asTab />;
 }
 
+const ACTIVITY_VIEWS = [
+  { value: 'list', label: 'Activity' },
+  { value: 'calendar', label: 'Calendar' },
+];
+
 /** Notifications. `asTab`: the Activity tab's root; otherwise a pushed screen (older links). */
 export function NotificationsScreen({ initial = 'all', asTab = false }) {
   const ws = useSession((s) => s.workspaceId);
   const { data, loading } = useNotifications();
   const directory = useDirectory();
   const [filter, setFilter] = useState(initial);
+  // The Activity tab can show a calendar of meetings, tasks due, reminders and scheduled messages.
+  const [view, setView] = useState(() => (asTab ? prefs.get('activity.view', 'list') : 'list'));
+  const pickView = (v) => {
+    prefs.set('activity.view', v);
+    setView(v);
+  };
   const list = useMemo(() => {
     const all = data || [];
     const shown = (() => {
@@ -100,8 +113,11 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
   return (
     <Screen>
       {asTab ? (
-        <TabHeader title="Activity" actions={unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}>
-          <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />
+        <TabHeader title="Activity" actions={view === 'list' && unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}>
+          <div className="px-4 pb-2.5">
+            <Segmented label="View" value={view} onChange={pickView} options={ACTIVITY_VIEWS} size="sm" />
+          </div>
+          {view === 'list' && <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />}
         </TabHeader>
       ) : (
         <Header
@@ -112,8 +128,10 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
           <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />
         </Header>
       )}
-      <Body tab={asTab ? 'activity' : undefined} onRefresh={() => invalidate('notifications')}>
-        {loading ? (
+      <Body tab={asTab ? 'activity' : undefined} onRefresh={() => invalidate('notifications', 'calendar:', 'reminders', 'scheduled:', 'tasks')}>
+        {view === 'calendar' ? (
+          <CalendarView />
+        ) : loading ? (
           <SkeletonRows />
         ) : list.length ? (
           <div className="mx-4 mt-3 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">

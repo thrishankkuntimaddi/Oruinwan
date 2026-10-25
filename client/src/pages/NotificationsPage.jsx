@@ -2,8 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Bell, Check, Trash2, RefreshCcw, Loader2, ExternalLink, Settings,
-    ChevronDown, X, AlertCircle,
+    ChevronDown, X, AlertCircle, CalendarDays,
 } from 'lucide-react';
+import ActivityCalendar from '../features/notifications/components/ActivityCalendar';
 import { useNotifications, notificationHref } from '../features/notifications/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
@@ -21,6 +22,7 @@ const TABS = [
     { key: 'messages', label: 'Messages' },
     { key: 'tasks',    label: 'Tasks' },
     { key: 'team',     label: 'Team' },
+    { key: 'calendar', label: 'Calendar', Icon: CalendarDays },
     { key: 'settings', label: 'Settings', Icon: Settings },
 ];
 
@@ -205,7 +207,9 @@ export default function NotificationsPage() {
             <div className="gl-x-page-body">
                 <div className="gl-x-wrap gl-x-page-pad">
                     {(activeTab === 'all' || activeTab === 'unread') && <UpdateCard />}
-                    {activeTab === 'settings' ? (
+                    {activeTab === 'calendar' ? (
+                        <ActivityCalendar workspaceId={workspaceId} />
+                    ) : activeTab === 'settings' ? (
                         <NotificationPreferences workspaceId={workspaceId} />
                     ) : loading && notifications.length === 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '72px', gap: '12px', color: 'var(--text-secondary)' }}>
