@@ -2,7 +2,7 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown, BarChart3, BellRing, Bookmark, Camera, CheckCircle2, Copy, CornerDownRight, Ellipsis, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, Sparkles, Trash2, TriangleAlert, Paperclip,
+  ArrowDown, BarChart3, BellRing, Bookmark, Camera, Check, CheckCheck, CheckCircle2, Clock3, Copy, CornerDownRight, CornerUpLeft, Ellipsis, EyeOff, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, SmilePlus, Sparkles, Trash2, TriangleAlert, Paperclip, X,
 } from 'lucide-react';
 import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
@@ -25,6 +25,8 @@ import { Info } from 'lucide-react';
 import { Smile, Type } from 'lucide-react';
 import { applyFormat, insertAt, insertLink } from './composerFormat.js';
 import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
+import { SWIPE_TRIGGER, useRowGestures } from './messageGestures.js';
+import { ScheduleSheet } from './ScheduleSheet.jsx';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -120,25 +122,39 @@ export function reactorsLabel(people) {
 }
 
 function Reactions({ m, me, directory, onReact }) {
-  const [who, setWho] = useState(null); // the emoji whose people are shown, or null
+  const [who, setWho] = useState(null); // 'all' or an emoji: the "who reacted" sheet, or null
+  const [picking, setPicking] = useState(false);
+  const lastTap = useRef({ emoji: null, at: 0 });
+  const timer = useRef(null);
   const entries = Object.entries(m.reactions || {}).filter(([, users]) => users.length);
-  const press = useLongPress(() => setWho((w) => w || entries[0]?.[0] || null));
   if (!entries.length) return null;
   const people = (users) => users.map((id) => reactorOf(id, { me, directory, names: m.reactorNames }));
+  const total = entries.reduce((n, [, users]) => n + users.length, 0);
+  // Everyone who reacted, with all their emojis ("All" filter).
+  const everyone = [];
+  for (const [emoji, users] of entries) for (const id of users) {
+    const found = everyone.find((x) => x.id === id);
+    if (found) found.emojis.push(emoji);
+    else everyone.push({ ...reactorOf(id, { me, directory, names: m.reactorNames }), emojis: [emoji] });
+  }
+  const listed = who === 'all' ? everyone : people(m.reactions?.[who] || []).map((p) => ({ ...p, emojis: [who] }));
+  // Tap: who reacted. Double tap: add (or take back) that reaction.
+  const tapChip = (emoji) => {
+    const now = Date.now();
+    if (lastTap.current.emoji === emoji && now - lastTap.current.at < 280) {
+      clearTimeout(timer.current);
+      lastTap.current = { emoji: null, at: 0 };
+      tap('light');
+      onReact(m.id, emoji);
+      return;
+    }
+    lastTap.current = { emoji, at: now };
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setWho(emoji), 280);
+  };
   return (
     <>
-      {/* A long press on the reactions shows who reacted; a tap adds or removes mine. */}
-      <div
-        className="mt-1.5 flex flex-wrap gap-1.5"
-        onPointerDown={(e) => {
-          e.stopPropagation(); // not the message's own long press (its actions)
-          press.onPointerDown(e);
-        }}
-        onPointerMove={press.onPointerMove}
-        onPointerUp={press.onPointerUp}
-        onPointerCancel={press.onPointerCancel}
-        onPointerLeave={press.onPointerLeave}
-      >
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5" data-no-tap onPointerDown={(e) => e.stopPropagation()}>
         {entries.map(([emoji, users]) => {
           const mine = users.includes(me);
           return (
@@ -146,16 +162,9 @@ function Reactions({ m, me, directory, onReact }) {
               key={emoji}
               type="button"
               data-testid="reaction-chip"
-              onClick={() => {
-                if (who) return;
-                onReact(m.id, emoji);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setWho(emoji);
-              }}
+              onClick={() => tapChip(emoji)}
               aria-pressed={mine}
-              aria-label={`${emoji} ${users.length}: ${reactorsLabel(people(users))}. Press and hold to see who reacted.`}
+              aria-label={`${emoji} ${users.length}: ${reactorsLabel(people(users))}. Tap to see who reacted, double tap to ${mine ? 'take back yours' : 'add yours'}.`}
               className={cx(
                 'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
                 mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
@@ -166,39 +175,100 @@ function Reactions({ m, me, directory, onReact }) {
             </button>
           );
         })}
+        <button
+          type="button"
+          aria-label="Add a reaction"
+          data-testid="reaction-add"
+          onClick={() => setPicking(true)}
+          className="pressable grid h-7 w-8 place-items-center rounded-full border border-dashed border-line-strong text-text-2"
+        >
+          <Icon as={SmilePlus} size={14} />
+        </button>
       </div>
-      <Sheet open={Boolean(who)} onClose={() => setWho(null)} title="Reactions">
+      <Sheet open={Boolean(who)} onClose={() => setWho(null)} title={`Reactions · ${total}`}>
         <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-2" role="tablist">
-          {entries.map(([emoji, users]) => (
+          {[['all', everyone.length], ...entries.map(([e, u]) => [e, u.length])].map(([key, n]) => (
             <button
-              key={emoji}
+              key={key}
               type="button"
               role="tab"
-              aria-selected={who === emoji}
-              onClick={() => setWho(emoji)}
+              aria-selected={who === key}
+              onClick={() => setWho(key)}
               className={cx(
                 'pressable inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-3 text-[14px]',
-                who === emoji ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+                who === key ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
               )}
             >
-              {emoji} <span className="tabular-nums text-xs font-medium">{users.length}</span>
+              {key === 'all' ? 'All' : key} <span className="tabular-nums text-xs font-medium">{n}</span>
             </button>
           ))}
         </div>
-        <ul className="px-4 pb-4" data-testid="reaction-people">
-          {people(m.reactions?.[who] || []).map((p) => (
+        <ul className="px-4 pb-2" data-testid="reaction-people">
+          {listed.map((p) => (
             <li key={p.id} className="flex items-center gap-3 py-2">
               <Avatar name={p.name === 'You' ? directory?.[me]?.name || 'You' : p.name} src={p.avatarUrl} size="sm" />
               <span className="min-w-0 flex-1 truncate text-[15px]">{p.name}</span>
               <span className="text-lg" aria-hidden>
-                {who}
+                {p.emojis.join(' ')}
               </span>
             </li>
           ))}
         </ul>
+        {who && who !== 'all' && (
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => {
+                onReact(m.id, who);
+                setWho(null);
+              }}
+              className="pressable w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] font-medium"
+            >
+              {(m.reactions?.[who] || []).includes(me) ? `Take back your ${who}` : `React ${who} too`}
+            </button>
+          </div>
+        )}
       </Sheet>
+      <EmojiSheet
+        open={picking}
+        onClose={() => setPicking(false)}
+        onPick={(e) => {
+          setPicking(false);
+          onReact(m.id, e);
+        }}
+      />
     </>
   );
+}
+
+/** The message a reply quotes: its author and a line of it; tapping shows the original. */
+export function QuoteBlock({ quoted, directory, me, onJump, compact = false }) {
+  if (!quoted) return null;
+  const name = quoted.authorId === me ? 'You' : quoted.authorName || directory?.[quoted.authorId]?.name || 'Someone';
+  const text = quoted.state === 'missing' || quoted.state === 'deleted' ? 'Original message not available' : quoted.text || (quoted.state === 'attachment' ? 'Attachment' : 'Message');
+  return (
+    <button
+      type="button"
+      data-no-tap
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={() => onJump?.(quoted.id)}
+      className={cx('mb-1 block w-full max-w-md rounded-lg border-l-[3px] border-accent bg-surface-2/80 px-2.5 text-left', compact ? 'py-1' : 'py-1.5')}
+      data-testid="quote-block"
+    >
+      <span className="block truncate text-[12px] font-semibold text-accent-ink">{name}</span>
+      <span className="line-clamp-2 block text-[13px] text-text-2">{plainLine(text)}</span>
+    </button>
+  );
+}
+
+const plainLine = (t) => String(t || '').replace(/[*_~`>#]/g, '').replace(/\s+/g, ' ').trim();
+
+/** ✓ sent, ✓✓ read (DMs; the server hides reads of people with read receipts off). */
+function Ticks({ state }) {
+  if (!state) return null;
+  if (state === 'sending') return <Icon as={Clock3} size={12} className="text-text-3" aria-label="Sending" />;
+  if (state === 'read') return <Icon as={CheckCheck} size={14} className="text-accent-ink" aria-label="Read" />;
+  return <Icon as={Check} size={14} className="text-text-3" aria-label="Sent" />;
 }
 
 function ThreadSummary({ m, directory, onOpen }) {
@@ -230,16 +300,26 @@ function ThreadSummary({ m, directory, onOpen }) {
   );
 }
 
-export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, highlight, hideThread }) {
+export function MessageItem({
+  m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, highlight, hideThread, onSwipeReply, onTapMessage, onDoubleTap, receipt, onJumpTo,
+}) {
   const author = m.author || directory[m.authorId] || { name: 'Unknown' };
-  const press = useLongPress(() => onLongPress(m));
+  const ready = !m.pending && m.state !== 'deleted';
+  const { dx, handlers } = useRowGestures({
+    onLongPress: () => onLongPress(m),
+    onSwipe: ready && onSwipeReply ? () => onSwipeReply(m) : null,
+    onTap: ready && onTapMessage ? () => onTapMessage(m) : null,
+    onDoubleTap: ready && onDoubleTap ? () => onDoubleTap(m) : null,
+  });
   if (m.state === 'system') {
     return <p className="px-4 py-2 text-center text-xs text-text-3">{m.text}</p>;
   }
+  const tick = receipt ? receipt(m) : null;
   return (
     <div
-      {...press}
+      {...handlers}
       data-mid={m.id}
+      style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: dx ? 'none' : 'transform 180ms ease-out', touchAction: 'pan-y' }}
       className={cx(
         'group relative flex gap-3 px-4 transition-colors select-none hover:bg-surface-2/40',
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
@@ -247,6 +327,15 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
         m.pending && !m.upload && 'opacity-60',
       )}
     >
+      {dx > 0 && (
+        <span
+          className="pointer-events-none absolute top-1/2 -left-9 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-accent/15 text-accent-ink"
+          style={{ opacity: Math.min(dx / SWIPE_TRIGGER, 1), transform: `translateY(-50%) scale(${dx >= SWIPE_TRIGGER ? 1.1 : 0.85})` }}
+          aria-hidden
+        >
+          <Icon as={CornerUpLeft} size={16} />
+        </span>
+      )}
       <div className="w-9 shrink-0">
         {!grouped && (
           <button type="button" onClick={() => author.id && author.id !== me && onLongPress(m, 'profile')} aria-label={author.name}>
@@ -259,11 +348,18 @@ export function MessageItem({ m, grouped, directory, me, onReact, onLongPress, o
           <div className="flex items-baseline gap-2">
             <span className="truncate text-[14px] font-semibold">{author.name}</span>
             <span className="shrink-0 text-[11px] text-text-3">{clock(m.at)}</span>
+            {tick && <Ticks state={tick} />}
             {m.pinned && <Icon as={Pin} size={12} className="shrink-0 text-accent-ink" aria-label="Pinned" />}
             {m.saved && <Icon as={Bookmark} size={12} className="shrink-0 text-accent-ink" aria-label="Saved for later" />}
           </div>
         )}
+        {m.quoted && m.state !== 'deleted' && <QuoteBlock quoted={m.quoted} directory={directory} me={me} onJump={onJumpTo} />}
         <MessageBody m={m} onCancelUpload={onCancelUpload} me={me} directory={directory} />
+        {grouped && tick && (
+          <span className="float-right -mt-4 ml-2" aria-hidden={false}>
+            <Ticks state={tick} />
+          </span>
+        )}
         <TranslationNote m={m} />
         {m.edited &&
           (m.editCount > 0 && m.state === 'ok' ? (
@@ -334,13 +430,16 @@ export function AiLiveReply({ reply }) {
   );
 }
 
-export function MessageList({ items, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, header, footer, loading, highlightId }) {
+export function MessageList({
+  items, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, header, footer, loading, highlightId, onSwipeReply, onTapMessage, onDoubleTap, receipt, onDayTap, onJumpTo, onReachTop,
+}) {
   const ref = useRef(null);
   const content = useRef(null);
   const [atBottom, setAtBottom] = useState(true);
   const live = Array.isArray(footer) ? footer.length : footer ? 1 : 0;
   const count = items.length + live;
   const first = useRef(true);
+  const loadingTop = useRef(false);
 
   // "Translate automatically": other people's recent messages, into the chosen language.
   const autoLang = useTranslations((s) => s.autoLang);
@@ -390,6 +489,16 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
         onScroll={(e) => {
           const el = e.currentTarget;
           setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+          // Near the top: load older history, keeping what's on screen in place.
+          if (onReachTop && el.scrollTop < 120 && !loadingTop.current) {
+            loadingTop.current = true;
+            const before = el.scrollHeight;
+            Promise.resolve(onReachTop())
+              .then((n) => {
+                if (n) requestAnimationFrame(() => (el.scrollTop += el.scrollHeight - before));
+              })
+              .finally(() => setTimeout(() => (loadingTop.current = false), 400));
+          }
         }}
         className="h-full overflow-y-auto overscroll-contain pb-3"
       >
@@ -414,7 +523,16 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
               <Fragment key={m.id}>
                 {newDay && (
                   <div className="pointer-events-none sticky top-1.5 z-[1] flex justify-center py-1.5">
-                    <span className="rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm">{dayLabel(m.at)}</span>
+                    {/* Tap the date to jump to another day. */}
+                    <button
+                      type="button"
+                      onClick={onDayTap ? () => onDayTap(m.at) : undefined}
+                      aria-label={onDayTap ? `${dayLabel(m.at)}. Jump to a date` : dayLabel(m.at)}
+                      className={cx('rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm', onDayTap && 'pointer-events-auto pressable')}
+                      data-testid="day-chip"
+                    >
+                      {dayLabel(m.at)}
+                    </button>
                   </div>
                 )}
                 <MessageItem
@@ -428,6 +546,11 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
                   onRetry={onRetry}
                   onCancelUpload={onCancelUpload}
                   highlight={m.id === highlightId}
+                  onSwipeReply={onSwipeReply}
+                  onTapMessage={onTapMessage}
+                  onDoubleTap={onDoubleTap}
+                  receipt={receipt}
+                  onJumpTo={onJumpTo}
                 />
               </Fragment>
             );
@@ -448,12 +571,16 @@ export function MessageList({ items, directory, me, onReact, onLongPress, onOpen
   );
 }
 
-export function MessageActions({ message, me, open, onClose, onReact, onReply, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, onInfo, onCopyLink, onShare, canThread = true }) {
-  const [confirm, setConfirm] = useState(false);
+export function MessageActions({
+  message, me, open, onClose, onReact, onReply, onQuote, onDelete, onEdit, onPin, onSave, onTask, onRemind, onTranslate, onHistory, onInfo, onCopyLink, onShare, canThread = true,
+}) {
+  const [confirm, setConfirm] = useState(null); // 'everyone' | 'me'
+  const [picking, setPicking] = useState(false);
   if (!message) return null;
   const mine = message.authorId === me;
   const readable = !message.state || message.state === 'ok';
   const items = [
+    onQuote && !message.pending && { icon: CornerUpLeft, label: 'Reply', run: onQuote },
     canThread && !message.parentId && { icon: CornerDownRight, label: 'Reply in thread', run: onReply },
     readable && message.type !== 'checklist' && {
       icon: Copy,
@@ -473,14 +600,15 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
     mine && readable && onEdit && message.type !== 'checklist' && { icon: Pencil, label: 'Edit message', run: onEdit },
     readable && message.editCount > 0 && onHistory && { icon: History, label: 'Edit history', run: onHistory },
     mine && onInfo && !message.pending && { icon: Info, label: 'Message info', run: onInfo },
-    mine && onDelete && { icon: Trash2, label: 'Delete message', danger: true, run: () => setConfirm(true), keepOpen: true },
+    onDelete && !message.pending && { icon: EyeOff, label: 'Delete for me', danger: true, run: () => setConfirm('me'), keepOpen: true },
+    mine && onDelete && { icon: Trash2, label: 'Delete for everyone', danger: true, run: () => setConfirm('everyone'), keepOpen: true },
   ].filter(Boolean);
 
   return (
     <>
       <Sheet open={open} onClose={onClose}>
         <div className="flex justify-between gap-1 px-4 pb-3">
-          {QUICK_REACTIONS.map((e) => (
+          {QUICK_REACTIONS.slice(0, 6).map((e) => (
             <button
               key={e}
               type="button"
@@ -494,6 +622,14 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
               {e}
             </button>
           ))}
+          <button
+            type="button"
+            aria-label="More reactions"
+            onClick={() => setPicking(true)}
+            className="pressable grid h-11 w-11 place-items-center rounded-full border border-dashed border-line-strong text-text-2"
+          >
+            <Icon as={SmilePlus} size={20} />
+          </button>
         </div>
         <div className="border-t border-line-soft px-2 py-2">
           {items.map((a) => (
@@ -513,16 +649,26 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
         </div>
       </Sheet>
       <Dialog
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title="Delete this message?"
-        body="It will be removed for everyone in this conversation. This can't be undone."
+        open={Boolean(confirm)}
+        onClose={() => setConfirm(null)}
+        title={confirm === 'me' ? 'Delete this message for you?' : 'Delete this message for everyone?'}
+        body={confirm === 'me' ? 'It disappears from this conversation on your devices. Everyone else still sees it.' : "It will be removed for everyone in this conversation. This can't be undone."}
         confirmLabel="Delete"
         danger
         onConfirm={() => {
-          setConfirm(false);
+          const scope = confirm;
+          setConfirm(null);
           onClose();
-          onDelete();
+          onDelete(scope);
+        }}
+      />
+      <EmojiSheet
+        open={picking}
+        onClose={() => setPicking(false)}
+        onPick={(e) => {
+          setPicking(false);
+          onReact(message.id, e);
+          onClose();
         }}
       />
     </>
@@ -531,7 +677,7 @@ export function MessageActions({ message, me, open, onClose, onReact, onReply, o
 
 export function Composer({
   placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, editText = '', onCancelEdit, aiMentions = false, assistants,
-  mentions = null, recent = null, onVoice = null,
+  mentions = null, recent = null, onVoice = null, quote = null, onCancelQuote = null, onSchedule = null, directory = null, me = null, scheduleRef = null,
 }) {
   const [text, setText] = useState(initial);
   const [caret, setCaret] = useState(initial.length);
@@ -569,6 +715,8 @@ export function Composer({
   // Formatting row (shown on demand, so the composer stays one line) and the emoji sheet.
   const [formatting, setFormatting] = useState(false);
   const [emoji, setEmoji] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const sendPress = useRef(null);
   // The selection when focus left the box (for a link typed in its own field, or an emoji).
   const savedSel = useRef(null);
   const selection = () => {
@@ -645,6 +793,16 @@ export function Composer({
     setCaret(0);
     tap('light');
   };
+  // Send later: the text goes out at the picked time (long-press Send, or + → Send later).
+  const openSchedule = () => {
+    if (!onSchedule) return;
+    if (!text.trim()) {
+      toast('Type the message first, then choose Send later');
+      return;
+    }
+    setScheduling(true);
+  };
+  if (scheduleRef) scheduleRef.current = openSchedule;
   // With a physical keyboard, Enter sends (or completes a mention) and Shift+Enter starts a new line.
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
@@ -683,6 +841,16 @@ export function Composer({
         ))}
       <MentionSuggestions items={people} onPick={completeMention} />
       {recent && !editing && !text && !voice.recording && <SmartReplies recent={recent} onPick={fill} />}
+      {quote && !editing && (
+        <div className="flex items-start gap-2 px-3 pt-2" data-testid="composer-quote">
+          <div className="min-w-0 flex-1">
+            <QuoteBlock quoted={{ id: quote.id, authorId: quote.authorId, authorName: quote.author?.name, text: quote.text, state: quote.state }} directory={directory} me={me} compact />
+          </div>
+          <button type="button" aria-label="Cancel reply" onClick={onCancelQuote} className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2">
+            <Icon as={X} size={14} />
+          </button>
+        </div>
+      )}
       {editing && (
         <div className="flex items-center justify-between px-4 pt-2 text-xs text-accent-ink">
           <span className="flex items-center gap-1.5">
@@ -764,8 +932,32 @@ export function Composer({
             <button
               type="button"
               aria-label="Send"
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={send}
+              title={onSchedule ? 'Send (press and hold to send later)' : 'Send'}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (!onSchedule || !text.trim()) return;
+                clearTimeout(sendPress.current);
+                sendPress.current = setTimeout(() => {
+                  sendPress.current = 'fired';
+                  tap('medium');
+                  openSchedule();
+                }, 450);
+              }}
+              onPointerUp={() => {
+                if (sendPress.current !== 'fired') clearTimeout(sendPress.current);
+              }}
+              onPointerLeave={() => sendPress.current !== 'fired' && clearTimeout(sendPress.current)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openSchedule();
+              }}
+              onClick={() => {
+                if (sendPress.current === 'fired') {
+                  sendPress.current = null;
+                  return;
+                }
+                send();
+              }}
               disabled={!text.trim()}
               className={cx(
                 'pressable grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors',
@@ -777,6 +969,21 @@ export function Composer({
           )}
         </div>
       )}
+      <ScheduleSheet
+        open={scheduling}
+        onClose={() => setScheduling(false)}
+        preview={text.trim()}
+        onPick={async (when) => {
+          const value = text.trim();
+          setScheduling(false);
+          if (!value) return;
+          const ok = await onSchedule(value, when);
+          if (ok !== false) {
+            setText('');
+            setCaret(0);
+          }
+        }}
+      />
       <EmojiSheet
         open={emoji}
         onClose={() => {
@@ -818,7 +1025,7 @@ export function useFilePickers(onFiles) {
   return { inputs, pick };
 }
 
-export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, onPoll, onChecklist, title = 'Add to message' }) {
+export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, onPoll, onChecklist, onSchedule, title = 'Add to message' }) {
   // A computer has no camera to point: its file picker covers photos.
   const camera = onPick && !finePointer();
   return (
@@ -832,6 +1039,7 @@ export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, onPo
           onChecklist && { icon: ListChecks, label: 'Checklist', hint: 'A list anyone here can tick off', run: onChecklist },
           onAskAi && { icon: Sparkles, label: 'Summarize with AI', hint: 'Catch up on this conversation, or list its action items', run: onAskAi },
           onTask && { icon: ListTodo, label: 'Create a task', hint: 'Track something from this conversation', run: onTask },
+          onSchedule && { icon: Clock3, label: 'Send later', hint: 'Schedule what you typed (or press and hold Send)', run: onSchedule },
         ]
           .filter(Boolean)
           .map((a) => (

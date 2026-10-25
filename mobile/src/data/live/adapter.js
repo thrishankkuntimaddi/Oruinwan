@@ -179,6 +179,18 @@ function mapChannel(c) {
 async function mapMessage(conv, m) {
   const { text, state } = await readMessage(conv, m);
   const mapped = toAppMessage(conv, m, text, state);
+  // A reply that quotes another message (swipe to reply): the quoted one, decrypted here too.
+  const q = m.quotedMessageId && typeof m.quotedMessageId === 'object' ? m.quotedMessageId : null;
+  if (q) {
+    const read = await readMessage(conv, q).catch(() => ({ text: '', state: 'failed' }));
+    mapped.quoted = {
+      id: idOf(q),
+      authorId: idOf(q.sender),
+      authorName: q.sender && typeof q.sender === 'object' ? mapUser(q.sender)?.name || null : null,
+      text: read.text,
+      state: read.state,
+    };
+  } else if (m.quotedMessageId) mapped.quoted = { id: idOf(m.quotedMessageId), authorId: null, authorName: null, text: '', state: 'missing' };
   indexMessages(conv, [mapped]);
   return mapped;
 }
@@ -200,6 +212,8 @@ function toAppMessage(conv, m, text, state) {
     parentId: idOf(m.parentId),
     edited: Boolean(m.editedAt),
     pinned: Boolean(m.isPinned),
+    // Who has read it (privacy-filtered by the server): the ticks on my DM messages.
+    readBy: (m.readBy || []).map(idOf).filter(Boolean),
     // Channel and DM attachments are on the message; thread replies keep them in the payload.
     attachments: (m.attachments?.length ? m.attachments : m.payload?.attachments || []).map(mapAttachment).filter(Boolean),
     ...messageExtras(m, me?.id), // polls, checklists, saved, edit history, thread state
@@ -776,14 +790,16 @@ export const liveAdapter = {
     return String(data.dmSessionId);
   },
 
-  async messages(conv) {
+  /** The latest 50 messages, or the 50 before `before` (a message id) for older history. */
+  async messages(conv, { before } = {}) {
     const ws = currentWs;
+    const q = { limit: 50, ...(before ? { before } : {}) };
     const data =
       conv.kind === 'channel'
-        ? await api.get(`/v2/messages/channel/${conv.id}`, { limit: 50 })
-        : await api.get(`/v2/messages/workspace/${ws}/dm/${conv.id}`, { limit: 50 });
+        ? await api.get(`/v2/messages/channel/${conv.id}`, q)
+        : await api.get(`/v2/messages/workspace/${ws}/dm/${conv.id}`, q);
     const items = chronological(await mapMessages(conv, data.messages));
-    indexMessages(conv, [], { complete: true });
+    if (!before) indexMessages(conv, [], { complete: true });
     return { items: items.filter((m) => !m.parentId), hasMore: Boolean(data.hasMore) };
   },
   async thread(conv, parentId) {
@@ -793,7 +809,7 @@ export const liveAdapter = {
       replies: chronological(await mapMessages(conv, data.replies)),
     };
   },
-  async sendMessage(conv, text, { parentId, clientTempId, mentionText } = {}) {
+  async sendMessage(conv, text, { parentId, clientTempId, mentionText, quotedMessageId } = {}) {
     const dm = dmCache.get(conv.id);
     const key = await conversationKey(conv, {
       workspaceId: currentWs,
@@ -802,7 +818,13 @@ export const liveAdapter = {
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
-    const body = { ...(await encryptText(key, text)), clientTempId, clientMessageId: clientTempId, ...(mentionText ? { mentionText } : {}) }; // server dedupes on clientMessageId
+    const body = {
+      ...(await encryptText(key, text)),
+      clientTempId,
+      clientMessageId: clientTempId, // server dedupes on clientMessageId
+      ...(mentionText ? { mentionText } : {}),
+      ...(quotedMessageId ? { quotedMessageId } : {}),
+    };
     let data;
     if (parentId) data = await api.post(`/v2/messages/thread/${parentId}`, body);
     else if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });
@@ -843,9 +865,57 @@ export const liveAdapter = {
     const { ciphertext, messageIv } = await encryptText(key, text);
     await api.patch(`/v2/messages/${id}`, { ciphertext, messageIv });
   },
-  async deleteMessage(conv, id) {
-    await api.del(`/v2/messages/${id}`, { scope: 'everyone' });
+  /** scope: 'everyone' (mine, or a channel admin) or 'me' (hidden for me only). */
+  async deleteMessage(conv, id, scope = 'everyone') {
+    await api.del(`/v2/messages/${id}`, { scope });
     forgetMessage(conv.id, id);
+  },
+
+  // ---- Send later (the text is encrypted here; the server sends it at the time) and Sent.
+  async scheduleMessage(ws, conv, text, sendAt, { quotedMessageId } = {}) {
+    const dm = dmCache.get(conv.id);
+    const key = await conversationKey(conv, { workspaceId: ws, participantIds: dm ? dm.participantIds : undefined, create: conv.kind === 'dm' });
+    const body = { ...(await encryptText(key, text)), ...(quotedMessageId ? { quotedMessageId } : {}) };
+    const data = await api.post('/v2/scheduled-messages', { workspaceId: ws, kind: conv.kind, conversationId: conv.id, sendAt: new Date(sendAt).toISOString(), body });
+    return data.scheduled;
+  },
+  /** Mine, still to send (or failed): [{ id, conv, sendAt, status, error, text }]. */
+  async scheduledMessages(ws) {
+    const data = await api.get('/v2/scheduled-messages', { workspaceId: ws });
+    return Promise.all(
+      (data.scheduled || []).map(async (s) => {
+        const conv = { kind: s.kind, id: s.conversationId };
+        let text = '';
+        if (s.body?.ciphertext) {
+          try {
+            text = await decryptPayload(await conversationKey(conv), s.body);
+          } catch {
+            text = '';
+          }
+        }
+        return { id: s.id, conv, sendAt: s.sendAt, status: s.status, error: s.error, text };
+      }),
+    );
+  },
+  async rescheduleMessage(id, sendAt) {
+    return (await api.patch(`/v2/scheduled-messages/${id}`, { sendAt: new Date(sendAt).toISOString() })).scheduled;
+  },
+  async cancelScheduled(id) {
+    await api.del(`/v2/scheduled-messages/${id}`);
+  },
+  async sendScheduledNow(id) {
+    return api.post(`/v2/scheduled-messages/${id}/send-now`, {});
+  },
+  /** My latest messages across the workspace, decrypted: [{ id, conv, text, at, attachments }]. */
+  async sentMessages(ws) {
+    const data = await api.get('/v2/scheduled-messages/sent', { workspaceId: ws });
+    return Promise.all(
+      (data.messages || []).map(async (m) => {
+        const conv = { kind: m.kind, id: m.conversationId };
+        const read = await readMessage(conv, { ...m, payload: m.payload, attachments: m.attachments }).catch(() => ({ text: '', state: 'failed' }));
+        return { id: m.id, conv, text: read.text, state: read.state, at: m.at, attachments: (m.attachments || []).map(mapAttachment).filter(Boolean) };
+      }),
+    );
   },
   async react(conv, id, emoji, add) {
     if (add === false) await api.del(`/v2/messages/${id}/react`, { emoji });

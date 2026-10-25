@@ -10,15 +10,15 @@ import { withTranscripts } from '../../lib/aiPeople.js';
 import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
 import { enqueue, isNetworkError, isOffline, retryQueued, useQueuedMessages } from '../../data/outbox.js';
 
-/** One reaction per person (as the server keeps it): a new emoji replaces mine; the same one removes it. */
-function toggleReaction(m, emoji, me) {
+/** Several reactions per person, each emoji once: tapping one I gave removes it, another adds it. */
+export function toggleReaction(m, emoji, me) {
   const had = (m.reactions?.[emoji] || []).includes(me);
-  const reactions = {};
-  for (const [e, users] of Object.entries(m.reactions || {})) {
-    const rest = users.filter((u) => u !== me);
-    if (rest.length) reactions[e] = rest;
-  }
-  if (!had) reactions[emoji] = [...(reactions[emoji] || []), me];
+  const reactions = { ...(m.reactions || {}) };
+  if (had) {
+    const rest = reactions[emoji].filter((u) => u !== me);
+    if (rest.length) reactions[emoji] = rest;
+    else delete reactions[emoji];
+  } else reactions[emoji] = [...(reactions[emoji] || []), me];
   return { ...m, reactions };
 }
 
@@ -58,6 +58,14 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
           : d,
       );
     return on('socket', ({ event, payload: p } = {}) => {
+      // Someone read the conversation: their read shows on my messages (the ticks) right away.
+      if (event === 'read-update' && p?.readerId && conv?.id && String(p.dmSessionId || p.channelId) === String(conv.id)) {
+        const reader = String(p.readerId);
+        setQueryData(key, (d) =>
+          d ? { ...d, items: d.items.map((m) => (m.authorId !== reader && !m.pending && !(m.readBy || []).includes(reader) ? { ...m, readBy: [...(m.readBy || []), reader] } : m)) } : d,
+        );
+        return;
+      }
       const id = p?.messageId && String(p.messageId);
       if (!id) return;
       if (event === 'poll:vote_updated' && p.poll) patchOne(id, (m) => ({ ...m, poll: mapPoll(p.poll, m.authorId) }));
@@ -65,12 +73,13 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
       else if ((event === 'message:reaction_added' || event === 'message:reaction_removed') && Array.isArray(p.reactions))
         patchOne(id, (m) => ({ ...m, reactions: mapReactions(p.reactions), reactorNames: { ...m.reactorNames, ...mapReactorNames(p.reactions) } }));
       else if (event === 'message:checklist_updated' && Array.isArray(p.checklist)) patchOne(id, (m) => ({ ...m, checklist: mapChecklist(p.checklist) }));
+      else if (event === 'message:hidden') setQueryData(key, (d) => (d ? { ...d, items: d.items.filter((m) => m.id !== id) } : d));
       else if (event === 'thread-resolved') {
         patchOne(id, (m) => ({ ...m, resolved: Boolean(p.isResolved) }));
         if (threadOf === id) setQueryData(key, (d) => (d?.meta ? { ...d, meta: { ...d.meta, resolved: Boolean(p.isResolved) } } : d));
       }
     });
-  }, [key, threadOf]);
+  }, [key, threadOf, conv?.id]);
 
   // Mark the conversation read when it opens, whenever someone else's message arrives while it's
   // on screen, when the app comes back to the foreground and when the socket reconnects, so the
@@ -102,7 +111,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const patch = useCallback((fn) => setQueryData(key, (d) => (d ? { ...d, items: fn(d.items) } : d)), [key]);
 
   const sendNow = useCallback(
-    async (text, { retryId, mentionText, people = [] } = {}) => {
+    async (text, { retryId, mentionText, people = [], quoted = null } = {}) => {
       const body = text.trim();
       if (!body) return;
       const tempId = retryId || uid('tmp');
@@ -117,12 +126,14 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
         failed: false,
         parentId: threadOf || null,
         state: 'ok',
+        quoted,
+        readBy: [],
       };
       patch((items) => (retryId ? items.map((m) => (m.id === retryId ? optimistic : m)) : [...items, optimistic]));
       // The chat list shows it as the latest message right away (it moves to the top).
       if (!threadOf) bumpChatRow(conv, { lastText: body, lastAt: optimistic.at, lastSender: { id: me, name: null } });
       try {
-        const saved = await api().sendMessage(conv, body, { parentId: threadOf, clientTempId: tempId, mentionText });
+        const saved = await api().sendMessage(conv, body, { parentId: threadOf, clientTempId: tempId, mentionText, quotedMessageId: quoted?.id || null });
         patch((items) => {
           // The realtime echo may already have added the saved message.
           const withoutTemp = items.filter((m) => m.id !== tempId);
@@ -193,11 +204,11 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   );
 
   const remove = useCallback(
-    async (messageId) => {
+    async (messageId, scope = 'everyone') => {
       const before = getQueryData(key);
       patch((items) => items.filter((m) => m.id !== messageId));
       try {
-        await api().deleteMessage(conv, messageId);
+        await api().deleteMessage(conv, messageId, scope);
         // A deleted reply changes its parent's reply count in the conversation.
         if (threadOf) invalidate(`messages:${conv.id}`);
       } catch (err) {
@@ -232,6 +243,19 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     (id, fn) => setQueryData(key, (d) => (d ? { ...d, items: d.items.map((m) => (m.id === id ? fn(m) : m)), parent: d.parent?.id === id ? fn(d.parent) : d.parent } : d)),
     [key],
   );
+  /** Loads the 50 messages before the oldest one shown (scrolling back, jumping to a date). */
+  const loadOlder = useCallback(async () => {
+    const d = getQueryData(key);
+    const oldest = d?.items?.find((m) => !m.pending);
+    if (threadOf || !d?.hasMore || !oldest) return 0;
+    const older = await api().messages(conv, { before: oldest.id });
+    setQueryData(key, (cur) => {
+      if (!cur) return cur;
+      const have = new Set(cur.items.map((m) => m.id));
+      return { ...cur, items: [...older.items.filter((m) => !have.has(m.id)), ...cur.items], hasMore: older.hasMore };
+    });
+    return older.items.length;
+  }, [conv, key, threadOf]);
   /** Adds a message sent outside send() (a poll or checklist), unless the realtime echo already did. */
   const append = useCallback((m) => setQueryData(key, (d) => (d && !d.items.some((x) => x.id === m.id) ? { ...d, items: [...d.items, m] } : d)), [key]);
   const patchMeta = useCallback((p) => setQueryData(key, (d) => (d ? { ...d, meta: { ...(d.meta || {}), ...p } } : d)), [key]);
@@ -256,5 +280,6 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     react,
     remove,
     edit,
+    loadOlder,
   };
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
 } from 'lucide-react';
@@ -38,6 +38,8 @@ import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import { HuddleBanner, HuddleButton } from '../huddles/HuddlesScreen.jsx';
 import { GroupTile } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
+import { DayJumpSheet } from './DayJumpSheet.jsx';
+import { QUICK_REACTIONS } from '../../data/constants.js';
 import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
 import { EllipsisVertical, Share2, Copy, Link2 } from 'lucide-react';
 import { useWebUrl } from '../../data/live/webUrl.js';
@@ -53,7 +55,7 @@ function useConversationMeta(kind, id) {
   return (dms || []).find((d) => d.id === id) || null;
 }
 
-function useMessageTools({ conv, convo, me, label, threadOf }) {
+function useMessageTools({ conv, convo, me, label, threadOf, onQuote }) {
   const [active, setActive] = useState(null);
   const [taskFrom, setTaskFrom] = useState(null);
   const [convertFrom, setConvertFrom] = useState(null);
@@ -90,6 +92,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
         onClose={() => setActive(null)}
         canThread={threadsOn && !threadOf}
         onReact={convo.react}
+        onQuote={onQuote ? () => onQuote(active) : null}
         onReply={() => nav.push('thread', { kind: conv.kind, convId: conv.id, messageId: active.id })}
         onPin={
           api().togglePin
@@ -121,7 +124,7 @@ function useMessageTools({ conv, convo, me, label, threadOf }) {
         }
         onTask={() => (api().convertToTask ? setConvertFrom(active) : setTaskFrom(active))}
         onEdit={() => setEditing(active)}
-        onDelete={() => convo.remove(active.id)}
+        onDelete={(scope) => convo.remove(active.id, scope)}
       />
       <TaskEditorSheet
         open={Boolean(taskFrom)}
@@ -178,6 +181,64 @@ function useShareLinks(conv) {
   };
 }
 
+/** Double tap a message: the reaction most used on it already, or 👍. Mine already? Nothing changes. */
+export function doubleTapEmoji(m, me) {
+  const entries = Object.entries(m.reactions || {}).filter(([, u]) => u.length).sort((a, b) => b[1].length - a[1].length);
+  const emoji = entries[0]?.[0] || QUICK_REACTIONS[0] || '👍';
+  return (m.reactions?.[emoji] || []).includes(me) ? null : emoji;
+}
+
+/**
+ * Ticks on my messages in a DM or group DM: 'sending', 'sent', or 'read' once everyone else
+ * read it (the server leaves out people who turned read receipts off).
+ */
+export function receiptFor(m, me, others) {
+  if (m.authorId !== me || m.state === 'deleted' || m.failed) return null;
+  if (m.pending) return 'sending';
+  if (!others?.length) return 'sent';
+  const read = new Set(m.readBy || []);
+  return others.every((id) => read.has(id)) ? 'read' : 'sent';
+}
+
+/** Quote, reply, schedule and jump helpers shared by a conversation and a thread. */
+function useComposerExtras({ conv, convo, me }) {
+  const ws = useSession((s) => s.workspaceId);
+  const [quote, setQuote] = useState(null);
+  const [jumpTo, setJumpTo] = useState(null);
+  const scheduleRef = useRef(null);
+  const quotedOf = (m) => (m ? { id: m.id, authorId: m.authorId, authorName: m.author?.name || null, text: m.text, state: m.state } : null);
+  return {
+    quote,
+    setQuote,
+    jumpTo,
+    setJumpTo,
+    scheduleRef,
+    quotedOf,
+    jumpToMessage: (id) => {
+      if (convo.items.some((x) => x.id === id)) {
+        setJumpTo(null);
+        setTimeout(() => setJumpTo(id), 0);
+      } else toast('That message is further back than this device has loaded.');
+    },
+    doubleTap: (m) => {
+      const emoji = doubleTapEmoji(m, me);
+      if (emoji) convo.react(m.id, emoji);
+    },
+    schedule: async (text, when) => {
+      try {
+        await api().scheduleMessage(ws, conv, text, when, { quotedMessageId: quote?.id || null });
+        setQuote(null);
+        invalidate('scheduled:');
+        toast(`Scheduled for ${new Date(when).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`, 'success');
+        return true;
+      } catch (err) {
+        toast(err.message || 'Could not schedule it', 'danger');
+        return false;
+      }
+    },
+  };
+}
+
 /** The decrypted end of a conversation, as AI features take it: [{ id, sender, text, isMe }]. */
 function transcript(items, directory, me, limit = 200) {
   return items
@@ -225,8 +286,11 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const { data: assistants } = useAssistants();
   const [plus, setPlus] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [sheet, setSheet] = useState(null); // 'poll' | 'checklist' | 'summary' | 'menu'
-  const [jumpTo, setJumpTo] = useState(null);
+  const [sheet, setSheet] = useState(null); // 'poll' | 'checklist' | 'summary' | 'menu' | 'days'
+  const extras = useComposerExtras({ conv, convo, me });
+  const { jumpTo, setJumpTo } = extras;
+  const [dayAt, setDayAt] = useState(null);
+  const [olderBusy, setOlderBusy] = useState(false);
   const status = useConversationStatus(kind, id, meta);
   const aiOn = useFlag('ai');
   // Unread when the conversation opened (opening marks it read), for "since you last read".
@@ -234,7 +298,9 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
 
   const label = label0;
   const huddleScope = useMemo(() => (kind === 'channel' ? { channelId: id } : { dmId: id }), [kind, id]);
-  const tools = useMessageTools({ conv, convo, me, label });
+  const tools = useMessageTools({ conv, convo, me, label, onQuote: extras.setQuote });
+  // Ticks in DMs and group DMs (not channels, not agents): read once the others have read it.
+  const others = useMemo(() => (kind === 'dm' && !meta?.agentId ? (meta?.participantIds || []).filter((x) => x && x !== me) : null), [kind, meta, me]);
   const pickers = useFilePickers(convo.sendFiles);
   const mentions = useMentions({ kind, id, meta, me });
   const recent = useMemo(() => (aiOn && !meta?.agentId ? transcript(convo.items, directory, me, 8) : null), [aiOn, meta?.agentId, convo.items, directory, me]);
@@ -350,6 +416,17 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         onCancelUpload={convo.cancelUpload}
         onLongPress={tools.onLongPress}
         onOpenThread={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
+        // Tap a message for its thread view; swipe right to reply; double tap to react.
+        onTapMessage={(m) => nav.push('thread', { kind, convId: id, messageId: m.id })}
+        onSwipeReply={canPost ? (m) => extras.setQuote(m) : null}
+        onDoubleTap={extras.doubleTap}
+        receipt={others ? (m) => receiptFor(m, me, others) : null}
+        onDayTap={(at) => {
+          setDayAt(at);
+          setSheet('days');
+        }}
+        onJumpTo={extras.jumpToMessage}
+        onReachTop={convo.hasMore ? convo.loadOlder : null}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
         highlightId={jumpTo || highlight}
       />
@@ -376,11 +453,20 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           editing={Boolean(tools.editing)}
           onCancelEdit={() => tools.setEditing(null)}
           onPlus={() => setPlus(true)}
+          quote={extras.quote}
+          onCancelQuote={() => extras.setQuote(null)}
+          onSchedule={api().scheduleMessage ? extras.schedule : null}
+          scheduleRef={extras.scheduleRef}
+          directory={directory}
+          me={me}
           onSend={(text) => {
             if (tools.editing) {
               convo.edit(tools.editing.id, text);
               tools.setEditing(null);
-            } else convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text) });
+            } else {
+              convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text), quoted: extras.quotedOf(extras.quote) });
+              extras.setQuote(null);
+            }
           }}
         />
       )}
@@ -394,6 +480,29 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         onChecklist={canPost && api().sendChecklist ? () => setSheet('checklist') : null}
         onAskAi={aiOn ? () => (api().summarizeConversation ? setSheet('summary') : askAiAbout(`Summarize the recent conversation in ${label} and list any action items for me.`)) : null}
         onTask={tools.openTask}
+        onSchedule={canPost && api().scheduleMessage ? () => setTimeout(() => extras.scheduleRef.current?.(), 220) : null}
+      />
+      <DayJumpSheet
+        open={sheet === 'days'}
+        onClose={() => setSheet(null)}
+        items={convo.items}
+        initial={dayAt}
+        hasMore={convo.hasMore}
+        loadingOlder={olderBusy}
+        onLoadOlder={async () => {
+          setOlderBusy(true);
+          try {
+            await convo.loadOlder();
+          } catch (err) {
+            toast(err.message || 'Could not load older messages', 'danger');
+          } finally {
+            setOlderBusy(false);
+          }
+        }}
+        onJump={(mid) => {
+          setSheet(null);
+          extras.jumpToMessage(mid);
+        }}
       />
       <ConversationMenu
         open={sheet === 'menu'}
@@ -425,7 +534,8 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const aiReplies = useAiReplies(convId, messageId);
   const { data: assistants } = useAssistants();
   const aiOn = useFlag('ai');
-  const tools = useMessageTools({ conv, convo, me, label, threadOf: messageId });
+  const extras = useComposerExtras({ conv, convo, me });
+  const tools = useMessageTools({ conv, convo, me, label, threadOf: messageId, onQuote: extras.setQuote });
   const pickers = useFilePickers(convo.sendFiles);
   const mentions = useMentions({ kind, id: convId, meta, me });
   const [attach, setAttach] = useState(false);
@@ -509,10 +619,11 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         onLongPress={tools.onLongPress}
         onOpenThread={() => {}}
         onRetry={() => {}}
+        onDoubleTap={extras.doubleTap}
       />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-2 text-xs text-text-2">
         <span className="font-medium">
-          {convo.items.length} {convo.items.length === 1 ? 'reply' : 'replies'}
+          {convo.items.length ? `${convo.items.length} ${convo.items.length === 1 ? 'reply' : 'replies'}` : 'No replies yet. Reply below to start the thread.'}
         </span>
         {info?.participants?.length > 0 && (
           <button type="button" onClick={() => setSheet('people')} className="inline-flex items-center gap-1 font-medium text-accent-ink">
@@ -536,12 +647,13 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   return (
     <Screen>
       <Header
-        title="Thread"
+        title={convo.items.length ? 'Thread' : 'Message'}
         subtitle={label && `in ${label}`}
         border
         actions={
           info ? (
             <>
+              {!meta?.agentId && <HuddleButton scope={kind === 'channel' ? { channelId: convId } : { dmId: convId }} title={label} />}
               <IconButton icon={info.following ? BellRing : Bell} active={info.following} label={info.following ? 'Unfollow thread' : 'Follow thread'} onClick={follow} />
               <IconButton icon={Ellipsis} label="Thread options" onClick={() => setSheet('menu')} />
             </>
@@ -559,6 +671,10 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         onCancelUpload={convo.cancelUpload}
         onLongPress={tools.onLongPress}
         onOpenThread={() => {}}
+        onSwipeReply={info?.locked ? null : (m) => extras.setQuote(m)}
+        onDoubleTap={extras.doubleTap}
+        onJumpTo={extras.jumpToMessage}
+        highlightId={extras.jumpTo}
         footer={aiReplies.map((r) => <AiLiveReply key={r.id} reply={r} />)}
       />
       {info?.locked ? (
@@ -583,11 +699,18 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         editText={tools.editing?.text || ''}
         editing={Boolean(tools.editing)}
         onCancelEdit={() => tools.setEditing(null)}
+        quote={extras.quote}
+        onCancelQuote={() => extras.setQuote(null)}
+        directory={directory}
+        me={me}
         onSend={(text) => {
           if (tools.editing) {
             convo.edit(tools.editing.id, text);
             tools.setEditing(null);
-          } else convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text) });
+          } else {
+            convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text), quoted: extras.quotedOf(extras.quote) });
+            extras.setQuote(null);
+          }
         }}
       />
       )}
