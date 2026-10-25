@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  LayoutGrid, List, Plus, Search, X, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
+  ChevronDown, LayoutGrid, List, Plus, Search, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -11,7 +11,7 @@ import { PRIORITY_META, STATUS_META, TASK_PRIORITIES, TASK_TRANSITIONS } from '.
 import { prefs } from '../../native/storage.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, Fab, IconButton } from '../../ui/Button.jsx';
-import { Chips, Field, SearchField } from '../../ui/Controls.jsx';
+import { Field } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
@@ -30,6 +30,7 @@ import { blockersOf } from '../../data/live/adapter.work.js';
 import { TemplatePickerSheet } from './PlanningScreen.jsx';
 import { TaskEditorSheet, PeoplePicker, toDateInput, fromDateInput } from './TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
+import { tap as tapHaptic } from '../../native/index.js';
 
 // The same views, in the same order and words, as the web's Tasks panel.
 export const VIEWS = [
@@ -37,6 +38,7 @@ export const VIEWS = [
   { value: 'incoming', label: 'Incoming' },
   { value: 'given', label: 'Given' },
   { value: 'all', label: 'All tasks' },
+  { value: 'blocked', label: 'Blocked' },
   { value: 'done', label: 'Completed' },
   { value: 'trash', label: 'Trash' },
 ];
@@ -132,6 +134,8 @@ export function filterView(tasks, view, me) {
       return tasks.filter((t) => open(t) && t.assigneeIds.includes(me) && t.createdBy !== me);
     case 'given':
       return tasks.filter((t) => open(t) && t.createdBy === me && t.assigneeIds.some((id) => id !== me));
+    case 'blocked':
+      return tasks.filter((t) => t.status === 'blocked');
     case 'done':
       return tasks.filter((t) => !open(t));
     default:
@@ -139,27 +143,176 @@ export function filterView(tasks, view, me) {
   }
 }
 
+/** Moves a task to another status, with Undo in the toast. */
+export async function moveTask(task, status) {
+  if (task.status === status) return;
+  const from = task.status;
+  const ws = useSession.getState().workspaceId;
+  const apply = (st) => setQueryData(`tasks:${ws}`, (list) => list?.map((t) => (t.id === task.id ? { ...t, status: st } : t)));
+  apply(status);
+  try {
+    await api().updateTask(task.id, { status });
+    toast(`Moved to ${STATUS_META[status]?.label || status}`, 'neutral', {
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          apply(from);
+          try {
+            await api().updateTask(task.id, { status: from });
+          } catch (err) {
+            toast(err.message || 'Could not undo', 'danger');
+          } finally {
+            invalidate('tasks');
+          }
+        },
+      },
+    });
+  } catch (err) {
+    apply(from);
+    toast(err.message || 'Could not move the task', 'danger');
+  } finally {
+    invalidate('tasks');
+  }
+}
+
+/**
+ * Board: one column per status. Press and hold a card, then drag it to another column
+ * (mouse: just drag). Dropping moves the task; the toast offers Undo.
+ */
 function Board({ tasks, directory }) {
   const columns = OPEN_ORDER.map((s) => ({ status: s, items: tasks.filter((t) => t.status === s) }));
+  const [drag, setDrag] = useState(null); // { task, x, y, over }
+  const scroller = useRef(null);
+  const press = useRef(null);
+  const justDragged = useRef(false);
+
+  const columnAt = (x, y) => document.elementFromPoint(x, y)?.closest?.('[data-status]')?.dataset.status || null;
+
+  useEffect(() => {
+    if (!drag) return undefined;
+    const move = (e) => {
+      e.preventDefault?.();
+      const p = e.touches ? e.touches[0] : e;
+      setDrag((d) => d && { ...d, x: p.clientX, y: p.clientY, over: columnAt(p.clientX, p.clientY) });
+      // Near the edges, scroll the board sideways.
+      const el = scroller.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (p.clientX > r.right - 40) el.scrollBy({ left: 18 });
+        else if (p.clientX < r.left + 40) el.scrollBy({ left: -18 });
+      }
+    };
+    const up = () => {
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 350);
+      setDrag((d) => {
+        if (d?.over && d.over !== d.task.status) moveTask(d.task, d.over);
+        return null;
+      });
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('touchend', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [Boolean(drag)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startPress = (task) => (e) => {
+    const start = { x: e.clientX, y: e.clientY };
+    const begin = () => {
+      tapHaptic('medium');
+      setDrag({ task, x: start.x, y: start.y, over: task.status });
+    };
+    clearTimeout(press.current?.timer);
+    press.current = { start, timer: e.pointerType === 'mouse' ? null : setTimeout(begin, 320), begin, mouse: e.pointerType === 'mouse' };
+  };
+  const pressMove = (e) => {
+    const p = press.current;
+    if (!p) return;
+    const dist = Math.hypot(e.clientX - p.start.x, e.clientY - p.start.y);
+    if (p.mouse && dist > 6) {
+      press.current = null;
+      p.begin();
+    } else if (!p.mouse && dist > 10) {
+      clearTimeout(p.timer);
+      press.current = null;
+    }
+  };
+  const pressEnd = () => {
+    clearTimeout(press.current?.timer);
+    press.current = null;
+  };
+
   return (
-    <div className="no-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-4">
-      {columns.map((col) => (
-        <section key={col.status} className="flex w-[82%] max-w-80 shrink-0 snap-center flex-col rounded-card border border-line-soft bg-surface">
-          <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">
-            <StatusIcon status={col.status} size={16} />
-            <h3 className="flex-1 text-[14px] font-semibold">{STATUS_META[col.status].label}</h3>
-            <span className="text-xs text-text-3 tabular-nums">{col.items.length}</span>
-          </header>
-          <div className="divide-y divide-line-soft">
-            {col.items.length ? (
-              col.items.map((t) => <TaskRow key={t.id} task={t} directory={directory} compact />)
-            ) : (
-              <p className="px-4 py-6 text-center text-xs text-text-3">Nothing here</p>
+    <>
+      <div
+        ref={scroller}
+        className={cx('no-scrollbar flex scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-4', !drag && 'snap-x snap-mandatory')}
+        data-testid="task-board"
+      >
+        {columns.map((col) => (
+          <section
+            key={col.status}
+            data-status={col.status}
+            className={cx(
+              'flex w-[82%] max-w-80 shrink-0 snap-center flex-col rounded-card border bg-surface transition-colors',
+              drag && drag.over === col.status && drag.task.status !== col.status ? 'border-accent bg-accent/10' : 'border-line-soft',
             )}
-          </div>
-        </section>
-      ))}
-    </div>
+          >
+            <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">
+              <StatusIcon status={col.status} size={16} />
+              <h3 className="flex-1 text-[14px] font-semibold">{STATUS_META[col.status].label}</h3>
+              <span className="text-xs text-text-3 tabular-nums">{col.items.length}</span>
+            </header>
+            <div className="min-h-16 divide-y divide-line-soft">
+              {col.items.length ? (
+                col.items.map((t) => (
+                  <div
+                    key={t.id}
+                    onPointerDown={startPress(t)}
+                    onPointerMove={pressMove}
+                    onPointerUp={pressEnd}
+                    onPointerCancel={pressEnd}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onClickCapture={(e) => {
+                      // The release that ends a drag must not also open the task.
+                      if (justDragged.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                    className={cx('select-none', drag?.task.id === t.id && 'opacity-40')}
+                    data-testid={`board-card-${t.id}`}
+                  >
+                    <TaskRow task={t} directory={directory} compact />
+                  </div>
+                ))
+              ) : (
+                <p className="px-4 py-6 text-center text-xs text-text-3">{drag ? 'Drop here' : 'Nothing here'}</p>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+      {drag && (
+        <div
+          className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 -translate-y-1/2 rotate-2 rounded-card border border-accent bg-surface px-3.5 py-2.5 text-[14px] font-medium shadow-2xl"
+          style={{ left: drag.x, top: drag.y }}
+          aria-hidden
+        >
+          {drag.task.title}
+          {drag.over && drag.over !== drag.task.status && <span className="mt-0.5 block text-[12px] text-accent-ink">Move to {STATUS_META[drag.over]?.label}</span>}
+        </div>
+      )}
+      {!drag && <p className="px-4 pb-2 text-center text-[12px] text-text-3">Press and hold a card, then drag it to another column.</p>}
+    </>
   );
 }
 
@@ -175,10 +328,12 @@ export function TasksScreen() {
   const [create, setCreate] = useState(false);
   const [newMenu, setNewMenu] = useState(false);
   const [fromTemplate, setFromTemplate] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const [viewSheet, setViewSheet] = useState(false);
+  // Searching is the header's search (it lists tasks first on this tab).
+  const query = '';
 
-  const tasks = useMemo(() => searchTasks(filterView(data || [], view, me), query).sort(SORTS[sort].fn), [data, view, me, sort, query]);
+  const tasks = useMemo(() => filterView(data || [], view, me).sort(SORTS[sort].fn), [data, view, me, sort]);
+  const viewCounts = useMemo(() => Object.fromEntries(VIEWS.map((v) => [v.value, v.value === 'trash' ? null : filterView(data || [], v.value, me).length])), [data, me]);
   const groups = useMemo(() => {
     const order = view === 'done' ? ['done', 'cancelled'] : OPEN_ORDER;
     return order.map((s) => ({ status: s, items: tasks.filter((t) => t.status === s) })).filter((g) => g.items.length);
@@ -192,24 +347,21 @@ export function TasksScreen() {
   return (
     <Screen>
       <TabHeader title="Tasks">
-        {searching ? (
+        {
           <div className="flex items-center gap-2 pr-2 pb-3 pl-4">
-            <SearchField value={query} onChange={setQuery} placeholder="Search tasks" className="flex-1" autoFocus />
-            <IconButton
-              icon={X}
-              label="Close search"
-              size="sm"
-              onClick={() => {
-                setSearching(false);
-                setQuery('');
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center pr-2 pb-3">
-            <Chips options={VIEWS} value={view} onChange={(v) => pick('tasks.view', v, setView)} className="min-w-0 flex-1 pr-2 [mask-image:linear-gradient(to_right,black_88%,transparent)]" />
-            <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
-              <IconButton icon={Search} label="Search tasks" size="sm" onClick={() => setSearching(true)} />
+            <button
+              type="button"
+              onClick={() => setViewSheet(true)}
+              className="pressable flex h-9 min-w-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[14px] font-semibold"
+              aria-haspopup="dialog"
+              data-testid="task-view"
+            >
+              <span className="truncate">{VIEWS.find((v) => v.value === view)?.label || 'All tasks'}</span>
+              <span className="text-[12px] font-medium text-text-3 tabular-nums">{view === 'trash' ? '' : viewCounts[view] ?? ''}</span>
+              <Icon as={ChevronDown} size={15} className="shrink-0 text-text-2" />
+            </button>
+            <span className="flex-1" />
+            <div className="flex shrink-0 items-center">
               <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} size="sm" onClick={() => setSortSheet(true)} />
               <IconButton icon={CalendarRange} label="Planning: sprints, milestones, time report, design reviews" size="sm" onClick={() => nav.push('planning')} />
               <IconButton
@@ -220,7 +372,7 @@ export function TasksScreen() {
               />
             </div>
           </div>
-        )}
+        }
       </TabHeader>
       <Body tab="tasks" onRefresh={() => invalidate('tasks')}>
         {view === 'trash' ? (
@@ -255,7 +407,17 @@ export function TasksScreen() {
           ))
         )}
       </Body>
-      <Fab icon={Plus} label="New task" side="left" onClick={() => setNewMenu(true)} />
+      <Fab icon={Plus} label="New task" onClick={() => setNewMenu(true)} />
+      <ActionSheet
+        open={viewSheet}
+        onClose={() => setViewSheet(false)}
+        title="Show"
+        actions={VIEWS.map((v) => ({
+          label: `${v.label}${v.value === view ? '  ✓' : ''}`,
+          hint: viewCounts[v.value] != null ? `${viewCounts[v.value]} ${viewCounts[v.value] === 1 ? 'task' : 'tasks'}` : 'Deleted tasks you can restore',
+          onSelect: () => pick('tasks.view', v.value, setView),
+        }))}
+      />
       <ActionSheet
         open={sortSheet}
         onClose={() => setSortSheet(false)}

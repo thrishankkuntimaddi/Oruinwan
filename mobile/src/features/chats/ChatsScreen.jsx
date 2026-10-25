@@ -140,7 +140,6 @@ function ChatMenu({ row, prefs, onClose }) {
   const [busy, setBusy] = useState(false);
   if (!row && !confirm) return null;
   const conv = row ? { kind, id: item.id } : null;
-  const isDm = kind === 'dm';
   const ws = useSession.getState().workspaceId;
 
   const toggleMute = async () => {

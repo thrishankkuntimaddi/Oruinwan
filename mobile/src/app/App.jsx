@@ -42,6 +42,8 @@ export function App() {
   const status = useSession((s) => s.status);
   const needsPassword = useSession((s) => s.needsPassword);
   const pickingWorkspace = useSession((s) => s.pickingWorkspace);
+  // From the header, the workspace list opens over the open workspace (calls keep running).
+  const hasWorkspace = useSession((s) => Boolean(s.workspaceId));
   const creatingWorkspace = useSession((s) => s.creatingWorkspace);
   const joinToken = useSession((s) => s.joinToken);
 
@@ -150,7 +152,12 @@ export function App() {
 
   return (
     <>
-      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
+      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace && !hasWorkspace ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
+      {status === 'signed-in' && pickingWorkspace && hasWorkspace && !creatingWorkspace && !joinToken && (
+        <div className="animate-fade-in fixed inset-0 z-[55] bg-bg">
+          <WorkspacePicker />
+        </div>
+      )}
       {status === 'signed-in' && <MediaHost />}
       {status === 'signed-in' && <ReminderLayer />}
       {/* Free-plan limits: the upgrade sheet for any refused addition (features/plan). */}

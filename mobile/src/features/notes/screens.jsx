@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Search, Star, Users, X, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
+  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -10,7 +10,7 @@ import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { NOTE_TYPES, NOTE_TYPE_OPTIONS } from '../../data/constants.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { IconButton, Button, Fab } from '../../ui/Button.jsx';
-import { Chips, SearchField, Segmented } from '../../ui/Controls.jsx';
+import { Chips, Segmented } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -95,10 +95,9 @@ function NotesList({ section }) {
   const ws = useSession((s) => s.workspaceId);
   const { data, loading } = useNotes();
   const directory = useDirectory();
-  const [query, setQuery] = useState('');
+  const query = '';
   const [filter, setFilter] = useState('all');
   const [templates, setTemplates] = useState(false);
-  const [searching, setSearching] = useState(false);
 
   const notes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -137,27 +136,8 @@ function NotesList({ section }) {
       <TabHeader title="Notes">
         <div className="space-y-2.5 pb-3">
           {section}
-          {searching ? (
-            <div className="flex items-center gap-2 pr-2 pl-4">
-              <SearchField value={query} onChange={setQuery} placeholder="Search notes" className="flex-1" autoFocus />
-              <IconButton
-                icon={X}
-                label="Close search"
-                size="sm"
-                onClick={() => {
-                  setSearching(false);
-                  setQuery('');
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center pr-2">
-              <Chips options={FILTERS} value={filter} onChange={setFilter} className="min-w-0 flex-1 pr-2 [mask-image:linear-gradient(to_right,black_88%,transparent)]" />
-              <div className="flex shrink-0 items-center border-l border-line-soft pl-1">
-                <IconButton icon={Search} label="Search notes" size="sm" onClick={() => setSearching(true)} />
-              </div>
-            </div>
-          )}
+          {/* Searching is the header's search, which lists notes first on this tab. */}
+          <Chips options={FILTERS} value={filter} onChange={setFilter} />
         </div>
       </TabHeader>
       <Body tab="notes" onRefresh={() => invalidate('notes')}>

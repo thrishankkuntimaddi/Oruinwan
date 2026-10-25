@@ -1,11 +1,14 @@
 // Screen scaffolding: a header (large title on tab roots, compact with back on pushed
 // screens) and a scroll body that remembers its position.
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNav } from '../app/nav.js';
 import { usePane } from '../app/layout.js';
 import { cx } from './cx.js';
 import { IconButton } from './Button.jsx';
+
+/** True for a screen shown as a tab's main screen (Files, Knowledge or Huddles on the tab bar): no Back. */
+export const TabRootContext = createContext(false);
 
 export function Screen({ children, className }) {
   return <div className={cx('flex h-full flex-col bg-bg', className)}>{children}</div>;
@@ -15,7 +18,8 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
   const pop = useNav((s) => s.pop);
   // The first screen in a wide window's detail pane sits beside its list: nothing to go back to.
   const { split, depth } = usePane();
-  const showBack = back && !(split && depth === 0 && !onBack);
+  const tabRoot = useContext(TabRootContext);
+  const showBack = back && !tabRoot && !(split && depth === 0 && !onBack);
   return (
     <header className={cx('glass-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">

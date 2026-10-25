@@ -65,7 +65,7 @@ export function ToastHost() {
     () =>
       on('toast', (t) => {
         setToasts((list) => [...list.slice(-2), t]);
-        setTimeout(() => setToasts((list) => list.filter((x) => x.id !== t.id)), 3200);
+        setTimeout(() => setToasts((list) => list.filter((x) => x.id !== t.id)), t.action ? 5000 : 3200);
       }),
     [],
   );
@@ -82,6 +82,18 @@ export function ToastHost() {
         >
           <Icon as={TONE_ICON[t.tone] || Info} size="sm" className={TONE_CLASS[t.tone] || TONE_CLASS.neutral} />
           <span>{t.message}</span>
+          {t.action && (
+            <button
+              type="button"
+              className="pointer-events-auto -my-1 ml-1 rounded-lg px-2 py-1 font-semibold text-accent-ink active:bg-surface-2"
+              onClick={() => {
+                setToasts((list) => list.filter((x) => x.id !== t.id));
+                t.action.onPress?.();
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
         </div>
       ))}
     </div>,

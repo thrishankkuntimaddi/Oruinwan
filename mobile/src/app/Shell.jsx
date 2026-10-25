@@ -9,7 +9,7 @@
 //    screen, and its back button returns to the tab it was opened from.
 import { Suspense, useEffect, useState } from 'react';
 import { Bell, FileText, House, MessagesSquare, SquareCheckBig } from 'lucide-react';
-import { BAR_TABS, TABS, markPane, useNav } from './nav.js';
+import { TABS, markPane, useNav } from './nav.js';
 import { TAB_ROOTS, ROUTES } from './routes.js';
 import { PaneContext, SPLIT_TABS, useListWidth, useSplit, useWide } from './layout.js';
 import { TabBar } from './TabBar.jsx';
@@ -25,6 +25,10 @@ import { setBadgeCount } from '../native/index.js';
 import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
 import { SHORTCUTS, shortcutFor } from './shortcuts.js';
 import { useOutbox } from '../data/outbox.js';
+import { SidePanel, useEdgeSwipe } from './SidePanel.jsx';
+import { AiFab } from './AiFab.jsx';
+import { EXTRA_TABS, useTabBar } from './tabBarPrefs.js';
+import { TabRootContext } from '../ui/Screen.jsx';
 
 /** A small pill while there is no connection: what you see is saved data; sends are queued. */
 function OfflinePill() {
@@ -72,7 +76,15 @@ function Missing({ name }) {
 function TabRoot({ tab }) {
   if (tab === 'home') return <HomeScreen />;
   const Comp = TAB_ROOTS[tab];
-  return Comp ? <Comp /> : <Missing name={tab} />;
+  if (!Comp) return <Missing name={tab} />;
+  // Files, Knowledge and Huddles can be tabs too: their screens drop the Back button there.
+  return EXTRA_TABS.includes(tab) ? (
+    <TabRootContext.Provider value>
+      <Comp />
+    </TabRootContext.Provider>
+  ) : (
+    <Comp />
+  );
 }
 
 /** A tab's pushed screens, each covering the one below it. */
@@ -193,6 +205,7 @@ function SplitTab({ tab, stack }) {
     <div className="flex h-full">
       <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
         <Root tab={tab} />
+        <AiFab tab={tab} />
         <TabBar />
       </section>
       <DetailPane tab={tab} stack={stack} />
@@ -221,7 +234,7 @@ export function Shell() {
   // Hardware keyboard shortcuts (app/shortcuts.js): ⌘K search, ⌘1-5 tabs, ⌘[ back, ⌘, settings.
   const [help, setHelp] = useState(false);
   useEffect(() => {
-    const tabs = BAR_TABS.filter((t) => t !== 'notes' || flags.notes);
+    const tabs = useTabBar.getState().items.filter((t) => t !== 'notes' || flags.notes);
     const onKey = (e) => {
       const action = shortcutFor(e, tabs);
       if (!action) return;
@@ -242,6 +255,8 @@ export function Shell() {
   }, [wide, flags.ai, flags.notes]);
 
   const stack = stacks[tab];
+  // Swipe in from the right edge on a tab's main screen: the side panel (phones and tablets).
+  useEdgeSwipe(!wide && stack.length === 0 && tab !== 'ai');
 
   if (wide) {
     return (
@@ -273,6 +288,7 @@ export function Shell() {
         <UnreadBadge />
         <HuddleLayer />
         <OfflinePill />
+        <SidePanel />
         <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
       </div>
     );
@@ -286,10 +302,12 @@ export function Shell() {
           <Stack stack={stacks[t]} split={false} />
         </div>
       ))}
+      <AiFab tab={tab} hidden={stack.length > 0} />
       {stack.length === 0 && tab !== 'ai' && <TabBar />}
       <UnreadBadge />
       <HuddleLayer />
       <OfflinePill />
+      <SidePanel />
       <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
     </div>
   );

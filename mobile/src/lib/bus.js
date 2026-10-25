@@ -17,6 +17,7 @@ export function emit(event, payload) {
   }
 }
 
-export function toast(message, tone = 'neutral') {
-  emit('toast', { message, tone, id: Math.random().toString(36).slice(2) });
+/** A short message at the bottom. `action`: { label, onPress } adds a button (Undo). */
+export function toast(message, tone = 'neutral', { action } = {}) {
+  emit('toast', { message, tone, action, id: Math.random().toString(36).slice(2) });
 }

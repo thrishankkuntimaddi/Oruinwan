@@ -78,9 +78,10 @@ describe('Notes tab: Notes · Roadmap', () => {
 
 describe('Tasks tab', () => {
   it('uses the web view names and lists the Trash', async () => {
-    expect(VIEWS.map((v) => v.label)).toEqual(['My tasks', 'Incoming', 'Given', 'All tasks', 'Completed', 'Trash']);
+    expect(VIEWS.map((v) => v.label)).toEqual(['My tasks', 'Incoming', 'Given', 'All tasks', 'Blocked', 'Completed', 'Trash']);
     render(<TasksScreen />);
-    fireEvent.click(screen.getByRole('button', { name: 'Trash' }));
+    fireEvent.click(screen.getByTestId('task-view'));
+    fireEvent.click(await screen.findByText(/^Trash/));
     fireEvent.click(await screen.findByText('Old plan'));
     fireEvent.click(await screen.findByRole('button', { name: 'Restore' }));
     await waitFor(() => expect(fake.restoreTask).toHaveBeenCalledWith('t9'));

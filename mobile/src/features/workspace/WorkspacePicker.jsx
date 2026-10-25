@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Link2, Plus } from 'lucide-react';
+import { ChevronRight, Link2, Plus, X } from 'lucide-react';
 import { useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
 import { Badge } from '../../ui/Feedback.jsx';
@@ -18,13 +18,29 @@ export function WorkspacePicker() {
   const openCreate = useSession((s) => s.openCreateWorkspace);
   const firstName = String(user?.name || user?.username || '').split(' ')[0];
   const [joinLink, setJoinLink] = useState(false);
+  // Opened from the header while a workspace is open: offer the way back to it.
+  const currentId = useSession((s) => s.workspaceId);
+  const current = workspaces.find((w) => w.id === currentId);
 
   // Most active first.
   const sorted = [...workspaces].sort((a, b) => (b.unread || 0) - (a.unread || 0));
 
   return (
     <div className="flex h-full flex-col bg-bg pt-safe pb-safe">
-      <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10 pt-8">
+      {current && (
+        <div className="mx-auto flex w-full max-w-md items-center justify-end px-3 pt-2">
+          <button
+            type="button"
+            onClick={() => useSession.setState({ pickingWorkspace: false })}
+            className="pressable flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[14px] font-medium text-text-2"
+            data-testid="workspace-picker-close"
+          >
+            Back to {current.name}
+            <Icon as={X} size={16} />
+          </button>
+        </div>
+      )}
+      <div className={`mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10 ${current ? 'pt-3' : 'pt-8'}`}>
         <h1 className="text-[28px] font-bold tracking-tight">Welcome back{firstName ? `, ${firstName}` : ''}</h1>
         <p className="mt-1.5 text-[15px] text-text-2">
           {sorted.length > 1 ? 'You belong to these workspaces. Pick one to open.' : 'Here is your workspace.'}

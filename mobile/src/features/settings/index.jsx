@@ -64,14 +64,14 @@ const External = <Icon as={ExternalLink} size="sm" className="text-text-3" />;
 
 // ---------------------------------------------------------------- Main
 
-export function SettingsScreen() {
+export function SettingsScreen({ confirmSignOut = false }) {
   const user = useSession((s) => s.user);
   const workspace = useWorkspace();
   const update = useUpdate((s) => s.status);
   const current = useUpdate((s) => s.currentVersion);
   const labs = useFlags((s) => s.flags.labs);
   const [statusSheet, setStatusSheet] = useState(false);
-  const [signOut, setSignOut] = useState(false);
+  const [signOut, setSignOut] = useState(confirmSignOut);
   const [query, setQuery] = useState('');
   const results = searchSettings(query);
 

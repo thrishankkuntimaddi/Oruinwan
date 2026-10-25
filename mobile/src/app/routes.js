@@ -20,6 +20,10 @@ export const TAB_ROOTS = {
   tasks: pick(tasks, 'TasksScreen'),
   notes: pick(notes, 'NotesScreen'),
   activity: pick(more, 'ActivityScreen'),
+  // Can be put on the tab bar instead of a default tab (tab bar drawer → Edit).
+  files: pick(more, 'FilesScreen'),
+  knowledge: pick(knowledge, 'KnowledgeScreen'),
+  huddles: pick(() => import('../features/huddles/HuddlesScreen.jsx'), 'HuddlesScreen'),
   // Not on the tab bar: opened from the AI button in every tab's header.
   ai: pick(() => import('../features/ai/AiScreen.jsx'), 'AiScreen'),
 };

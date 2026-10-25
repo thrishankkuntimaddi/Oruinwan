@@ -4,12 +4,13 @@ import { create } from 'zustand';
 import { uid } from '../lib/id.js';
 import { tap } from '../native/index.js';
 import { isSplit, useSplit } from './layout.js';
+import { EXTRA_TABS } from './tabBarPrefs.js';
 
 // The bottom tab bar, in order. Activity is the notifications list.
 export const BAR_TABS = ['home', 'chats', 'tasks', 'notes', 'activity'];
 // Every stack. AI is not on the tab bar: it opens from the AI button in each tab's header (and
 // the sidebar on wide windows), covers the tab bar, and its back button returns to `prev`.
-export const TABS = [...BAR_TABS, 'ai'];
+export const TABS = [...BAR_TABS, ...EXTRA_TABS, 'ai'];
 
 const emptyStacks = () => Object.fromEntries(TABS.map((t) => [t, []]));
 

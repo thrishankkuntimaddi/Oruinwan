@@ -79,10 +79,34 @@ describe('tabs', () => {
     expect(TABS).toContain('ai');
     render(<TabBar />);
     const bar = screen.getByRole('navigation', { name: 'Main' });
-    const labels = within(bar).getAllByRole('button').map((b) => b.textContent.replace(/\d+/g, '').trim());
+    const labels = [...bar.querySelectorAll('[data-tour]')].map((b) => b.textContent.replace(/\d+/g, '').trim());
     expect(labels).toEqual(['Home', 'Chats', 'Tasks', 'Notes', 'Activity']);
     // Unread notifications badge the Activity tab.
     expect(await within(bar).findByRole('button', { name: 'Activity, 1 new' })).toBeTruthy();
+  });
+
+  it('the handle above the bar opens the drawer with more places; Edit puts Files on the bar', async () => {
+    const { setBarItems } = await import('./tabBarPrefs.js');
+    render(<TabBar />);
+    const handle = screen.getByTestId('tabbar-handle');
+    expect(handle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.pointerDown(handle, { clientY: 700 });
+    fireEvent.pointerUp(handle, { clientY: 700 });
+    expect(handle.getAttribute('aria-expanded')).toBe('true');
+    const drawer = screen.getByTestId('tabbar-drawer');
+    for (const name of ['Files', 'Knowledge', 'Huddles', 'Automations', 'Integrations', 'Settings']) expect(within(drawer).getByText(name)).toBeTruthy();
+    fireEvent.click(within(drawer).getByText('Files'));
+    expect(useNav.getState().tab).toBe('files');
+    // Edit: swap Activity for Files.
+    fireEvent.pointerDown(handle, { clientY: 700 });
+    fireEvent.pointerUp(handle, { clientY: 700 });
+    fireEvent.click(screen.getByTestId('tabbar-edit'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Activity' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Files' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const bar = screen.getByRole('navigation', { name: 'Main' });
+    expect([...bar.querySelectorAll('[data-tour]')].map((b) => b.dataset.tour)).toEqual(['home', 'chats', 'tasks', 'notes', 'files']);
+    setBarItems(['home', 'chats', 'tasks', 'notes', 'activity']);
   });
 
   it('AI opens over any tab, and Back (or the Android back button) returns to that tab', () => {
@@ -106,13 +130,43 @@ describe('tabs', () => {
 });
 
 describe('tab header', () => {
-  it('has AI, Search and Profile on the right, and no notifications bell', () => {
+  it('has Search and Profile on the right; AI is the floating button, not in the header', () => {
     render(<TabHeader title="Chats" />);
     const buttons = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'));
-    expect(buttons.slice(-3)).toEqual(['Oruinwan AI', 'Search', 'Profile and settings']);
+    expect(buttons.slice(-2)).toEqual(['Search', 'Profile and settings']);
+    expect(screen.queryByRole('button', { name: 'Oruinwan AI' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Notifications/ })).toBeNull();
+  });
+
+  it('Search grows in the header and searches the tab you are on, without leaving it', async () => {
+    useNav.getState().setTab('chats');
+    render(<TabHeader title="Chats" />);
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(useNav.getState().stacks.home.at(-1).name).toBe('search');
+    const input = screen.getByRole('searchbox', { name: 'Search chats and people' });
+    expect(useNav.getState().stacks.chats).toEqual([]);
+    fireEvent.change(input, { target: { value: 'be' } });
+    const panel = await screen.findByRole('region', { name: 'Search results' });
+    expect(await within(panel).findByText('Ben Carter')).toBeTruthy();
+    // See all results opens the full search with the same words.
+    fireEvent.click(await within(panel).findByTestId('quick-search-all'));
+    expect(useNav.getState().stacks.chats.at(-1)).toMatchObject({ name: 'search', params: { q: 'be' } });
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+
+  it('Cancel closes the search', () => {
+    render(<TabHeader title="Tasks" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(screen.getByRole('searchbox', { name: 'Search tasks' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+
+  it('the AI button is small above + on Chats, Tasks and Notes and full size on Home and Activity', async () => {
+    const { AiFab } = await import('./AiFab.jsx');
+    const { rerender } = render(<AiFab tab="chats" />);
+    expect(screen.getByRole('button', { name: 'Oruinwan AI' }).dataset.size).toBe('small');
+    rerender(<AiFab tab="home" />);
+    expect(screen.getByRole('button', { name: 'Oruinwan AI' }).dataset.size).toBe('big');
     fireEvent.click(screen.getByRole('button', { name: 'Oruinwan AI' }));
     expect(useNav.getState().tab).toBe('ai');
   });
@@ -193,11 +247,14 @@ describe('Tasks', () => {
     render(<TasksScreen />);
     expect(await screen.findByText('Fix login bug')).toBeTruthy();
     expect(screen.getByText('Write launch post')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Search tasks' }));
-    fireEvent.change(screen.getByPlaceholderText('Search tasks'), { target: { value: 'launch' } });
+    // One search (the header's); the view is a dropdown, and New task sits bottom right.
+    expect(screen.queryByRole('button', { name: 'Search tasks' })).toBeNull();
+    expect(screen.getByTestId('task-view').textContent).toContain('All tasks');
+    fireEvent.click(screen.getByTestId('task-view'));
+    fireEvent.click(await screen.findByText(/^Completed/));
+    expect(await screen.findByText('Old thing')).toBeTruthy();
     expect(screen.queryByText('Fix login bug')).toBeNull();
-    expect(screen.getByText('Write launch post')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'New task' }).className).toContain('left-4');
+    expect(screen.getByRole('button', { name: 'New task' }).className).toContain('right-4');
   });
 });
 
