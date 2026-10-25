@@ -2,7 +2,7 @@
 // Upcoming · Past (scheduled meetings and quick huddles alike; docs/api/meetings-unified.md →
 // Lists). Rows open the meeting page. Also the controls a conversation shows (start / join).
 import { useEffect, useState } from 'react';
-import { CalendarClock, CalendarPlus, Headphones, Phone, Radio, Video } from 'lucide-react';
+import { CalendarClock, CalendarPlus, Headphones, Phone, Radio } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
 import { invalidate, useQuery } from '../../data/query.js';
@@ -240,15 +240,7 @@ export function HuddleButton({ scope, title }) {
         data-testid="conversation-huddle"
         onClick={() => run(() => (liveHere ? joinHuddle(liveHere.huddleId, scope, title) : startHuddle(scope, title)))}
       />
-      {!inHere && !liveHere && (
-        <IconButton
-          icon={Video}
-          label="Start a video huddle"
-          disabled={connecting}
-          data-testid="conversation-video-huddle"
-          onClick={() => run(() => startHuddle(scope, title, { video: true }))}
-        />
-      )}
+      {/* One huddle button; video is in the ⋮ menu and can be turned on during the call. */}
     </>
   );
 }

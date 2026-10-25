@@ -27,6 +27,8 @@ import { applyFormat, insertAt, insertLink } from './composerFormat.js';
 import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
 import { SWIPE_TRIGGER, useRowGestures } from './messageGestures.js';
 import { ScheduleSheet } from './ScheduleSheet.jsx';
+import { clearDraft, draftFor, saveDraft } from './drafts.js';
+import { useSession } from '../../data/session.js';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -677,9 +679,11 @@ export function MessageActions({
 
 export function Composer({
   placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, editText = '', onCancelEdit, aiMentions = false, assistants,
-  mentions = null, recent = null, onVoice = null, quote = null, onCancelQuote = null, onSchedule = null, directory = null, me = null, scheduleRef = null,
+  mentions = null, recent = null, onVoice = null, quote = null, onCancelQuote = null, onSchedule = null, directory = null, me = null, scheduleRef = null, draftConv = null,
 }) {
-  const [text, setText] = useState(initial);
+  // Unsent text is kept per conversation on this device (Drafts & sent lists it).
+  const draftWs = useSession((s) => s.workspaceId);
+  const [text, setText] = useState(() => initial || (draftConv ? draftFor(draftWs, draftConv) : ''));
   const [caret, setCaret] = useState(initial.length);
   const ref = useRef(null);
   // Where the caret goes after the next render (set when a mention is completed), so typing continues after it.
@@ -750,9 +754,15 @@ export function Composer({
   // again after it is sent. Editing a message swaps the composer to that message's text and puts
   // back what was being typed before when the edit ends (saved or cancelled) — not the draft.
   useEffect(() => {
+    if (!initial && draftConv) return; // keep the saved draft
     setText(initial);
     if (initial) setTimeout(() => ref.current?.focus(), 50);
-  }, [initial]);
+  }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!draftConv || editing) return undefined;
+    const t = setTimeout(() => saveDraft(draftWs, draftConv, text), 400);
+    return () => clearTimeout(t);
+  }, [text, draftWs, draftConv?.kind, draftConv?.id, editing]); // eslint-disable-line react-hooks/exhaustive-deps
   const beforeEdit = useRef(null);
   const latest = useRef(text);
   latest.current = text;
@@ -791,6 +801,7 @@ export function Composer({
     onSend(value);
     setText('');
     setCaret(0);
+    if (draftConv) clearDraft(draftWs, draftConv);
     tap('light');
   };
   // Send later: the text goes out at the picked time (long-press Send, or + → Send later).
@@ -981,6 +992,7 @@ export function Composer({
           if (ok !== false) {
             setText('');
             setCaret(0);
+            if (draftConv) clearDraft(draftWs, draftConv);
           }
         }}
       />

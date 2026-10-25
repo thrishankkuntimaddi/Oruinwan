@@ -25,7 +25,7 @@ import { setBadgeCount } from '../native/index.js';
 import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
 import { SHORTCUTS, shortcutFor } from './shortcuts.js';
 import { useOutbox } from '../data/outbox.js';
-import { SidePanel, useEdgeSwipe } from './SidePanel.jsx';
+import { SidePanel, useEdgeBack, useEdgeSwipe } from './SidePanel.jsx';
 import { AiFab } from './AiFab.jsx';
 import { EXTRA_TABS, useTabBar } from './tabBarPrefs.js';
 import { TabRootContext } from '../ui/Screen.jsx';
@@ -213,6 +213,8 @@ function SplitTab({ tab, stack }) {
   );
 }
 
+const goBack = () => useNav.getState().back();
+
 export function Shell() {
   const tab = useNav((s) => s.tab);
   const stacks = useNav((s) => s.stacks);
@@ -257,6 +259,8 @@ export function Shell() {
   const stack = stacks[tab];
   // Swipe in from the right edge on a tab's main screen: the side panel (phones and tablets).
   useEdgeSwipe(!wide && stack.length === 0 && tab !== 'ai');
+  // …and from the left edge on a pushed screen (or AI) to go back.
+  useEdgeBack(!wide && (stack.length > 0 || tab === 'ai'), goBack);
 
   if (wide) {
     return (

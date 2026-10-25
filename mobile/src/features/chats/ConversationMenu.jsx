@@ -306,7 +306,7 @@ const CONFIRM = {
  * status (useConversationStatus), items (the loaded messages, for search), onJump(message),
  * onPoll (null when polls can't be created here).
  */
-export function ConversationMenu({ open, onClose, conv, meta, label, status, items, onJump, onPoll }) {
+export function ConversationMenu({ open, onClose, conv, meta, label, status, items, onJump, onPoll, mode = 'actions' }) {
   const directory = useDirectory();
   const huddles = useHuddlesAvailable();
   const threadsOn = useFlag('threads');
@@ -326,7 +326,7 @@ export function ConversationMenu({ open, onClose, conv, meta, label, status, ite
     huddles,
     polls: Boolean(onPoll),
     threads: threadsOn && Boolean(api().channelThreads),
-  });
+  }).filter((item) => item.section === mode);
 
   // Sheets open after the menu's exit animation, so the two never stack.
   const later = (fn) => setTimeout(fn, 220);

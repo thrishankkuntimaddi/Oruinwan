@@ -40,6 +40,7 @@ export const ROUTES = {
   saved: pick(chats, 'SavedScreen'),
   unread: pick(chats, 'UnreadScreen'),
   archivedChats: pick(chats, 'ArchivedChatsScreen'),
+  outgoing: pick(chats, 'OutgoingScreen'),
   task: pick(tasks, 'TaskScreen'),
   taskDiscussion: pick(tasks, 'TaskDiscussionScreen'),
   planning: pick(tasks, 'PlanningScreen'),

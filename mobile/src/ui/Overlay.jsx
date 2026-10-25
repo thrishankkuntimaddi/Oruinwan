@@ -42,13 +42,62 @@ export function usePresence(open, ms = 200) {
   return { mounted, closing };
 }
 
+/**
+ * The bar at the top of a sheet is a handle: drag it (or the title) down to close the sheet,
+ * up to make it taller. Dragging down from the top of the content closes it too.
+ */
+function useSheetDrag(onClose) {
+  const [dy, setDy] = useState(0);
+  const [tall, setTall] = useState(false);
+  const drag = useRef(null);
+  const start = (e, fromContent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const scroller = fromContent ? e.currentTarget : null;
+    if (scroller && scroller.scrollTop > 0) return;
+    drag.current = { y: e.clientY, fromContent, active: !fromContent, id: e.pointerId, el: e.currentTarget };
+  };
+  const move = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const delta = e.clientY - d.y;
+    if (!d.active) {
+      if (delta > 8) {
+        d.active = true;
+        try {
+          d.el.setPointerCapture?.(d.id);
+        } catch {
+          /* not capturable */
+        }
+      } else if (delta < -4) {
+        drag.current = null;
+        return;
+      } else return;
+    }
+    setDy(delta);
+  };
+  const end = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d?.active) return;
+    if (dy > 90) onClose?.();
+    else if (dy < -50 && !d.fromContent) setTall(true);
+    setDy(0);
+  };
+  const handle = { onPointerDown: (e) => start(e, false), onPointerMove: move, onPointerUp: end, onPointerCancel: end };
+  const content = { onPointerDown: (e) => start(e, true), onPointerMove: move, onPointerUp: end, onPointerCancel: end };
+  return { dy: Math.max(dy, -60), tall, setTall, handle, content, dragging: Boolean(drag.current?.active) };
+}
+
 export function Sheet({ open, onClose, title, children, footer, className, full = false }) {
   useOverlay(open, onClose);
   const { mounted, closing } = usePresence(open);
+  const drag = useSheetDrag(onClose);
   useEffect(() => {
     if (open) hideKeyboard();
-  }, [open]);
+    else drag.setTall(false);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!mounted) return null;
+  const offset = drag.dy > 0 ? drag.dy : 0;
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center lg:p-8" role="presentation">
       <button
@@ -57,6 +106,7 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
         tabIndex={-1}
         onClick={onClose}
         className={cx('scrim absolute inset-0 transition-opacity duration-200', closing ? 'opacity-0' : 'animate-fade-in')}
+        style={offset ? { opacity: Math.max(0.2, 1 - offset / 400) } : undefined}
       />
       <div
         role="dialog"
@@ -65,18 +115,25 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
         className={cx(
           'glass-strong relative flex max-h-[92%] flex-col rounded-t-3xl border-t pb-safe',
           'lg:max-h-[85vh] lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:pb-2',
-          'transition-[transform,opacity] duration-200',
+          'transition-[transform,opacity,height] duration-200',
           closing ? 'translate-y-full lg:translate-y-0 lg:scale-95 lg:opacity-0' : 'animate-sheet-in',
-          full && 'h-[92%] lg:h-[80vh]',
+          (full || drag.tall) && 'h-[92%] lg:h-[80vh]',
           className,
         )}
-        style={{ boxShadow: 'var(--glass-edge), var(--shadow-sheet)' }}
+        style={{
+          boxShadow: 'var(--glass-edge), var(--shadow-sheet)',
+          ...(offset && !closing ? { transform: `translateY(${offset}px)`, transition: 'none' } : {}),
+        }}
       >
-        <div className="flex justify-center pt-2.5 pb-1 lg:pt-2">
-          <span className="h-1 w-10 rounded-full bg-text-3/40 lg:hidden" />
+        <div {...drag.handle} className="touch-none select-none lg:touch-auto" data-testid="sheet-handle">
+          <div className="flex justify-center pt-2.5 pb-1 lg:pt-2">
+            <span className="h-1 w-10 rounded-full bg-text-3/40 lg:hidden" />
+          </div>
+          {title && <h2 className="px-5 pt-1 pb-3 text-[17px] font-semibold lg:pt-3">{title}</h2>}
         </div>
-        {title && <h2 className="px-5 pt-1 pb-3 text-[17px] font-semibold lg:pt-3">{title}</h2>}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+        <div {...drag.content} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
         {footer && <div className="border-t border-[var(--glass-border)] px-4 pt-3 pb-3">{footer}</div>}
       </div>
     </div>,

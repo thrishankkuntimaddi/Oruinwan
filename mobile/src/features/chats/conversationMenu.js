@@ -1,44 +1,46 @@
-// What a conversation's ⋮ menu offers: the same items as the web client's chat header
-// (client/src/features/messaging/chatWindowComp/header/header.jsx), in its order.
-//   DM:      voice call, video call, search, reminders, pinned, saved, view profile, mute, block, clear, delete
-//   Group:   voice call, video call, search, reminders, pinned, saved, group info, mute, clear, delete
-//   Channel: huddle, poll, search, threads, reminders, pinned, saved, channel info, members, mute
+// A conversation's options, split in two so nothing appears twice:
+//  - section 'hub' (tap the conversation's name): what's in it and how it notifies you —
+//    channel/group info or profile, members, threads, pinned, saved, reminders, notifications.
+//  - section 'actions' (the ⋮ button): things you do — search, poll, video huddle, block,
+//    clear, delete. The header's own huddle button starts a voice huddle.
 
 /**
  * opts: { kind: 'channel' | 'dm', isGroup, isAgent, muted, blocked, huddles (calls available),
  * polls (can create one here), threads (threads are on) }.
- * Returns [{ id, label, danger?, confirm? }]. `confirm` marks actions that ask first.
+ * Returns [{ id, label, section, danger?, confirm? }]. `confirm` marks actions that ask first.
  */
 export function conversationMenuItems(opts = {}) {
   const { kind, isGroup = false, isAgent = false, muted = false, blocked = false, huddles = false, polls = false, threads = true } = opts;
-  const mute = { id: 'mute', label: muted ? 'Unmute notifications' : 'Mute notifications' };
-  const common = [
-    { id: 'search', label: 'Search in conversation' },
-    kind === 'channel' && threads && { id: 'threads', label: 'Threads' },
-    { id: 'reminders', label: 'Reminders' },
-    { id: 'pinned', label: 'Pinned messages' },
-    { id: 'saved', label: 'Saved messages' },
+  const hub = (item) => ({ ...item, section: 'hub' });
+  const act = (item) => ({ ...item, section: 'actions' });
+  const mute = hub({ id: 'mute', label: muted ? 'Unmute notifications' : 'Mute notifications' });
+  const video = huddles && !isAgent && act({ id: 'video', label: 'Start a video huddle' });
+  const tools = [
+    hub({ id: 'reminders', label: 'Reminders' }),
+    hub({ id: 'pinned', label: 'Pinned messages' }),
+    hub({ id: 'saved', label: 'Saved messages' }),
   ];
   if (kind === 'channel') {
     return [
-      huddles && { id: 'huddle', label: 'Start huddle' },
-      polls && { id: 'poll', label: 'Create poll' },
-      ...common,
-      { id: 'channelInfo', label: 'Channel info' },
-      { id: 'members', label: 'Channel members' },
+      hub({ id: 'channelInfo', label: 'Channel info' }),
+      hub({ id: 'members', label: 'Channel members' }),
+      threads && hub({ id: 'threads', label: 'Threads' }),
+      ...tools,
       mute,
+      act({ id: 'search', label: 'Search in conversation' }),
+      polls && act({ id: 'poll', label: 'Create poll' }),
+      video,
     ].filter(Boolean);
   }
-  const calls = huddles && !isAgent;
   return [
-    calls && { id: 'voice', label: 'Voice call' },
-    calls && { id: 'video', label: 'Video call' },
-    ...common,
-    isGroup ? { id: 'groupInfo', label: 'Group info' } : !isAgent && { id: 'profile', label: 'View profile' },
+    isGroup ? hub({ id: 'groupInfo', label: 'Group info' }) : !isAgent && hub({ id: 'profile', label: 'View profile' }),
+    ...tools,
     mute,
-    !isGroup && !isAgent && { id: 'block', label: blocked ? 'Unblock user' : 'Block user', confirm: !blocked },
-    { id: 'clear', label: 'Clear chat', danger: true, confirm: true },
-    { id: 'delete', label: 'Delete chat', danger: true, confirm: true },
+    act({ id: 'search', label: 'Search in conversation' }),
+    video,
+    !isGroup && !isAgent && act({ id: 'block', label: blocked ? 'Unblock user' : 'Block user', confirm: !blocked }),
+    act({ id: 'clear', label: 'Clear chat', danger: true, confirm: true }),
+    act({ id: 'delete', label: 'Delete chat', danger: true, confirm: true }),
   ].filter(Boolean);
 }
 

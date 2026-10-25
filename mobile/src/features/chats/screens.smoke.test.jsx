@@ -150,13 +150,18 @@ describe.each(Object.keys(LAYOUTS))('chat screens (%s layout)', (layout) => {
     expect(await screen.findByText(/^Resolved/)).toBeTruthy();
   });
 
-  it('offers the web header tools in the channel ⋮ menu: pinned, threads, mute', async () => {
+  it('tapping the channel name lists what is in it; ⋮ has the actions; nothing twice', async () => {
     render(<ConversationScreen kind="channel" id="c1" />);
     await screen.findByTestId('poll-card');
     fireEvent.click(screen.getByTestId('conversation-menu'));
-    for (const label of ['Create poll', 'Search in conversation', 'Threads', 'Reminders', 'Pinned messages', 'Saved messages', 'Channel info', 'Channel members', 'Mute notifications']) {
-      expect(screen.getByText(label)).toBeTruthy();
+    for (const label of ['Create poll', 'Search in conversation']) expect(screen.getByText(label)).toBeTruthy();
+    expect(screen.queryByText('Pinned messages')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(screen.getByTestId('conversation-hub'));
+    for (const label of ['Threads', 'Reminders', 'Pinned messages', 'Saved messages', 'Channel info', 'Channel members', 'Mute notifications']) {
+      expect(await screen.findByText(label)).toBeTruthy();
     }
+    expect(screen.queryByText('Create poll')).toBeNull();
     fireEvent.click(screen.getByText('Pinned messages'));
     expect(await screen.findByText('Pinned hello')).toBeTruthy();
     expect(fake.pinnedMessages).toHaveBeenCalledWith({ kind: 'channel', id: 'c1' });
@@ -165,10 +170,10 @@ describe.each(Object.keys(LAYOUTS))('chat screens (%s layout)', (layout) => {
   it('mutes a channel and lists its threads from the menu', async () => {
     render(<ConversationScreen kind="channel" id="c1" />);
     await screen.findByTestId('poll-card');
-    fireEvent.click(screen.getByTestId('conversation-menu'));
+    fireEvent.click(screen.getByTestId('conversation-hub'));
     await act(async () => fireEvent.click(screen.getByText('Mute notifications')));
     expect(fake.setChannelMuted).toHaveBeenCalledWith('c1', true);
-    fireEvent.click(screen.getByTestId('conversation-menu'));
+    fireEvent.click(screen.getByTestId('conversation-hub'));
     fireEvent.click(await screen.findByText('Threads'));
     expect(await screen.findByText('A thread starter')).toBeTruthy();
   });
@@ -191,8 +196,11 @@ describe.each(Object.keys(LAYOUTS))('chat screens (%s layout)', (layout) => {
     fake.dms.mockResolvedValue([{ id: 'd1', isGroup: false, userId: 'u1', user: { id: 'u1', name: 'Ana Silva', presence: 'active' }, participantIds: ['me', 'u1'] }]);
     render(<ConversationScreen kind="dm" id="d1" />);
     await screen.findByTestId('poll-card');
+    fireEvent.click(screen.getByTestId('conversation-hub'));
+    for (const label of ['View profile', 'Mute notifications']) expect(await screen.findByText(label)).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
     fireEvent.click(screen.getByTestId('conversation-menu'));
-    for (const label of ['View profile', 'Mute notifications', 'Block user', 'Clear chat', 'Delete chat']) expect(screen.getByText(label)).toBeTruthy();
+    for (const label of ['Block user', 'Clear chat', 'Delete chat']) expect(await screen.findByText(label)).toBeTruthy();
     fireEvent.click(screen.getByText('Block user'));
     expect(fake.setDmBlocked).not.toHaveBeenCalled();
     expect(await screen.findByText('Block this person?')).toBeTruthy();

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
+  ChevronDown, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
 } from 'lucide-react';
 import { ThreadPeopleSheet } from './ThreadPeopleSheet.jsx';
 import { nav } from '../../app/nav.js';
@@ -330,15 +330,14 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
     ].filter(Boolean);
   }, [convo.items, directory, me, ws, label, unreadAtOpen]);
 
-  const title =
-    kind === 'channel' ? (
-      <span className="flex items-center gap-1.5">
-        <Icon as={channelGlyph(meta)} size={16} className="shrink-0 text-text-2" />
-        <span className="truncate">{meta?.name || '…'}</span>
-      </span>
-    ) : (
-      meta?.user?.name || '…'
-    );
+  // Tap the name: what's in the conversation (info, members, threads, pinned…), see ConversationMenu.
+  const title = (
+    <button type="button" onClick={() => setSheet('hub')} className="pressable flex max-w-full items-center gap-1.5 text-left" data-testid="conversation-hub" aria-label={`${label}: details`}>
+      {kind === 'channel' && <Icon as={channelGlyph(meta)} size={16} className="shrink-0 text-text-2" />}
+      <span className="truncate">{kind === 'channel' ? meta?.name || '…' : meta?.user?.name || '…'}</span>
+      <Icon as={ChevronDown} size={15} className="shrink-0 text-text-3" />
+    </button>
+  );
   const subtitle =
     kind === 'channel'
       ? [meta?.memberCount && `${meta.memberCount} members`, meta?.topic].filter(Boolean).join(' · ')
@@ -457,6 +456,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           onCancelQuote={() => extras.setQuote(null)}
           onSchedule={api().scheduleMessage ? extras.schedule : null}
           scheduleRef={extras.scheduleRef}
+          draftConv={draft ? null : conv}
           directory={directory}
           me={me}
           onSend={(text) => {
@@ -505,8 +505,9 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         }}
       />
       <ConversationMenu
-        open={sheet === 'menu'}
-        onClose={() => setSheet((s) => (s === 'menu' ? null : s))}
+        open={sheet === 'menu' || sheet === 'hub'}
+        mode={sheet === 'hub' ? 'hub' : 'actions'}
+        onClose={() => setSheet((s) => (s === 'menu' || s === 'hub' ? null : s))}
         conv={conv}
         meta={meta}
         label={label}

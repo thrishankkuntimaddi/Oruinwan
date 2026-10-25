@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Bookmark, Building2, ChevronRight, CircleHelp, LifeBuoy, LogOut, Repeat2, Settings, Sparkles, UserRound,
+  Bookmark, Building2, ChevronRight, CircleHelp, Clock3, LifeBuoy, LogOut, Repeat2, Send, Settings, Sparkles, UserRound,
 } from 'lucide-react';
 import { create } from 'zustand';
 import { useSession, useWorkspace } from '../data/session.js';
@@ -139,6 +139,8 @@ export function SidePanel() {
 
             <p className="mt-5 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">You</p>
             <Item icon={Bookmark} label="Saved messages" onClick={go(() => nav.push('saved'))} />
+            <Item icon={Clock3} label="Drafts & scheduled" onClick={go(() => nav.push('outgoing', { tab: 'scheduled' }))} testId="side-outgoing" />
+            <Item icon={Send} label="Sent" onClick={go(() => nav.push('outgoing', { tab: 'sent' }))} />
             <Item icon={Sparkles} label="AI chat history" onClick={go(() => nav.openAi())} />
             <Item icon={UserRound} label="Profile" onClick={go(() => nav.push('settings.profile'))} />
             <Item
@@ -160,6 +162,32 @@ export function SidePanel() {
     </>,
     document.body,
   );
+}
+
+/** Swipe in from the left edge on a pushed screen to go back (as on iPhone). */
+export function useEdgeBack(enabled, onBack) {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let start = null;
+    const down = (e) => {
+      const t = e.touches[0];
+      start = t.clientX < 24 ? { x: t.clientX, y: t.clientY } : null;
+    };
+    const move = (e) => {
+      if (!start) return;
+      const t = e.touches[0];
+      if (t.clientX - start.x > 70 && Math.abs(t.clientY - start.y) < 50) {
+        start = null;
+        onBack();
+      }
+    };
+    window.addEventListener('touchstart', down, { passive: true });
+    window.addEventListener('touchmove', move, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', down);
+      window.removeEventListener('touchmove', move);
+    };
+  }, [enabled, onBack]);
 }
 
 /** Swipe in from the right edge (on a tab's main screen) to open the panel. */

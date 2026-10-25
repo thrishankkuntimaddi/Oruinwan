@@ -4,12 +4,23 @@ import { conversationMenuItems, matchExcerpt, searchConversation } from './conve
 const ids = (opts) => conversationMenuItems(opts).map((i) => i.id);
 
 describe('conversationMenuItems (the web header menu, on the phone)', () => {
-  it('a DM has calls, tools, profile, mute, block, clear and delete', () => {
-    expect(ids({ kind: 'dm', huddles: true })).toEqual(['voice', 'video', 'search', 'reminders', 'pinned', 'saved', 'profile', 'mute', 'block', 'clear', 'delete']);
+  it('a DM: name → profile, reminders, pinned, saved, mute; ⋮ → search, video, block, clear, delete', () => {
+    expect(ids({ kind: 'dm', huddles: true })).toEqual(['profile', 'reminders', 'pinned', 'saved', 'mute', 'search', 'video', 'block', 'clear', 'delete']);
+    const sections = Object.fromEntries(conversationMenuItems({ kind: 'dm', huddles: true }).map((i) => [i.id, i.section]));
+    expect(sections).toMatchObject({ profile: 'hub', mute: 'hub', search: 'actions', block: 'actions', delete: 'actions' });
   });
 
-  it('a channel has huddle, poll, threads, info, members and mute (no block, clear or delete)', () => {
-    expect(ids({ kind: 'channel', huddles: true, polls: true })).toEqual(['huddle', 'poll', 'search', 'threads', 'reminders', 'pinned', 'saved', 'channelInfo', 'members', 'mute']);
+  it('a channel: name → info, members, threads, pinned, saved, reminders, mute; ⋮ → search, poll, video', () => {
+    expect(ids({ kind: 'channel', huddles: true, polls: true })).toEqual(['channelInfo', 'members', 'threads', 'reminders', 'pinned', 'saved', 'mute', 'search', 'poll', 'video']);
+  });
+
+  it('no option appears twice and the voice huddle is only the header button', () => {
+    for (const opts of [{ kind: 'dm', huddles: true }, { kind: 'channel', huddles: true, polls: true }, { kind: 'dm', isGroup: true, huddles: true }]) {
+      const list = ids(opts);
+      expect(new Set(list).size).toBe(list.length);
+      expect(list).not.toContain('voice');
+      expect(list).not.toContain('huddle');
+    }
   });
 
   it('a group DM offers group info instead of profile and block', () => {
@@ -21,9 +32,9 @@ describe('conversationMenuItems (the web header menu, on the phone)', () => {
   });
 
   it('leaves out what is unavailable: calls without huddles, polls without permission, threads when off, calls with an agent', () => {
-    expect(ids({ kind: 'channel', threads: false })).toEqual(['search', 'reminders', 'pinned', 'saved', 'channelInfo', 'members', 'mute']);
+    expect(ids({ kind: 'channel', threads: false })).toEqual(['channelInfo', 'members', 'reminders', 'pinned', 'saved', 'mute', 'search']);
     const agent = ids({ kind: 'dm', isAgent: true, huddles: true });
-    expect(agent).not.toContain('voice');
+    expect(agent).not.toContain('video');
     expect(agent).not.toContain('profile');
     expect(agent).not.toContain('block');
   });
