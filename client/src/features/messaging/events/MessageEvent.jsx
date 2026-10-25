@@ -190,6 +190,10 @@ function MessageEvent({
         timestamp: event.createdAt || event.payload?.createdAt,
         ts: event.createdAt || event.payload?.createdAt,
         isRead: (event.readBy || event.payload?.readBy)?.some(r => (r.user?._id || r.user || r._id || r) === currentUserId),
+        // Read receipts (the ticks on my own messages): everyone but me who has read it.
+        readByOthers: (event.readBy || event.payload?.readBy || event.backend?.readBy || [])
+            .map(r => String(r?.user?._id || r?.user || r?._id || r))
+            .filter(id => id && id !== String(currentUserId)),
         status: event.status || 'sent',
         
         isDeleted: event.payload?.isDeleted || event.isDeleted || false,

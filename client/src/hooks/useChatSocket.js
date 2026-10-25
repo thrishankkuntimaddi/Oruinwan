@@ -429,6 +429,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         socket.on('member-left', handleMemberLeft);
 
         socket.on('message-read', handleMessageRead);
+        // Someone read the conversation: the ticks on my messages (ChatWindowV2 'read-update').
+        const handleReadUpdate = (data) => eventHandlerRef.current?.({ type: 'read-update', payload: data });
+        socket.on('read-update', handleReadUpdate);
 
         
         return () => {
@@ -462,6 +465,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             socket.off('member-left', handleMemberLeft);
 
             socket.off('message-read', handleMessageRead);
+            socket.off('read-update', handleReadUpdate);
 
             
             socket.off('connect', handleConnect);

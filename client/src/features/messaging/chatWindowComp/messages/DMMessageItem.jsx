@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '@services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2 } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2, Check, CheckCheck } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
@@ -205,8 +205,14 @@ function DMMessageItem({
                 </div>
 
                 {}
-                <span style={{ position: 'absolute', top: '2px', right: '16px', fontSize: '10px', color: 'var(--text-muted)', userSelect: 'none' }}>
+                <span style={{ position: 'absolute', top: '2px', right: '16px', fontSize: '10px', color: 'var(--text-muted)', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {formatTime(msg.ts)}
+                    {/* Read receipts on my messages: one tick sent, two (gold) once the other side read it. */}
+                    {isMe && !String(msg.id || '').startsWith('temp_') && (
+                        (msg.readByOthers || []).length
+                            ? <CheckCheck size={12} style={{ color: 'var(--accent)' }} aria-label="Read" data-testid="receipt-read" />
+                            : <Check size={12} aria-label="Sent" data-testid="receipt-sent" />
+                    )}
                 </span>
 
                 {}

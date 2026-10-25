@@ -501,11 +501,13 @@ module.exports = function registerChatHandlers(io, socket) {
 
       await Message.updateOne({ _id: messageId, readBy: { $ne: readerId } }, readReceipts.readUpdate(readerId));
 
+      // With the conversation's id, so apps that match reads by conversation (the phone) see it too.
+      const where = ctx.message.channel ? { channelId: String(ctx.message.channel) } : { dmSessionId: String(ctx.message.dm) };
       if (receipts !== false && await sharesReadReceipts(readerId)) {
-        io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId] });
+        io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId], ...where });
       } else {
         // Only the reader's own tabs/devices learn about it.
-        io.to(`user:${readerId}`).emit("read-update", { readerId, messageIds: [messageId] });
+        io.to(`user:${readerId}`).emit("read-update", { readerId, messageIds: [messageId], ...where });
       }
     } catch (err) {
       logger.error("message-read ERROR:", err);

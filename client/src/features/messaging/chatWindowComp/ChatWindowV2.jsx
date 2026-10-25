@@ -348,6 +348,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
     
     const conversationRef = React.useRef(conversation);
+    // The socket handler is created once: it reads who I am and which conversation is open here.
+    const currentUserIdRef = React.useRef(currentUserId);
+    currentUserIdRef.current = currentUserId;
+    const conversationIdRef = React.useRef(conversationId);
+    conversationIdRef.current = conversationId;
 
     // Feed decrypted messages to the in-browser search index (the server can't read them).
     React.useEffect(() => {
@@ -608,6 +613,25 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     });
                 }
                 break;
+
+            case 'read-update': {
+                // Someone read this conversation (or some messages): the ticks on my messages update now.
+                const p = event.payload || {};
+                const reader = p.readerId && String(p.readerId);
+                if (!reader || reader === String(currentUserIdRef.current || '')) break;
+                const here = String(p.dmSessionId || p.channelId || '') === String(conversationIdRef.current || '');
+                const ids = Array.isArray(p.messageIds) ? new Set(p.messageIds.map(String)) : null;
+                if (!here && !ids) break;
+                for (const ev of conversationRef.current.events || []) {
+                    const sender = String(ev.sender?._id || ev.sender || ev.payload?.sender?._id || ev.backend?.sender?._id || ev.backend?.sender || '');
+                    if (sender !== String(currentUserIdRef.current || '')) continue;
+                    if (ids && !ids.has(String(ev.id))) continue;
+                    const readBy = (ev.readBy || ev.payload?.readBy || ev.backend?.readBy || []).map((r) => String(r?._id || r?.user || r));
+                    if (readBy.includes(reader)) continue;
+                    conversationRef.current.updateEvent(ev.id, { readBy: [...readBy, reader] });
+                }
+                break;
+            }
 
             case 'reaction-added':
             case 'reaction-removed':
