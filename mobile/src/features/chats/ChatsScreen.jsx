@@ -67,7 +67,8 @@ export function sortConversations(list) {
 export function chatSections(channels = [], dms = []) {
   return {
     channels: sortConversations(channels.filter((c) => c.isMember)),
-    people: sortConversations(dms.filter((d) => !d.agentId)),
+    // A 1:1 DM nobody has written in yet isn't a conversation: it stays out of the list.
+    people: sortConversations(dms.filter((d) => !d.agentId && (d.isGroup || !d.noMessages || d.unread > 0))),
     agentDms: sortConversations(dms.filter((d) => d.agentId)),
   };
 }

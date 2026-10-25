@@ -86,7 +86,13 @@ export default function ContactsProvider({ children }) {
 
       
       // Conversations with AI agents are listed under Agents, not with people.
-      const rawDMs = (chatListRes.data.sessions || []).filter((s) => !s.isAgent);
+      // A 1:1 DM opened but never written in (a profile visited, "Message" pressed and left) isn't
+      // a conversation yet: it stays out of the list until someone sends something — unless it's
+      // unread, a favourite or the one open right now.
+      const openPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const rawDMs = (chatListRes.data.sessions || []).filter((s) => !s.isAgent).filter((s) =>
+        s.isGroup || s.lastMessageId || (s.unreadCount || 0) > 0
+        || favoriteItemIds.includes(String(s.id)) || openPath.includes(`/dm/${s.id}`));
 
       const dmsData = rawDMs.map(session => {
         
