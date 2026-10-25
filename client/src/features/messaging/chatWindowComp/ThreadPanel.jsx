@@ -26,7 +26,7 @@ import { setOpenThread, clearOpenThread } from '../../notifications/attention';
 import { indexConversation } from '../../../utils/localMessageIndex';
 import { useAuth } from '../../../contexts/AuthContext';
 
-export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true }) {
+export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true, agentId = null }) {
     const { showToast } = useToast();
 
     
@@ -513,9 +513,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 });
 
             // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
-            if (mentionsAI(replyText) || threadAI.isFollowUp(messageId)) {
+            // In a chat with an agent (Claude, ChatGPT…) every reply in its threads is for it.
+            if (agentId || mentionsAI(replyText) || threadAI.isFollowUp(messageId)) {
                 threadAI.ask({
-                    assistant: !mentionsAI(replyText) ? threadAI.followUpAssistantFor(messageId) : undefined,
+                    assistant: agentId || (!mentionsAI(replyText) ? threadAI.followUpAssistantFor(messageId) : undefined),
                     prompt: replyText,
                     parentId: messageId,
                     triggerMessageId: res.data?.reply?._id || null,

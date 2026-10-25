@@ -267,6 +267,7 @@ const CentralContentView = ({
                     currentUserId={currentUserId}
                     members={channelMembers || null}
                     broadcastMentionsAllowed={broadcastMentionsAllowed}
+                    agentId={chat?.isAgent ? (chat.agentId || 'default') : null}
                     style={{ width: 'clamp(280px, 35vw, 400px)', flexShrink: 0 }}
                 />
                 </div>
