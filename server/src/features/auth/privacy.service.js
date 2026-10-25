@@ -111,6 +111,18 @@ async function redactReadBy(messages, viewerId) {
         logger.warn({ err: err.message }, '[PRIVACY] Could not load read-receipt preferences');
         return messages;
     }
+    // Read receipts off for the viewer: they don't see who read anything either (like WhatsApp).
+    let viewerHides = false;
+    if (viewer) {
+        try {
+            viewerHides = (await readersHidingReceipts([viewer])).has(viewer);
+        } catch {
+            viewerHides = false;
+        }
+    }
+    if (viewerHides) {
+        return messages.map((m) => (m && Array.isArray(m.readBy) ? { ...m, readBy: m.readBy.filter(r => idOf(r) === viewer) } : m));
+    }
     if (hidden.size === 0) return messages;
 
     return messages.map((m) => {

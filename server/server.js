@@ -356,6 +356,8 @@ app.use("/api/v2/backup", require("./src/features/drive-backup/driveBackup.route
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
 // Pinned (max 3) and archived chats in a person's chat list.
 app.use("/api/v2/conversation-prefs", require("./src/features/conversation-prefs/conversationPrefs.routes"));
+// Send later (encrypted on the sender's device) and the Sent list.
+app.use("/api/v2/scheduled-messages", require("./src/features/scheduled-messages/scheduledMessages.routes"));
 
 app.use('/api/public', require('./src/features/developer/publicApi.versioning')); // /v1/* + deprecated unversioned alias
 
@@ -456,6 +458,7 @@ connectDatabase()
       require('./src/features/security/retention.cron').startRetentionCron();
       require('./src/features/automations/automation.cron').startAutomationCron(io);
       require('./src/features/drive-backup/driveBackup.cron').startDriveBackupCron();
+      require('./src/features/scheduled-messages/scheduledMessages.cron').startScheduledMessagesCron(io);
       scheduleJob({
         name: 'audit-digest',
         intervalMs: 60 * 60 * 1000,

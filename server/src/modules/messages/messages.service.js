@@ -1138,24 +1138,11 @@ async function addReaction(messageId, userId, emoji, io) {
     const message = await Message.findById(messageId);
     if (!message) throw new Error('Message not found');
 
-    const existingReaction = message.reactions.find(
-        r => r.userId.toString() === userId.toString()
+    // Several reactions per person (each emoji once); DELETE /react removes one.
+    const already = message.reactions.some(
+        r => r.userId.toString() === userId.toString() && r.emoji === emoji
     );
-
-    if (existingReaction) {
-        if (existingReaction.emoji === emoji) {
-            
-            
-        } else {
-            
-            message.reactions = message.reactions.filter(
-                r => r.userId.toString() !== userId.toString()
-            );
-            message.reactions.push({ userId, emoji });
-            await message.save();
-        }
-    } else {
-        
+    if (!already) {
         message.reactions.push({ userId, emoji });
         await message.save();
     }

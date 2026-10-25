@@ -100,6 +100,7 @@ describe('redactReadBy', () => {
     privacyService.rememberPrivacy('loud', { readReceipts: true });
     const msgs = [{ _id: 'm1', readBy: ['quiet', 'loud'] }];
     expect((await privacyService.redactReadBy(msgs, 'viewer'))[0].readBy).toEqual(['loud']);
-    expect((await privacyService.redactReadBy(msgs, 'quiet'))[0].readBy).toEqual(['quiet', 'loud']);
+    // Someone with receipts off doesn't see other people's reads either (only their own).
+    expect((await privacyService.redactReadBy(msgs, 'quiet'))[0].readBy).toEqual(['quiet']);
   });
 });
