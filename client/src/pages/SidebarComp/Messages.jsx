@@ -35,6 +35,22 @@ export default function Messages() {
   }, [navigate, workspaceId]);
   useGroupDMLive(socket, selectedChat, myId, { onUpdate: onGroupUpdate, onRemoved: onGroupRemoved });
 
+  // A DM opened by the other person's user id (New message, a profile, a link) is not a
+  // conversation yet: create or find the real DM first. Sending under a user id fails with
+  // "This conversation's encryption key is not ready yet".
+  const openDMWithUser = useCallback(async (wsId, userId) => {
+    try {
+      const { data } = await api.get(`/api/v2/messages/workspace/${wsId}/dm/resolve/${userId}`);
+      if (data?.success && data.dmSessionId) {
+        navigate(`/workspace/${wsId}/messages/dm/${data.dmSessionId}`, { replace: true });
+        return true;
+      }
+    } catch (error) {
+      logger.error('❌ [Messages] Could not start the DM:', error);
+    }
+    return false;
+  }, [navigate]);
+
   
   useEffect(() => {
     const path = location.pathname;
@@ -141,18 +157,7 @@ export default function Messages() {
           });
 
           if (user) {
-            const userData = user.user || user;
-            const username = userData.username || userData.name || userData.email?.split('@')[0] || "Unknown User";
-
-            setSelectedChat({
-              id: newDMParam,
-              name: username,
-              type: "dm",
-              avatar: userData.profilePicture || userData.avatar,
-              status: userData.isOnline ? "online" : "offline",
-              isNew: true,
-              workspaceId: workspaceId
-            });
+            if (!(await openDMWithUser(workspaceId, newDMParam))) setSelectedChat(null);
             setCurrentBroadcast(null);
           }
         } catch (error) {
@@ -255,62 +260,16 @@ export default function Messages() {
               workspaceId: workspaceId
             });
           } else {
-            
-
-            const userRes = await api.get(`/api/workspaces/${workspaceId}/members`);
-            const members = userRes.data.members || [];
-
-            
-            const user = members.find(m => {
-              const memberId = m._id || m.id || m.user?._id || m.user?.id;
-              return String(memberId) === String(dmId);
-            });
-
-            if (user) {
-              
-              const userData = user.user || user;
-              const username = userData.username
-                || userData.name
-                || userData.email?.split('@')[0]
-                || "Unknown User";
-
-              setSelectedChat({
-                id: dmId,  
-                name: username,
-                type: "dm",
-                avatar: userData.profilePicture || userData.avatar,
-                status: userData.isOnline ? "online" : "offline",
-                isNew: true,  
-                workspaceId: workspaceId
-              });
-            } else {
-              
-
-              setSelectedChat({
-                id: dmId,
-                name: "Unknown User",
-                type: "dm",
-                avatar: null,
-                status: "offline",
-                isNew: true,
-                workspaceId: workspaceId
-              });
+            // Not a DM id: a person's id (New message, a profile, a link). Open the real DM.
+            // If it is not a person either, it may be a DM the list doesn't show yet: open it as is.
+            if (!(await openDMWithUser(workspaceId, dmId))) {
+              setSelectedChat({ id: dmId, name: "Direct message", type: "dm", isNew: false, workspaceId });
             }
           }
         } catch (error) {
           logger.error("❌ [DM Fetch] Failed to fetch DM details:", error);
           logger.error("❌ [DM Fetch] Error details:", error.response?.data || error.message);
-
-          
-          setSelectedChat({
-            id: dmId,
-            name: "Unknown User",
-            type: "dm",
-            avatar: null,
-            status: "offline",
-            isNew: true,
-            workspaceId: workspaceId
-          });
+          setSelectedChat({ id: dmId, name: "Direct message", type: "dm", isNew: false, workspaceId });
         }
         setCurrentBroadcast(null);
       };
@@ -320,7 +279,7 @@ export default function Messages() {
       setSelectedChat(null);
       setCurrentBroadcast(null);
     }
-  }, [location.pathname, location.state, contacts, searchParams]);
+  }, [location.pathname, location.state, contacts, searchParams, openDMWithUser]);
 
   const handleDeleteChat = (chat) => {
     deleteItem(chat.id);
@@ -331,9 +290,8 @@ export default function Messages() {
   const handleStartDM = (selectedUser) => {
     setShowCreateDM(false);
     
-    if (workspaceId) {
-      navigate(`/workspace/${workspaceId}/messages/dm/${selectedUser._id || selectedUser.id}`);
-    }
+    const userId = selectedUser?._id || selectedUser?.id;
+    if (workspaceId && userId) openDMWithUser(workspaceId, userId);
   };
 
   return (
