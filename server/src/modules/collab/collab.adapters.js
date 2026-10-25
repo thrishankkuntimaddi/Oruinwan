@@ -93,22 +93,33 @@ const knowledge = {
     },
 };
 
+// A whiteboard page: docId is the meeting (page 1) or a WhiteboardPage (pages 2+).
+const boardPage = (docId) => require('../../features/collaboration/whiteboardPage.model').findById(docId).select('meetingId').lean();
+
 const whiteboard = {
     async authorize(docId, userId) {
         const { loadMeetingForUser } = require('../../features/meetings/meetingAccess');
-        const { meeting } = await loadMeetingForUser(docId, userId);
+        const page = isValidId(docId) ? await boardPage(docId) : null;
+        const { meeting } = await loadMeetingForUser(page ? String(page.meetingId) : docId, userId);
         return { workspaceId: String(meeting.workspaceId), canWrite: true };
     },
     async loadContent(docId) {
+        const WhiteboardPage = require('../../features/collaboration/whiteboardPage.model');
+        const page = await WhiteboardPage.findById(docId).select('strokes').lean();
+        if (page) return page.strokes || [];
         const Whiteboard = require('../../features/collaboration/whiteboard.model');
         const wb = await Whiteboard.findOne({ meetingId: docId }).select('strokes').lean();
         return wb ? wb.strokes || [] : [];
     },
     async persist(docId, value, { workspaceId } = {}) {
+        const strokes = Array.isArray(value) ? value : [];
+        const WhiteboardPage = require('../../features/collaboration/whiteboardPage.model');
+        const page = await WhiteboardPage.findByIdAndUpdate(docId, { $set: { strokes } });
+        if (page) return;
         const Whiteboard = require('../../features/collaboration/whiteboard.model');
         await Whiteboard.findOneAndUpdate(
             { meetingId: docId },
-            { $set: { strokes: Array.isArray(value) ? value : [] }, $setOnInsert: { meetingId: docId, workspaceId } },
+            { $set: { strokes }, $setOnInsert: { meetingId: docId, workspaceId } },
             { upsert: true }
         );
     },

@@ -49,7 +49,11 @@ function startRemindersCron(io) {
   const stop = scheduleJob({
     name: 'reminders',
     intervalMs: INTERVAL_MS,
-    run: () => checkDueReminders(io),
+    run: async () => {
+      await checkDueReminders(io);
+      // Note reminders become notifications (Activity + phone push).
+      await require('../notes/noteReminders').fireDue(io).catch((err) => logger.warn('[REMINDERS] note reminders failed:', err?.message));
+    },
   });
   logger.info('✅ [REMINDERS] Cron started (60s interval)');
   return stop;

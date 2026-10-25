@@ -36,6 +36,11 @@ const NoteSchema = new mongoose.Schema({
     // Anyone who can open that meeting may read and edit the note (see collab.adapters).
     meeting: { type: mongoose.Schema.Types.ObjectId, ref: "ScheduledMeeting", default: null },
 
+    // Pages: a note can have more pages, each its own Note pointing at the first one (the note
+    // in the list). Pages share the first page's sharing; archive and delete apply to all.
+    parentNote: { type: mongoose.Schema.Types.ObjectId, ref: "Note", default: null, index: true },
+    pageOrder: { type: Number, default: 0 },
+
     // The template this note was started from ('meeting', 'projectspec', ...); null for a
     // blank note. Free-plan limit: 2 notes per template per person per workspace.
     templateKey: { type: String, default: null },

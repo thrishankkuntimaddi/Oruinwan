@@ -77,7 +77,19 @@ describe('knowledge adapter', () => {
 });
 
 describe('whiteboard adapter', () => {
+    test('a page beyond the first persists to its own record', async () => {
+        const WhiteboardPage = require('../../../features/collaboration/whiteboardPage.model');
+        const pageSpy = jest.spyOn(WhiteboardPage, 'findByIdAndUpdate').mockResolvedValue({ _id: 'p2' });
+        const boardSpy = jest.spyOn(Whiteboard, 'findOneAndUpdate').mockResolvedValue({});
+        const pageId = oid();
+        await ADAPTERS.whiteboard.persist(pageId, [{ id: 's2', points: [] }], { workspaceId: WS });
+        expect(pageSpy).toHaveBeenCalledWith(pageId, { $set: { strokes: [{ id: 's2', points: [] }] } });
+        expect(boardSpy).not.toHaveBeenCalled();
+    });
+
     test('persist upserts strokes for the meeting', async () => {
+        const WhiteboardPage = require('../../../features/collaboration/whiteboardPage.model');
+        jest.spyOn(WhiteboardPage, 'findByIdAndUpdate').mockResolvedValue(null); // not a page: the meeting's own board
         const spy = jest.spyOn(Whiteboard, 'findOneAndUpdate').mockResolvedValue({});
         const meetingId = oid();
         await ADAPTERS.whiteboard.persist(meetingId, [{ id: 's1', points: [] }], { workspaceId: WS });

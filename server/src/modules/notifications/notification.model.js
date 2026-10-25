@@ -11,6 +11,7 @@ const NOTIFICATION_TYPES = [
     'task_removed',
     'task_transfer',
     'note_shared',
+    'note_reminder',     // "Remind me about this note" came due
     'design_review',     // features/design-review: requests, decisions, comments
     'member_joined',     
     'channel_pinned',    

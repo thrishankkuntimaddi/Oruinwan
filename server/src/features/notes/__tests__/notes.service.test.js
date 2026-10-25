@@ -57,6 +57,38 @@ beforeEach(() => {
     jest.spyOn(identity.users, 'findById').mockImplementation(async () => ({ _id: ALICE, username: 'alice' }));
     jest.spyOn(identity.users, 'findManyByIds').mockImplementation(async () => new Map());
     findSpy = jest.spyOn(Note, 'find').mockImplementation(() => chain([]));
+    // Pages follow their note's sharing and archive state.
+    jest.spyOn(Note, 'updateMany').mockResolvedValue({ modifiedCount: 0 });
+    jest.spyOn(Note, 'deleteMany').mockResolvedValue({ deletedCount: 0 });
+});
+
+describe('NO7 pages', () => {
+    test('the notes list shows only first pages', async () => {
+        await service.getNotes(ALICE, { workspaceId: WS });
+        expect(findSpy.mock.calls[0][0]).toMatchObject({ parentNote: null });
+    });
+
+    test('an editor adds a page that takes the note’s sharing; the list of pages comes back', async () => {
+        const root = makeNote({ sharedWith: [BOB], allowEditing: true, title: 'Spec' });
+        const saved = [];
+        jest.spyOn(Note, 'findById').mockImplementation((id) => chain(String(id) === String(root._id) ? root : saved.find((p) => String(p._id) === String(id)) || null));
+        jest.spyOn(Note, 'countDocuments').mockResolvedValue(0);
+        jest.spyOn(Note, 'findOne').mockImplementation(() => chain(null));
+        jest.spyOn(Note.prototype, 'save').mockImplementation(function save() { saved.push(this); return Promise.resolve(this); });
+        const out = await service.createNote(BOB, { parentNoteId: String(root._id), workspaceId: WS }, null, {});
+        const page = saved[0];
+        expect(String(page.parentNote)).toBe(String(root._id));
+        expect(page.sharedWith.map(String)).toEqual([BOB]);
+        expect(String(page.owner)).toBe(ALICE);
+        expect(page.title).toBe('Page 2');
+        expect(out.note.pages).toBeDefined();
+    });
+
+    test('someone who can only view the note cannot add pages', async () => {
+        const root = makeNote({ sharedWith: [BOB], allowEditing: false });
+        jest.spyOn(Note, 'findById').mockImplementation(() => chain(root));
+        await expect(service.createNote(BOB, { parentNoteId: String(root._id), workspaceId: WS }, null, {})).rejects.toMatchObject({ status: 403 });
+    });
 });
 
 function withNote(doc) {

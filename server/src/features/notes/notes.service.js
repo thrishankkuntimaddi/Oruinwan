@@ -79,7 +79,8 @@ async function validateShareTargets(workspaceId, ownerId, userIds) {
 async function getNotes(userId, filters = {}) {
     const { workspaceId, type } = filters;
     const visibility = [{ owner: userId }, { sharedWith: userId }, { isPublic: true }];
-    const query = { $or: visibility };
+    // The list shows notes (their first page); more pages open from inside the note.
+    const query = { $or: visibility, parentNote: null };
 
     if (workspaceId) {
         await assertWorkspaceMember(workspaceId, userId);
@@ -102,14 +103,66 @@ async function getNotes(userId, filters = {}) {
     return { notes };
 }
 
+/** The pages of the note `root` heads, in order: [{ _id, title, pageOrder }] (the first page first). */
+async function pagesOf(rootId) {
+    const rest = await Note.find({ parentNote: rootId }).select('_id title pageOrder').sort({ pageOrder: 1, createdAt: 1 }).lean();
+    const root = await Note.findById(rootId).select('_id title').lean();
+    return [...(root ? [{ _id: root._id, title: root.title, pageOrder: 0 }] : []), ...rest];
+}
+
 async function getNote(userId, noteId) {
     const note = await loadNote(noteId);
     await policy.assertNoteAccess(note, userId, 'view');
     const populated = await withUsers(Note.findById(note._id).select('-versions').lean());
+    const rootId = note.parentNote || note._id;
+    populated.pages = await pagesOf(rootId);
     return { note: populated };
 }
 
+/** Copies the first page's sharing (and archive state) to its other pages. */
+async function syncPages(root) {
+    await Note.updateMany(
+        { parentNote: root._id },
+        { $set: { sharedWith: root.sharedWith || [], isPublic: !!root.isPublic, allowEditing: !!root.allowEditing, allowComments: !!root.allowComments, isArchived: !!root.isArchived, archivedAt: root.archivedAt || null } },
+    );
+}
+
+/** A new page in a note: anyone who may edit the note may add one. It takes the note's sharing. */
+async function createPage(userId, parentId, noteData, io, req) {
+    const parent = await loadNote(parentId);
+    const root = parent.parentNote ? await loadNote(parent.parentNote) : parent;
+    await policy.assertNoteAccess(root, userId, policy.isNoteOwner(root, userId) ? 'owner' : 'edit');
+    const count = await Note.countDocuments({ parentNote: root._id });
+    if (count >= 99) throw new HttpError(409, 'A note can have up to 100 pages');
+    const last = await Note.findOne({ parentNote: root._id }).sort({ pageOrder: -1 }).select('pageOrder').lean();
+    const page = new Note({
+        company: root.company || null,
+        workspace: root.workspace,
+        owner: root.owner,
+        title: normaliseTitle(noteData.title || `Page ${count + 2}`),
+        content: sanitizeNoteContent(noteData.content || ''),
+        type: root.type,
+        sharedWith: root.sharedWith || [],
+        isPublic: !!root.isPublic,
+        allowEditing: !!root.allowEditing,
+        allowComments: !!root.allowComments,
+        meeting: root.meeting || null,
+        parentNote: root._id,
+        pageOrder: (last?.pageOrder || 0) + 1,
+    });
+    await page.save();
+    await logAction({ userId, action: 'note_page_created', description: `Added a page to: ${root.title}`, resourceType: 'note', resourceId: root._id, companyId: root.company || null, metadata: { pageId: String(page._id) }, req });
+    const populated = await withUsers(Note.findById(page._id).lean());
+    populated.pages = await pagesOf(root._id);
+    notify.notifyNoteUpdated(await withUsers(Note.findById(root._id).lean()), io);
+    return { message: 'Page added', note: populated };
+}
+
 async function createNote(userId, noteData, io, req) {
+    if (noteData.parentNoteId) {
+        if (!isValidId(noteData.parentNoteId)) throw new HttpError(400, 'Invalid parent note id');
+        return createPage(userId, noteData.parentNoteId, noteData, io, req);
+    }
     const {
         content,
         type = 'note',
@@ -179,6 +232,7 @@ async function updateNote(userId, noteId, updates, io, _req) {
 
     if (updates.title !== undefined) note.title = normaliseTitle(updates.title);
     if (updates.content !== undefined) note.content = sanitizeNoteContent(updates.content);
+    if (updates.pageOrder !== undefined && note.parentNote && Number.isFinite(Number(updates.pageOrder))) note.pageOrder = Number(updates.pageOrder);
 
     if (isOwner) {
         if (updates.sharedWith !== undefined) {
@@ -199,6 +253,7 @@ async function updateNote(userId, noteId, updates, io, _req) {
     }
 
     await note.save();
+    if (!note.parentNote && isOwner) await syncPages(note);
     // Keep an open live editor (and its stored Yjs state) in step with this write.
     if (updates.content !== undefined) await collab().contentChanged('note', note._id, note.content, { workspaceId: idOf(note.workspace) });
 
@@ -229,6 +284,12 @@ async function deleteNote(userId, noteId, permanent, io, _req) {
     await policy.assertNoteAccess(note, userId, 'owner');
 
     if (permanent) {
+        // Deleting a note deletes its pages too.
+        if (!note.parentNote) {
+            const pages = await Note.find({ parentNote: note._id }).select('_id').lean();
+            await Note.deleteMany({ parentNote: note._id });
+            await Promise.all(pages.map((p) => collab().documentDeleted('note', p._id)));
+        }
         await Note.findByIdAndDelete(note._id);
         await collab().documentDeleted('note', note._id);
         await Promise.all((note.attachments || []).map(a => deleteObjectForAttachment(note, a)));
@@ -239,6 +300,7 @@ async function deleteNote(userId, noteId, permanent, io, _req) {
     note.isArchived = true;
     note.archivedAt = new Date();
     await note.save();
+    if (!note.parentNote) await syncPages(note);
     notify.notifyNoteDeleted(note._id, note, io, { archived: true });
     return { message: 'Note archived', archived: true };
 }
@@ -265,6 +327,7 @@ async function shareNote(userId, noteId, userIds, io, req, options = {}) {
     if (allowEditing !== undefined) note.allowEditing = allowEditing;
 
     await note.save();
+    if (!note.parentNote) await syncPages(note);
 
     await logAction({
         userId,
@@ -419,6 +482,8 @@ async function saveVersion(userId, noteId, snapshot) {
 }
 
 module.exports = {
+    createPage,
+    pagesOf,
     getNotes,
     getNote,
     createNote,

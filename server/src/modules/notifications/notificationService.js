@@ -467,6 +467,18 @@ async function noteShared(io, { recipientIds, sharerUsername, workspaceId, noteT
     });
 }
 
+async function noteReminder(io, { recipientId, workspaceId, noteId, noteTitle, text = '' }) {
+    return create(io, {
+        recipient: recipientId,
+        workspaceId,
+        type: 'note_reminder',
+        title: `Reminder: ${noteTitle}`,
+        body: text || 'You asked to be reminded about this note.',
+        link: `/notes/${noteId}`,
+        meta: { noteId, noteTitle, kind: 'note_reminder' },
+    });
+}
+
 async function aiSuggestion(io, { userId, workspaceId, title, body, link = null, meta = {} }) {
     return create(io, {
         recipient: userId,
@@ -588,6 +600,7 @@ async function threadAdded(io, { recipientIds, adderUsername, workspaceId, chann
 }
 
 module.exports = {
+    noteReminder,
     PREF_KEY_BY_TYPE,
     TASK_STATUS_LABELS,
     TASK_PRIORITY_LABELS,
