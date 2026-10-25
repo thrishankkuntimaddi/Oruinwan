@@ -713,6 +713,18 @@ export async function joinMeeting(meeting) {
   return enter({ huddleId: `meeting-${id}`, scope: meetingScope(m), title: m.title || 'Meeting', start: true, meetingId: id });
 }
 
+/** Ring more people into the call I'm in (huddle:invite). Resolves { invited }. */
+export async function inviteToCall(userIds) {
+  const call = useHuddle.getState().call;
+  if (!call) throw new Error('You are not in a call.');
+  const h = helpers();
+  if (!h?.request) throw new Error('Adding people needs a connection to the server.');
+  const r = await h.request('huddle:invite', { huddleId: call.huddleId, userIds });
+  if (!r) throw new Error('No answer from the server. Check your connection.');
+  if (!r.ok) throw new Error(r.message || 'Could not add them.');
+  return r;
+}
+
 export function leave() {
   const call = useHuddle.getState().call;
   if (call) emit('huddle:leave', { huddleId: call.huddleId });

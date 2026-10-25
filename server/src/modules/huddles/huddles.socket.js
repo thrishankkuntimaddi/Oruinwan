@@ -299,6 +299,7 @@ function emitSelfActive(io, registry, userId) {
  * history run and complete its meeting record(s).
  */
 function announceEnded(io, huddle, reason, { history = defaultHistory(), meetings = defaultMeetings } = {}) {
+    invitedTo.delete(String(huddle.huddleId));
     const payload = {
         huddleId: huddle.huddleId, meetingId: huddle.meetingId || null,
         channelId: huddle.channelId, dmId: huddle.dmId, workspaceId: huddle.workspaceId, reason, timestamp: new Date(),
@@ -391,6 +392,12 @@ async function declineCall(io, huddleId, userId, { registry = defaultRegistry, h
     }
     return declined;
 }
+
+/**
+ * People added to a running call by someone in it (huddle:invite), with the call's scope, so
+ * they may join even if they aren't in its DM or channel. huddleId -> Map(userId -> scope).
+ */
+const invitedTo = new Map();
 
 function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp, meetings = defaultMeetings, emptyTimeoutMs = 30000, planLimits = defaultPlanLimits, ringTimeoutMs = ringing.RING_MS } = {}) {
     const uid = () => String(socket.user.id);
@@ -542,7 +549,10 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         if (!huddleId) return huddleError(socket, huddleId, 'BAD_REQUEST', 'Missing huddleId');
 
         try {
-            const check = await verify(socket, { channelId, dmId, workspaceId });
+            let check = await verify(socket, { channelId, dmId, workspaceId });
+            // Invited into this call by someone in it: allowed in, in the call's own scope.
+            const invite = invitedTo.get(String(huddleId))?.get(uid());
+            if (!check.ok && invite && registry.get(huddleId)) check = { ok: true, scope: invite, groupDm: true, invited: true };
             if (!check.ok) return huddleError(socket, huddleId, 'FORBIDDEN', check.message);
 
             const username = await displayName(socket);
@@ -617,6 +627,49 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         } catch (err) {
             logger.error('[huddle:join] failed:', err);
             huddleError(socket, huddleId, 'SERVER_ERROR', 'Failed to join huddle');
+        }
+    });
+
+    // Add people to the call I'm in: they're rung (phone push too) and may join. ack({ ok, invited }).
+    socket.on('huddle:invite', async (data = {}, ack) => {
+        const reply = typeof ack === 'function' ? ack : () => {};
+        try {
+            const huddleId = String(data.huddleId || '');
+            const huddle = registry.get(huddleId);
+            if (!huddle || !registry.participant(huddleId, uid())) return reply({ ok: false, message: 'Join the call first.' });
+            const ids = [...new Set((Array.isArray(data.userIds) ? data.userIds : []).map(String))].filter(id => id && id !== uid()).slice(0, 20);
+            if (!ids.length) return reply({ ok: false, message: 'Pick someone to add.' });
+            const ws = huddle.workspaceId ? String(huddle.workspaceId) : null;
+            if (!ws) return reply({ ok: false, message: 'Only calls in a workspace can add people.' });
+            const identity = require('../../identity');
+            const allowed = [];
+            for (const id of ids) {
+                const m = await identity.workspaces.membership(ws, id).catch(() => null);
+                if (m?.member) allowed.push(id);
+            }
+            if (!allowed.length) return reply({ ok: false, message: 'They are not in this workspace.' });
+            const scope = { ...(huddle.channelId ? { channelId: String(huddle.channelId) } : huddle.dmId ? { dmId: String(huddle.dmId) } : {}), workspaceId: ws, planWorkspaceId: ws };
+            if (!invitedTo.has(huddleId)) invitedTo.set(huddleId, new Map());
+            for (const id of allowed) invitedTo.get(huddleId).set(id, scope);
+            const from = await callerProfile(socket);
+            ringing.invite(io, {
+                huddleId,
+                callerId: uid(),
+                callees: allowed.filter(id => !registry.participant(huddleId, id)),
+                workspaceId: ws,
+                dmId: scope.dmId || null,
+                channelId: scope.channelId || null,
+                title: `${from.name || 'Someone'} added you to a call`,
+                from,
+                video: !!huddle.video,
+                meetingId: await meetingIdFor(registry, huddleId),
+                timeoutMs: ringTimeoutMs,
+            });
+            io.to(`huddle:${huddleId}`).emit('huddle:invited', { huddleId, by: uid(), userIds: allowed });
+            reply({ ok: true, invited: allowed.length });
+        } catch (err) {
+            logger.error('[huddle:invite] failed:', err);
+            reply({ ok: false, message: 'Could not add them.' });
         }
     });
 

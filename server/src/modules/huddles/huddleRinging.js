@@ -175,6 +175,53 @@ function start(io, { huddleId, kind, callerId, callees, workspaceId, dmId = null
     return payload;
 }
 
+/**
+ * Someone in a call adds more people: they ring like a group call (their phone rings, with Join and
+ * Decline). Adds to the call's current ring if it is still ringing.
+ */
+function invite(io, { huddleId, callerId, callees, workspaceId, dmId = null, channelId = null, title, from, video, meetingId, timeoutMs = RING_MS }) {
+    const list = [...new Set((callees || []).map(String))].filter(id => id && id !== String(callerId));
+    if (!list.length) return null;
+    const expiresAt = Date.now() + timeoutMs;
+    const payload = {
+        huddleId,
+        kind: 'group_dm',
+        ...(dmId ? { dmId } : {}),
+        ...(channelId ? { channelId } : {}),
+        workspaceId: workspaceId || null,
+        title: title || null,
+        from,
+        video: !!video,
+        meetingId: meetingId || null,
+        ring: true,
+        invited: true,
+        expiresAt,
+    };
+    let ring = rings.get(huddleId);
+    if (!ring) {
+        ring = { callerId: String(callerId), payload, callees: new Set(), answered: new Set(), workspaceId, timer: null };
+        rings.set(huddleId, ring);
+        ring.timer = setTimeout(() => {
+            const r = clear(huddleId);
+            if (!r) return;
+            const unanswered = [...r.callees];
+            for (const id of unanswered) {
+                r.callees.add(id);
+                cancelFor(io, r, id, 'timeout');
+            }
+            missedCall(io, r, unanswered);
+        }, timeoutMs);
+        if (ring.timer.unref) ring.timer.unref();
+    }
+    for (const id of list) {
+        ring.callees.add(id);
+        const mine = { ...payload, declineUrl: declineUrlFor(huddleId, id, expiresAt) };
+        emitToUser(io, id, 'huddle:ring', mine);
+        pushCall(id, mine);
+    }
+    return payload;
+}
+
 /** The callee joined the call (on some device): stop ringing on all their devices. */
 function answered(io, huddleId, userId) {
     const ring = rings.get(huddleId);
@@ -221,4 +268,4 @@ function _reset() {
     rings.clear();
 }
 
-module.exports = { RING_MS, start, answered, decline, ended, isRinging, signDecline, verifyDecline, declineUrlFor, _reset };
+module.exports = { RING_MS, start, invite, answered, decline, ended, isRinging, signDecline, verifyDecline, declineUrlFor, _reset };

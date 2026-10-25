@@ -6,6 +6,7 @@
 // The controls fade while there's video and come back with a tap.
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  UserPlus,
   ChevronDown,
   ClipboardList,
   Ear,
@@ -25,6 +26,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useWide } from '../../app/layout.js';
+import { AddPeopleSheet } from './AddPeopleSheet.jsx';
 import { hasCallSession, keepScreenOn } from '../../native/callSession.js';
 import { useOverlay } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -184,6 +186,9 @@ function FullCall({ title }) {
   const [poke, setPoke] = useState(0);
   const [menu, setMenu] = useState(false);
   const [panel, setPanel] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [pullDown, setPullDown] = useState(0);
+  const swipe = useRef(null);
   const stageRef = useRef(null);
   const size = useElementSize(stageRef);
   const speaking = useSpeaking(participants, true);
@@ -279,6 +284,24 @@ function FullCall({ title }) {
       data-view={view.kind}
       data-controls={controlsShown ? 'shown' : 'hidden'}
       className="fixed inset-0 z-[45] overflow-hidden bg-bg"
+      style={pullDown ? { transform: `translateY(${pullDown}px)`, borderRadius: 24, transition: 'none' } : { transition: 'transform 200ms ease-out' }}
+      onTouchStart={(e) => {
+        // Swipe the call down to keep using the app (it shrinks to the floating window).
+        const t = e.touches[0];
+        swipe.current = t.clientY < window.innerHeight * 0.4 ? { y: t.clientY, x: t.clientX } : null;
+      }}
+      onTouchMove={(e) => {
+        if (!swipe.current) return;
+        const t = e.touches[0];
+        const dy = t.clientY - swipe.current.y;
+        if (Math.abs(t.clientX - swipe.current.x) > Math.abs(dy)) return;
+        setPullDown(Math.max(0, dy));
+      }}
+      onTouchEnd={() => {
+        if (pullDown > 120) setCallView('mini');
+        setPullDown(0);
+        swipe.current = null;
+      }}
       onPointerDown={() => controlsShown && keepControls()}
       onClickCapture={(e) => {
         if (controlsShown) return;
@@ -333,6 +356,7 @@ function FullCall({ title }) {
             </span>
           </span>
         </span>
+        <HeaderButton icon={UserPlus} label="Add people to the call" onClick={() => setAdding(true)} testId="huddle-add-people" />
         {people.length >= 2 && (
           <HeaderButton
             icon={gridLike ? SquareUserRound : LayoutGrid}
@@ -370,6 +394,7 @@ function FullCall({ title }) {
         <Control icon={PhoneOff} label="Leave the call" danger onClick={leave} testId="huddle-bar-leave" />
       </div>
       <CallMenu open={menu} onClose={() => setMenu(false)} />
+      <AddPeopleSheet open={adding} onClose={() => setAdding(false)} />
       {panel && (
         <Suspense fallback={null}>
           <MeetingCallPanel open onClose={() => setPanel(false)} />

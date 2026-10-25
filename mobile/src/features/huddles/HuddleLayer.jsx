@@ -43,10 +43,19 @@ function Call() {
   return <CallView title={title} />;
 }
 
+const RECAP_MS = 5000;
+
 /** "Meeting ended · View recap" where the person is, after a call they were part of ends. */
 export function RecapBanner() {
   const recaps = useRecap((s) => s.recaps);
   const call = useHuddle((s) => s.call);
+  // It doesn't wait for a tap: each banner closes by itself after a few seconds.
+  const ids = recaps.map((r) => r.meetingId).join(',');
+  useEffect(() => {
+    if (!ids) return undefined;
+    const timers = ids.split(',').map((id) => setTimeout(() => dismissRecap(id), RECAP_MS));
+    return () => timers.forEach(clearTimeout);
+  }, [ids]);
   if (!recaps.length) return null;
   return (
     <div className="fixed inset-x-3 z-[61] flex flex-col gap-2" style={{ top: `calc(env(safe-area-inset-top) + ${call ? 64 : 8}px)` }}>
@@ -55,7 +64,12 @@ export function RecapBanner() {
           key={r.meetingId}
           role="status"
           data-testid="meeting-recap-banner"
-          className="glass-strong mx-auto flex w-full max-w-lg items-center gap-3 rounded-2xl border px-3 py-2.5 animate-sheet-in"
+          className="glass-strong mx-auto flex w-full max-w-lg items-center gap-3 rounded-2xl border px-3 py-2.5 animate-drop-in"
+          onTouchStart={(e) => (e.currentTarget.dataset.y = e.touches[0].clientY)}
+          onTouchEnd={(e) => {
+            // Swipe it up to dismiss.
+            if (e.currentTarget.dataset.y - e.changedTouches[0].clientY > 30) dismissRecap(r.meetingId);
+          }}
           style={{ borderLeft: '3px solid rgb(var(--c-accent))' }}
         >
           <Icon as={ClipboardList} size={18} className="shrink-0 text-accent-ink" />
