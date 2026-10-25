@@ -9,7 +9,10 @@ import { tap as haptic } from '../../native/index.js';
 export const SWIPE_TRIGGER = 56;
 const SWIPE_MAX = 80;
 const LONG_PRESS_MS = 420;
-const DOUBLE_TAP_MS = 280;
+// A little longer than the system's: people double-tap slower to take a reaction back.
+const DOUBLE_TAP_MS = 350;
+// After a double tap (a reaction), taps are ignored this long so the next one can't open the thread.
+const AFTER_REACT_MS = 600;
 const INTERACTIVE = 'a,button,input,textarea,select,video,audio,img,[role="button"],[data-no-tap]';
 
 export function isInteractive(target, row) {
@@ -22,6 +25,7 @@ export function useRowGestures({ onLongPress, onSwipe, onTap, onDoubleTap }) {
   const g = useRef(null);
   const lastTap = useRef(0);
   const tapTimer = useRef(null);
+  const quietUntil = useRef(0);
 
   const clearLong = () => {
     clearTimeout(g.current?.long);
@@ -91,10 +95,12 @@ export function useRowGestures({ onLongPress, onSwipe, onTap, onDoubleTap }) {
       if (onDoubleTap && now - lastTap.current < DOUBLE_TAP_MS) {
         clearTimeout(tapTimer.current);
         lastTap.current = 0;
+        quietUntil.current = now + AFTER_REACT_MS;
         haptic('light');
         onDoubleTap();
         return;
       }
+      if (now < quietUntil.current) return;
       lastTap.current = now;
       clearTimeout(tapTimer.current);
       if (onTap) tapTimer.current = setTimeout(onTap, onDoubleTap ? DOUBLE_TAP_MS : 0);
