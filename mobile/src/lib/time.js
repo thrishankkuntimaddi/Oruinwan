@@ -34,6 +34,21 @@ export function shortAgo(value, now = Date.now()) {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
+/** Chat list time, as WhatsApp shows it: "14:05" today, "Yesterday", then "25/10/2026". */
+export function chatListTime(value, now = Date.now()) {
+  const d = toDate(value);
+  if (!d) return '';
+  const today = startOfDay(now).getTime();
+  const day = startOfDay(d).getTime();
+  if (day >= today) return clock(d);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1); // not today - 24h: daylight-saving days are 23 or 25 hours
+  if (day === yesterday.getTime()) return 'Yesterday';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
 export function clock(value) {
   const d = toDate(value);
   return d ? d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';

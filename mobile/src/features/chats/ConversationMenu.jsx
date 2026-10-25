@@ -50,8 +50,8 @@ const PRESENCE_TEXT = { active: 'Active', online: 'Active', away: 'Away', dnd: '
  */
 export function useConversationStatus(kind, id, meta) {
   const isDm = kind === 'dm' && !meta?.agentId;
-  const { data: dm } = useQuery(isDm && api().dmStatus && `dmStatus:${id}`, () => api().dmStatus(id), { staleMs: 60_000 });
-  const { data: policy } = useQuery(kind === 'channel' && api().channelPolicy && `channelPolicy:${id}`, () => api().channelPolicy(id), { staleMs: 5 * 60_000 });
+  const { data: dm } = useQuery(isDm && id && api().dmStatus && `dmStatus:${id}`, () => api().dmStatus(id), { staleMs: 60_000 });
+  const { data: policy } = useQuery(kind === 'channel' && id && api().channelPolicy && `channelPolicy:${id}`, () => api().channelPolicy(id), { staleMs: 5 * 60_000 });
   const muted = kind === 'channel' ? Boolean(policy?.muted ?? meta?.muted) : Boolean(dm?.muted);
   return { muted, blocked: Boolean(dm?.blocked), blockedByOther: Boolean(dm?.blockedByOther) };
 }

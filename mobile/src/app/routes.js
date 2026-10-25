@@ -35,6 +35,7 @@ export const ROUTES = {
   profile: pick(chats, 'ProfileScreen'),
   saved: pick(chats, 'SavedScreen'),
   unread: pick(chats, 'UnreadScreen'),
+  archivedChats: pick(chats, 'ArchivedChatsScreen'),
   task: pick(tasks, 'TaskScreen'),
   taskDiscussion: pick(tasks, 'TaskDiscussionScreen'),
   planning: pick(tasks, 'PlanningScreen'),

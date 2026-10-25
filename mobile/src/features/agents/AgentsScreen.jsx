@@ -152,7 +152,7 @@ function AgentSheet({ agent, ws, policy, onClose }) {
   );
 }
 
-export function AgentsScreen() {
+export function AgentsScreen({ connect = false }) {
   const ws = useSession((s) => s.workspaceId);
   const mode = useSession((s) => s.mode);
   const server = useSession((s) => s.server);
@@ -175,6 +175,11 @@ export function AgentsScreen() {
           <EmptyState icon={Bot} title="No agents here" body="Oruinwan AI lives in the AI tab." />
         ) : (
           <>
+            {connect && policy.canConnectOwn && (
+              <p className="mx-4 mt-3 rounded-card border border-line-soft bg-surface-2 px-3.5 py-3 text-[13px] leading-relaxed text-text-2" data-testid="agents-connect-hint">
+                Pick an agent, then <span className="font-semibold text-text">Connect my own</span> and paste your API key from that company. Only you can use it, and it answers you in Chats → Agents.
+              </p>
+            )}
             <Section title="Agents">
               <RowGroup footer={policy.canConnectOwn ? 'Your own key is used only for your messages. Nobody else in the workspace can see or use it.' : 'Your workspace admins decide which agents everyone can use.'}>
                 {agents.map((a) => {

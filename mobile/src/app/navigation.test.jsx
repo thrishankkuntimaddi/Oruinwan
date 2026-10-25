@@ -126,17 +126,29 @@ describe('Chats', () => {
     expect(s.agentDms.map((d) => d.id)).toEqual(['d3']);
   });
 
-  it('has no Unread section or search field; unread rows are highlighted in place; New message floats', async () => {
+  it('All is one list, newest first, no sections; unread rows stay in place with a badge', async () => {
     render(<ChatsScreen />);
-    const dmsSection = await screen.findByRole('region', { name: 'Direct messages' });
-    const ben = within(dmsSection).getByText('Ben Carter').closest('button');
-    expect(ben.dataset.unread).toBe('true');
-    expect(within(screen.getByRole('region', { name: 'Channels' })).getByText('design').closest('button').dataset.unread).toBe('true');
-    expect(within(screen.getByRole('region', { name: 'Agents' })).getByTestId('agent-anthropic').dataset.unread).toBe('true');
+    const list = await screen.findByRole('list', { name: 'Chats' });
+    const names = within(list).getAllByRole('listitem').map((li) => li.querySelector('[data-testid]').dataset.testid);
+    // random (1m), muted-one (2m), Ben (3m), Cleo (4m), general (5m), Claude (10m), design (30m)
+    expect(names).toEqual(['chat-channel:c3', 'chat-channel:c4', 'chat-dm:d1', 'chat-dm:d2', 'chat-channel:c1', 'chat-dm:d3', 'chat-channel:c2']);
+    expect(screen.getByTestId('chat-dm:d1').dataset.unread).toBe('true');
+    expect(screen.getByTestId('chat-channel:c2').dataset.unread).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Direct messages' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Unread' })).toBeNull();
     expect(screen.queryByRole('searchbox')).toBeNull();
     expect(screen.getAllByRole('button', { name: 'New message' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1 unread').length).toBeGreaterThan(0);
+  });
+
+  it('the Agents filter lists agent chats and offers to connect your own', async () => {
+    const { useChatsUi } = await import('../features/chats/chatsUi.js');
+    useChatsUi.getState().setSegment('agents');
+    render(<ChatsScreen />);
+    expect(await screen.findByTestId('chat-dm:d3')).toBeTruthy();
+    expect(screen.queryByTestId('chat-dm:d1')).toBeNull();
+    fireEvent.click(screen.getByTestId('agents-manage'));
+    expect(useNav.getState().stacks.home.at(-1)).toMatchObject({ name: 'agents', params: { connect: true } });
+    useChatsUi.getState().setSegment('all');
   });
 });
 

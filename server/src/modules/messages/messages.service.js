@@ -706,20 +706,7 @@ async function getUserDMSessions(userId, workspaceId) {
             });
 
             
-            let lastMessageText = 'No messages yet';
-            if (lastMsg) {
-                if (lastMsg.type === 'image') lastMessageText = '📷 Photo';
-                else if (lastMsg.type === 'video') lastMessageText = '🎬 Video';
-                else if (lastMsg.type === 'voice') lastMessageText = '🎵 Voice note';
-                else if (lastMsg.type === 'file') lastMessageText = '📎 File';
-                else if (lastMsg.type === 'poll') lastMessageText = '📊 Poll';
-                else if (lastMsg.type === 'contact') lastMessageText = '👤 Contact';
-                else if (lastMsg.type === 'meeting') lastMessageText = '📅 Meeting';
-                else if (lastMsg.type === 'checklist') lastMessageText = '☑️ Checklist';
-                else if (lastMsg.text) lastMessageText = lastMsg.text; 
-                else if (lastMsg.payload?.isEncrypted || lastMsg.payload?.ciphertext) lastMessageText = '🔒 Encrypted message';
-                else lastMessageText = 'Message';
-            }
+            const lastMessageText = messagePreviewLabel(lastMsg);
 
             const preview = {
                 lastMessage: lastMessageText,
@@ -773,6 +760,7 @@ async function getUserDMSessions(userId, workspaceId) {
                     : null,
                 lastMessageId: lastMsg?._id || null,
                 lastMessageAt: lastMsg?.createdAt || session.createdAt,
+                lastMessageSender: lastMsg?.sender ? { _id: String(lastMsg.sender._id || lastMsg.sender), username: lastMsg.sender.username || null } : null,
                 unreadCount
             };
         })
@@ -785,6 +773,61 @@ async function getUserDMSessions(userId, workspaceId) {
  * Unread top-level messages per channel for `userId`, counted from the moment
  * they joined each channel. Returns a Map of channelId → count (only >0).
  */
+/** The chat list's one-line label for a message ("📷 Photo", its plain text, …). */
+function messagePreviewLabel(lastMsg) {
+    if (!lastMsg) return 'No messages yet';
+    const t = lastMsg.type;
+    if (t === 'image') return '📷 Photo';
+    if (t === 'video') return '🎬 Video';
+    if (t === 'voice' || t === 'audio') return '🎵 Voice note';
+    if (t === 'file') return '📎 File';
+    if (t === 'poll') return '📊 Poll';
+    if (t === 'contact') return '👤 Contact';
+    if (t === 'meeting') return '📅 Meeting';
+    if (t === 'checklist') return '☑️ Checklist';
+    if (lastMsg.text) return lastMsg.text;
+    if (lastMsg.payload?.isEncrypted || lastMsg.payload?.ciphertext) return '🔒 Encrypted message';
+    return 'Message';
+}
+
+const memberIdOf = (m) => String(m?.user?._id || m?.user || m);
+
+/**
+ * The newest top-level message of each channel `userId` is in, for the chat list: a label for
+ * media, the ciphertext for text (members decrypt it), who sent it and when.
+ * Returns a Map of channelId → { id, label, preview, senderId, senderName, at }.
+ */
+async function getChannelLastMessages(userId, channels) {
+    const out = new Map();
+    const mine = (channels || []).filter(ch => (ch.members || []).some(m => memberIdOf(m) === String(userId)));
+    await Promise.all(mine.map(async (ch) => {
+        const me = ch.members.find(m => memberIdOf(m) === String(userId));
+        const last = await Message.findOne({
+            channel: ch._id,
+            parentId: null,
+            type: { $ne: 'system' },
+            isDeleted: { $ne: true },
+            isDeletedUniversally: { $ne: true },
+            hiddenFor: { $ne: userId },
+            ...(me?.joinedAt ? { createdAt: { $gte: new Date(me.joinedAt) } } : {}),
+        })
+            .sort({ createdAt: -1 })
+            .select('_id payload type text createdAt sender')
+            .lean();
+        if (!last) return;
+        await hydrate(last, { sender: { type: 'user', fields: ['username', 'profile'] } });
+        out.set(String(ch._id), {
+            id: String(last._id),
+            label: messagePreviewLabel(last),
+            preview: last.type === 'message' && last.payload?.ciphertext ? { ciphertext: last.payload.ciphertext, messageIv: last.payload.messageIv } : null,
+            senderId: last.sender ? String(last.sender._id || last.sender) : null,
+            senderName: last.sender?.profile?.name || last.sender?.username || null,
+            at: last.createdAt,
+        });
+    }));
+    return out;
+}
+
 async function getChannelUnreadCounts(userId, channels) {
     const clauses = [];
     for (const ch of channels || []) {
@@ -1428,6 +1471,8 @@ module.exports = {
     findOrCreateDMSession,
     getUserDMSessions,
     getChannelUnreadCounts,
+    getChannelLastMessages,
+    messagePreviewLabel,
     getWorkspaceUnreadCounts,
     editMessage,
     deleteMessage,

@@ -354,6 +354,8 @@ app.use("/api/v2/notes", require("./src/features/notes/notes.routes"));
 app.use("/api/v2/backup", require("./src/features/drive-backup/driveBackup.routes"));
 
 app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"));
+// Pinned (max 3) and archived chats in a person's chat list.
+app.use("/api/v2/conversation-prefs", require("./src/features/conversation-prefs/conversationPrefs.routes"));
 
 app.use('/api/public', require('./src/features/developer/publicApi.versioning')); // /v1/* + deprecated unversioned alias
 

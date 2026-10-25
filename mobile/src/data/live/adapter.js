@@ -60,6 +60,17 @@ export function mapUser(u) {
   };
 }
 
+/** The server's label for the last message, when it says more than "encrypted" ("📷 Photo", "📊 Poll"). */
+export function previewLabel(s) {
+  const t = s?.lastMessage;
+  if (!t || typeof t !== 'string') return null;
+  if (/^(No messages yet|Message|🔒 Encrypted message)$/.test(t.trim())) return null;
+  // Plain (unencrypted) text from older servers is fine to show; ciphertext never comes in this field.
+  return t;
+}
+
+const senderOf = (s) => (s?.lastMessageSender ? { id: s.lastMessageSender._id ? String(s.lastMessageSender._id) : null, name: s.lastMessageSender.name || s.lastMessageSender.username || null } : null);
+
 /** A 1:1 DM row. */
 export function mapPersonDm(s, myId) {
   const user = mapUser(s.otherUser) || { id: s.otherUserId ? String(s.otherUserId) : null, name: 'Unknown', presence: 'offline' };
@@ -71,7 +82,8 @@ export function mapPersonDm(s, myId) {
     participantIds: [myId, user.id].filter(Boolean),
     unread: s.unreadCount || 0,
     lastAt: s.lastMessageAt || null,
-    lastText: null,
+    lastText: previewLabel(s),
+    lastSender: senderOf(s),
     agentId: s.isAgent ? s.agentId || 'default' : null,
   };
 }
@@ -102,7 +114,8 @@ export function mapGroupDm(s, myId) {
     participantIds: members.map((m) => m.id),
     unread: s.unreadCount || 0,
     lastAt: s.lastMessageAt || null,
-    lastText: null,
+    lastText: previewLabel(s),
+    lastSender: senderOf(s),
     agentId: null,
   };
 }
@@ -154,7 +167,9 @@ function mapChannel(c) {
     memberCount: memberIds.length || c.memberCount || 0,
     memberIds,
     lastAt: c.lastMessageAt || null,
-    lastText: null, // message bodies are end-to-end encrypted; the topic is shown instead
+    // Media labels come as text; text messages come encrypted (decrypted in channels()).
+    lastText: previewLabel(c),
+    lastSender: senderOf(c),
   };
 }
 
@@ -667,7 +682,22 @@ export const liveAdapter = {
 
   async channels(ws) {
     const data = await api.get(`/workspaces/${ws}/channels`);
-    const list = (data.channels || []).map(mapChannel);
+    const raw = data.channels || [];
+    const list = raw.map(mapChannel);
+    // The newest message's text, for the chat list (end-to-end encrypted: decrypted on the phone).
+    if (useE2ee.getState().status === 'ready') {
+      await Promise.all(
+        raw.map(async (c, i) => {
+          if (!c.lastMessagePreview?.ciphertext || !list[i].isMember) return;
+          try {
+            const key = await conversationKey({ kind: 'channel', id: list[i].id });
+            list[i].lastText = await decryptPayload(key, c.lastMessagePreview);
+          } catch {
+            /* keep the label */
+          }
+        }),
+      );
+    }
     for (const c of list) nameConversation(c.id, { kind: 'channel', name: `#${c.name}`, ws });
     return list;
   },
@@ -676,6 +706,16 @@ export const liveAdapter = {
   },
   async leaveChannel(id) {
     await api.post(`/channels/${id}/exit`);
+  },
+  /** My pinned (max 3) and archived chats: [{ kind, id, pinnedAt, archivedAt }]. */
+  async conversationPrefs(ws) {
+    const data = await api.get(`/v2/conversation-prefs/${ws}`);
+    return (data.prefs || []).map((p) => ({ kind: p.kind, id: String(p.id), pinnedAt: p.pinnedAt || null, archivedAt: p.archivedAt || null }));
+  },
+  /** patch: { pinned?: boolean, archived?: boolean }. Throws (409, code PIN_LIMIT) for a fourth pin. */
+  async setConversationPref(ws, conv, patch) {
+    const data = await api.put('/v2/conversation-prefs', { workspaceId: ws, kind: conv.kind, id: conv.id, ...patch });
+    return data.pref;
   },
   async setChannelMuted(id, muted) {
     if (muted) await api.post(`/channels/${id}/mute`, {});
@@ -696,7 +736,7 @@ export const liveAdapter = {
             const key = await conversationKey({ kind: 'dm', id: dm.id });
             dm.lastText = await decryptPayload(key, s.lastMessagePreview);
           } catch {
-            dm.lastText = null;
+            /* keep the server's label */
           }
         }
         dmCache.set(dm.id, dm);

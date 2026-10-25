@@ -1,4 +1,4 @@
-export { ChatsScreen } from './ChatsScreen.jsx';
+export { ChatsScreen, ArchivedChatsScreen } from './ChatsScreen.jsx';
 export {
   ConversationScreen,
   ThreadScreen,

@@ -805,7 +805,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     
     const allChannels = await Channel.find({ workspace: workspaceId })
-      .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents')
+      .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents lastMessageAt mutedBy postingPolicy')
       .sort({ isDefault: -1, createdAt: 1 }) 
       .lean();
     await hydrate(allChannels, { createdBy: { type: 'user', fields: ['username', 'profile'] } });
@@ -875,7 +875,13 @@ exports.getWorkspaceChannels = async (req, res) => {
     });
 
     
-    const unreadCounts = await messagesService.getChannelUnreadCounts(userId, visibleChannels);
+    const [unreadCounts, lastMessages] = await Promise.all([
+      messagesService.getChannelUnreadCounts(userId, visibleChannels),
+      messagesService.getChannelLastMessages(userId, visibleChannels).catch((err) => {
+        logger.warn('[channels] last message previews failed:', err?.message);
+        return new Map();
+      }),
+    ]);
 
     const channelsWithMembershipInfo = visibleChannels.map(channel => {
       const isMember = channel.members.some(m => {
@@ -883,10 +889,16 @@ exports.getWorkspaceChannels = async (req, res) => {
         return memberId === userId.toString();
       });
 
+      const last = lastMessages.get(String(channel._id));
+      const { mutedBy, ...rest } = channel;
       return {
-        ...channel,
+        ...rest,
         isMember,
+        isMuted: (mutedBy || []).some((m) => String(m?.user || m) === String(userId)),
         unreadCount: unreadCounts.get(String(channel._id)) || 0,
+        // The chat list sorts by and previews the newest message (text arrives encrypted).
+        lastMessageAt: last?.at || channel.lastMessageAt || null,
+        ...(last ? { lastMessage: last.label, lastMessagePreview: last.preview, lastMessageSender: { _id: last.senderId, name: last.senderName } } : {}),
       };
     });
 
