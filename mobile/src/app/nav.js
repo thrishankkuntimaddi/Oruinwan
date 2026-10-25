@@ -13,6 +13,10 @@ export const TABS = [...BAR_TABS, 'ai'];
 
 const emptyStacks = () => Object.fromEntries(TABS.map((t) => [t, []]));
 
+/** Forget every "came from" tab: after the person picks a tab themselves, back stays in that tab. */
+const clearFrom = (stacks) =>
+  Object.fromEntries(Object.entries(stacks).map(([t, list]) => [t, list.map((r) => (r.from ? { ...r, from: undefined } : r))]));
+
 // Which pane the user last clicked or typed in ({ tab, pane: 'list' | 'detail' | 'sidebar' }),
 // set by the wide layout. In a split tab, opening something from the list replaces what the
 // detail pane shows; only screens opened inside the detail pane stack on top of each other.
@@ -36,7 +40,7 @@ export const useNav = create((set, get) => ({
       return;
     }
     tap('select');
-    set(tab === 'ai' ? { tab, prev: current } : { tab });
+    set(tab === 'ai' ? { tab, prev: current } : { tab, stacks: clearFrom(stacks) });
   },
 
   /** Leaves the AI screen for the tab it was opened from. */
@@ -47,7 +51,10 @@ export const useNav = create((set, get) => ({
 
   push(name, params = {}, { tab } = {}) {
     const target = tab || get().tab;
-    const route = { key: uid('r'), name, params };
+    const current = get().tab;
+    // Opened from another tab (Activity → a DM, Home → a task): back returns to that tab.
+    const from = target !== current && current !== 'ai' ? current : undefined;
+    const route = { key: uid('r'), name, params, from };
     const fresh = isSplit(target) && !(origin?.pane === 'detail' && origin.tab === target);
     // Anything else opened before the next click (open() then push()) stacks on this screen.
     origin = { tab: target, pane: 'detail' };
@@ -65,18 +72,23 @@ export const useNav = create((set, get) => ({
   pop() {
     const { tab, stacks } = get();
     if (!stacks[tab].length) return false;
-    set({ stacks: { ...stacks, [tab]: stacks[tab].slice(0, -1) } });
+    const top = stacks[tab][stacks[tab].length - 1];
+    const next = { ...stacks, [tab]: stacks[tab].slice(0, -1) };
+    set(top.from && top.from !== tab && TABS.includes(top.from) ? { tab: top.from, stacks: next } : { stacks: next });
     return true;
   },
 
   /** Open a route from anywhere (notification, search, deep link) in the right tab. */
   open(tab, name, params = {}) {
     origin = { tab, pane: 'detail' };
-    set((s) => ({
-      tab,
-      ...(tab === 'ai' && s.tab !== 'ai' ? { prev: s.tab } : {}),
-      stacks: { ...s.stacks, [tab]: name ? [{ key: uid('r'), name, params }] : [] },
-    }));
+    set((s) => {
+      const from = tab !== s.tab && s.tab !== 'ai' ? s.tab : undefined;
+      return {
+        tab,
+        ...(tab === 'ai' && s.tab !== 'ai' ? { prev: s.tab } : {}),
+        stacks: { ...s.stacks, [tab]: name ? [{ key: uid('r'), name, params, from }] : [] },
+      };
+    });
   },
 
   resetAll() {

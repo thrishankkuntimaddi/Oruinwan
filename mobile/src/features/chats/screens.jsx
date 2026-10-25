@@ -28,6 +28,7 @@ import { useAiReplies } from './useAiReplies.js';
 import { AiLiveReply, Composer, ComposerPlusSheet, MessageActions, MessageItem, MessageList, useFilePickers } from './messages.jsx';
 import { ChannelTile, channelGlyph } from './ChatsScreen.jsx';
 import { openConversation } from './chatsUi.js';
+import { searchPeople, wordStartMatch } from '../../lib/peopleSearch.js';
 import { TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
@@ -769,20 +770,35 @@ export function ProfileScreen({ userId }) {
   );
 }
 
+/** New message list: people without a DM yet (by name), then people with one (most recent first). */
+export function newMessagePeople(members, dms, me, query) {
+  const lastWith = new Map();
+  for (const d of dms || []) if (!d.isGroup && !d.agentId && d.user?.id && d.lastAt) lastWith.set(d.user.id, d.lastAt);
+  const matched = searchPeople((members || []).filter((u) => u.id !== me && !u.bot && !u.deactivated), query);
+  const fresh = matched.filter((u) => !lastWith.has(u.id));
+  const known = matched.filter((u) => lastWith.has(u.id));
+  if (!query) known.sort((a, b) => lastWith.get(b.id).localeCompare(lastWith.get(a.id)));
+  return { fresh, known };
+}
+
 export function NewMessageScreen() {
   const { data: members, loading } = useMembers();
   const me = useSession((s) => s.user?.id);
   const ws = useSession((s) => s.workspaceId);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(null);
-  const people = (members || []).filter((u) => u.id !== me && (!query || u.name.toLowerCase().includes(query.toLowerCase())));
+  const { data: dms } = useDms();
+  // People you haven't messaged yet come first (that's who a new message is usually for);
+  // people you already talk to follow, most recent first. Typing narrows both by word start.
+  const { fresh, known } = useMemo(() => newMessagePeople(members, dms, me, query), [members, dms, me, query]);
+  const people = [...fresh, ...known];
   const open = async (u) => {
     setBusy(u.id);
     try {
-      const dmId = await api().openDm(ws, u.id);
+      const existing = (dms || []).find((d) => !d.isGroup && !d.agentId && d.user?.id === u.id);
+      const dmId = existing?.id || (await api().openDm(ws, u.id));
       invalidate('dms');
-      nav.pop();
-      openConversation('dm', dmId);
+      nav.replace('conversation', { kind: 'dm', id: dmId });
     } catch (err) {
       toast(err.message || 'Could not open the conversation', 'danger');
     } finally {
@@ -798,30 +814,39 @@ export function NewMessageScreen() {
       </Header>
       <Body>
         <RowGroup className="mt-1">
-          <Row icon={Users} tile="accent" title="New group" subtitle="A conversation with several people" onClick={() => nav.replace('newGroup')} />
-          <Row icon={Hash} tile="accent" title="Browse channels" onClick={() => nav.replace('browseChannels')} />
+          <Row icon={Users} tile="accent" title="New group" subtitle="A group DM with several people" onClick={() => nav.push('newGroup')} />
+          <Row icon={Hash} tile="accent" title="Browse channels" onClick={() => nav.push('browseChannels')} />
         </RowGroup>
-        <Section title="People">
-          {loading ? (
-            <SkeletonRows count={6} />
-          ) : people.length ? (
-            <RowGroup>
-              {people.map((u) => (
-                <Row
-                  key={u.id}
-                  leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
-                  title={u.name}
-                  subtitle={u.title || u.email}
-                  trailing={busy === u.id ? <Spinner className="text-text-2" /> : null}
-                  chevron={false}
-                  onClick={() => open(u)}
-                />
-              ))}
-            </RowGroup>
-          ) : (
-            <EmptyState icon={Users} title="No one found" body="Only people in this workspace can be messaged." />
-          )}
-        </Section>
+        {loading && !members ? (
+          <SkeletonRows count={6} />
+        ) : people.length ? (
+          <>
+            {[
+              ['fresh', fresh, query ? 'Start a conversation' : 'People you haven’t messaged'],
+              ['known', known, query ? 'Already talking' : 'Your conversations'],
+            ].map(([key, list, title]) =>
+              list.length ? (
+                <Section key={key} title={title}>
+                  <RowGroup>
+                    {list.map((u) => (
+                      <Row
+                        key={u.id}
+                        leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
+                        title={u.name}
+                        subtitle={u.title || (u.username ? `@${u.username}` : u.email)}
+                        trailing={busy === u.id ? <Spinner className="text-text-2" /> : null}
+                        chevron={false}
+                        onClick={() => open(u)}
+                      />
+                    ))}
+                  </RowGroup>
+                </Section>
+              ) : null,
+            )}
+          </>
+        ) : (
+          <EmptyState icon={Users} title={query ? `No one matches “${query}”` : 'No one found'} body="Only people in this workspace can be messaged." />
+        )}
       </Body>
     </Screen>
   );
@@ -834,7 +859,7 @@ export function BrowseChannelsScreen() {
   const [busy, setBusy] = useState(null);
   const [create, setCreate] = useState(false);
   const list = (channels || [])
-    .filter((c) => !query || c.name.includes(query.toLowerCase()))
+    .filter((c) => wordStartMatch(`${c.name} ${c.topic || ''}`, query))
     .sort((a, b) => Number(a.isMember) - Number(b.isMember) || a.name.localeCompare(b.name));
 
   const join = async (c) => {

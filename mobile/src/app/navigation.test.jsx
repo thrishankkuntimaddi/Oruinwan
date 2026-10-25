@@ -188,3 +188,40 @@ describe('Tasks', () => {
     expect(screen.getByRole('button', { name: 'New task' }).className).toContain('left-4');
   });
 });
+
+describe('back returns to where you came from', () => {
+  it('Activity → a DM → Back lands on Activity, not the Chats list', () => {
+    nav.setTab('activity');
+    nav.open('chats', 'conversation', { kind: 'dm', id: 'd1' });
+    expect(useNav.getState().tab).toBe('chats');
+    expect(useNav.getState().back()).toBe(true);
+    expect(useNav.getState().tab).toBe('activity');
+    expect(useNav.getState().stacks.chats).toEqual([]);
+  });
+
+  it('Home → a conversation pushed into Chats → thread → Back, Back lands on Home', () => {
+    nav.push('conversation', { kind: 'channel', id: 'c1' }, { tab: 'chats' });
+    nav.push('thread', { kind: 'channel', convId: 'c1', messageId: 'm1' });
+    nav.pop();
+    expect(useNav.getState().tab).toBe('chats');
+    nav.pop();
+    expect(useNav.getState().tab).toBe('home');
+  });
+
+  it('after picking a tab yourself, Back stays in that tab', () => {
+    nav.setTab('activity');
+    nav.open('chats', 'conversation', { kind: 'dm', id: 'd1' });
+    nav.setTab('home');
+    nav.setTab('chats');
+    nav.pop();
+    expect(useNav.getState().tab).toBe('chats');
+  });
+
+  it('New message → Browse channels → Back returns to New message', () => {
+    nav.setTab('chats');
+    nav.push('newMessage');
+    nav.push('browseChannels');
+    nav.pop();
+    expect(useNav.getState().stacks.chats.map((r) => r.name)).toEqual(['newMessage']);
+  });
+});
