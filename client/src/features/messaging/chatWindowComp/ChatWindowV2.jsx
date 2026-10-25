@@ -39,6 +39,7 @@ import { encryptMessageForSending } from '../../../services/messageEncryptionSer
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
 import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
 import { mentionCandidates, mentionedOutsiders, outsidersSentence } from '../mentionInvite';
+import { createGroupDM } from '../groupDm/groupDmApi';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -209,7 +210,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     // People I @mentioned who aren't in this channel: "Add them?" (Slack-like). [{ id, username, name }]
     const [mentionInvite, setMentionInvite] = useState(null);
     const [mentionInviteBusy, setMentionInviteBusy] = useState(false);
-    useEffect(() => { setMentionInvite(null); }, [chat?.id]);
+    // In a 1:1 DM, mentioning someone else offers a group with the three of you.
+    const [groupOffer, setGroupOffer] = useState(null);
+    useEffect(() => { setMentionInvite(null); setGroupOffer(null); }, [chat?.id]);
     // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
     const [showAskAi, setShowAskAi] = useState(false);
     const [showChecklistModal, setShowChecklistModal] = useState(false);
@@ -1089,6 +1092,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 const inChannel = (chat?.members || []).map((m) => String(m.user?._id || m.user || m._id || m));
                 const outsiders = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, inChannel, currentUserId);
                 if (outsiders.length) setMentionInvite(outsiders);
+            } else if (chat?.type === 'dm' && !chat?.isGroup && !chat?.isAgent && chat?.userId) {
+                const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [chat.userId, currentUserId], currentUserId);
+                if (others.length) setGroupOffer(others);
             }
 
             // Addressed to the AI: an @mention, or a follow-up right after it answered me
@@ -1120,7 +1126,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, chat?.isGroup, chat?.userId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1621,6 +1627,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         features,
         onShowHistory: (msg) => setHistoryMsg(msg),
         onConvertToTask: (msg) => setTaskMsg(msg),
+        onOpenTask: (taskId) => navigate(`/workspace/${workspaceId || chat?.workspaceId}/tasks/${taskId}`),
         onSummarizeThread: (msg) => setSummaryMsg(msg),
     }), [actions, handleSend, showToast, isChannelAdmin, performDelete, patchEvent, currentUserId, user?.username, conversationId, conversationType, loadMessageInfo, features, shareWorkspaceId, chat?.name, chat?.type]);
 
@@ -1727,10 +1734,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     
     // In a chat with an agent anyone in the workspace can be @mentioned ("tell @muzamil …").
-    // In a channel anyone in the workspace can be @mentioned too (members first); the channel then
-    // offers to add the ones who aren't in it (mentionInvite).
+    // In a channel or DM anyone in the workspace can be @mentioned too (members first); a channel
+    // then offers to add the ones who aren't in it (mentionInvite), a 1:1 DM a group (groupOffer).
     const mentionPool = chat?.isAgent ? workspaceMembers
-        : chat?.type === 'channel' ? mentionCandidates(chat?.members || [], workspaceMembers) : (chat?.members || []);
+        : chat?.type === 'channel' || chat?.type === 'dm' ? mentionCandidates(chat?.members || [], workspaceMembers) : (chat?.members || []);
     const channelMembers = mentionPool.map(m => {
         const user = m.user || m; 
         return {
@@ -1747,11 +1754,38 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            {groupOffer && chat?.type === 'dm' && (
+                <div className="gl-card" role="status" data-testid="group-offer"
+                    style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
+                    <span style={{ flex: 1, fontSize: 13 }}>
+                        {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. Start a group with {chat?.name || 'them'} and {groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}?
+                    </span>
+                    <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setGroupOffer(null)} disabled={mentionInviteBusy}>Not now</button>
+                    <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="group-offer-start" disabled={mentionInviteBusy}
+                        onClick={async () => {
+                            setMentionInviteBusy(true);
+                            try {
+                                const ws = workspaceId || chat?.workspaceId;
+                                const dm = await createGroupDM(ws, [chat.userId, ...groupOffer.map((p) => p.id)]);
+                                setGroupOffer(null);
+                                await refreshContacts?.();
+                                navigate(`/workspace/${ws}/home/dm/${dm._id || dm.id}`);
+                                showToast('Group ready: carry on there', 'success');
+                            } catch (err) {
+                                showToast(err?.response?.data?.message || 'Could not start the group', 'error');
+                            } finally {
+                                setMentionInviteBusy(false);
+                            }
+                        }}>
+                        {mentionInviteBusy ? 'Starting…' : 'Start group'}
+                    </button>
+                </div>
+            )}
             {mentionInvite && chat?.type === 'channel' && (
                 <div className="gl-card" role="status" data-testid="mention-invite"
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
-                        {outsidersSentence(mentionInvite, chat?.name)} Add {mentionInvite.length === 1 ? 'them' : 'them all'} so they see this conversation?
+                        {outsidersSentence(mentionInvite, String(chat?.name || '').replace(/^#/, ''))} Add {mentionInvite.length === 1 ? 'them' : 'them all'} so they see this conversation?
                     </span>
                     <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setMentionInvite(null)} disabled={mentionInviteBusy}>Not now</button>
                     <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="mention-invite-add" disabled={mentionInviteBusy}
@@ -1769,7 +1803,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                             }
                             setMentionInviteBusy(false);
                             setMentionInvite(null);
-                            if (added) showToast(added === 1 ? `Added to #${chat.name}` : `${added} people added to #${chat.name}`, 'success');
+                            const where = `#${String(chat.name || '').replace(/^#/, '')}`;
+                            if (added) showToast(added === 1 ? `Added to ${where}` : `${added} people added to ${where}`, 'success');
                             if (problem) showToast(problem, 'error');
                             refreshContacts?.();
                         }}>

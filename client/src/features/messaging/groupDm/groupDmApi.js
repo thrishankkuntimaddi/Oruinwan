@@ -39,6 +39,8 @@ export function groupTitle(group, myId) {
         .filter((p) => String(p._id || p.id) !== String(myId))
         .map((p) => p.username || 'Someone');
     if (names.length === 0) return 'Just you';
-    if (names.length <= 3) return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-    return `${names.slice(0, 2).join(', ')} and ${names.length - 2} others`;
+    // Short however big the group is: two names, then a count.
+    if (names.length <= 2) return names.join(' and ');
+    const more = names.length - 2;
+    return `${names.slice(0, 2).join(', ')} and ${more} ${more === 1 ? 'other' : 'others'}`;
 }

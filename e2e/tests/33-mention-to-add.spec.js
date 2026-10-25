@@ -62,3 +62,34 @@ test('mentioning someone outside the channel offers to add them', async ({ brows
 
   await ctx.close();
 });
+
+test('mentioning someone else in a 1:1 DM offers a group with the three of you', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const t = Date.now();
+  const { openDm, sendText } = require('./helpers');
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.addLocatorHandler(page.locator('[data-tour-card]'), async () => {
+    await page.getByRole('button', { name: 'Skip tour' }).click();
+  });
+  await login(page, 'shiva');
+  await openWorkspace(page);
+  await openDm(page, 'manogna');
+  const firstUrl = page.url();
+  await sendText(page, `let's ask @sandeep about it ${t}`);
+
+  const offer = page.getByTestId('group-offer');
+  await expect(offer).toBeVisible({ timeout: 30_000 });
+  await expect(offer).toContainText("@sandeep isn't in this chat");
+  await page.getByTestId('group-offer-start').click();
+  await page.waitForURL((u) => /\/dm\/[a-f0-9]{24}/.test(String(u)) && String(u) !== firstUrl, { timeout: 30_000 });
+
+  // The new conversation is a group of exactly the three of us.
+  const dmId = page.url().match(/\/dm\/([a-f0-9]{24})/)[1];
+  const details = await page.request.get(`${E2E.apiUrl}/api/v2/dm/${dmId}`, { headers: { Authorization: `Bearer ${await token(page)}` } });
+  const dm = (await details.json()).dm;
+  expect(dm.isGroup).toBe(true);
+  const ids = (dm.members || dm.participants || []).map((m) => String(m._id || m.id || m)).sort();
+  expect(ids).toEqual([seedData().users.shiva.id, seedData().users.manogna.id, seedData().users.sandeep.id].sort());
+  await ctx.close();
+});

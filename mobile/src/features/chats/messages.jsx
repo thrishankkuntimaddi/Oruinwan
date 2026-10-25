@@ -9,6 +9,7 @@ import { QUICK_REACTIONS } from '../../data/constants.js';
 import { clock, dayLabel, isSameDay, shortAgo } from '../../lib/time.js';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
+import { nav } from '../../app/nav.js';
 import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Markdown } from '../../ui/Markdown.jsx';
 import { Sheet, Dialog } from '../../ui/Overlay.jsx';
@@ -635,6 +636,8 @@ export function MessageActions({
     onRemind && { icon: BellRing, label: 'Remind me about this', run: onRemind },
     readable && message.text && message.type !== 'checklist' && onTranslate && { icon: Languages, label: 'Translate', run: onTranslate },
     readable && onTask && !message.linkedTaskId && { icon: ListTodo, label: 'Convert to task', run: onTask },
+    // Already a task: open it with its details.
+    message.linkedTaskId && { icon: ListTodo, label: 'Open task', run: () => nav.push('task', { id: message.linkedTaskId }, { tab: 'tasks' }) },
     mine && readable && onEdit && message.type !== 'checklist' && { icon: Pencil, label: 'Edit message', run: onEdit },
     readable && message.editCount > 0 && onHistory && { icon: History, label: 'Edit history', run: onHistory },
     mine && onInfo && !message.pending && { icon: Info, label: 'Message info', run: onInfo },

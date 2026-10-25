@@ -186,7 +186,7 @@ test('display names', () => {
     const p = (id, username) => ({ _id: id, username });
     expect(svc.groupDisplayName({ name: 'Crew', participants: [] }, mockASHA)).toBe('Crew');
     expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen')] }, mockASHA)).toBe('ben and chen');
-    expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen'), p(mockDIVYA, 'divya')] }, mockASHA)).toBe('ben, chen and divya');
+    expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen'), p(mockDIVYA, 'divya')] }, mockASHA)).toBe('ben, chen and 1 other');
     expect(svc.groupDisplayName({ participants: [p(mockASHA), p(mockBEN, 'b'), p(mockCHEN, 'c'), p(mockDIVYA, 'd'), p(mockOUTSIDER, 'e')] }, mockASHA)).toBe('b, c and 2 others');
     expect(svc.memberSinceFor({ isGroup: false }, mockASHA)).toBeNull();
 });

@@ -202,6 +202,14 @@ export default function MyTasks({ section, children }) {
   const [showModal, setShowModal] = useState(false);
   const [mobileShowList, setMobileShowList] = useState(reviewsMode);
   const [selectedId, setSelectedId] = useState(null);
+  // An open task fills the main window by default (the list steps aside); remembered per browser.
+  const [taskWide, setTaskWide] = useState(() => {
+    try { return localStorage.getItem('oru.tasks.wide') !== 'false'; } catch { return true; }
+  });
+  const toggleTaskWide = () => setTaskWide((w) => {
+    try { localStorage.setItem('oru.tasks.wide', String(!w)); } catch { /* private mode */ }
+    return !w;
+  });
   const [confirm, setConfirm] = useState(null); // { mode, task, to? }
   const [transferTask, setTransferTask] = useState(null);
   const [prefill, setPrefill] = useState(null); // template draft for the create dialog
@@ -441,7 +449,7 @@ export default function MyTasks({ section, children }) {
       {/* ── Main ── */}
       {!reviewsMode && (
       <div style={{ flex: 1, minWidth: 0, display: (isMobile && !mobileShowList) ? 'none' : 'flex', overflow: 'hidden' }}>
-        <div className="tasks-main" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="tasks-main" style={{ flex: 1, minWidth: 0, display: selectedTask && taskWide && !isMobile ? 'none' : 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           <header className="gl-x-tasks-head">
             {refreshing && (
@@ -569,6 +577,8 @@ export default function MyTasks({ section, children }) {
         {selectedTask && (
           <WorkspaceTaskDetailPanel
             fullScreen={isMobile}
+            wide={taskWide && !isMobile}
+            onToggleWide={toggleTaskWide}
             task={selectedTask}
             members={members || []}
             allTasks={tasks}

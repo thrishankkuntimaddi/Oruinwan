@@ -11,6 +11,7 @@ import { useViewing } from '../../data/live/viewing.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
+import { cx } from '../../ui/cx.js';
 import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
@@ -297,6 +298,8 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   // People I @mentioned who aren't in this channel: "Add them?" (Slack-like). [{ id, name, username }]
   const [mentionInvite, setMentionInvite] = useState(null);
   const [mentionInviteBusy, setMentionInviteBusy] = useState(false);
+  // In a 1:1 DM, mentioning someone else offers a group with the three of you: { people, text }.
+  const [groupOffer, setGroupOffer] = useState(null);
   const status = useConversationStatus(kind, id, meta);
   const aiOn = useFlag('ai');
   // Unread when the conversation opened (opening marks it read), for "since you last read".
@@ -449,7 +452,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         </div>
       ) : (
         <Composer
-          placeholder={`Message ${label}`}
+          placeholder={isGroup && !meta?.groupName ? 'Message the group' : `Message ${label}`}
           aiMentions={aiOn}
           assistants={assistants}
           mentions={mentions.composer}
@@ -481,11 +484,37 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
                 const inChannel = new Set(meta?.memberIds || []);
                 const outsiders = (people || []).filter((p) => p.id && p.id !== me && !inChannel.has(p.id));
                 if (outsiders.length) setMentionInvite(outsiders);
+              } else if (kind === 'dm' && !isGroup && !meta?.agentId && meta?.user?.id && api().createGroupDm) {
+                const others = (people || []).filter((p) => p.id && p.id !== me && p.id !== meta.user.id);
+                if (others.length) setGroupOffer({ people: others, text });
               }
             }
           }}
         />
       )}
+      <Dialog
+        open={Boolean(groupOffer)}
+        onClose={() => setGroupOffer(null)}
+        title={`Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`}
+        body="They aren't in this chat. The group is a new conversation; your message goes there to carry on."
+        confirmLabel="Start group"
+        cancelLabel="Not now"
+        busy={mentionInviteBusy}
+        onConfirm={async () => {
+          setMentionInviteBusy(true);
+          try {
+            const group = await api().createGroupDm(ws, [meta.user.id, ...groupOffer.people.map((p) => p.id)]);
+            const groupId = group?.id || group;
+            invalidate('dms');
+            setGroupOffer(null);
+            nav.replace('conversation', { kind: 'dm', id: groupId, draft: groupOffer.text });
+          } catch (err) {
+            toast(err.message || 'Could not start the group', 'danger');
+          } finally {
+            setMentionInviteBusy(false);
+          }
+        }}
+      />
       <Dialog
         open={Boolean(mentionInvite)}
         onClose={() => setMentionInvite(null)}
@@ -1072,6 +1101,8 @@ export function NewMessageScreen() {
   const ws = useSession((s) => s.workspaceId);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(null);
+  // Several people ticked: one group with exactly them (the server reopens it if it exists).
+  const [picked, setPicked] = useState([]);
   const { data: dms } = useDms();
   // People you haven't messaged yet come first (that's who a new message is usually for);
   // people you already talk to follow, most recent first. Typing narrows both by word start.
@@ -1119,9 +1150,33 @@ export function NewMessageScreen() {
                         leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
                         title={u.name}
                         subtitle={u.title || u.email || (u.username ? `@${u.username}` : null)}
-                        trailing={busy === u.id ? <Spinner className="text-text-2" /> : null}
+                        trailing={
+                          busy === u.id ? (
+                            <Spinner className="text-text-2" />
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={picked.includes(u.id) ? `Untick ${u.name}` : `Tick ${u.name} for a group`}
+                              aria-pressed={picked.includes(u.id)}
+                              data-testid="pick-person"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPicked((list) => (list.includes(u.id) ? list.filter((x) => x !== u.id) : [...list, u.id]));
+                              }}
+                              className={cx(
+                                'grid h-7 w-7 place-items-center rounded-full border',
+                                picked.includes(u.id) ? 'border-accent bg-gold text-on-accent' : 'border-line-strong text-transparent',
+                              )}
+                            >
+                              <Icon as={Check} size={14} />
+                            </button>
+                          )
+                        }
                         chevron={false}
-                        onClick={() => open(u)}
+                        // While some are ticked, a tap ticks too; otherwise it opens the DM.
+                        onClick={() =>
+                          picked.length ? setPicked((list) => (list.includes(u.id) ? list.filter((x) => x !== u.id) : [...list, u.id])) : open(u)
+                        }
                       />
                     ))}
                   </RowGroup>
@@ -1133,6 +1188,35 @@ export function NewMessageScreen() {
           <EmptyState icon={Users} title={query ? `No one matches “${query}”` : 'No one found'} body="Only people in this workspace can be messaged." />
         )}
       </Body>
+      {picked.length > 0 && (
+        <div className="absolute inset-x-0 bottom-0 z-10 border-t border-line-soft bg-bg/95 px-4 pb-safe pt-3 backdrop-blur">
+          <Button
+            block
+            loading={busy === 'group'}
+            data-testid="start-picked"
+            onClick={async () => {
+              if (picked.length === 1) {
+                const u = (members || []).find((m) => m.id === picked[0]);
+                if (u) open(u);
+                return;
+              }
+              setBusy('group');
+              try {
+                const group = await api().createGroupDm(ws, picked);
+                invalidate('dms');
+                nav.replace('conversation', { kind: 'dm', id: group?.id || group });
+              } catch (err) {
+                toast(err.message || 'Could not start the group', 'danger');
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            {picked.length === 1 ? 'Message 1 person' : `Message ${picked.length} people`}
+          </Button>
+          <p className="mt-1.5 pb-2 text-center text-xs text-text-3">Your group with exactly these people opens, or a new one starts.</p>
+        </div>
+      )}
     </Screen>
   );
 }

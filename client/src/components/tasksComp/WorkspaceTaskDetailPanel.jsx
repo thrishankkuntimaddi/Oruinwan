@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     X, Eye, Activity, Plus, CheckCircle2, Tag, Loader2, ArrowRight, User, Edit2, Calendar, Trash2,
     Link2, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest, MessagesSquare,
+    Maximize2, Minimize2,
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -142,6 +143,8 @@ function AssigneeEditor({ members, initial, onCancel, onSave }) {
 export default function WorkspaceTaskDetailPanel({
     task, members = [], allTasks = [], milestones = [], can = {}, fullScreen = false, onClose, onUpdate, onStatusChange, onDelete,
     onRestore, onRequestTransfer, onTransferRespond, onPatchLocal, onFetch,
+    // wide: the task fills the main window (the list steps aside); onToggleWide switches.
+    wide = false, onToggleWide,
 }) {
     const { activeWorkspace } = useWorkspace();
     const aiWorkspaceId = activeWorkspace?.id || activeWorkspace?._id || null;
@@ -218,7 +221,7 @@ export default function WorkspaceTaskDetailPanel({
     const readOnlyHint = (what) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}><Lock size={9} /> {what}</span>;
 
     return (
-        <aside className="tasks-ui" aria-label="Task details" style={{ ...(fullScreen ? { position: 'fixed', inset: 0, zIndex: 55, width: '100%' } : { width: 'min(360px, 42%)', minWidth: '300px' }), flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)', overflow: 'hidden', fontFamily: FONT }}>
+        <aside className="tasks-ui" aria-label="Task details" data-wide={wide ? 'true' : undefined} style={{ ...(fullScreen ? { position: 'fixed', inset: 0, zIndex: 55, width: '100%' } : wide ? { flex: 1, minWidth: 0, width: '100%' } : { width: 'min(360px, 42%)', minWidth: '300px' }), flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)', overflow: 'hidden', fontFamily: FONT }}>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px 10px 16px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                 <IssueTypeIcon type={task.issueType} />
@@ -228,6 +231,12 @@ export default function WorkspaceTaskDetailPanel({
                 {deleted && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--state-danger)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>In trash</span>}
                 <span style={{ flex: 1 }} />
                 {saving && <Loader2 size={13} className="tk-spin" style={{ color: 'var(--accent)' }} />}
+                {!fullScreen && onToggleWide && (
+                    <button type="button" className="tk-icon-btn" onClick={onToggleWide} data-testid="task-wide-toggle"
+                        aria-label={wide ? 'Show beside the list' : 'Open in the main window'} title={wide ? 'Show beside the list' : 'Open in the main window'}>
+                        {wide ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                    </button>
+                )}
                 <button type="button" className="tk-icon-btn" onClick={onClose} aria-label="Close details"><X size={15} /></button>
             </div>
 

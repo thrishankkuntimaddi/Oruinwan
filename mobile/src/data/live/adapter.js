@@ -94,8 +94,10 @@ export function groupTitle(name, people, myId) {
   if (name) return name;
   const names = (people || []).filter((p) => p.id !== myId).map((p) => p.name || 'Someone');
   if (names.length === 0) return 'Just you';
-  if (names.length <= 3) return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} others`;
+  // Short however big the group is: two names, then a count.
+  if (names.length <= 2) return names.join(' and ');
+  const more = names.length - 2;
+  return `${names.slice(0, 2).join(', ')} and ${more} ${more === 1 ? 'other' : 'others'}`;
 }
 
 /** A group DM row: `user` carries the group's title so screens that show one name keep working. */

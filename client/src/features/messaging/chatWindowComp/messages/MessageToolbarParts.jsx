@@ -6,6 +6,7 @@ import {
     Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2, Link2, Share2,
 } from 'lucide-react';
 import { getMessageText, hasEditHistory, isBookmarkedBy } from '../../../../utils/messageActionUtils';
+import api from '@services/api';
 
 const NON_EDITABLE_TYPES = ['poll', 'system', 'meeting', 'contact', 'image', 'video', 'file', 'voice'];
 
@@ -97,6 +98,37 @@ export function MessageMoreMenu({ anchor, groups, onClose }) {
 /* Small inline pieces                                                 */
 /* ------------------------------------------------------------------ */
 
+// Brief task details for the chip on a message that became a task, fetched once per task.
+const taskBriefs = new Map(); // taskId -> Promise<{ key, title, status } | null>
+function taskBrief(taskId) {
+    if (!taskBriefs.has(taskId)) {
+        taskBriefs.set(taskId, api.get(`/api/v2/tasks/${taskId}`)
+            .then((r) => { const t = r.data?.task || r.data; return t ? { key: t.issueKey || null, title: t.title || '', status: t.status || '' } : null; })
+            .catch(() => null));
+    }
+    return taskBriefs.get(taskId);
+}
+const STATUS_WORDS = { todo: 'To do', in_progress: 'In progress', review: 'In review', blocked: 'Blocked', done: 'Done', cancelled: 'Cancelled', backlog: 'Backlog' };
+
+/** The task made from a message: its key, title and status; clicking opens it. */
+function LinkedTaskChip({ taskId, style }) {
+    const [brief, setBrief] = React.useState(null);
+    const params = typeof window !== 'undefined' ? /\/workspace\/([^/]+)/.exec(window.location.pathname) : null;
+    React.useEffect(() => { let alive = true; taskBrief(String(taskId)).then((b) => alive && setBrief(b)); return () => { alive = false; }; }, [taskId]);
+    const open = (e) => {
+        e.stopPropagation();
+        if (!params) return;
+        window.history.pushState({}, '', `/workspace/${params[1]}/tasks/${taskId}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+    return (
+        <button type="button" data-testid="linked-task-badge" onClick={open} title="Open the task made from this message"
+            style={{ ...style, border: 'none', cursor: 'pointer', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            ☑ {brief?.key ? `${brief.key} · ` : 'Task'}{brief?.title ? `${brief.title}` : ''}{brief?.status ? ` · ${STATUS_WORDS[brief.status] || brief.status}` : ''}
+        </button>
+    );
+}
+
 /** Small status chips: the thread was marked resolved, a task was made from the message. */
 export function MessageBadges({ msg }) {
     if (!msg?.resolvedThreadAt && !msg?.linkedTaskId) return null;
@@ -107,7 +139,7 @@ export function MessageBadges({ msg }) {
                 <span data-testid="resolved-badge" title="Thread marked resolved" style={{ ...chip, color: 'var(--state-success)', background: 'rgba(90,186,138,0.1)' }}>✓ Resolved</span>
             )}
             {msg.linkedTaskId && (
-                <span data-testid="linked-task-badge" title="A task was created from this message" style={{ ...chip, color: 'var(--accent)', background: 'rgba(184,149,106,0.12)' }}>☑ Task</span>
+                <LinkedTaskChip taskId={msg.linkedTaskId} style={{ ...chip, color: 'var(--accent)', background: 'rgba(184,149,106,0.12)' }} />
             )}
         </>
     );
@@ -313,7 +345,9 @@ export function useMessageToolbar({
                 accent: bookmarked,
             },
             toolbar.onRemind && { label: 'Remind me', icon: <Bell size={13} />, onClick: act(() => toolbar.onRemind(msg)) },
-            toolbar.onConvertToTask && text && { label: 'Convert to task', icon: <CheckSquare size={13} />, onClick: act(() => toolbar.onConvertToTask(msg)) },
+            // Already a task: open it (with its details) instead of converting again.
+            msg.linkedTaskId && toolbar.onOpenTask && { label: 'Open task', icon: <CheckSquare size={13} />, onClick: act(() => toolbar.onOpenTask(msg.linkedTaskId)) },
+            !msg.linkedTaskId && toolbar.onConvertToTask && text && { label: 'Convert to task', icon: <CheckSquare size={13} />, onClick: act(() => toolbar.onConvertToTask(msg)) },
             toolbar.onSummarizeThread && hasReplies && { label: 'Summarize thread', icon: <Sparkles size={13} />, onClick: act(() => toolbar.onSummarizeThread(msg)) },
             text && CODE_IN_MESSAGE.test(text) && { label: 'Review code with AI', icon: <Code2 size={13} />, onClick: act(() => reviewCodeWithAI(text)) },
         ],
