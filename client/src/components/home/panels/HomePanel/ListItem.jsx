@@ -1,4 +1,5 @@
 import React from 'react';
+import StandingTag from '../../../ui/StandingTag';
 import UserAvatarImage from '../../../../shared/components/ui/UserAvatarImage';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Lock, Megaphone, Star, Check } from 'lucide-react';
@@ -87,6 +88,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
             <span className="gl-shell-row-label">
                 {item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}
             </span>
+            {item.type === 'dm' && !item.isGroup && <StandingTag standing={item.standing} />}
 
             {!isSelectionMode && (
                 <button

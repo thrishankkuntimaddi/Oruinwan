@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { api, useSession } from './session.js';
 import { useQuery } from './query.js';
+import { activePeople } from '../lib/standing.js';
 
 const useWs = () => useSession((s) => s.workspaceId);
 
@@ -14,13 +15,20 @@ export function useDms() {
   const ws = useWs();
   return useQuery(ws && `dms:${ws}`, () => api().dms(ws));
 }
-export function useMembers() {
+/** Everyone, including people who left or were removed (names on what they wrote). */
+export function useAllMembers() {
   const ws = useWs();
   return useQuery(ws && `members:${ws}`, () => api().members(ws), { staleMs: 5 * 60_000 });
 }
-/** id → user lookup for the active workspace, including the signed-in user. */
+/** The people who can be messaged, mentioned and added: active members only. */
+export function useMembers() {
+  const q = useAllMembers();
+  const data = useMemo(() => (q.data ? activePeople(q.data) : q.data), [q.data]);
+  return { ...q, data };
+}
+/** id → user lookup for the active workspace (former members too), including the signed-in user. */
 export function useDirectory() {
-  const { data } = useMembers();
+  const { data } = useAllMembers();
   const me = useSession((s) => s.user);
   return useMemo(() => {
     const map = Object.fromEntries((data || []).map((u) => [u.id, u]));

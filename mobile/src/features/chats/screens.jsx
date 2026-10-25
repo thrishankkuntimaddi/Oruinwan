@@ -11,6 +11,7 @@ import { useViewing } from '../../data/live/viewing.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
+import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Field, SearchField, Toggle } from '../../ui/Controls.jsx';
@@ -1019,6 +1020,7 @@ export function ProfileScreen({ userId }) {
         <div className="flex flex-col items-center px-6 pb-4 text-center">
           <Avatar name={user.name} src={user.avatarUrl} size="xl" presence={user.presence} />
           <h1 className="mt-4 text-2xl font-bold">{user.name}</h1>
+          <StandingTag person={user} className="mt-1.5" />
           {user.title && <p className="mt-0.5 text-sm text-text-2">{user.title}</p>}
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-text-2">
             <Icon as={Clock} size={13} /> {PRESENCE_TEXT[user.presence] || 'Offline'}

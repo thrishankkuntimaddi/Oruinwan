@@ -9,6 +9,7 @@ import { QUICK_REACTIONS } from '../../data/constants.js';
 import { clock, dayLabel, isSameDay, shortAgo } from '../../lib/time.js';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
+import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Markdown } from '../../ui/Markdown.jsx';
 import { Sheet, Dialog } from '../../ui/Overlay.jsx';
 import { cx } from '../../ui/cx.js';
@@ -382,6 +383,7 @@ export function MessageItem({
         {!grouped && (
           <div className="flex items-baseline gap-2">
             <span className="truncate text-[14px] font-semibold">{author.name}</span>
+            <StandingTag person={directory[m.authorId] || author} />
             <span className="shrink-0 text-[11px] text-text-3">{clock(m.at)}</span>
             {tick && <Ticks state={tick} />}
             {m.pinned && <Icon as={Pin} size={12} className="shrink-0 text-accent-ink" aria-label="Pinned" />}

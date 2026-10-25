@@ -7,13 +7,14 @@ import {
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
-import { useAgents, useChannels, useDms } from '../../data/hooks.js';
+import { useAgents, useChannels, useDirectory, useDms } from '../../data/hooks.js';
 import { api, useSession } from '../../data/session.js';
 import { toast } from '../../lib/bus.js';
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Fab } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
+import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Segmented } from '../../ui/Controls.jsx';
 import { ActionSheet, Dialog } from '../../ui/Overlay.jsx';
@@ -87,8 +88,11 @@ const titleOf = (row) => (row.kind === 'channel' ? row.item.name : row.item.user
 export function ChatRow({ row, agentIcon, onMenu }) {
   const { kind, item } = row;
   const me = useSession((s) => s.user?.id);
+  const directory = useDirectory();
   const unread = isUnreadRow(row);
   const selected = useIsOpen('conversation', item.id);
+  // A 1:1 DM with someone who left or was removed: their name stays, with a tag.
+  const person = kind === 'dm' && !item.isGroup && item.user?.id ? directory[item.user.id] : null;
   const press = useLongPress(() => onMenu?.(row));
   return (
     <button
@@ -107,6 +111,7 @@ export function ChatRow({ row, agentIcon, onMenu }) {
             {kind === 'channel' && <span className="text-text-3">#</span>}
             {titleOf(row)}
           </span>
+          <StandingTag person={person} />
           {item.lastAt && <span className={cx('shrink-0 text-[11px]', unread ? 'font-semibold text-accent-ink' : 'text-text-3')}>{chatListTime(item.lastAt)}</span>}
         </span>
         <span className="mt-0.5 flex items-center gap-2">

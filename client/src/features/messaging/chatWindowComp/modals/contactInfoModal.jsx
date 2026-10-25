@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Phone, Info, X } from "lucide-react";
 import api from '@services/api';
+import StandingTag from '../../../../components/ui/StandingTag';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -35,13 +36,14 @@ export default function ContactInfoModal({ chat, onClose }) {
                 const workspaceId = chat.workspaceId;
                 if (!workspaceId) throw new Error('No workspace ID');
 
-                const res = await api.get(`/api/workspaces/${workspaceId}/members`);
+                // Former members too: someone who left keeps their name here (with a tag).
+                const res = await api.get(`/api/workspaces/${workspaceId}/members`, { params: { includeFormer: 1 } });
                 const members = res.data.members || [];
                 const userId = chat.userId || chat.id;
                 const user = members.find(m => String(m._id || m.id) === String(userId));
 
                 setUserData(user || {
-                    username: chat.name || chat.username,
+                    username: chat.name || chat.username || chat.label,
                     email: chat.email, phone: chat.phone,
                     profilePicture: chat.image, isOnline: chat.status === 'online',
                     profile: chat.profile || {}
@@ -145,6 +147,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                                     <h2 style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
                                         {displayName}
                                     </h2>
+                                    <StandingTag standing={displayData.standing || chat.standing} style={{ marginLeft: 0, display: 'inline-block', marginTop: 4 }} />
                                     <p style={{ margin: '2px 0 0', fontSize: '10px', fontWeight: 600, color: statusColor.text, fontFamily: FONT, letterSpacing: '0.06em' }}>
                                         {statusLabel}
                                     </p>

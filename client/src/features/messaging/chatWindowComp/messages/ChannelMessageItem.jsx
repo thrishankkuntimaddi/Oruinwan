@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import StandingTag from '../../../../components/ui/StandingTag';
+import { useContacts } from '../../../../contexts/ContactsContext';
 import api from '@services/api';
 import {
     Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2, Info,
@@ -52,6 +54,9 @@ function ChannelMessageItem({
 
     const senderId = msg.sender?._id || msg.senderId || (typeof msg.sender === 'string' ? msg.sender : null);
     const isMe = !!senderId && !!currentUserId && String(senderId) === String(currentUserId);
+    // People who left or were removed keep their name here, with a tag (Former member, Deactivated…).
+    const { allMembers: everyone = [] } = useContacts() || {};
+    const standingOf = (id) => everyone.find((m) => String(m._id || m.id) === String(id))?.standing;
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -214,6 +219,7 @@ function ChannelMessageItem({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <ProfileTrigger userId={senderId} username={msg.senderName}><span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span></ProfileTrigger>
+                    <StandingTag standing={standingOf(senderId)} />
                         {msg.isPinned && (
                             <Pin size={10} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} title={msg.pinnedByName ? `Pinned by ${msg.pinnedByName}` : 'Pinned'} />
                         )}

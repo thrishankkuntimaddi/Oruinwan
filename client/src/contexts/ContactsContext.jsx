@@ -24,6 +24,8 @@ export default function ContactsProvider({ children }) {
   const [channels, setChannels] = useState([]);
   const [dms, setDms] = useState([]);
   const [members, setMembers] = useState([]); 
+  // Everyone, former members included ({ ..., standing }), for names and tags.
+  const [allMembers, setAllMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -56,7 +58,8 @@ export default function ContactsProvider({ children }) {
         }) : Promise.resolve({ data: { favorites: [] } }),
 
         
-        workspaceId ? api.get(`/api/workspaces/${workspaceId}/members`).catch(err => {
+        // With people who left or were removed: their names stay on what they wrote (tagged).
+        workspaceId ? api.get(`/api/workspaces/${workspaceId}/members`, { params: { includeFormer: 1 } }).catch(err => {
           logger.warn("Members fetch failed:", err);
           return { data: { members: [] } };
         }) : Promise.resolve({ data: { members: [] } })
@@ -85,6 +88,9 @@ export default function ContactsProvider({ children }) {
       const filteredChannels = channelsData.filter(ch => ch.isMember || ch.isDiscoverable);
 
       
+      // How each person stands (active / former / deactivated / suspended), for tags by their name.
+      const standingById = new Map((membersRes.data.members || []).map((m) => [String(m.user?._id || m._id), m.standing || 'active']));
+
       // Conversations with AI agents are listed under Agents, not with people.
       // A 1:1 DM opened but never written in (a profile visited, "Message" pressed and left) isn't
       // a conversation yet: it stays out of the list until someone sends something — unless it's
@@ -139,6 +145,7 @@ export default function ContactsProvider({ children }) {
           userId: otherUserId, 
           type: 'dm',
           label: otherUser?.username || 'Unknown User',
+          standing: standingById.get(String(otherUserId)) || 'active',
           path: `/dm/${session.id}`, 
           isFavorite: favoriteItemIds.includes(String(session.id)),
           lastMessage: session.lastMessage,
@@ -156,14 +163,17 @@ export default function ContactsProvider({ children }) {
         username: member.user?.username || member.username,
         email: member.user?.email || member.email,
         profilePicture: member.user?.profilePicture || member.profilePicture,
-        role: member.role
+        role: member.role,
+        standing: member.standing || 'active',
       }));
       // Seed the shared avatar cache so every screen shows each member's stored picture.
       rememberAvatars(membersData);
+      // Everyone (names on old messages, tasks, notes); `members` below is who can be picked.
+      setAllMembers(membersData);
 
       setChannels(filteredChannels);
       setDms(dmsData);
-      setMembers(membersData);
+      setMembers(membersData.filter((m) => m.standing === 'active'));
       setContacts([...filteredChannels, ...dmsData]);
 
     } catch (err) {
@@ -365,7 +375,8 @@ export default function ContactsProvider({ children }) {
       allItems,
       channels,
       dms,
-      members,  
+      members,
+      allMembers,
       setAllItems: setContacts,
       deleteItem,
       addItem,

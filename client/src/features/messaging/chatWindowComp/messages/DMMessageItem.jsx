@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import StandingTag from '../../../../components/ui/StandingTag';
+import { useContacts } from '../../../../contexts/ContactsContext';
 import api from '@services/api';
 import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2, Check, CheckCheck } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
@@ -47,6 +49,9 @@ function DMMessageItem({
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
     const isMe = (!!senderId && !!currentUserId && String(senderId) === String(currentUserId)) || msg.sender === "you" || msg.sender === "me";
+    // People who left or were removed keep their name here, with a tag (Former member, Deactivated…).
+    const { allMembers: everyone = [] } = useContacts() || {};
+    const standingOf = (id) => everyone.find((m) => String(m._id || m.id) === String(id))?.standing;
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -201,6 +206,7 @@ function DMMessageItem({
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 0 }}>
                     <ProfileTrigger userId={senderId} username={msg.senderName}><span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span></ProfileTrigger>
+                    <StandingTag standing={standingOf(senderId)} />
                     {msg.isPinned && <Pin size={10} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} title={msg.pinnedByName ? `Pinned by ${msg.pinnedByName}` : 'Pinned'} />}
                 </div>
 

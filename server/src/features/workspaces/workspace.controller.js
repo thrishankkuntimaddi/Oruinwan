@@ -705,6 +705,20 @@ exports.joinWorkspace = async (req, res) => {
   }
 };
 
+/**
+ * How a person stands in the workspace, for the tag beside their name:
+ * 'active', 'suspended' (by an admin), 'deactivated' (their account is closed or suspended)
+ * or 'former' (left or removed).
+ */
+function memberStanding(m) {
+  const u = m.user || {};
+  if (u.isActive === false || ['deactivated', 'suspended', 'deleted', 'banned'].includes(String(u.accountStatus || ''))) return 'deactivated';
+  if ((m.status || 'active') === 'removed') return 'former';
+  if (m.status === 'suspended') return 'suspended';
+  return 'active';
+}
+exports._internal.memberStanding = memberStanding;
+
 exports.getWorkspaceMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -713,7 +727,7 @@ exports.getWorkspaceMembers = async (req, res) => {
 
     const workspace = await identity.workspaces.findById(workspaceId);
     if (workspace) {
-      await hydrate(workspace, { 'members.user': { type: 'user', fields: ['username', 'email', 'phone', 'profilePicture', 'isOnline', 'userStatus', 'profile', 'lastLoginAt'] } });
+      await hydrate(workspace, { 'members.user': { type: 'user', fields: ['username', 'email', 'phone', 'profilePicture', 'isOnline', 'userStatus', 'profile', 'lastLoginAt', 'accountStatus', 'isActive'] } });
     }
 
     if (!workspace) {
@@ -727,8 +741,11 @@ exports.getWorkspaceMembers = async (req, res) => {
 
     // Everyone still attached to the workspace (the caller included). Presence
     // lives in isOnline/status; the membership state in membershipStatus.
+    // ?includeFormer=1 adds people who left or were removed, so their names stay on what they
+    // wrote; `standing` tells the apps how to tag them (pickers show only 'active').
+    const includeFormer = ['1', 'true'].includes(String(req.query?.includeFormer || ''));
     const members = workspace.members
-      .filter(m => m.user && m.status !== 'removed')
+      .filter(m => m.user && (includeFormer || m.status !== 'removed'))
       .map(m => ({
         _id: m.user._id,
         username: m.user.username,
@@ -742,6 +759,7 @@ exports.getWorkspaceMembers = async (req, res) => {
         lastSeen: m.user.lastLoginAt,
         role: m.role,
         membershipStatus: m.status || 'active',
+        standing: memberStanding(m),
         joinedAt: m.joinedAt,
         isCurrentUser: String(m.user._id) === String(userId)
       }));

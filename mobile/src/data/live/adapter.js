@@ -705,9 +705,12 @@ export const liveAdapter = {
     await api.post(`/workspaces/${ws}/invite`, { emails, inviteType: 'email' });
   },
 
+  /** Everyone in the workspace, with people who left or were removed (standing ≠ 'active'). */
   async members(ws) {
-    const data = await api.get(`/workspaces/${ws}/members`);
-    return (data.members || []).map(mapUser).sort((a, b) => a.name.localeCompare(b.name));
+    const data = await api.get(`/workspaces/${ws}/members`, { includeFormer: 1 });
+    return (data.members || [])
+      .map((m) => ({ ...mapUser(m), standing: m.standing || 'active', deactivated: Boolean(m.standing && m.standing !== 'active') }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   },
 
   async channels(ws) {
