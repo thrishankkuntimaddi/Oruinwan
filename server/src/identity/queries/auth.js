@@ -310,7 +310,11 @@ const userDocs = {
         if (rows[0]) return docFromRow(rows[0]);
         const canonical = canonicalEmail(email);
         if (!isGmail(canonical)) return null;
-        return docFromRow(await findRow(`${CANONICAL_SQL('email')} = $1 ORDER BY created_at LIMIT 1`, [canonical]));
+        // Oldest account wins. (Not findRow: it adds its own LIMIT, and "ORDER BY" must come first.)
+        const { rows: same } = await query(
+            `SELECT * FROM users WHERE ${CANONICAL_SQL('email')} = $1 ORDER BY created_at LIMIT 1`, [canonical]
+        );
+        return docFromRow(same[0] || null);
     },
     async findByRefreshTokenHash(hash) {
         const { rows } = await query('SELECT u.* FROM user_refresh_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = $1', [hash]);

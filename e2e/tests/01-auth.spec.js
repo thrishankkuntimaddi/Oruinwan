@@ -48,4 +48,16 @@ test.describe('company sign-up', () => {
     // Only the email keeps its Verify button: the E2E server has no SMS keys.
     await expect(page.getByRole('button', { name: 'Verify' })).toHaveCount(1);
   });
+
+  // A Gmail address with no account yet is looked up in its canonical form (dots, +tags) too;
+  // that lookup once sent invalid SQL, so every new Google user got "Google login failed".
+  test('Google sign-in with a new Gmail address offers to create the account', async ({ request }) => {
+    const email = `New.Person+${Date.now()}@gmail.com`;
+    const res = await request.post(`${E2E.apiUrl}/api/auth/google-login`, { data: { accessToken: `e2e-google:${email}` } });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.needsSignup).toBe(true);
+    expect(body.email).toBe(email);
+    expect(body.signupToken).toBeTruthy();
+  });
 });
