@@ -1,5 +1,5 @@
 {
   "_comment": "Oldest installed app (native shell) each UI bundle runs on. Bump it to the release version whenever a release changes native code the UI depends on: a new Capacitor plugin or native method (phone), or a new Electron version, preload API or main-process feature (desktop). Older apps are then offered the full download instead of the quick update. See docs/UPDATES.md.",
-  "phone": "2.3.7",
+  "phone": "3.1.0",
   "desktop": "2.3.5"
 }
