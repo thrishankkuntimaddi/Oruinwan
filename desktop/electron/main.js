@@ -89,10 +89,33 @@ let isQuitting = false;
 const IS_MAC = process.platform === 'darwin';
 const TRAY_DIR = path.join(__dirname, '..', 'assets', 'tray');
 
+// Email buttons on a computer with the app: the web's /open/<page> hands oruinwan://open/<page>
+// to the app, which shows that page (macOS: open-url; Windows/Linux: a second instance's args).
+let pendingAppPath = null;
+let pageLoaded = false;
+function openAppLink(url) {
+  const appPath = links.pathFromAppLink(url);
+  if (!appPath) return;
+  if (mainWindow && !mainWindow.isDestroyed() && pageLoaded) {
+    showWindow();
+    mainWindow.webContents.executeJavaScript(links.navigateScript(appPath)).catch(() => {});
+  } else {
+    pendingAppPath = appPath;
+    showWindow();
+  }
+}
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  openAppLink(url);
+});
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => showWindow());
+  app.on('second-instance', (_event, argv) => {
+    showWindow();
+    openAppLink(links.appLinkInArgs(argv));
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -592,6 +615,15 @@ function createWindow() {
   watchCallWindow(win);
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
+  pageLoaded = false;
+  win.webContents.on('did-finish-load', () => {
+    pageLoaded = true;
+    if (pendingAppPath) {
+      const appPath = pendingAppPath;
+      pendingAppPath = null;
+      win.webContents.executeJavaScript(links.navigateScript(appPath)).catch(() => {});
+    }
+  });
   win.loadURL(START_URL).catch((err) => console.error('[window] failed to load', START_URL, err.message));
   if (appUi.pending) watchBoot(win);
   return win;
@@ -1015,6 +1047,16 @@ app.whenReady().then(() => {
     }
   }
   registerAppScheme();
+  // Installed builds answer oruinwan:// links (development and test runs leave them alone).
+  if (app.isPackaged && !TEST_MODE) {
+    try {
+      app.setAsDefaultProtocolClient(links.APP_LINK_SCHEME);
+    } catch (err) {
+      console.warn('[links] could not register oruinwan:// links:', err.message);
+    }
+  }
+  // Started by a link (Windows, Linux): open its page once the window has loaded.
+  openAppLink(links.appLinkInArgs(process.argv));
   answerCors(session.defaultSession);
   lockDownPermissions(session.defaultSession);
   buildMenu();

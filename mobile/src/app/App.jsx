@@ -20,7 +20,7 @@ import { MediaHost } from '../features/media/MediaHost.jsx';
 import { ReminderLayer } from '../features/chats/ReminderLayer.jsx';
 import { PhoneTour } from '../features/tour/PhoneTour.jsx';
 import { finishBackupLink } from '../features/settings/backupInfo.js';
-import { openConversationLink } from '../features/home/openTarget.js';
+import { openConversationLink, openPageLink } from '../features/home/openTarget.js';
 import { BackupRestoreOffer } from '../features/settings/backup.jsx';
 import { PlanLayer } from '../features/plan/UpgradeSheet.jsx';
 import { ApprovalHost } from '../features/auth/ApprovalHost.jsx';
@@ -98,7 +98,7 @@ export function App() {
     // oruinwan://sso?code=… finishes a company SSO sign-in; other links are invitations.
     // oruinwan://backup?result=… is Google Drive backup coming back (Settings → Backup).
     // https://<web>/workspace/…/channel|dm/<id>?message=…|thread=… opens that message or thread.
-    onAppUrl((url) => finishBackupLink(url) || useSession.getState().finishSso(url) || useSession.getState().openInvite(url) || openConversationLink(url)).then((f) => (off = f));
+    onAppUrl((url) => finishBackupLink(url) || useSession.getState().finishSso(url) || openPageLink(url) || useSession.getState().openInvite(url) || openConversationLink(url)).then((f) => (off = f));
     return () => off();
   }, []);
 

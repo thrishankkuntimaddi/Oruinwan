@@ -106,7 +106,9 @@ function _shell({ icon, title, subtitle, body, preheader = '' }) {
 </html>`;
 }
 
-function _btn(text, url) {
+function _btn(text, rawUrl) {
+  // Opens the Oruinwan app when it's installed, else the page in the browser.
+  const url = require('../src/shared/utils/webAppUrl').appOpenLink(rawUrl);
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
   <tr>
     <td style="background-color:${T.accent};padding:14px 32px">

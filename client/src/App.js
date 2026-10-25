@@ -74,6 +74,7 @@ import Settings from "./pages/Settings";
 import BackupRestoreOffer from "./components/backup/BackupRestoreOffer";
 import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
+import OpenInApp from "./pages/OpenInApp";
 import JoinChannel from "./pages/JoinChannel";
 
 // The docs site is its own chunk (content + highlighter), loaded on first visit.
@@ -841,6 +842,9 @@ function App() {
                           <Route path="/register-company" element={IS_SITE ? <OpenWebApp /> : <RegisterCompany />} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
+                          {/* Email buttons: the app when installed, else the page here (pages/OpenInApp). */}
+                          <Route path="/open/*" element={<OpenInApp />} />
+                          <Route path="/open" element={<OpenInApp />} />
                           <Route path="/forgot-password" element={IS_SITE ? <OpenWebApp /> : <ForgotPassword />} />
                           <Route path="/reset-password" element={<ResetPassword />} />
                           <Route path="/verify-email" element={<VerifyEmail />} />

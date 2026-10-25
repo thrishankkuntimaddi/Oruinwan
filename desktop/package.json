@@ -27,8 +27,16 @@
   },
   "build": {
     "appId": "com.oruinwan.desktop",
+    "protocols": [
+      {
+        "name": "Oruinwan",
+        "schemes": [
+          "oruinwan"
+        ]
+      }
+    ],
     "productName": "Oruinwan",
-    "copyright": "Copyright © 2026 Oruinwan Inc.",
+    "copyright": "Copyright \u00a9 2026 Oruinwan Inc.",
     "directories": {
       "output": "dist",
       "buildResources": "assets"

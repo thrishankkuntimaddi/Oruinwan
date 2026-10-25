@@ -1,11 +1,12 @@
 // Opens whatever a notification points at, in the tab that owns it.
-import { nav } from '../../app/nav.js';
+import { BAR_TABS, nav } from '../../app/nav.js';
 import { api } from '../../data/session.js';
 import { setQueryData } from '../../data/query.js';
 import { useSession } from '../../data/session.js';
 import { pushTarget } from '../../data/live/notificationTarget.js';
 import { parseConversationLink, parseItemLink } from '../../lib/shareContent.js';
 import { toast } from '../../lib/bus.js';
+import { screenForPage, unwrapOpenLink } from '../../lib/openLink.js';
 
 /**
  * A tapped push notification: switch to its workspace if needed, then open its conversation
@@ -113,5 +114,35 @@ export function openConversationLink(url) {
     pendingOff = null;
     openLinkTarget(link);
   });
+  return true;
+}
+
+/**
+ * An email button (https://<web>/open/<page> or oruinwan://open/<page>) opened the app: an
+ * invitation, conversation, note or task opens as its own link would; a few app pages open
+ * their screen; anything else just opens the app. Returns false when the link isn't one.
+ */
+export function openPageLink(url) {
+  const open = unwrapOpenLink(url);
+  if (!open) return false;
+  if (useSession.getState().openInvite(open.url) || openConversationLink(open.url)) return true;
+  const screen = screenForPage(open.page);
+  if (!screen) return true;
+  const show = () => {
+    const [name] = screen;
+    if (BAR_TABS.includes(name)) nav.setTab(name);
+    else nav.push(name);
+  };
+  pendingOff?.();
+  pendingOff = null;
+  if (useSession.getState().status === 'signed-in') show();
+  else {
+    pendingOff = useSession.subscribe((s) => {
+      if (s.status !== 'signed-in') return;
+      pendingOff?.();
+      pendingOff = null;
+      show();
+    });
+  }
   return true;
 }

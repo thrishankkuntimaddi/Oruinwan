@@ -28,4 +28,29 @@ function navigateScript(path) {
     + ' history.pushState({}, "", p); dispatchEvent(new PopStateEvent("popstate")); } })()';
 }
 
-module.exports = { inAppPath, navigateScript };
+/**
+ * oruinwan://open/<page>?… — what the web's /open/<page> sends when someone clicks an email
+ * button on a computer that has the app — as the in-app path /<page>?…, else null.
+ * (oruinwan://open with no page opens the app's home.)
+ */
+const APP_LINK_SCHEME = 'oruinwan';
+function pathFromAppLink(url) {
+  if (typeof url !== 'string') return null;
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== `${APP_LINK_SCHEME}:` || u.host !== 'open') return null;
+  const path = `${u.pathname || '/'}${u.search}${u.hash}`;
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return null;
+  return path;
+}
+
+/** The app link in a command line (Windows and Linux pass it as an argument), else null. */
+function appLinkInArgs(argv) {
+  return (argv || []).find((a) => typeof a === 'string' && a.startsWith(`${APP_LINK_SCHEME}://`)) || null;
+}
+
+module.exports = { inAppPath, navigateScript, pathFromAppLink, appLinkInArgs, APP_LINK_SCHEME };
