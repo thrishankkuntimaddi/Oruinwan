@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, LayoutGrid, List, Plus, Search, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
+  ChevronDown, Link2, LayoutGrid, List, Plus, Search, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -30,7 +30,9 @@ import { blockersOf } from '../../data/live/adapter.work.js';
 import { TemplatePickerSheet } from './PlanningScreen.jsx';
 import { TaskEditorSheet, PeoplePicker, toDateInput, fromDateInput } from './TaskEditorSheet.jsx';
 import { askAiAbout } from '../ai/aiUi.js';
-import { tap as tapHaptic } from '../../native/index.js';
+import { copyText, tap as tapHaptic } from '../../native/index.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { itemLink } from '../../lib/shareContent.js';
 
 // The same views, in the same order and words, as the web's Tasks panel.
 export const VIEWS = [
@@ -486,6 +488,7 @@ function EditTextSheet({ open, onClose, title, value, multiline, onSave }) {
 
 export function TaskScreen({ id }) {
   const ws = useSession((s) => s.workspaceId);
+  const taskLinkBase = useWebUrl(useSession((s) => s.server));
   const directory = useDirectory();
   const { data: channels } = useChannels();
   const aiOn = useFlag('ai');
@@ -545,7 +548,21 @@ export function TaskScreen({ id }) {
 
   return (
     <Screen>
-      <Header title="" actions={<IconButton icon={Trash2} label="Move to trash" onClick={() => setTrash(true)} />} />
+      <Header
+        title=""
+        actions={
+          <>
+            {taskLinkBase && (
+              <IconButton
+                icon={Link2}
+                label="Copy link to this task"
+                onClick={async () => ((await copyText(itemLink({ base: taskLinkBase, workspaceId: ws, kind: 'task', id }))) ? toast('Link copied') : toast("Couldn't copy", 'danger'))}
+              />
+            )}
+            <IconButton icon={Trash2} label="Move to trash" onClick={() => setTrash(true)} />
+          </>
+        }
+      />
       <Body>
         <div className="px-4">
           <span

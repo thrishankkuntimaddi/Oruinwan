@@ -14,7 +14,6 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [visibility, setVisibility] = useState('public'); 
-    const [isDiscoverable, setIsDiscoverable] = useState(true);
 
     
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
@@ -80,7 +79,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 name: name.trim(),
                 description,
                 isPrivate: visibility === 'private',
-                isDiscoverable: visibility === 'public' ? isDiscoverable : false,
+                isDiscoverable: visibility === 'public',
                 members: channelMembers, 
                 workspaceId
             };
@@ -327,39 +326,6 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                         </div>
                                     </div>
 
-                                    {visibility === 'public' && (
-                                        <div
-                                            style={{
-                                                marginTop: '12px', paddingTop: '12px',
-                                                borderTop: '1px solid var(--border-default)',
-                                                display: 'flex', alignItems: 'flex-start', gap: '10px',
-                                                cursor: 'pointer',
-                                            }}
-                                            onClick={e => { e.stopPropagation(); setIsDiscoverable(!isDiscoverable); }}
-                                        >
-                                            <div style={{
-                                                marginTop: '1px', width: '16px', height: '16px', borderRadius: '2px',
-                                                border: `1px solid ${isDiscoverable ? 'var(--accent)' : 'var(--border-accent)'}`,
-                                                backgroundColor: isDiscoverable ? 'var(--accent)' : 'transparent',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                flexShrink: 0, transition: '150ms ease',
-                                            }}>
-                                                {isDiscoverable && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <h5 style={{
-                                                    fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)',
-                                                    margin: '0 0 2px', fontFamily: FONT,
-                                                }}>Discoverable</h5>
-                                                <p style={{
-                                                    fontSize: '11px', color: 'var(--text-muted)', margin: 0,
-                                                    lineHeight: 1.5, fontFamily: FONT,
-                                                }}>
-                                                    Others can find and join this channel
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {}

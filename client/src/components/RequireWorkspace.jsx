@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import logger from '../utils/logger';
 
@@ -22,6 +22,22 @@ const WorkspaceLoadingShell = ({ label = 'Loading workspace...' }) => (
             </p>
         </div>
         <style>{`@keyframes ws-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+);
+
+/** A link into a workspace this account isn't in: say so (instead of silently redirecting). */
+const NotAMember = () => (
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: 'var(--bg-base)', fontFamily: 'var(--font)', padding: 24 }}>
+        <div role="alert" style={{ maxWidth: 420, width: '100%', textAlign: 'center', background: 'var(--bg-surface, var(--bg-elevated))', border: '1px solid var(--border-subtle, var(--border))', borderRadius: 20, padding: '32px 24px' }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }} aria-hidden>🔒</div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>You're not a member of this workspace</h1>
+            <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-secondary)', margin: '0 0 20px' }}>
+                This link points to something in a workspace you haven't joined. Ask someone in it to invite you, or open one of your own workspaces.
+            </p>
+            <Link to="/workspaces" replace style={{ display: 'inline-block', padding: '10px 18px', borderRadius: 12, background: 'var(--accent)', color: 'var(--text-on-accent, #1a1408)', fontWeight: 600, textDecoration: 'none' }}>
+                Go to my workspaces
+            </Link>
+        </div>
     </div>
 );
 
@@ -48,11 +64,8 @@ const RequireWorkspace = ({ children }) => {
             return <WorkspaceLoadingShell label="Verifying access..." />;
         }
 
-        logger.error('🚨 [RequireWorkspace] SECURITY: User tried to access workspace they are not a member of!', {
-            workspaceId,
-            userWorkspaces: workspaces.map(w => w.id)
-        });
-        return <Navigate to="/workspaces" replace />;
+        logger.warn('[RequireWorkspace] Link to a workspace this account is not in', { workspaceId });
+        return <NotAMember />;
     }
 
     

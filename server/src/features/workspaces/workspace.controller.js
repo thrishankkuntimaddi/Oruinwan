@@ -859,15 +859,9 @@ exports.getWorkspaceChannels = async (req, res) => {
         return memberId === userId.toString();
       });
 
+      // Public channels are listed for everyone in the workspace; private ones for their members.
       if (!channel.isPrivate) {
-        
-        if (channel.isDiscoverable) {
-          
-          return true;
-        } else {
-          
-          return isMemberOfChannel;
-        }
+        return true;
       } else {
         
         return isMemberOfChannel;

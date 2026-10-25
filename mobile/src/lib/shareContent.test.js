@@ -5,6 +5,19 @@ import {
 
 const base = 'https://chat.example.com';
 
+describe('note and task links', () => {
+  it('builds and reads /workspace/<ws>/notes|tasks/<id>', async () => {
+    const { itemLink, parseItemLink } = await import('./shareContent.js');
+    const note = itemLink({ base: `${base}/`, workspaceId: 'w1', kind: 'note', id: 'n9' });
+    expect(note).toBe(`${base}/workspace/w1/notes/n9`);
+    expect(parseItemLink(note)).toEqual({ workspaceId: 'w1', kind: 'note', id: 'n9' });
+    expect(parseItemLink(`${base}/workspace/w1/tasks/t2`)).toEqual({ workspaceId: 'w1', kind: 'task', id: 't2' });
+    expect(parseItemLink(`${base}/workspace/w1/channel/c1`)).toBeNull();
+    expect(parseConversationLink(note)).toBeNull();
+    expect(itemLink({ workspaceId: 'w1', kind: 'file', id: 'x' })).toBeNull();
+  });
+});
+
 describe('links', () => {
   it('links a message, a thread reply and a thread', () => {
     expect(messageLink({ base, workspaceId: 'w', kind: 'channel', conversationId: 'c', message: { id: 'm' } })).toBe(`${base}/workspace/w/channel/c?message=m`);

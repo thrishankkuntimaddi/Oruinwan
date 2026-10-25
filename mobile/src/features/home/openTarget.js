@@ -4,7 +4,7 @@ import { api } from '../../data/session.js';
 import { setQueryData } from '../../data/query.js';
 import { useSession } from '../../data/session.js';
 import { pushTarget } from '../../data/live/notificationTarget.js';
-import { parseConversationLink } from '../../lib/shareContent.js';
+import { parseConversationLink, parseItemLink } from '../../lib/shareContent.js';
 import { toast } from '../../lib/bus.js';
 
 /**
@@ -57,10 +57,14 @@ export function openNotification(n) {
 
 /** Opens a parsed message/thread link once signed in ({ workspaceId, kind, id, messageId, threadId }). */
 export function openLinkTarget(link) {
+  return openConvTarget(link);
+}
+
+function openConvTarget(link) {
   const session = useSession.getState();
   if (link.workspaceId && link.workspaceId !== session.workspaceId) {
     if (!session.workspaces.some((w) => w.id === link.workspaceId)) {
-      toast("That message is in a workspace you're not in", 'danger');
+      toast("You're not a member of the workspace this link is from", 'danger');
       return;
     }
     session.switchWorkspace(link.workspaceId);
@@ -70,6 +74,21 @@ export function openLinkTarget(link) {
   if (link.threadId) nav.push('thread', { kind: link.kind, convId: link.id, messageId: link.threadId });
 }
 
+/** Opens a parsed note or task link ({ workspaceId, kind, id }) once signed in. */
+export function openItemTarget(link) {
+  const session = useSession.getState();
+  if (link.workspaceId && link.workspaceId !== session.workspaceId) {
+    if (!session.workspaces.some((w) => w.id === link.workspaceId)) {
+      toast("You're not a member of the workspace this link is from", 'danger');
+      return;
+    }
+    session.switchWorkspace(link.workspaceId);
+  }
+  if (session.pickingWorkspace) useSession.setState({ pickingWorkspace: false });
+  if (link.kind === 'note') nav.open('notes', 'note', { id: link.id });
+  else nav.open('tasks', 'task', { id: link.id });
+}
+
 let pendingOff = null;
 
 /**
@@ -77,8 +96,11 @@ let pendingOff = null;
  * app: show it, after sign-in if needed. Returns false when the link isn't one.
  */
 export function openConversationLink(url) {
-  const link = parseConversationLink(url);
-  if (!link) return false;
+  const conv = parseConversationLink(url);
+  const item = conv ? null : parseItemLink(url);
+  if (!conv && !item) return false;
+  const link = conv || item;
+  const openLinkTarget = conv ? openConvTarget : openItemTarget;
   pendingOff?.();
   pendingOff = null;
   if (useSession.getState().status === 'signed-in') {

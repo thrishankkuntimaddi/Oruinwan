@@ -37,6 +37,9 @@
                      links: other /workspace/ pages the app opens in the browser stay there. -->
                 <data android:pathPattern="/workspace/.*/channel/.*" />
                 <data android:pathPattern="/workspace/.*/dm/.*" />
+                <!-- Shared notes and tasks (3.1). -->
+                <data android:pathPattern="/workspace/.*/notes/.*" />
+                <data android:pathPattern="/workspace/.*/tasks/.*" />
             </intent-filter>
             <!-- oruinwan://join/<token> and oruinwan://join-workspace?token=… -->
             <intent-filter>

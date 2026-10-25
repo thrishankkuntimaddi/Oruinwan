@@ -16,6 +16,26 @@ export function conversationLink({ base = '', workspaceId, kind, conversationId,
   return `${String(base || '').replace(/\/+$/, '')}/workspace/${workspaceId}/${type}/${conversationId}${q ? `?${q}` : ''}`;
 }
 
+/** Link to a note or a task on the web app: /workspace/<ws>/notes/<id>, /workspace/<ws>/tasks/<id>. */
+export function itemLink({ base = '', workspaceId, kind, id }) {
+  if (!workspaceId || !id || !['note', 'task'].includes(kind)) return null;
+  return `${String(base || '').replace(/\/+$/, '')}/workspace/${workspaceId}/${kind === 'note' ? 'notes' : 'tasks'}/${id}`;
+}
+
+/** A note or task link → { workspaceId, kind: 'note' | 'task', id }, or null. */
+export function parseItemLink(input) {
+  let url;
+  try {
+    url = new URL(String(input || '').trim());
+  } catch {
+    return null;
+  }
+  const path = `${url.protocol === 'oruinwan:' ? `/${url.host}` : ''}${url.pathname}`;
+  const m = path.match(/\/workspace\/([^/]+)\/(notes|tasks)\/([^/?#]+)\/?$/i);
+  if (!m) return null;
+  return { workspaceId: decodeURIComponent(m[1]), kind: m[2].toLowerCase() === 'notes' ? 'note' : 'task', id: decodeURIComponent(m[3]) };
+}
+
 /** Link to one message (a thread reply opens its thread too). */
 export function messageLink({ base, workspaceId, kind, conversationId, message }) {
   const parent = message?.parentId && message.parentId !== message.id ? message.parentId : null;

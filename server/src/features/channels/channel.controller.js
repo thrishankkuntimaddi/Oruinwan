@@ -27,7 +27,7 @@ exports.createChannel = async (req, res) => {
   logger.debug('createChannel invoked');
   try {
     const userId = req.user.sub;
-    const { name, description = "", isPrivate = false, isDiscoverable = true, memberIds = [], workspaceId } = req.body;
+    const { name, description = "", isPrivate = false, memberIds = [], workspaceId } = req.body;
 
     if (!workspaceId) {
       return res.status(400).json({ message: "Workspace ID is required" });
@@ -71,7 +71,8 @@ exports.createChannel = async (req, res) => {
       members,
       createdBy: userId,
       isPrivate,
-      isDiscoverable: isPrivate ? false : isDiscoverable, 
+      // Public or private, nothing in between: every public channel can be found and joined.
+      isDiscoverable: !isPrivate,
     });
 
     try {
@@ -176,7 +177,7 @@ exports.getMyChannels = async (req, res) => {
       workspace: workspaceId,
       $or: [
         { isDefault: true },                                    
-        { isPrivate: false, isDiscoverable: true },            
+        { isPrivate: false },            
         { 'members.user': userId }                              
       ]
     })
@@ -462,13 +463,6 @@ exports.joinChannel = async (req, res) => {
 
     if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel without an invitation" });
 
-    
-    if (!channel.isDiscoverable && !channel.isDefault) {
-      return res.status(403).json({
-        message: "This channel is not open for self-service joining. Ask an admin to invite you.",
-        code: "CHANNEL_NOT_DISCOVERABLE"
-      });
-    }
 
     
     const isAlreadyMember = isMember(channel.members, userId);
@@ -1678,14 +1672,6 @@ exports.joinDiscoverableChannel = async (req, res) => {
       });
     }
 
-    
-    if (!channel.isDiscoverable) {
-      logger.info(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is not discoverable`);
-      return res.status(403).json({
-        message: "This channel is not open for self-service joining",
-        code: "CHANNEL_NOT_DISCOVERABLE"
-      });
-    }
 
     
     const workspace = await identity.workspaces.findById(channel.workspace);

@@ -27,6 +27,7 @@ export function conversationMenuItems(opts = {}) {
       threads && hub({ id: 'threads', label: 'Threads' }),
       ...tools,
       mute,
+      hub({ id: 'link', label: 'Copy link to channel' }),
       act({ id: 'search', label: 'Search in conversation' }),
       polls && act({ id: 'poll', label: 'Create poll' }),
       video,

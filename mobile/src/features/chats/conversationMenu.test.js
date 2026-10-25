@@ -11,7 +11,7 @@ describe('conversationMenuItems (the web header menu, on the phone)', () => {
   });
 
   it('a channel: name → info, members, threads, pinned, saved, reminders, mute; ⋮ → search, poll, video', () => {
-    expect(ids({ kind: 'channel', huddles: true, polls: true })).toEqual(['channelInfo', 'members', 'threads', 'reminders', 'pinned', 'saved', 'mute', 'search', 'poll', 'video']);
+    expect(ids({ kind: 'channel', huddles: true, polls: true })).toEqual(['channelInfo', 'members', 'threads', 'reminders', 'pinned', 'saved', 'mute', 'link', 'search', 'poll', 'video']);
   });
 
   it('no option appears twice and the voice huddle is only the header button', () => {
@@ -32,7 +32,7 @@ describe('conversationMenuItems (the web header menu, on the phone)', () => {
   });
 
   it('leaves out what is unavailable: calls without huddles, polls without permission, threads when off, calls with an agent', () => {
-    expect(ids({ kind: 'channel', threads: false })).toEqual(['channelInfo', 'members', 'reminders', 'pinned', 'saved', 'mute', 'search']);
+    expect(ids({ kind: 'channel', threads: false })).toEqual(['channelInfo', 'members', 'reminders', 'pinned', 'saved', 'mute', 'link', 'search']);
     const agent = ids({ kind: 'dm', isAgent: true, huddles: true });
     expect(agent).not.toContain('video');
     expect(agent).not.toContain('profile');

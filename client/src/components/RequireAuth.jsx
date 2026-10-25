@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import LoadingScreen from "../shared/components/ui/LoadingScreen";
+import { rememberReturn } from "../utils/returnTo";
 
 export default function RequireAuth({ children }) {
   const { user, loading } = useContext(AuthContext);
@@ -9,7 +10,11 @@ export default function RequireAuth({ children }) {
 
   if (loading) return <LoadingScreen />;
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    // A shared link: come back to it after signing in.
+    rememberReturn(`${location.pathname}${location.search}`);
+    return <Navigate to="/login" replace />;
+  }
 
   
   

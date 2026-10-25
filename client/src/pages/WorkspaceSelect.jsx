@@ -21,6 +21,7 @@ import { emitPlanLimit } from "../features/plan/planLimit";
 import "../features/plan/plan.css";
 import "./workspaceSelectComponents/workspaceSelect.css";
 import logger from '../utils/logger';
+import { takeReturn } from "../utils/returnTo";
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
@@ -32,7 +33,11 @@ const WorkspaceSelect = () => {
     React.useEffect(() => {
         if (user?.roles?.includes('oruinwan_admin')) {
             navigate('/platform-admin', { replace: true });
+            return;
         }
+        // Signed in from a shared link: open what it points at.
+        const back = user ? takeReturn() : null;
+        if (back) navigate(back, { replace: true });
     }, [user, navigate]);
 
     

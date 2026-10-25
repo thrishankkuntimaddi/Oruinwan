@@ -3,7 +3,7 @@
 // tools as the web client's chat header, on the same server APIs.
 import { useState } from 'react';
 import {
-  Ban, BarChart3, Bell, BellOff, BellRing, Bookmark, BookmarkX, CircleCheck, Eraser, Headphones, Info, MessagesSquare, Phone, Pin, PinOff, Search, Trash2, UserRound, Users, Video,
+  Ban, BarChart3, Link2, Bell, BellOff, BellRing, Bookmark, BookmarkX, CircleCheck, Eraser, Headphones, Info, MessagesSquare, Phone, Pin, PinOff, Search, Trash2, UserRound, Users, Video,
 } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
@@ -23,6 +23,9 @@ import { useHuddlesAvailable } from '../huddles/HuddlesScreen.jsx';
 import { startHuddle } from '../huddles/huddle.js';
 import { MessageCard } from './SavedScreen.jsx';
 import { conversationMenuItems, matchExcerpt, searchConversation } from './conversationMenu.js';
+import { conversationLink } from '../../lib/shareContent.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { copyText } from '../../native/index.js';
 
 const ICONS = {
   huddle: Headphones,
@@ -39,6 +42,7 @@ const ICONS = {
   groupInfo: Users,
   profile: UserRound,
   clear: Eraser,
+  link: Link2,
   delete: Trash2,
 };
 
@@ -310,6 +314,7 @@ export function ConversationMenu({ open, onClose, conv, meta, label, status, ite
   const directory = useDirectory();
   const huddles = useHuddlesAvailable();
   const threadsOn = useFlag('threads');
+  const webBase = useWebUrl(useSession((s) => s.server));
   const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -405,6 +410,11 @@ export function ConversationMenu({ open, onClose, conv, meta, label, status, ite
     groupInfo: () => nav.push('groupInfo', { id }),
     profile: () => meta?.userId && nav.push('profile', { userId: meta.userId }),
     mute: toggleMute,
+    link: async () => {
+      const url = webBase && conversationLink({ base: webBase, workspaceId: useSession.getState().workspaceId, kind, conversationId: id });
+      if (url && (await copyText(url))) toast('Link copied');
+      else toast("Couldn't copy the link", 'danger');
+    },
     block: () => (status.blocked ? setBlocked(false) : later(() => setConfirm('block'))),
     clear: () => later(() => setConfirm('clear')),
     delete: () => later(() => setConfirm('delete')),

@@ -211,10 +211,12 @@ describe('Home', () => {
     expect(recentConversations(channels, dms).map((r) => r.item.id)).toEqual(['c3', 'c4', 'd1', 'd2', 'c1']);
   });
 
-  it('shows tiles instead of activity, and Unread opens the grouped unread list', async () => {
+  it('a row of small cards, then activity, tasks, quick jump and jump to; Unread opens the unread list', async () => {
     render(<HomeScreen />);
-    expect(screen.queryByText(/caught up/)).toBeNull();
-    expect(screen.queryByText('Activity')).toBeNull();
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(await screen.findByText('Quick jump')).toBeTruthy();
+    expect(screen.getByTestId('home-drafts')).toBeTruthy();
+    expect(screen.getByTestId('home-scheduled')).toBeTruthy();
     expect(screen.getByTestId('home-tasks')).toBeTruthy();
     expect(screen.getByTestId('home-saved')).toBeTruthy();
     expect(screen.getByTestId('home-huddles')).toBeTruthy();
