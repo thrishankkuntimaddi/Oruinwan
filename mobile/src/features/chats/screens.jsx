@@ -293,6 +293,9 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const { jumpTo, setJumpTo } = extras;
   const [dayAt, setDayAt] = useState(null);
   const [olderBusy, setOlderBusy] = useState(false);
+  // People I @mentioned who aren't in this channel: "Add them?" (Slack-like). [{ id, name, username }]
+  const [mentionInvite, setMentionInvite] = useState(null);
+  const [mentionInviteBusy, setMentionInviteBusy] = useState(false);
   const status = useConversationStatus(kind, id, meta);
   const aiOn = useFlag('ai');
   // Unread when the conversation opened (opening marks it read), for "since you last read".
@@ -470,12 +473,44 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
               convo.edit(tools.editing.id, text);
               tools.setEditing(null);
             } else {
-              convo.send(text, { mentionText: mentions.textFor(text), people: mentions.peopleFor(text), quoted: extras.quotedOf(extras.quote) });
+              const people = mentions.peopleFor(text);
+              convo.send(text, { mentionText: mentions.textFor(text), people, quoted: extras.quotedOf(extras.quote) });
               extras.setQuote(null);
+              if (kind === 'channel' && api().addChannelMembers) {
+                const inChannel = new Set(meta?.memberIds || []);
+                const outsiders = (people || []).filter((p) => p.id && p.id !== me && !inChannel.has(p.id));
+                if (outsiders.length) setMentionInvite(outsiders);
+              }
             }
           }}
         />
       )}
+      <Dialog
+        open={Boolean(mentionInvite)}
+        onClose={() => setMentionInvite(null)}
+        title={
+          mentionInvite?.length === 1
+            ? `Add ${mentionInvite[0].name || `@${mentionInvite[0].username}`} to ${label}?`
+            : `Add ${mentionInvite?.length || 0} people to ${label}?`
+        }
+        body={`${(mentionInvite || []).map((p) => p.name || `@${p.username}`).join(', ')} ${mentionInvite?.length === 1 ? "isn't" : "aren't"} in this channel yet. Added, they see the whole conversation.`}
+        confirmLabel="Add to channel"
+        cancelLabel="Not now"
+        busy={mentionInviteBusy}
+        onConfirm={async () => {
+          setMentionInviteBusy(true);
+          try {
+            await api().addChannelMembers(id, mentionInvite.map((p) => p.id));
+            invalidate('channels');
+            toast(mentionInvite.length === 1 ? `Added to ${label}` : `${mentionInvite.length} people added to ${label}`, 'success');
+          } catch (err) {
+            toast(err.message || 'Could not add them', 'danger');
+          } finally {
+            setMentionInviteBusy(false);
+            setMentionInvite(null);
+          }
+        }}
+      />
       {tools.actions}
       {pickers.inputs}
       <ComposerPlusSheet

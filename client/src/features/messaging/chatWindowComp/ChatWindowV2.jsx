@@ -38,6 +38,7 @@ import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.j
 import { encryptMessageForSending } from '../../../services/messageEncryptionService';
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
 import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
+import { mentionCandidates, mentionedOutsiders, outsidersSentence } from '../mentionInvite';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -205,6 +206,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     const [showBookmarks, setShowBookmarks] = useState(false);
     const [showPinned, setShowPinned] = useState(false);
+    // People I @mentioned who aren't in this channel: "Add them?" (Slack-like). [{ id, username, name }]
+    const [mentionInvite, setMentionInvite] = useState(null);
+    const [mentionInviteBusy, setMentionInviteBusy] = useState(false);
+    useEffect(() => { setMentionInvite(null); }, [chat?.id]);
     // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
     const [showAskAi, setShowAskAi] = useState(false);
     const [showChecklistModal, setShowChecklistModal] = useState(false);
@@ -1080,6 +1085,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             setReplyingTo(null);
             setNewMessage('');
 
+            if (chat?.type === 'channel') {
+                const inChannel = (chat?.members || []).map((m) => String(m.user?._id || m.user || m._id || m));
+                const outsiders = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, inChannel, currentUserId);
+                if (outsiders.length) setMentionInvite(outsiders);
+            }
+
             // Addressed to the AI: an @mention, or a follow-up right after it answered me
             // (unless I'm now talking to a person).
             const followUp = conversationAI.isFollowUp(null) && !mentionsPerson(mentionText);
@@ -1109,7 +1120,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1716,7 +1727,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     
     // In a chat with an agent anyone in the workspace can be @mentioned ("tell @muzamil …").
-    const channelMembers = (chat?.isAgent ? workspaceMembers : (chat?.members || [])).map(m => {
+    // In a channel anyone in the workspace can be @mentioned too (members first); the channel then
+    // offers to add the ones who aren't in it (mentionInvite).
+    const mentionPool = chat?.isAgent ? workspaceMembers
+        : chat?.type === 'channel' ? mentionCandidates(chat?.members || [], workspaceMembers) : (chat?.members || []);
+    const channelMembers = mentionPool.map(m => {
         const user = m.user || m; 
         return {
             _id: user._id || user.userId || m.userId,
@@ -1732,6 +1747,36 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            {mentionInvite && chat?.type === 'channel' && (
+                <div className="gl-card" role="status" data-testid="mention-invite"
+                    style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
+                    <span style={{ flex: 1, fontSize: 13 }}>
+                        {outsidersSentence(mentionInvite, chat?.name)} Add {mentionInvite.length === 1 ? 'them' : 'them all'} so they see this conversation?
+                    </span>
+                    <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setMentionInvite(null)} disabled={mentionInviteBusy}>Not now</button>
+                    <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="mention-invite-add" disabled={mentionInviteBusy}
+                        onClick={async () => {
+                            setMentionInviteBusy(true);
+                            let added = 0;
+                            let problem = null;
+                            for (const p of mentionInvite) {
+                                try {
+                                    await api.post(`/api/channels/${chat.id}/invite`, { userId: p.id });
+                                    added += 1;
+                                } catch (err) {
+                                    problem = err?.response?.data?.message || 'Could not add them';
+                                }
+                            }
+                            setMentionInviteBusy(false);
+                            setMentionInvite(null);
+                            if (added) showToast(added === 1 ? `Added to #${chat.name}` : `${added} people added to #${chat.name}`, 'success');
+                            if (problem) showToast(problem, 'error');
+                            refreshContacts?.();
+                        }}>
+                        {mentionInviteBusy ? 'Adding…' : 'Add to channel'}
+                    </button>
+                </div>
+            )}
             {showAskAi && (
                 <Suspense fallback={null}>
                     <AskAiPanel
