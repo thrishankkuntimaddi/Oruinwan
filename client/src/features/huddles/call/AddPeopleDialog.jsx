@@ -4,16 +4,29 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, UserPlus, X } from 'lucide-react';
 import api from '@services/api';
 import { useSocket } from '../../../contexts/SocketContext';
-import { useWorkspace } from '../../../contexts/WorkspaceContext';
+import { useOptionalWorkspace } from '../../../contexts/WorkspaceContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 
 const nameOf = (m) => m?.profile?.name || m?.name || m?.username || 'Someone';
 const idOf = (m) => String(m?._id || m?.id || m?.user?._id || m?.userId || '');
 
-export default function AddPeopleDialog({ huddleId, inCall = [], onClose }) {
+/**
+ * The call's workspace. The call screen is drawn above the workspace pages (outside the
+ * WorkspaceProvider), so the workspace comes from the context when there is one, else from the
+ * page address (/workspace/<id>/…). Using useWorkspace here crashed the whole app — and with it
+ * the call — the moment someone opened "Add people".
+ */
+export function callWorkspaceId(activeWorkspace, pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
+    if (activeWorkspace?.id) return String(activeWorkspace.id);
+    const m = /\/workspace\/([^/]+)/.exec(pathname || '');
+    return m ? m[1] : null;
+}
+
+export default function AddPeopleDialog({ huddleId, inCall = [], onClose, workspaceId = null }) {
     const { socket } = useSocket();
-    const { activeWorkspace } = useWorkspace();
+    const { activeWorkspace } = useOptionalWorkspace() || {};
+    const wsId = workspaceId || callWorkspaceId(activeWorkspace);
     const { user } = useAuth();
     const { showToast } = useToast();
     const [members, setMembers] = useState([]);
@@ -22,11 +35,11 @@ export default function AddPeopleDialog({ huddleId, inCall = [], onClose }) {
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
-        if (!activeWorkspace?.id) return;
-        api.get(`/workspaces/${activeWorkspace.id}/members`)
+        if (!wsId) return;
+        api.get(`/api/workspaces/${wsId}/members`)
             .then((res) => setMembers((res.data?.members || []).map((m) => m.user || m)))
             .catch(() => setMembers([]));
-    }, [activeWorkspace?.id]);
+    }, [wsId]);
 
     const here = useMemo(() => new Set(inCall.map((p) => String(p.userId))), [inCall]);
     const me = String(user?._id || user?.id || '');
