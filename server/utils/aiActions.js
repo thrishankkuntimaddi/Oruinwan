@@ -32,7 +32,9 @@ const fail = (error) => ({ success: false, error });
 const ioFrom = (ctx) => ctx.io || ctx.req?.app?.get?.('io') || null;
 const cleanText = (v, max = MAX_TEXT) => String(v ?? '').trim().slice(0, max);
 const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const sameId = (a, b) => String(a?._id || a?.user?._id || a?.user || a) === String(b);
+// A channel member entry is { _id (the entry's own id), user, joinedAt }: compare its user,
+// not its _id. DM participants are ids or user objects ({ _id }).
+const sameId = (a, b) => String(a?.user?._id || a?.user || a?._id || a) === String(b);
 
 async function membership(ctx) {
     if (!ctx.workspaceId) return { error: fail('No current workspace. Ask the user to open a workspace first.') };

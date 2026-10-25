@@ -43,11 +43,14 @@ jest.mock('../../../identity', () => ({
 jest.mock('../../../identity/hydrate', () => ({ hydrate: async (x) => x, USER_MIN: {} }));
 
 const lean = (v) => ({ select: () => ({ lean: async () => v }), lean: async () => v });
+// Member entries as Mongo stores them: each has its own _id besides the user's id.
+let mockEntry = 0;
+const entry = (user) => ({ _id: `64b0000000000000000009${String(++mockEntry).padStart(2, '0')}`, user, joinedAt: new Date(0) });
 const mockChannels = {
-  [CH]: { _id: CH, name: 'general', workspace: WS, company: null, members: [{ user: ME }, { user: BOB }] },
-  [CH_NOT_MINE]: { _id: CH_NOT_MINE, name: 'secret', workspace: WS, company: null, members: [{ user: BOB }] },
-  [CH_ANN]: { _id: CH_ANN, name: 'announcements', workspace: WS, company: null, postingPolicy: 'admins', members: [{ user: ME }, { user: BOB }] },
-  [CH_ELSEWHERE]: { _id: CH_ELSEWHERE, name: 'elsewhere', workspace: OTHER_WS, company: null, members: [{ user: ME }] },
+  [CH]: { _id: CH, name: 'general', workspace: WS, company: null, members: [entry(ME), entry(BOB)] },
+  [CH_NOT_MINE]: { _id: CH_NOT_MINE, name: 'secret', workspace: WS, company: null, members: [entry(BOB)] },
+  [CH_ANN]: { _id: CH_ANN, name: 'announcements', workspace: WS, company: null, postingPolicy: 'admins', members: [entry(ME), entry(BOB)] },
+  [CH_ELSEWHERE]: { _id: CH_ELSEWHERE, name: 'elsewhere', workspace: OTHER_WS, company: null, members: [entry(ME)] },
 };
 jest.mock('../../channels/channel.model', () => ({
   findById: jest.fn((id) => lean(mockChannels[String(id)] || null)),
