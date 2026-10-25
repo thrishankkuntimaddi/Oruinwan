@@ -123,7 +123,7 @@ export function SidePanel() {
             <p className="mt-5 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Workspace</p>
             <button
               type="button"
-              onClick={go(() => useSession.setState({ pickingWorkspace: true }))}
+              onClick={go(() => useSession.setState({ pickingWorkspace: 'browse' }))}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-surface-2"
               data-testid="side-workspace"
             >

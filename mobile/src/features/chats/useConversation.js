@@ -22,6 +22,13 @@ function toggleReaction(m, emoji, me) {
   return { ...m, reactions };
 }
 
+/** Updates a chat's row in the cached chat list (last message, time) without a reload. */
+export function bumpChatRow(conv, patchRow) {
+  const ws = useSession.getState().workspaceId;
+  const listKey = conv.kind === 'channel' ? `channels:${ws}` : `dms:${ws}`;
+  setQueryData(listKey, (list) => list?.map((c) => (c.id === conv.id ? { ...c, ...patchRow } : c)));
+}
+
 export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
   const me = useSession((s) => s.user?.id);
   const key = threadOf ? `thread:${threadOf}` : conv?.id && `messages:${conv.id}`;
@@ -112,6 +119,8 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
         state: 'ok',
       };
       patch((items) => (retryId ? items.map((m) => (m.id === retryId ? optimistic : m)) : [...items, optimistic]));
+      // The chat list shows it as the latest message right away (it moves to the top).
+      if (!threadOf) bumpChatRow(conv, { lastText: body, lastAt: optimistic.at, lastSender: { id: me, name: null } });
       try {
         const saved = await api().sendMessage(conv, body, { parentId: threadOf, clientTempId: tempId, mentionText });
         patch((items) => {

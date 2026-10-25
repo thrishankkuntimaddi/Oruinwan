@@ -6,6 +6,7 @@
 // `onBack` (the AI screen, which isn't on the tab bar) swaps the switcher for a back button and
 // leaves out the buttons.
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronDown, Search, X } from 'lucide-react';
 import { useSession, useWorkspace } from '../data/session.js';
 import { useUpdate } from '../update/updater.js';
@@ -44,7 +45,8 @@ function SearchPanel({ anchor, context, query, onClose }) {
     return () => window.removeEventListener('resize', measure);
   }, [anchor]);
   if (!box) return null;
-  return (
+  // Through a portal: the header's backdrop blur would otherwise contain a fixed panel.
+  return createPortal(
     <div
       className="animate-drop-in fixed bottom-0 z-30 overflow-y-auto overscroll-contain border-t border-line-soft bg-bg"
       style={{ top: box.top, left: box.left, width: box.width }}
@@ -54,7 +56,8 @@ function SearchPanel({ anchor, context, query, onClose }) {
       <Suspense fallback={null}>
         <QuickSearch context={context} query={query} onClose={onClose} />
       </Suspense>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -131,7 +134,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
                   nav.push('search', { q });
                 }
               }}
-              className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-text-3"
+              className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-text-3 [&::-webkit-search-cancel-button]:hidden"
             />
             {query && (
               <button type="button" aria-label="Clear" onClick={() => (setQuery(''), inputRef.current?.focus())} className="grid h-6 w-6 place-items-center rounded-full bg-surface-3 text-text-2">
@@ -147,7 +150,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
         <div className="flex h-16 items-center gap-1 pl-4 pr-2">
           <button
             type="button"
-            onClick={() => useSession.setState({ pickingWorkspace: true })}
+            onClick={() => useSession.setState({ pickingWorkspace: 'browse' })}
             aria-label={`Workspace: ${workspace?.name || 'none'}. Your workspaces`}
             data-tour="workspace"
             className="pressable mr-1 flex min-w-0 flex-1 items-center gap-3 text-left"

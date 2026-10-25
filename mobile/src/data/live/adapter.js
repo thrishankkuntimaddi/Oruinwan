@@ -84,6 +84,7 @@ export function mapPersonDm(s, myId) {
     lastAt: s.lastMessageAt || null,
     lastText: previewLabel(s),
     lastSender: senderOf(s),
+    noMessages: s.lastMessage === 'No messages yet',
     agentId: s.isAgent ? s.agentId || 'default' : null,
   };
 }
@@ -116,6 +117,7 @@ export function mapGroupDm(s, myId) {
     lastAt: s.lastMessageAt || null,
     lastText: previewLabel(s),
     lastSender: senderOf(s),
+    noMessages: s.lastMessage === 'No messages yet',
     agentId: null,
   };
 }

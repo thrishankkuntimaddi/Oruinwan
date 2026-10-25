@@ -20,7 +20,8 @@ export function WorkspacePicker() {
   const [joinLink, setJoinLink] = useState(false);
   // Opened from the header while a workspace is open: offer the way back to it.
   const currentId = useSession((s) => s.workspaceId);
-  const current = workspaces.find((w) => w.id === currentId);
+  const browsing = useSession((s) => s.pickingWorkspace === 'browse');
+  const current = browsing ? workspaces.find((w) => w.id === currentId) : null;
 
   // Most active first.
   const sorted = [...workspaces].sort((a, b) => (b.unread || 0) - (a.unread || 0));

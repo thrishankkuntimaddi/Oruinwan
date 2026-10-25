@@ -833,7 +833,7 @@ export function NewMessageScreen() {
                         key={u.id}
                         leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
                         title={u.name}
-                        subtitle={u.title || (u.username ? `@${u.username}` : u.email)}
+                        subtitle={u.title || u.email || (u.username ? `@${u.username}` : null)}
                         trailing={busy === u.id ? <Spinner className="text-text-2" /> : null}
                         chevron={false}
                         onClick={() => open(u)}

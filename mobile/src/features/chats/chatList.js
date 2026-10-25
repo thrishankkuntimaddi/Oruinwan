@@ -106,7 +106,7 @@ export function previewText(row, me, plain) {
   const text = item.lastText ? plain(item.lastText) : '';
   if (!text) {
     if (kind === 'channel') return item.lastAt ? 'New message' : item.topic || 'No messages yet';
-    return item.lastAt ? 'New message' : 'No messages yet';
+    return item.lastAt && !item.noMessages ? 'New message' : 'No messages yet';
   }
   const sender = item.lastSender;
   if (sender?.id && sender.id === me) return `You: ${text}`;

@@ -35,7 +35,8 @@ const MORE = [
   { id: 'settings', label: 'Settings', icon: Settings, open: () => nav.push('settings') },
 ];
 
-const DRAWER_H = 236;
+/** One drawer row: icon tile, label and padding. */
+const ROW_H = 100;
 
 function EditBarSheet({ open, onClose }) {
   const items = useTabBar((s) => s.items);
@@ -136,6 +137,8 @@ export function TabBar() {
   const badges = { chats: unread.channels + unread.dms, tasks: due, activity: unread.notifications };
   const items = bar.filter((t) => t !== 'notes' || notesOn).map((id) => ({ id, ...TAB_META[id], badge: badges[id] || 0 }));
   const drawerTabs = BAR_CHOICES.filter((t) => !bar.includes(t) && (t !== 'notes' || notesOn));
+
+  const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / 4) * ROW_H + 24;
 
   if (keyboardOpen) return null;
 
