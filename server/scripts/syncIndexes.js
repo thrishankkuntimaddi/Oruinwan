@@ -34,6 +34,8 @@ function loadAllModels() {
         '../src/features/files/WorkspaceFile',
         '../src/features/files/FileVersion',
         '../src/features/files/FileComment',
+        // Task discussions (unique task per discussion; one copy of a chat reply per task).
+        '../src/features/tasks/taskDiscussion.model',
     ];
     for (const rel of extra) {
         try { require(path.join(__dirname, rel)); } catch (err) { console.warn(`skip ${rel}: ${err.message}`); }
