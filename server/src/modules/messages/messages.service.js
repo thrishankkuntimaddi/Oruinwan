@@ -392,11 +392,9 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
                 hereIds = new Set(recipientIds.filter(id => live[String(id)] && live[String(id)].status !== 'offline'));
             }
             if (userHandles.length > 0) {
-                const handles = new Set(userHandles.map(h => String(h).toLowerCase()));
+                // Names may have spaces: "@Pakanati Shiva Kumar Goud" is one mention.
                 const users = await identity.users.findManyByIds(recipientIds);
-                mentionedUserIds = [...users.values()]
-                    .filter(u => handles.has(String(u.username || '').toLowerCase()))
-                    .map(u => String(u._id));
+                mentionedUserIds = require('../../utils/mentionMatch').mentionedUserIds(mentionText, users);
             }
             if (mentionedUserIds.length > 0) {
                 await Message.findByIdAndUpdate(message._id, { $set: { mentions: mentionedUserIds } });

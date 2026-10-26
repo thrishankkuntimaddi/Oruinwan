@@ -769,7 +769,7 @@ export function Composer({
   // "@a…", "@cl…" being typed: offer the assistants it could be (Oruinwan AI, Claude…).
   const aiAt = aiMentions && !editing ? assistantMentionAt(text, caret, assistants?.length ? assistants : [DEFAULT_ASSISTANT]) : null;
   // People, @channel/@here and #channels.
-  const at = mentions && !editing ? mentionAt(text, caret) : null;
+  const at = mentions && !editing ? mentionAt(text, caret, mentions.people) : null;
   const people = at ? mentionSuggestions(at, mentions) : [];
   const completeAi = (a) => {
     const tag = `@${a.mention} `;

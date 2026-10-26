@@ -5,6 +5,8 @@
 // Segments: [{ text, kind }] where kind is null | 'mark' | 'bold' | 'italic' | 'strike' |
 // 'code' | 'mention' | 'quote' | 'list', or combinations joined by spaces ("bold italic").
 
+import { findKnownMentions } from '../../../../platform/people/mentions.js';
+
 const INLINE = [
   { kind: 'code', re: /`([^`\n]+)`/y, mark: 1 },
   { kind: 'bold', re: /\*\*(?=\S)([^\n]*?\S)\*\*/y, mark: 2 },
@@ -46,7 +48,9 @@ function inline(line, base, out) {
     if (matched) continue;
     // @mentions and #channels
     if ((line[i] === '@' || line[i] === '#') && (i === 0 || /\s|\(/.test(line[i - 1]))) {
-      const m = /^[@#][\w.-]+/.exec(line.slice(i));
+      // A workspace name with spaces ("@Pakanati Shiva Kumar Goud") is one mention.
+      const known = line[i] === '@' ? findKnownMentions(line.slice(i)).find((x) => x.start === 0 && x.known) : null;
+      const m = known ? [line.slice(i, i + known.end)] : /^[@#][\w.-]+/.exec(line.slice(i));
       if (m && m[0].length > 1) {
         flush();
         out.push({ text: m[0], kind: base ? `${base} mention` : 'mention' });

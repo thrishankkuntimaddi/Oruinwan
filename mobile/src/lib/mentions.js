@@ -2,14 +2,22 @@
 // resolves @handles: server/src/utils/mentionParser.js); @channel notifies everyone in the
 // channel and @here the people online, unless the channel limits them to its admins.
 // The message itself is end-to-end encrypted, so the handles go to the server separately as
-// `mentionText`, as on the web.
+// `mentionText`, as on the web. Usernames can have spaces ("@Pakanati Shiva Kumar Goud"): the
+// longest known name wins (platform/people/mentions.js).
+
+import { findMentions } from '../../../platform/people/mentions.js';
 
 /** While typing: { trigger: '@' | '#', query, start, end } for the word before the caret, or null. */
-export function mentionAt(text, caret = text.length) {
+export function mentionAt(text, caret = text.length, people = null) {
   const before = String(text || '').slice(0, caret);
   const m = /(^|[\s(])([@#])([\w.-]*)$/.exec(before);
-  if (!m) return null;
-  return { trigger: m[2], query: m[3].toLowerCase(), start: caret - m[3].length - 1, end: caret };
+  if (m) return { trigger: m[2], query: m[3].toLowerCase(), start: caret - m[3].length - 1, end: caret };
+  // Names can have spaces: "@varshitha gaj" is still being typed while it starts a username.
+  const w = /(^|[\s(])@([^\n@]{1,60})$/.exec(before);
+  if (!w || !/\s/.test(w[2]) || !people?.length) return null;
+  const query = w[2].toLowerCase().replace(/[\s\u00a0]+/g, ' ');
+  if (!people.some((u) => String(u?.username || '').toLowerCase().replace(/\s+/g, ' ').startsWith(query))) return null;
+  return { trigger: '@', query, start: caret - w[2].length - 1, end: caret };
 }
 
 /** Whether this person may use @channel / @here in a channel with this policy. */
@@ -73,12 +81,12 @@ export function applyMention(text, at, suggestion) {
  */
 export function mentionTextFor(text, usernames, { allowBroadcast = true } = {}) {
   const out = new Set();
-  for (const m of String(text || '').matchAll(/(^|[^\w@])@([a-zA-Z0-9_.-]+)/g)) {
-    const handle = m[2].replace(/[.-]+$/, '').toLowerCase();
-    if (handle === 'channel' || handle === 'here' || handle === 'everyone') {
+  for (const m of findMentions(text, usernames ? [...usernames] : [])) {
+    const handle = m.key;
+    if (!m.known && (handle === 'channel' || handle === 'here' || handle === 'everyone')) {
       // @everyone is the same as @channel on the server.
       if (allowBroadcast) out.add(`@${handle}`);
-    } else if (usernames?.has(handle)) out.add(`@${handle}`);
+    } else if (m.known) out.add(`@${handle}`);
   }
   return [...out].join(' ');
 }

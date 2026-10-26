@@ -1,9 +1,10 @@
 // Query hooks for the active workspace. Keys start with the entity name so
 // invalidate('tasks') refreshes every workspace's task list.
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { api, useSession } from './session.js';
 import { useQuery } from './query.js';
 import { activePeople } from '../lib/standing.js';
+import { setMentionNames } from '../../../platform/people/mentions.js';
 
 const useWs = () => useSession((s) => s.workspaceId);
 
@@ -18,7 +19,12 @@ export function useDms() {
 /** Everyone, including people who left or were removed (names on what they wrote). */
 export function useAllMembers() {
   const ws = useWs();
-  return useQuery(ws && `members:${ws}`, () => api().members(ws), { staleMs: 5 * 60_000 });
+  const q = useQuery(ws && `members:${ws}`, () => api().members(ws), { staleMs: 5 * 60_000 });
+  // Messages draw "@Full Name" as one mention once they know the workspace's usernames.
+  useEffect(() => {
+    if (q.data) setMentionNames(q.data.map((u) => u?.username));
+  }, [q.data]);
+  return q;
 }
 /** The people who can be messaged, mentioned and added: active members only. */
 export function useMembers() {

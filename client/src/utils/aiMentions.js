@@ -10,6 +10,7 @@
 
 import { messageService } from '../services/messageService';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
+import { mentionedPeople } from '@platform/people/mentions.js';
 
 const ASSISTANT_HANDLES = /^(ai|oruinwan(?:[-_]?ai)?|claude|chatgpt|gpt|gemini|grok|local)$/i;
 
@@ -53,14 +54,12 @@ export function mentionsInText(text, chosen) {
  * the text itself), looked up among `members`. Assistants (@ai, @claude…) are skipped.
  */
 export function peopleFromHandles(textOrHandles, members) {
-    const byName = new Map((members || []).filter((m) => m?.username).map((m) => [lower(m.username), m]));
+    // Names may have spaces ("@Pakanati Shiva Kumar Goud"): the longest known name wins.
+    const people = (members || []).filter((m) => m?.username && !ASSISTANT_HANDLES.test(m.username));
     const out = [];
     const seen = new Set();
-    for (const match of String(textOrHandles || '').matchAll(/(^|[^\w@])@([\w.-]+)/g)) {
-        const handle = match[2].replace(/[.-]+$/, '');
-        if (ASSISTANT_HANDLES.test(handle)) continue;
-        const m = byName.get(lower(handle));
-        const id = m && String(m._id || m.id);
+    for (const m of mentionedPeople(textOrHandles, people)) {
+        const id = String(m._id || m.id || '');
         if (!id || seen.has(id)) continue;
         seen.add(id);
         out.push({ id, username: m.username, name: m.name || m.username });

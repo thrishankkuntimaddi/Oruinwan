@@ -1,5 +1,22 @@
 import { useState, useCallback, useRef } from 'react';
 
+/**
+ * Where the "@" of the mention being typed is, or -1. Names can have spaces, so the query may
+ * run past a space ("@varshitha gaj") while it still starts someone's username.
+ */
+export function mentionStart(text, cursorPos, members = []) {
+    for (let i = cursorPos - 1; i >= 0 && cursorPos - i <= 60; i--) {
+        const c = text[i];
+        if (c === '\n') return -1;
+        if (c !== '@') continue;
+        if (i > 0 && /[\p{L}\p{N}_@/]/u.test(text[i - 1])) return -1;
+        const query = text.slice(i + 1, cursorPos).toLowerCase().replace(/[\s\u00a0]+/g, ' ');
+        if (!/\s/.test(query)) return i;
+        return (members || []).some((m) => String(m?.username || '').toLowerCase().replace(/\s+/g, ' ').startsWith(query)) ? i : -1;
+    }
+    return -1;
+}
+
 export function useMentionAutocomplete(members = [], { includeBroadcast = false, assistants = [] } = {}) {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
@@ -25,22 +42,14 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false,
         const cursorPos = range.startOffset;
 
         
-        let atIndex = -1;
-        for (let i = cursorPos - 1; i >= 0; i--) {
-            if (text[i] === '@') {
-                atIndex = i;
-                break;
-            }
-            
-            if (text[i] === ' ' || text[i] === '\n') break;
-        }
+        const atIndex = mentionStart(text, cursorPos, members);
 
         if (atIndex === -1) {
             setShowSuggestions(false);
             return;
         }
 
-        const query = text.slice(atIndex + 1, cursorPos).toLowerCase();
+        const query = text.slice(atIndex + 1, cursorPos).toLowerCase().replace(/[\s\u00a0]+/g, ' ');
         queryRef.current = query;
 
         // Channels also offer @here (online members) and @channel (everyone).
@@ -111,11 +120,7 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false,
         const cursorPos = range.startOffset;
 
         
-        let atIndex = -1;
-        for (let i = cursorPos - 1; i >= 0; i--) {
-            if (text[i] === '@') { atIndex = i; break; }
-            if (text[i] === ' ' || text[i] === '\n') break;
-        }
+        const atIndex = mentionStart(text, cursorPos, members);
         if (atIndex === -1) return;
 
         
@@ -172,7 +177,7 @@ export function useMentionAutocomplete(members = [], { includeBroadcast = false,
         if (editableRef?.current) {
             editableRef.current.dispatchEvent(new Event('input', { bubbles: true }));
         }
-    }, []);
+    }, [members]);
 
     
     const extractMentionText = useCallback((editableRef) => {

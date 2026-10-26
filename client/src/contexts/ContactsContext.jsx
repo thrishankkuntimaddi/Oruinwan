@@ -5,6 +5,7 @@ import api from '@services/api';
 import { useSocket } from "./SocketContext";
 import logger from '../utils/logger';
 import { rememberAvatars } from '../utils/avatarUtils';
+import { setMentionNames } from '@platform/people/mentions.js';
 
 const ContactsContext = createContext();
 export const useContacts = () => useContext(ContactsContext);
@@ -168,6 +169,8 @@ export default function ContactsProvider({ children }) {
       }));
       // Seed the shared avatar cache so every screen shows each member's stored picture.
       rememberAvatars(membersData);
+      // Messages draw "@Full Name" as one mention once they know the workspace's usernames.
+      setMentionNames(membersData.map((m) => m.username));
       // Everyone (names on old messages, tasks, notes); `members` below is who can be picked.
       setAllMembers(membersData);
 

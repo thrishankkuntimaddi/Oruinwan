@@ -110,10 +110,7 @@ async function resolveThreadMentions(parent, replierId, mentionText) {
     if (userHandles.length > 0) {
         const identity = require('../../identity');
         const users = await identity.users.findManyByIds(audience);
-        const handles = new Set(userHandles);
-        userIds = [...users.values()]
-            .filter((u) => handles.has(String(u.username || '').toLowerCase()))
-            .map((u) => String(u._id));
+        userIds = require('../../utils/mentionMatch').mentionedUserIds(mentionText.slice(0, 4000), users);
     }
 
     let broadcastIds = [];

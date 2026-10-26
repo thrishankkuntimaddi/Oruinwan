@@ -339,8 +339,9 @@ async function resolveMentions(task, authorId, text) {
         .map((m) => sid(m.user))
         .filter((id) => id !== String(authorId));
     const users = await hydrateUsers(memberIds);
-    const handles = new Set(userHandles);
-    return memberIds.filter((id) => handles.has(String(users.get(id)?.username || '').toLowerCase()));
+    const { mentionedUsernames, foldName } = require('../../utils/mentionMatch');
+    const names = mentionedUsernames(String(text).slice(0, 4000), memberIds.map((id) => users.get(id)?.username));
+    return memberIds.filter((id) => names.has(foldName(users.get(id)?.username)));
 }
 
 async function postComment(userId, taskId, { text, attachments = [] } = {}, io = null) {

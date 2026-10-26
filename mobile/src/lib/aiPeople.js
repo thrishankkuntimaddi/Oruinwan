@@ -3,6 +3,8 @@
 // DM with them, decrypted on the phone, for "what did we say about…") so the assistant
 // knows exactly who is meant; the text keeps "@username".
 
+import { findMentions, mentionedPeople } from '../../../platform/people/mentions.js';
+
 const ASSISTANT_HANDLES = /^(ai|oruinwan(?:[-_]?ai)?|claude|chatgpt|gpt|gemini|grok|local)$/i;
 const lower = (s) => String(s || '').toLowerCase();
 
@@ -12,14 +14,10 @@ const lower = (s) => String(s || '').toLowerCase();
  * Returns [{ id, name, username }].
  */
 export function peopleInText(text, { picked = [], people = [], me = null } = {}) {
-  const byHandle = new Map();
-  for (const p of [...picked, ...people]) if (p?.username && !byHandle.has(lower(p.username))) byHandle.set(lower(p.username), p);
+  const list = [...picked, ...people].filter((p) => p?.username && !ASSISTANT_HANDLES.test(p.username));
   const out = [];
   const seen = new Set();
-  for (const m of String(text || '').matchAll(/(^|[^\w@])@([\w.-]+)/g)) {
-    const handle = m[2].replace(/[.-]+$/, '');
-    if (ASSISTANT_HANDLES.test(handle)) continue;
-    const p = byHandle.get(lower(handle));
+  for (const p of mentionedPeople(text, list)) {
     if (!p?.id || p.id === me || seen.has(p.id)) continue;
     seen.add(p.id);
     out.push({ id: p.id, name: p.name || p.username, username: p.username });
@@ -48,13 +46,19 @@ export async function withTranscripts(people, transcriptOf = null) {
 /** Splits text into strings and { person } parts for each "@username" of a mentioned person. */
 export function mentionParts(text, people = []) {
   const list = people.filter((p) => p?.username);
-  if (!list.length) return [String(text || '')];
-  const byName = new Map(list.map((p) => [lower(p.username), p]));
-  const escaped = list.map((p) => p.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  return String(text || '')
-    .split(new RegExp(`(@(?:${escaped}))(?![\\w-])`, 'gi'))
-    .filter((s) => s !== '')
-    .map((s) => (s.startsWith('@') && byName.has(lower(s.slice(1))) ? { person: byName.get(lower(s.slice(1))), text: s } : s));
+  const src = String(text || '');
+  if (!list.length) return [src];
+  const byName = new Map(list.map((p) => [lower(p.username).replace(/\s+/g, ' ').trim(), p]));
+  const out = [];
+  let last = 0;
+  for (const m of findMentions(src, [...byName.keys()])) {
+    if (!m.known) continue;
+    if (m.start > last) out.push(src.slice(last, m.start));
+    out.push({ person: byName.get(m.key), text: src.slice(m.start, m.end) });
+    last = m.end;
+  }
+  if (last < src.length) out.push(src.slice(last));
+  return out;
 }
 
 const LABELS = {

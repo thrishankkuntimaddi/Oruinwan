@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo, useSyncExternalStore } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import CodeBlock from './CodeBlock';
 import { linkMentions, mentionFromHref } from '../../../utils/linkMentions';
+import { getMentionNames, subscribeMentionNames } from '@platform/people/mentions.js';
 import { useAuth } from '../../../contexts/AuthContext';
 import { MentionChip } from '../../../features/profileCard/ProfileTrigger';
 
@@ -68,9 +69,12 @@ const urlTransform = (url) => (url.startsWith('mention:') ? url : defaultUrlTran
  * highlighted code blocks with copy/run, and @mention chips.
  */
 function MessageMarkdown({ text }) {
+    // Redraw once the workspace's names are known, so "@Full Name" becomes one chip.
+    const names = useSyncExternalStore(subscribeMentionNames, getMentionNames);
+    const linked = useMemo(() => linkMentions(text, names), [text, names]);
     return (
         <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={COMPONENTS} urlTransform={urlTransform}>
-            {linkMentions(text)}
+            {linked}
         </ReactMarkdown>
     );
 }

@@ -1,24 +1,40 @@
 // Small Markdown renderer for messages, AI answers and release notes. It builds React
 // elements directly (never HTML strings), so message content can't inject markup.
-import { Fragment } from 'react';
+import { Fragment, useSyncExternalStore } from 'react';
+import { getMentionNames, subscribeMentionNames } from '../../../platform/people/mentions.js';
 import { cx } from './cx.js';
 import { CodeBlock } from './CodeBlock.jsx';
 
 // A backslash escapes a markdown character (\_ shows _), as on the web: /shrug sends ¯\\\_(ツ)\_/¯.
-const INLINE =
+const INLINE_PLAIN =
   /(\\[\\`*_~[\]()#])|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)|(~~[^~\n]+~~)/g;
+// Group 7 is @mentions: with the workspace's names (which may have spaces), those go first.
+const MENTION_AT = INLINE_PLAIN.source.indexOf('(@[A-Za-z]') + 1;
+const INLINE_SRC = [INLINE_PLAIN.source.slice(0, MENTION_AT), INLINE_PLAIN.source.slice(MENTION_AT)];
+// Any case, and any run of spaces between words.
+const nameRe = (name) => name.split(' ').map((w) => w.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&').replace(/[a-z]/g, (c) => `[${c}${c.toUpperCase()}]`)).join('[\\s\\u00a0]+');
+let inlineFor = { names: null, re: INLINE_PLAIN };
+function inlineRegex(names) {
+  if (inlineFor.names === names) return inlineFor.re;
+  const multi = (names || []).filter((n) => n.includes(' '));
+  const re = multi.length
+    ? new RegExp(`${INLINE_SRC[0]}@(?:${multi.map(nameRe).join('|')})(?![\\w])|${INLINE_SRC[1]}`, 'g')
+    : INLINE_PLAIN;
+  inlineFor = { names, re };
+  return re;
+}
 
-function inline(text, keyBase = 'i', { onLink } = {}) {
+function inline(text, keyBase = 'i', { onLink, names } = {}) {
   const out = [];
   let last = 0;
   // matchAll clones the regex, so nested calls (bold text) never share lastIndex.
-  for (const m of text.matchAll(INLINE)) {
+  for (const m of text.matchAll(inlineRegex(names))) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const [tok] = m;
     const key = `${keyBase}-${m.index}`;
     if (m[1]) out.push(tok.slice(1));
     else if (m[2]) out.push(<code key={key}>{tok.slice(1, -1)}</code>);
-    else if (m[3]) out.push(<strong key={key}>{inline(tok.slice(2, -2), key)}</strong>);
+    else if (m[3]) out.push(<strong key={key}>{inline(tok.slice(2, -2), key, { names })}</strong>);
     else if (m[4]) out.push(<em key={key}>{tok.slice(1, -1)}</em>);
     else if (m[5]) {
       const label = tok.slice(1, tok.indexOf(']'));
@@ -40,7 +56,7 @@ function inline(text, keyBase = 'i', { onLink } = {}) {
           {tok}
         </span>,
       );
-    } else if (m[9]) out.push(<del key={key}>{inline(tok.slice(2, -2), key)}</del>);
+    } else if (m[9]) out.push(<del key={key}>{inline(tok.slice(2, -2), key, { names })}</del>);
     last = m.index + tok.length;
   }
   if (last < text.length) out.push(text.slice(last));
@@ -107,7 +123,9 @@ export function parseBlocks(src) {
 }
 
 export function Markdown({ text, className, onLink }) {
-  const opts = { onLink };
+  // Redraw once the workspace's names are known, so "@Full Name" is one mention.
+  const names = useSyncExternalStore(subscribeMentionNames, getMentionNames);
+  const opts = { onLink, names };
   return (
     <div className={cx('prose-oru selectable', className)}>
       {parseBlocks(text).map((b, i) => {
