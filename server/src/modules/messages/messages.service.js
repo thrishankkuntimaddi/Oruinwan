@@ -643,7 +643,8 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
     const b = String(userId2);
     const fail = (status, message, code) => Object.assign(new Error(message), { status, statusCode: status, code });
     if (![a, b, String(workspaceId)].every((id) => mongoose.isValidObjectId(id))) throw fail(400, 'Invalid conversation', 'INVALID_ID');
-    if (a === b) throw fail(400, 'Cannot start a direct message with yourself', 'INVALID_TARGET');
+    // The same person twice: their notes-to-self chat (only them in it).
+    const self = a === b;
 
     const workspace = await identity.workspaces.findById(workspaceId, { activeOnly: true });
     if (!workspace) throw fail(404, 'Workspace not found', 'WORKSPACE_NOT_FOUND');
@@ -654,9 +655,9 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
     if (!active.has(b)) throw fail(403, 'That person is not a member of this workspace', 'NOT_A_MEMBER');
 
     const pairKey = DMSession.dmPairKey(workspaceId, a, b);
-    const sorted = [a, b].sort();
+    const sorted = self ? [a] : [a, b].sort();
     let dmSession = await DMSession.findOne({ pairKey })
-        || await DMSession.findOne({ workspace: workspaceId, participants: { $all: sorted, $size: 2 }, isGroup: { $ne: true } }).sort({ createdAt: 1 });
+        || (self ? null : await DMSession.findOne({ workspace: workspaceId, participants: { $all: sorted, $size: 2 }, isGroup: { $ne: true } }).sort({ createdAt: 1 }));
 
     if (dmSession && !dmSession.pairKey) {
         // A DM from before pair keys: claim the key (another copy may already hold it).
@@ -673,6 +674,7 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
                         company: workspace.company || null,
                         participants: sorted,
                         isGroup: false,
+                        ...(self ? { isSelf: true } : {}),
                         lastMessageAt: new Date(),
                     },
                 },
@@ -730,7 +732,8 @@ async function getUserDMSessions(userId, workspaceId) {
             if (lastMsg) await hydrate(lastMsg, { sender: { type: 'user', fields: ['username'] } });
 
             
-            const otherUser = session.participants.find(
+            // Notes to self: "the other person" is me.
+            const otherUser = session.isSelf ? session.participants[0] : session.participants.find(
                 (p) => {
                     const participantId = p?._id || p;
                     return String(participantId) !== String(userId);
@@ -794,6 +797,7 @@ async function getUserDMSessions(userId, workspaceId) {
                 id: session._id,
                 otherUser: otherUser || { username: 'Self' },
                 otherUserId: otherUser?._id || otherUser,
+                ...(session.isSelf ? { isSelf: true } : {}),
                 ...(agentEmail ? { isAgent: true, agentId: agentEmail[1] || 'default' } : {}),
                 lastMessage: lastMessageText,
                 // Encrypted text can only be read by the participants: hand the client

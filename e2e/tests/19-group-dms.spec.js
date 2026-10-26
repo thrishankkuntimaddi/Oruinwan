@@ -36,12 +36,16 @@ test.describe('group DMs', () => {
   const groupRow = (page) => page.getByRole('link').filter({ hasText: groupName }).first();
 
   test('start a named group with two people', async () => {
+    // Home's "+" opens the To: bar: bob and carol have no group with alice yet, so it offers one.
     await alice.locator('[title="Add Direct Messages"]').first().click();
-    const dialog = alice.getByRole('dialog', { name: 'New message' });
-    await dialog.getByRole('checkbox', { name: 'Add bob to a group' }).click();
-    await dialog.getByRole('checkbox', { name: 'Add carol to a group' }).click();
-    await dialog.getByLabel('Group name').fill(groupName);
-    await dialog.getByRole('button', { name: 'Start group (3)' }).click();
+    const view = alice.getByTestId('new-message-view');
+    for (const who of ['bob', 'carol']) {
+      await view.getByLabel('To').fill(who);
+      await view.getByTestId('to-option').filter({ hasText: who }).first().click();
+    }
+    await expect(view.getByTestId('no-conversation')).toBeVisible({ timeout: 30_000 });
+    await view.getByLabel('Group name').fill(groupName);
+    await view.getByTestId('start-group').click();
     await alice.waitForURL(/\/dm\/[a-f0-9]{24}/, { timeout: 30_000 });
     groupPath = new URL(alice.url()).pathname;
     await expect(alice.getByText('3 people · group')).toBeVisible();

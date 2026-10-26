@@ -433,3 +433,11 @@ describe('New message: finding the conversation without creating it', () => {
         await expect(svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [] })).rejects.toMatchObject({ status: 400 });
     });
 });
+
+describe('notes to self', () => {
+    it('only me in the To bar: looks up my notes-to-self chat', async () => {
+        const DMSession = require('../../../../models/DMSession');
+        DMSession.findOne.mockImplementationOnce(async (q) => (q.pairKey === `${mockWS}:${mockASHA}:${mockASHA}` ? null : 'wrong'));
+        await expect(svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [mockASHA] })).resolves.toEqual({ dm: null, isGroup: false });
+    });
+});

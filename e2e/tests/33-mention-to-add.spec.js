@@ -115,7 +115,8 @@ test('a DM opened on the Messages page offers a group; a group offers to add', a
   await sendText(page, `ping @sandeep about this ${t}`);
   const offer = page.getByTestId('group-offer');
   await expect(offer).toBeVisible({ timeout: 30_000 });
-  await expect(offer).toContainText('Start a new group');
+  // The test above made a group of exactly these three: the offer opens it instead of starting one.
+  await expect(offer).toContainText(/You already have a group|Start a new group/);
   await page.getByTestId('group-offer-start').click();
   await page.waitForURL((u) => /\/dm\/[a-f0-9]{24}/.test(String(u)) && !String(u).includes(dmId), { timeout: 30_000 });
   const groupId = page.url().match(/\/dm\/([a-f0-9]{24})/)[1];

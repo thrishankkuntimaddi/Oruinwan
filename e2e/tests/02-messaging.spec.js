@@ -1,16 +1,7 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { E2E, login, openWorkspace, waitForComposerReady, withDb } = require('./helpers');
-
-/** Open (or create) the DM with `otherUsername` through the "New Message" dialog. */
-async function openDm(page, otherUsername) {
-  await page.locator('[title="Add Direct Messages"]').first().click();
-  const search = page.getByPlaceholder('Search by name or email…');
-  await search.fill(otherUsername);
-  await page.getByText(otherUsername, { exact: true }).last().click();
-  await page.waitForURL(/\/dm\/[a-f0-9]{24}/, { timeout: 30_000 });
-}
+const { E2E, login, openWorkspace, waitForComposerReady, withDb, openDm } = require('./helpers');
 
 test.describe('messaging', () => {
   test('encrypted DM and thread reply between two users', async ({ browser }) => {
@@ -32,14 +23,15 @@ test.describe('messaging', () => {
     // Alice sends a DM.
     await openDm(alice, 'bob');
     await waitForComposerReady(alice);
-    // The DM list in the sidebar shows Bob's profile photo, not just his initial.
-    await expect(alice.locator('[data-testid="user-avatar"][alt="bob"]').first())
-      .toHaveAttribute('src', E2E.users.bob.profilePicture);
     const aliceComposer = alice.locator('[contenteditable="true"]').last();
     await aliceComposer.click();
     await alice.keyboard.type(dmText);
     await alice.keyboard.press('Enter');
     await expect(alice.locator('[id^="msg-"]').filter({ hasText: dmText })).toBeVisible();
+    // The DM list in the sidebar (it lists a chat once it has a message) shows Bob's profile
+    // photo, not just his initial.
+    await expect(alice.locator('[data-testid="user-avatar"][alt="bob"]').first())
+      .toHaveAttribute('src', E2E.users.bob.profilePicture, { timeout: 30_000 });
 
     // Bob opens the same conversation and can read (decrypt) it.
     await openDm(bob, 'alice');

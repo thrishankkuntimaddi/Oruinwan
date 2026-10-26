@@ -98,7 +98,7 @@ export default function ContactsProvider({ children }) {
       // unread, a favourite or the one open right now.
       const openPath = typeof window !== 'undefined' ? window.location.pathname : '';
       const rawDMs = (chatListRes.data.sessions || []).filter((s) => !s.isAgent).filter((s) =>
-        s.isGroup || s.lastMessageId || (s.unreadCount || 0) > 0
+        s.isGroup || s.isSelf || s.lastMessageId || (s.unreadCount || 0) > 0
         || favoriteItemIds.includes(String(s.id)) || openPath.includes(`/dm/${s.id}`));
 
       const dmsData = rawDMs.map(session => {
@@ -145,7 +145,9 @@ export default function ContactsProvider({ children }) {
           id: session.id, 
           userId: otherUserId, 
           type: 'dm',
-          label: otherUser?.username || 'Unknown User',
+          // Notes to self: "Name (you)".
+          label: session.isSelf ? `${otherUser?.username || 'You'} (you)` : (otherUser?.username || 'Unknown User'),
+          ...(session.isSelf ? { isSelf: true } : {}),
           standing: standingById.get(String(otherUserId)) || 'active',
           path: `/dm/${session.id}`, 
           isFavorite: favoriteItemIds.includes(String(session.id)),

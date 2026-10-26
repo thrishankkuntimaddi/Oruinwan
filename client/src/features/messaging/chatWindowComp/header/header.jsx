@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { presenceState, presenceLabel } from '../../../../shared/utils/presence';
-import { Pin, AlarmClock,
+import { Pin, AlarmClock, Plus,
   Phone,
   Video,
   Search,
@@ -33,6 +33,7 @@ import GroupInfoModal from "../../groupDm/GroupInfoModal";
 export default function Header({
   chat,
   onClose,
+  onEditPeople,
   showSearch,
   setShowSearch,
   searchQuery,
@@ -183,6 +184,15 @@ export default function Header({
                 ? (chat.name?.replace(/^#/, '') || 'Unnamed Channel')
                 : (chat.name || chat.username || chat.email?.split('@')[0] || 'Unknown User')
               }
+              {/* Groups: "+" turns into the To: bar with this group's people, to add or remove
+                  someone and open that conversation instead. */}
+              {isGroup && onEditPeople && (
+                <button type="button" onClick={onEditPeople} data-testid="group-edit-people"
+                  title="Add or remove people (opens the To: bar)" aria-label="Add or remove people"
+                  style={{ marginLeft: 6, verticalAlign: 'middle', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2, cursor: 'pointer', color: 'var(--text-secondary)', padding: 0 }}>
+                  <Plus size={12} />
+                </button>
+              )}
             </div>
             <div style={{
               fontSize: '11px', color: 'var(--text-muted)',

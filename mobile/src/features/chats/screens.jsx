@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, Headphones, Video, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus,
+  ChevronDown, Headphones, Video, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus, X,
 } from 'lucide-react';
 import { ThreadPeopleSheet } from './ThreadPeopleSheet.jsx';
 import { nav } from '../../app/nav.js';
@@ -11,7 +11,6 @@ import { useViewing } from '../../data/live/viewing.js';
 import { Header, Screen, Body } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
-import { cx } from '../../ui/cx.js';
 import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
@@ -420,6 +419,18 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         border
         actions={
           <>
+            {/* Groups: the To: bar with this group's people, to add or remove someone and open
+                that conversation instead (this group doesn't change). */}
+            {isGroup && (
+              <IconButton
+                icon={UserPlus}
+                label="Add or remove people"
+                data-testid="group-edit-people"
+                onClick={() => nav.push('newMessage', {
+                  people: (meta?.participantIds || []).filter((pid) => pid && pid !== me).map((pid) => ({ id: pid, name: directory?.[pid]?.name || 'Someone' })),
+                })}
+              />
+            )}
             {!meta?.agentId && <HuddleButton scope={huddleScope} title={label} />}
             <IconButton icon={EllipsisVertical} label="More options" data-testid="conversation-menu" onClick={() => setSheet('menu')} />
           </>
@@ -503,9 +514,15 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
                 const inGroup = new Set(meta?.participantIds || []);
                 const others = (people || []).filter((p) => p.id && p.id !== me && !inGroup.has(p.id));
                 if (others.length) setGroupOffer({ people: others, text, add: true });
-              } else if (kind === 'dm' && !isGroup && !meta?.agentId && meta?.user?.id && api().createGroupDm) {
+              } else if (kind === 'dm' && !isGroup && !meta?.agentId && !meta?.isSelf && meta?.user?.id && api().createGroupDm) {
                 const others = (people || []).filter((p) => p.id && p.id !== me && p.id !== meta.user.id);
-                if (others.length) setGroupOffer({ people: others, text });
+                if (others.length) {
+                  setGroupOffer({ people: others, text });
+                  // Already a group with exactly us? Then the offer opens it instead of starting one.
+                  Promise.resolve(api().findConversation?.(ws, [meta.user.id, ...others.map((p) => p.id)]))
+                    .then((found) => found?.isGroup && setGroupOffer((o) => (o && o.text === text ? { ...o, existing: found } : o)))
+                    .catch(() => {});
+                }
               }
             }
           }}
@@ -517,10 +534,12 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         title={
           groupOffer?.add
             ? `Add ${groupOffer.people.length === 1 ? groupOffer.people[0].name : `${groupOffer.people.length} people`} to the group?`
-            : `Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
+            : groupOffer?.existing
+              ? `Open your group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
+              : `Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
         }
-        body={groupOffer?.add ? "They aren't in this group yet." : "They aren't in this chat. The group is a new conversation and this chat stays as it is; your message goes there to carry on."}
-        confirmLabel={groupOffer?.add ? 'Add to group' : 'Start group'}
+        body={groupOffer?.add ? "They aren't in this group yet." : groupOffer?.existing ? 'You already have a group with exactly these people. This chat stays as it is; your message goes there to carry on.' : "They aren't in this chat. The group is a new conversation and this chat stays as it is; your message goes there to carry on."}
+        confirmLabel={groupOffer?.add ? 'Add to group' : groupOffer?.existing ? 'Open group' : 'Start group'}
         cancelLabel="Not now"
         busy={mentionInviteBusy}
         onConfirm={async () => {
@@ -1167,23 +1186,55 @@ export function newMessagePeople(members, dms, me, query) {
   return { fresh, known };
 }
 
-export function NewMessageScreen() {
+const joinNames = (people) => {
+  const n = people.map((p) => p.name);
+  return n.length <= 2 ? n.join(' and ') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
+};
+
+/**
+ * New message with a "To:" bar, like Slack (and the web app): tap people to add them. One person
+ * opens your chat with them; several open your group with exactly those people, or offer to start
+ * one. "You" is your notes-to-self chat. `people` ([{ id, name }]) pre-fills it (a group's "+").
+ */
+export function NewMessageScreen({ people: prefill = null } = {}) {
   const { data: members, loading } = useMembers();
   const me = useSession((s) => s.user?.id);
+  const myUser = useSession((s) => s.user);
   const ws = useSession((s) => s.workspaceId);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(null);
-  // Several people ticked: one group with exactly them (the server reopens it if it exists).
-  const [picked, setPicked] = useState([]);
+  const [picked, setPicked] = useState(() => (Array.isArray(prefill) ? prefill.filter((p) => p?.id && p.id !== me) : []));
+  const [groupName, setGroupName] = useState('');
   const { data: dms } = useDms();
   // People you haven't messaged yet come first (that's who a new message is usually for);
   // people you already talk to follow, most recent first. Typing narrows both by word start.
   const { fresh, known } = useMemo(() => newMessagePeople(members, dms, me, query), [members, dms, me, query]);
-  const people = [...fresh, ...known];
-  const open = async (u) => {
-    setBusy(u.id);
+  const pickedIds = new Set(picked.map((p) => p.id));
+  const pickedMe = picked.length === 1 && picked[0].id === me;
+  const notPicked = (u) => !pickedIds.has(u.id);
+  const meName = myUser?.name || myUser?.username || 'You';
+  const showMe = !picked.length && (!query || wordStartMatch(`${meName} you`, query));
+
+  // Who's in the To bar decides the conversation: look it up without creating it.
+  const key = picked.map((p) => p.id).sort().join(',');
+  const { data: found, loading: finding } = useQuery(
+    ws && key && picked.length > 1 && api().findConversation && `findConv:${ws}:${key}`,
+    () => api().findConversation(ws, key.split(',')),
+    { staleMs: 5_000 },
+  );
+
+  const toggle = (u) => {
+    setQuery('');
+    if (u.id === me || pickedMe) return setPicked(u.id === me ? [{ id: me, name: `${meName} (you)` }] : [{ id: u.id, name: u.name }]);
+    setPicked((list) => (list.some((p) => p.id === u.id) ? list.filter((p) => p.id !== u.id) : [...list, { id: u.id, name: u.name }]));
+    return undefined;
+  };
+
+  const openOne = async () => {
+    const u = picked[0];
+    setBusy('open');
     try {
-      const existing = (dms || []).find((d) => !d.isGroup && !d.agentId && d.user?.id === u.id);
+      const existing = (dms || []).find((d) => !d.isGroup && !d.agentId && (u.id === me ? d.isSelf : d.user?.id === u.id && !d.isSelf));
       const dmId = existing?.id || (await api().openDm(ws, u.id));
       invalidate('dms');
       nav.replace('conversation', { kind: 'dm', id: dmId });
@@ -1193,102 +1244,131 @@ export function NewMessageScreen() {
       setBusy(null);
     }
   };
+  const openGroup = async () => {
+    setBusy('open');
+    try {
+      const id = found?.id || (await api().createGroupDm(ws, picked.map((p) => p.id), groupName))?.id;
+      invalidate('dms');
+      nav.replace('conversation', { kind: 'dm', id });
+    } catch (err) {
+      toast(err.message || 'Could not start the group', 'danger');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const personRow = (u) => (
+    <Row
+      key={u.id}
+      leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
+      title={u.name}
+      subtitle={u.title || u.email || (u.username ? `@${u.username}` : null)}
+      chevron={false}
+      onClick={() => toggle(u)}
+    />
+  );
+
   return (
     <Screen>
       <Header title="New message">
         <div className="px-4 pb-3">
-          <SearchField value={query} onChange={setQuery} placeholder="Search people" autoFocus />
+          <div data-testid="to-bar" className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line-strong bg-surface px-3 py-2">
+            <span className="text-[13px] font-semibold text-text-3">To:</span>
+            {picked.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                data-testid="to-chip"
+                aria-label={`Remove ${p.name}`}
+                onClick={() => setPicked((list) => list.filter((x) => x.id !== p.id))}
+                className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-2 py-0.5 text-[13px] font-semibold text-accent-ink"
+              >
+                {p.name} <Icon as={X} size={12} />
+              </button>
+            ))}
+            <input
+              aria-label="To"
+              placeholder={picked.length ? 'Add someone else' : 'Search people'}
+              value={query}
+              autoFocus
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Backspace' && !query && picked.length) setPicked((l) => l.slice(0, -1)); }}
+              className="min-w-[8rem] flex-1 bg-transparent py-0.5 text-[15px] text-text outline-none placeholder:text-text-3"
+            />
+          </div>
         </div>
       </Header>
       <Body>
-        <RowGroup className="mt-1">
-          <Row icon={Users} tile="accent" title="New group" subtitle="A group DM with several people" onClick={() => nav.push('newGroup')} />
-          <Row icon={Hash} tile="accent" title="Browse channels" onClick={() => nav.push('browseChannels')} />
-        </RowGroup>
+        {picked.length > 0 && (
+          <div data-testid="to-result" className="mx-4 mt-2 rounded-2xl border border-line-soft bg-surface p-4">
+            {picked.length === 1 ? (
+              <>
+                <p className="text-[15px] font-semibold text-text">{pickedMe ? 'Your notes to yourself' : `Your chat with ${picked[0].name}`}</p>
+                <p className="mt-0.5 text-[13px] text-text-2">{pickedMe ? 'Notes, links and drafts only you can see.' : 'Add more people to open a group with them instead.'}</p>
+                <Button className="mt-3" block loading={busy === 'open'} data-testid="to-open" onClick={openOne}>Open chat</Button>
+              </>
+            ) : finding && !found ? (
+              <p className="text-[14px] text-text-2">Looking for your group…</p>
+            ) : found ? (
+              <>
+                <p className="text-[15px] font-semibold text-text">{found.name || `Your group with ${joinNames(picked)}`}</p>
+                <p className="mt-0.5 text-[13px] text-text-2">You already have a group with exactly these people.</p>
+                <Button className="mt-3" block loading={busy === 'open'} data-testid="to-open" onClick={openGroup}>Open group</Button>
+              </>
+            ) : (
+              <>
+                <p className="text-[15px] font-semibold text-text">{`You don't have a group with ${joinNames(picked)} yet`}</p>
+                <p className="mt-0.5 text-[13px] text-text-2">Start one. Your other chats with these people stay as they are.</p>
+                <input
+                  aria-label="Group name"
+                  placeholder="Group name (optional)"
+                  value={groupName}
+                  maxLength={80}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  className="mt-3 w-full rounded-xl border border-line-strong bg-bg px-3 py-2 text-[15px] text-text outline-none"
+                />
+                <Button className="mt-2" block loading={busy === 'open'} data-testid="to-start-group" onClick={openGroup}>Start group</Button>
+              </>
+            )}
+          </div>
+        )}
+        {!picked.length && (
+          <RowGroup className="mt-1">
+            <Row icon={Users} tile="accent" title="New group" subtitle="Name a group and pick its people" onClick={() => nav.push('newGroup')} />
+            <Row icon={Hash} tile="accent" title="Browse channels" onClick={() => nav.push('browseChannels')} />
+          </RowGroup>
+        )}
         {loading && !members ? (
           <SkeletonRows count={6} />
-        ) : people.length ? (
+        ) : (
           <>
+            {showMe && (
+              <Section title="You">
+                <RowGroup>
+                  <Row
+                    leading={<Avatar name={meName} src={myUser?.avatarUrl} size="sm" />}
+                    title={`${meName} (you)`}
+                    subtitle="Notes to self"
+                    chevron={false}
+                    onClick={() => toggle({ id: me, name: meName })}
+                  />
+                </RowGroup>
+              </Section>
+            )}
             {[
-              ['fresh', fresh, query ? 'Start a conversation' : 'People you haven’t messaged'],
-              ['known', known, query ? 'Already talking' : 'Your conversations'],
-            ].map(([key, list, title]) =>
-              list.length ? (
-                <Section key={key} title={title}>
-                  <RowGroup>
-                    {list.map((u) => (
-                      <Row
-                        key={u.id}
-                        leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
-                        title={u.name}
-                        subtitle={u.title || u.email || (u.username ? `@${u.username}` : null)}
-                        trailing={
-                          busy === u.id ? (
-                            <Spinner className="text-text-2" />
-                          ) : (
-                            <button
-                              type="button"
-                              aria-label={picked.includes(u.id) ? `Untick ${u.name}` : `Tick ${u.name} for a group`}
-                              aria-pressed={picked.includes(u.id)}
-                              data-testid="pick-person"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPicked((list) => (list.includes(u.id) ? list.filter((x) => x !== u.id) : [...list, u.id]));
-                              }}
-                              className={cx(
-                                'grid h-7 w-7 place-items-center rounded-full border',
-                                picked.includes(u.id) ? 'border-accent bg-gold text-on-accent' : 'border-line-strong text-transparent',
-                              )}
-                            >
-                              <Icon as={Check} size={14} />
-                            </button>
-                          )
-                        }
-                        chevron={false}
-                        // While some are ticked, a tap ticks too; otherwise it opens the DM.
-                        onClick={() =>
-                          picked.length ? setPicked((list) => (list.includes(u.id) ? list.filter((x) => x !== u.id) : [...list, u.id])) : open(u)
-                        }
-                      />
-                    ))}
-                  </RowGroup>
-                </Section>
-              ) : null,
+              ['fresh', fresh.filter(notPicked), query ? 'Start a conversation' : 'People you haven’t messaged'],
+              ['known', known.filter(notPicked), query ? 'Already talking' : 'Your conversations'],
+            ].map(([k, list, title]) => (list.length ? (
+              <Section key={k} title={title}>
+                <RowGroup>{list.map(personRow)}</RowGroup>
+              </Section>
+            ) : null))}
+            {!fresh.length && !known.length && !showMe && (
+              <EmptyState icon={Users} title={query ? `No one matches “${query}”` : 'No one found'} body="Only people in this workspace can be messaged." />
             )}
           </>
-        ) : (
-          <EmptyState icon={Users} title={query ? `No one matches “${query}”` : 'No one found'} body="Only people in this workspace can be messaged." />
         )}
       </Body>
-      {picked.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 z-10 border-t border-line-soft bg-bg/95 px-4 pb-safe pt-3 backdrop-blur">
-          <Button
-            block
-            loading={busy === 'group'}
-            data-testid="start-picked"
-            onClick={async () => {
-              if (picked.length === 1) {
-                const u = (members || []).find((m) => m.id === picked[0]);
-                if (u) open(u);
-                return;
-              }
-              setBusy('group');
-              try {
-                const group = await api().createGroupDm(ws, picked);
-                invalidate('dms');
-                nav.replace('conversation', { kind: 'dm', id: group?.id || group });
-              } catch (err) {
-                toast(err.message || 'Could not start the group', 'danger');
-              } finally {
-                setBusy(null);
-              }
-            }}
-          >
-            {picked.length === 1 ? 'Message 1 person' : `Message ${picked.length} people`}
-          </Button>
-          <p className="mt-1.5 pb-2 text-center text-xs text-text-3">Your group with exactly these people opens, or a new one starts.</p>
-        </div>
-      )}
     </Screen>
   );
 }

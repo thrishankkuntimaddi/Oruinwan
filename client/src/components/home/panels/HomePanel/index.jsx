@@ -356,7 +356,7 @@ const HomePanel = ({ title }) => {
                         className="gl-icon-btn"
                         title="New Message"
                         aria-label="New message"
-                        onClick={() => setShowNewDMModal(true)}
+                        onClick={() => activeWorkspace?.id && navigate(`/workspace/${activeWorkspace.id}/home/new`)}
                     >
                         <SquarePen size={15} />
                     </button>
@@ -427,7 +427,7 @@ const HomePanel = ({ title }) => {
                 label="Direct Messages"
                 isOpen={expanded.dms}
                 onClick={() => toggle("dms")}
-                onAdd={() => setShowNewDMModal(true)}
+                onAdd={() => activeWorkspace?.id && navigate(`/workspace/${activeWorkspace.id}/home/new`)}
             />
             {expanded.dms && (
                 dms.length > 0

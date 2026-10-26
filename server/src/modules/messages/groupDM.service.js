@@ -130,6 +130,7 @@ async function describe(sessionDoc, viewerId) {
     return {
         id: String(session._id),
         isGroup: !!session.isGroup,
+        isSelf: !!session.isSelf,
         name: session.name || null,
         displayName: session.isGroup ? groupDisplayName(session, viewerId) : null,
         createdBy: session.createdBy ? String(session.createdBy) : null,
@@ -157,8 +158,10 @@ function sameGroup(workspaceId, ids) {
  */
 async function findConversation({ userId, workspaceId, userIds }) {
     if (!mongoose.isValidObjectId(String(workspaceId))) throw fail(400, 'workspaceId is required');
-    const others = [...new Set((Array.isArray(userIds) ? userIds : []).map(String))].filter((id) => id !== String(userId));
-    if (others.length === 0) throw fail(400, 'Pick at least one person');
+    const ids = [...new Set((Array.isArray(userIds) ? userIds : []).map(String))];
+    if (ids.length === 0) throw fail(400, 'Pick at least one person');
+    // Only me: my notes-to-self chat.
+    const others = ids.length === 1 && ids[0] === String(userId) ? [String(userId)] : ids.filter((id) => id !== String(userId));
     if (others.some((id) => !mongoose.isValidObjectId(id))) throw fail(400, 'Invalid person');
     if (others.length + 1 > MAX_MEMBERS) throw fail(400, `A group can have up to ${MAX_MEMBERS} people.`, 'GROUP_FULL');
     const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');

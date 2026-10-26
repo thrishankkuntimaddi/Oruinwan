@@ -127,7 +127,8 @@ export default function Messages() {
             setSelectedChat({
               id: dmSession.id,
               userId: dmSession.otherUser._id || dmSession.otherUser.id || dmSession.otherUserId || null,
-              name: username,
+              name: dmSession.isSelf ? `${username} (you)` : username,
+              isSelf: !!dmSession.isSelf,
               type: "dm",
               avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,
               status: dmSession.otherUser.isOnline ? "online" : "offline",
@@ -255,7 +256,8 @@ export default function Messages() {
             setSelectedChat({
               id: dmSession.id,  
               userId: dmSession.otherUser._id || dmSession.otherUser.id || dmSession.otherUserId || null,
-              name: username,
+              name: dmSession.isSelf ? `${username} (you)` : username,
+              isSelf: !!dmSession.isSelf,
               type: "dm",
               avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,
               status: dmSession.otherUser.isOnline ? "online" : "offline",
@@ -305,7 +307,7 @@ export default function Messages() {
         {}
         <div className="flex-1 flex flex-col">
           {isCompose ? (
-            <NewMessageView key={workspaceId} workspaceId={workspaceId} currentUserId={myId} />
+            <NewMessageView key={`${workspaceId}:${location.key}`} workspaceId={workspaceId} currentUserId={myId} currentUser={me} base="messages" />
           ) : currentBroadcast ? (
             <BroadcastChatWindow broadcast={currentBroadcast} />
           ) : selectedChat ? (

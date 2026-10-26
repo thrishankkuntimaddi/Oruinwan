@@ -8,6 +8,7 @@ import { ChannelsLanding, HomeLanding } from "./landing/Landings";
 import logger from '../../utils/logger';
 import { useAuth } from "../../contexts/AuthContext";
 import { groupChatObject, useGroupDMLive } from "../../features/messaging/groupDm/groupChat";
+import NewMessageView from "../../features/messaging/newMessage/NewMessageView";
 
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
@@ -117,6 +118,7 @@ const Home = () => {
             let isAlreadySessionId = false;
             // A DM with an AI agent (Oruinwan AI, Claude…): its account isn't a workspace member.
             let agentSession = null;
+            let selfSession = false;
 
             
             try {
@@ -134,6 +136,7 @@ const Home = () => {
                 otherUserId = existingSession.otherUserId;
                 isAlreadySessionId = true;
                 if (existingSession.isAgent) agentSession = existingSession;
+                selfSession = !!existingSession.isSelf;
               }
             } catch (err) {
               
@@ -183,7 +186,8 @@ const Home = () => {
             const chatObject = {
               id: resolvedDMSessionId,  
               userId: otherUserId,       
-              name: memberName || "Unknown User",
+              name: selfSession ? `${memberName || 'You'} (you)` : (memberName || "Unknown User"),
+              ...(selfSession ? { isSelf: true } : {}),
               ...(agentSession ? { agentId: agentSession.agentId, isAgent: true } : {}),
               image: memberPicture,
               status: status,
@@ -245,6 +249,9 @@ const Home = () => {
     return () => socket.off("user-status-changed", handleStatusChange);
   }, [socket, activeChat]);
 
+  // New message (To: bar) on Home.
+  const isCompose = /\/home\/new\/?$/.test(location.pathname);
+
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-base, #0c0c0c)' }}>
       <style>{`
@@ -293,6 +300,8 @@ const Home = () => {
           {}
           <div style={{ height: '42px', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }} />
         </div>
+      ) : isCompose ? (
+        <NewMessageView key={`${workspaceId}:${location.key}`} workspaceId={workspaceId} currentUserId={me?._id || me?.id || me?.sub} currentUser={me} base="home" />
       ) : activeChat ? (
         <ChatWindowV2
           key={activeChat.id || activeChat._id}

@@ -73,13 +73,16 @@ const senderOf = (s) => (s?.lastMessageSender ? { id: s.lastMessageSender._id ? 
 
 /** A 1:1 DM row. */
 export function mapPersonDm(s, myId) {
-  const user = mapUser(s.otherUser) || { id: s.otherUserId ? String(s.otherUserId) : null, name: 'Unknown', presence: 'offline' };
+  const found = mapUser(s.otherUser) || { id: s.otherUserId ? String(s.otherUserId) : null, name: 'Unknown', presence: 'offline' };
+  // Notes to self: a chat with only me in it, shown as "Name (you)".
+  const user = s.isSelf ? { ...found, name: `${found.name || 'You'} (you)` } : found;
   return {
     id: idOf(s),
     isGroup: false,
+    ...(s.isSelf ? { isSelf: true } : {}),
     userId: user.id,
     user,
-    participantIds: [myId, user.id].filter(Boolean),
+    participantIds: s.isSelf ? [user.id].filter(Boolean) : [myId, user.id].filter(Boolean),
     unread: s.unreadCount || 0,
     lastAt: s.lastMessageAt || null,
     lastText: previewLabel(s),
@@ -833,6 +836,16 @@ export const liveAdapter = {
   },
   async leaveGroupDm(id) {
     await api.del(`/v2/dm/${id}/members/me`);
+  },
+  /**
+   * The conversation New message (the To: bar) opens for these people, without creating it:
+   * { id, isGroup, name } or null. Several people: the group with exactly them and me.
+   */
+  async findConversation(ws, userIds) {
+    const data = await api.post('/v2/dm/find', { workspaceId: ws, userIds });
+    if (!data?.dm) return null;
+    const group = data.dm.isGroup ? mapGroupDetails(data.dm, me?.id) : null;
+    return { id: String(data.dm.id), isGroup: !!data.dm.isGroup, name: group?.name || data.dm.displayName || null };
   },
   async openDm(ws, userId) {
     const data = await api.get(`/v2/messages/workspace/${ws}/dm/resolve/${userId}`);

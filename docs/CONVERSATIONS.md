@@ -138,10 +138,23 @@ REST API would answer with). Socket reactions, deletes and pins call the same se
 
 ## New message (the "To:" bar)
 
-On the Messages page, New message opens a "To:" bar, like Slack. Add one person and your 1:1 chat
-with them opens right below; add more and the group with exactly those people and you opens
-(`POST /api/v2/dm/find`, which never creates anything). When there is no such group yet the view
-says so: send a first message (it starts the group and is sent there) or press Start group.
+New message (Home's compose button and its Direct messages "+", and the Messages page "+") opens
+a "To:" bar, like Slack. Add one person and your 1:1 chat with them opens right below (an empty one
+stays out of the chat list until someone writes); add more and the group with exactly those people
+and you opens (`POST /api/v2/dm/find`, which never creates anything). When there is no such group
+yet the view says so: send a first message (it starts the group and is sent there) or press Start
+group, optionally with a name. The phone app has the same bar.
+
+A group's header has a "+": it opens the To: bar with the group's people, so adding or removing
+someone shows that conversation instead (the group itself doesn't change; Group info adds people).
+
+Mentioning someone in a 1:1 DM offers a group with them; when a group of exactly those people
+exists already, the offer says so and opens it.
+
+## Notes to self
+
+Pick yourself in the To: bar ("Name (you)") for a chat only you are in (`DMSession.isSelf`, pair key
+`<workspace>:<me>:<me>`). It is end-to-end encrypted like any DM and never notifies anyone.
 
 ## Mentions
 

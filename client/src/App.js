@@ -240,6 +240,22 @@ function App() {
                             }
                           />
 
+                          {/* New message (the To: bar) on Home. */}
+                          <Route
+                            path="/workspace/:workspaceId/home/new"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                    <RequireWorkspace>
+                                      <MainLayout sidePanel={<HomePanel />}>
+                                        <Home />
+                                      </MainLayout>
+                                    </RequireWorkspace>
+                                  </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+
                           {}
                           <Route
                             path="/workspace/:workspaceId/home/channel/:id"

@@ -102,7 +102,6 @@ async function prepareSend(senderId, input = {}, io = null) {
     } else if (receiverId) {
         assertId(receiverId, 'person');
         if (!workspaceId) throw fail(400, 'workspaceId required when using receiverId', 'MISSING_WORKSPACE');
-        if (String(receiverId) === uid) throw fail(400, 'Cannot start a direct message with yourself', 'INVALID_TARGET');
         // Checks that both people are active members of the workspace.
         newDM = await require('./messages.service').findOrCreateDMSession(uid, receiverId, workspaceId);
         access = await checkConversationAccess({ dm: newDM._id }, uid, { forWrite: true });

@@ -70,9 +70,20 @@ async function waitForComposerReady(scope) {
 
 /** Open (or create) the DM with `otherUsername` through the "New Message" dialog. */
 async function openDm(page, otherUsername) {
+  // Home's "+" opens the To: bar; one person opens our chat below it. Then open that chat on its
+  // own page, as the tests expect (/dm/<id>).
   await page.locator('[title="Add Direct Messages"]').first().click();
-  await page.getByPlaceholder('Search by name or email…').fill(otherUsername);
-  await page.getByRole('dialog', { name: 'New message' }).getByText(otherUsername, { exact: true }).last().click();
+  const view = page.getByTestId('new-message-view');
+  await view.getByLabel('To').fill(otherUsername);
+  await view.getByTestId('to-option').filter({ hasText: otherUsername }).first().click();
+  const conv = view.getByTestId('to-conversation');
+  await expect(conv).toBeVisible({ timeout: 30_000 });
+  const id = await conv.getAttribute('data-conversation-id');
+  const ws = page.url().match(/\/workspace\/([a-f0-9]{24})/)[1];
+  await page.evaluate((to) => {
+    window.history.pushState({}, '', to);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, `/workspace/${ws}/dm/${id}`);
   await page.waitForURL(/\/dm\/[a-f0-9]{24}/, { timeout: 30_000 });
 }
 

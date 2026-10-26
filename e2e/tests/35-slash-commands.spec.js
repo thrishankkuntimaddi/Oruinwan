@@ -91,7 +91,7 @@ test('slash commands create a task, a poll and a reminder', async ({ browser }) 
   await expect(page.getByTestId('slash-error')).toContainText('Add at least two options');
   await expect(page.locator('[id^="msg-"]').filter({ hasText: '/poll "Only one"' })).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await page.keyboard.press('Control+A');
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
 
   // Unknown command: asked first.

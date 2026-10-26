@@ -40,9 +40,9 @@ describe('New message with a To: bar', () => {
     });
 
     it('one person opens our chat; adding another opens the group with exactly them', async () => {
-        apiMock.post.mockImplementation(async (url, body) => {
+        apiMock.get.mockImplementation(async (url) => (url.includes('/dm/resolve/') ? { data: { success: true, dmSessionId: 'd1' } } : { data: { members: MEMBERS } }));
+        apiMock.post.mockImplementation(async (url) => {
             if (url !== '/api/v2/dm/find') throw new Error(url);
-            if (body.userIds.length === 1) return { data: { dm: { id: 'd1', isGroup: false, participants: [{ _id: ME }, { _id: MUZ, username: 'Muzamil K' }] } } };
             return { data: { dm: { id: 'g1', isGroup: true, participants: [{ _id: ME }, { _id: MUZ }, { _id: VAR }] } } };
         });
         renderView();
@@ -76,5 +76,28 @@ describe('New message with a To: bar', () => {
         await pick('muz', 'Muzamil K');
         fireEvent.keyDown(screen.getByLabelText('To'), { key: 'Backspace' });
         expect(screen.queryAllByTestId('to-chip')).toHaveLength(0);
+    });
+});
+
+describe('To: bar extras', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        apiMock.get.mockResolvedValue({ data: { members: MEMBERS } });
+    });
+
+    it('picking myself opens my notes-to-self chat', async () => {
+        apiMock.get.mockImplementation(async (url) => (url.includes('/dm/resolve/') ? { data: { success: true, dmSessionId: 's1' } } : { data: { members: MEMBERS } }));
+        render(<MemoryRouter><NewMessageView workspaceId={WS} currentUserId={ME} currentUser={{ username: 'Thrishank Kuntimaddi' }} /></MemoryRouter>);
+        await pick('thri', 'Thrishank Kuntimaddi (you)');
+        expect(await screen.findByTestId('chat-window')).toHaveTextContent('dm s1 with Thrishank Kuntimaddi (you)');
+        expect(apiMock.get).toHaveBeenCalledWith(`/api/v2/messages/workspace/${WS}/dm/resolve/${ME}`);
+    });
+
+    it("a group's + opens the To bar with its people picked", async () => {
+        apiMock.post.mockResolvedValue({ data: { dm: { id: 'g1', isGroup: true, participants: [] } } });
+        const people = [{ _id: MUZ, name: 'Muzamil K' }, { _id: VAR, name: 'varshitha gajjala k' }, { _id: ME, name: 'me' }];
+        render(<MemoryRouter initialEntries={[{ pathname: '/', state: { people } }]}><NewMessageView workspaceId={WS} currentUserId={ME} /></MemoryRouter>);
+        expect(screen.getAllByTestId('to-chip').map((c) => c.textContent)).toEqual(['Muzamil K', 'varshitha gajjala k']);
+        expect(await screen.findByTestId('chat-window')).toHaveTextContent('group g1');
     });
 });

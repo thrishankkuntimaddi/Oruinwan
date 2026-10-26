@@ -34,16 +34,20 @@ const DMSessionSchema = new mongoose.Schema(
         // (it can shrink to 1 as people leave).
         validator: function (v) {
           if (!Array.isArray(v) || !distinctIds(v)) return false;
-          const group = typeof this.get === "function" ? this.get("isGroup") : this.isGroup;
-          return group ? v.length >= 1 && v.length <= MAX_GROUP_DM_MEMBERS : v.length === 2;
+          const get = (k) => (typeof this.get === "function" ? this.get(k) : this[k]);
+          if (get("isSelf")) return v.length === 1;
+          return get("isGroup") ? v.length >= 1 && v.length <= MAX_GROUP_DM_MEMBERS : v.length === 2;
         },
-        message: "A DM has exactly 2 distinct participants; a group DM has 1 to 10"
+        message: "A DM has exactly 2 distinct participants; a group DM has 1 to 10; notes to self have 1"
       }
     },
 
     // 1:1 DMs: "<workspace>:<smaller user id>:<larger user id>", unique, so the same two people
     // never get two conversations in one workspace. Not set on groups.
     pairKey: { type: String, default: undefined },
+
+    // Notes to self: a 1:1 chat with only me in it (pairKey "<workspace>:<me>:<me>").
+    isSelf: { type: Boolean, default: false },
 
     // Group DMs: 3+ people when created. Stays a group even if people leave.
     isGroup: { type: Boolean, default: false },
@@ -126,7 +130,7 @@ DMSessionSchema.index({ pairKey: 1 }, { unique: true, partialFilterExpression: {
 
 DMSessionSchema.pre("save", function (next) {
   const count = this.participants ? this.participants.length : 0;
-  const ok = this.isGroup ? count >= 1 && count <= MAX_GROUP_DM_MEMBERS : count === 2;
+  const ok = this.isSelf ? count === 1 : this.isGroup ? count >= 1 && count <= MAX_GROUP_DM_MEMBERS : count === 2;
   if (!this.workspace || !ok) {
     return next(new Error("Invalid DM session"));
   }

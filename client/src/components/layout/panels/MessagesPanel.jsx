@@ -139,7 +139,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         id: session.id,
                         isGroup: !!session.isGroup,
                         userId: session.isGroup ? null : (session.otherUser?._id || session.otherUser?.id),
-                        name: session.isGroup ? (session.displayName || 'Group') : (session.otherUser?.username || "User"),
+                        name: session.isGroup ? (session.displayName || 'Group') : session.isSelf ? `${session.otherUser?.username || 'You'} (you)` : (session.otherUser?.username || "User"),
                         avatar: session.otherUser?.profilePicture,
                         status: initialStatus,
                         unread: session.unreadCount || 0,

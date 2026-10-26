@@ -46,6 +46,8 @@ async function phoneOpenDm(page, username) {
   await page.getByRole('button', { name: 'New message' }).last().click();
   await page.getByPlaceholder('Search people').fill(username);
   await page.getByRole('button', { name: E2E.users[username].email }).click();
+  // The To: bar: the person is a chip now; open our chat.
+  await page.getByTestId('to-open').click();
   await expect(page.getByRole('textbox', { name: `Message ${username}` })).toBeVisible({ timeout: 30_000 });
 }
 

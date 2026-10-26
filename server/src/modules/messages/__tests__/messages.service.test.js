@@ -192,9 +192,23 @@ describe('Messages Service', () => {
             expect(DMSession.findOne).not.toHaveBeenCalled();
         });
 
-        it('refuses invalid ids and a DM with yourself', async () => {
+        it('refuses invalid ids', async () => {
             await expect(messagesService.findOrCreateDMSession('x', U2, WS)).rejects.toMatchObject({ status: 400 });
-            await expect(messagesService.findOrCreateDMSession(U1, U1, WS)).rejects.toMatchObject({ status: 400 });
+        });
+
+        it('me and me: my notes-to-self chat, with only me in it', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active']]));
+            DMSession.findOne = jest.fn().mockReturnValue(sortable(null));
+            DMSession.findOneAndUpdate = jest.fn().mockResolvedValue({ _id: 'self1', participants: [U1], isSelf: true });
+            const result = await messagesService.findOrCreateDMSession(U1, U1, WS);
+            const selfKey = `${WS}:${U1}:${U1}`;
+            expect(DMSession.findOneAndUpdate).toHaveBeenCalledWith(
+                { pairKey: selfKey },
+                { $setOnInsert: expect.objectContaining({ pairKey: selfKey, participants: [U1], isGroup: false, isSelf: true }) },
+                { upsert: true, new: true },
+            );
+            expect(DMSession.findOne).toHaveBeenCalledTimes(1);
+            expect(result._id).toBe('self1');
         });
     });
 

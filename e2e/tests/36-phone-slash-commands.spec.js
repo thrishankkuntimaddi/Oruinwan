@@ -26,6 +26,8 @@ test('phone: slash commands create a task, a poll and a reminder', async ({ brow
   await page.getByRole('button', { name: 'New message' }).last().click();
   await page.getByPlaceholder('Search people').fill('sandeep');
   await page.getByRole('button', { name: E2E.users.sandeep.email }).click();
+  // The To: bar: the person is a chip now; open our chat.
+  await page.getByTestId('to-open').click();
   const box = page.getByRole('textbox', { name: 'Message sandeep' });
   await expect(box).toBeVisible({ timeout: 30_000 });
 

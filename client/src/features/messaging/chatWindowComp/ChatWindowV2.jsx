@@ -224,6 +224,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [groupOffer, setGroupOffer] = useState(null);
     // What people added from a mention can read ('from_now' or 'earlier'); asked fresh each time.
     const [groupOfferHistory, setGroupOfferHistory] = useState('from_now');
+    // In a 1:1 DM: the group with exactly these people, when one exists already (the offer then
+    // says "open it" instead of "start one").
+    const [groupOfferExisting, setGroupOfferExisting] = useState(null);
     useEffect(() => { setGroupOfferHistory('from_now'); }, [groupOffer]);
     useEffect(() => { setMentionInvite(null); setGroupOffer(null); }, [chat?.id]);
     // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
@@ -247,6 +250,21 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         rawSocket.on('thread:resolved', onResolved);
         return () => rawSocket.off('thread:resolved', onResolved);
     }, [rawSocket]);
+
+    // Mentioned someone in a 1:1 DM: is there already a group with the three (or more) of us?
+    const offerKey = groupOffer && chat?.type === 'dm' && !chat?.isGroup && dmOtherUserId
+        ? [dmOtherUserId, ...groupOffer.map((p) => p.id)].map(String).sort().join(',') : '';
+    useEffect(() => {
+        setGroupOfferExisting(null);
+        const ws = workspaceId || chat?.workspaceId;
+        if (!offerKey || !ws) return undefined;
+        let live = true;
+        api.post('/api/v2/dm/find', { workspaceId: ws, userIds: offerKey.split(',') })
+            .then((res) => { if (live && res.data?.dm?.isGroup) setGroupOfferExisting(res.data.dm); })
+            .catch(() => {});
+        return () => { live = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [offerKey]);
 
     // /meet (web only) from the composer; the shared commands use `slashContext` below.
     const handleSlashCommand = (name) => {
@@ -1112,7 +1130,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 const inGroup = (chat?.members || []).map((m) => String(m?._id || m?.id || m?.user?._id || m?.user || m));
                 const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [...inGroup, currentUserId], currentUserId);
                 if (others.length) setGroupOffer(others);
-            } else if (!notice && chat?.type === 'dm' && !chat?.isAgent && dmOtherUserId) {
+            } else if (!notice && chat?.type === 'dm' && !chat?.isAgent && !chat?.isSelf && dmOtherUserId) {
                 const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [dmOtherUserId, currentUserId], currentUserId);
                 if (others.length) setGroupOffer(others);
             }
@@ -1887,7 +1905,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     <span style={{ flex: 1, fontSize: 13 }}>
                         {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. {chat?.isGroup
                             ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group?`
-                            : `Start a new group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}? This chat stays as it is.`}
+                            : groupOfferExisting
+                                ? `You already have a group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}. Open it? This chat stays as it is.`
+                                : `Start a new group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}? This chat stays as it is.`}
                         {chat?.isGroup && (
                             <span style={{ display: 'block', marginTop: 6 }}>
                                 <HistoryChoice compact value={groupOfferHistory} onChange={setGroupOfferHistory} />
@@ -1933,14 +1953,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                                 setGroupOffer(null);
                                 await refreshContacts?.(workspaceId || chat?.workspaceId);
                                 navigate(`/workspace/${ws}/home/dm/${dm._id || dm.id}`);
-                                showToast('Group ready: carry on there', 'success');
+                                showToast(groupOfferExisting ? 'Opened your group: carry on there' : 'Group ready: carry on there', 'success');
                             } catch (err) {
                                 showToast(err?.response?.data?.message || (chat?.isGroup ? 'Could not add them' : 'Could not start the group'), 'error');
                             } finally {
                                 setMentionInviteBusy(false);
                             }
                         }}>
-                        {chat?.isGroup ? (mentionInviteBusy ? 'Adding…' : 'Add to group') : (mentionInviteBusy ? 'Starting…' : 'Start group')}
+                        {chat?.isGroup ? (mentionInviteBusy ? 'Adding…' : 'Add to group') : groupOfferExisting ? (mentionInviteBusy ? 'Opening…' : 'Open group') : (mentionInviteBusy ? 'Starting…' : 'Start group')}
                     </button>
                 </div>
             )}
@@ -1989,6 +2009,16 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             <Header
                 chat={chat}
                 onClose={onClose}
+                onEditPeople={chat?.isGroup ? () => {
+                    // The To: bar with this group's people (not me): change who's in it to open
+                    // that conversation instead (the group itself doesn't change).
+                    const ws = workspaceId || chat?.workspaceId;
+                    const base = location.pathname.includes('/messages') ? 'messages' : 'home';
+                    const people = (chat.members || [])
+                        .map((m) => ({ _id: String(m?._id || m?.id || m?.user?._id || m?.user || m), name: m?.username || m?.name || 'Someone', username: m?.username || '' }))
+                        .filter((p) => p._id && p._id !== 'undefined' && p._id !== String(currentUserId));
+                    navigate(`/workspace/${ws}/${base}/new`, { state: { people } });
+                } : undefined}
                 connected={socket?.connected || false}
                 onCreatePoll={features.polls ? () => setActiveModal('poll') : undefined}
                 showSearch={showSearch}
