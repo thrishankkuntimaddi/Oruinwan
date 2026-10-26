@@ -42,7 +42,9 @@ test('To: one person opens our chat, two open (or start) our group', async ({ br
 
   const none = view.getByTestId('no-conversation');
   const text = `to bar hello ${t}`;
-  if (await none.isVisible({ timeout: 15_000 }).catch(() => false)) {
+  // Either "no group yet" or the group itself (its composer) shows; wait for one of them.
+  await expect(none.or(page.getByText('Message...', { exact: true }).first())).toBeVisible({ timeout: 30_000 });
+  if (await none.isVisible()) {
     await expect(none).toContainText("You don't have a group with");
     await view.getByLabel('First message').fill(text);
     await view.getByLabel('First message').press('Enter');

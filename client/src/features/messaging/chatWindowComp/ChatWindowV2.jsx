@@ -248,19 +248,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         return () => rawSocket.off('thread:resolved', onResolved);
     }, [rawSocket]);
 
-    // New message (the "To:" bar) started this conversation with a first message: send it once,
-    // when the conversation is loaded and can be written to.
-    const sendDraftOnOpen = location.state?.sendDraft;
-    const sentDraftRef = useRef(null);
-    useEffect(() => {
-        if (!sendDraftOnOpen?.text || !chat?.id || conversation.loading || !canInteract) return;
-        if (sentDraftRef.current === chat.id) return;
-        sentDraftRef.current = chat.id;
-        navigate(location.pathname + location.search, { replace: true, state: { ...location.state, sendDraft: undefined } });
-        handleSend(sendDraftOnOpen.text, { mentionText: sendDraftOnOpen.text });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sendDraftOnOpen, chat?.id, conversation.loading, canInteract]);
-
     // /meet (web only) from the composer; the shared commands use `slashContext` below.
     const handleSlashCommand = (name) => {
         if (name === 'meet') { setShowMeetingModal(true); return true; }
@@ -1160,6 +1147,19 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, chat?.isGroup, dmOtherUserId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
+
+    // New message (the "To:" bar) started this conversation with a first message: send it once,
+    // when the conversation is loaded and can be written to.
+    const sendDraftOnOpen = location.state?.sendDraft;
+    const sentDraftRef = useRef(null);
+    useEffect(() => {
+        if (!sendDraftOnOpen?.text || !chat?.id || conversation.loading || !canInteract) return;
+        if (sentDraftRef.current === chat.id) return;
+        sentDraftRef.current = chat.id;
+        navigate(location.pathname + location.search, { replace: true, state: { ...location.state, sendDraft: undefined } });
+        handleSend(sendDraftOnOpen.text, { mentionText: sendDraftOnOpen.text });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sendDraftOnOpen, chat?.id, conversation.loading, canInteract]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
