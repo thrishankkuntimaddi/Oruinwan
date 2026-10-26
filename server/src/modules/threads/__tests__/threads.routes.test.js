@@ -183,9 +183,28 @@ describe('recountThread', () => {
         expect(Message.countDocuments.mock.calls[0][0]).toMatchObject({ parentId: PARENT, isDeletedUniversally: { $ne: true } });
         expect(Message.updateOne).toHaveBeenCalledWith({ _id: PARENT }, { $set: { replyCount: 2, lastReplyAt: last } });
 
+        const DMSession = require('../../../../models/DMSession');
+        DMSession.findById.mockImplementation(() => query({ _id: oid(7), isGroup: false, participants: [ALICE, BOB] }));
         const io = makeIo();
-        emitThreadCounters(io, { _id: PARENT, dm: oid(7) }, counters);
+        await emitThreadCounters(io, { _id: PARENT, dm: oid(7) }, counters);
         expect(io.emitted).toEqual([{ room: `dm:${oid(7)}`, event: 'message-updated', payload: { messageId: PARENT, channelId: null, dmId: oid(7), updates: { replyCount: 2, lastReplyAt: last.toISOString() } } }]);
+    });
+
+    it('in a group, someone who joined after the parent hears nothing about its thread', async () => {
+        const { emitThreadCounters } = require('../threads.service');
+        const DMSession = require('../../../../models/DMSession');
+        const written = new Date('2026-10-01T10:00:00Z');
+        const CAROL = oid(33);
+        DMSession.findById.mockImplementation(() => query({
+            _id: oid(7), isGroup: true, participants: [ALICE, BOB, CAROL],
+            memberSince: [{ user: CAROL, at: new Date('2026-10-05T10:00:00Z') }],
+        }));
+        const io = makeIo();
+        await emitThreadCounters(io, { _id: PARENT, dm: oid(7), createdAt: written }, { replyCount: 1, lastReplyAt: written });
+        const rooms = io.emitted.map((e) => e.room);
+        expect(rooms).toHaveLength(1);
+        expect(rooms[0]).toEqual(expect.arrayContaining([`user:${ALICE}`, `user:${BOB}`]));
+        expect(rooms[0].join(' ')).not.toContain(CAROL);
     });
 });
 

@@ -19,6 +19,7 @@
  */
 
 const crypto = require('crypto');
+const { messageAudience } = require('../../modules/conversations/conversationRooms');
 const gateway = require('./ai.gatewayResolver');
 const { upsertSystemUser } = require('../../identity/queries/security');
 const { hydrate, USER_MIN } = require('../../identity/hydrate');
@@ -239,16 +240,17 @@ async function postThreadReply({ parent, parentId, senderId, enc, io }) {
   const updatedParent = await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 }, $set: { lastReplyAt: new Date() } }, { new: true })
     .lean().then((doc) => hydrate(doc, { sender: USER_MIN }));
 
-  if (io) {
-    const room = parent.channel ? `channel:${parent.channel}` : `dm:${parent.dm}`;
+  // Only to people who may see the thread (in a group, not those who joined after its parent).
+  const target = io ? await messageAudience(io, parent) : null;
+  if (target) {
     if (updatedParent?.replyCount === 1) {
-      io.to(room).emit('thread:created', {
+      target.emit('thread:created', {
         parentMessageId: String(parentId), channelId: parent.channel, dmId: parent.dm,
         replyCount: 1, lastReplyAt: new Date().toISOString(), parentMessage: updatedParent,
       });
     }
-    io.to(room).emit('thread-reply', { parentId: String(parentId), reply: replyObj });
-    io.to(room).emit('message-updated', { messageId: String(parentId), updates: { replyCount: updatedParent?.replyCount }, fullMessage: updatedParent });
+    target.emit('thread-reply', { parentId: String(parentId), reply: replyObj });
+    target.emit('message-updated', { messageId: String(parentId), updates: { replyCount: updatedParent?.replyCount }, fullMessage: updatedParent });
   }
   return reply;
 }

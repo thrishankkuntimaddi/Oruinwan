@@ -6,6 +6,13 @@ const { hydrate, USER_MIN } = require('../../identity/hydrate');
 
 const INTERVAL_MS = 60 * 1000;
 
+async function canStillRead(reminder) {
+  if (!reminder.messageId || typeof reminder.messageId !== 'object') return false;
+  const { checkMessageAccess } = require('../../modules/conversations/conversationAccess');
+  const access = await checkMessageAccess(reminder.messageId, String(reminder.userId)).catch(() => ({ ok: false }));
+  return access.ok;
+}
+
 async function checkDueReminders(io) {
   const now = new Date();
 
@@ -30,6 +37,9 @@ async function checkDueReminders(io) {
   );
 
   for (const reminder of dueReminders) {
+    // Delivered only while they can still read the message (it may have been removed, or they
+    // may have left the conversation or the workspace since setting it).
+    if (!(await canStillRead(reminder))) continue;
     const room = `user_${reminder.userId}`;
     io.to(room).emit('reminder-fired', {
       reminderId: reminder._id,

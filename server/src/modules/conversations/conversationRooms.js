@@ -47,4 +47,44 @@ async function evictFromWorkspace(io, workspaceId, userId, { channelIds = null }
     }
 }
 
-module.exports = { leaveRooms, evictFromChannel, evictFromWorkspace };
+/**
+ * Where a live event about a message goes. Channels and 1:1 DMs: the conversation's room. A group
+ * where someone joined after the message was written (for a thread reply: after its parent was
+ * written) must not tell them about it, so the event goes only to the members who may see it,
+ * each through their own room. `anchor` is the message whose date decides (the thread's parent).
+ * Returns a Socket.IO target, or null when nobody may receive it.
+ */
+async function messageAudience(io, message, { anchor = null } = {}) {
+    if (!io || !message) return null;
+    const channel = message.channel?._id || message.channel;
+    const dm = message.dm?._id || message.dm;
+    if (channel) return io.to(`channel:${channel}`);
+    if (!dm) return null;
+    const room = `dm:${dm}`;
+    let session = null;
+    try {
+        const DMSession = require('../../../models/DMSession');
+        session = await DMSession.findById(String(dm)).select('isGroup participants memberSince').lean();
+    } catch (err) {
+        logger.warn({ err: err?.message }, '[rooms] could not load the group for an event');
+    }
+    if (!session) return null;
+    if (!session.isGroup) return io.to(room);
+    const { messageTime } = require('./conversationAccess');
+    const at = messageTime(anchor || message);
+    const joinedAfter = new Set((session.memberSince || [])
+        .filter((m) => m?.at && at && new Date(m.at).getTime() > at.getTime() + 999)
+        .map((m) => String(m.user?._id || m.user)));
+    if (!joinedAfter.size) return io.to(room);
+    const allowed = (session.participants || []).map(String).filter((id) => !joinedAfter.has(id));
+    if (!allowed.length) return null;
+    return io.to(allowed.flatMap(userRooms));
+}
+
+/** Emits `event` about `message` to whoever may see it (see messageAudience). */
+async function emitAboutMessage(io, message, event, payload, opts) {
+    const target = await messageAudience(io, message, opts);
+    if (target) target.emit(event, payload);
+}
+
+module.exports = { leaveRooms, evictFromChannel, evictFromWorkspace, messageAudience, emitAboutMessage };

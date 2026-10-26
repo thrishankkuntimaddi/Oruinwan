@@ -15,6 +15,7 @@
  */
 
 const Message = require('../messages/message.model.js');
+const { emitAboutMessage } = require('../conversations/conversationRooms');
 const ThreadRead = require('./threadRead.model');
 const { checkConversationAccess } = require('./threadAccess');
 const { LIVE_REPLY } = require('./threads.service');
@@ -103,9 +104,8 @@ async function setLock(messageId, userId, locked, io) {
     }
     const saved = await Message.findByIdAndUpdate(parent._id, { $set: update }, { new: true }).lean();
     const info = lockInfo(saved);
-    const room = roomOf(parent);
-    if (io && room) {
-        io.to(room).emit('thread:locked', {
+    if (io && roomOf(parent)) {
+        await emitAboutMessage(io, parent, 'thread:locked', {
             messageId: String(parent._id),
             channelId: parent.channel ? sid(parent.channel) : null,
             dmId: parent.dm ? sid(parent.dm) : null,

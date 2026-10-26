@@ -43,14 +43,16 @@ function withSenders(reminders) {
 }
 
 async function getUserReminders(userId) {
-  return MessageReminder.find({ userId, delivered: false })
+  const { filterReadable } = require('../conversations/conversationAccess');
+  const rows = await MessageReminder.find({ userId, delivered: false })
     .sort({ remindAt: 1 })
     .populate({
       path: 'messageId',
       select: 'text payload attachments type channel dm sender createdAt',
     })
-    .lean()
-    .then(withSenders);
+    .lean();
+  // Only messages they can still read (not after leaving the conversation or the workspace).
+  return withSenders(await filterReadable(rows, userId, (r) => r.messageId));
 }
 
 async function cancelReminder(reminderId, userId) {
@@ -82,8 +84,12 @@ async function deliverDueReminders(io) {
 
     const ids = due.map(r => r._id);
 
+    const { checkMessageAccess } = require('../conversations/conversationAccess');
     for (const reminder of due) {
-      if (io) {
+      const access = reminder.messageId && typeof reminder.messageId === 'object'
+        ? await checkMessageAccess(reminder.messageId, String(reminder.userId)).catch(() => ({ ok: false }))
+        : { ok: false };
+      if (io && access.ok) {
         
         io.to(`user:${reminder.userId.toString()}`).emit('reminder:due', {
           reminderId: reminder._id,

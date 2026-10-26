@@ -5,6 +5,7 @@ const requireAuth = require('../../shared/middleware/auth');
 const MessageReminder = require('../../modules/messages/messageReminder.model');
 const Message = require('../../modules/messages/message.model');
 const { canAccessMessage } = require('../../modules/messages/messageAccess');
+const { filterReadable } = require('../../modules/conversations/conversationAccess');
 const mongoose = require('mongoose');
 const { hydrate, USER_MIN } = require('../../identity/hydrate');
 
@@ -53,9 +54,11 @@ router.get('/reminders', requireAuth, async (req, res) => {
       .sort({ remindAt: 1 })
       .populate('messageId')
       .lean();
-    await hydrate(reminders, { 'messageId.sender': USER_MIN });
+    // A message they can no longer read (left the conversation or workspace) isn't listed.
+    const readable = await filterReadable(reminders, userId, (r) => r.messageId);
+    await hydrate(readable, { 'messageId.sender': USER_MIN });
 
-    res.json({ reminders });
+    res.json({ reminders: readable });
   } catch (err) {
     logger.error('Get reminders error:', err);
     res.status(500).json({ message: 'Failed to fetch reminders' });

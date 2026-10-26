@@ -1,4 +1,5 @@
 const Message = require('../messages/message.model.js');
+const { emitAboutMessage, messageAudience } = require('../conversations/conversationRooms');
 
 async function followThread(messageId, userId) {
     const updated = await Message.findByIdAndUpdate(
@@ -61,16 +62,16 @@ async function recountThread(parentId) {
 
 /** Tell the parent's conversation its thread counters changed. */
 function emitThreadCounters(io, parent, { replyCount, lastReplyAt }) {
-    if (!io || !parent) return;
-    const room = parent.channel ? `channel:${parent.channel._id || parent.channel}` : parent.dm ? `dm:${parent.dm._id || parent.dm}` : null;
-    if (!room) return;
-    io.to(room).emit('message-updated', {
+    if (!io || !parent) return Promise.resolve();
+    if (!parent.channel && !parent.dm) return Promise.resolve();
+    // Only to people who may see the thread (in a group, not those who joined after the parent).
+    return emitAboutMessage(io, parent, 'message-updated', {
         messageId: String(parent._id),
         // Which conversation, so clients that cache per conversation (the phone app) can refresh it.
         channelId: parent.channel ? String(parent.channel._id || parent.channel) : null,
         dmId: parent.dm ? String(parent.dm._id || parent.dm) : null,
         updates: { replyCount, lastReplyAt: lastReplyAt ? new Date(lastReplyAt).toISOString() : null },
-    });
+    }).catch(() => {});
 }
 
 /**
@@ -277,16 +278,17 @@ async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv,
         .lean().then((doc) => (doc ? hydrate(doc, { sender: USER_MIN }) : doc));
 
     if (io && updatedParent) {
-        const room = parent.channel ? `channel:${parent.channel}` : `dm:${parent.dm}`;
+        // The thread's audience: in a group, not people who joined after its parent was written.
+        const target = await messageAudience(io, parent);
         const lastReplyIso = new Date(lastReplyAt).toISOString();
-        if (updatedParent.replyCount === 1) {
-            io.to(room).emit('thread:created', {
+        if (target && updatedParent.replyCount === 1) {
+            target.emit('thread:created', {
                 parentMessageId: String(parentId), channelId: parent.channel || null, dmId: parent.dm || null,
                 replyCount: 1, lastReplyAt: lastReplyIso, parentMessage: updatedParent,
             });
         }
-        io.to(room).emit('thread-reply', { parentId: String(parentId), reply: replyOut });
-        io.to(room).emit('message-updated', {
+        if (target) target.emit('thread-reply', { parentId: String(parentId), reply: replyOut });
+        if (target) target.emit('message-updated', {
             messageId: String(parentId),
             channelId: parent.channel ? String(parent.channel) : null,
             dmId: parent.dm ? String(parent.dm) : null,

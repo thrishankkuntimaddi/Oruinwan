@@ -141,6 +141,30 @@ async function checkMessageAccess(message, userId, options = {}) {
     return { ...access, message };
 }
 
+/**
+ * The items whose message userId may still read (lists made earlier: bookmarks, reminders).
+ * One access check per conversation. `messageOf(item)` returns the item's message.
+ */
+async function filterReadable(items, userId, messageOf = (x) => x) {
+    const checks = new Map();
+    const out = [];
+    for (const item of items || []) {
+        const m = messageOf(item);
+        if (!m || typeof m !== 'object') continue;
+        const channel = sid(m.channel);
+        const dm = sid(m.dm);
+        const key = channel ? `c:${channel}` : dm ? `d:${dm}` : null;
+        if (!key) continue;
+        if (!checks.has(key)) checks.set(key, checkConversationAccess(channel ? { channel } : { dm }, userId));
+        const access = await checks.get(key);
+        if (!access.ok) continue;
+        const at = messageTime(m);
+        if (access.since && at && at.getTime() + 999 < access.since.getTime()) continue;
+        out.push(item);
+    }
+    return out;
+}
+
 /** Mongo filter for a history query: nothing before the person may see it. */
 function historyFilter(access) {
     return access?.hideBefore ? { createdAt: { $gte: access.hideBefore } } : {};
@@ -149,6 +173,7 @@ function historyFilter(access) {
 module.exports = {
     checkConversationAccess,
     checkMessageAccess,
+    filterReadable,
     isActiveWorkspaceMember,
     groupJoinedAt,
     historyFilter,

@@ -1,4 +1,5 @@
 const logger = require('../../../utils/logger');
+const { emitAboutMessage } = require('../conversations/conversationRooms');
 const messagesService = require('./messages.service');
 const Channel = require("../../features/channels/channel.model.js");
 const Message = require("./message.model.js");
@@ -569,8 +570,8 @@ async function enrichPollVoters(message) {
 function broadcastPollUpdate(req, message, poll) {
     const io = req.io || req.app?.get('io');
     if (!io) return;
-    const room = message.channel ? `channel:${message.channel}` : message.dm ? `dm:${message.dm}` : null;
-    if (room) io.to(room).emit('poll:vote_updated', { messageId: String(message._id), poll });
+    // Polls are plain text: only to people who may see this message.
+    emitAboutMessage(io, message, 'poll:vote_updated', { messageId: String(message._id), poll }).catch(() => {});
 }
 
 exports.closePoll = async (req, res) => {

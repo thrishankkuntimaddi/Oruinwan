@@ -1,5 +1,6 @@
 'use strict';
 
+const { emitAboutMessage } = require('../conversations/conversationRooms');
 const Message = require('./message.model.js');
 const DMSession = require('../../../models/DMSession');
 const _Channel = require('../../features/channels/channel.model.js');
@@ -1023,10 +1024,7 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
     message.version = (message.version || 1) + 1;
     await message.save();
 
-    const room = roomFor(message);
-    if (io && room) {
-        io.to(room).emit('message:edited', await messageForClient(message));
-    }
+    if (io) await emitAboutMessage(io, message, 'message:edited', await messageForClient(message));
 
     return message;
 }
@@ -1077,10 +1075,7 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
     message.version = (message.version || 1) + 1;
     await message.save();
 
-    const room = roomFor(message);
-    if (io && room) {
-        io.to(room).emit('message:edited', await messageForClient(message));
-    }
+    if (io) await emitAboutMessage(io, message, 'message:edited', await messageForClient(message));
 
     return message;
 }
@@ -1147,7 +1142,7 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     }, { workspaceId: message.workspace, companyId: message.company, actorId: userId }).catch(() => {});
 
     if (io) {
-        io.to(room).emit('message:deleted', {
+        await emitAboutMessage(io, message, 'message:deleted', {
             messageId,
             dm: message.dm || null,
             channel: message.channel || null,
@@ -1203,7 +1198,7 @@ async function setPinned(messageId, userId, pin, io) {
     const pinnedByName = pinner?.username || null;
     const room = roomFor(message);
     if (io && room) {
-        io.to(room).emit(pin ? 'message-pinned' : 'message-unpinned', {
+        await emitAboutMessage(io, message, pin ? 'message-pinned' : 'message-unpinned', {
             messageId: String(message._id),
             // Content fields included so clients that merge this into the
             // message's `payload` keep the ciphertext needed to decrypt it.
@@ -1262,7 +1257,7 @@ async function addReaction(messageId, userId, emoji, io) {
         : `dm:${message.dm}`;
 
     if (io) {
-        io.to(room).emit('message:reaction_added', await reactionEvent(message, { messageId, userId, emoji }));
+        await emitAboutMessage(io, message, 'message:reaction_added', await reactionEvent(message, { messageId, userId, emoji }));
     }
 
     if (message.sender && String(message.sender) !== String(userId) && message.workspace) {
@@ -1297,7 +1292,7 @@ async function removeReaction(messageId, userId, emoji, io) {
         : `dm:${message.dm}`;
 
     if (io) {
-        io.to(room).emit('message:reaction_removed', await reactionEvent(message, { messageId, userId, emoji }));
+        await emitAboutMessage(io, message, 'message:reaction_removed', await reactionEvent(message, { messageId, userId, emoji }));
     }
 
     return message;
@@ -1307,8 +1302,9 @@ async function checklistToggle(messageId, itemIndex, userId, io) {
     const message = await Message.findById(messageId);
     if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
     // Only people in the conversation may tick items (this had no access check).
-    const { checkConversationAccess } = require('../threads/threadAccess');
-    const access = await checkConversationAccess({ channel: message.channel, dm: message.dm }, userId, { forWrite: true });
+    // Message-level: in a group, not a checklist from before they joined.
+    const { checkMessageAccess } = require('../conversations/conversationAccess');
+    const access = await checkMessageAccess(message, userId, { forWrite: true });
     if (!access.ok) throw Object.assign(new Error(access.error), { status: access.status });
     if (message.type !== 'checklist') throw Object.assign(new Error('Message is not a checklist'), { status: 400 });
 
@@ -1324,7 +1320,7 @@ async function checklistToggle(messageId, itemIndex, userId, io) {
 
     const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
     if (io) {
-        io.to(room).emit('message:checklist_updated', {
+        await emitAboutMessage(io, message, 'message:checklist_updated', {
             messageId,
             itemIndex,
             checklist: message.checklist,
@@ -1347,7 +1343,7 @@ async function resolveThread(messageId, userId, io) {
 
     const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
     if (io) {
-        io.to(room).emit('thread:resolved', {
+        await emitAboutMessage(io, message, 'thread:resolved', {
             messageId,
             resolved:          isNowResolved,
             resolvedBy:        isNowResolved ? userId : null,
@@ -1462,7 +1458,7 @@ async function convertToTask(messageId, userId, taskData = {}, io) {
 
     const room = roomFor(message);
     if (io && room) {
-        io.to(room).emit('message:task_created', {
+        await emitAboutMessage(io, message, 'message:task_created', {
             messageId,
             taskId:    task._id,
             taskTitle: task.title,

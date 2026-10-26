@@ -1,5 +1,6 @@
 const logger = require('../../../utils/logger');
 const express = require('express');
+const { filterReadable } = require('../conversations/conversationAccess');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const Message = require('./message.model');
@@ -54,9 +55,11 @@ router.get('/bookmarks', requireAuth, async (req, res) => {
       .limit(Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100))
       .populate('channel', 'name')
       .lean();
-    await require('../../identity/hydrate').hydrate(messages, { sender: { type: 'user', fields: ['username', 'profilePicture'] } });
+    // Only what they can still read: not after leaving a channel, group or workspace.
+    const readable = await filterReadable(messages, userId);
+    await require('../../identity/hydrate').hydrate(readable, { sender: { type: 'user', fields: ['username', 'profilePicture'] } });
 
-    res.json({ messages });
+    res.json({ messages: readable });
   } catch (err) {
     logger.error('Get bookmarks error:', err);
     res.status(500).json({ message: 'Failed to fetch bookmarks' });

@@ -9,6 +9,10 @@ jest.mock('../../threads/threadAccess', () => ({
     checkConversationAccess: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('../../../../models/DMSession');
+jest.mock('../../conversations/conversationAccess', () => ({
+    ...jest.requireActual('../../conversations/conversationAccess'),
+    checkMessageAccess: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('../../../identity', () => ({
     workspaces: { findById: jest.fn() },
     users: { findById: jest.fn(), findManyByIds: jest.fn(async (ids) => new Map(ids.map(id => [String(id), { _id: String(id), username: 'u' + id }]))) },
@@ -231,10 +235,12 @@ describe('Messages Service', () => {
 
     describe('checklistToggle', () => {
         it('refuses users outside the conversation', async () => {
-            const { checkConversationAccess } = require('../../threads/threadAccess');
-            checkConversationAccess.mockResolvedValueOnce({ ok: false, status: 404, error: 'Conversation not found' });
+            const { checkMessageAccess } = require('../../conversations/conversationAccess');
+            checkMessageAccess.mockResolvedValueOnce({ ok: false, status: 404, error: 'Message not found' });
             Message.findById = jest.fn().mockResolvedValue({ _id: 'msg1', type: 'checklist', channel: 'ch1', checklist: [{ checked: false }], save: jest.fn(), markModified: jest.fn() });
             await expect(messagesService.checklistToggle('msg1', 0, 'intruder', null)).rejects.toMatchObject({ status: 404 });
+            // Message-level: in a group, a checklist from before you joined is out of reach too.
+            expect(checkMessageAccess).toHaveBeenCalledWith(expect.objectContaining({ _id: 'msg1' }), 'intruder', { forWrite: true });
         });
 
         it('should throw if message type is not checklist', async () => {
