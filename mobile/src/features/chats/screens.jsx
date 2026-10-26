@@ -39,7 +39,7 @@ import { blockedNote, isPlanLimit } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
 import { HuddleBanner, HuddleButton, useHuddlesAvailable } from '../huddles/HuddlesScreen.jsx';
 import { startHuddle } from '../huddles/huddle.js';
-import { GroupTile } from './groupScreens.jsx';
+import { GroupTile, HistoryChoice, addedMessage } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
 import { DayJumpSheet } from './DayJumpSheet.jsx';
 import { AiIsland } from './AiIsland.jsx';
@@ -407,7 +407,9 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
   const commands = phoneCommands({
     conv, ws, me, meta, label, isGroup, canPost, canManage: mentions.canManage, convo, mentions, people: mentions.people, aiOn, huddlesOn,
     onSummarize: api().summarizeConversation ? () => setSheet('summary') : () => askAiAbout(`Summarize the recent conversation in ${label}.`),
-    onGroupOffer: meta?.user?.id && api().createGroupDm ? (list) => setGroupOffer({ people: list, text: '' }) : null,
+    onGroupOffer: isGroup && api().addGroupDmMembers
+      ? (list) => setGroupOffer({ people: list, text: '', add: true })
+      : meta?.user?.id && api().createGroupDm ? (list) => setGroupOffer({ people: list, text: '' }) : null,
   });
 
   return (
@@ -517,7 +519,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
             ? `Add ${groupOffer.people.length === 1 ? groupOffer.people[0].name : `${groupOffer.people.length} people`} to the group?`
             : `Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
         }
-        body={groupOffer?.add ? "They aren't in this group yet. Added, they'll see messages from now on, not earlier ones." : "They aren't in this chat. The group is a new conversation and this chat stays as it is; your message goes there to carry on."}
+        body={groupOffer?.add ? "They aren't in this group yet." : "They aren't in this chat. The group is a new conversation and this chat stays as it is; your message goes there to carry on."}
         confirmLabel={groupOffer?.add ? 'Add to group' : 'Start group'}
         cancelLabel="Not now"
         busy={mentionInviteBusy}
@@ -525,9 +527,10 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           setMentionInviteBusy(true);
           if (groupOffer?.add) {
             try {
-              await api().addGroupDmMembers(id, groupOffer.people.map((p) => p.id));
+              const history = groupOffer.history || 'from_now';
+              const next = await api().addGroupDmMembers(id, groupOffer.people.map((p) => p.id), { history });
               invalidate('dms');
-              toast(groupOffer.people.length === 1 ? 'Added to the group' : `${groupOffer.people.length} people added to the group`, 'success');
+              toast(addedMessage(groupOffer.people.length, history, next?.limitedHistory), 'success');
               setGroupOffer(null);
             } catch (err) {
               toast(err.message || 'Could not add them', 'danger');
@@ -548,7 +551,35 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
             setMentionInviteBusy(false);
           }
         }}
-      />
+      >
+        {groupOffer?.add && (
+          <div className="mt-4">
+            <HistoryChoice value={groupOffer.history || 'from_now'} onChange={(history) => setGroupOffer((o) => (o ? { ...o, history } : o))} />
+            <button
+              type="button"
+              className="mt-3 w-full text-center text-[14px] font-medium text-accent-ink"
+              disabled={mentionInviteBusy}
+              onClick={async () => {
+                // A separate group with everyone here plus them; this group stays as it is.
+                setMentionInviteBusy(true);
+                try {
+                  const others = (meta?.participantIds || []).filter((p) => p !== me);
+                  const group = await api().createGroupDm(ws, [...others, ...groupOffer.people.map((p) => p.id)], '', { newGroup: true });
+                  invalidate('dms');
+                  setGroupOffer(null);
+                  nav.replace('conversation', { kind: 'dm', id: group?.id || group, draft: groupOffer.text });
+                } catch (err) {
+                  toast(err.message || 'Could not start the group', 'danger');
+                } finally {
+                  setMentionInviteBusy(false);
+                }
+              }}
+            >
+              Start a new group instead
+            </button>
+          </div>
+        )}
+      </Dialog>
       <Dialog
         open={Boolean(mentionInvite)}
         onClose={() => setMentionInvite(null)}

@@ -14,7 +14,7 @@ One function decides access: `checkConversationAccess` / `checkMessageAccess` in
 | Public channel | Members. Workspace members can also open its threads and pins before joining. | Members (announcement channels: channel admins and workspace owners/admins) | Members and workspace members |
 | Private channel | Members | Members (announcement rule as above) | Members |
 | 1:1 DM | The two people | Both, unless either blocked the other | Same |
-| Group | Its members, **messages from when they joined** | Members | Members |
+| Group | Its members, **from their join date** (set when they were added: see Groups) | Members | Members |
 
 Everyone must also be an **active member of the conversation's workspace**. Someone who leaves, is
 removed or suspended loses access to that workspace's channels, DMs and groups straight away, on
@@ -32,16 +32,29 @@ every path, and their devices leave the live rooms at once.
 
 - A group has 3 to 10 people when it starts, its own id, an optional name and an admin (the person
   who started it).
-- **Same people, same group.** Starting a group with exactly the people of an existing unnamed
-  group reopens that group. Naming the new group always makes a separate one. So Nani + Mani +
-  Teja and Nani + Mani + Nikil are two groups, each with its own history.
-- **Adding people** keeps the same group. People who are added see messages **from the moment they
-  joined**, never earlier ones: the server filters history, threads, pins, search, files,
-  bookmarks, missed-message catch-up and notifications by their join date (`memberSince`).
+- **Same people, same group.** Starting a group from New Message with exactly the people of an
+  existing unnamed group reopens that group. Naming the new group always makes a separate one. So
+  Nani + Mani + Teja and Nani + Mani + Nikil are two groups, each with its own history.
+- **Two ways to bring someone in** (Group info → Add people, or mentioning / `/invite`-ing someone
+  in the group):
+  - **Add to this group** keeps the same group. The person adding chooses what the new people see
+    (`POST /api/v2/dm/:id/members { userIds, history }`):
+    - `from_now` (default): messages from when they joined. The group gets a new key; the new
+      people hold only that one, so earlier messages stay unreadable to them even as ciphertext.
+    - `earlier`: also the earlier messages the person adding them can see: the same join date and
+      copies of the earlier keys from then on. A period whose key the server holds no copy of
+      can't be shared; their join date then moves after it and the answer says so
+      (`history[userId].limited`), which the apps show.
+  - **Start a new group** (`POST /api/v2/dm/group { …, newGroup: true }`) always makes a separate
+    group with the people picked, even if the same people already have one; the original keeps its
+    people and history, and nothing is copied.
+- The server filters history, threads, pins, search, files, bookmarks, reminders, missed-message
+  catch-up, notifications and live events by each member's join date (`memberSince.at`); the keys
+  they hold follow `memberSince.fromKeyVersion` (also when they set up encryption later).
 - **Leaving and removing.** Anyone can leave; the group's admin can remove others. When the admin
   leaves, the person who has been in the group longest takes over. People who leave or are removed
-  lose access, their copy of the conversation key and their live connection at once; the others
-  keep the whole history.
+  lose access, their copies of the conversation keys and their live connection at once, and the
+  group gets a new key for the people still in it; the others keep the whole history.
 - A group stays a group even if people leave (it can shrink to one person).
 
 ## Channels
@@ -49,8 +62,25 @@ every path, and their devices leave the live rooms at once.
 - Any active member of the workspace can join a public channel; private channels are by invitation.
   People outside the workspace can't join, read or find its channels.
 - **New channel members read the whole history** (unlike groups).
-- Removing someone (or them leaving) takes them out of the live room and removes their copy of the
-  channel key.
+- Removing someone (or them leaving) takes them out of the live room and removes their copies of
+  the channel's keys. A **private** channel then gets a new key for the members still in it (a
+  public one doesn't: anyone in the workspace may join and read it).
+
+## Conversation keys
+
+Messages are encrypted with the conversation's key (AES-256-GCM). The key has versions
+(`server/src/modules/conversations/keyEpochs.js`, PostgreSQL `conversation_key_epochs`, migration
+0018): a group that adds people "from now on", and a group or private channel that loses someone,
+gets a new key; the previous one is kept only by the people allowed to read that period. Messages
+record the version they were encrypted with (`payload.keyVersion`; missing = 1); the apps read
+older messages with the earlier keys they hold and always send with the current one. A send with
+an older key is refused with `409 KEY_ROTATED`; the apps then fetch the new key and send again, and
+a `conversation:key_rotated` event tells open apps to do it straight away. Scheduled messages that
+outlive a key change fail with a plain reason to schedule them again.
+
+Limits: a new key protects what is said **after** someone leaves; a key they already downloaded
+still opens the period they could read (the server no longer gives them its messages). Apps from
+before key versions can't send in a conversation whose key changed until they are updated.
 
 ## Threads
 

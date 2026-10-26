@@ -50,9 +50,12 @@ const DMSessionSchema = new mongoose.Schema(
     name: { type: String, trim: true, maxlength: 80, default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     // When each person joined a group DM; they only see messages from then on.
+    // fromKeyVersion: the earliest conversation key version they may hold (missing = 1), so a
+    // device that sets up encryption later gets exactly the earlier keys they're allowed.
     memberSince: [{
       user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-      at: { type: Date, default: Date.now }
+      at: { type: Date, default: Date.now },
+      fromKeyVersion: { type: Number, default: undefined }
     }],
 
     

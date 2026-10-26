@@ -136,3 +136,30 @@ describe('knowledge pages', () => {
     expect(mockApi.del).toHaveBeenCalledWith('/v2/knowledge/pages/k3');
   });
 });
+
+describe('group DMs: adding people and starting a new group', () => {
+  const dm = { _id: 'g1', isGroup: true, participants: [{ _id: 'u1', username: 'nani' }, { _id: 'u2', username: 'mani' }, { _id: 'u3', username: 'teja' }, { _id: 'u4', username: 'nikil' }] };
+
+  it('adds people with the chosen history and says when some earlier messages could not be shared', async () => {
+    mockApi.post.mockResolvedValueOnce({ dm, history: { u4: { since: '2026-01-01', limited: true } } });
+    const g = await liveAdapter.addGroupDmMembers('g1', ['u4'], { history: 'earlier' });
+    expect(mockApi.post).toHaveBeenCalledWith('/v2/dm/g1/members', { userIds: ['u4'], history: 'earlier' });
+    expect(g.limitedHistory).toBe(true);
+  });
+
+  it('defaults to "from now on"', async () => {
+    mockApi.post.mockResolvedValueOnce({ dm, history: { u4: { limited: false } } });
+    const g = await liveAdapter.addGroupDmMembers('g1', ['u4']);
+    expect(mockApi.post).toHaveBeenCalledWith('/v2/dm/g1/members', { userIds: ['u4'], history: 'from_now' });
+    expect(g.limitedHistory).toBe(false);
+  });
+
+  it('"Start a new group" asks for a separate group', async () => {
+    mockApi.post.mockResolvedValueOnce({ dm: { ...dm, _id: 'g2' } });
+    await liveAdapter.createGroupDm('w1', ['u2', 'u3', 'u4'], '', { newGroup: true });
+    expect(mockApi.post).toHaveBeenCalledWith('/v2/dm/group', { workspaceId: 'w1', memberIds: ['u2', 'u3', 'u4'], newGroup: true });
+    mockApi.post.mockResolvedValueOnce({ dm });
+    await liveAdapter.createGroupDm('w1', ['u2', 'u3']);
+    expect(mockApi.post).toHaveBeenLastCalledWith('/v2/dm/group', { workspaceId: 'w1', memberIds: ['u2', 'u3'] });
+  });
+});

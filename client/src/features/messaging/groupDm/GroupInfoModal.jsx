@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, UserPlus, LogOut, Pencil } from 'lucide-react';
 import useWorkspaceRecipients from '../recipients/useWorkspaceRecipients';
 import { filterRecipients } from '../recipients/recipients';
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { getErrorMessage } from '../../../utils/apiHelpers';
 import {
-    MAX_GROUP_MEMBERS, getDMDetails, renameGroupDM, addGroupDMMembers, removeGroupDMMember, leaveGroupDM, groupTitle,
+    MAX_GROUP_MEMBERS, getDMDetails, renameGroupDM, addGroupDMMembers, removeGroupDMMember, leaveGroupDM, groupTitle, createGroupDM, addedMessage,
 } from './groupDmApi';
+import HistoryChoice from './HistoryChoice';
 
 const row = { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 4px' };
 const small = { fontSize: '11px', color: 'var(--text-muted)' };
@@ -20,7 +22,10 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
     const [adding, setAdding] = useState(false);
     const [picked, setPicked] = useState([]);
     const [query, setQuery] = useState('');
+    const [history, setHistory] = useState('from_now');
+    const [notice, setNotice] = useState(null);
     const [busy, setBusy] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let alive = true;
@@ -53,7 +58,21 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
     };
 
     const saveName = () => run(async () => { const dm = await renameGroupDM(dmId, name); setEditing(false); return dm; });
-    const addPicked = () => run(async () => { const dm = await addGroupDMMembers(dmId, picked); setPicked([]); setAdding(false); return dm; });
+    const addPicked = () => run(async () => {
+        const dm = await addGroupDMMembers(dmId, picked, { history });
+        setNotice(addedMessage(picked.length, history, dm?.limitedHistory));
+        setPicked([]);
+        setAdding(false);
+        return dm;
+    });
+    // A separate group with everyone here plus the picked people; this group stays as it is.
+    const startNewGroup = () => run(async () => {
+        const others = (group?.participants || []).map((p) => String(p._id)).filter((id) => id !== String(currentUserId));
+        const dm = await createGroupDM(workspaceId, [...others, ...picked], '', { newGroup: true });
+        onClose?.();
+        navigate(`/workspace/${workspaceId}/home/dm/${dm._id || dm.id}`);
+        return null;
+    });
     const remove = (userId) => run(async () => { await removeGroupDMMember(dmId, userId); return getDMDetails(dmId); });
     const leave = async () => {
         setBusy(true);
@@ -83,6 +102,7 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px' }}>
                     {error && <div role="alert" style={{ fontSize: '12px', color: 'var(--state-danger)', marginBottom: '8px' }}>{error}</div>}
+                    {notice && <div role="status" style={{ fontSize: '12px', color: 'var(--state-success, var(--text-secondary))', marginBottom: '8px' }}>{notice}</div>}
 
                     {group && (
                         <>
@@ -107,7 +127,7 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
                                 <div style={{ ...small, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, flex: 1 }}>People</div>
                                 {room > 0 && !adding && (
-                                    <button type="button" onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px' }}>
+                                    <button type="button" onClick={() => { setAdding(true); setHistory('from_now'); setNotice(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px' }}>
                                         <UserPlus size={13} aria-hidden="true" /> Add people
                                     </button>
                                 )}
@@ -118,7 +138,6 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people" aria-label="Search people to add" autoFocus
                                         style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', marginBottom: '6px' }} />
                                     <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                                        <div style={{ ...small, marginBottom: '6px' }}>People you add see messages from now on, not earlier ones.</div>
                                         {candidates.length === 0 && <div style={small}>{query.trim() ? 'No one matches.' : 'Everyone in this workspace is already here.'}</div>}
                                         {candidates.map((m) => {
                                             const on = picked.includes(m._id);
@@ -132,10 +151,17 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                                             );
                                         })}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                                    <div style={{ ...small, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, margin: '10px 0 6px' }}>What they can see</div>
+                                    <HistoryChoice value={history} onChange={setHistory} />
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                                         <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => { setAdding(false); setPicked([]); }}>Cancel</button>
-                                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" disabled={busy || picked.length === 0} onClick={addPicked}>
-                                            Add {picked.length || ''}
+                                        <button type="button" className="gl-btn gl-btn--sm" data-testid="start-new-group"
+                                            title="A separate group with everyone here and the people you picked. This group stays as it is."
+                                            disabled={busy || picked.length === 0 || (group.participants.length + picked.length) > MAX_GROUP_MEMBERS} onClick={startNewGroup}>
+                                            Start a new group
+                                        </button>
+                                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="add-to-group" disabled={busy || picked.length === 0} onClick={addPicked}>
+                                            {picked.length ? `Add ${picked.length} to this group` : 'Add to this group'}
                                         </button>
                                     </div>
                                 </div>

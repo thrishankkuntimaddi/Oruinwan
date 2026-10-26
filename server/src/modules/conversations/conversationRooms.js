@@ -15,9 +15,45 @@ function leaveRooms(io, userId, rooms) {
     for (const room of userRooms(String(userId))) io.in(room).socketsLeave(rooms);
 }
 
-/** After a channel removal or exit: no live events, no key copy. */
+/**
+ * A private channel or a group lost someone: a new key for the people still in it, so what is
+ * said next can't be opened with a key the person kept. (Public channels don't: anyone in the
+ * workspace may join and read them.) Called after they were taken off the member list.
+ */
+async function rotateWithout(io, conversationId, conversationType, userId) {
+    try {
+        let members = null;
+        if (conversationType === 'channel') {
+            const Channel = require('../../features/channels/channel.model.js');
+            const ch = await Channel.findById(String(conversationId)).select('isPrivate members').lean();
+            if (!ch?.isPrivate) return null;
+            members = (ch.members || []).map((m) => String(m?.user?._id || m?.user || m));
+        } else {
+            const DMSession = require('../../../models/DMSession');
+            const dm = await DMSession.findById(String(conversationId)).select('isGroup participants').lean();
+            if (!dm?.isGroup) return null;
+            members = (dm.participants || []).map(String);
+        }
+        members = members.filter((m) => m !== String(userId));
+        if (!members.length) return null;
+        // Only when they held its current key (never had it: nothing to protect against).
+        const doc = await require('../../identity/queries/auth').conversationKeyDocs.findByConversation(String(conversationId), conversationType);
+        if (!doc || !(doc.encryptedKeys || []).some((e) => String(e.userId) === String(userId))) return null;
+        const keyEpochs = require('./keyEpochs');
+        const r = await keyEpochs.rotate(conversationId, conversationType, { memberIds: members, keepOld: members });
+        if (r.status !== 'ROTATED') return null;
+        keyEpochs.announce(io, conversationId, conversationType, r.version);
+        return r.version;
+    } catch (err) {
+        logger.error({ err: err?.message, conversationId: String(conversationId) }, '[rooms] could not give the conversation a new key');
+        return null;
+    }
+}
+
+/** After a channel removal or exit: no live events, no key copies; a private channel gets a new key. */
 async function evictFromChannel(io, channelId, userId) {
     leaveRooms(io, userId, [`channel:${channelId}`]);
+    await rotateWithout(io, channelId, 'channel', userId);
     try {
         await require('./conversationKeys.service').removeParticipant(String(channelId), 'channel', String(userId));
     } catch (err) {
@@ -32,7 +68,7 @@ async function evictFromWorkspace(io, workspaceId, userId, { channelIds = null }
         const DMSession = require('../../../models/DMSession');
         const [channels, dms] = await Promise.all([
             channelIds ? Promise.resolve(channelIds.map((id) => ({ _id: id }))) : Channel.find({ workspace: workspaceId }).select('_id').lean(),
-            DMSession.find({ workspace: workspaceId, participants: userId }).select('_id').lean(),
+            DMSession.find({ workspace: workspaceId, participants: userId }).select('_id isGroup').lean(),
         ]);
         leaveRooms(io, userId, [
             ...channels.map((c) => `channel:${c._id}`),
@@ -41,7 +77,13 @@ async function evictFromWorkspace(io, workspaceId, userId, { channelIds = null }
             `workspace_${workspaceId}`,
         ]);
         const keys = require('./conversationKeys.service');
+        // Private channels and groups they were in get a new key first (it checks they held one).
+        for (const c of channels) await rotateWithout(io, c._id, 'channel', userId);
         await Promise.allSettled(channels.map((c) => keys.removeParticipant(String(c._id), 'channel', String(userId))));
+        for (const d of dms.filter((x) => x.isGroup)) {
+            await rotateWithout(io, d._id, 'dm', userId);
+            await keys.removeParticipant(String(d._id), 'dm', String(userId)).catch(() => {});
+        }
     } catch (err) {
         logger.warn({ err: err?.message, workspaceId: String(workspaceId) }, '[rooms] could not evict from workspace');
     }
@@ -87,4 +129,4 @@ async function emitAboutMessage(io, message, event, payload, opts) {
     if (target) target.emit(event, payload);
 }
 
-module.exports = { leaveRooms, evictFromChannel, evictFromWorkspace, messageAudience, emitAboutMessage };
+module.exports = { leaveRooms, evictFromChannel, evictFromWorkspace, rotateWithout, messageAudience, emitAboutMessage };

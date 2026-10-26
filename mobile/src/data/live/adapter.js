@@ -804,8 +804,9 @@ export const liveAdapter = {
     return list.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
   },
   // Group DMs (3+ people). The server adds me to the group I create.
-  async createGroupDm(ws, memberIds, name) {
-    const data = await api.post('/v2/dm/group', { workspaceId: ws, memberIds, ...(name?.trim() ? { name: name.trim() } : {}) });
+  // newGroup: "Start a new group" — always a separate group, even with the same people.
+  async createGroupDm(ws, memberIds, name, { newGroup = false } = {}) {
+    const data = await api.post('/v2/dm/group', { workspaceId: ws, memberIds, ...(name?.trim() ? { name: name.trim() } : {}), ...(newGroup ? { newGroup: true } : {}) });
     return mapGroupDetails(data.dm, me?.id);
   },
   async dmDetails(id) {
@@ -816,9 +817,16 @@ export const liveAdapter = {
     const data = await api.patch(`/v2/dm/${id}`, { name });
     return mapGroupDetails(data.dm, me?.id);
   },
-  async addGroupDmMembers(id, userIds) {
-    const data = await api.post(`/v2/dm/${id}/members`, { userIds });
-    return mapGroupDetails(data.dm, me?.id);
+  /**
+   * history: 'from_now' (they see messages from when they join) or 'earlier' (also the earlier
+   * messages I can see). The group comes back with `limitedHistory`: true when some earlier
+   * messages couldn't be shared (their key isn't held by the server).
+   */
+  async addGroupDmMembers(id, userIds, { history = 'from_now' } = {}) {
+    const data = await api.post(`/v2/dm/${id}/members`, { userIds, history });
+    const group = mapGroupDetails(data.dm, me?.id);
+    const limitedHistory = Object.values(data.history || {}).some((h) => h?.limited);
+    return group && typeof group === 'object' ? { ...group, limitedHistory } : group;
   },
   async removeGroupDmMember(id, userId) {
     await api.del(`/v2/dm/${id}/members/${userId}`);

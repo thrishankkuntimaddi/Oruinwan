@@ -117,6 +117,28 @@ async function grant(conversationId, conversationType, userId, { versions = null
     return { granted, unavailable };
 }
 
+/**
+ * A group member's earlier keys, per their row in the group (DMSession.memberSince
+ * fromKeyVersion, missing = 1): every earlier key from that version on. Used when they get the
+ * current key later (e.g. they set up encryption after being added).
+ */
+async function grantEntitled(dmId, userId) {
+    const DMSession = require('../../../models/DMSession');
+    const dm = await DMSession.findById(sid(dmId)).select('isGroup participants memberSince').lean();
+    if (!dm?.isGroup || !(dm.participants || []).some((p) => sid(p) === sid(userId))) return { granted: 0, unavailable: [] };
+    const row = (dm.memberSince || []).find((m) => sid(m.user) === sid(userId));
+    const from = Number(row?.fromKeyVersion) || 1;
+    const versions = new Set((await list(dmId, 'dm')).map((e) => e.version).filter((v) => v >= from));
+    return grant(dmId, 'dm', userId, { versions });
+}
+
+/** Tells the conversation's open apps to fetch its new key. */
+function announce(io, conversationId, conversationType, version) {
+    if (!io) return;
+    const room = conversationType === 'channel' ? `channel:${sid(conversationId)}` : `dm:${sid(conversationId)}`;
+    io.to(room).emit('conversation:key_rotated', { conversationId: sid(conversationId), conversationType, version });
+}
+
 /** Earlier keys `userId` holds, as sent to their devices (newest first). */
 async function earlierKeysFor(conversationId, conversationType, userId) {
     try {
@@ -157,4 +179,4 @@ async function checkSendVersion(conversationId, conversationType, keyVersion) {
     });
 }
 
-module.exports = { currentVersion, rotate, grant, earlierKeysFor, list, removeUser, checkSendVersion, wrapForUsers };
+module.exports = { currentVersion, rotate, grant, grantEntitled, announce, earlierKeysFor, list, removeUser, checkSendVersion, wrapForUsers };

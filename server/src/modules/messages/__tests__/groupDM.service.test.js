@@ -58,9 +58,62 @@ jest.mock('../../../identity/hydrate', () => ({
         return doc;
     }),
 }));
+// Conversation keys, in memory: the current key's version and holders, and earlier keys (epochs)
+// with their holders. `noServerCopy` marks epochs the server can't hand out.
+const mockKeys = { byConv: new Map() };
+function mockConvKeys(id) {
+    const k = String(id);
+    if (!mockKeys.byConv.has(k)) mockKeys.byConv.set(k, { version: 1, holders: new Set(), epochs: [], noServerCopy: new Set() });
+    return mockKeys.byConv.get(k);
+}
 jest.mock('../../conversations/conversationKeys.service', () => ({
-    ensureDMConversationKey: jest.fn(async () => ({ status: 'OK' })),
-    removeParticipant: jest.fn(async () => true),
+    ensureDMConversationKey: jest.fn(async (id) => {
+        const s = mockStore.sessions.find((x) => String(x._id) === String(id));
+        for (const p of s?.participants || []) mockConvKeys(id).holders.add(String(p));
+        return { status: 'OK' };
+    }),
+    removeParticipant: jest.fn(async (id, _t, u) => {
+        const k = mockConvKeys(id);
+        k.holders.delete(String(u));
+        for (const e of k.epochs) e.holders.delete(String(u));
+        return true;
+    }),
+    publicKeys: { findByUserId: jest.fn(async (u) => ({ userId: u, publicKey: 'pem' })) },
+}));
+jest.mock('../../conversations/keyEpochs', () => ({
+    rotate: jest.fn(async (id, _t, { memberIds, keepOld = memberIds }) => {
+        const k = mockConvKeys(id);
+        k.epochs.push({ version: k.version, retiredAt: new Date(), holders: new Set(keepOld.map(String).filter((u) => k.holders.has(u))) });
+        k.version += 1;
+        k.holders = new Set(memberIds.map(String));
+        return { status: 'ROTATED', version: k.version };
+    }),
+    list: jest.fn(async (id) => mockConvKeys(id).epochs.map((e) => ({ ...e, holders: new Set(e.holders) }))),
+    grant: jest.fn(async (id, _t, u, { versions = null } = {}) => {
+        const k = mockConvKeys(id);
+        let granted = 0;
+        const unavailable = [];
+        for (const e of k.epochs) {
+            if (versions && !versions.has(e.version)) continue;
+            if (e.holders.has(String(u))) continue;
+            if (k.noServerCopy.has(e.version)) { unavailable.push(e.version); continue; }
+            e.holders.add(String(u));
+            granted += 1;
+        }
+        return { granted, unavailable };
+    }),
+    removeUser: jest.fn(async (id, _t, u) => { for (const e of mockConvKeys(id).epochs) e.holders.delete(String(u)); }),
+    announce: jest.fn(),
+}));
+// The removal side of conversationRooms (tested on its own): a group that loses someone who
+// held its key gets a new key for the rest.
+jest.mock('../../conversations/conversationRooms', () => ({
+    rotateWithout: jest.fn(async (io, id, _t, u) => {
+        const s = mockStore.sessions.find((x) => String(x._id) === String(id));
+        const rest = (s?.participants || []).map(String).filter((p) => p !== String(u));
+        if (!s?.isGroup || !rest.length || !mockConvKeys(id).holders.has(String(u))) return null;
+        return (await require('../../conversations/keyEpochs').rotate(id, 'dm', { memberIds: rest, keepOld: rest })).version;
+    }),
 }));
 
 const Message = require('../message.model.js');
@@ -82,8 +135,15 @@ function fakeIo() {
 
 beforeEach(() => {
     mockStore.sessions.length = 0;
+    mockKeys.byConv.clear();
     jest.clearAllMocks();
 });
+
+/** Which key versions `u` can open in conversation `id`: current and earlier. */
+const keysOf = (id, u) => {
+    const k = mockConvKeys(id);
+    return [...k.epochs.filter((e) => e.holders.has(String(u))).map((e) => e.version), ...(k.holders.has(String(u)) ? [k.version] : [])].sort();
+};
 
 describe('create', () => {
     test('makes a group with the creator, wraps the key for everyone and tells them', async () => {
@@ -137,6 +197,10 @@ describe('members', () => {
         const since = svc.memberSinceFor(session, mockDIVYA);
         expect(new Date(since).getTime()).toBeGreaterThanOrEqual(before);
         expect(keys.ensureDMConversationKey).toHaveBeenCalledWith(mockDM);
+        // A new key: Divya holds only that one; the others keep the earlier one too.
+        expect(keysOf(mockDM, mockDIVYA)).toEqual([2]);
+        expect(keysOf(mockDM, mockASHA)).toEqual([1, 2]);
+        expect(require('../../conversations/keyEpochs').announce).toHaveBeenCalledWith(io, mockDM, 'dm', 2);
         expect(io.rooms.joined).toEqual(expect.arrayContaining([[`user:${mockDIVYA}`, `dm:${mockDM}`]]));
         expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_member_added', text: 'ben added divya' }));
         expect(io.events.some((e) => e.event === 'dm:members_updated' && e.room === `dm:${mockDM}`)).toBe(true);
@@ -249,5 +313,104 @@ describe('the conversation scenarios (docs/CONVERSATIONS.md)', () => {
         expect(String(named.session._id)).not.toBe(String(nmt._id));
         // Every conversation keeps its own id, so history stays separate.
         expect(new Set(mockStore.sessions.map((x) => String(x._id))).size).toBe(mockStore.sessions.length);
+    });
+});
+
+describe('adding people: how much history they get (Nani, Mani, Teja, Nikil)', () => {
+    const [NANI, MANI, TEJA, NIKIL] = [mockASHA, mockBEN, mockCHEN, mockDIVYA];
+    const epochs = () => require('../../conversations/keyEpochs');
+
+    async function nmt() {
+        const { session } = await svc.createGroup({ creatorId: NANI, workspaceId: mockWS, memberIds: [MANI, TEJA] }, null);
+        session.memberSince.forEach((m) => { m.at = new Date('2026-01-01'); });
+        return session;
+    }
+
+    test('Nani ↔ Mani stays a 1:1 DM: people are never added to it', async () => {
+        mockMakeSession({ _id: mockOid(60), participants: [NANI, MANI], isGroup: false });
+        await expect(svc.addMembers({ dmId: mockOid(60), actorId: NANI, userIds: [TEJA], history: 'earlier' }, null)).rejects.toMatchObject({ code: 'NOT_A_GROUP' });
+    });
+
+    test('"from now on": Nikil sees messages from now, with a new key and none of the earlier ones', async () => {
+        const g = await nmt();
+        const before = Date.now();
+        const { history } = await svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL], history: 'from_now' }, null);
+        expect(new Date(svc.memberSinceFor(g, NIKIL)).getTime()).toBeGreaterThanOrEqual(before);
+        expect(keysOf(g._id, NIKIL)).toEqual([2]);
+        expect(keysOf(g._id, NANI)).toEqual([1, 2]);
+        expect(g.memberSince.find((m) => m.user === NIKIL).fromKeyVersion).toBe(2);
+        expect(history[NIKIL].limited).toBe(false);
+    });
+
+    test('the default is "from now on"', async () => {
+        const g = await nmt();
+        await svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL] }, null);
+        expect(keysOf(g._id, NIKIL)).toEqual([2]);
+    });
+
+    test('"earlier messages": Nikil sees what Mani can see, with the earlier keys', async () => {
+        const g = await nmt();
+        // Teja was added "from now on" earlier in March (key 2); Mani has been there since January.
+        await svc.removeMember({ dmId: g._id, actorId: NANI, userId: TEJA }, null); // key 2
+        await svc.addMembers({ dmId: g._id, actorId: NANI, userIds: [TEJA], history: 'from_now' }, null); // key 3
+        const tejaSince = new Date(svc.memberSinceFor(g, TEJA));
+
+        await svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL], history: 'earlier' }, null);
+        expect(new Date(svc.memberSinceFor(g, NIKIL))).toEqual(new Date('2026-01-01'));
+        expect(keysOf(g._id, NIKIL)).toEqual([1, 2, 3]);
+        expect(epochs().rotate).toHaveBeenCalledTimes(2); // no new key for an "earlier" add
+
+        // Added by Teja instead: only what Teja can see.
+        await svc.removeMember({ dmId: g._id, actorId: NANI, userId: NIKIL }, null); // key 4
+        await svc.addMembers({ dmId: g._id, actorId: TEJA, userIds: [NIKIL], history: 'earlier' }, null);
+        expect(new Date(svc.memberSinceFor(g, NIKIL))).toEqual(tejaSince);
+        expect(keysOf(g._id, NIKIL)).toEqual([3, 4]);
+    });
+
+    test('a period whose key the server has no copy of: their history starts after it, and the reply says so', async () => {
+        const g = await nmt();
+        await svc.removeMember({ dmId: g._id, actorId: NANI, userId: TEJA }, null); // key 1 retired
+        mockConvKeys(g._id).noServerCopy.add(1);
+        const retired = mockConvKeys(g._id).epochs.find((e) => e.version === 1).retiredAt;
+        const { history } = await svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL], history: 'earlier' }, null);
+        expect(history[NIKIL]).toMatchObject({ limited: true });
+        expect(new Date(svc.memberSinceFor(g, NIKIL))).toEqual(retired);
+        expect(g.memberSince.find((m) => m.user === NIKIL).fromKeyVersion).toBe(2);
+        expect(keysOf(g._id, NIKIL)).toEqual([2]);
+    });
+
+    test('an unknown history choice is refused', async () => {
+        const g = await nmt();
+        await expect(svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL], history: 'all' }, null)).rejects.toMatchObject({ status: 400, code: 'BAD_HISTORY' });
+        expect(g.participants).not.toContain(NIKIL);
+    });
+
+    test('if the new key cannot be made, nobody is added', async () => {
+        const g = await nmt();
+        epochs().rotate.mockRejectedValueOnce(new Error('postgres down'));
+        await expect(svc.addMembers({ dmId: g._id, actorId: MANI, userIds: [NIKIL] }, null)).rejects.toMatchObject({ status: 503, code: 'KEY_ROTATION_FAILED' });
+        expect(g.participants).not.toContain(NIKIL);
+        expect(keysOf(g._id, NIKIL)).toEqual([]);
+    });
+
+    test('removing Mani: a new key for the rest; Mani holds none of the keys', async () => {
+        const g = await nmt();
+        const io = fakeIo();
+        await svc.removeMember({ dmId: g._id, actorId: NANI, userId: MANI }, io);
+        expect(keysOf(g._id, MANI)).toEqual([]);
+        expect(keysOf(g._id, TEJA)).toEqual([1, 2]);
+    });
+
+    test('Start a new group: Nani + Mani + Teja + Nikil as a separate group; the original stays as it is', async () => {
+        const g = await nmt();
+        await svc.addMembers({ dmId: g._id, actorId: NANI, userIds: [NIKIL] }, null);
+        // The same four people again, as "Start a new group": a new group, not the old one.
+        const fresh = await svc.createGroup({ creatorId: NANI, workspaceId: mockWS, memberIds: [MANI, TEJA, NIKIL], newGroup: true }, null);
+        expect(fresh.created).toBe(true);
+        expect(String(fresh.session._id)).not.toBe(String(g._id));
+        expect(g.participants).toEqual([NANI, MANI, TEJA, NIKIL]);
+        // From New Message (no newGroup), the same people reopen the existing group.
+        const reopen = await svc.createGroup({ creatorId: TEJA, workspaceId: mockWS, memberIds: [NANI, MANI, NIKIL] }, null);
+        expect(reopen.created).toBe(false);
     });
 });

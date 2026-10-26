@@ -2,7 +2,7 @@
 // calls they make. The chat window and the thread panel build their command context from these.
 import api from '@services/api';
 import { encryptMessageForSending } from '../../../services/messageEncryptionService';
-import { addGroupDMMembers, leaveGroupDM } from '../groupDm/groupDmApi';
+import { leaveGroupDM } from '../groupDm/groupDmApi';
 
 const errorText = (err, fallback) => err?.response?.data?.message || err?.message || fallback;
 const rethrow = (fallback) => (err) => { throw new Error(errorText(err, fallback)); };
@@ -95,9 +95,6 @@ export async function addToChannel(channelId, people) {
     if (!added && problem) throw new Error(problem);
     return added;
 }
-
-/** /invite in a group. */
-export const addToGroup = (dmId, people) => addGroupDMMembers(dmId, people.map((p) => p.id)).catch(rethrow('Could not add them.'));
 
 /** /call @person: their DM's id (made if needed). */
 export async function dmWith(workspaceId, userId) {

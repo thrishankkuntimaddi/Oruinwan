@@ -37,6 +37,48 @@ function Tick({ on }) {
   );
 }
 
+/** What people added to a group can read. Exported for the mention offer and tests. */
+export const HISTORY_OPTIONS = [
+  { value: 'from_now', title: 'From now on', body: 'They see messages sent after they join.' },
+  { value: 'earlier', title: 'Include earlier messages', body: 'They also see the earlier messages you can see.' },
+];
+
+/** Picks how much history people added to a group get. */
+export function HistoryChoice({ value, onChange }) {
+  return (
+    <div role="radiogroup" aria-label="What they can see" className="flex flex-col gap-2">
+      {HISTORY_OPTIONS.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.value)}
+            className={cx('flex items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors', on ? 'border-gold bg-surface-2' : 'border-line')}
+          >
+            <span className={cx('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border', on ? 'border-gold' : 'border-line')} aria-hidden>
+              {on && <span className="size-2.5 rounded-full bg-gold" />}
+            </span>
+            <span>
+              <span className="block text-[15px] font-medium">{o.title}</span>
+              <span className="block text-[13px] text-text-2">{o.body}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The toast after adding people to a group. */
+export function addedMessage(count, history, limited) {
+  const who = count === 1 ? 'Added to the group' : `${count} people added to the group`;
+  if (history !== 'earlier') return `${who}. They see messages from now on.`;
+  return limited ? `${who}. Some older messages couldn't be shared with them.` : `${who} with the earlier messages.`;
+}
+
 /** Toggles a person in a picked list. Exported for tests. */
 export function togglePicked(list, id, max = MAX_GROUP_MEMBERS - 1) {
   if (list.includes(id)) return list.filter((x) => x !== id);
@@ -117,12 +159,14 @@ export function NewGroupScreen() {
 
 export function GroupInfoScreen({ id }) {
   const me = useSession((s) => s.user?.id);
+  const ws = useSession((s) => s.workspaceId);
   const { data: members } = useMembers();
   const [group, setGroup] = useState(null);
   const [rename, setRename] = useState(false);
   const [name, setName] = useState('');
   const [adding, setAdding] = useState(false);
   const [picked, setPicked] = useState([]);
+  const [history, setHistory] = useState('from_now');
   const [leave, setLeave] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -174,7 +218,7 @@ export function GroupInfoScreen({ id }) {
         <Section>
           <RowGroup>
             <Row icon={Pencil} tile="accent" title={group.groupName ? 'Rename group' : 'Name this group'} onClick={() => { setName(group.groupName || ''); setRename(true); }} />
-            {room > 0 && <Row icon={UserPlus} tile="accent" title="Add people" onClick={() => { setPicked([]); setAdding(true); }} />}
+            {room > 0 && <Row icon={UserPlus} tile="accent" title="Add people" onClick={() => { setPicked([]); setHistory('from_now'); setAdding(true); }} />}
           </RowGroup>
         </Section>
         <Section title={`People · ${group.members.length}`}>
@@ -221,10 +265,45 @@ export function GroupInfoScreen({ id }) {
         open={adding}
         onClose={() => setAdding(false)}
         title="Add people"
-        footer={<Button block loading={busy} disabled={picked.length === 0} onClick={() => run(() => api().addGroupDmMembers(id, picked), () => setAdding(false))}>Add {picked.length || ''}</Button>}
+        footer={(
+          <div className="flex flex-col gap-2">
+            <Button
+              block
+              loading={busy}
+              disabled={picked.length === 0}
+              onClick={() => run(async () => {
+                const next = await api().addGroupDmMembers(id, picked, { history });
+                toast(addedMessage(picked.length, history, next?.limitedHistory), 'success');
+                return next;
+              }, () => setAdding(false))}
+            >
+              {picked.length ? `Add ${picked.length} to this group` : 'Add to this group'}
+            </Button>
+            <Button
+              block
+              variant="secondary"
+              disabled={busy || picked.length === 0 || group.members.length + picked.length > MAX_GROUP_MEMBERS}
+              onClick={() => run(async () => {
+                // A separate group with everyone here plus the new people; this one stays as it is.
+                const others = group.members.map((m) => m.id).filter((m) => m !== me);
+                const fresh = await api().createGroupDm(ws, [...others, ...picked], '', { newGroup: true });
+                setAdding(false);
+                nav.pop();
+                openConversation('dm', fresh.id);
+                return null;
+              })}
+            >
+              Start a new group instead
+            </Button>
+          </div>
+        )}
       >
         <div className="px-2 pb-4">
-          <p className="px-3 pb-2 text-[13px] text-text-2">People you add see messages from now on, not earlier ones.</p>
+          <div className="px-1 pb-3">
+            <p className="px-2 pb-2 text-[13px] font-medium text-text-2">What they can see</p>
+            <HistoryChoice value={history} onChange={setHistory} />
+            <p className="px-2 pt-2 text-[12px] text-text-3">A new group starts empty and keeps this one as it is.</p>
+          </div>
           {candidates.length ? (
             <RowGroup>
               {candidates.map((u) => (

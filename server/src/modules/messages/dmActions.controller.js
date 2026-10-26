@@ -155,8 +155,9 @@ exports.unmuteDM = async (req, res) => {
 /** POST /api/v2/dm/group { workspaceId, memberIds: [...], name? } */
 exports.createGroupDM = async (req, res) => {
     try {
-        const { workspaceId, memberIds, name } = req.body || {};
-        const { session, created } = await groupDM.createGroup({ creatorId: req.user.sub, workspaceId, memberIds, name }, ioOf(req));
+        const { workspaceId, memberIds, name, newGroup } = req.body || {};
+        // newGroup: "Start a new group" — always a separate group, even with the same people.
+        const { session, created } = await groupDM.createGroup({ creatorId: req.user.sub, workspaceId, memberIds, name, newGroup: newGroup === true }, ioOf(req));
         return res.status(created ? 201 : 200).json({ success: true, created, dm: await groupDM.describe(session, req.user.sub) });
     } catch (err) {
         return sendError(res, err);
@@ -186,8 +187,9 @@ exports.renameGroupDM = async (req, res) => {
 /** POST /api/v2/dm/:dmId/members { userIds: [...] } */
 exports.addGroupDMMembers = async (req, res) => {
     try {
-        const { session, added } = await groupDM.addMembers({ dmId: req.params.dmId, actorId: req.user.sub, userIds: req.body?.userIds }, ioOf(req));
-        return res.json({ success: true, added, dm: await groupDM.describe(session, req.user.sub) });
+        // history: 'from_now' (default) or 'earlier' — see groupDM.service.
+        const { session, added, history } = await groupDM.addMembers({ dmId: req.params.dmId, actorId: req.user.sub, userIds: req.body?.userIds, history: req.body?.history || 'from_now' }, ioOf(req));
+        return res.json({ success: true, added, history, dm: await groupDM.describe(session, req.user.sub) });
     } catch (err) {
         return sendError(res, err);
     }

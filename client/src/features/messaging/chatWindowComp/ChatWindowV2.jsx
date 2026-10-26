@@ -39,10 +39,11 @@ import { encryptMessageForSending } from '../../../services/messageEncryptionSer
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
 import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
 import { mentionCandidates, mentionedOutsiders, outsidersSentence } from '../mentionInvite';
-import { createGroupDM, addGroupDMMembers } from '../groupDm/groupDmApi';
+import { createGroupDM, addGroupDMMembers, addedMessage } from '../groupDm/groupDmApi';
+import HistoryChoice from '../groupDm/HistoryChoice';
 import {
     commandPeople, createCommandTask, remindOnMessage, scheduleEncrypted, setConversationMuted, setMyStatus, setMyPresence,
-    setChannelTopic, leaveConversation, addToChannel, addToGroup, dmWith,
+    setChannelTopic, leaveConversation, addToChannel, dmWith,
 } from '../slash/commandActions';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
@@ -220,6 +221,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [mentionInviteBusy, setMentionInviteBusy] = useState(false);
     // In a 1:1 DM, mentioning someone else offers a group with the three of you.
     const [groupOffer, setGroupOffer] = useState(null);
+    // What people added from a mention can read ('from_now' or 'earlier'); asked fresh each time.
+    const [groupOfferHistory, setGroupOfferHistory] = useState('from_now');
+    useEffect(() => { setGroupOfferHistory('from_now'); }, [groupOffer]);
     useEffect(() => { setMentionInvite(null); setGroupOffer(null); }, [chat?.id]);
     // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
     const [showAskAi, setShowAskAi] = useState(false);
@@ -1828,9 +1832,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 showToast(added === 1 ? 'Added to the channel' : `${added} people added`, 'success');
                 refreshContacts?.(wsForCommands);
             } else if (chat?.isGroup) {
-                await addToGroup(conversationId, people);
-                showToast(people.length === 1 ? 'Added to the group' : `${people.length} people added to the group`, 'success');
-                refreshContacts?.(wsForCommands);
+                // A group: the same bar as mentioning someone, which asks what they can see.
+                setGroupOffer(people);
             } else {
                 // A 1:1 chat: offer a group with them (the same bar as mentioning someone).
                 setGroupOffer(people);
@@ -1865,20 +1868,47 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
                         {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. {chat?.isGroup
-                            ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group? They'll see messages from now on, not earlier ones.`
+                            ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group?`
                             : `Start a new group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}? This chat stays as it is.`}
+                        {chat?.isGroup && (
+                            <span style={{ display: 'block', marginTop: 6 }}>
+                                <HistoryChoice compact value={groupOfferHistory} onChange={setGroupOfferHistory} />
+                            </span>
+                        )}
                     </span>
                     <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setGroupOffer(null)} disabled={mentionInviteBusy}>Not now</button>
+                    {chat?.isGroup && (
+                        <button type="button" className="gl-btn gl-btn--sm" data-testid="group-offer-new" disabled={mentionInviteBusy}
+                            title="A separate group with everyone here and them. This group stays as it is."
+                            onClick={async () => {
+                                setMentionInviteBusy(true);
+                                try {
+                                    const ws = workspaceId || chat?.workspaceId;
+                                    const others = (chat?.members || []).map((m) => String(m?._id || m?.id || m?.user?._id || m?.user || m)).filter((id) => id && id !== 'undefined' && id !== String(currentUserId));
+                                    const dm = await createGroupDM(ws, [...new Set([...others, ...groupOffer.map((p) => p.id)])], '', { newGroup: true });
+                                    setGroupOffer(null);
+                                    await refreshContacts?.(ws);
+                                    navigate(`/workspace/${ws}/home/dm/${dm._id || dm.id}`);
+                                    showToast('New group ready: carry on there', 'success');
+                                } catch (err) {
+                                    showToast(err?.response?.data?.message || 'Could not start the group', 'error');
+                                } finally {
+                                    setMentionInviteBusy(false);
+                                }
+                            }}>
+                            New group
+                        </button>
+                    )}
                     <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="group-offer-start" disabled={mentionInviteBusy}
                         onClick={async () => {
                             setMentionInviteBusy(true);
                             try {
                                 const ws = workspaceId || chat?.workspaceId;
                                 if (chat?.isGroup) {
-                                    await addGroupDMMembers(chat.id, groupOffer.map((p) => p.id));
+                                    const added = await addGroupDMMembers(chat.id, groupOffer.map((p) => p.id), { history: groupOfferHistory });
                                     setGroupOffer(null);
                                     await refreshContacts?.(ws);
-                                    showToast(groupOffer.length === 1 ? 'Added to the group' : `${groupOffer.length} people added to the group`, 'success');
+                                    showToast(addedMessage(groupOffer.length, groupOfferHistory, added?.limitedHistory), 'success');
                                     return;
                                 }
                                 const dm = await createGroupDM(ws, [dmOtherUserId, ...groupOffer.map((p) => p.id)]);

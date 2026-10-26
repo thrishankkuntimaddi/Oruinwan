@@ -350,6 +350,9 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
         // person when they add someone; see groupDM.service.)
         if (conversationType === 'channel') {
             await keyEpochs().grant(conversationId, 'channel', newUserId).catch((err) => logger.warn({ err: err?.message }, '[E2EE] Earlier channel keys not given'));
+        } else {
+            // Group members: the earlier keys their place in the group allows (none for 1:1 DMs).
+            await keyEpochs().grantEntitled(conversationId, newUserId).catch((err) => logger.warn({ err: err?.message }, '[E2EE] Earlier group keys not given'));
         }
 
         

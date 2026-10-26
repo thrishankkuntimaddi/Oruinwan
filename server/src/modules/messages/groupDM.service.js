@@ -9,10 +9,18 @@
  *   giving the new group a name always makes a new one.
  * - Anyone in the group can rename it, add people and leave. The group's admin (its creator)
  *   can remove someone else; when the admin leaves, the longest-standing member takes over.
- * - People who are added see messages from the moment they joined (memberSince), never
- *   earlier ones. The server enforces that on every read (conversations/conversationAccess.js).
- * - People who leave or are removed lose their copy of the key, their access on the server and
- *   their live connection to the conversation at once.
+ * - Whoever adds people chooses how much they see (`history`):
+ *     'from_now' (default): messages from when they joined. The group gets a new key that the
+ *                new people hold, and they never get the earlier ones.
+ *     'earlier': also the earlier messages the person adding them can see: the same join date
+ *                and the earlier keys from then on. A period whose key the server has no copy of
+ *                can't be shared; their history then starts after it (the reply says so).
+ *   The server enforces the join date on every read (conversations/conversationAccess.js) and
+ *   the keys make it hold for encrypted content too (conversations/keyEpochs.js).
+ * - "Start a new group" (createGroup with newGroup: true) always makes a separate group; the
+ *   original keeps its people and history.
+ * - People who leave or are removed lose their copies of the keys, their access on the server
+ *   and their live connection to the conversation at once, and the group gets a new key.
  */
 
 const DMSession = require('../../../models/DMSession');
@@ -20,11 +28,13 @@ const Message = require('./message.model.js');
 const identity = require('../../identity');
 const { hydrate } = require('../../identity/hydrate');
 const conversationKeysService = require('../conversations/conversationKeys.service');
+const keyEpochs = require('../conversations/keyEpochs');
 const logger = require('../../shared/utils/logger');
 const mongoose = require('mongoose');
 
 const MAX_MEMBERS = DMSession.MAX_GROUP_DM_MEMBERS;
 const PARTICIPANT_FIELDS = ['username', 'email', 'profilePicture', 'isOnline', 'userStatus'];
+const HISTORY = ['from_now', 'earlier'];
 
 function fail(status, message, code) {
     return Object.assign(new Error(message), { status, ...(code ? { code } : {}) });
@@ -139,7 +149,7 @@ async function describe(sessionDoc, viewerId) {
  * Creates a group DM, or reopens the one these exact people already have.
  * `memberIds` are the other people; the creator is added.
  */
-async function createGroup({ creatorId, workspaceId, memberIds, name }, io) {
+async function createGroup({ creatorId, workspaceId, memberIds, name, newGroup = false }, io) {
     if (!mongoose.isValidObjectId(String(workspaceId))) throw fail(400, 'workspaceId is required');
     const ids = [...new Set([String(creatorId), ...(Array.isArray(memberIds) ? memberIds : []).map(String)])];
     if (ids.some((id) => !mongoose.isValidObjectId(id))) throw fail(400, 'Invalid person');
@@ -151,7 +161,7 @@ async function createGroup({ creatorId, workspaceId, memberIds, name }, io) {
 
     const cleanName = typeof name === 'string' && name.trim() ? name.trim().slice(0, 80) : null;
     const existing = await DMSession.findOne({ workspace: workspaceId, isGroup: true, participants: { $all: ids, $size: ids.length } });
-    if (existing && !cleanName) {
+    if (existing && !cleanName && !newGroup) {
         // Same people again: bring it back for the creator instead of making a duplicate.
         existing.hiddenFor = (existing.hiddenFor || []).filter((h) => String(h.user) !== String(creatorId));
         await existing.save();
@@ -166,7 +176,7 @@ async function createGroup({ creatorId, workspaceId, memberIds, name }, io) {
         isGroup: true,
         name: cleanName,
         createdBy: creatorId,
-        memberSince: ids.map((user) => ({ user, at: now })),
+        memberSince: ids.map((user) => ({ user, at: now, fromKeyVersion: 1 })),
         lastMessageAt: now,
     });
 
@@ -187,11 +197,27 @@ async function createGroup({ creatorId, workspaceId, memberIds, name }, io) {
     return { session, created: true };
 }
 
-async function addMembers({ dmId, actorId, userIds }, io) {
+/** A person's row in the group: when they joined and the first key version they may hold. */
+function sinceRow(session, userId) {
+    return (session.memberSince || []).find((m) => String(m.user) === String(userId)) || null;
+}
+
+/** Gives the conversation a new key held by `memberIds` (`keepOld` keep the current one). */
+async function newKey(session, memberIds, keepOld, actorId) {
+    const r = await keyEpochs.rotate(session._id, 'dm', { memberIds, keepOld, createdBy: actorId });
+    return r.status === 'ROTATED' ? r.version : null;
+}
+
+/**
+ * Adds people. `history`: 'from_now' (default) or 'earlier' (see the top of this file).
+ * Returns { session, added, history: { [userId]: { since, limited } } }.
+ */
+async function addMembers({ dmId, actorId, userIds, history = 'from_now' }, io) {
+    if (!HISTORY.includes(history)) throw fail(400, "history must be 'from_now' or 'earlier'", 'BAD_HISTORY');
     const session = await loadGroup(dmId, actorId);
     const current = new Set(session.participants.map(String));
     const toAdd = [...new Set((Array.isArray(userIds) ? userIds : []).map(String))].filter((id) => !current.has(id));
-    if (toAdd.length === 0) return { session, added: [] };
+    if (toAdd.length === 0) return { session, added: [], history: {} };
     if (toAdd.some((id) => !mongoose.isValidObjectId(id))) throw fail(400, 'Invalid person');
     if (current.size + toAdd.length > MAX_MEMBERS) throw fail(400, `A group can have up to ${MAX_MEMBERS} people.`, 'GROUP_FULL');
 
@@ -199,21 +225,75 @@ async function addMembers({ dmId, actorId, userIds }, io) {
     if (!toAdd.every((id) => members.has(id))) throw fail(403, 'Everyone must be a member of this workspace');
 
     const now = new Date();
+    let since = now;
+    let fromKeyVersion = 1;
+    let rotatedTo = null;
+    if (history === 'earlier') {
+        // What the person adding them can see: their join date and keys from then on.
+        const mine = sinceRow(session, actorId);
+        since = mine?.at ? new Date(mine.at) : new Date(0); // founding members of old groups: everything
+        fromKeyVersion = Number(mine?.fromKeyVersion) || 1;
+    } else {
+        // A new key first: if that fails, nobody is added (they must not get the current key).
+        try {
+            rotatedTo = await newKey(session, [...current, ...toAdd], [...current], actorId);
+        } catch (err) {
+            logger.error({ err, dmSessionId: String(session._id) }, '[GROUP_DM][E2EE] Could not make a new key; nobody added');
+            throw fail(503, "Couldn't add them securely right now. Try again in a moment.", 'KEY_ROTATION_FAILED');
+        }
+        fromKeyVersion = rotatedTo || 1;
+    }
+
     session.participants.push(...toAdd);
     session.memberSince = (session.memberSince || []).filter((m) => !toAdd.includes(String(m.user)));
-    session.memberSince.push(...toAdd.map((user) => ({ user, at: now })));
+    session.memberSince.push(...toAdd.map((user) => ({ user, at: since, fromKeyVersion })));
     session.hiddenFor = (session.hiddenFor || []).filter((h) => !toAdd.includes(String(h.user)));
     // Someone who left and is added back starts fresh.
     session.clearedAt = (session.clearedAt || []).filter((c) => !toAdd.includes(String(c.user)));
-    await session.save();
+    try {
+        await session.save();
+    } catch (err) {
+        // Not added after all: take back the new key copies they were given.
+        for (const id of toAdd) {
+            await conversationKeysService.removeParticipant(session._id, 'dm', id).catch(() => {});
+            await keyEpochs.removeUser(session._id, 'dm', id).catch(() => {});
+        }
+        throw err;
+    }
 
-    // New members get the existing key (like joining a channel); they only see messages from now.
+    // The current key for anyone still without a copy (or a first key for the group), then the
+    // earlier keys their place allows. A period whose key can't be shared moves their start later.
     try {
         await conversationKeysService.ensureDMConversationKey(session._id);
     } catch (err) {
         logger.error({ err, dmSessionId: String(session._id) }, '[GROUP_DM][E2EE] Could not share the key with new members');
     }
+    const result = {};
+    for (const id of toAdd) result[id] = { since, limited: false };
+    if (history === 'earlier') {
+        const epochs = await keyEpochs.list(session._id, 'dm').catch(() => []);
+        const wanted = new Set(epochs.map((e) => e.version).filter((v) => v >= fromKeyVersion));
+        let changed = false;
+        for (const id of toAdd) {
+            const g = await keyEpochs.grant(session._id, 'dm', id, { versions: wanted }).catch(() => ({ unavailable: [...wanted] }));
+            // No public key yet: they get the keys when they set up encryption (grantEntitled).
+            const hasKey = await conversationKeysService.publicKeys.findByUserId(id).then((k) => Boolean(k?.publicKey)).catch(() => false);
+            if (!g.unavailable.length || !hasKey) continue;
+            const last = Math.max(...g.unavailable);
+            const lost = epochs.find((e) => e.version === last);
+            const row = sinceRow(session, id);
+            const after = lost?.retiredAt ? new Date(lost.retiredAt) : now;
+            if (row && after > row.at) {
+                row.at = after;
+                row.fromKeyVersion = last + 1;
+                result[id] = { since: after, limited: true };
+                changed = true;
+            }
+        }
+        if (changed) await session.save();
+    }
 
+    if (rotatedTo) keyEpochs.announce(io, session._id, 'dm', rotatedTo);
     moveSockets(io, toAdd, session._id, true);
     const actorName = await usernameOf(actorId);
     for (const id of toAdd) {
@@ -221,12 +301,12 @@ async function addMembers({ dmId, actorId, userIds }, io) {
         await systemLine(io, session, {
             event: 'group_member_added',
             text: `${actorName} added ${addedName}`,
-            data: { userId: String(actorId), userName: actorName, addedUserId: id, addedUserName: addedName },
+            data: { userId: String(actorId), userName: actorName, addedUserId: id, addedUserName: addedName, history },
         });
     }
     tellPeople(io, toAdd, session._id);
     await membersUpdated(io, session);
-    return { session, added: toAdd };
+    return { session, added: toAdd, history: result };
 }
 
 /** Removes `userId` from the group; `actorId === userId` means they left. */
@@ -261,7 +341,9 @@ async function removeMember({ dmId, actorId, userId }, io) {
     }
     await session.save();
 
-    // No more key on the server for them; the server also refuses their requests from now on.
+    // No more keys on the server for them; the server also refuses their requests from now on.
+    // The group gets a new key, so what is said next can't be opened with a key they kept.
+    await require('../conversations/conversationRooms').rotateWithout(io, session._id, 'dm', target);
     try {
         await conversationKeysService.removeParticipant(session._id, 'dm', target);
     } catch (err) {

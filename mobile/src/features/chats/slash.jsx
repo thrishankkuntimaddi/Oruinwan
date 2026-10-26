@@ -9,6 +9,7 @@ import { invalidate, setQueryData } from '../../data/query.js';
 import { nav } from '../../app/nav.js';
 import { toast } from '../../lib/bus.js';
 import { startHuddle } from '../huddles/huddle.js';
+import { addedMessage } from './groupScreens.jsx';
 
 export {
   filterCommands, prepareCommand, runPrepared, typingHint, helpLines, runsWithoutArgs, parseCommandLine,
@@ -212,10 +213,13 @@ export function phoneCommands({
         await api().addChannelMembers(conv.id, ids);
         invalidate('channels');
         toast(list.length === 1 ? `Added to ${label}` : `${list.length} people added to ${label}`, 'success');
+      } else if (isGroup && onGroupOffer) {
+        // A group: the same offer as mentioning someone, which asks what they can see.
+        onGroupOffer(list);
       } else if (isGroup) {
-        await api().addGroupDmMembers(conv.id, ids);
+        await api().addGroupDmMembers(conv.id, ids, { history: 'from_now' });
         invalidate('dms');
-        toast(list.length === 1 ? 'Added to the group' : `${list.length} people added to the group`, 'success');
+        toast(addedMessage(list.length, 'from_now'), 'success');
       } else if (onGroupOffer) {
         onGroupOffer(list);
       } else {

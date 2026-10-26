@@ -85,6 +85,8 @@ export function connectRealtime(base) {
   // Group DMs: renamed, people added or removed, or I was removed.
   socket.on('dm:members_updated', () => emit('data:changed', ['dms']));
   socket.on('dm:removed', () => emit('data:changed', ['dms']));
+  // The conversation got a new key (a group added or removed someone): fetch it before the next send.
+  socket.on('conversation:key_rotated', (p) => emit('key:rotated', { conversationId: p?.conversationId, conversationType: p?.conversationType }));
   // invited-to-channel: someone added me to a channel (I'm not in its room yet).
   for (const ev of ['channel-created', 'channel-updated', 'channel-deleted', 'channel-member-added', 'invited-to-channel']) socket.on(ev, () => emit('data:changed', ['channels']));
   for (const ev of ['task-created', 'task-updated', 'task-assigned', 'task-removed']) socket.on(ev, () => emit('data:changed', ['tasks', 'task:']));

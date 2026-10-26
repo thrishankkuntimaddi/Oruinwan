@@ -1,6 +1,7 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { mapGroupDm, mapGroupDetails, mapPersonDm, groupTitle } from '../../data/live/adapter.js';
-import { togglePicked, MAX_GROUP_MEMBERS } from './groupScreens.jsx';
+import { togglePicked, MAX_GROUP_MEMBERS, HistoryChoice, HISTORY_OPTIONS, addedMessage } from './groupScreens.jsx';
 
 const session = {
   id: 'g1',
@@ -51,5 +52,27 @@ describe('group DMs on the phone', () => {
     for (let i = 0; i < MAX_GROUP_MEMBERS + 3; i++) list = togglePicked(list, `p${i}`);
     expect(list).toHaveLength(MAX_GROUP_MEMBERS - 1);
     expect(togglePicked(['a', 'b'], 'a')).toEqual(['b']);
+  });
+});
+
+describe('adding people to a group: what they can see', () => {
+  test('two choices, "from now on" first', () => {
+    expect(HISTORY_OPTIONS.map((o) => o.value)).toEqual(['from_now', 'earlier']);
+  });
+
+  test('the picker shows both and reports the choice', () => {
+    const onChange = vi.fn();
+    render(<HistoryChoice value="from_now" onChange={onChange} />);
+    const [now, earlier] = screen.getAllByRole('radio');
+    expect(now.getAttribute('aria-checked')).toBe('true');
+    expect(earlier.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(screen.getByText('Include earlier messages'));
+    expect(onChange).toHaveBeenCalledWith('earlier');
+  });
+
+  test('the toast says what they can see', () => {
+    expect(addedMessage(1, 'from_now')).toBe('Added to the group. They see messages from now on.');
+    expect(addedMessage(2, 'earlier', false)).toBe('2 people added to the group with the earlier messages.');
+    expect(addedMessage(1, 'earlier', true)).toMatch(/Some older messages couldn't be shared/);
   });
 });
