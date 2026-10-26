@@ -209,6 +209,128 @@ export function DependenciesSection({ task, candidates = [], lookup = [], canAdd
     );
 }
 
+/* ── Linked tickets ───────────────────────────────────────────────────── */
+
+export const LINK_TYPE_LABELS = {
+    relates_to: 'Relates to',
+    blocks: 'Blocks',
+    is_blocked_by: 'Is blocked by',
+    duplicates: 'Duplicates',
+    is_duplicated_by: 'Is duplicated by',
+};
+
+/** Tasks that match "PRJ-12", "12" or words of the title (best first), for the link picker. */
+export function matchTickets(query, tasks = [], excludeIds = [], limit = 8) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return [];
+    const skip = new Set(excludeIds.map(String));
+    const scored = [];
+    for (const t of tasks) {
+        if (!t || t.deleted || skip.has(String(t.id))) continue;
+        const key = String(t.issueKey || '').toLowerCase();
+        const title = String(t.title || '').toLowerCase();
+        let score = -1;
+        if (key && key === q) score = 0;
+        else if (key && (key.startsWith(q) || key.endsWith(`-${q}`))) score = 1;
+        else if (title.startsWith(q)) score = 2;
+        else if (title.split(/\s+/).some((w) => w.startsWith(q))) score = 3;
+        else if (q.length >= 3 && title.includes(q)) score = 4;
+        if (score >= 0) scored.push([score, t]);
+    }
+    return scored.sort((a, b) => a[0] - b[0] || String(a[1].title).localeCompare(String(b[1].title))).slice(0, limit).map(([, t]) => t);
+}
+
+/**
+ * Other tasks (tickets) this one is linked to: relates to, blocks, is blocked by, duplicates.
+ * Search by key or title to add; click one to open it. Links are kept on both tasks (server).
+ * `onChange(linkedIssues)` stores the task's new links; `onOpen(taskId)` opens a linked task.
+ */
+export function LinkedTicketsSection({ task, candidates = [], canEdit = false, disabled = false, onChange, onOpen }) {
+    const { showToast } = useToast();
+    const [query, setQuery] = useState('');
+    const [type, setType] = useState('relates_to');
+    const [busy, setBusy] = useState(false);
+    const [removing, setRemoving] = useState(null);
+    const byId = useMemo(() => new Map(candidates.map((t) => [String(t.id), t])), [candidates]);
+    const links = (task.linkedIssues || []).map((l) => {
+        const id = idOf(l.task);
+        const known = byId.get(id) || (typeof l.task === 'object' ? { id, title: l.task.title, issueKey: l.task.issueKey, status: l.task.status } : null);
+        return { linkId: idOf(l._id || l.id), id, linkType: l.linkType || 'relates_to', known };
+    });
+    const matches = matchTickets(query, candidates, [task.id, ...links.map((l) => l.id)]);
+
+    const add = async (target) => {
+        setBusy(true);
+        try {
+            const res = await api.post(`/api/v2/tasks/${task.id}/links`, { linkedTaskId: target.id, linkType: type });
+            onChange?.(res.data?.task?.linkedIssues || [...(task.linkedIssues || []), { task: target.id, linkType: type }]);
+            setQuery('');
+            showToast(`Linked ${target.issueKey || 'task'}`, 'success');
+        } catch (err) {
+            showToast(taskErrorMessage(err, 'Could not link it'), 'error');
+        } finally { setBusy(false); }
+    };
+    const remove = async (link) => {
+        if (!link.linkId) return;
+        setRemoving(link.linkId);
+        try {
+            await api.delete(`/api/v2/tasks/${task.id}/links/${link.linkId}`);
+            onChange?.((task.linkedIssues || []).filter((l) => idOf(l._id || l.id) !== link.linkId));
+        } catch (err) {
+            showToast(taskErrorMessage(err, 'Could not remove the link'), 'error');
+        } finally { setRemoving(null); }
+    };
+
+    return (
+        <DetailSection testId="task-linked-tickets" label={`Linked tickets${links.length ? ` (${links.length})` : ''}`} icon={<Link2 size={10} />}>
+            {links.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                    {links.map((l) => (
+                        <div key={`${l.linkId || l.id}-${l.linkType}`} style={rowStyle}>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', minWidth: 78 }}>{LINK_TYPE_LABELS[l.linkType] || l.linkType}</span>
+                            <button type="button" onClick={() => onOpen?.(l.id)} title="Open this task"
+                                style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 0, padding: 0, cursor: onOpen ? 'pointer' : 'default', color: 'var(--text-primary)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
+                                {l.known?.issueKey ? <strong style={{ fontFamily: 'monospace', marginRight: 6 }}>{l.known.issueKey}</strong> : null}
+                                {l.known?.title || `Task ${l.id.slice(-6)}`}
+                            </button>
+                            {l.known?.status && <span style={{ fontSize: '10px', whiteSpace: 'nowrap', color: l.known.status === 'done' ? 'var(--state-success)' : 'var(--text-secondary)' }}>{statusLabel(l.known.status)}</span>}
+                            {canEdit && !disabled && l.linkId && (
+                                <button type="button" onClick={() => remove(l)} disabled={removing === l.linkId} aria-label={`Unlink ${l.known?.issueKey || l.known?.title || 'task'}`} title="Unlink"
+                                    style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: 0, padding: 2, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                    {removing === l.linkId ? <Loader2 size={11} className="tk-spin" /> : <X size={12} />}
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            ) : <p style={emptyText}>No linked tickets</p>}
+            {canEdit && !disabled && (
+                <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <select className="tk-field" style={{ maxWidth: 140 }} value={type} onChange={(e) => setType(e.target.value)} aria-label="How they're linked">
+                            {Object.entries(LINK_TYPE_LABELS).filter(([k]) => k !== 'is_duplicated_by').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                        <input className="tk-field" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ticket key or title…" aria-label="Find a ticket to link"
+                            onKeyDown={(e) => { if (e.key === 'Enter' && matches[0]) { e.preventDefault(); add(matches[0]); } }} data-testid="link-ticket-search" />
+                    </div>
+                    {query.trim() && (
+                        <div role="listbox" aria-label="Tickets" style={{ marginTop: 4, border: '1px solid var(--border-subtle)', borderRadius: 2, background: 'var(--bg-surface)', maxHeight: 220, overflowY: 'auto' }}>
+                            {matches.length ? matches.map((t) => (
+                                <button key={t.id} type="button" role="option" aria-selected={false} disabled={busy} onClick={() => add(t)}
+                                    style={{ display: 'flex', width: '100%', gap: 8, alignItems: 'center', padding: '6px 8px', background: 'none', border: 0, cursor: 'pointer', textAlign: 'left', fontSize: 12, color: 'var(--text-primary)', fontFamily: FONT }}>
+                                    {t.issueKey && <strong style={{ fontFamily: 'monospace' }}>{t.issueKey}</strong>}
+                                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                                    <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{statusLabel(t.status)}</span>
+                                </button>
+                            )) : <p style={{ ...emptyText, margin: 0, padding: '6px 8px' }}>No ticket matches “{query.trim()}”</p>}
+                        </div>
+                    )}
+                </div>
+            )}
+        </DetailSection>
+    );
+}
+
 /* ── Time tracking ────────────────────────────────────────────────────── */
 
 /**

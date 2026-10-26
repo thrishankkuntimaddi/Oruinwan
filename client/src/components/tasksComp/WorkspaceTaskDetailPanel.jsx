@@ -12,7 +12,7 @@ import AITaskAssist from './AITaskAssist';
 import { STATUS_META, TRANSITIONS, PRIORITIES, PRIORITY_META, statusLabel, priorityLabel, toDateInput, taskErrorMessage } from '../../utils/taskMeta';
 import { StatusBadge, PriorityIcon, UserAvatar, IssueTypeIcon, fmtDate, tint, FONT } from './taskUi';
 import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
-import { SubtasksSection, DependenciesSection, TimeTrackingSection, RepeatSection, MilestoneSection } from './TaskDetailSections';
+import { SubtasksSection, DependenciesSection, LinkedTicketsSection, TimeTrackingSection, RepeatSection, MilestoneSection } from './TaskDetailSections';
 import { RepeatBadge } from './RepeatPicker';
 import { AttachFromApps, usePickerTypes } from '../../features/integrations/CloudPicker';
 import TaskDiscussion, { TaskLinkedThread } from './TaskDiscussion';
@@ -424,6 +424,15 @@ export default function WorkspaceTaskDetailPanel({
 
                         {/* Time tracking */}
                         <TimeTrackingSection task={task} disabled={deleted} onChange={(timeTracking) => onPatchLocal?.(task.id, { timeTracking })} />
+
+                        {/* Linked tickets: relates to / blocks / duplicates other tasks */}
+                        <LinkedTicketsSection task={task} candidates={allTasks} canEdit={!!(can.dependency || can.edit)} disabled={deleted}
+                            onChange={(linkedIssues) => onPatchLocal?.(task.id, { linkedIssues })}
+                            onOpen={(id) => {
+                                const ws = aiWorkspaceId || (task.workspace?._id || task.workspace);
+                                window.history.pushState({}, '', `/workspace/${ws}/tasks/${id}`);
+                                window.dispatchEvent(new PopStateEvent('popstate'));
+                            }} />
 
                         {/* Dependencies */}
                         <DependenciesSection task={task} candidates={allTasks} lookup={allTasks} canAdd={!!can.dependency} disabled={deleted}
