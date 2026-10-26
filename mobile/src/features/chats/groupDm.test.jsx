@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { mapGroupDm, mapGroupDetails, mapPersonDm, groupTitle } from '../../data/live/adapter.js';
-import { togglePicked, MAX_GROUP_MEMBERS, HistoryChoice, HISTORY_OPTIONS, addedMessage } from './groupScreens.jsx';
+import { togglePicked, MAX_GROUP_MEMBERS, HistoryChoice, HISTORY_OPTIONS, addedMessage, groupCandidates } from './groupScreens.jsx';
 
 const session = {
   id: 'g1',
@@ -74,5 +74,26 @@ describe('adding people to a group: what they can see', () => {
     expect(addedMessage(1, 'from_now')).toBe('Added to the group. They see messages from now on.');
     expect(addedMessage(2, 'earlier', false)).toBe('2 people added to the group with the earlier messages.');
     expect(addedMessage(1, 'earlier', true)).toMatch(/Some older messages couldn't be shared/);
+  });
+});
+
+describe('picking people for a group', () => {
+  const members = [
+    { id: 'u1', name: 'Nani' },
+    { id: 'u2', name: 'Mani Kumar', username: 'mani' },
+    { id: 'u3', name: 'Teja' },
+    { id: 'u4', name: 'Nikil' },
+    { id: 'u5', name: 'Gone Person', deactivated: true },
+    { id: 'b1', name: 'Helper bot', bot: true },
+  ];
+
+  test('only active people, never me, a bot or someone already in the group', () => {
+    expect(groupCandidates(members, { me: 'u1', exclude: new Set(['u2']) }).map((u) => u.id)).toEqual(['u4', 'u3']);
+  });
+
+  test('search matches like New Message: word starts, not the middle of short words', () => {
+    expect(groupCandidates(members, { me: 'u1', query: 'kum' }).map((u) => u.id)).toEqual(['u2']);
+    expect(groupCandidates(members, { me: 'u1', query: 'ni' }).map((u) => u.id)).toEqual(['u4']);
+    expect(groupCandidates(members, { me: 'u1', query: 'gone' })).toEqual([]);
   });
 });

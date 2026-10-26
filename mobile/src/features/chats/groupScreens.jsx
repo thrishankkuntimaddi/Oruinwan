@@ -16,6 +16,7 @@ import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { toast } from '../../lib/bus.js';
 import { cx } from '../../ui/cx.js';
 import { openConversation } from './chatsUi.js';
+import { searchPeople } from '../../lib/peopleSearch.js';
 
 /** Largest group, me included (server: DMSession.MAX_GROUP_DM_MEMBERS). */
 export const MAX_GROUP_MEMBERS = 10;
@@ -79,6 +80,14 @@ export function addedMessage(count, history, limited) {
   return limited ? `${who}. Some older messages couldn't be shared with them.` : `${who} with the earlier messages.`;
 }
 
+/**
+ * People who can be picked for a group: active, not bots, not me and not already in it, matched
+ * like New Message (lib/peopleSearch.js). Exported for tests.
+ */
+export function groupCandidates(members, { me, exclude = new Set(), query = '' } = {}) {
+  return searchPeople((members || []).filter((u) => u.id !== me && !exclude.has(u.id) && !u.bot && !u.deactivated), query);
+}
+
 /** Toggles a person in a picked list. Exported for tests. */
 export function togglePicked(list, id, max = MAX_GROUP_MEMBERS - 1) {
   if (list.includes(id)) return list.filter((x) => x !== id);
@@ -94,7 +103,7 @@ export function NewGroupScreen() {
   const [picked, setPicked] = useState([]);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  const people = (members || []).filter((u) => u.id !== me && (!query || u.name.toLowerCase().includes(query.toLowerCase())));
+  const people = groupCandidates(members, { me, query });
 
   const create = async () => {
     setBusy(true);
@@ -179,7 +188,7 @@ export function GroupInfoScreen({ id }) {
   }, [id]);
 
   const inGroup = useMemo(() => new Set((group?.members || []).map((m) => m.id)), [group]);
-  const candidates = (members || []).filter((u) => !inGroup.has(u.id));
+  const candidates = groupCandidates(members, { me, exclude: inGroup });
   const isCreator = group && String(group.createdBy) === String(me);
   const room = MAX_GROUP_MEMBERS - (group?.members?.length || 0);
 

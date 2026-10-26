@@ -116,3 +116,40 @@ describe('New message dialog', () => {
         expect(screen.getByLabelText('Search people')).toHaveValue('');
     });
 });
+
+describe('both "New message" entry points search the same way', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        apiMock.get.mockResolvedValue({ data: { members: MEMBERS } });
+    });
+    const rows = () => screen.queryAllByTestId('recipient-row').map((r) => r.textContent);
+    const search = async () => {
+        await waitFor(() => expect(rows()).toHaveLength(3));
+        fireEvent.change(screen.getByLabelText('Search people'), { target: { value: 'kum' } });
+        expect(rows()).toEqual([expect.stringContaining('Mani Kumar')]);
+        fireEvent.change(screen.getByLabelText('Search people'), { target: { value: 'gone' } });
+        expect(rows()).toHaveLength(0); // removed members never show
+    };
+
+    it('Home sidebar', async () => {
+        const { MemoryRouter } = await import('react-router-dom');
+        const { NewDMModal } = await import('../components/home/panels/HomePanel/ChannelDMModals');
+        render(<MemoryRouter><NewDMModal workspaceId="w1" showNewDMModal setShowNewDMModal={vi.fn()} handleStartDM={vi.fn()} currentUserId={ME} /></MemoryRouter>);
+        await search();
+    });
+
+    it('Messages page', async () => {
+        const { MemoryRouter, Routes, Route } = await import('react-router-dom');
+        const { AuthContext } = await import('../contexts/AuthContext');
+        const { default: MessagesNewDM } = await import('../features/messaging/NewDMModal');
+        render(
+            <AuthContext.Provider value={{ user: { _id: ME } }}>
+                <MemoryRouter initialEntries={['/workspace/w1/messages']}>
+                    <Routes><Route path="/workspace/:workspaceId/messages" element={<MessagesNewDM onClose={vi.fn()} onStart={vi.fn()} />} /></Routes>
+                </MemoryRouter>
+            </AuthContext.Provider>,
+        );
+        await search();
+        expect(apiMock.get).toHaveBeenCalledWith('/api/workspaces/w1/members');
+    });
+});
