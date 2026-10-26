@@ -28,6 +28,8 @@ export function useNotifications() {
 
 const convKey = (type, id) => `${type}:${id}`;
 const PREVIEW_MAX = 90;
+// A list loaded within this long after a conversation was read may predate the read.
+const SEED_AFTER_READ_MS = 20_000;
 
 function clip(text) {
     if (!text) return '';
@@ -200,14 +202,23 @@ export function NotificationsProvider({ children }) {
     }, [hasMore, loading, page, fetchNotifications]);
 
     // ── Per-conversation unread ────────────────────────────────────────────
+    // When each conversation was last read here. A list loaded from the server can be older than
+    // that read (it was asked for while the chat was opening): its count must not come back.
+    const readAtRef = useRef({});
     const seedConversationUnread = useCallback((type, entries) => {
+        const now = Date.now();
+        const open = conversationInPath(pathnameRef.current);
+        const pane = conversationInPath(panePathRef.current);
         setConversationUnread(prev => {
             const next = { ...prev };
             for (const { id, unread } of entries || []) {
                 if (!id) continue;
                 const k = convKey(type, id);
-                // Never drop a live increment that arrived before the seed.
-                next[k] = Math.max(Number(unread) || 0, prev[k] || 0);
+                const onScreen = (open && convKey(open.type, open.id) === k) || (pane && convKey(pane.type, pane.id) === k);
+                const justRead = now - (readAtRef.current[k] || 0) < SEED_AFTER_READ_MS;
+                // Never drop a live increment that arrived before the seed; never bring back a
+                // count for a conversation on screen or read moments ago.
+                next[k] = onScreen || justRead ? (prev[k] || 0) : Math.max(Number(unread) || 0, prev[k] || 0);
                 if (!next[k]) delete next[k];
             }
             return next;
@@ -217,6 +228,7 @@ export function NotificationsProvider({ children }) {
     const clearConversationUnread = useCallback((type, id) => {
         if (!id) return;
         const k = convKey(type, id);
+        readAtRef.current[k] = Date.now();
         setConversationUnread(prev => {
             if (!prev[k]) return prev;
             const next = { ...prev };

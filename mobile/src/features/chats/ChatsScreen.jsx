@@ -2,6 +2,7 @@
 // All / Channels / DMs / Agents filter it; nothing is split into sections. Long-press (or
 // right-click) a chat for pin, mark as read, mute, archive and delete.
 import { useMemo, useState } from 'react';
+import { clearUnreadLocally } from '../../data/unread.js';
 import {
   Archive, ArchiveRestore, Bell, BellOff, Bot, CheckCheck, Compass, Hash, Info, KeyRound, Lock, LogOut, Megaphone, MessageCirclePlus, Pin, PinOff, SquarePen, Trash2, UserRound,
 } from 'lucide-react';
@@ -132,9 +133,7 @@ export function ConversationRow({ kind, item }) {
 }
 
 function markReadLocally(row) {
-  const ws = useSession.getState().workspaceId;
-  const key = row.kind === 'channel' ? `channels:${ws}` : `dms:${ws}`;
-  setQueryData(key, (list) => list?.map((c) => (c.id === row.item.id ? { ...c, unread: 0, mentions: 0 } : c)));
+  clearUnreadLocally(row.kind, row.item.id);
 }
 
 /** The long-press menu of a chat. */

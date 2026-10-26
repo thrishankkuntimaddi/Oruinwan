@@ -1,5 +1,6 @@
 // Messages for one conversation (or one thread), with optimistic sends and reactions.
 import { useCallback, useEffect, useMemo } from 'react';
+import { clearUnreadLocally } from '../../data/unread.js';
 import { api, useSession } from '../../data/session.js';
 import { getQueryData, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { uid } from '../../lib/id.js';
@@ -96,6 +97,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     if (!conv?.id || threadOf) return undefined;
     const mark = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      clearUnreadLocally(conv.kind, conv.id);
       Promise.resolve(api().markRead?.(conv)).catch(() => {});
     };
     mark();

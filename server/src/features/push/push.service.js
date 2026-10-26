@@ -169,6 +169,8 @@ function sendApns(deviceToken, { title, body, data, badge, ttlSeconds = null }) 
       'apns-topic': cfg.bundleId,
       'apns-push-type': 'alert',
       'apns-priority': '10',
+      // One notification per conversation on the iPhone too: a newer one replaces it (Android: tag).
+      ...(data?.conversationId ? { 'apns-collapse-id': String(data.conversationId).slice(0, 64) } : {}),
       ...(ttlSeconds ? { 'apns-expiration': String(Math.floor(Date.now() / 1000) + ttlSeconds) } : {}),
       'content-type': 'application/json',
     });

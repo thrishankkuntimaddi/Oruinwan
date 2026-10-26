@@ -117,6 +117,11 @@ export function setQueryData(key, updater) {
   return current;
 }
 
+/** The cached keys that start with `prefix`. */
+export function queryKeys(prefix = '') {
+  return [...entries.keys()].filter((k) => k.startsWith(prefix));
+}
+
 export function getQueryData(key) {
   return read(key).data;
 }

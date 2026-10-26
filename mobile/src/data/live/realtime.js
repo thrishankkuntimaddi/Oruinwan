@@ -1,6 +1,7 @@
 // Live updates from the server over Socket.IO. Events refresh the matching cached lists;
 // the screens then re-render from the query cache.
 import { io } from 'socket.io-client';
+import { clearUnreadLocally } from '../unread.js';
 import { emit } from '../../lib/bus.js';
 import { accessToken, refreshSession } from './http.js';
 import { NOTIFICATION_EVENTS, applyNotificationEvent } from './notificationLive.js';
@@ -80,6 +81,10 @@ export function connectRealtime(base) {
     socket.on(ev, changeEvent);
   }
   socket.on('new-dm-session', () => emit('data:changed', ['dms']));
+  // Read on another device (or another tab): clear its unread count here too.
+  socket.on('conversation:read', (p) => {
+    if (p?.conversationId) clearUnreadLocally(p.conversationType === 'channel' ? 'channel' : 'dm', p.conversationId);
+  });
   // I joined a workspace on another device (an invitation accepted in the browser).
   socket.on('workspaces:changed', () => emit('data:changed', ['workspaces']));
   // Group DMs: renamed, people added or removed, or I was removed.
