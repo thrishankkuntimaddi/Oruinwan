@@ -1,4 +1,3 @@
-import api from '../../services/api';
 import { parseGithubArgs, parseJiraArgs, parsePrRef, defaultRepoForChannel } from './prRefs';
 import {
     isConnected, notConnectedMessage, createGithubIssue, getPullRequest, createJiraIssue, createZoomMeeting, connectorAction,
@@ -6,7 +5,7 @@ import {
 import { openCloudPicker, itemMarkdown, PICKER_TYPES } from './CloudPicker';
 import { openCodeReview } from './codeReviewBus';
 
-// Slash commands that talk to integrations (and /task). The composer calls
+// Slash commands that talk to integrations (/task and the rest are in platform/commands). The composer calls
 // runIntegrationCommand() and shows `error` if it throws.
 
 // /drive etc. map to their connector type.
@@ -18,7 +17,7 @@ const ISSUE_COMMANDS = {
 };
 const MEET_LINK = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?\S*)?$/;
 
-export const INTEGRATION_COMMANDS = new Set(['github', 'jira', 'zoom', 'review', 'task', 'gmeet', ...Object.keys(PICKER_COMMANDS), ...Object.keys(ISSUE_COMMANDS)]);
+export const INTEGRATION_COMMANDS = new Set(['github', 'jira', 'zoom', 'review', 'gmeet', ...Object.keys(PICKER_COMMANDS), ...Object.keys(ISSUE_COMMANDS)]);
 
 /** "issue group/project Fix login" → { target, title }. */
 export function parseIssueArgs(name, args) {
@@ -101,25 +100,6 @@ export async function runIntegrationCommand(name, args, ctx) {
             const joinUrl = m.joinUrl || m.join_url;
             if (!joinUrl) fail('Zoom did not return a join link.');
             await send(`📹 **Zoom meeting — ${esc(m.topic || topic)}**\n[Join the meeting](${joinUrl})`);
-            return;
-        }
-
-        case 'task': {
-            const title = String(args || '').trim();
-            if (!title) fail('Usage: /task <title>');
-            if (!workspaceId) fail('Open a workspace first.');
-            const payload = channelId
-                ? { title, workspaceId, assignmentType: 'channel', channelId, visibility: 'channel', status: 'todo', priority: 'medium' }
-                : { title, workspaceId, assignmentType: 'self', status: 'todo', priority: 'medium' };
-            let task;
-            try {
-                const { data } = await api.post('/api/v2/tasks', payload);
-                task = data?.task || data?.tasks?.[0] || {};
-            } catch (err) {
-                fail(err?.response?.data?.message || 'Could not create the task.');
-            }
-            if (channelId) await send(`📋 New task${task.issueKey ? ` **${task.issueKey}**` : ''}: ${esc(task.title || title)}`);
-            notify?.(`Task created${task.issueKey ? ` (${task.issueKey})` : ''}`, 'success');
             return;
         }
 

@@ -20,7 +20,7 @@ export function chatTranscript(events = [], limit = 200) {
 }
 
 /** "Ask AI about this chat": a small floating panel under the conversation header. */
-export default function AskAiPanel({ events, title, workspaceId, onClose }) {
+export default function AskAiPanel({ events, title, workspaceId, onClose, initialQuestion = null }) {
     const [q, setQ] = useState('');
     const [busy, setBusy] = useState(false);
     const [answer, setAnswer] = useState(null); // { q, text } | { q, error }
@@ -51,8 +51,17 @@ export default function AskAiPanel({ events, title, workspaceId, onClose }) {
         }
     };
 
+    // Opened with a question (/summarize): ask it right away, once.
+    const askedInitial = useRef(null);
+    useEffect(() => {
+        if (!initialQuestion || askedInitial.current === initialQuestion) return;
+        askedInitial.current = initialQuestion;
+        ask(initialQuestion);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialQuestion]);
+
     return (
-        <div className="gl-card" role="dialog" aria-label="Ask AI about this chat" data-testid="ask-ai-panel"
+        <div className="gl-card anim-pop-in" role="dialog" aria-label="Ask AI about this chat" data-testid="ask-ai-panel"
             style={{ position: 'absolute', top: 64, right: 16, width: 'min(420px, calc(100% - 32px))', zIndex: 30, padding: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <Sparkles size={15} style={{ color: 'var(--accent)' }} />

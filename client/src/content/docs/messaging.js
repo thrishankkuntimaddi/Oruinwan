@@ -1,4 +1,6 @@
 // Messaging: channels, DMs, threads, mentions, message actions, media, commands, search.
+import { COMMANDS, usage } from '../../../../platform/commands/slashCommands.js';
+
 export default {
     id: 'messaging',
     title: 'Messaging',
@@ -281,25 +283,24 @@ export default {
         {
             id: 'slash-commands',
             title: 'Slash commands',
-            summary: 'Type / at the start of a message to start a call, create a poll or task, ask the AI, and more.',
-            keywords: 'slash command commands / call video meet poll code shrug ai task github review jira zoom',
+            summary: 'Type / in any message box to create a task, set a reminder, start a call, ask the AI, and more.',
+            keywords: 'slash command commands / task remind reminder poll checklist huddle call video ai summarize later schedule send later invite leave mute unmute status away back topic shrug me code search help meet github review jira zoom',
             blocks: [
-                'Type [[/]] at the start of a message to see the commands that are available here. Keep typing to filter, then press [[Enter]] or [[Tab]].',
-                { table: { caption: 'Slash commands', head: ['Command', 'What it does'], rows: [
-                    ['`/call`', 'Start (or join) a voice huddle here.'],
-                    ['`/video`', 'Start (or join) a video call here.'],
-                    ['`/meet`', 'Schedule a meeting and post it here.'],
-                    ['`/poll`', 'Create a poll (when polls are on).'],
-                    ['`/code [language]`', 'Insert a code block.'],
-                    ['`/shrug [message]`', 'Send your message with ¯\\_(ツ)_/¯.'],
-                    ['`/ai <question>`', 'Ask Oruinwan AI in the AI panel.'],
-                    ['`/task <title>`', 'Create a task in this conversation.'],
-                    ['`/github issue [owner/repo] <title>`', 'Open a GitHub issue. `/github pr owner/repo#12` shares a pull request.'],
-                    ['`/review owner/repo#12`', 'Open a pull request’s changes next to the chat (or paste a PR link).'],
-                    ['`/jira <PROJECT> <summary>`', 'Create a Jira issue.'],
-                    ['`/zoom [topic]`', 'Create a Zoom meeting and post the join link.'],
-                ] } },
-                { callout: 'note', text: '`/github`, `/review`, `/jira` and `/zoom` appear only when integrations are enabled on your server and connected for the workspace. See [Integrations](/docs/integrations/overview).' },
+                'Type [[/]] at the start of a message, in a channel, a direct message, a group or a thread. The list shows the commands that work there; keep typing to filter it. Use [[↑]] [[↓]] or tap to choose, [[Tab]] to fill in the name, and [[Enter]] to run it. The web app and the phone app have the same commands.',
+                'While you type a command, the line above the message box shows what it needs. If something is missing or wrong, the command is not sent: it tells you what to fix. A message that starts with an unknown command asks before sending it as text.',
+                { table: { caption: 'Slash commands', head: ['Command', 'What it does'], rows: COMMANDS.map((c) => [`\`${usage(c)}\``, `${c.description}.`]) } },
+                { h3: 'Examples' },
+                { list: [
+                    '`/task Fix login @sandeep tomorrow`: a task for Sandeep, due tomorrow, linked to this conversation.',
+                    '`/remind me in 1 hour check the build`: a reminder only you see. `/remind @mani friday 9am send the report` reminds Mani, and everyone here sees the line.',
+                    '`/poll "Lunch?" "Pizza" "Sushi"`: a poll with two options.',
+                    '`/checklist Launch: docs; blog; tweet`: a checklist titled Launch.',
+                    '`/later tomorrow 9am Standup notes are in the doc`: sends the message tomorrow at 9:00.',
+                    '`/status 🌴 On holiday until Monday`: your status. `/status` on its own clears it.',
+                ] },
+                'Times can be written as `in 10 minutes`, `in 2 hours`, `5pm`, `tomorrow`, `tomorrow 9am`, `friday 3pm`, `next week`, `nov 2` or `2026-11-02`. A day without a time means 9:00 (5:00 PM for a task’s due date).',
+                'Commands that create something for everyone (a task, a reminder for someone, a poll, a checklist) post a short line in the conversation so everyone sees what happened. What a command posts is end-to-end encrypted like any message.',
+                { callout: 'note', text: 'Only channel admins can use `/topic`. In a channel where only admins can post, commands that post are for admins too. On the web, `/meet` schedules a meeting, and `/github`, `/review`, `/jira`, `/zoom` and the other integration commands appear when integrations are connected for the workspace. See [Integrations](/docs/integrations/overview).' },
             ],
         },
         {

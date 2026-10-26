@@ -32,6 +32,7 @@ import { ScheduleSheet } from './ScheduleSheet.jsx';
 import { clearDraft, draftFor, saveDraft } from './drafts.js';
 import { hasFormatting, highlightSegments } from './composerHighlight.js';
 import { useSession } from '../../data/session.js';
+import { SlashBar, SlashList, filterCommands, helpLines, prepareCommand, runPrepared, runsWithoutArgs, typingHint } from './slash.jsx';
 
 const GROUP_GAP = 5 * 60_000;
 
@@ -719,6 +720,8 @@ export function MessageActions({
 export function Composer({
   placeholder, onSend, onPlus, disabled, disabledReason, initial = '', autoFocus, editing, editText = '', onCancelEdit, aiMentions = false, assistants,
   mentions = null, recent = null, onVoice = null, quote = null, onCancelQuote = null, onSchedule = null, directory = null, me = null, scheduleRef = null, draftConv = null,
+  // Slash commands: the actions here (see slash.jsx, phoneCommands). Null turns them off.
+  commands = null,
 }) {
   // Unsent text is kept per conversation on this device (Drafts & sent lists it).
   const draftWs = useSession((s) => s.workspaceId);
@@ -755,6 +758,53 @@ export function Composer({
     tap('select');
   };
   const voice = useVoiceRecorder((file) => onVoice?.(file));
+
+  // ── Slash commands: "/na" lists them, "/name args" shows how to use it, Send runs it.
+  const [slashNote, setSlashNote] = useState(null); // { kind: 'error' | 'unknown' | 'help', … }
+  const [slashActive, setSlashActive] = useState(0);
+  const slashOn = Boolean(commands) && !editing;
+  const slashCtx = slashOn
+    ? {
+        ...commands,
+        insert: (value) => fill(value),
+        showHelp: () => setSlashNote({ kind: 'help', lines: helpLines(slashCtxRef.current) }),
+      }
+    : null;
+  const slashCtxRef = useRef(slashCtx);
+  slashCtxRef.current = slashCtx;
+  const slashMenu = slashOn && /^\/[a-z0-9_-]*$/i.test(text) ? filterCommands(text, slashCtx) : null;
+  const slashHint = slashOn && !slashMenu && text.startsWith('/') ? typingHint(text, slashCtx) : null;
+  useEffect(() => setSlashActive(0), [text]);
+  const clearText = () => {
+    setText('');
+    setCaret(0);
+    if (draftConv) clearDraft(draftWs, draftConv);
+  };
+  // True when `value` was a command (run, or help shown instead of sending it).
+  const runSlash = (value) => {
+    const prepared = prepareCommand(value, slashCtx);
+    if (prepared.status === 'none') return false;
+    if (prepared.status === 'unknown') setSlashNote({ kind: 'unknown', name: prepared.name });
+    else if (prepared.status !== 'ready') setSlashNote({ kind: 'error', message: prepared.message });
+    else {
+      setSlashNote(null);
+      clearText();
+      tap('light');
+      runPrepared(prepared, slashCtx).catch((err) => {
+        setText((t) => t || value);
+        setSlashNote({ kind: 'error', message: err?.message || `/${prepared.command.name} didn't work.` });
+      });
+    }
+    return true;
+  };
+  const pickCommand = (c) => {
+    tap('select');
+    if (runsWithoutArgs(c)) {
+      runSlash(`/${c.name}`);
+      return;
+    }
+    fill(`/${c.name} `);
+  };
   // Formatting row (shown on demand, so the composer stays one line) and the emoji sheet.
   const [formatting, setFormatting] = useState(false);
   const [emoji, setEmoji] = useState(false);
@@ -836,9 +886,11 @@ export function Composer({
     );
   }
 
-  const send = () => {
+  const send = (asText = false) => {
     const value = text.trim();
     if (!value) return;
+    if (slashOn && !asText && runSlash(value)) return;
+    setSlashNote(null);
     onSend(value);
     setText('');
     setCaret(0);
@@ -857,6 +909,28 @@ export function Composer({
   if (scheduleRef) scheduleRef.current = openSchedule;
   // With a physical keyboard, Enter sends (or completes a mention) and Shift+Enter starts a new line.
   const onKeyDown = (e) => {
+    if (slashMenu?.length) {
+      const n = slashMenu.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashActive((i) => (i + (e.key === 'ArrowDown' ? 1 : n - 1)) % n);
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        fill(`/${slashMenu[Math.min(slashActive, n - 1)].name} `);
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+        e.preventDefault();
+        pickCommand(slashMenu[Math.min(slashActive, n - 1)]);
+        return;
+      }
+    }
+    if (e.key === 'Escape' && slashNote) {
+      setSlashNote(null);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && finePointer()) {
       e.preventDefault();
       if (people.length && !people[0].disabled) completeMention(people[0]);
@@ -892,6 +966,20 @@ export function Composer({
           </button>
         ))}
       <MentionSuggestions items={people} onPick={completeMention} />
+      {slashMenu && <SlashList items={slashMenu} active={slashActive} onPick={pickCommand} />}
+      {slashNote ? (
+        <SlashBar
+          notice={slashNote}
+          onClose={() => setSlashNote(null)}
+          onEdit={() => {
+            setSlashNote(null);
+            ref.current?.focus();
+          }}
+          onSendAsText={() => send(true)}
+        />
+      ) : (
+        slashHint && <SlashBar notice={{ kind: 'hint', ...slashHint }} />
+      )}
       {recent && !editing && !text && !voice.recording && <SmartReplies recent={recent} onPick={fill} />}
       {quote && !editing && (
         <div className="flex items-start gap-2 px-3 pt-2" data-testid="composer-quote">
@@ -959,6 +1047,7 @@ export function Composer({
                 onChange={(e) => {
                   setText(e.target.value);
                   setCaret(e.target.selectionStart ?? e.target.value.length);
+                  if (slashNote && slashNote.kind !== 'help') setSlashNote(null);
                 }}
                 onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? text.length)}
                 onScroll={(e) => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import api from '@services/api';
+import { commandPeople, createCommandTask, remindOnMessage, setMyStatus, setMyPresence } from '../slash/commandActions';
 import { formatTime as fmtTime } from "./helpers/helpers";
 import { useToast } from "../../../contexts/ToastContext";
 import { Smile, X, Bell, BellOff, CheckCircle2, RotateCcw, Sparkles, Pencil, Trash2, Columns2, Share2, Copy, Link2, Lock, LockOpen, UserPlus } from "lucide-react";
@@ -26,7 +27,7 @@ import { setOpenThread, clearOpenThread } from '../../notifications/attention';
 import { indexConversation } from '../../../utils/localMessageIndex';
 import { useAuth } from '../../../contexts/AuthContext';
 
-export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true, agentId = null }) {
+export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true, agentId = null, slashContext = null }) {
     const { showToast } = useToast();
 
     
@@ -92,6 +93,24 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     // Share / copy the thread: a plain-text transcript of what this device decrypted, plus a link
     // that opens the thread. Nothing is uploaded.
     const [shareAnchor, setShareAnchor] = useState(null);
+    // Slash commands in a thread: the conversation's (when this panel sits beside it), plus the
+    // thread's own: post here, link tasks and reminders to this thread, summarize it.
+    const threadSlashContext = {
+        ...(slashContext || { setStatus: setMyStatus, setPresence: setMyPresence }),
+        where: 'thread',
+        me: slashContext?.me || { id: currentUserId },
+        people: slashContext?.people || commandPeople(mentionMembers || []),
+        lastMessageId: () => {
+            const real = (x) => { const id = String(x?._id || x?.id || ''); return /^[a-f0-9]{24}$/i.test(id) ? id : null; };
+            for (let i = replies.length - 1; i >= 0; i -= 1) { const id = real(replies[i]); if (id) return id; }
+            return real(parentMessage);
+        },
+        createTask: (t) => createCommandTask({ ...t, workspaceId: threadWorkspaceId ? String(threadWorkspaceId) : null, conversationType, conversationId: channelId }),
+        remind: remindOnMessage,
+        askAi: (question) => handleSendReply(`@ai ${question}`),
+        summarize: () => setShowSummary(true),
+    };
+
     const shareThreadLink = () => threadLink({ base: webBase(), workspaceId: threadWorkspaceId ? String(threadWorkspaceId) : null, kind: conversationType, conversationId: channelId, parentId: threadRootId });
     const shareThreadText = () => buildThreadTranscript({
         title: threadTitle(conversationType, conversationName || parentMessageState?.channelId?.name || ''),
@@ -141,15 +160,6 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     }, [threadRootId]);
 
     // Slash commands in the thread composer.
-    const handleThreadSlash = (name, args) => {
-        if (name === 'ai') {
-            window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt: args || null } }));
-            return true;
-        }
-        return false;
-    };
-
-    
     const messageId = parentMessage._id || parentMessage.id;
     const { following, followerCount, toggle: toggleFollow, loading: followLoading, markAsFollowing } =
         useThreadFollow(messageId, initialFollowStatus);
@@ -583,6 +593,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
             
             markAsFollowing();
+            // Slash commands link to what they post (a task to its "Task created" line).
+            return { id: String(res.data.reply._id) };
         } catch (err) {
             logger.error("[THREAD][SEND][E2EE] Send reply failed:", err);
             showToast(err.response?.data?.message || "Failed to send reply", "error");
@@ -1090,7 +1102,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 newMessage={newReply}
                                 setNewMessage={setNewReply}
                                 onSend={handleSendReply}
-                                onSlashCommand={handleThreadSlash}
+                                slashContext={threadSlashContext}
                                 conversationType={conversationType}
                                 members={mentionMembers}
                                 broadcastMentionsAllowed={broadcastMentionsAllowed}

@@ -39,7 +39,11 @@ import { encryptMessageForSending } from '../../../services/messageEncryptionSer
 import useConversationAI, { mentionsAI, mentionsPerson } from '../../../hooks/useConversationAI';
 import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
 import { mentionCandidates, mentionedOutsiders, outsidersSentence } from '../mentionInvite';
-import { createGroupDM } from '../groupDm/groupDmApi';
+import { createGroupDM, addGroupDMMembers } from '../groupDm/groupDmApi';
+import {
+    commandPeople, createCommandTask, remindOnMessage, scheduleEncrypted, setConversationMuted, setMyStatus, setMyPresence,
+    setChannelTopic, leaveConversation, addToChannel, addToGroup, dmWith,
+} from '../slash/commandActions';
 import { getMessageText, toggleBookmarkedBy, formatReminderTime, canUseBroadcastMentions } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
@@ -70,6 +74,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const navigate = useNavigate();
     const location = useLocation();
     const { refreshContacts, members: workspaceMembers = [], dms: contactDms = [] } = useContacts() || {};
+    // The other person in a 1:1 DM. Some ways of opening a DM don't carry it; the contacts list does.
+    const dmOtherUserId = chat?.type === 'dm' && !chat?.isGroup
+        ? (chat?.userId || contactDms.find((d) => String(d.id) === String(chat?.id))?.userId || null)
+        : null;
 
     
     const huddle = useHuddle({
@@ -215,6 +223,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     useEffect(() => { setMentionInvite(null); setGroupOffer(null); }, [chat?.id]);
     // "Ask AI about this chat" (AskAiPanel); if AI is off for the workspace the panel says so.
     const [showAskAi, setShowAskAi] = useState(false);
+    // A question the Ask AI panel asks as soon as it opens (/summarize).
+    const [askAiQuestion, setAskAiQuestion] = useState(null);
     const [showChecklistModal, setShowChecklistModal] = useState(false);
     const [showReminders, setShowReminders] = useState(false);
     // Pull request open in the code-review side panel: { repo, number, messageId?, … } | null.
@@ -248,6 +258,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             default: return false;
         }
     };
+
+    // /call @person opens their DM with { startCall } in the route state: start the call here.
+    const startCallOnOpen = location.state?.startCall;
+    useEffect(() => {
+        if (!startCallOnOpen || !chat?.id || !features.huddles) return;
+        navigate(location.pathname + location.search, { replace: true, state: { ...location.state, startCall: undefined } });
+        startOrJoinCall(startCallOnOpen === 'video');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startCallOnOpen, chat?.id]);
 
     // Call buttons: leave if in a call; join a live one here (keeping its kind);
     // otherwise start a new voice or video call.
@@ -1092,8 +1111,13 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 const inChannel = (chat?.members || []).map((m) => String(m.user?._id || m.user || m._id || m));
                 const outsiders = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, inChannel, currentUserId);
                 if (outsiders.length) setMentionInvite(outsiders);
-            } else if (chat?.type === 'dm' && !chat?.isGroup && !chat?.isAgent && chat?.userId) {
-                const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [chat.userId, currentUserId], currentUserId);
+            } else if (chat?.type === 'dm' && chat?.isGroup) {
+                // A group: mentioning someone who isn't in it offers to add them.
+                const inGroup = (chat?.members || []).map((m) => String(m?._id || m?.id || m?.user?._id || m?.user || m));
+                const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [...inGroup, currentUserId], currentUserId);
+                if (others.length) setGroupOffer(others);
+            } else if (chat?.type === 'dm' && !chat?.isAgent && dmOtherUserId) {
+                const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [dmOtherUserId, currentUserId], currentUserId);
                 if (others.length) setGroupOffer(others);
             }
 
@@ -1126,7 +1150,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
         return result;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, chat?.isGroup, chat?.userId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
+    }, [actions, replyingTo, showToast, conversationAI, chat?.name, chat?.isAgent, chat?.agentId, chat?.type, chat?.members, chat?.isGroup, dmOtherUserId, user?.username, workspaceMembers, contactDms, workspaceId, currentUserId]);
 
     
     const handleSendAttachment = useCallback(async (attachment) => {
@@ -1748,6 +1772,97 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         };
     }).filter(m => m.username); 
 
+    // ── Slash commands: what they do in this conversation (platform/commands/slashCommands.js) ──
+    const sendChecklist = async (checklist) => {
+        const result = await actions.sendMessage({ type: 'checklist', checklist });
+        if (!result.success) {
+            showToast(result.message || result.error || 'Failed to send checklist', 'error');
+            throw new Error(result.message || 'Could not send the checklist.');
+        }
+        if (result.message) {
+            await conversation.addRealtimeEvent({
+                id: result.message._id,
+                type: 'checklist',
+                payload: { ...result.message, reactions: [], replyCount: 0, clientTempId: result.tempId },
+                checklist: result.message.checklist,
+                sender: result.message.sender,
+                createdAt: result.message.createdAt,
+            }, currentUserId);
+        }
+    };
+    const wsForCommands = workspaceId || chat?.workspaceId || activeWorkspace?.id || null;
+    const slashWhere = chat?.type === 'channel' ? 'channel' : chat?.isGroup ? 'group' : 'dm';
+    const slashContext = {
+        where: slashWhere,
+        canPost: !postingLocked && !blocked && !blockedByOther,
+        isChannelAdmin: chat?.type === 'channel' && channelPolicy.canManage !== false,
+        me: { id: currentUserId, username: user?.username },
+        people: commandPeople(workspaceMembers),
+        lastMessageId: () => {
+            const events = conversation.events || [];
+            for (let i = events.length - 1; i >= 0; i -= 1) {
+                const e = events[i];
+                const id = String(e?.id || e?._id || '');
+                if (/^[a-f0-9]{24}$/i.test(id) && e.type !== 'system' && !e.parentId) return id;
+            }
+            return null;
+        },
+        createTask: (t) => createCommandTask({ ...t, workspaceId: wsForCommands, conversationType: chat?.type, conversationId }),
+        remind: remindOnMessage,
+        ...(features.polls ? {
+            createPoll: ({ question, options }) => handleCreatePoll({
+                question, options: options.map((o) => ({ text: o, votes: [], count: 0 })),
+                allowMultiple: false, anonymous: false, endDate: null, createdAt: new Date().toISOString(), votes: {}, totalVotes: 0, status: 'active',
+            }),
+        } : {}),
+        createChecklist: sendChecklist,
+        ...(features.huddles && !chat?.isAgent ? {
+            startCall: ({ video }) => startOrJoinCall(video),
+            callPerson: async (person) => {
+                const dmId = await dmWith(wsForCommands, person.id);
+                navigate(`/workspace/${wsForCommands}/home/dm/${dmId}`, { state: { startCall: 'voice' } });
+            },
+        } : {}),
+        ...(features.ai !== false ? {
+            askAi: (question) => handleSend(`@ai ${question}`, { mentionText: '' }),
+            summarize: () => {
+                setAskAiQuestion('Summarize this conversation: the main points, decisions and anything still open.');
+                setShowAskAi(true);
+            },
+        } : {}),
+        scheduleMessage: (text, at) => scheduleEncrypted({ workspaceId: wsForCommands, conversationType: chat?.type, conversationId, text, at }),
+        invite: async (people) => {
+            if (chat?.type === 'channel') {
+                const added = await addToChannel(conversationId, people);
+                showToast(added === 1 ? 'Added to the channel' : `${added} people added`, 'success');
+                refreshContacts?.(wsForCommands);
+            } else if (chat?.isGroup) {
+                await addToGroup(conversationId, people);
+                showToast(people.length === 1 ? 'Added to the group' : `${people.length} people added to the group`, 'success');
+                refreshContacts?.(wsForCommands);
+            } else {
+                // A 1:1 chat: offer a group with them (the same bar as mentioning someone).
+                setGroupOffer(people);
+            }
+        },
+        ...(chat?.type === 'channel' || chat?.isGroup ? {
+            leave: async () => {
+                await leaveConversation(chat?.type === 'channel' ? 'channel' : 'dm', conversationId);
+                showToast(chat?.type === 'channel' ? `You left #${String(chat?.name || '').replace(/^#/, '')}` : 'You left the group', 'success');
+                await refreshContacts?.(wsForCommands);
+                navigate(`/workspace/${wsForCommands}/home`);
+            },
+        } : {}),
+        setMuted: async (next) => {
+            await setConversationMuted(chat?.type === 'channel' ? 'channel' : 'dm', conversationId, next);
+            setMuted(next);
+        },
+        setStatus: setMyStatus,
+        setPresence: setMyPresence,
+        ...(chat?.type === 'channel' ? { setTopic: (topic) => setChannelTopic(conversationId, topic) } : {}),
+        openSearch: (words) => { setShowSearch(true); setSearchQuery(words || ''); },
+    };
+
     const userJoinedAt = conversationType === 'channel'
         ? chat?.members?.find(m => (m.user?._id || m.user) === currentUserId)?.joinedAt
         : null;
@@ -1758,7 +1873,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 <div className="gl-card" role="status" data-testid="group-offer"
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
-                        {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. Start a group with {chat?.name || 'them'} and {groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}?
+                        {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. {chat?.isGroup
+                            ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group? They see the whole conversation.`
+                            : `Start a group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}?`}
                     </span>
                     <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setGroupOffer(null)} disabled={mentionInviteBusy}>Not now</button>
                     <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="group-offer-start" disabled={mentionInviteBusy}
@@ -1766,18 +1883,25 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                             setMentionInviteBusy(true);
                             try {
                                 const ws = workspaceId || chat?.workspaceId;
-                                const dm = await createGroupDM(ws, [chat.userId, ...groupOffer.map((p) => p.id)]);
+                                if (chat?.isGroup) {
+                                    await addGroupDMMembers(chat.id, groupOffer.map((p) => p.id));
+                                    setGroupOffer(null);
+                                    await refreshContacts?.(ws);
+                                    showToast(groupOffer.length === 1 ? 'Added to the group' : `${groupOffer.length} people added to the group`, 'success');
+                                    return;
+                                }
+                                const dm = await createGroupDM(ws, [dmOtherUserId, ...groupOffer.map((p) => p.id)]);
                                 setGroupOffer(null);
                                 await refreshContacts?.(workspaceId || chat?.workspaceId);
                                 navigate(`/workspace/${ws}/home/dm/${dm._id || dm.id}`);
                                 showToast('Group ready: carry on there', 'success');
                             } catch (err) {
-                                showToast(err?.response?.data?.message || 'Could not start the group', 'error');
+                                showToast(err?.response?.data?.message || (chat?.isGroup ? 'Could not add them' : 'Could not start the group'), 'error');
                             } finally {
                                 setMentionInviteBusy(false);
                             }
                         }}>
-                        {mentionInviteBusy ? 'Starting…' : 'Start group'}
+                        {chat?.isGroup ? (mentionInviteBusy ? 'Adding…' : 'Add to group') : (mentionInviteBusy ? 'Starting…' : 'Start group')}
                     </button>
                 </div>
             )}
@@ -1818,7 +1942,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         events={conversation.events}
                         title={chat?.type === 'channel' ? `#${chat?.name || 'channel'}` : (chat?.name || chat?.username || 'this chat')}
                         workspaceId={workspaceId || chat?.workspaceId}
-                        onClose={() => setShowAskAi(false)}
+                        initialQuestion={askAiQuestion}
+                        onClose={() => { setShowAskAi(false); setAskAiQuestion(null); }}
                     />
                 </Suspense>
             )}
@@ -1943,6 +2068,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 }}
                 onSendAttachment={handleSendAttachment}
                 onSlashCommand={handleSlashCommand}
+                slashContext={slashContext}
                 onCreateChecklist={() => setShowChecklistModal(true)}
                 onCreatePoll={features.polls ? () => setShowPollModal(true) : undefined}
                 features={features}
@@ -2107,23 +2233,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             {showChecklistModal && (
                 <CreateChecklistModal
                     onClose={() => setShowChecklistModal(false)}
-                    onCreate={async (checklist) => {
-                        const result = await actions.sendMessage({ type: 'checklist', checklist });
-                        if (!result.success) {
-                            showToast(result.message || result.error || 'Failed to send checklist', 'error');
-                            throw new Error('send failed');
-                        }
-                        if (result.message) {
-                            await conversation.addRealtimeEvent({
-                                id: result.message._id,
-                                type: 'checklist',
-                                payload: { ...result.message, reactions: [], replyCount: 0, clientTempId: result.tempId },
-                                checklist: result.message.checklist,
-                                sender: result.message.sender,
-                                createdAt: result.message.createdAt,
-                            }, currentUserId);
-                        }
-                    }}
+                    onCreate={sendChecklist}
                 />
             )}
             {/* The call itself shows app-wide (features/huddles/call/CallScreen). */}

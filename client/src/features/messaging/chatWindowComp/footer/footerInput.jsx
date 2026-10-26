@@ -11,12 +11,12 @@ import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete
 import { useAssistants } from "../../../../hooks/useAssistants";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
-import { parseSlashCommand } from "../../../../components/chat/slash/slashCommands";
+import { menuCommands, prepareCommand, runPrepared, webOnlyCommandFor, typingHint, helpLines, parseCommandLine } from "../../../../components/chat/slash/slashCommands";
 import { useFeatureFlags } from "../../../../contexts/FeatureFlagsContext";
-import { INTEGRATION_COMMANDS, runIntegrationCommand } from "../../../../features/integrations/slashActions";
+import { runIntegrationCommand } from "../../../../features/integrations/slashActions";
 import { BridgeNotice } from "../../../../features/integrations/bridgeRelay";
 import { useToast } from "../../../../contexts/ToastContext";
-import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
+import SlashNotice from "../../../../components/chat/slash/SlashNotice";
 import SmartReplySuggestions from "./SmartReplySuggestions";
 import { useAIContext } from "../../../../contexts/AIContext";
 import ScreenRecorder from "./ScreenRecorder";
@@ -65,6 +65,8 @@ export default function FooterInput({
   onCreatePoll,
   onCreateChecklist,
   onSlashCommand,
+  // Actions for slash commands here (see platform/commands/slashCommands.js): where, people, createTask…
+  slashContext = null,
   features = null,
   linkPreview = null,
   linkPreviewLoading = false,
@@ -115,7 +117,8 @@ export default function FooterInput({
 
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
-  const [previewCommand, setPreviewCommand] = useState(null);
+  // Slash command help above the composer: hint while typing, error, "send as text?", /help.
+  const [slashNotice, setSlashNotice] = useState(null);
   const { flags } = useFeatureFlags();
   const { showToast } = useToast();
   // Workspace admins can switch off uploads and AI; hide their controls.
@@ -177,30 +180,6 @@ export default function FooterInput({
       zone.removeEventListener('drop', onDrop);
     };
   }, [canUpload, disabled, addFiles]);
-
-  const insertSlashCommand = useCallback((cmd) => {
-    if (!editableRef.current) return;
-    editableRef.current.focus();
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const textNode = editableRef.current.firstChild;
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, textNode.length);
-        range.deleteContents();
-      } else {
-        editableRef.current.innerHTML = "";
-      }
-    }
-    document.execCommand("insertText", false, `${cmd.command} `);
-    const html = editableRef.current.innerHTML || "";
-    setHasText(true);
-    onChange({ target: { value: html } });
-    setShowSlashMenu(false);
-    setSlashQuery("");
-    setPreviewCommand(cmd);
-  }, [onChange]);
 
   // Oruinwan AI (assistant panel, smart replies, drafts) inserts text here.
   const aiCtx = useAIContext();
@@ -377,20 +356,109 @@ export default function FooterInput({
     }
   };
 
+  // ── Slash commands ──
+  // The actions every composer has; the conversation adds the rest through `slashContext`.
+  const skipCommandRef = useRef(false);
+  const slashCtx = {
+    where: conversationType === 'channel' ? 'channel' : 'dm',
+    canPost: !blocked && !disabled,
+    send: async (text) => {
+      const handles = (String(text).match(/@[\w.-]+/g) || []).join(' ');
+      const r = await onSend(text, { mentionText: handles });
+      const id = r?.message?._id || r?.message?.id || r?.id || null;
+      return id ? { id: String(id) } : null;
+    },
+    insert: (text) => insertText(text),
+    showHelp: () => setSlashNotice({ kind: 'help', lines: helpLines(slashCtxRef.current) }),
+    toast: (message, tone) => showToast?.(message, tone),
+    ...(slashContext || {}),
+  };
+  const slashCtxRef = useRef(slashCtx);
+  slashCtxRef.current = slashCtx;
+
+  const clearComposer = useCallback(() => {
+    if (editableRef.current) editableRef.current.innerHTML = "";
+    setHasText(false); setNewMessage(""); setShowSlashMenu(false);
+  }, [setNewMessage]);
+
+  const putBack = useCallback((typed) => {
+    if (editableRef.current && !editableRef.current.textContent.trim()) insertText(typed);
+  }, [insertText]);
+
+  // Runs `typed` when it's a command. True when it was handled (run, or help shown instead).
+  const runSlashText = (typed) => {
+    const ctx = slashCtxRef.current;
+    // Web-only: /meet and the integrations.
+    const webOnly = webOnlyCommandFor(typed, flags, ctx.where);
+    if (webOnly) {
+      const { command, args } = webOnly;
+      clearComposer();
+      setSlashNotice(null);
+      if (command.name === 'meet') {
+        if (!onSlashCommand || onSlashCommand('meet', args) === false) { putBack(typed); setSlashNotice({ kind: 'error', message: "/meet isn't available here." }); }
+        return true;
+      }
+      const wsId = workspaceId || window.location.pathname.match(/\/workspace\/([^/]+)/)?.[1] || null;
+      runIntegrationCommand(command.name, args, {
+        workspaceId: wsId, conversationId, conversationType,
+        send: (text) => onSend(text, { mentionText: '' }),
+        notify: (msg, tone) => showToast?.(msg, tone),
+      }).catch((err) => {
+        putBack(typed);
+        setSlashNotice({ kind: 'error', message: err?.message || 'That command failed.' });
+      });
+      return true;
+    }
+    const prepared = prepareCommand(typed, ctx);
+    if (prepared.status === 'none') return false;
+    setShowSlashMenu(false);
+    if (prepared.status === 'unknown') { setSlashNotice({ kind: 'unknown', name: prepared.name }); return true; }
+    if (prepared.status !== 'ready') { setSlashNotice({ kind: 'error', message: prepared.message }); return true; }
+    clearComposer();
+    setSlashNotice(null);
+    runPrepared(prepared, ctx).catch((err) => {
+      putBack(typed);
+      setSlashNotice({ kind: 'error', message: err?.response?.data?.message || err?.message || `/${prepared.command.name} didn't work.` });
+    });
+    return true;
+  };
+
+  const runSlashTextRef = useRef(runSlashText);
+  runSlashTextRef.current = runSlashText;
+
+  // A command picked from the list: run it when it needs nothing more, otherwise fill "/name ".
+  const pickSlashCommand = (command, { run }) => {
+    if (run) { runSlashText(`/${command.name}`); return; }
+    const el = editableRef.current;
+    if (!el) return;
+    el.focus();
+    el.innerHTML = "";
+    document.execCommand("insertText", false, `/${command.name} `);
+    setHasText(true);
+    onChange({ target: { value: el.innerHTML || "" } });
+    setShowSlashMenu(false);
+    setSlashQuery("");
+    const hint = typingHint(`/${command.name} `, slashCtxRef.current);
+    setSlashNotice(hint ? { kind: 'hint', ...hint } : null);
+  };
+
   const handleInput = useCallback((e) => {
     const html = e.currentTarget.innerHTML;
     const text = stripTags(html).trim();
     setHasText(text.length > 0);
     onChange({ target: { value: html } });
     handleMentionInput();
-    if (text.startsWith("/")) {
+    // "/na" shows the list; "/name args" shows how to use it.
+    const line = text.startsWith("/") ? parseCommandLine(text) : null;
+    if (/^\/[a-z0-9_-]*$/i.test(text)) {
       setSlashQuery(text);
       setShowSlashMenu(true);
-      setPreviewCommand(null);
+      setSlashNotice((n) => (n?.kind === 'help' ? n : null));
     } else {
       setShowSlashMenu(false);
       setSlashQuery("");
-      if (!text) setPreviewCommand(null);
+      const hint = line ? typingHint(text, slashCtxRef.current) : null;
+      setSlashNotice((n) => (hint ? { kind: 'hint', ...hint } : n?.kind === 'help' ? n : null));
     }
   }, [onChange, handleMentionInput]);
 
@@ -402,51 +470,9 @@ export default function FooterInput({
     if (!textContent || blocked || disabled) return;
     closeSuggestions();
 
-    // Slash commands run instead of being sent as text.
-    const command = parseSlashCommand(el.innerText, flags);
-    if (command) {
-      const clear = () => {
-        if (editableRef.current) editableRef.current.innerHTML = "";
-        setHasText(false); setNewMessage(""); setShowSlashMenu(false); setPreviewCommand(null);
-      };
-      if (command.name === 'shrug') {
-        clear();
-        onSend(`${command.args ? `${command.args} ` : ''}¯\\\\\\_(ツ)\\_/¯`, { mentionText: '' }); // markdown-escaped shrug
-        return;
-      }
-      if (command.name === 'code') {
-        el.innerText = '';
-        el.focus();
-        document.execCommand('insertText', false, '```' + (command.args || '') + '\n\n```');
-        setHasText(true);
-        setShowSlashMenu(false); setPreviewCommand(null);
-        return;
-      }
-      // /github, /jira, /zoom, /review, /task: run here, post the result as a
-      // message; on failure explain why and give the command back to edit.
-      if (INTEGRATION_COMMANDS.has(command.name)) {
-        const typed = el.innerText.trim();
-        clear();
-        const wsId = workspaceId || window.location.pathname.match(/\/workspace\/([^/]+)/)?.[1] || null;
-        runIntegrationCommand(command.name, command.args, {
-          workspaceId: wsId,
-          conversationId,
-          conversationType,
-          send: (text) => onSend(text, { mentionText: '' }),
-          notify: (msg, tone) => showToast?.(msg, tone),
-        }).catch((err) => {
-          showToast?.(err?.message || 'That command failed.', 'error', 6000);
-          if (editableRef.current && !editableRef.current.textContent.trim()) insertText(typed);
-        });
-        return;
-      }
-      // Only a view that handles slash commands may consume one; without a
-      // handler the text is sent as typed instead of silently disappearing.
-      if (onSlashCommand && onSlashCommand(command.name, command.args) !== false) {
-        clear();
-        return;
-      }
-    }
+    // Slash commands run instead of being sent as text (and /xyz never goes out by accident).
+    if (!skipCommandRef.current && runSlashTextRef.current(el.innerText.trim())) return;
+    skipCommandRef.current = false;
     const mentionText = extractMentionText(editableRef);
     let markdown;
     // Real formatting tags only: `<br>` (a plain line break) used to match `<b` and send
@@ -463,8 +489,9 @@ export default function FooterInput({
     setHasText(false);
     setNewMessage("");
     setShowSlashMenu(false);
-    setPreviewCommand(null);
-  }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText, flags, onSlashCommand, workspaceId, conversationId, conversationType, showToast, insertText]);
+    setSlashNotice(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText]);
 
   const handleKeyDown = useCallback((e) => {
     if (showSlashMenu) {
@@ -473,7 +500,7 @@ export default function FooterInput({
     }
     if (e.key === 'Escape') {
       if (showSlashMenu) { setShowSlashMenu(false); return; }
-      if (previewCommand) { setPreviewCommand(null); return; }
+      if (slashNotice) { setSlashNotice(null); return; }
     }
     if (showSuggestions) {
       const consumed = handleMentionKeyDown(e);
@@ -489,7 +516,7 @@ export default function FooterInput({
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion, showSlashMenu, previewCommand]);
+  }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion, showSlashMenu, slashNotice]);
 
   const handlePickEmoji = useCallback((emoji) => {
     editableRef.current?.focus();
@@ -578,10 +605,12 @@ export default function FooterInput({
       )}
 
       {}
-      {previewCommand && !showSlashMenu && (
-        <SlashCommandPreview
-          command={previewCommand}
-          onClose={() => setPreviewCommand(null)}
+      {slashNotice && !showSlashMenu && (
+        <SlashNotice
+          notice={slashNotice}
+          onClose={() => setSlashNotice(null)}
+          onEdit={() => { setSlashNotice(null); editableRef.current?.focus(); }}
+          onSendAsText={() => { setSlashNotice(null); skipCommandRef.current = true; handleSend(); }}
         />
       )}
 
@@ -706,9 +735,9 @@ export default function FooterInput({
           <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 60, marginBottom: '4px' }}>
             <SlashCommandMenu
               query={slashQuery}
-              onSelect={insertSlashCommand}
-              onClose={() => { setShowSlashMenu(false); setPreviewCommand(null); }}
-              onPreviewChange={setPreviewCommand}
+              items={menuCommands(slashQuery, slashCtx, flags)}
+              onPick={pickSlashCommand}
+              onClose={() => setShowSlashMenu(false)}
             />
           </div>
         )}

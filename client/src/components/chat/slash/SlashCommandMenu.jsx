@@ -1,118 +1,73 @@
 import React, { useEffect, useRef, useState } from "react";
-import { SLASH_COMMAND_CATEGORIES, filterSlashCommands } from "./slashCommands";
-import { useFeatureFlags } from "../../../contexts/FeatureFlagsContext";
+import { SLASH_COMMAND_CATEGORIES, runsWithoutArgs } from "./slashCommands";
 import SlashCommandItem from "./SlashCommandItem";
 
-export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewChange }) {
-  const { flags } = useFeatureFlags();
-  const filtered = filterSlashCommands(query, flags);
+/**
+ * The list shown while typing "/name". ↑↓ (or hover) picks, Tab fills the name, Enter runs a
+ * command that needs nothing more (otherwise fills it), a click does the same as Enter.
+ * items: the commands to show, already filtered. onPick(command, { run }).
+ */
+export default function SlashCommandMenu({ items = [], query = "/", onPick, onClose }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  const listRef = useRef(null);
   const activeItemRef = useRef(null);
+  // Grouped order is the order shown (and the order the arrow keys walk).
+  const grouped = SLASH_COMMAND_CATEGORIES
+    .map((cat) => ({ ...cat, commands: items.filter((c) => c.category === cat.id) }))
+    .filter((cat) => cat.commands.length > 0);
+  const flat = grouped.flatMap((g) => g.commands);
+  const key = flat.map((c) => c.name).join(",");
 
+  useEffect(() => { setActiveIdx(0); }, [key]);
   useEffect(() => {
-    const clamped = Math.min(activeIdx, Math.max(filtered.length - 1, 0));
-    setActiveIdx(clamped);
-    onPreviewChange?.(filtered[clamped] ?? null);
-    
-  }, [query]);
+    activeItemRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIdx]);
 
-  useEffect(() => {
-    activeItemRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    onPreviewChange?.(filtered[activeIdx] ?? null);
-  }, [activeIdx, filtered, onPreviewChange]);
+  const pick = (command, viaTab = false) => onPick?.(command, { run: !viaTab && runsWithoutArgs(command) });
 
   SlashCommandMenu.handleKey = (e) => {
-    if (!filtered.length) return false;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((i) => (i + 1) % filtered.length); return true; }
-    if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((i) => (i - 1 + filtered.length) % filtered.length); return true; }
-    if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); if (filtered[activeIdx]) onSelect(filtered[activeIdx]); return true; }
+    if (!flat.length) return false;
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((i) => (i + 1) % flat.length); return true; }
+    if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((i) => (i - 1 + flat.length) % flat.length); return true; }
+    if (e.key === "Tab") { e.preventDefault(); if (flat[activeIdx]) pick(flat[activeIdx], true); return true; }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (flat[activeIdx]) pick(flat[activeIdx]); return true; }
     if (e.key === "Escape") { onClose?.(); return true; }
     return false;
   };
 
-  if (!filtered.length) {
+  if (!flat.length) {
     return (
-      <div className="gl-liquid gl-liquid--strong" style={{
-        width: '100%', borderRadius: 'var(--gl-radius-md)',
-        padding: '20px', textAlign: 'center',
-      }}>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-          No commands match <code style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{query}</code>
+      <div className="gl-liquid gl-liquid--strong anim-pop-in" data-testid="slash-menu" style={{ width: '100%', borderRadius: 'var(--gl-radius-md)', padding: '14px 16px' }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+          No command called <code style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{String(query).split(/\s+/)[0]}</code>. Type /help to see them all.
         </p>
       </div>
     );
   }
 
-  const grouped = SLASH_COMMAND_CATEGORIES
-    .map((cat) => ({ ...cat, commands: filtered.filter((cmd) => cmd.category === cat.id) }))
-    .filter((cat) => cat.commands.length > 0);
-
   let flatIdx = 0;
-
   return (
     <div
       onMouseDown={(e) => e.preventDefault()}
-      className="gl-liquid gl-liquid--strong"
-      style={{
-        width: '100%', borderRadius: 'var(--gl-radius-md)',
-        overflow: 'hidden',
-      }}
+      className="gl-liquid gl-liquid--strong anim-pop-in"
+      data-testid="slash-menu"
+      role="listbox"
+      aria-label="Commands"
+      style={{ width: '100%', borderRadius: 'var(--gl-radius-md)', overflow: 'hidden' }}
     >
-      {}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '6px 12px',
-        backgroundColor: 'var(--bg-active)',
-        borderBottom: '1px solid var(--border-subtle)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.14em',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          }}>Commands</span>
-          {query && query !== "/" && (
-            <span style={{
-              fontFamily: 'monospace', fontSize: '11px',
-              color: 'var(--accent)',
-              backgroundColor: 'rgba(184,149,106,0.1)',
-              padding: '1px 6px', borderRadius: '2px',
-            }}>{query}</span>
-          )}
-        </div>
-        <button
-          onMouseDown={(e) => { e.preventDefault(); onClose?.(); }}
-          style={{
-            color: 'var(--text-muted)', background: 'none', border: 'none',
-            cursor: 'pointer', fontSize: '12px', padding: '2px 4px',
-            transition: 'color 150ms ease',
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-          title="Close (Esc)"
-        >✕</button>
-      </div>
-
-      {}
-      <div ref={listRef} style={{ maxHeight: '260px', overflowY: 'auto', padding: '4px 6px' }}>
+      <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 6px' }}>
         {grouped.map((cat) => (
           <div key={cat.id}>
             <div style={{ padding: '6px 8px 3px' }}>
-              <span style={{
-                fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
-                textTransform: 'uppercase', letterSpacing: '0.14em',
-                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-              }}>{cat.label}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>{cat.label}</span>
             </div>
             {cat.commands.map((cmd) => {
               const thisIdx = flatIdx++;
               return (
-                <div key={cmd.command} ref={thisIdx === activeIdx ? activeItemRef : null}>
+                <div key={cmd.name} ref={thisIdx === activeIdx ? activeItemRef : null}>
                   <SlashCommandItem
                     command={cmd}
                     isActive={thisIdx === activeIdx}
-                    onSelect={onSelect}
+                    onSelect={() => pick(cmd)}
                     onHover={() => setActiveIdx(thisIdx)}
                   />
                 </div>
@@ -121,24 +76,10 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
           </div>
         ))}
       </div>
-
-      {}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '6px 12px',
-        borderTop: '1px solid var(--border-subtle)',
-        backgroundColor: 'var(--bg-active)',
-      }}>
-        {[['↑↓', 'navigate'], ['↵', 'select'], ['Esc', 'close']].map(([key, label]) => (
-          <span key={key} style={{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            fontSize: '10px', color: 'var(--text-muted)',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          }}>
-            <kbd style={{
-              backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)',
-              borderRadius: '2px', padding: '1px 4px', fontSize: '9px', fontFamily: 'monospace',
-            }}>{key}</kbd>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)' }}>
+        {[['↑↓', 'choose'], ['Tab', 'fill'], ['↵', 'run'], ['Esc', 'close']].map(([k, label]) => (
+          <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+            <kbd style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', borderRadius: 2, padding: '1px 4px', fontSize: 10, fontFamily: 'monospace' }}>{k}</kbd>
             {label}
           </span>
         ))}

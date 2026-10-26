@@ -93,3 +93,42 @@ test('mentioning someone else in a 1:1 DM offers a group with the three of you',
   expect(ids).toEqual([seedData().users.vishnu.id, seedData().users.manogna.id, seedData().users.sandeep.id].sort());
   await ctx.close();
 });
+
+// Opened on the Messages page, a DM didn't know who the other person was, so mentioning
+// someone else offered nothing. In a group, mentioning someone outside offers to add them.
+test('a DM opened on the Messages page offers a group; a group offers to add', async ({ browser }) => {
+  test.setTimeout(240_000);
+  const t = Date.now();
+  const { openDm, sendText } = require('./helpers');
+  const ws = seedData().workspaceId;
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.addLocatorHandler(page.locator('[data-tour-card]'), async () => {
+    await page.getByRole('button', { name: 'Skip tour' }).click();
+  });
+  await login(page, 'vishnu');
+  await openWorkspace(page);
+  await openDm(page, 'manogna');
+  const dmId = page.url().match(/\/dm\/([a-f0-9]{24})/)[1];
+
+  await page.goto(`${E2E.webUrl}/workspace/${ws}/messages/dm/${dmId}`);
+  await sendText(page, `ping @sandeep about this ${t}`);
+  const offer = page.getByTestId('group-offer');
+  await expect(offer).toBeVisible({ timeout: 30_000 });
+  await expect(offer).toContainText('Start a group');
+  await page.getByTestId('group-offer-start').click();
+  await page.waitForURL((u) => /\/dm\/[a-f0-9]{24}/.test(String(u)) && !String(u).includes(dmId), { timeout: 30_000 });
+  const groupId = page.url().match(/\/dm\/([a-f0-9]{24})/)[1];
+
+  await sendText(page, `and @alice too ${t}`);
+  await expect(offer).toBeVisible({ timeout: 30_000 });
+  await expect(offer).toContainText('Add them to the group');
+  await page.getByTestId('group-offer-start').click();
+  await expect(offer).toBeHidden({ timeout: 30_000 });
+
+  const details = await page.request.get(`${E2E.apiUrl}/api/v2/dm/${groupId}`, { headers: { Authorization: `Bearer ${await token(page)}` } });
+  const dm = (await details.json()).dm;
+  const ids = (dm.members || dm.participants || []).map((m) => String(m._id || m.id || m));
+  expect(ids).toContain(seedData().users.alice.id);
+  await ctx.close();
+});

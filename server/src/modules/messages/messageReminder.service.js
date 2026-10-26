@@ -5,7 +5,7 @@ const MessageReminder = require('./messageReminder.model');
 const Message         = require('./message.model');
 const { loadAccessibleMessage } = require('./messageAccess');
 
-async function scheduleReminder(userId, messageId, remindAt, note = '') {
+async function scheduleReminder(userId, messageId, remindAt, note = '', { forUserId = null } = {}) {
   const when = new Date(remindAt);
   if (isNaN(when.getTime())) throw Object.assign(new Error('Invalid remindAt date'), { status: 400 });
   if (when <= new Date()) throw Object.assign(new Error('remindAt must be in the future'), { status: 400 });
@@ -14,11 +14,23 @@ async function scheduleReminder(userId, messageId, remindAt, note = '') {
   // Throws 400/404/403 when the message is missing or the caller cannot read it.
   await loadAccessibleMessage(Message, messageId, userId, { select: '_id channel dm', lean: true });
 
+  // A reminder for someone else (/remind @person): they must be able to read the message too.
+  const target = forUserId && String(forUserId) !== String(userId) ? String(forUserId) : null;
+  if (target) {
+    if (!require('mongoose').Types.ObjectId.isValid(target)) throw Object.assign(new Error('Invalid person'), { status: 400 });
+    try {
+      await loadAccessibleMessage(Message, messageId, target, { select: '_id channel dm', lean: true });
+    } catch {
+      throw Object.assign(new Error("They can't see this conversation, so they can't be reminded about it"), { status: 403 });
+    }
+  }
+
   const reminder = await MessageReminder.create({
-    userId,
+    userId: target || userId,
     messageId,
     remindAt: when,
     note: String(note || '').trim().slice(0, 500),
+    ...(target ? { setBy: userId } : {}),
   });
   return reminder;
 }
@@ -79,6 +91,7 @@ async function deliverDueReminders(io) {
           message:    reminder.messageId,
           note:       reminder.note,
           remindAt:   reminder.remindAt,
+          setBy:      reminder.setBy || null,
         });
       }
     }

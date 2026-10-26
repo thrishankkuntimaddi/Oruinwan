@@ -4,8 +4,9 @@ import { Fragment } from 'react';
 import { cx } from './cx.js';
 import { CodeBlock } from './CodeBlock.jsx';
 
+// A backslash escapes a markdown character (\_ shows _), as on the web: /shrug sends ¯\\\_(ツ)\_/¯.
 const INLINE =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)|(~~[^~\n]+~~)/g;
+  /(\\[\\`*_~[\]()#])|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))|((?:https?:\/\/)[^\s<>()]+[^\s<>().,!?;:'"])|(@[A-Za-z][\w.-]*)|(#[a-z0-9][a-z0-9_-]*)|(~~[^~\n]+~~)/g;
 
 function inline(text, keyBase = 'i', { onLink } = {}) {
   const out = [];
@@ -15,10 +16,11 @@ function inline(text, keyBase = 'i', { onLink } = {}) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const [tok] = m;
     const key = `${keyBase}-${m.index}`;
-    if (m[1]) out.push(<code key={key}>{tok.slice(1, -1)}</code>);
-    else if (m[2]) out.push(<strong key={key}>{inline(tok.slice(2, -2), key)}</strong>);
-    else if (m[3]) out.push(<em key={key}>{tok.slice(1, -1)}</em>);
-    else if (m[4]) {
+    if (m[1]) out.push(tok.slice(1));
+    else if (m[2]) out.push(<code key={key}>{tok.slice(1, -1)}</code>);
+    else if (m[3]) out.push(<strong key={key}>{inline(tok.slice(2, -2), key)}</strong>);
+    else if (m[4]) out.push(<em key={key}>{tok.slice(1, -1)}</em>);
+    else if (m[5]) {
       const label = tok.slice(1, tok.indexOf(']'));
       const href = tok.slice(tok.indexOf('(') + 1, -1);
       out.push(
@@ -26,19 +28,19 @@ function inline(text, keyBase = 'i', { onLink } = {}) {
           {label}
         </a>,
       );
-    } else if (m[5]) {
+    } else if (m[6]) {
       out.push(
         <a key={key} href={tok} onClick={(e) => onLink && (e.preventDefault(), onLink(tok))} target="_blank" rel="noreferrer noopener">
           {tok.replace(/^https?:\/\//, '')}
         </a>,
       );
-    } else if (m[6] || m[7]) {
+    } else if (m[7] || m[8]) {
       out.push(
         <span key={key} className="rounded bg-accent/12 px-0.5 font-medium text-accent-ink">
           {tok}
         </span>,
       );
-    } else if (m[8]) out.push(<del key={key}>{inline(tok.slice(2, -2), key)}</del>);
+    } else if (m[9]) out.push(<del key={key}>{inline(tok.slice(2, -2), key)}</del>);
     last = m.index + tok.length;
   }
   if (last < text.length) out.push(text.slice(last));

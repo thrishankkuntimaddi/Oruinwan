@@ -665,6 +665,11 @@ export const liveAdapter = {
     await api.patch('/users/status', { status: presence });
     return presence;
   },
+  /** A custom status ({ emoji, text }), or null to clear it (/status). */
+  async setCustomStatus(status) {
+    const data = await api.patch('/users/status', { customStatus: status || null });
+    return data.customStatus || null;
+  },
 
   async workspaces() {
     const data = await api.get('/workspaces/my');
@@ -764,6 +769,10 @@ export const liveAdapter = {
   async setConversationPref(ws, conv, patch) {
     const data = await api.put('/v2/conversation-prefs', { workspaceId: ws, kind: conv.kind, id: conv.id, ...patch });
     return data.pref;
+  },
+  /** The channel's topic (its description; channel admins only). */
+  async setChannelTopic(id, topic) {
+    await api.patch(`/channels/${id}/description`, { description: topic });
   },
   async setChannelMuted(id, muted) {
     if (muted) await api.post(`/channels/${id}/mute`, {});
@@ -986,8 +995,10 @@ export const liveAdapter = {
       dueDate: data.due || undefined,
       status: data.status,
       assignmentType: onlyMe ? 'self' : 'members',
-      ...(onlyMe ? {} : { assignedToIds: ids, assignmentMode: 'shared' }),
+      ...(onlyMe ? {} : { assignedToIds: ids, assignmentMode: 'shared', taskMode: 'shared' }),
       ...(data.channelId ? { channelId: data.channelId } : {}),
+      ...(data.linkedMessageId ? { linkedMessage: data.linkedMessageId } : {}),
+      ...(data.source ? { source: data.source } : {}),
     });
     return mapTask(res.task || res.tasks?.[0]);
   },

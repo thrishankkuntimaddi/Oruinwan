@@ -125,6 +125,7 @@ export default function Messages() {
 
             setSelectedChat({
               id: dmSession.id,
+              userId: dmSession.otherUser._id || dmSession.otherUser.id || dmSession.otherUserId || null,
               name: username,
               type: "dm",
               avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,
@@ -252,6 +253,7 @@ export default function Messages() {
 
             setSelectedChat({
               id: dmSession.id,  
+              userId: dmSession.otherUser._id || dmSession.otherUser.id || dmSession.otherUserId || null,
               name: username,
               type: "dm",
               avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,

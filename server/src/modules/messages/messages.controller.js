@@ -1238,11 +1238,11 @@ exports.scheduleReminder = async (req, res) => {
     try {
         const userId     = req.user.sub;
         const { messageId } = req.params;
-        const { remindAt, note = '' } = req.body;
+        const { remindAt, note = '', forUserId = null } = req.body;
 
         if (!remindAt) return res.status(400).json({ message: 'remindAt is required' });
 
-        const reminder = await reminderService.scheduleReminder(userId, messageId, remindAt, typeof note === 'string' ? note : '');
+        const reminder = await reminderService.scheduleReminder(userId, messageId, remindAt, typeof note === 'string' ? note : '', { forUserId });
         return res.status(201).json({ success: true, reminder });
     } catch (err) {
         const status = err.status || 500;

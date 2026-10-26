@@ -165,6 +165,8 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
             }))
             .catch((err) => toast(err.message || 'Oruinwan AI could not answer right now.', 'danger'));
         }
+        // Slash commands link to what they post (a task to its "Task created" line).
+        return saved;
       } catch (err) {
         // No connection: hand it to the offline queue (same id, so the server dedupes a retry).
         if (isNetworkError(err)) {

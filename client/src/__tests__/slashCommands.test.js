@@ -1,37 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { parseSlashCommand, filterSlashCommands, availableSlashCommands } from '../components/chat/slash/slashCommands';
+import { defineCommandTests, fakeCtx } from '@platform/commands/commands.cases.js';
+import { menuCommands, webOnlyCommandFor, webOnlyCommands, runsWithoutArgs, findCommand } from '../components/chat/slash/slashCommands';
 
-describe('slash commands', () => {
-    it('parses a known command and its arguments', () => {
-        expect(parseSlashCommand('/ai what did we decide?')).toEqual({ name: 'ai', args: 'what did we decide?' });
-        expect(parseSlashCommand('  /CALL  ')).toEqual({ name: 'call', args: '' });
-    });
-    it('leaves unknown commands and normal text alone', () => {
-        expect(parseSlashCommand('/nope')).toBeNull();
-        expect(parseSlashCommand('hello /ai')).toBeNull();
-        expect(parseSlashCommand('/usr/local/bin is a path')).toBeNull();
-    });
+// The same cases as the phone app (mobile/src/lib/slash.test.js).
+defineCommandTests({ describe, it, expect });
+
+describe('web-only commands', () => {
     it('hides integration commands unless the flag is on', () => {
-        expect(parseSlashCommand('/github')).toBeNull();
-        expect(parseSlashCommand('/github', { integrations: true })).toEqual({ name: 'github', args: '' });
-        expect(availableSlashCommands().some(c => c.command === '/jira')).toBe(false);
+        expect(webOnlyCommandFor('/github issue x')).toBeNull();
+        expect(webOnlyCommandFor('/github issue acme/web Login broken', { integrations: true })).toMatchObject({ command: { name: 'github' }, args: 'issue acme/web Login broken' });
+        expect(webOnlyCommands({ integrations: true }).map((c) => c.name).sort())
+            .toEqual(['bitbucket', 'confluence', 'drive', 'dropbox', 'github', 'gitlab', 'gmeet', 'jira', 'linear', 'meet', 'notion', 'onedrive', 'review', 'zoom']);
+        expect(webOnlyCommands({}).map((c) => c.name)).toEqual(['meet']);
     });
-    it('knows the integration and task commands', () => {
-        const on = { integrations: true };
-        expect(parseSlashCommand('/review acme/web#12', on)).toEqual({ name: 'review', args: 'acme/web#12' });
-        expect(parseSlashCommand('/github issue acme/web Login broken', on)).toEqual({ name: 'github', args: 'issue acme/web Login broken' });
-        expect(parseSlashCommand('/jira WEB Fix it', on)).toEqual({ name: 'jira', args: 'WEB Fix it' });
-        expect(parseSlashCommand('/zoom', on)).toEqual({ name: 'zoom', args: '' });
-        expect(parseSlashCommand('/review acme/web#12')).toBeNull();
-        expect(parseSlashCommand('/zoom')).toBeNull();
-        // /task is a core command, not behind the flag.
-        expect(parseSlashCommand('/task Write the release notes')).toEqual({ name: 'task', args: 'Write the release notes' });
-        expect(filterSlashCommands('/re', on).map(c => c.command)).toContain('/review');
-        expect(availableSlashCommands(on).filter(c => c.flag === 'integrations').map(c => c.command).sort())
-            .toEqual(['/bitbucket', '/confluence', '/drive', '/dropbox', '/github', '/gitlab', '/gmeet', '/jira', '/linear', '/notion', '/onedrive', '/review', '/zoom']);
+    it('are not offered in threads', () => {
+        expect(webOnlyCommands({ integrations: true }, 'thread')).toEqual([]);
     });
-    it('filters by prefix', () => {
-        expect(filterSlashCommands('/vi').map(c => c.command)).toEqual(['/video']);
-        expect(filterSlashCommands('/').length).toBe(availableSlashCommands().length);
+    it('the menu lists shared commands first, then web ones', () => {
+        const { ctx } = fakeCtx();
+        const names = menuCommands('/', ctx, { integrations: true }).map((c) => c.name);
+        expect(names.indexOf('task')).toBeLessThan(names.indexOf('github'));
+        expect(menuCommands('/re', ctx, { integrations: true }).map((c) => c.name)).toEqual(['remind', 'review']);
+    });
+    it('knows which commands run straight from the menu', () => {
+        expect(runsWithoutArgs(findCommand('huddle'))).toBe(true);
+        expect(runsWithoutArgs(findCommand('shrug'))).toBe(true);
+        expect(runsWithoutArgs(findCommand('task'))).toBe(false);
     });
 });

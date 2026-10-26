@@ -155,7 +155,7 @@ describe('user card', () => {
     test('never leaks sensitive fields', async () => {
         const { card } = bodyOf(await byId(ALICE, BOB, WS));
         expect(Object.keys(card).sort()).toEqual([
-            'about', 'companyRole', 'department', 'designation', 'displayName', 'email', 'id', 'isOnline',
+            'about', 'companyRole', 'customStatus', 'department', 'designation', 'displayName', 'email', 'id', 'isOnline',
             'lastSeen', 'profilePicture', 'timezone', 'userStatus', 'username', 'workspaceRole',
         ]);
     });

@@ -129,38 +129,69 @@ exports.updateStatus = async (req, res) => {
     try {
         const userId = req.user.sub;
         const { status } = req.body;
+        // Optional custom status ({ emoji, text }, or null to clear), kept in the profile.
+        const hasCustom = Object.prototype.hasOwnProperty.call(req.body || {}, 'customStatus');
+        const customStatus = hasCustom ? normalizeCustomStatus(req.body.customStatus) : undefined;
 
-        
-        if (!['active', 'away', 'dnd'].includes(status)) {
+        if (status === undefined && !hasCustom) {
+            return res.status(400).json({ message: "Nothing to update" });
+        }
+        if (status !== undefined && !['active', 'away', 'dnd'].includes(status)) {
             return res.status(400).json({ message: "Invalid status. Must be: active, away, or dnd" });
         }
+        if (customStatus === false) {
+            return res.status(400).json({ message: "A status is an emoji and up to 100 characters of text" });
+        }
 
-        
-        const user = await identity.users.update(userId, { userStatus: status });
+        const patch = {};
+        if (status !== undefined) patch.userStatus = status;
+        if (hasCustom) {
+            const current = await identity.users.findById(userId);
+            if (!current) return res.status(404).json({ message: "User not found" });
+            const profile = { ...(current.profile || {}) };
+            if (customStatus) profile.customStatus = { ...customStatus, setAt: new Date().toISOString() };
+            else delete profile.customStatus;
+            patch.profile = profile;
+        }
+
+        const user = await identity.users.update(userId, patch);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        
         const io = req.app.get('io');
         if (io) {
             io.emit('user-status-changed', {
                 userId,
-                status,
-                username: user.username
+                status: user.userStatus,
+                username: user.username,
+                customStatus: user.profile?.customStatus || null,
             });
         }
 
         return res.json({
             message: "Status updated successfully",
-            status: user.userStatus
+            status: user.userStatus,
+            customStatus: user.profile?.customStatus || null,
         });
     } catch (err) {
         logger.error("UPDATE STATUS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
+
+/** { emoji, text } trimmed; null to clear; false when invalid. */
+function normalizeCustomStatus(value) {
+    if (value === null || value === '') return null;
+    if (typeof value !== 'object') return false;
+    const emoji = typeof value.emoji === 'string' ? value.emoji.trim().slice(0, 16) : '';
+    const text = typeof value.text === 'string' ? value.text.trim() : '';
+    if (text.length > 100) return false;
+    if (!emoji && !text) return null;
+    return { emoji, text };
+}
+exports.normalizeCustomStatus = normalizeCustomStatus;
 
 exports.checkUsername = async (req, res) => {
     try {

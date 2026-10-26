@@ -43,6 +43,7 @@ import { GroupTile } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
 import { DayJumpSheet } from './DayJumpSheet.jsx';
 import { AiIsland } from './AiIsland.jsx';
+import { phoneCommands } from './slash.jsx';
 import { QUICK_REACTIONS } from '../../data/constants.js';
 import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
 import { EllipsisVertical, Share2, Copy, Link2 } from 'lucide-react';
@@ -267,6 +268,9 @@ function useMentions({ kind, id, meta, me }) {
     const usernames = new Set(all.map((u) => String(u.username || '').toLowerCase()).filter(Boolean));
     return {
       composer: { people, channels: (channels || []).filter((c) => !c.private || c.isMember), me, inChannel, allowBroadcast },
+      people: all,
+      // Channel admins (and workspace admins) manage the channel: /topic.
+      canManage: Boolean(policy?.canManage) || ['admin', 'owner'].includes(workspace?.role),
       textFor: (text) => mentionTextFor(text, usernames, { allowBroadcast: inChannel && allowBroadcast }),
       // The people named, as { id, name, username }, for the assistant when the message is for it.
       peopleFor: (text) => peopleInText(text, { people: all, me }),
@@ -399,6 +403,13 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
     convo.append(m);
   };
 
+  const huddlesOn = useHuddlesAvailable();
+  const commands = phoneCommands({
+    conv, ws, me, meta, label, isGroup, canPost, canManage: mentions.canManage, convo, mentions, people: mentions.people, aiOn, huddlesOn,
+    onSummarize: api().summarizeConversation ? () => setSheet('summary') : () => askAiAbout(`Summarize the recent conversation in ${label}.`),
+    onGroupOffer: meta?.user?.id && api().createGroupDm ? (list) => setGroupOffer({ people: list, text: '' }) : null,
+  });
+
   return (
     <Screen>
       <Header
@@ -472,6 +483,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           draftConv={draft ? null : conv}
           directory={directory}
           me={me}
+          commands={meta?.agentId ? null : commands}
           onSend={(text) => {
             if (tools.editing) {
               convo.edit(tools.editing.id, text);
@@ -484,6 +496,11 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
                 const inChannel = new Set(meta?.memberIds || []);
                 const outsiders = (people || []).filter((p) => p.id && p.id !== me && !inChannel.has(p.id));
                 if (outsiders.length) setMentionInvite(outsiders);
+              } else if (kind === 'dm' && isGroup && api().addGroupDmMembers) {
+                // A group: mentioning someone who isn't in it offers to add them.
+                const inGroup = new Set(meta?.participantIds || []);
+                const others = (people || []).filter((p) => p.id && p.id !== me && !inGroup.has(p.id));
+                if (others.length) setGroupOffer({ people: others, text, add: true });
               } else if (kind === 'dm' && !isGroup && !meta?.agentId && meta?.user?.id && api().createGroupDm) {
                 const others = (people || []).filter((p) => p.id && p.id !== me && p.id !== meta.user.id);
                 if (others.length) setGroupOffer({ people: others, text });
@@ -495,13 +512,30 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
       <Dialog
         open={Boolean(groupOffer)}
         onClose={() => setGroupOffer(null)}
-        title={`Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`}
-        body="They aren't in this chat. The group is a new conversation; your message goes there to carry on."
-        confirmLabel="Start group"
+        title={
+          groupOffer?.add
+            ? `Add ${groupOffer.people.length === 1 ? groupOffer.people[0].name : `${groupOffer.people.length} people`} to the group?`
+            : `Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
+        }
+        body={groupOffer?.add ? "They aren't in this group yet. Added, they see the whole conversation." : "They aren't in this chat. The group is a new conversation; your message goes there to carry on."}
+        confirmLabel={groupOffer?.add ? 'Add to group' : 'Start group'}
         cancelLabel="Not now"
         busy={mentionInviteBusy}
         onConfirm={async () => {
           setMentionInviteBusy(true);
+          if (groupOffer?.add) {
+            try {
+              await api().addGroupDmMembers(id, groupOffer.people.map((p) => p.id));
+              invalidate('dms');
+              toast(groupOffer.people.length === 1 ? 'Added to the group' : `${groupOffer.people.length} people added to the group`, 'success');
+              setGroupOffer(null);
+            } catch (err) {
+              toast(err.message || 'Could not add them', 'danger');
+            } finally {
+              setMentionInviteBusy(false);
+            }
+            return;
+          }
           try {
             const group = await api().createGroupDm(ws, [meta.user.id, ...groupOffer.people.map((p) => p.id)]);
             const groupId = group?.id || group;
@@ -680,6 +714,11 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   );
 
   const resolvedBy = info?.resolvedBy?.id ? directory[info.resolvedBy.id]?.name || info.resolvedBy.username : null;
+  const isGroup = kind === 'dm' && Boolean(meta?.isGroup);
+  const commands = phoneCommands({
+    conv, ws, me, meta, label, isGroup, threadOf: messageId, canPost: !info?.locked, canManage: mentions.canManage, convo, mentions, people: mentions.people, aiOn,
+    onSummarize: () => setSheet('summary'),
+  });
   const header = convo.parent ? (
     <div className="border-b border-line-soft pb-3">
       <MessageItem
@@ -775,6 +814,7 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         onCancelQuote={() => extras.setQuote(null)}
         directory={directory}
         me={me}
+        commands={meta?.agentId ? null : commands}
         onSend={(text) => {
           if (tools.editing) {
             convo.edit(tools.editing.id, text);

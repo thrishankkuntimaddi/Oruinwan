@@ -24,6 +24,12 @@ const MessageReminderSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    // Someone else set it (/remind @person); null when it's my own.
+    setBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     
     delivered: {
       type: Boolean,

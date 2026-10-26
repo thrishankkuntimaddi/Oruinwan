@@ -51,6 +51,7 @@ const CentralContentView = ({
     onAttach,
     onSendAttachment,
     onSlashCommand,
+    slashContext = null,
     onCreatePoll,          
     onCreateChecklist,
     features,
@@ -160,6 +161,7 @@ const CentralContentView = ({
                             onAttach={onAttach}
                             onSendAttachment={onSendAttachment}
                             onSlashCommand={onSlashCommand}
+                            slashContext={slashContext}
                             onCreatePoll={onCreatePoll}
                             onCreateChecklist={onCreateChecklist}
                             features={features}
@@ -268,6 +270,7 @@ const CentralContentView = ({
                     members={channelMembers || null}
                     broadcastMentionsAllowed={broadcastMentionsAllowed}
                     agentId={chat?.isAgent ? (chat.agentId || 'default') : null}
+                    slashContext={slashContext}
                     style={{ width: 'clamp(280px, 35vw, 400px)', flexShrink: 0 }}
                 />
                 </div>

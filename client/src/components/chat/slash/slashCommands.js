@@ -1,63 +1,55 @@
-// Slash commands the composer actually runs. Each one maps to a real feature;
-// `where` limits it to places that feature exists, `flag` to a release flag.
+// Slash commands in the web composer. The commands themselves, their arguments and help text are
+// shared with the phone app (platform/commands/slashCommands.js); this adds the few that only the
+// web app has: /meet and the integration commands (behind the `integrations` release flag).
+
+import { COMMAND_CATEGORIES, filterCommands, matchesText, parseCommandLine } from '@platform/commands/slashCommands.js';
+
+export * from '@platform/commands/slashCommands.js';
 
 export const SLASH_COMMAND_CATEGORIES = [
-  { id: "communication", label: "Communication" },
-  { id: "productivity", label: "Productivity" },
-  { id: "ai", label: "AI" },
-  { id: "developer", label: "Developer" },
+    ...COMMAND_CATEGORIES,
+    { id: 'developer', label: 'Integrations' },
 ];
 
-const cmd = (command, label, category, emoji, description, hint, extra = {}) => ({
-  command, label, category, emoji, description,
-  color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200",
-  preview: { title: label, actions: [{ icon: emoji, label: description, detail: hint }], hint },
-  ...extra,
+const web = (name, emoji, description, args = '', extra = {}) => ({
+    name, emoji, description, args, category: 'developer', webOnly: true, where: ['channel', 'dm', 'group'], ...extra,
 });
 
-export const SLASH_COMMANDS = [
-  cmd("/call", "Voice call", "communication", "📞", "Start (or join) a voice huddle here", "Usage: /call"),
-  cmd("/video", "Video call", "communication", "🎥", "Start (or join) a video call here", "Usage: /video"),
-  cmd("/meet", "Schedule meeting", "communication", "📅", "Schedule a meeting and post it here", "Usage: /meet"),
-  cmd("/poll", "Poll", "productivity", "📊", "Create a poll in this conversation", "Usage: /poll"),
-  cmd("/code", "Code block", "productivity", "💻", "Insert a code block", "Usage: /code [language]"),
-  cmd("/shrug", "Shrug", "communication", "🤷", "Send a message with ¯\\_(ツ)_/¯", "Usage: /shrug [message]"),
-  cmd("/ai", "Ask Oruinwan AI", "ai", "✨", "Ask the assistant about this conversation", "Usage: /ai <question>"),
-  cmd("/task", "New task", "productivity", "✅", "Create a task in this conversation", "Usage: /task <title>"),
-  cmd("/github", "GitHub", "developer", "🐙", "Open an issue or share a pull request", "Usage: /github issue [owner/repo] <title> · /github pr owner/repo#12", { flag: "integrations" }),
-  cmd("/review", "Review pull request", "developer", "🔍", "Open a pull request's changes next to the chat", "Usage: /review owner/repo#12 (or a PR link)", { flag: "integrations" }),
-  cmd("/jira", "Jira issue", "developer", "🎫", "Create a Jira issue", "Usage: /jira <PROJECT> <summary>", { flag: "integrations" }),
-  cmd("/zoom", "Zoom meeting", "communication", "📹", "Create a Zoom meeting and post the join link", "Usage: /zoom [topic]", { flag: "integrations" }),
-  cmd("/gmeet", "Google Meet", "communication", "🎥", "Create a Google Meet link, or share one you paste", "Usage: /gmeet [title] · /gmeet https://meet.google.com/abc-defg-hij", { flag: "integrations" }),
-  cmd("/gitlab", "GitLab issue", "developer", "🦊", "Open a GitLab issue", "Usage: /gitlab issue group/project <title>", { flag: "integrations" }),
-  cmd("/bitbucket", "Bitbucket issue", "developer", "🪣", "Open a Bitbucket issue", "Usage: /bitbucket issue workspace/repo <title>", { flag: "integrations" }),
-  cmd("/linear", "Linear issue", "developer", "◑", "Create a Linear issue", "Usage: /linear issue TEAM <title>", { flag: "integrations" }),
-  cmd("/drive", "Google Drive", "productivity", "📁", "Share a Google Drive file", "Usage: /drive [search]", { flag: "integrations" }),
-  cmd("/onedrive", "OneDrive", "productivity", "☁️", "Share a OneDrive file", "Usage: /onedrive [search]", { flag: "integrations" }),
-  cmd("/dropbox", "Dropbox", "productivity", "📦", "Share a Dropbox file", "Usage: /dropbox [search]", { flag: "integrations" }),
-  cmd("/notion", "Notion", "productivity", "📝", "Share a Notion page or import it into Knowledge", "Usage: /notion [search]", { flag: "integrations" }),
-  cmd("/confluence", "Confluence", "productivity", "📚", "Share a Confluence page or import it into Knowledge", "Usage: /confluence [search]", { flag: "integrations" }),
+/** Web-only commands. `flag` limits one to a release flag. */
+export const WEB_ONLY_COMMANDS = [
+    web('meet', '📅', 'Schedule a meeting and post it here', '', { category: 'calls' }),
+    web('github', '🐙', 'Open an issue or share a pull request', 'issue [owner/repo] <title> · pr owner/repo#12', { flag: 'integrations' }),
+    web('review', '🔍', "Open a pull request's changes next to the chat", 'owner/repo#12', { flag: 'integrations' }),
+    web('jira', '🎫', 'Create a Jira issue', '<PROJECT> <summary>', { flag: 'integrations' }),
+    web('zoom', '📹', 'Create a Zoom meeting and post the join link', '[topic]', { flag: 'integrations' }),
+    web('gmeet', '🎥', 'Create a Google Meet link, or share one you paste', '[title | link]', { flag: 'integrations' }),
+    web('gitlab', '🦊', 'Open a GitLab issue', 'issue group/project <title>', { flag: 'integrations' }),
+    web('bitbucket', '🪣', 'Open a Bitbucket issue', 'issue workspace/repo <title>', { flag: 'integrations' }),
+    web('linear', '◑', 'Create a Linear issue', 'issue TEAM <title>', { flag: 'integrations' }),
+    web('drive', '📁', 'Share a Google Drive file', '[search]', { flag: 'integrations' }),
+    web('onedrive', '☁️', 'Share a OneDrive file', '[search]', { flag: 'integrations' }),
+    web('dropbox', '📦', 'Share a Dropbox file', '[search]', { flag: 'integrations' }),
+    web('notion', '📝', 'Share a Notion page or import it into Knowledge', '[search]', { flag: 'integrations' }),
+    web('confluence', '📚', 'Share a Confluence page or import it into Knowledge', '[search]', { flag: 'integrations' }),
 ];
 
-/** Commands available with the given release flags. */
-export function availableSlashCommands(flags = {}) {
-  return SLASH_COMMANDS.filter((c) => !c.flag || flags[c.flag] === true);
+/** Web-only commands available with these release flags in this place. */
+export function webOnlyCommands(flags = {}, where = 'channel') {
+    return WEB_ONLY_COMMANDS.filter((c) => (!c.flag || flags[c.flag] === true) && c.where.includes(where));
 }
 
-export const filterSlashCommands = (query, flags = {}) => {
-  const list = availableSlashCommands(flags);
-  if (!query || query === "/") return list;
-  const q = query.toLowerCase().split(/\s+/)[0];
-  return list.filter(
-    (c) => c.command.toLowerCase().startsWith(q) || c.label.toLowerCase().includes(q.replace(/^\//, ""))
-  );
-};
+/** The web-only command `text` starts with, or null. */
+export function webOnlyCommandFor(text, flags = {}, where = 'channel') {
+    const line = parseCommandLine(text);
+    if (!line) return null;
+    const command = webOnlyCommands(flags, where).find((c) => c.name === line.name);
+    return command ? { command, args: line.argsText } : null;
+}
 
-/** "/ai what's next?" -> { name: "ai", args: "what's next?" }; null for unknown commands. */
-export function parseSlashCommand(text, flags = {}) {
-  const m = String(text || "").trim().match(/^\/([a-z]+)(?:\s+([\s\S]*))?$/i);
-  if (!m) return null;
-  const name = m[1].toLowerCase();
-  if (!availableSlashCommands(flags).some((c) => c.command === `/${name}`)) return null;
-  return { name, args: (m[2] || "").trim() };
+/** The menu: shared commands for ctx, then the web-only ones, filtered by what's typed. */
+export function menuCommands(query, ctx = {}, flags = {}) {
+    const shared = filterCommands(query, ctx);
+    const q = String(query || '').replace(/^\//, '').split(/\s+/)[0].toLowerCase();
+    const extras = webOnlyCommands(flags, ctx.where).filter((c) => !q || c.name.startsWith(q) || matchesText(c, q));
+    return [...shared, ...extras];
 }

@@ -39,18 +39,18 @@ describe('integration slash commands', () => {
         await expect(runIntegrationCommand('review', 'nonsense', ctx())).rejects.toThrow(/Usage/);
     });
 
-    it('/jira and /zoom post their links; /task creates a channel task', async () => {
+    it('/jira and /zoom post their links', async () => {
         apiMock.get.mockResolvedValue({ data: { connected: true, config: {} } });
         apiMock.post.mockImplementation(async (url) => {
             if (url.endsWith('/jira/issue')) return { data: { key: 'WEB-9', url: 'https://acme.atlassian.net/browse/WEB-9' } };
             if (url.endsWith('/zoom/meeting')) return { data: { joinUrl: 'https://zoom.us/j/1', topic: 'Sync' } };
-            return { data: { task: { title: 'Ship it', issueKey: 'T-3' } } };
+            return { data: {} };
         });
         const c = ctx();
         await runIntegrationCommand('jira', 'web Fix redirect', c);
         await runIntegrationCommand('zoom', 'Sync', c);
-        await runIntegrationCommand('task', 'Ship it', c);
-        expect(c.send.mock.calls.map((x) => x[0]).join('\n')).toMatch(/\[WEB-9\]\(https:\/\/acme.atlassian.net\/browse\/WEB-9\)[\s\S]*zoom\.us\/j\/1[\s\S]*T-3/);
-        expect(apiMock.post).toHaveBeenCalledWith('/api/v2/tasks', expect.objectContaining({ assignmentType: 'channel', channelId: 'c1', title: 'Ship it' }));
+        expect(c.send.mock.calls.map((x) => x[0]).join('\n')).toMatch(/\[WEB-9\]\(https:\/\/acme.atlassian.net\/browse\/WEB-9\)[\s\S]*zoom\.us\/j\/1/);
+        // /task is a shared command now (platform/commands/slashCommands.js).
+        await expect(runIntegrationCommand('task', 'Ship it', c)).rejects.toThrow(/Unknown command/);
     });
 });

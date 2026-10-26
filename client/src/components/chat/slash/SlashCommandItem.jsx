@@ -7,6 +7,10 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
 
   return (
     <button
+      type="button"
+      role="option"
+      aria-selected={isActive}
+      data-testid={`slash-item-${command.name}`}
       onMouseDown={(e) => { e.preventDefault(); onSelect(command); }}
       onMouseEnter={() => { setHovered(true); onHover?.(command); }}
       onMouseLeave={() => setHovered(false)}
@@ -35,12 +39,13 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
           <span style={{
             fontSize: '12px', fontFamily: 'monospace', fontWeight: 700,
             color: active ? 'var(--accent)' : 'var(--text-primary)',
-          }}>{command.command}</span>
-          <span style={{
-            fontSize: '9px', fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.12em', color: 'var(--text-muted)',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          }}>{command.label}</span>
+          }}>/{command.name}</span>
+          {command.args && (
+            <span style={{
+              fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+            }}>{command.args}</span>
+          )}
         </div>
         <p style={{
           fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden',

@@ -72,6 +72,7 @@ function buildCard(user, { workspaceRole = null, showEmail = true, sameCompany =
         email: showEmail ? (isCompanyUser && user.companyEmail ? user.companyEmail : user.email) || null : null,
         profilePicture: user.profilePicture || null,
         about: user.profile?.about || null,
+        customStatus: user.profile?.customStatus ? { emoji: user.profile.customStatus.emoji || '', text: user.profile.customStatus.text || '' } : null,
         designation: user.jobTitle || null,
         department: departments.length ? departments.join(', ') : null,
         companyRole: isCompanyUser && sameCompany ? user.companyRole || null : null,

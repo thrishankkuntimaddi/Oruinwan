@@ -174,8 +174,9 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
     },
 
     // ---- Reminders
-    async remindMe(conv, id, at, note = '') {
-      const data = await api.post(`/v2/messages/${id}/reminder`, { remindAt: new Date(at).toISOString(), note });
+    /** A reminder on a message, for me (or, with forUserId, for someone who can read it: /remind @person). */
+    async remindMe(conv, id, at, note = '', { forUserId = null } = {}) {
+      const data = await api.post(`/v2/messages/${id}/reminder`, { remindAt: new Date(at).toISOString(), note, ...(forUserId ? { forUserId } : {}) });
       return { id: idOf(data.reminder), at: data.reminder?.remindAt || at };
     },
     /** Reminders not yet delivered: [{ id, at, note, conv, message }]. */
