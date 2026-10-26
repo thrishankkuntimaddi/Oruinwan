@@ -67,13 +67,10 @@ const Landing = () => {
         return () => clearTimeout(t);
     }, [hash]);
 
-    useEffect(() => {
-        if (user) navigate('/workspaces', { replace: true });
-    }, [user, navigate]);
-
     useRevealAll(rootRef);
 
-    if (user) return null;
+    // Signed-in visitors still see the landing page; its calls to action open their workspaces.
+    const firstName = String(user?.profile?.name || user?.username || '').trim().split(/\s+/)[0];
 
     return (
         <div className="orw" ref={rootRef} id="top">
@@ -92,7 +89,10 @@ const Landing = () => {
                 <section className="orw-hero" aria-labelledby="orw-hero-title">
                     <div className="orw-container orw-hero__grid">
                         <div>
-                            <span className="orw-chip" data-reveal><span className="orw-dot" aria-hidden="true" />Free · Open source · MIT licence</span>
+                            <span className="orw-chip" data-reveal>
+                                <span className="orw-dot" aria-hidden="true" />
+                                {user ? `Welcome back${firstName ? `, ${firstName}` : ''}` : 'Free · Open source · MIT licence'}
+                            </span>
                             <h1 className="orw-hero__title" id="orw-hero-title" data-reveal style={{ '--d': '80ms' }}>
                                 <span>One workspace.</span>
                                 <span className="orw-gloss-text">Every conversation.</span>
@@ -102,9 +102,15 @@ const Landing = () => {
                                 desktop, phone and tablet.
                             </p>
                             <div className="orw-hero__ctas" data-reveal style={{ '--d': '240ms' }}>
-                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
-                                    Start free <ArrowRight size={16} />
-                                </AppLink>
+                                {user ? (
+                                    <Link to="/workspaces" className="orw-btn orw-btn--primary orw-btn--lg">
+                                        Open your workspaces <ArrowRight size={16} />
+                                    </Link>
+                                ) : (
+                                    <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
+                                        Start free <ArrowRight size={16} />
+                                    </AppLink>
+                                )}
                                 <a className="orw-btn orw-btn--ghost orw-btn--lg" href={REPO_URL} target="_blank" rel="noopener noreferrer">
                                     <Github size={15} aria-hidden="true" /> View on GitHub
                                 </a>
@@ -167,8 +173,9 @@ const Landing = () => {
                             </p>
                             <ul className="orw-ai__points">
                                 {[
-                                    'Mention an agent in a channel, or open a DM with it',
-                                    'Summarise threads and turn them into tasks',
+                                    'Mention @ai in a channel, or open a DM with an agent',
+                                    'Summarise threads, reply in them, and turn them into tasks',
+                                    'Make notes, set reminders and ask about any chat',
                                     'A recap after every meeting, from its transcript',
                                     'Draft, rewrite and translate messages',
                                 ].map(p => <li key={p}><span aria-hidden="true" />{p}</li>)}
@@ -233,9 +240,15 @@ const Landing = () => {
                                 <h3>Web app</h3>
                                 <p>Works in any modern browser, including Safari on iPhone and iPad. Nothing to install, always up to date.</p>
                                 <div className="orw-dl__actions">
-                                    <AppLink to="/login" className="orw-btn orw-btn--primary orw-btn--block">
-                                        Open {BRAND.name} web <ArrowRight size={14} />
-                                    </AppLink>
+                                    {user ? (
+                                        <Link to="/workspaces" className="orw-btn orw-btn--primary orw-btn--block">
+                                            Open {BRAND.name} web <ArrowRight size={14} />
+                                        </Link>
+                                    ) : (
+                                        <AppLink to="/login" className="orw-btn orw-btn--primary orw-btn--block">
+                                            Open {BRAND.name} web <ArrowRight size={14} />
+                                        </AppLink>
+                                    )}
                                 </div>
                             </div>
                             <div className="orw-dl__item">
@@ -332,12 +345,20 @@ const Landing = () => {
                             <h2 className="orw-h2">Build your team’s HQ on <span className="orw-gloss-text">{BRAND.name}</span>.</h2>
                             <p className="orw-lead">Free and open source. Set up in minutes. Bring everyone into one workspace.</p>
                             <div className="orw-final__ctas">
-                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
-                                    Get started free <ArrowRight size={16} />
-                                </AppLink>
-                                <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg">
-                                    Log in
-                                </AppLink>
+                                {user ? (
+                                    <Link to="/workspaces" className="orw-btn orw-btn--primary orw-btn--lg">
+                                        Open your workspaces <ArrowRight size={16} />
+                                    </Link>
+                                ) : (
+                                    <>
+                                        <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
+                                            Get started free <ArrowRight size={16} />
+                                        </AppLink>
+                                        <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg">
+                                            Log in
+                                        </AppLink>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

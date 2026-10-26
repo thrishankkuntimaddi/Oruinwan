@@ -15,7 +15,7 @@ export default function ForgotPassword() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (user) navigate('/', { replace: true });
+        if (user) navigate('/workspaces', { replace: true });
     }, [user, navigate]);
 
     const handleSubmit = async (e) => {

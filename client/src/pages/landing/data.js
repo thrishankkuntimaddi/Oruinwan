@@ -2,6 +2,7 @@ import {
     Hash, MessageCircle, GitBranch, Headphones, ListChecks, NotebookPen, Bot, Plug, Columns2,
     Workflow, FolderOpen, Search, Video, MessagesSquare, KanbanSquare, Captions, Map, PenTool,
     ShieldCheck, KeyRound, ScrollText, Lock, Users, EyeOff, Fingerprint, MonitorSmartphone, HardDriveUpload,
+    SquareSlash, CalendarDays, Clock, Presentation,
 } from 'lucide-react';
 import BRAND from '../../shared/brand';
 
@@ -60,6 +61,8 @@ export const CAPABILITIES = [
     { icon: Hash, label: 'Channels' },
     { icon: MessageCircle, label: 'Direct messages' },
     { icon: GitBranch, label: 'Threads' },
+    { icon: SquareSlash, label: 'Slash commands' },
+    { icon: Clock, label: 'Send later' },
     { icon: Headphones, label: 'Huddles' },
     { icon: Video, label: 'Video and screen share' },
     { icon: Captions, label: 'Recording, captions and AI recap' },
@@ -67,6 +70,8 @@ export const CAPABILITIES = [
     { icon: ListChecks, label: 'Tasks and planning' },
     { icon: PenTool, label: 'Design reviews' },
     { icon: NotebookPen, label: 'Notes with live co-editing' },
+    { icon: Presentation, label: 'Whiteboards' },
+    { icon: CalendarDays, label: 'Calendar' },
     { icon: Map, label: 'Roadmap' },
     { icon: FolderOpen, label: 'Files and knowledge' },
     { icon: Search, label: 'Search' },
@@ -82,15 +87,15 @@ export const PLATFORM_TABS = [
         blurb: 'Channels, DMs, threads and huddles.',
         heading: 'Conversations with structure, not noise.',
         body: 'Channels keep work organised by team and topic. Threads keep side discussions out of the main feed, and a huddle starts in one click when typing gets slow.',
-        points: ['Public and private channels, direct messages and group DMs of up to 10 people, with encrypted messages', 'Threads, open beside the conversation in split view on desktop and tablet', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
+        points: ['Public and private channels, direct messages and groups of up to 10 people, with encrypted messages and read receipts', 'Threads you can follow, slash commands like /task, /remind and /poll, and Send later', 'Huddles and scheduled meetings with screen share, recording, live captions and an AI recap'],
         visual: 'thread',
     },
     {
         id: 'plan', icon: KanbanSquare, title: 'Plan',
         blurb: 'Tasks, planning and notes.',
         heading: 'Plans live next to the talk.',
-        body: 'Turn a message into a task, plan the work, review designs and write decisions down in notes your team edits together, without leaving the conversation that started it.',
-        points: ['Tasks with owners, due dates, boards and planning', 'Design reviews with comments on the work itself', 'Notes and a roadmap with live co-editing, templates and a knowledge base'],
+        body: 'Turn a message, a note or a file into a task, plan the work, review designs and write decisions down in notes your team edits together, without leaving the conversation that started it.',
+        points: ['Tasks with owners, due dates, boards, linked tickets and a discussion for each one', 'A calendar of meetings, huddles, due tasks, reminders and scheduled messages', 'Notes with pages, reminders, whiteboards, templates, a roadmap and a knowledge base'],
         visual: 'kanban',
     },
     {
@@ -113,12 +118,12 @@ export const PLATFORM_TABS = [
 
 // ── Feature bento ──────────────────────────────────────────────────────
 export const FEATURES = [
-    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels, DMs and group DMs with messages encrypted on your device, reactions, mentions, pins and files.' },
-    { icon: GitBranch, color: '#7fd4e0', title: 'Threads', desc: 'Side discussions that stay out of the main feed, open beside the conversation in split view.' },
+    { icon: MessageCircle, color: '#c8a274', title: 'Chat', desc: 'Channels, DMs and groups with messages encrypted on your device, read receipts, reactions, mentions, slash commands and Send later.' },
+    { icon: GitBranch, color: '#7fd4e0', title: 'Threads', desc: 'Side discussions that stay out of the main feed. Follow them, lock them, and open them beside the conversation.' },
     { icon: Headphones, color: '#5cc995', title: 'Huddles & meetings', desc: 'Audio, video and screen share in one click. Record, follow live captions and get an AI recap after.' },
-    { icon: ListChecks, color: '#f5c46b', title: 'Tasks & planning', desc: 'Tasks straight from chat, boards, planning and design reviews, with owners, due dates and progress.' },
-    { icon: NotebookPen, color: '#f39a6b', title: 'Notes & knowledge', desc: 'Notes, templates, a roadmap and a knowledge base your team edits together, live.' },
-    { icon: Bot, color: '#ecd6b0', title: 'AI assistant', desc: 'Summaries, drafts and answers in context, with your choice of model: Claude, ChatGPT, Gemini, Grok or your own.' },
+    { icon: ListChecks, color: '#f5c46b', title: 'Tasks & planning', desc: 'Tasks from a message, note or file, with owners, due dates, boards, a calendar and design reviews.' },
+    { icon: NotebookPen, color: '#f39a6b', title: 'Notes & knowledge', desc: 'Notes with pages and reminders, whiteboards, templates, a roadmap and a knowledge base, edited together live.' },
+    { icon: Bot, color: '#ecd6b0', title: 'AI assistant', desc: 'Mention @ai to summarise, draft, reply in threads, make tasks and notes or set reminders, with Claude, ChatGPT, Gemini, Grok or your own model.' },
     { icon: Plug, color: '#f0a3c4', title: 'Integrations', desc: 'GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Zoom, cloud drives and webhooks, connected with a token.' },
     { icon: Workflow, color: '#9fd8a6', title: 'Automations', desc: 'Triggers, conditions, schedules and actions that take the routine steps off your plate.' },
     { icon: MonitorSmartphone, wide: true, color: '#d9b98f', title: 'Apps for every platform', desc: 'Web, Mac, Windows, Linux and Android phones and tablets, all in sync, with one-click updates.' },
@@ -172,7 +177,7 @@ export const SECURITY = [
 export const STEPS = [
     { n: '01', title: 'Create your workspace', desc: 'Sign up, verify your email and name your workspace in a short setup wizard. Companies can register for the company console.' },
     { n: '02', title: 'Bring your team', desc: 'Share a team invite link, send one-time links or invite by email, then organise people into channels, departments and roles.' },
-    { n: '03', title: 'Work in one place', desc: 'Chat, meet, plan and bring in agents, on the web, desktop, tablet and phone.' },
+    { n: '03', title: 'Work in one place', desc: 'Chat, meet, plan and bring in agents, on the web, desktop, tablet and phone. Share a link to any note, task or channel.' },
 ];
 
 // ── FAQ ────────────────────────────────────────────────────────────────
@@ -186,5 +191,6 @@ export const FAQ = [
     { q: 'Can admins read our messages or see who is most active?', a: 'No. Admins manage people, workspaces and permissions. They never see messages or message counts, and there are no per-person activity metrics.' },
     { q: 'Which AI models can we use?', a: 'Claude, ChatGPT, Gemini and Grok, or a model you host yourself. A workspace admin can install an agent for everyone, or each member can connect one with their own API key. Mention an agent in a channel or open a DM with it.' },
     { q: 'What integrations are there?', a: 'GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Zoom, cloud drives and incoming webhooks, plus automations that run on triggers you choose. You connect them with a personal token or a webhook URL.' },
-    { q: 'Which platforms are supported?', a: `${BRAND.name} runs in any modern browser. There are desktop apps for Mac, Windows and Linux, and an app for Android phones and tablets, with split view on larger screens. Everything syncs in real time, and the apps tell you when an update is ready.` },
+    { q: 'Which platforms are supported?', a: `${BRAND.name} runs in any modern browser; on a phone the website opens the same interface as the phone app, with notifications and call ringing. There are desktop apps for Mac, Windows and Linux, and an app for Android phones and tablets, with split view on larger screens. Everything syncs in real time, and the apps tell you when an update is ready.` },
+    { q: 'Can I type commands in chat?', a: 'Yes. Type / in any channel, DM, group or thread to see them: /task, /remind, /poll, /checklist, /huddle, /ai, /summarize, /later, /status and more. /help lists them all.' },
 ];

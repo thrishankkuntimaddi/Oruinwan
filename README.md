@@ -12,7 +12,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 
-[Website](https://thrishankkuntimaddi.github.io/Oruinwan/) · [Pricing](https://thrishankkuntimaddi.github.io/Oruinwan/pricing) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruinwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
+[Open Oruinwan](https://oruinwan.poelys.com) · [Website](https://thrishankkuntimaddi.github.io/Oruinwan/) · [Pricing](https://thrishankkuntimaddi.github.io/Oruinwan/pricing) · [Download the apps](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest) · [Report a bug](https://github.com/thrishankkuntimaddi/Oruinwan/issues) · [Local development guide](docs/LOCAL_DEVELOPMENT.md)
 
 <img src="mobile/play-store/feature-graphic.png" alt="Oruinwan: one workspace, every conversation" width="720" />
 
@@ -45,7 +45,7 @@
 
 Oruinwan is a workspace for teams. Each **workspace** has public and private channels, direct messages, threads, huddles and meetings, tasks and planning, notes and a knowledge base, files, AI agents, automations and integrations. Companies can also register for a **company console** with departments, roles, permissions and audit logs.
 
-It runs in the browser, as a desktop app for macOS, Windows and Linux, and as an app for Android phones and tablets (with split and wide layouts on larger screens). On iPhone and iPad, use the web app. Every app talks to one Oruinwan server, which you can use as a hosted service or run yourself.
+It runs in the browser, as a desktop app for macOS, Windows and Linux, and as an app for Android phones and tablets (with split and wide layouts on larger screens). Phones that open the website get the same interface as the phone app, with notifications and call ringing, so iPhone users get the full phone experience in Safari. Every app talks to one Oruinwan server: use the hosted one at **[oruinwan.poelys.com](https://oruinwan.poelys.com)**, or run your own.
 
 Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Enterprise plans are coming soon.
 
@@ -54,28 +54,35 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 ## Features
 
 ### Chat
-- Public and private channels, direct messages and group DMs (up to 10 people)
+- Public and private channels, direct messages and groups (up to 10 people), in one chat list with up to 3 pins and an archive
 - Messages encrypted on your device with a key for each conversation (see [Security and privacy](#security-and-privacy))
-- Threads, reactions, mentions, pins, polls, search and file sharing
+- Threads you can follow, add people to and lock; reactions (several per person), mentions, polls, search and file sharing
+- @mention anyone: if they aren't in the channel or group yet, Oruinwan offers to add them, and new channel members read its whole history
+- Read receipts (with a privacy switch), Send later with a Drafts & sent list, and share links to messages, threads, notes, tasks and channels
+- Slash commands in channels, DMs, groups and threads: `/task`, `/remind`, `/poll`, `/checklist`, `/huddle`, `/call`, `/video`, `/ai`, `/summarize`, `/later`, `/invite`, `/leave`, `/mute`, `/status`, `/away`, `/topic`, `/search`, `/help` and more
 - Split view on desktop and tablet: two conversations, or a conversation and a thread, side by side
 
 ### Huddles and meetings
-- Audio and video calls with screen sharing and raise hand, started in one click or scheduled ahead
+- Audio and video calls with screen sharing and raise hand, started in one click or scheduled ahead; calls ring, and you can add people during a call
+- A call layout for 1 to 25 people: paged grid, speaker view, pinning, and shared screens on the main stage
 - One meeting page before, during and after every call: agenda, notes, recording, live transcript and captions
 - An AI recap after the call, from its transcript
 
 ### Tasks and planning
-- Tasks straight from messages, with owners, due dates, boards and progress
+- Tasks from a message, a note or a file (or `/task`), with owners, due dates, boards, linked tickets and a discussion for each task
+- A calendar with meetings, huddles, tasks due, reminders and scheduled messages
 - Planning views and design reviews with comments on the work itself
 
 ### Notes and knowledge
-- Notes with live co-editing, templates and a roadmap
-- Files and a knowledge base the AI can search
+- Notes with live co-editing, pages, templates, *Remind me* and a roadmap
+- Whiteboards with pages
+- Every file shared with you in one list, and a knowledge base the AI can search
 
 ### AI
 - The AI assistant with your choice of model: Claude, ChatGPT, Gemini, Grok, or any model you host (Ollama or any OpenAI-compatible server)
 - Agents installed for a whole workspace by an admin, or connected personally with your own API key
-- Summaries, drafts, rewrites, tasks from threads and meeting recaps
+- Mention `@ai` to summarise, draft, start or reply in threads, create tasks and notes, set reminders and message people for you
+- Ask AI about any chat, a quick AI window on the phone, and meeting recaps
 
 ### Integrations and automations
 - GitHub, GitLab, Bitbucket, Jira, Linear, Slack, Microsoft Teams, Zoom, Google Drive, OneDrive, Dropbox, CI/CD and incoming webhooks, connected with a personal token or a webhook URL
@@ -83,8 +90,10 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 
 ### Accounts and administration
 - Email and password or Google sign-in, email verification, passkeys and two-factor authentication
+- A home screen that lists your workspaces; each workspace has a profile (logo, cover, tagline, website, location)
 - Workspace admin (members, invitations, channels, feature switches) and the company console (departments, people, roles, permissions, audit logs)
 - Optional encrypted backup to your own Google Drive
+- People who leave keep their name in old messages, tagged *Former member* or *Deactivated*
 - Admins never see message content or message counts, and Oruinwan keeps no per-person activity metrics
 
 ---
@@ -121,7 +130,7 @@ Every release has the same file names, so these links always fetch the newest ve
 | Linux (any distribution) | [Oruinwan-Linux.AppImage](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Linux.AppImage) |
 | Linux (Debian, Ubuntu) | [Oruinwan-Linux.deb](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Linux.deb) |
 | Android phones and tablets | [Oruinwan-Android.apk](https://github.com/thrishankkuntimaddi/Oruinwan/releases/latest/download/Oruinwan-Android.apk) |
-| iPhone and iPad | Use the web app in Safari |
+| iPhone and iPad | Open [oruinwan.poelys.com](https://oruinwan.poelys.com) in Safari |
 
 The release page lists SHA-256 checksums and install notes (the Mac and Windows builds aren't notarized or code-signed yet). Once installed, the apps tell you when an update is ready ([Updates](#updates)).
 
@@ -129,7 +138,7 @@ The release page lists SHA-256 checksums and install notes (the Mac and Windows 
 
 ## Self-hosting
 
-The root `Dockerfile` builds one image with the API, the AI module, the migrations and the web app. `docker-compose.yml` runs it next to PostgreSQL (with pgvector), Redis, S3-compatible storage and MongoDB.
+The root `Dockerfile` builds one image with the API, the AI module, the migrations, the web app and the phone interface for phone browsers (served at `/m/`). `docker-compose.yml` runs it next to PostgreSQL (with pgvector), Redis, S3-compatible storage and MongoDB.
 
 ```bash
 git clone https://github.com/thrishankkuntimaddi/Oruinwan.git
@@ -146,7 +155,7 @@ Oruinwan is then on **http://localhost:8080**.
    ```
 2. In a `.env` next to `docker-compose.yml`, set `APP_URL` (the public `https://` address; sign-in cookies need HTTPS anywhere but localhost), `POSTGRES_PASSWORD` and `S3_SECRET_KEY`. Use `APP_MONGO_URI` for a hosted MongoDB instead of the `mongo` service.
 3. Configure email (`BREVO_API_KEY` or `SMTP_*`; `DEV_MAIL=console` prints codes to the log while testing).
-4. Optional: `VITE_GOOGLE_CLIENT_ID` as a build argument for Google sign-in on the web, a TURN server for huddles behind strict firewalls, and an AI provider (`AI_PROVIDER`; the default is a local model through Ollama).
+4. Optional: `VITE_GOOGLE_CLIENT_ID` as a build argument for Google sign-in on the web, a TURN server for huddles behind strict firewalls, Web Push keys for notifications in phone browsers, and an AI provider (`AI_PROVIDER`; the default is a local model through Ollama).
 5. Create the first platform admin: `docker compose exec app node scripts/createOruinwanAdmin.js`.
 
 Without Docker: `yarn install && yarn build`, then `NODE_ENV=production node server.js` in `server/`. The server serves the API and the web app from one origin.
@@ -248,9 +257,9 @@ For the built-in AI: `ollama pull qwen2.5:3b && ollama pull nomic-embed-text`. T
 | `server/` | Express 5 + Socket.IO API: features in `server/src/features`, core modules in `server/src/modules`. Runs PostgreSQL migrations on boot and serves the web app's build. |
 | `client/` | React 19 + Vite web app. The same code builds the desktop app (`vite build --mode app`) and the product website (`vite build --mode site`). |
 | `desktop/` | Electron shell for macOS, Windows and Linux around the client's app build. See [desktop/README.md](desktop/README.md). |
-| `mobile/` | Capacitor app for Android (and iOS): its own phone UI, with split and wide layouts on tablets. See [mobile/README.md](mobile/README.md). |
+| `mobile/` | Capacitor app for Android (and iOS): its own phone UI, with split and wide layouts on tablets. The same UI is served to phone browsers at `/m/`. See [mobile/README.md](mobile/README.md). |
 | `ai/` | AI layer: agents, tools, memory and providers (Anthropic, OpenAI, Gemini, xAI and any OpenAI-compatible server). See [ai/README.md](ai/README.md). |
-| `platform/` | Code shared by the web client and server: API client, socket client and event names. |
+| `platform/` | Code shared by the web client, phone app and server: API client, socket client, event names, slash commands and animations. |
 | `sdk/` | The public API SDK. |
 | `e2e/` | Playwright end-to-end tests. |
 | `docs/` | Architecture, scaling, integrations and API documentation. |
@@ -331,7 +340,7 @@ Each `.env.example` documents every variable it uses. The key ones:
 | Scaling | `REDIS_URL`, `PROCESS_ROLE` | Any role other than `all` needs Redis |
 | Email | `BREVO_API_KEY`, `EMAIL_FROM`, `SMTP_*`, `SMTP_FALLBACK_*`, `DEV_MAIL` | Tried in that order; `DEV_MAIL=console` for development |
 | Google sign-in | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | |
-| Push notifications | `FIREBASE_SERVICE_ACCOUNT` (Android), `APNS_*` (iOS) | Optional |
+| Push notifications | `FIREBASE_SERVICE_ACCOUNT` (Android), `APNS_*` (iOS), `WEB_PUSH_PUBLIC_KEY` / `WEB_PUSH_PRIVATE_KEY` / `WEB_PUSH_SUBJECT` (phone browsers; `npx web-push generate-vapid-keys`) | Optional |
 | AI | `AI_PROVIDER`, `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_EMBED_MODEL`, `AI_SERVICE_URL`, `AI_SERVICE_TOKEN` | Default provider is `local_llm` |
 | Huddles | `CLOUDFLARE_TURN_*`, or `TURN_URLS` with `TURN_SECRET` or `TURN_USERNAME`/`TURN_CREDENTIAL`; `HUDDLE_MAX_PARTICIPANTS` | Configure one TURN source |
 | Plan limits | `PLAN_LIMITS_JSON`, `DEVICE_LIMIT`, `ORUINWAN_UNLIMITED` | See [Configurable limits](#configurable-limits) |

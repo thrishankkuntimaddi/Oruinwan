@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import BrandMark from '../../shared/components/ui/BrandMark';
 import BRAND from '../../shared/brand';
+import { useAuth } from '../../contexts/AuthContext';
 import { NAV_LINKS } from './data';
 import { scrollToId, useActiveSection, useScrollState } from './hooks';
 import AppLink from './AppLink';
@@ -17,6 +18,7 @@ const LandingNav = () => {
     const sectionInView = useActiveSection(SECTION_IDS);
     const active = onHome ? sectionInView : null;
     const [open, setOpen] = useState(false);
+    const { user } = useAuth();
 
     // Close the mobile drawer on Escape or when the viewport grows past the breakpoint.
     useEffect(() => {
@@ -70,10 +72,18 @@ const LandingNav = () => {
                     </nav>
 
                     <div className="orw-nav__actions">
-                        <AppLink to="/login" className="orw-btn orw-btn--text">Log in</AppLink>
-                        <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary">
-                            Get started <ArrowRight size={14} />
-                        </AppLink>
+                        {user ? (
+                            <Link to="/workspaces" className="orw-btn orw-btn--primary">
+                                Open {BRAND.name} <ArrowRight size={14} />
+                            </Link>
+                        ) : (
+                            <>
+                                <AppLink to="/login" className="orw-btn orw-btn--text">Log in</AppLink>
+                                <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary">
+                                    Get started <ArrowRight size={14} />
+                                </AppLink>
+                            </>
+                        )}
                         <button type="button" className="orw-nav__burger" onClick={() => setOpen(o => !o)}
                             aria-expanded={open} aria-controls="orw-drawer" aria-label={open ? 'Close menu' : 'Open menu'}>
                             {open ? <X size={18} /> : <Menu size={18} />}
@@ -93,8 +103,14 @@ const LandingNav = () => {
                     Docs <ArrowRight size={16} />
                 </a>
                 <div className="orw-drawer__actions">
-                    <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => setOpen(false)}>Log in</AppLink>
-                    <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => setOpen(false)}>Get started</AppLink>
+                    {user ? (
+                        <Link to="/workspaces" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => setOpen(false)}>Open {BRAND.name}</Link>
+                    ) : (
+                        <>
+                            <AppLink to="/login" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => setOpen(false)}>Log in</AppLink>
+                            <AppLink to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => setOpen(false)}>Get started</AppLink>
+                        </>
+                    )}
                 </div>
             </div>
         </>
