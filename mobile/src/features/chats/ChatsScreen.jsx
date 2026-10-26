@@ -357,7 +357,7 @@ export function ChatsScreen() {
           </>
         )}
       </Body>
-      <Fab icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
+      <Fab compact icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
       <ChatMenu row={menu} prefs={prefs} onClose={() => setMenu(null)} />
     </Screen>
   );

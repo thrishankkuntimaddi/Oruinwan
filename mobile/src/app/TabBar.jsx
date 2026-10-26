@@ -205,14 +205,18 @@ export function TabBar() {
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((v) => !v))}
           className="absolute inset-x-0 -top-3 z-10 flex h-6 touch-none cursor-grab items-center justify-center"
         >
-          <span className={cx('h-1 w-10 rounded-full bg-line-strong transition-colors', open && 'bg-accent')} />
-          {/* The hint: a small tab at the right end of the line (away from the middle tab), pointing
-              up while closed and down while open; it nudges until the drawer has been opened once. */}
+          {/* The handle: the bar's top line rises in a soft bump in the middle, holding an arrow
+              (up while closed, down while open); it nudges until the drawer has been opened once. */}
+          <svg aria-hidden width="76" height="14" viewBox="0 0 76 14" className="pointer-events-none absolute left-1/2 top-[-2px] -translate-x-1/2 overflow-visible">
+            <path d="M0 14 C 18 14, 22 1, 38 1 C 54 1, 58 14, 76 14" style={{ fill: 'rgb(var(--c-chrome))' }} />
+            <path d="M0 14 C 18 14, 22 1, 38 1 C 54 1, 58 14, 76 14" fill="none" strokeWidth="1" style={{ stroke: open ? 'var(--color-accent, currentColor)' : 'var(--glass-border)' }} />
+          </svg>
           <span
             aria-hidden
             data-testid="tabbar-handle-arrow"
             className={cx(
-              'absolute right-3 top-1/2 grid h-5 w-7 -translate-y-1/2 place-items-center rounded-full border border-[var(--glass-border)] bg-surface text-text-2 shadow-sm',
+              'relative -top-[6px] grid h-4 w-6 place-items-center text-text-2',
+              open && 'text-accent-ink',
               !open && !seenDrawer && 'animate-nudge-up',
             )}
           >

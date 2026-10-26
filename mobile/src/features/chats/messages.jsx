@@ -1,6 +1,6 @@
 // Message list, message rows and the composer. Rows are left-aligned with avatar and name,
 // the same layout as the web client, so conversations read the same on every device.
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowDown, BarChart3, BellRing, Bookmark, Camera, Check, CheckCheck, CheckCircle2, Clock3, Copy, CornerDownRight, CornerUpLeft, Ellipsis, EyeOff, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, SmilePlus, Sparkles, Trash2, TriangleAlert, Paperclip, X,
 } from 'lucide-react';
@@ -494,6 +494,17 @@ export function AiLiveReply({ reply }) {
   );
 }
 
+/** Messages split into days: [{ at, items }], in order. */
+export function dayBlocks(items) {
+  const out = [];
+  for (const m of items || []) {
+    const last = out[out.length - 1];
+    if (last && isSameDay(last.at, m.at)) last.items.push(m);
+    else out.push({ at: m.at, items: [m] });
+  }
+  return out;
+}
+
 export function MessageList({
   items, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, header, footer, loading, highlightId, onSwipeReply, onTapMessage, onDoubleTap, receipt, onDayTap, onJumpTo, onReachTop,
   topInset = 0,
@@ -576,53 +587,54 @@ export function MessageList({
               <Spinner />
             </div>
           )}
-          {items.map((m, i) => {
-            const prev = items[i - 1];
-            const newDay = !prev || !isSameDay(prev.at, m.at);
-            const grouped =
-              !newDay &&
-              prev &&
-              prev.authorId === m.authorId &&
-              !prev.replyCount &&
-              prev.state !== 'system' &&
-              new Date(m.at) - new Date(prev.at) < GROUP_GAP;
-            return (
-              <Fragment key={m.id}>
-                {newDay && (
-                  <div className="pointer-events-none sticky z-[1] flex justify-center py-1.5" style={{ top: 6 + topInset }}>
-                    {/* Tap the date to jump to another day. */}
-                    <button
-                      type="button"
-                      onClick={onDayTap ? () => onDayTap(m.at) : undefined}
-                      aria-label={onDayTap ? `${dayLabel(m.at)}. Jump to a date` : dayLabel(m.at)}
-                      className={cx('rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm', onDayTap && 'pointer-events-auto pressable')}
-                      data-testid="day-chip"
-                    >
-                      {dayLabel(m.at)}
-                    </button>
-                  </div>
-                )}
-                <MessageItem
-                  m={m}
-                  grouped={grouped}
-                  directory={directory}
-                  me={me}
-                  onReact={onReact}
-                  onLongPress={onLongPress}
-                  onOpenThread={onOpenThread}
-                  onRetry={onRetry}
-                  onCancelUpload={onCancelUpload}
-                  highlight={m.id === highlightId}
-                  onSwipeReply={onSwipeReply}
-                  onTapMessage={onTapMessage}
-                  onDoubleTap={onDoubleTap}
-                  receipt={receipt}
-                  onJumpTo={onJumpTo}
-                  arrived={arrived.has(String(m.id))}
-                />
-              </Fragment>
-            );
-          })}
+          {/* One block per day: its date chip sticks to the top only while that day is on screen
+              (in one shared block the chips of earlier days stayed stuck and piled up). */}
+          {dayBlocks(items).map((day) => (
+            <section key={`day-${day.items[0].id}`} data-testid="day-block">
+              <div className="pointer-events-none sticky z-[1] flex justify-center py-1.5" style={{ top: 6 + topInset }}>
+                {/* Tap the date to jump to another day. */}
+                <button
+                  type="button"
+                  onClick={onDayTap ? () => onDayTap(day.at) : undefined}
+                  aria-label={onDayTap ? `${dayLabel(day.at)}. Jump to a date` : dayLabel(day.at)}
+                  className={cx('rounded-full border border-line bg-surface-2 px-3 py-0.5 text-[11px] font-medium text-text-2 shadow-sm', onDayTap && 'pointer-events-auto pressable')}
+                  data-testid="day-chip"
+                >
+                  {dayLabel(day.at)}
+                </button>
+              </div>
+              {day.items.map((m, i) => {
+                const prev = day.items[i - 1];
+                const grouped =
+                  prev &&
+                  prev.authorId === m.authorId &&
+                  !prev.replyCount &&
+                  prev.state !== 'system' &&
+                  new Date(m.at) - new Date(prev.at) < GROUP_GAP;
+                return (
+                  <MessageItem
+                    key={m.id}
+                    m={m}
+                    grouped={grouped}
+                    directory={directory}
+                    me={me}
+                    onReact={onReact}
+                    onLongPress={onLongPress}
+                    onOpenThread={onOpenThread}
+                    onRetry={onRetry}
+                    onCancelUpload={onCancelUpload}
+                    highlight={m.id === highlightId}
+                    onSwipeReply={onSwipeReply}
+                    onTapMessage={onTapMessage}
+                    onDoubleTap={onDoubleTap}
+                    receipt={receipt}
+                    onJumpTo={onJumpTo}
+                    arrived={arrived.has(String(m.id))}
+                  />
+                );
+              })}
+            </section>
+          ))}
           {footer}
         </div>
       </div>

@@ -327,6 +327,12 @@ export function AiScreen() {
   useEffect(() => {
     if (!pending) return;
     const p = useAiUi.getState().take();
+    // From the quick window: carry on with the same conversation.
+    if (p?.thread) {
+      setThread(p.thread);
+      if (p.prompt) ask(p.prompt, p.thread);
+      return;
+    }
     if (p?.prompt) ask(p.prompt, { id: uid('ai'), messages: [] });
   }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
 

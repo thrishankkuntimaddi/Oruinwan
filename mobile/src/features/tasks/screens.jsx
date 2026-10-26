@@ -410,7 +410,7 @@ export function TasksScreen() {
           ))
         )}
       </Body>
-      <Fab icon={Plus} label="New task" onClick={() => setNewMenu(true)} />
+      <Fab compact icon={Plus} label="New task" onClick={() => setNewMenu(true)} />
       <ActionSheet
         open={viewSheet}
         onClose={() => setViewSheet(false)}

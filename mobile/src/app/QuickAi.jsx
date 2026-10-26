@@ -3,10 +3,10 @@
 // "Ask AI" tile opens the full screen directly.)
 import { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
-import { ArrowUp, Maximize2, Square, X } from 'lucide-react';
+import { ArrowUp, Maximize2, SquarePen, Square, X } from 'lucide-react';
 import { api, useSession } from '../data/session.js';
 import { nav } from './nav.js';
-import { askAiAbout } from '../features/ai/aiUi.js';
+import { continueInAi } from '../features/ai/aiUi.js';
 import { useOverlay } from '../ui/Overlay.jsx';
 import { Icon } from '../ui/Icon.jsx';
 import { Markdown } from '../ui/Markdown.jsx';
@@ -71,12 +71,22 @@ export function QuickAi() {
     }
   };
 
+  // Expand: the same conversation on the full screen (an answer still coming is asked again there).
   const openFull = () => {
     const last = turns[turns.length - 1];
+    const unfinished = last && !last.done;
+    if (unfinished) abort.current?.abort();
+    const kept = unfinished ? turns.slice(0, -1) : turns;
+    const prompt = q.trim() || (unfinished ? last.q : '');
     hide();
-    if (q.trim()) askAiAbout(q.trim());
-    else if (last && !last.done) askAiAbout(last.q);
-    else nav.openAi();
+    if (!kept.length && !prompt) nav.openAi();
+    else continueInAi(kept, prompt);
+  };
+  const newChat = () => {
+    abort.current?.abort();
+    setTurns([]);
+    setQ('');
+    setTimeout(() => input.current?.focus(), 30);
   };
 
   return (
@@ -94,6 +104,11 @@ export function QuickAi() {
             <AiEyes size={18} />
           </span>
           <span className="flex-1 text-[14px] font-semibold">Oruinwan AI</span>
+          {turns.length > 0 && (
+            <button type="button" aria-label="New chat" title="New chat" onClick={newChat} data-testid="quick-ai-new" className="grid h-8 w-8 place-items-center rounded-full text-text-2 active:bg-surface-2">
+              <Icon as={SquarePen} size={15} />
+            </button>
+          )}
           <button type="button" aria-label="Open Oruinwan AI" onClick={openFull} className="grid h-8 w-8 place-items-center rounded-full text-text-2 active:bg-surface-2">
             <Icon as={Maximize2} size={15} />
           </button>

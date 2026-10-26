@@ -1,7 +1,7 @@
 // A small "Ask AI" pill at the top of a conversation, like a dynamic island: tap it, ask about
 // this conversation, and the answer appears right there. Swipe it up (or tap ×) to close.
 // The question goes with the messages decrypted on this device (nothing else is uploaded).
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -22,13 +22,8 @@ export function AiIsland({ transcript, title }) {
   const [dy, setDy] = useState(0);
   const drag = useRef(null);
   const input = useRef(null);
-  // Full "Ask AI about this chat" pill at first, then a small sparkle in the corner (it covered
-  // the newest messages when it stayed).
-  const [compact, setCompact] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setCompact(true), ISLAND_FULL_MS);
-    return () => clearTimeout(t);
-  }, []);
+    // Always the small button in the top-right corner: the full pill covered the messages.
+  const compact = true;
 
   const close = () => {
     setOpen(false);

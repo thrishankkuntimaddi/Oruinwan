@@ -165,7 +165,7 @@ function NotesList({ section }) {
           />
         )}
       </Body>
-      <Fab icon={Plus} label="New note" onClick={() => setTemplates(true)} />
+      <Fab compact icon={Plus} label="New note" onClick={() => setTemplates(true)} />
       <Sheet open={templates} onClose={() => setTemplates(false)} title="New note">
         <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
           {TEMPLATES.map((t) => {
