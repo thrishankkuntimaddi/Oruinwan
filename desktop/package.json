@@ -1,6 +1,6 @@
 {
   "name": "oruinwan-desktop",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "description": "Channels, direct messages, tasks, notes and Oruinwan AI for your team",
   "main": "electron/main.js",
   "desktopName": "oruinwan.desktop",
@@ -36,7 +36,7 @@
       }
     ],
     "productName": "Oruinwan",
-    "copyright": "Copyright \u00a9 2026 Oruinwan Inc.",
+    "copyright": "Copyright © 2026 Oruinwan Inc.",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
