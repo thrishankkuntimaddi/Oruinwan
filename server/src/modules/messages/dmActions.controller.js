@@ -164,6 +164,17 @@ exports.createGroupDM = async (req, res) => {
     }
 };
 
+/** POST /api/v2/dm/find { workspaceId, userIds } — the DM or group New message would open, or null. */
+exports.findConversation = async (req, res) => {
+    try {
+        const { workspaceId, userIds } = req.body || {};
+        const result = await groupDM.findConversation({ userId: req.user.sub, workspaceId, userIds });
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        return sendError(res, err);
+    }
+};
+
 /** GET /api/v2/dm/:dmId — people and name, for 1:1 and group DMs. */
 exports.getDMDetails = async (req, res) => {
     try {

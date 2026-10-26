@@ -30,6 +30,7 @@ function mockMakeSession(fields) {
 jest.mock('../../../../models/DMSession', () => {
     const model = {
         MAX_GROUP_DM_MEMBERS: 10,
+        dmPairKey: (ws, a, b) => `${ws}:${[String(a), String(b)].sort().join(':')}`,
         findOne: jest.fn(async (q) => mockStore.sessions.find((s) => s.isGroup && q.isGroup
             && s.participants.length === q.participants.$size
             && q.participants.$all.every((p) => s.participants.map(String).includes(String(p)))) || null),
@@ -412,5 +413,23 @@ describe('adding people: how much history they get (Nani, Mani, Teja, Nikil)', (
         // From New Message (no newGroup), the same people reopen the existing group.
         const reopen = await svc.createGroup({ creatorId: TEJA, workspaceId: mockWS, memberIds: [NANI, MANI, NIKIL] }, null);
         expect(reopen.created).toBe(false);
+    });
+});
+
+describe('New message: finding the conversation without creating it', () => {
+    it('finds the group with exactly these people, and nothing for new people', async () => {
+        const { session } = await svc.createGroup({ creatorId: mockASHA, workspaceId: mockWS, memberIds: [mockBEN, mockCHEN] }, fakeIo());
+        const found = await svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [mockCHEN, mockBEN] });
+        expect(found).toMatchObject({ isGroup: true, dm: { id: String(session._id), isGroup: true } });
+        const none = await svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [mockBEN, mockDIVYA] });
+        expect(none).toEqual({ dm: null, isGroup: true });
+        expect(mockStore.sessions).toHaveLength(1);
+    });
+    it('one person: our DM, or null before we ever talked', async () => {
+        await expect(svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [mockBEN] })).resolves.toEqual({ dm: null, isGroup: false });
+    });
+    it('refuses people outside the workspace and an empty list', async () => {
+        await expect(svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [mockOid(99)] })).rejects.toMatchObject({ status: 403 });
+        await expect(svc.findConversation({ userId: mockASHA, workspaceId: mockWS, userIds: [] })).rejects.toMatchObject({ status: 400 });
     });
 });

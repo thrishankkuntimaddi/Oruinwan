@@ -336,6 +336,22 @@ function App() {
                             }
                           />
 
+                          {/* New message: a "To:" bar, the chat or group for the people picked below it. */}
+                          <Route
+                            path="/workspace/:workspaceId/messages/new"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <MainLayout sidePanel={<MessagesPanel />}>
+                                      <Messages />
+                                    </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+
                           {}
                           <Route
                             path="/workspace/:workspaceId/messages/dm/:dmId"

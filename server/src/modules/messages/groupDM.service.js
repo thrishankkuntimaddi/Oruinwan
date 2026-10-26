@@ -145,6 +145,37 @@ async function describe(sessionDoc, viewerId) {
     };
 }
 
+/** The group these exact people already have, or null (New message and createGroup agree). */
+function sameGroup(workspaceId, ids) {
+    return DMSession.findOne({ workspace: workspaceId, isGroup: true, participants: { $all: ids, $size: ids.length } });
+}
+
+/**
+ * The conversation "New message" would open for these people, without creating anything:
+ * one person → our 1:1 DM, two or more → the group with exactly them and me. Returns
+ * { dm: describe(...) | null, isGroup }. Everyone must be an active member of the workspace.
+ */
+async function findConversation({ userId, workspaceId, userIds }) {
+    if (!mongoose.isValidObjectId(String(workspaceId))) throw fail(400, 'workspaceId is required');
+    const others = [...new Set((Array.isArray(userIds) ? userIds : []).map(String))].filter((id) => id !== String(userId));
+    if (others.length === 0) throw fail(400, 'Pick at least one person');
+    if (others.some((id) => !mongoose.isValidObjectId(id))) throw fail(400, 'Invalid person');
+    if (others.length + 1 > MAX_MEMBERS) throw fail(400, `A group can have up to ${MAX_MEMBERS} people.`, 'GROUP_FULL');
+    const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');
+    if (!(await isActiveWorkspaceMember(workspaceId, userId))) throw fail(403, 'Not a member of this workspace');
+    const { ids: members } = await activeMemberIds(workspaceId);
+    if (!others.every((id) => members.has(id))) throw fail(403, 'Everyone must be a member of this workspace');
+
+    let session;
+    if (others.length === 1) {
+        session = await DMSession.findOne({ pairKey: DMSession.dmPairKey(workspaceId, userId, others[0]) });
+        if (session?.isGroup) session = null;
+    } else {
+        session = await sameGroup(workspaceId, [String(userId), ...others]);
+    }
+    return { dm: session ? await describe(session, userId) : null, isGroup: others.length > 1 };
+}
+
 /**
  * Creates a group DM, or reopens the one these exact people already have.
  * `memberIds` are the other people; the creator is added.
@@ -160,7 +191,7 @@ async function createGroup({ creatorId, workspaceId, memberIds, name, newGroup =
     if (!ids.every((id) => members.has(id))) throw fail(403, 'Everyone must be a member of this workspace');
 
     const cleanName = typeof name === 'string' && name.trim() ? name.trim().slice(0, 80) : null;
-    const existing = await DMSession.findOne({ workspace: workspaceId, isGroup: true, participants: { $all: ids, $size: ids.length } });
+    const existing = await sameGroup(workspaceId, ids);
     if (existing && !cleanName && !newGroup) {
         // Same people again: bring it back for the creator instead of making a duplicate.
         existing.hiddenFor = (existing.hiddenFor || []).filter((h) => String(h.user) !== String(creatorId));
@@ -394,6 +425,7 @@ module.exports = {
     groupDisplayName,
     describe,
     createGroup,
+    findConversation,
     addMembers,
     removeMember,
     rename,

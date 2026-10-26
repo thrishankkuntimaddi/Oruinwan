@@ -412,7 +412,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         aria-label="New broadcast"
                     ><Megaphone size={15} /></button>
                     <button type="button" className="gl-icon-btn"
-                        onClick={() => setShowCreateDM(true)}
+                        onClick={() => navigate(`/workspace/${workspaceId}/messages/new`)}
                         title="New Message"
                         aria-label="New message"
                     ><Plus size={16} /></button>
@@ -470,7 +470,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                     title="No conversations yet"
                     text="Start a direct message with someone in this workspace."
                     action={(
-                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => setShowCreateDM(true)}>
+                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => navigate(`/workspace/${workspaceId}/messages/new`)}>
                             <Plus size={13} /> New message
                         </button>
                     )}

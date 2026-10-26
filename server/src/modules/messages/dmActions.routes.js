@@ -7,6 +7,7 @@ router.use(requireAuth);
 
 // Group DMs (3+ people).
 router.post('/group', ctrl.createGroupDM);
+router.post('/find', ctrl.findConversation);
 router.get('/:dmId', ctrl.getDMDetails);
 router.patch('/:dmId', ctrl.renameGroupDM);
 router.post('/:dmId/members', ctrl.addGroupDMMembers);

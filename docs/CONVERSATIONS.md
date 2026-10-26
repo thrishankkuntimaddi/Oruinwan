@@ -136,6 +136,21 @@ REST (`POST /api/v2/messages/channel`, `/direct`, `/poll`, `/forward`) and Socke
 The socket also confirms to the sender with `message-sent` (or `send-error` with the same `code` the
 REST API would answer with). Socket reactions, deletes and pins call the same services as REST.
 
+## New message (the "To:" bar)
+
+On the Messages page, New message opens a "To:" bar, like Slack. Add one person and your 1:1 chat
+with them opens right below; add more and the group with exactly those people and you opens
+(`POST /api/v2/dm/find`, which never creates anything). When there is no such group yet the view
+says so: send a first message (it starts the group and is sent there) or press Start group.
+
+## Mentions
+
+Usernames can contain spaces ("Pakanati Shiva Kumar Goud"). After an "@", the longest workspace
+username that follows wins, so the whole name is one mention, in how it is drawn, in the
+"add them?" offers and in notifications (`platform/people/mentions.js` in the apps,
+`server/src/utils/mentionMatch.js` on the server). Anything else after "@" is a one-word handle
+(@here, @channel, assistants).
+
 ## Recipient search
 
 "New message" (Home sidebar and Messages page) and "Add people" use the workspace's active members

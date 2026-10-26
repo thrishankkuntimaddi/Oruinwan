@@ -9,6 +9,7 @@ import "../../components/layout/shell.css";
 import NewDMModal from "../../features/messaging/NewDMModal";
 import { useParams } from "react-router-dom";
 import { MessagesLanding } from './landing/Landings';
+import NewMessageView from "../../features/messaging/newMessage/NewMessageView";
 import logger from '../../utils/logger';
 import { useSocket } from "../../contexts/SocketContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -296,12 +297,16 @@ export default function Messages() {
     if (workspaceId && userId) openDMWithUser(workspaceId, userId);
   };
 
+  const isCompose = /\/messages\/new\/?$/.test(location.pathname);
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-1 overflow-hidden">
         {}
         <div className="flex-1 flex flex-col">
-          {currentBroadcast ? (
+          {isCompose ? (
+            <NewMessageView key={workspaceId} workspaceId={workspaceId} currentUserId={myId} />
+          ) : currentBroadcast ? (
             <BroadcastChatWindow broadcast={currentBroadcast} />
           ) : selectedChat ? (
             <ChatWindowV2
@@ -313,7 +318,7 @@ export default function Messages() {
               workspaceId={workspaceId || selectedChat.workspaceId}
             />
           ) : (
-            <MessagesLanding onNewMessage={() => setShowCreateDM(true)} />
+            <MessagesLanding onNewMessage={() => navigate(`/workspace/${workspaceId}/messages/new`)} />
           )}
         </div>
       </div>
