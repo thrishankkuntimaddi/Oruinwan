@@ -1768,7 +1768,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                                 const ws = workspaceId || chat?.workspaceId;
                                 const dm = await createGroupDM(ws, [chat.userId, ...groupOffer.map((p) => p.id)]);
                                 setGroupOffer(null);
-                                await refreshContacts?.();
+                                await refreshContacts?.(workspaceId || chat?.workspaceId);
                                 navigate(`/workspace/${ws}/home/dm/${dm._id || dm.id}`);
                                 showToast('Group ready: carry on there', 'success');
                             } catch (err) {
@@ -1806,7 +1806,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                             const where = `#${String(chat.name || '').replace(/^#/, '')}`;
                             if (added) showToast(added === 1 ? `Added to ${where}` : `${added} people added to ${where}`, 'success');
                             if (problem) showToast(problem, 'error');
-                            refreshContacts?.();
+                            refreshContacts?.(workspaceId || chat?.workspaceId);
                         }}>
                         {mentionInviteBusy ? 'Adding…' : 'Add to channel'}
                     </button>

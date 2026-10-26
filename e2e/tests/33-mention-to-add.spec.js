@@ -72,7 +72,7 @@ test('mentioning someone else in a 1:1 DM offers a group with the three of you',
   await page.addLocatorHandler(page.locator('[data-tour-card]'), async () => {
     await page.getByRole('button', { name: 'Skip tour' }).click();
   });
-  await login(page, 'shiva');
+  await login(page, 'vishnu');
   await openWorkspace(page);
   await openDm(page, 'manogna');
   const firstUrl = page.url();
@@ -90,6 +90,6 @@ test('mentioning someone else in a 1:1 DM offers a group with the three of you',
   const dm = (await details.json()).dm;
   expect(dm.isGroup).toBe(true);
   const ids = (dm.members || dm.participants || []).map((m) => String(m._id || m.id || m)).sort();
-  expect(ids).toEqual([seedData().users.shiva.id, seedData().users.manogna.id, seedData().users.sandeep.id].sort());
+  expect(ids).toEqual([seedData().users.vishnu.id, seedData().users.manogna.id, seedData().users.sandeep.id].sort());
   await ctx.close();
 });
