@@ -30,7 +30,6 @@ function fakeIndexedDB() {
 
 const subtle = globalThis.crypto.subtle;
 const b64 = (bytes) => Buffer.from(bytes).toString('base64');
-const fromB64 = (s) => new Uint8Array(Buffer.from(s, 'base64'));
 const httpError = (status) => Object.assign(new Error(`HTTP ${status}`), { status });
 
 const rsa = () => subtle.generateKey(
