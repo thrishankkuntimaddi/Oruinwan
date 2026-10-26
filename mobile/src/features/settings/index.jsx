@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
-  ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, FileCode, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
+  ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
   LifeBuoy, BookOpen, Gift, ChevronRight,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -1127,9 +1127,8 @@ export function AboutSettings() {
             Version {current} · built {new Date(BUILD_TIME).toLocaleDateString()}
           </p>
         </div>
-        <Section title="Open source">
-          <RowGroup footer="Oruinwan is released under the MIT licence. The Inter typeface is used under the SIL Open Font License 1.1.">
-            <Row icon={FileCode} title="Source code" trailing={External} onClick={() => openExternal(`https://github.com/${REPO}`)} />
+        <Section title="Help">
+          <RowGroup footer="The Inter typeface is used under the SIL Open Font License 1.1.">
             <Row icon={Download} title="All releases" trailing={External} onClick={() => openExternal(RELEASES_PAGE)} />
             <Row icon={Bug} title="Report a problem" trailing={External} onClick={() => openExternal(`https://github.com/${REPO}/issues/new`)} />
           </RowGroup>

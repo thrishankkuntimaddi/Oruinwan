@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     ArrowRight, Play, CheckCircle2, Download, Globe, Monitor, Smartphone, ShieldCheck,
-    Github, Server, Scale, SlidersHorizontal, GitPullRequest,
+    Github,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import BRAND from '../../shared/brand';
@@ -91,7 +91,7 @@ const Landing = () => {
                         <div>
                             <span className="orw-chip" data-reveal>
                                 <span className="orw-dot" aria-hidden="true" />
-                                {user ? `Welcome back${firstName ? `, ${firstName}` : ''}` : 'Free · Open source · MIT licence'}
+                                {user ? `Welcome back${firstName ? `, ${firstName}` : ''}` : 'Free for teams · Web, desktop and phone'}
                             </span>
                             <h1 className="orw-hero__title" id="orw-hero-title" data-reveal style={{ '--d': '80ms' }}>
                                 <span>One workspace.</span>
@@ -280,40 +280,6 @@ const Landing = () => {
                     </div>
                 </section>
 
-                {/* ── Open source ──────────────────────────────────────── */}
-                <section id="open-source" className="orw-section" aria-label="Open source">
-                    <div className="orw-container">
-                        <div className="orw-oss orw-glass" data-reveal>
-                            <div>
-                                <p className="orw-eyebrow">Open source</p>
-                                <h2 className="orw-h2">Open source on GitHub.<br /><span className="orw-gloss-text">MIT licensed.</span></h2>
-                                <p className="orw-lead">
-                                    Read the code, run your own server with Docker Compose, change the limits, or send a pull request.
-                                    The server, web app, desktop and phone apps all live in one repository.
-                                </p>
-                                <div className="orw-oss__ctas">
-                                    <a className="orw-btn orw-btn--primary orw-btn--lg" href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                                        <Github size={16} aria-hidden="true" /> Oruinwan on GitHub
-                                    </a>
-                                    <a className="orw-btn orw-btn--ghost orw-btn--lg" href={`${REPO_URL}#self-hosting`} target="_blank" rel="noopener noreferrer">
-                                        <Server size={15} aria-hidden="true" /> Host it yourself
-                                    </a>
-                                </div>
-                            </div>
-                            <ul className="orw-oss__points">
-                                {[
-                                    { icon: Scale, text: 'MIT licence: use it, change it, ship it' },
-                                    { icon: Server, text: 'Self-host with Docker Compose: PostgreSQL, MongoDB and S3 storage' },
-                                    { icon: SlidersHorizontal, text: 'Every plan limit is configurable on your own server' },
-                                    { icon: GitPullRequest, text: 'Issues and pull requests welcome' },
-                                ].map(({ icon: Icon, text }) => (
-                                    <li key={text}><Icon size={16} aria-hidden="true" />{text}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
                 {/* ── Pricing teaser ───────────────────────────────────── */}
                 <section id="pricing" className="orw-section orw-section--slab" aria-label="Pricing">
                     <div className="orw-container">
@@ -343,7 +309,7 @@ const Landing = () => {
                         <div className="orw-final orw-glass" data-reveal>
                             <p className="orw-eyebrow" style={{ justifyContent: 'center' }}>Get started</p>
                             <h2 className="orw-h2">Build your team’s HQ on <span className="orw-gloss-text">{BRAND.name}</span>.</h2>
-                            <p className="orw-lead">Free and open source. Set up in minutes. Bring everyone into one workspace.</p>
+                            <p className="orw-lead">Free for teams. Set up in minutes. Bring everyone into one workspace.</p>
                             <div className="orw-final__ctas">
                                 {user ? (
                                     <Link to="/workspaces" className="orw-btn orw-btn--primary orw-btn--lg">

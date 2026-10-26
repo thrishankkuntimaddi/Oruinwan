@@ -11,7 +11,6 @@ export const NAV_LINKS = [
     { id: 'platform', label: 'Features' },
     { id: 'security', label: 'Security' },
     { id: 'download', label: 'Download' },
-    { id: 'open-source', label: 'Open source' },
     { id: 'pricing', label: 'Pricing', to: '/pricing' },
 ];
 
@@ -182,9 +181,8 @@ export const STEPS = [
 
 // ── FAQ ────────────────────────────────────────────────────────────────
 export const FAQ = [
-    { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a free, open-source workspace for teams: chat, threads, huddles, tasks, notes and AI in one place, on the web, desktop, phone and tablet.` },
+    { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a free workspace for teams: chat, threads, huddles, tasks, notes and AI in one place, on the web, desktop, phone and tablet.` },
     { q: 'Is it really free?', a: 'Yes. The Free plan has every feature, with limits sized for small teams: up to 4 signed-in devices, 2 workspaces you create and 2 you join, the owner plus 10 members per workspace, huddles of up to 10 people for 30 minutes, and 50 AI requests per person and 300 AI requests per workspace per day. Pro and Enterprise, with bigger limits and admin controls, are coming soon.' },
-    { q: 'Is it open source? Can I host it myself?', a: `Yes. ${BRAND.name} is MIT-licensed on GitHub. You can run the whole server yourself with Docker Compose, and every plan limit is configurable on your own server.` },
     { q: 'How do I sign in?', a: 'With your email and password, or with Google. New accounts verify their email address, and you can add passkeys and two-factor authentication in Settings.' },
     { q: 'How do I bring my team in?', a: 'Create a workspace with the setup wizard, then share a team invite link anyone on your team can use, or send one-time links that work once. You can also invite people by email.' },
     { q: 'Are messages encrypted?', a: `Yes. Messages in channels and DMs are encrypted on your device with per-conversation keys, and stay encrypted in transit and at rest. ${BRAND.name}'s server keeps a sealed copy of your key, protected by a server master key, so your devices unlock automatically after you sign in and AI agents can answer in encrypted conversations. Messages are never shown to admins. To hold that key yourself, run your own server.` },

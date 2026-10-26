@@ -28,7 +28,7 @@ export const SETTINGS_INDEX = [
   { title: 'Contact support', route: 'settings.support', keywords: 'support contact help team ticket request email' },
   { title: 'Report a problem', route: 'settings.support.new', keywords: 'bug problem crash issue report broken' },
   { title: 'Take the tour', action: 'tour', keywords: 'tour onboarding walkthrough introduction' },
-  { title: 'About Oruinwan', route: 'settings.about', keywords: 'about version licence license open source privacy terms' },
+  { title: 'About Oruinwan', route: 'settings.about', keywords: 'about version privacy terms' },
   { title: 'Sign out', action: 'signout', keywords: 'sign out log out logout' },
 ];
 

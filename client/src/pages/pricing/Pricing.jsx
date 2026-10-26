@@ -63,8 +63,8 @@ const PublicPricing = () => (
             center
             eyebrow="Pricing"
             icon={Tag}
-            title={<>Free for teams. <span className="orw-gloss-text">Open source.</span></>}
-            lead="Oruinwan is free to use and MIT-licensed. Pro and Enterprise plans with bigger limits and admin controls are on the way."
+            title={<>Free for teams. <span className="orw-gloss-text">Bigger plans soon.</span></>}
+            lead="Oruinwan is free to use. Pro and Enterprise plans with bigger limits and admin controls are on the way."
             actions={(
                 <a className="orw-btn orw-btn--ghost" href={REPO_URL} target="_blank" rel="noopener noreferrer">
                     <Github size={15} aria-hidden="true" /> Source on GitHub

@@ -71,7 +71,7 @@ const GROUPS = [
     {
         label: 'About',
         items: [
-            { id: 'updates', label: 'About & updates', icon: Info, description: 'Version, updates, plans', keywords: 'update updates version upgrade release new check reload restart about pricing plans pro enterprise open source github' },
+            { id: 'updates', label: 'About & updates', icon: Info, description: 'Version, updates, plans', keywords: 'update updates version upgrade release new check reload restart about pricing plans pro enterprise' },
         ],
     },
 ];

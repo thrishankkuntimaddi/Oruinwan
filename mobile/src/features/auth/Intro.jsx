@@ -61,7 +61,7 @@ export function Intro({ onGetStarted }) {
         <Button block size="lg" iconRight={ArrowRight} onClick={onGetStarted} data-testid="get-started">
           Get started
         </Button>
-        <p className="pt-1 text-center text-xs text-text-3">Version {__APP_VERSION__} · Open source (MIT)</p>
+        <p className="pt-1 text-center text-xs text-text-3">Version {__APP_VERSION__}</p>
       </div>
     </div>
   );

@@ -16,7 +16,6 @@ export const FREE_LIMITS = [
     { id: 'tasks', label: 'Tasks', value: '300 active per workspace; 30 for yourself + 30 assigned per person' },
     { id: 'ai', label: 'AI requests', value: '50 per person per day, 300 per workspace per day' },
     { id: 'backup', label: 'Backup', value: 'Encrypted backup to your Google Drive' },
-    { id: 'source', label: 'Source code', value: 'Open source, MIT licence' },
 ];
 
 export const PLANS = [

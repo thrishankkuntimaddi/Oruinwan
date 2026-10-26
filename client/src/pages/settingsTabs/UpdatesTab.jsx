@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Download, ExternalLink, RefreshCw, Tag } from 'lucide-react';
 import { PageIntro, Section, Row, Button, Notice, Badge } from './settingsUi';
 import { actionLabel, getUpdater, hasUpdate, updateTitle, useUpdateState } from '../../appMode/updates/store';
-import { notesExcerpt, RELEASES_URL, REPO_URL } from '../../appMode/updates/manifest';
+import { notesExcerpt, RELEASES_URL } from '../../appMode/updates/manifest';
 import { updateSubtitle } from '../../appMode/UpdateNotice';
 
 const when = (t) => (t ? new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null);
@@ -109,9 +109,6 @@ export default function UpdatesTab() {
             <Section title="Oruinwan">
                 <Row label="Plans" description="Oruinwan is free. Pro and Enterprise are coming soon.">
                     <Button icon={Tag} onClick={() => navigate('/pricing')}>See plans</Button>
-                </Row>
-                <Row label="Open source" description="MIT licensed. Read the code, report issues, contribute.">
-                    <Button icon={ExternalLink} onClick={() => window.open(REPO_URL, '_blank', 'noopener')}>GitHub</Button>
                 </Row>
             </Section>
         </>

@@ -21,7 +21,6 @@ const LandingFooter = () => {
                 { label: BRAND.ai, section: 'ai' },
                 { label: 'Pricing', to: '/pricing' },
                 { label: 'Download', section: 'download' },
-                { label: 'Open source', section: 'open-source' },
                 { label: 'Security', to: '/security' },
             ],
         },
@@ -69,7 +68,7 @@ const LandingFooter = () => {
                             <BrandMark size={28} />
                             <span className="orw-logo__word">{BRAND.name}</span>
                         </a>
-                        <p>The free, open-source workspace for teams: chat, huddles, tasks, notes and AI, on every platform.</p>
+                        <p>The free workspace for teams: chat, huddles, tasks, notes and AI, on every platform.</p>
                     </div>
                     {columns.map(col => (
                         <nav key={col.title} aria-label={col.title}>
@@ -89,7 +88,7 @@ const LandingFooter = () => {
                 <div className="orw-footer__wordmark" aria-hidden="true">{BRAND.name.toLowerCase()}</div>
 
                 <div className="orw-footer__bottom">
-                    <span>© {BRAND.year} {BRAND.company} Open source under the MIT licence.</span>
+                    <span>© {BRAND.year} {BRAND.company}</span>
                     <button type="button" className="orw-btn orw-btn--ghost" onClick={() => scrollToId('top')}>
                         Back to top <ArrowUp size={14} aria-hidden="true" />
                     </button>
