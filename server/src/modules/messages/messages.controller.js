@@ -31,13 +31,13 @@ function sendError(res, err, label) {
 /** Body fields both send endpoints accept. */
 function sendBody(body = {}) {
     const {
-        attachments, replyTo, parentId, quotedMessageId, ciphertext, messageIv, isEncrypted,
+        attachments, replyTo, parentId, quotedMessageId, ciphertext, messageIv, isEncrypted, keyVersion = null,
         clientTempId, clientMessageId, mentionText = '', type = 'message', poll = null,
         contact = null, meeting = null, checklistCount = 0, linkPreview = null,
     } = body;
     return {
         attachments, parentId: parentId || replyTo || null, quotedMessageId: quotedMessageId || null,
-        ciphertext, messageIv, isEncrypted, clientTempId, clientMessageId, mentionText, type, poll,
+        ciphertext, messageIv, isEncrypted, keyVersion, clientTempId, clientMessageId, mentionText, type, poll,
         contact, meeting, checklistCount, linkPreview,
     };
 }
@@ -78,6 +78,7 @@ async function sendTo(req, res, target, label) {
             quotedMessageId: b.quotedMessageId,
             ciphertext: b.ciphertext,
             messageIv: b.messageIv,
+            keyVersion: b.keyVersion,
             isEncrypted: b.isEncrypted,
             clientTempId: b.clientTempId,
             clientMessageId: b.clientMessageId,
@@ -91,7 +92,12 @@ async function sendTo(req, res, target, label) {
         return sentResponse(res, message);
     } catch (err) {
         if (err && err.status && err.status < 500) {
-            return res.status(err.status).json({ message: err.message, ...(err.code ? { code: err.code } : {}) });
+            return res.status(err.status).json({
+                message: err.message,
+                ...(err.code ? { code: err.code } : {}),
+                // KEY_ROTATED: which key to fetch before sending again.
+                ...(err.code === 'KEY_ROTATED' ? { currentVersion: err.currentVersion, conversationId: err.conversationId, conversationType: err.conversationType } : {}),
+            });
         }
         return handleError(res, err, label);
     }
@@ -310,6 +316,13 @@ exports.forwardMessage = async (req, res) => {
                 }
                 // The files stay the original sender's uploads; the forwarder can already read them.
                 const { target: t } = await prepareSend(userId, type === 'channel' ? { channelId: id } : { dmSessionId: id }, req.io);
+                // Text is encrypted with its own conversation's key: copied into another conversation
+                // nobody there could read it. The apps re-encrypt it for each target instead.
+                const sameConversation = String(t.channel || t.dm) === String(originalMessage.channel || originalMessage.dm);
+                if (forwardType === 'message' && !sameConversation) {
+                    errors.push({ target, error: 'Open the message to forward it (the app encrypts it for that conversation)' });
+                    continue;
+                }
                 await messagesService.createMessage({
                     type: forwardType,
                     company: t.company,
@@ -320,6 +333,7 @@ exports.forwardMessage = async (req, res) => {
                     sender: userId,
                     ciphertext: originalMessage.payload?.ciphertext || originalMessage.ciphertext,
                     messageIv: originalMessage.payload?.messageIv || originalMessage.messageIv,
+                    keyVersion: originalMessage.payload?.keyVersion || null,
                     isEncrypted: true,
                     attachments: originalMessage.attachments || [],
                     forwardedFrom: messageId,
@@ -347,13 +361,13 @@ exports.editMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.sub;
-        const { text, ciphertext, messageIv } = req.body || {};
+        const { text, ciphertext, messageIv, keyVersion = null } = req.body || {};
 
         const io = req.app?.get('io');
         const message = await messagesService.editMessage(
             messageId,
             userId,
-            { text, ciphertext, messageIv },
+            { text, ciphertext, messageIv, keyVersion },
             io
         );
 

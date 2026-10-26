@@ -163,4 +163,102 @@ const conversationKeys = {
     },
 };
 
-module.exports = { identityKeys, cryptoState, conversationKeys, toConversationKey };
+/**
+ * Earlier keys of a conversation (migration 0018). The current key stays in conversation_keys;
+ * rotate() moves it here (with the copies of the people who keep it) and installs a new one.
+ */
+const conversationKeyEpochs = {
+    /** Earlier keys `userId` holds a copy of: [{ version, encryptedKey, ephemeralPublicKey, algorithm }], newest first. */
+    async listForUser(conversationId, conversationType, userId) {
+        const { rows } = await query(
+            `SELECT em.version, em.encrypted_key, em.ephemeral_public_key, em.algorithm
+               FROM conversation_key_epoch_members em
+               JOIN conversation_keys k ON k.id = em.conversation_key_id
+              WHERE k.conversation_id = $1 AND k.conversation_type = $2 AND em.user_id = $3
+              ORDER BY em.version DESC`,
+            [str(conversationId), conversationType, str(userId)]
+        );
+        return rows.map((r) => ({ version: r.version, encryptedKey: r.encrypted_key, ephemeralPublicKey: r.ephemeral_public_key, algorithm: r.algorithm }));
+    },
+    /** Every earlier key with its server copy and who holds it: [{ version, workspaceEncryptedKey, holders: Set }]. */
+    async list(conversationId, conversationType) {
+        const { rows } = await query(
+            `SELECT e.version, e.workspace_encrypted_key, e.created_at, e.retired_at,
+                    COALESCE(array_agg(em.user_id) FILTER (WHERE em.user_id IS NOT NULL), '{}') AS holders
+               FROM conversation_key_epochs e
+               JOIN conversation_keys k ON k.id = e.conversation_key_id
+               LEFT JOIN conversation_key_epoch_members em ON em.conversation_key_id = e.conversation_key_id AND em.version = e.version
+              WHERE k.conversation_id = $1 AND k.conversation_type = $2
+              GROUP BY e.version, e.workspace_encrypted_key, e.created_at, e.retired_at
+              ORDER BY e.version DESC`,
+            [str(conversationId), conversationType]
+        );
+        return rows.map((r) => ({ version: r.version, workspaceEncryptedKey: r.workspace_encrypted_key, createdAt: r.created_at, retiredAt: r.retired_at, holders: new Set((r.holders || []).map(String)) }));
+    },
+    async addMemberKey(conversationId, conversationType, version, { userId, encryptedKey, ephemeralPublicKey = null, algorithm }) {
+        await query(
+            `INSERT INTO conversation_key_epoch_members (conversation_key_id, version, user_id, encrypted_key, ephemeral_public_key, algorithm)
+             SELECT e.conversation_key_id, e.version, $4, $5, $6, $7
+               FROM conversation_key_epochs e JOIN conversation_keys k ON k.id = e.conversation_key_id
+              WHERE k.conversation_id = $1 AND k.conversation_type = $2 AND e.version = $3
+             ON CONFLICT (conversation_key_id, version, user_id) DO UPDATE SET encrypted_key = EXCLUDED.encrypted_key,
+                ephemeral_public_key = EXCLUDED.ephemeral_public_key, algorithm = EXCLUDED.algorithm, added_at = now()`,
+            [str(conversationId), conversationType, version, str(userId), encryptedKey, ephemeralPublicKey, algorithm]
+        );
+    },
+    /** Takes away every earlier key `userId` holds in this conversation. */
+    async removeUser(conversationId, conversationType, userId) {
+        await query(
+            `DELETE FROM conversation_key_epoch_members
+              WHERE user_id = $3 AND conversation_key_id = (SELECT id FROM conversation_keys WHERE conversation_id = $1 AND conversation_type = $2)`,
+            [str(conversationId), conversationType, str(userId)]
+        );
+    },
+    /**
+     * A new key, in one transaction: the current key becomes epoch `expectedVersion` (kept only by
+     * `keepOld` user ids), the new key (`workspaceEncryptedKey`, member copies) becomes current at
+     * expectedVersion + 1. Fails with code 'KEY_CHANGED' when the key moved on meanwhile.
+     */
+    async rotate(conversationId, conversationType, { expectedVersion, workspaceEncryptedKey, encryptedKeys = [], keepOld = [] }) {
+        return withTransaction(async (tx) => {
+            const { rows } = await tx.query(
+                'SELECT * FROM conversation_keys WHERE conversation_id = $1 AND conversation_type = $2 FOR UPDATE',
+                [str(conversationId), conversationType]
+            );
+            const key = rows[0];
+            if (!key) throw Object.assign(new Error('Conversation key not found'), { code: 'NOT_FOUND' });
+            if (key.version !== expectedVersion) throw Object.assign(new Error('The conversation key changed meanwhile'), { code: 'KEY_CHANGED' });
+            const { rows: last } = await tx.query('SELECT max(retired_at) AS at FROM conversation_key_epochs WHERE conversation_key_id = $1', [key.id]);
+            await tx.query(
+                `INSERT INTO conversation_key_epochs (conversation_key_id, version, workspace_encrypted_key, created_at)
+                 VALUES ($1, $2, $3, $4)`,
+                [key.id, key.version, key.workspace_encrypted_key == null ? null : JSON.stringify(key.workspace_encrypted_key), last[0]?.at || key.created_at]
+            );
+            const keep = [...new Set(keepOld.map(str))];
+            if (keep.length) {
+                await tx.query(
+                    `INSERT INTO conversation_key_epoch_members (conversation_key_id, version, user_id, encrypted_key, ephemeral_public_key, algorithm, added_at)
+                     SELECT conversation_key_id, $2, user_id, encrypted_key, ephemeral_public_key, algorithm, added_at
+                       FROM conversation_key_members WHERE conversation_key_id = $1 AND user_id = ANY($3)`,
+                    [key.id, key.version, keep]
+                );
+            }
+            await tx.query('DELETE FROM conversation_key_members WHERE conversation_key_id = $1', [key.id]);
+            for (const e of encryptedKeys) {
+                await tx.query(
+                    `INSERT INTO conversation_key_members (conversation_key_id, user_id, encrypted_key, ephemeral_public_key, algorithm)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [key.id, str(e.userId), e.encryptedKey, e.ephemeralPublicKey || null, e.algorithm]
+                );
+            }
+            const { rows: updated } = await tx.query(
+                `UPDATE conversation_keys SET version = $2, workspace_encrypted_key = $3::jsonb, updated_at = now() WHERE id = $1 RETURNING *`,
+                [key.id, key.version + 1, workspaceEncryptedKey == null ? null : JSON.stringify(workspaceEncryptedKey)]
+            );
+            const { rows: m } = await tx.query('SELECT * FROM conversation_key_members WHERE conversation_key_id = $1', [key.id]);
+            return toConversationKey(updated[0], m);
+        });
+    },
+};
+
+module.exports = { identityKeys, cryptoState, conversationKeys, conversationKeyEpochs, toConversationKey };

@@ -80,7 +80,8 @@ async function encryptForConversation(conversationId, conversationType, plaintex
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     const encrypted = Buffer.concat([cipher.update(Buffer.from(String(plaintext), 'utf8')), cipher.final(), cipher.getAuthTag()]);
-    return { ciphertext: encrypted.toString('base64'), messageIv: iv.toString('base64') };
+    // keyVersion: which of the conversation's keys this is (stored on the message as payload.keyVersion).
+    return { ciphertext: encrypted.toString('base64'), messageIv: iv.toString('base64'), keyVersion: doc.version || 1 };
 }
 
 /** Wrap a secret (e.g. a workspace's AI API key) under SERVER_KEK for storage. */

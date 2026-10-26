@@ -166,7 +166,7 @@ async function _postChannelNotice(task, userId, text, io) {
             channel: channelId,
             sender: userId,
             ciphertext: enc.ciphertext,
-            messageIv: enc.messageIv,
+            messageIv: enc.messageIv, keyVersion: enc.keyVersion,
             isEncrypted: true,
         }, io);
     } catch (err) {

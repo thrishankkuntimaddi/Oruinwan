@@ -257,14 +257,14 @@ module.exports.followAndNotify = followAndNotify;
  * Used by server-side senders such as the assistant's reply_in_thread / create_thread tools.
  * `parent` is the lean parent message (channel/dm, workspace, company, sender, replyCount).
  */
-async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv, mentionText = '' }) {
+async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv, keyVersion = null, mentionText = '' }) {
     const { hydrate, USER_MIN } = require('../../identity/hydrate');
     const logger = require('../../../utils/logger');
     const parentId = parent._id;
     const reply = await Message.create({
         type: 'message',
         sender: senderId,
-        payload: { ciphertext, messageIv, isEncrypted: true },
+        payload: { ciphertext, messageIv, isEncrypted: true, ...(keyVersion ? { keyVersion } : {}) },
         attachments: [],
         parentId,
         readBy: [senderId],

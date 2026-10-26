@@ -9,6 +9,8 @@
 const express = require('express');
 const http = require('http');
 
+// Key versions (conversations/keyEpochs) live in PostgreSQL; here every conversation is on its first key.
+jest.mock('../../conversations/keyEpochs', () => ({ checkSendVersion: jest.fn(async (_id, _type, v) => (v == null ? 1 : Number(v))) }));
 jest.mock('../../../shared/middleware/auth', () => (req, res, next) => {
     req.user = { sub: req.headers['x-user'] };
     next();

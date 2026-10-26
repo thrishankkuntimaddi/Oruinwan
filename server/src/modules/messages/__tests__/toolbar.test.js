@@ -15,6 +15,8 @@ const Task = require('../../../../models/Task');
 const TaskActivity = require('../../../../models/TaskActivity');
 const IssueKeyCounter = require('../../../features/tasks/issue-key-counter.model');
 
+// Key versions (conversations/keyEpochs) live in PostgreSQL; here every conversation is on its first key.
+jest.mock('../../conversations/keyEpochs', () => ({ checkSendVersion: jest.fn(async (_id, _type, v) => (v == null ? 1 : Number(v))) }));
 jest.mock('../message.model.js');
 jest.mock('../../../identity', () => ({
     workspaces: { findById: jest.fn() },

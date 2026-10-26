@@ -176,7 +176,7 @@ const ACTION_HANDLERS = {
             channel: channel._id,
             sender: bot._id,
             ciphertext: enc.ciphertext,
-            messageIv: enc.messageIv,
+            messageIv: enc.messageIv, keyVersion: enc.keyVersion,
             fromAutomation: true,
         }, _getIo(io));
         return { messageId: String(msg._id), channelId: String(channel._id), channelName: channel.name };

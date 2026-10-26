@@ -242,7 +242,7 @@ async function postTopLevel(conv, text, ctx) {
         ...(conv.type === 'dm' ? { dm: conv.id } : { channel: conv.id }),
         sender: ctx.userId,
         ciphertext: enc.ciphertext,
-        messageIv: enc.messageIv,
+        messageIv: enc.messageIv, keyVersion: enc.keyVersion,
         isEncrypted: true,
         mentionText: mentionHandles(text),
     }, ioFrom(ctx));
@@ -255,7 +255,7 @@ async function postReply(parent, conv, text, ctx) {
     if (error) return { error };
     const { postEncryptedReply } = require('../src/modules/threads/threads.service');
     const reply = await postEncryptedReply(ioFrom(ctx), {
-        parent, senderId: ctx.userId, ciphertext: enc.ciphertext, messageIv: enc.messageIv, mentionText: mentionHandles(text),
+        parent, senderId: ctx.userId, ciphertext: enc.ciphertext, messageIv: enc.messageIv, keyVersion: enc.keyVersion, mentionText: mentionHandles(text),
     });
     return { reply };
 }
@@ -344,7 +344,7 @@ async function sendDirectMessage({ userId: who, message }, ctx) {
         dm: dm._id,
         sender: ctx.userId,
         ciphertext: enc.ciphertext,
-        messageIv: enc.messageIv,
+        messageIv: enc.messageIv, keyVersion: enc.keyVersion,
         isEncrypted: true,
     }, ioFrom(ctx));
     return { success: true, to, toUserId: recipientId, username: recipient.username || null, sent: text, dmSessionId: String(dm._id), messageId: String(saved._id) };

@@ -4,6 +4,8 @@ const DMSession = require('../../../../models/DMSession');
 // Users and workspaces live in PostgreSQL: the identity repositories are mocked.
 const identity = require('../../../identity');
 
+// Key versions (conversations/keyEpochs) live in PostgreSQL; here every conversation is on its first key.
+jest.mock('../../conversations/keyEpochs', () => ({ checkSendVersion: jest.fn(async (_id, _type, v) => (v == null ? 1 : Number(v))) }));
 jest.mock('../message.model.js');
 jest.mock('../../threads/threadAccess', () => ({
     checkConversationAccess: jest.fn(async () => ({ ok: true })),

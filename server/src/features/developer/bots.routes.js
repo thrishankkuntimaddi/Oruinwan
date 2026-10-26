@@ -136,7 +136,7 @@ router.post('/bots/:id/message', async (req, res) => {
       channel: channel._id,
       sender: req.user.sub,
       ciphertext: enc.ciphertext,
-      messageIv: enc.messageIv,
+      messageIv: enc.messageIv, keyVersion: enc.keyVersion,
       isEncrypted: true,
     }, io);
 

@@ -154,7 +154,7 @@ exports.getThread = async (req, res) => {
 exports.postThreadReply = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const { ciphertext, messageIv, attachments = [], clientTempId } = req.body || {};
+        const { ciphertext, messageIv, attachments = [], clientTempId, keyVersion = null } = req.body || {};
         const userId = req.user.sub;
 
         if (!ciphertext || !messageIv) {
@@ -220,6 +220,18 @@ exports.postThreadReply = async (req, res) => {
             replyData.clientMessageId = clientMessageId;
             const sent = await replayed();
             if (sent) return sent;
+        }
+
+        // Encrypted with the conversation's current key (KEY_ROTATED otherwise).
+        try {
+            const version = await require('../conversations/keyEpochs').checkSendVersion(
+                parentMessage.channel || parentMessage.dm, parentMessage.channel ? 'channel' : 'dm', keyVersion);
+            if (version) replyData.payload.keyVersion = version;
+        } catch (err) {
+            if (err.code === 'KEY_ROTATED') {
+                return res.status(409).json({ code: err.code, message: err.message, currentVersion: err.currentVersion, conversationId: err.conversationId, conversationType: err.conversationType });
+            }
+            throw err;
         }
 
         let reply;

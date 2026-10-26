@@ -215,7 +215,7 @@ async function run({ conversationType, conversationId, parent, triggerMessageId,
       sender: assistant._id,
       quotedMessageId: triggerMessageId || null,
       ciphertext: enc.ciphertext,
-      messageIv: enc.messageIv,
+      messageIv: enc.messageIv, keyVersion: enc.keyVersion,
       isEncrypted: true,
     }, ctx.io);
 
@@ -228,7 +228,7 @@ async function postThreadReply({ parent, parentId, senderId, enc, io }) {
   const reply = await Message.create({
     type: 'message',
     sender: senderId,
-    payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, attachments: [], isEncrypted: true },
+    payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, keyVersion: enc.keyVersion, attachments: [], isEncrypted: true },
     parentId,
     readBy: [senderId],
     workspace: parent.workspace,

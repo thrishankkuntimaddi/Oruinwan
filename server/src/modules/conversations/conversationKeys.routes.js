@@ -13,8 +13,11 @@ router.post('/:conversationId/keys/add-user', conversationKeysController.addUser
 
 router.get('/workspace/:workspaceId/keys', conversationKeysController.getUserWorkspaceKeys);
 
-router.post('/:id/keys/add-user', conversationKeysController.addParticipant);
+// (A second POST /:id/keys/add-user used to be registered here; the route above always answered
+// first, and the second had no access check, so it is gone.)
 
+// Only your own copy (a device that set encryption up again). People leaving or being removed lose
+// theirs on the server (conversationRooms.evictFrom…, groupDM.service).
 router.delete('/:id/keys/user/:userId', conversationKeysController.removeParticipant);
 
 router.get('/:id/keys/exists', conversationKeysController.checkKeysExist);

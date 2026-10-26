@@ -33,18 +33,23 @@ jest.mock('../../../identity/queries/auth', () => ({
     }),
   },
 }));
+// Everyone here is an active member of the conversation's workspace (key access requires it).
 jest.mock('../../../identity', () => ({
+  workspaces: { findById: jest.fn(async () => ({ _id: 'w1', members: ['64a000000000000000000001', '64a000000000000000000002', '64a000000000000000000003'].map((user) => ({ user, status: 'active' })) })) },
   identityKeys: {
     findByUserId: jest.fn(async (u) => (mockStore.keys.has(String(u)) ? { userId: u, publicKey: mockPub } : null)),
     batchFindByUserIds: jest.fn(async () => []),
   },
 }));
 jest.mock('../../../../models/DMSession', () => ({
-  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ _id: mockIds.DM, participants: mockStore.members.dm }) }) })),
+  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ _id: mockIds.DM, workspace: 'w1', participants: mockStore.members.dm }) }) })),
 }));
 jest.mock('../../../features/channels/channel.model.js', () => ({
-  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ _id: mockIds.CH, members: mockStore.members.channel.map((u) => ({ user: u })) }) }) })),
+  findById: jest.fn(() => ({ select: () => ({ lean: async () => ({ _id: mockIds.CH, workspace: 'w1', members: mockStore.members.channel.map((u) => ({ user: u })) }) }) })),
 }));
+
+// Earlier keys (keyEpochs) live in PostgreSQL; none here.
+jest.mock('../keyEpochs', () => ({ grant: jest.fn(async () => ({ granted: 0, unavailable: [] })), earlierKeysFor: jest.fn(async () => []), removeUser: jest.fn(async () => {}) }));
 
 const svc = require('../conversationKeys.service');
 

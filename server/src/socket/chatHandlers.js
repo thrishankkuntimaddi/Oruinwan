@@ -276,6 +276,7 @@ module.exports = function registerChatHandlers(io, socket) {
         quotedMessageId,
         ciphertext,
         messageIv,
+        keyVersion: data.keyVersion ?? null,
         mentionText: typeof data.mentionText === "string" ? data.mentionText : "",
         clientTempId,
         clientMessageId: data.clientMessageId,

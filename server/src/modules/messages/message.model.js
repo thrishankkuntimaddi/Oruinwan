@@ -109,7 +109,9 @@ const MessageSchema = new mongoose.Schema({
   payload: {
     ciphertext: String,
     messageIv: String,
-    isEncrypted: { type: Boolean, default: false }
+    isEncrypted: { type: Boolean, default: false },
+    // Which of the conversation's keys encrypted it (ConversationKey.version); missing = 1.
+    keyVersion: { type: Number, default: undefined }
   },
 
   text: { type: String, default: '' },
@@ -241,6 +243,7 @@ const MessageSchema = new mongoose.Schema({
     text:       { type: String, default: null },     
     ciphertext: { type: String, default: null },     
     messageIv:  { type: String, default: null },     
+    keyVersion: { type: Number, default: null },      // which conversation key encrypted this version
     isEncrypted:{ type: Boolean, default: false },   
     editedAt:   { type: Date, default: Date.now },
     // Set when this historical state was itself produced by restoring an older version.

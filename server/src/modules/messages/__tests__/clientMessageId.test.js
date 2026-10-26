@@ -1,5 +1,7 @@
 'use strict';
 
+// Key versions (conversations/keyEpochs) live in PostgreSQL; here every conversation is on its first key.
+jest.mock('../../conversations/keyEpochs', () => ({ checkSendVersion: jest.fn(async (_id, _type, v) => (v == null ? 1 : Number(v))) }));
 jest.mock('../message.model.js', () => ({ findOne: jest.fn(), create: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');

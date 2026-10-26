@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { conversationKeyDocs: ConversationKey } = require('../../identity/queries/auth');
 const identityStore = require('../../identity');
 const cryptoUtils = require('./cryptoUtils');
+const keyEpochs = () => require('./keyEpochs');
 
 // The public key to wrap conversation keys for. The key saved with someone's encryption setup
 // (cryptoState) is the one their devices open keys with, so it comes first; the separately
@@ -107,7 +108,9 @@ async function getUserConversationKey(conversationId, conversationType, userId) 
             encryptedKey: encryptedKeyData.encryptedKey,
             ephemeralPublicKey: encryptedKeyData.ephemeralPublicKey,
             algorithm: encryptedKeyData.algorithm,
-            version: conversationKey.version
+            version: conversationKey.version,
+            // Earlier keys of this conversation they may use (messages say which one: payload.keyVersion).
+            previous: await keyEpochs().earlierKeysFor(conversationId, conversationType, userId),
         };
     } catch (error) {
         logger.error('Failed to get user conversation key:', error);
@@ -119,17 +122,25 @@ async function getUserWorkspaceConversationKeys(userId, workspaceId) {
     try {
         const conversationKeys = await ConversationKey.findByUser(userId, workspaceId);
 
-        return conversationKeys.map(ck => {
+        // Only conversations they still belong to (copies can outlive a removal that failed half way).
+        const { checkConversationAccess } = require('./conversationAccess');
+        const out = [];
+        for (const ck of conversationKeys) {
             const encryptedKeyData = ck.getEncryptedKeyForUser(userId);
-            return {
+            if (!encryptedKeyData) continue;
+            const access = await checkConversationAccess({ [ck.conversationType === 'dm' ? 'dm' : 'channel']: String(ck.conversationId) }, userId);
+            if (!access.ok || (ck.conversationType === 'channel' && !access.isMember)) continue;
+            out.push({
                 conversationId: ck.conversationId,
                 conversationType: ck.conversationType,
                 encryptedKey: encryptedKeyData.encryptedKey,
                 ephemeralPublicKey: encryptedKeyData.ephemeralPublicKey,
                 algorithm: encryptedKeyData.algorithm,
-                version: ck.version
-            };
-        });
+                version: ck.version,
+                previous: await keyEpochs().earlierKeysFor(ck.conversationId, ck.conversationType, userId),
+            });
+        }
+        return out;
     } catch (error) {
         logger.error('Failed to get user workspace conversation keys:', error);
         throw error;
@@ -182,6 +193,8 @@ async function removeParticipant(conversationId, conversationType, userId) {
         conversationKey.encryptedKeys = conversationKey.encryptedKeys.filter(
             ek => ek.userId.toString() !== userId.toString()
         );
+        // Their copies of the conversation's earlier keys go too.
+        await keyEpochs().removeUser(conversationId, conversationType, userId);
 
         if (conversationKey.encryptedKeys.length === initialLength) {
             logger.info(`User ${userId} not found in ${conversationType}:${conversationId}`);
@@ -332,6 +345,12 @@ async function distributeKeyToNewMember(conversationId, conversationType, newUse
         await conversationKey.save();
 
         logger.info(`✅ [PHASE 4] Distributed conversation key for ${conversationType}:${conversationId} to user ${newUserId}`);
+
+        // Channel members read the whole history: every earlier key too. (Groups decide per
+        // person when they add someone; see groupDM.service.)
+        if (conversationType === 'channel') {
+            await keyEpochs().grant(conversationId, 'channel', newUserId).catch((err) => logger.warn({ err: err?.message }, '[E2EE] Earlier channel keys not given'));
+        }
 
         
         logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
@@ -835,20 +854,25 @@ async function ensureDMConversationKey(dmSessionId, requestingUserId = null) {
 }
 
 /** Is `userId` a member of the channel / participant of the DM? */
+/**
+ * Whether userId may hold this conversation's key: a participant (DM, group) or a member
+ * (channel) right now, and an active member of the conversation's workspace.
+ */
 async function isConversationMember(conversationId, conversationType, userId) {
     const mongoose = require('mongoose');
     if (!mongoose.isValidObjectId(String(conversationId)) || !userId) return false;
     const me = String(userId);
+    const { isActiveWorkspaceMember } = require('./conversationAccess');
 
     if (conversationType === 'dm') {
         const DMSession = require('../../../models/DMSession');
-        const dm = await DMSession.findById(conversationId).select('participants').lean();
-        return !!dm && (dm.participants || []).some(p => String(p) === me);
+        const dm = await DMSession.findById(conversationId).select('participants workspace').lean();
+        return !!dm && (dm.participants || []).some(p => String(p) === me) && await isActiveWorkspaceMember(dm.workspace, me);
     }
 
     const Channel = require("../../features/channels/channel.model.js");
-    const channel = await Channel.findById(conversationId).select('members').lean();
-    return !!channel && (channel.members || []).some(m => String(m?.user?._id || m?.user || m) === me);
+    const channel = await Channel.findById(conversationId).select('members workspace').lean();
+    return !!channel && (channel.members || []).some(m => String(m?.user?._id || m?.user || m) === me) && await isActiveWorkspaceMember(channel.workspace, me);
 }
 
 async function repairUserConversationAccess(userId) {
@@ -979,6 +1003,8 @@ async function rewrapForUser(conversationId, conversationType, userId) {
     doc.encryptedKeys = doc.encryptedKeys.filter((e) => String(e.userId) !== String(userId));
     await doc.save();
     const ok = await distributeKeyToNewMember(conversationId, conversationType, userId);
+    // Their copies of earlier keys were wrapped for the same old identity key.
+    await keyEpochs().grant(conversationId, conversationType, userId, { rewrap: true }).catch(() => {});
     return { status: ok ? 'REWRAPPED' : 'FAILED' };
 }
 

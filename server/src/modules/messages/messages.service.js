@@ -70,6 +70,7 @@ async function createMessage(messageData, io = null) {
         quotedMessageId = null,   
         ciphertext,
         messageIv,
+        keyVersion = null,
         _isEncrypted,
         
         poll = null,
@@ -112,6 +113,13 @@ async function createMessage(messageData, io = null) {
     if (type === 'integration' && !integration) {
         throw Object.assign(new Error('Integration messages can only be posted by an integration'), { statusCode: 400, status: 400 });
     }
+    // Encrypted with the conversation's current key, so everyone in it now can read it
+    // (a group that changed its key refuses messages made with the old one: KEY_ROTATED).
+    let storedKeyVersion;
+    if (TEXT_TYPES.includes(type) && (channel || dm)) {
+        storedKeyVersion = await require('../conversations/keyEpochs')
+            .checkSendVersion(channel || dm, channel ? 'channel' : 'dm', keyVersion);
+    }
 
     
     const messageDoc = {
@@ -128,6 +136,7 @@ async function createMessage(messageData, io = null) {
             ciphertext,
             messageIv,
             isEncrypted: true,
+            ...(storedKeyVersion ? { keyVersion: storedKeyVersion } : {}),
         } : undefined,
         
         attachments: attachments || [],
@@ -974,6 +983,7 @@ function snapshotCurrentContent(message) {
         text: encrypted ? null : (message.text || ''),
         ciphertext: encrypted ? message.payload.ciphertext : null,
         messageIv: encrypted ? (message.payload.messageIv || null) : null,
+        keyVersion: encrypted ? (message.payload.keyVersion || null) : null,
         isEncrypted: encrypted,
         // When this state became current: last edit, or creation for the original.
         editedAt: message.editedAt || message.createdAt || message.updatedAt || new Date(),
@@ -981,7 +991,7 @@ function snapshotCurrentContent(message) {
     };
 }
 
-async function editMessage(messageId, userId, { text, ciphertext, messageIv } = {}, io) {
+async function editMessage(messageId, userId, { text, ciphertext, messageIv, keyVersion = null } = {}, io) {
     const hasCipher = typeof ciphertext === 'string' && ciphertext.trim() !== '';
     const hasText = typeof text === 'string' && text.trim() !== '';
     if (!hasCipher && !hasText) throw httpError(400, 'Edit cannot be empty');
@@ -1012,8 +1022,11 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
     message.markModified('editHistory');
 
     if (hasCipher) {
+        // The edit is encrypted with the conversation's current key, like a new message.
+        const conv = message.channel ? { id: message.channel, type: 'channel' } : { id: message.dm, type: 'dm' };
+        const version = await require('../conversations/keyEpochs').checkSendVersion(conv.id?._id || conv.id, conv.type, keyVersion);
         const prev = message.payload?.toObject ? message.payload.toObject() : (message.payload || {});
-        message.payload = { ...prev, ciphertext, messageIv, isEncrypted: true };
+        message.payload = { ...prev, ciphertext, messageIv, isEncrypted: true, keyVersion: version || undefined };
         message.markModified('payload');
     } else {
         message.text = text;
@@ -1063,7 +1076,7 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
 
     const prev = message.payload?.toObject ? message.payload.toObject() : (message.payload || {});
     if (targetEncrypted) {
-        message.payload = { ...prev, ciphertext: target.ciphertext, messageIv: target.messageIv, isEncrypted: true };
+        message.payload = { ...prev, ciphertext: target.ciphertext, messageIv: target.messageIv, keyVersion: target.keyVersion || undefined, isEncrypted: true };
     } else {
         message.payload = { ...prev, ciphertext: undefined, messageIv: undefined, isEncrypted: false };
         message.text = target.text;

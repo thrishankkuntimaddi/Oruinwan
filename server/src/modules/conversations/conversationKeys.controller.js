@@ -39,6 +39,18 @@ exports.storeConversationKeys = async (req, res) => {
         if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, createdBy))) {
             return res.status(403).json({ message: 'You are not a member of this conversation' });
         }
+        // The key belongs to the conversation's own workspace, and copies only to its members.
+        const { checkConversationAccess } = require('./conversationAccess');
+        const access = await checkConversationAccess({ [conversationType === 'dm' ? 'dm' : 'channel']: conversationId }, createdBy);
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
+        if (String(workspaceId) !== String(access.workspaceId)) {
+            return res.status(400).json({ message: 'workspaceId does not match the conversation' });
+        }
+        for (const ek of encryptedKeys) {
+            if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, ek.userId))) {
+                return res.status(400).json({ message: 'A key copy is for someone who is not in this conversation' });
+            }
+        }
 
         
         const conversationKey = await conversationKeysService.storeConversationKeys({
@@ -84,6 +96,12 @@ exports.getConversationKey = async (req, res) => {
             return res.status(400).json({
                 message: 'Query parameter "type" is required (channel or dm)'
             });
+        }
+
+        // Only people in the conversation now (and active in its workspace) get its key. A copy
+        // left behind by a removal that failed half way is never handed out.
+        if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, userId))) {
+            return res.status(403).json({ error: 'NOT_A_PARTICIPANT', message: 'You are not a member of this conversation', conversationId, conversationType });
         }
 
         // DM keys are server-managed: create a missing key and hand it to any
@@ -217,6 +235,11 @@ exports.addUserKey = async (req, res) => {
             return res.status(403).json({ error: 'Target user is not a member of this conversation' });
         }
 
+        // The sharer must still be in the conversation themselves, not just hold an old copy.
+        if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, requestingUserId))) {
+            return res.status(403).json({ error: 'Cannot distribute key - you are not a member of this conversation' });
+        }
+
         const requestingUserKey = await conversationKeysService.getUserConversationKey(
             conversationId,
             conversationType,
@@ -271,41 +294,6 @@ exports.getUserWorkspaceKeys = async (req, res) => {
     }
 };
 
-exports.addParticipant = async (req, res) => {
-    try {
-        const { id: conversationId } = req.params;
-        const { conversationType, userId, encryptedKey, ephemeralPublicKey, algorithm } = req.body;
-
-        
-        if (!conversationType || !['channel', 'dm'].includes(conversationType)) {
-            return res.status(400).json({
-                message: 'Invalid conversationType'
-            });
-        }
-
-        if (!userId || !encryptedKey || !algorithm) {
-            return res.status(400).json({
-                message: 'userId, encryptedKey, and algorithm are required'
-            });
-        }
-
-        await conversationKeysService.addParticipant(
-            conversationId,
-            conversationType,
-            userId,
-            encryptedKey,
-            ephemeralPublicKey,
-            algorithm
-        );
-
-        return res.status(200).json({
-            message: 'Participant added successfully'
-        });
-    } catch (err) {
-        return handleError(res, err, 'ADD PARTICIPANT ERROR');
-    }
-};
-
 exports.removeParticipant = async (req, res) => {
     try {
         const { id: conversationId, userId } = req.params;
@@ -315,6 +303,10 @@ exports.removeParticipant = async (req, res) => {
             return res.status(400).json({
                 message: 'Query parameter "type" is required (channel or dm)'
             });
+        }
+        // Anyone could delete anyone's key copy here. Only your own now.
+        if (String(userId) !== String(req.user.sub)) {
+            return res.status(403).json({ message: 'You can only remove your own key copy' });
         }
 
         const removed = await conversationKeysService.removeParticipant(

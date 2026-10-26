@@ -108,7 +108,7 @@ async function upsertCard({ workspaceId, channelId, provider, card, summary, ded
     next.taskIds = unionIds(previous.taskIds, card.taskIds);
     next.taskKeys = [...new Set([...(previous.taskKeys || []), ...(card.taskKeys || [])])];
     existing.integration = next;
-    existing.payload = { ...(plain(existing.payload) || {}), ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true };
+    existing.payload = { ...(plain(existing.payload) || {}), ciphertext: enc.ciphertext, messageIv: enc.messageIv, keyVersion: enc.keyVersion, isEncrypted: true };
     existing.markModified('payload');
     existing.markModified('integration');
     existing.version = (existing.version || 1) + 1;
@@ -125,7 +125,7 @@ async function upsertCard({ workspaceId, channelId, provider, card, summary, ded
     channel: channel._id,
     sender: bot._id,
     ciphertext: enc.ciphertext,
-    messageIv: enc.messageIv,
+    messageIv: enc.messageIv, keyVersion: enc.keyVersion,
     integration: { ...stripUndefined(card), provider, updatedAt: new Date() },
   }, io);
   return { message, created: true, previous: null };
@@ -146,7 +146,7 @@ async function postThreadReply({ parent, senderId, text, io }) {
   const reply = await Message.create({
     type: 'message',
     sender: senderId,
-    payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, attachments: [], isEncrypted: true },
+    payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, keyVersion: enc.keyVersion, attachments: [], isEncrypted: true },
     parentId: parent._id,
     readBy: [senderId],
     workspace: parent.workspace,

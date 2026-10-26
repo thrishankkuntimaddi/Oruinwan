@@ -532,7 +532,7 @@ async function linkTaskToThread({ task, message, userId, io = null }) {
         const reply = await Message.create({
             type: 'message',
             sender: userId,
-            payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true },
+            payload: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, keyVersion: enc.keyVersion, isEncrypted: true },
             parentId: rootId,
             linkedTaskId: sid(task._id),
             readBy: [userId],
