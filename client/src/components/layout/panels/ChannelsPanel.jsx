@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import BumpCount from '../../motion/BumpCount';
 import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Hash, Search, Trash2, X, Check, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
@@ -372,13 +373,13 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
                 <LiveHuddleMark channelId={item.id} />
 
-                {unread > 0 && !isSelectionMode && (
-                    <span
+                {!isSelectionMode && (
+                    <BumpCount
                         className={`gl-shell-unread${mentioned ? ' is-mention' : ''}`}
                         title={mentioned ? 'You were mentioned' : `${unread} unread`}
-                    >
-                        {mentioned ? '@' : ''}{unread > 99 ? '99+' : unread}
-                    </span>
+                        prefix={mentioned ? '@' : ''}
+                        count={unread}
+                    />
                 )}
             </div>
         );

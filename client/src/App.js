@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import "./styles/motion.css";
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";

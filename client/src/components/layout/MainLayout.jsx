@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import BumpCount from '../motion/BumpCount';
 import { useNavigate, useLocation } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
@@ -70,9 +71,7 @@ const WorkspaceNotificationPanel = () => {
                 aria-haspopup="dialog"
             >
                 <Bell size={17} strokeWidth={2} />
-                {unreadCount > 0 && (
-                    <span className="gl-shell-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                )}
+                <BumpCount className="gl-shell-badge" count={unreadCount} />
             </button>
 
             {open && <div className="gl-shell-scrim" onClick={close} />}

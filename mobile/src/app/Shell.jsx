@@ -276,7 +276,7 @@ export function Shell() {
         <Sidebar />
         <main className="relative min-w-0 flex-1">
           {TABS.filter((t) => visited.has(t)).map((t) => (
-            <div key={t} className="absolute inset-0" hidden={t !== tab}>
+            <div key={t} className="animate-tab-in absolute inset-0" hidden={t !== tab}>
               <WideTab tab={t} stack={stacks[t]} />
             </div>
           ))}
@@ -289,7 +289,7 @@ export function Shell() {
     return (
       <div className="relative h-full overflow-hidden bg-bg">
         {TABS.filter((t) => visited.has(t)).map((t) => (
-          <div key={t} className="absolute inset-0" hidden={t !== tab}>
+          <div key={t} className="animate-tab-in absolute inset-0" hidden={t !== tab}>
             <SplitTab tab={t} stack={stacks[t]} />
           </div>
         ))}
@@ -305,7 +305,8 @@ export function Shell() {
   return (
     <div className="relative h-full overflow-hidden bg-bg">
       {TABS.filter((t) => visited.has(t)).map((t) => (
-        <div key={t} className="absolute inset-0" hidden={t !== tab}>
+        // Switching tabs fades the tab in (shown again, the animation replays).
+        <div key={t} className="animate-tab-in absolute inset-0" hidden={t !== tab}>
           <Root tab={t} />
           <Stack stack={stacks[t]} split={false} />
         </div>

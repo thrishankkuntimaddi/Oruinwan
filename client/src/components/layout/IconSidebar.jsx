@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import BumpCount from '../motion/BumpCount';
 import { useWorkspaceFeatures } from '../../hooks/useWorkspaceFeatures';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -101,7 +102,7 @@ const IconSidebar = ({ onProfileClick }) => {
     const moreActive = moreItems.some((i) => isActive(i.path));
 
 
-    const badge = (n) => (n > 0 ? <span className="gl-shell-badge">{n > 99 ? '99+' : n}</span> : null);
+    const badge = (n) => <BumpCount className="gl-shell-badge" count={n} />;
 
     return (
         <nav className="gl-shell-rail" aria-label="Workspace sections">

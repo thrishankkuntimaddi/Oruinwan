@@ -1870,7 +1870,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     return (
         <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
             {groupOffer && chat?.type === 'dm' && (
-                <div className="gl-card" role="status" data-testid="group-offer"
+                <div className="gl-card anim-slide-up" role="status" data-testid="group-offer"
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
                         {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. {chat?.isGroup
@@ -1906,7 +1906,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 </div>
             )}
             {mentionInvite && chat?.type === 'channel' && (
-                <div className="gl-card" role="status" data-testid="mention-invite"
+                <div className="gl-card anim-slide-up" role="status" data-testid="mention-invite"
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
                         {outsidersSentence(mentionInvite, String(chat?.name || '').replace(/^#/, ''))} Add {mentionInvite.length === 1 ? 'them' : 'them all'} so they see this conversation?

@@ -23,6 +23,8 @@ module.exports = defineConfig({
     video: isCI ? 'retain-on-failure' : 'off',
     // Locally, use the installed Chrome; CI installs Playwright's Chromium.
     ...(isCI ? {} : { channel: 'chrome' }),
+    // No animations in the tests (the apps honour reduced motion), so nothing waits on one.
+    reducedMotion: 'reduce',
     // Huddles need a microphone: grant it and feed a synthetic audio track.
     permissions: ['microphone', 'notifications'],
     launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },

@@ -32,6 +32,11 @@ function trayIconFile(platform, unread) {
   return dot ? 'tray-unread.png' : 'tray.png';
 }
 
+/** What the tray menu shows: it is rebuilt only when this changes. */
+function trayMenuKey({ doNotDisturb = false, launchAtLogin = false } = {}) {
+  return `${doNotDisturb ? 1 : 0}${launchAtLogin ? 1 : 0}`;
+}
+
 /** setLoginItemSettings works on macOS and Windows only. */
 function supportsLaunchAtLogin(platform) {
   return platform === 'darwin' || platform === 'win32';
@@ -96,6 +101,7 @@ function replyText(details, legacy) {
 }
 
 module.exports = {
+  trayMenuKey,
   SAFE_ID,
   MAX_REPLY_LENGTH,
   clampUnread,

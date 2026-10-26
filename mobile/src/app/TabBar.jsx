@@ -3,6 +3,7 @@
 // everything else — Files, Knowledge, Huddles, Automations, Integrations, Agents, Saved,
 // Settings — and Edit, which picks the five places on the bar (app/tabBarPrefs.js).
 import { useEffect, useRef, useState } from 'react';
+import { useBump } from '../lib/motion.js';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Bookmark, Bot, Check, ChevronDown, ChevronUp, Pencil, Plug, Settings, Workflow } from 'lucide-react';
 import { prefs } from '../native/storage.js';
@@ -181,6 +182,8 @@ export function TabBar() {
     if (remember) useNav.getState().openedFromDrawer(from);
   };
 
+  const activeIndex = items.findIndex((it) => it.id === tab);
+
   return (
     <>
       {(open || height > 0) &&
@@ -218,7 +221,7 @@ export function TabBar() {
         </div>
         <div
           className="overflow-hidden"
-          style={{ height, transition: drag.current ? 'none' : 'height 240ms var(--ease-out-soft)' }}
+          style={{ height, transition: drag.current ? 'none' : 'height 260ms var(--ease-spring)' }}
           aria-hidden={!open}
           data-testid="tabbar-drawer"
         >
@@ -247,7 +250,16 @@ export function TabBar() {
             </button>
           </div>
         </div>
-        <div className="mx-auto flex h-[60px] max-w-[520px] items-stretch">
+        <div className="relative mx-auto flex h-[60px] max-w-[520px] items-stretch">
+          {/* The active tab's line: one bar that slides to the tab you pick. */}
+          <span
+            aria-hidden
+            data-testid="tabbar-indicator"
+            className="pointer-events-none absolute top-0 left-0 flex justify-center transition-[transform,opacity] duration-[250ms] ease-[var(--ease-spring)]"
+            style={{ width: `${100 / Math.max(items.length, 1)}%`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }}
+          >
+            <span className="h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)]" />
+          </span>
           {items.map((it) => {
             const active = tab === it.id;
             return (
@@ -261,19 +273,11 @@ export function TabBar() {
                   setOpen(false);
                   setTab(it.id);
                 }}
-                className={cx('relative flex flex-1 flex-col items-center justify-center gap-1', active ? 'text-accent-ink' : 'text-text-2')}
+                className={cx('relative flex flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150', active ? 'text-accent-ink' : 'text-text-2')}
               >
-                <span
-                  className={cx('absolute top-0 h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)] transition-opacity duration-200', active ? 'opacity-100' : 'opacity-0')}
-                  aria-hidden
-                />
                 <span className="relative">
                   <Icon as={it.icon} size={22} />
-                  {it.badge > 0 && (
-                    <span className="absolute -top-1.5 left-3.5 min-w-[18px] h-[18px] rounded-full bg-gold px-1 text-center text-[10px] font-bold leading-[18px] text-on-accent ring-2 ring-bg">
-                      {it.badge > 99 ? '99+' : it.badge}
-                    </span>
-                  )}
+                  {it.badge > 0 && <TabBadge count={it.badge} />}
                 </span>
                 <span className="text-[11px] font-medium">{it.label}</span>
               </button>
@@ -283,5 +287,19 @@ export function TabBar() {
       </nav>
       <EditBarSheet open={editing} onClose={() => setEditing(false)} />
     </>
+  );
+}
+
+/** A tab's unread count; it bumps when the count goes up. */
+export function TabBadge({ count }) {
+  const bump = useBump(count);
+  return (
+    <span
+      key={bump.key}
+      data-testid="tab-badge"
+      className={cx('absolute -top-1.5 left-3.5 min-w-[18px] h-[18px] rounded-full bg-gold px-1 text-center text-[10px] font-bold leading-[18px] text-on-accent ring-2 ring-bg', bump.className)}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
   );
 }

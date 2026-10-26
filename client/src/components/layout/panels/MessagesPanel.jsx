@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import BumpCount from '../../motion/BumpCount';
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Plus, Search, Trash2, Check, Megaphone, Settings2, X, MessageSquare } from "lucide-react";
@@ -387,11 +388,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
                 {!isBroadcast && <LiveHuddleMark dmId={item.id} />}
 
-                {unread > 0 && !isSelectionMode && (
-                    <span className="gl-shell-unread" title={`${unread} unread`}>
-                        {unread > 99 ? '99+' : unread}
-                    </span>
-                )}
+                {!isSelectionMode && <BumpCount className="gl-shell-unread" title={`${unread} unread`} count={unread} />}
             </div>
         );
     };

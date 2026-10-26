@@ -32,6 +32,7 @@ import { ScheduleSheet } from './ScheduleSheet.jsx';
 import { clearDraft, draftFor, saveDraft } from './drafts.js';
 import { hasFormatting, highlightSegments } from './composerHighlight.js';
 import { useSession } from '../../data/session.js';
+import { motion, useArrivals, useBump, useReducedMotion } from '../../lib/motion.js';
 import { SlashBar, SlashList, filterCommands, helpLines, prepareCommand, runPrepared, runsWithoutArgs, typingHint } from './slash.jsx';
 
 const GROUP_GAP = 5 * 60_000;
@@ -159,12 +160,39 @@ export function reactorsLabel(people) {
   return `${n.slice(0, 2).join(', ')} and ${n.length - 2} others`;
 }
 
+/** One reaction: pops in when it's new, bumps when its count goes up. */
+function ReactionChip({ emoji, count, mine, fresh, onClick, label }) {
+  const reduced = useReducedMotion();
+  const bump = useBump(count);
+  return (
+    <button
+      key={bump.key}
+      type="button"
+      data-testid="reaction-chip"
+      onClick={onClick}
+      aria-pressed={mine}
+      aria-label={label}
+      className={cx(
+        'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
+        mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+        bump.className || (fresh && motion('animate-pop-in', reduced)),
+      )}
+    >
+      <span>{emoji}</span>
+      <span className="tabular-nums text-xs font-medium">{count}</span>
+    </button>
+  );
+}
+
 function Reactions({ m, me, directory, onReact }) {
   const [who, setWho] = useState(null); // 'all' or an emoji: the "who reacted" sheet, or null
   const [picking, setPicking] = useState(false);
   const lastTap = useRef({ emoji: null, at: 0 });
   const timer = useRef(null);
   const entries = Object.entries(m.reactions || {}).filter(([, users]) => users.length);
+  // Reactions shown when the message appeared stay still; ones added later pop in.
+  const shownAtFirst = useRef(null);
+  if (!shownAtFirst.current) shownAtFirst.current = new Set(entries.map(([emoji]) => emoji));
   if (!entries.length) return null;
   const people = (users) => users.map((id) => reactorOf(id, { me, directory, names: m.reactorNames }));
   const total = entries.reduce((n, [, users]) => n + users.length, 0);
@@ -196,21 +224,15 @@ function Reactions({ m, me, directory, onReact }) {
         {entries.map(([emoji, users]) => {
           const mine = users.includes(me);
           return (
-            <button
+            <ReactionChip
               key={emoji}
-              type="button"
-              data-testid="reaction-chip"
+              emoji={emoji}
+              count={users.length}
+              mine={mine}
+              fresh={!shownAtFirst.current.has(emoji)}
               onClick={() => tapChip(emoji)}
-              aria-pressed={mine}
-              aria-label={`${emoji} ${users.length}: ${reactorsLabel(people(users))}. Tap to see who reacted, double tap to ${mine ? 'take back yours' : 'add yours'}.`}
-              className={cx(
-                'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
-                mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
-              )}
-            >
-              <span>{emoji}</span>
-              <span className="tabular-nums text-xs font-medium">{users.length}</span>
-            </button>
+              label={`${emoji} ${users.length}: ${reactorsLabel(people(users))}. Tap to see who reacted, double tap to ${mine ? 'take back yours' : 'add yours'}.`}
+            />
           );
         })}
         <button
@@ -339,8 +361,9 @@ function ThreadSummary({ m, directory, onOpen }) {
 }
 
 export function MessageItem({
-  m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, highlight, hideThread, onSwipeReply, onTapMessage, onDoubleTap, receipt, onJumpTo,
+  m, grouped, directory, me, onReact, onLongPress, onOpenThread, onRetry, onCancelUpload, highlight, hideThread, onSwipeReply, onTapMessage, onDoubleTap, receipt, onJumpTo, arrived = false,
 }) {
+  const reduced = useReducedMotion();
   const author = m.author || directory[m.authorId] || { name: 'Unknown' };
   const ready = !m.pending && m.state !== 'deleted';
   const { dx, handlers } = useRowGestures({
@@ -363,6 +386,7 @@ export function MessageItem({
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
         highlight && 'bg-accent/10',
         m.pending && !m.upload && 'opacity-60',
+        arrived && motion('animate-msg-in', reduced),
       )}
     >
       {dx > 0 && (
@@ -480,6 +504,8 @@ export function MessageList({
   const count = items.length + live;
   const first = useRef(true);
   const loadingTop = useRef(false);
+  // Messages that arrive while it's open fade and rise in; the history it opened with doesn't.
+  const arrived = useArrivals(items);
 
   // "Translate automatically": other people's recent messages, into the chosen language.
   const autoLang = useTranslations((s) => s.autoLang);
@@ -591,6 +617,7 @@ export function MessageList({
                   onDoubleTap={onDoubleTap}
                   receipt={receipt}
                   onJumpTo={onJumpTo}
+                  arrived={arrived.has(String(m.id))}
                 />
               </Fragment>
             );

@@ -98,14 +98,22 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, fl
       {...touch}
       {...rest}
     >
-      {onRefresh && (
-        <div
-          className="flex items-end justify-center overflow-hidden text-text-2 transition-[height] duration-150"
-          style={{ height: pull }}
-          aria-hidden={!refreshing}
-        >
-          <span className={cx('mb-3 h-5 w-5 rounded-full border-2 border-accent border-t-transparent', refreshing && 'animate-spin')}
-            style={{ transform: refreshing ? undefined : `rotate(${pull * 4}deg)`, opacity: Math.min(pull / 56, 1) }} />
+      {onRefresh && (pull > 0 || refreshing) && (
+        // Pull to refresh: a spinner that follows the finger (transform and opacity only).
+        <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-center" data-testid="pull-refresh" role={refreshing ? 'status' : undefined} aria-label={refreshing ? 'Refreshing' : undefined}>
+          <span
+            className="mt-1 grid h-9 w-9 place-items-center rounded-full border border-line bg-surface shadow-sm"
+            style={{
+              transform: `translateY(${Math.min(pull, 64) - 20}px)`,
+              opacity: Math.min(pull / 40, 1),
+              transition: start.current == null ? 'transform 200ms var(--ease-out-soft), opacity 200ms' : 'none',
+            }}
+          >
+            <span
+              className={cx('h-5 w-5 rounded-full border-2 border-accent border-t-transparent', refreshing && 'animate-spin')}
+              style={{ transform: refreshing ? undefined : `rotate(${pull * 4}deg)` }}
+            />
+          </span>
         </div>
       )}
       {contained ? <div className="mx-auto w-full max-w-3xl">{children}</div> : children}

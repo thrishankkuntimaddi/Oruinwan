@@ -10,6 +10,7 @@ import { Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
 import { useToast } from '../../../contexts/ToastContext';
 import { useDateFormatter } from '../../../hooks/useUserPreferences';
+import { motionClass, useArrivals, useReducedMotion } from '../../../utils/motion';
 
 function ConversationStream({
     events = [],
@@ -273,6 +274,15 @@ function ConversationStream({
     
     // Day dividers follow Settings → Language & region (time zone and date order).
     const dateFmt = useDateFormatter();
+    // Messages that arrive while the conversation is open fade and rise in; the history it
+    // opened with, and older pages loaded by scrolling up, don't.
+    const reducedMotion = useReducedMotion();
+    const arrivedIds = useArrivals(
+        events.map((e) => ({ id: e.id, tempId: e.payload?.clientTempId || e.clientTempId, at: e.createdAt || e.payload?.createdAt })),
+        conversationId,
+    );
+    const msgInClass = motionClass('msg-in', reducedMotion);
+
     const { groupedEvents, dayLabels } = useMemo(() => {
         const grouped = {};
         const labels = {};
@@ -514,8 +524,8 @@ function ConversationStream({
                     </div>
                 )}
 
-            {}
-            <div style={{ padding: '0 1rem' }}>
+            {/* Opening another conversation: its messages fade and rise in a little. */}
+            <div key={conversationId || 'conversation'} className={motionClass('conv-in', reducedMotion)} style={{ padding: '0 1rem' }}>
                 {Object.keys(groupedEvents).map(dateKey => {
                     
                     const eventsForDate = groupedEvents[dateKey].filter(
@@ -611,7 +621,7 @@ function ConversationStream({
                                 <div
                                     key={event.id || `event-${dateKey}-${idx}`}
                                     id={`msg-${event.id}`}
-                                    className={jumpedMsgId === event.id ? 'highlight-jump' : ''}
+                                    className={[jumpedMsgId === event.id ? 'highlight-jump' : '', arrivedIds.has(String(event.id)) ? msgInClass : ''].filter(Boolean).join(' ')}
                                 >
                                     {renderEvent(event)}
                                 </div>

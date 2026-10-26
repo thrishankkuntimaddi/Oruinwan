@@ -984,12 +984,20 @@ function trayMenu() {
   ]);
 }
 
-function updateTray() {
+// What the tray shows now, so an unread update that changes nothing doesn't redraw it
+// (re-setting the image and menu on each message made some tray hosts flicker or shift).
+let trayShown = { icon: null, tip: null, menuKey: null };
+
+function updateTray({ force = false } = {}) {
   if (!tray || tray.isDestroyed()) return;
-  tray.setImage(trayImage());
-  tray.setToolTip(trayState.trayTooltip(unreadCount));
+  const icon = trayState.trayIconFile(process.platform, unreadCount);
+  const tip = trayState.trayTooltip(unreadCount);
+  if (force || icon !== trayShown.icon) tray.setImage(trayImage());
+  if (force || tip !== trayShown.tip) tray.setToolTip(tip);
   // macOS opens the menu on right-click only (left-click opens the window, below).
-  if (!IS_MAC) tray.setContextMenu(trayMenu());
+  const menuKey = trayState.trayMenuKey({ doNotDisturb: settings.doNotDisturb, launchAtLogin: trayState.supportsLaunchAtLogin(process.platform) && launchAtLogin() });
+  if (!IS_MAC && (force || menuKey !== trayShown.menuKey)) tray.setContextMenu(trayMenu());
+  trayShown = { icon, tip, menuKey };
 }
 
 function createTray() {

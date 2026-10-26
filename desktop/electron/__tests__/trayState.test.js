@@ -81,3 +81,9 @@ test('notification options: DND suppresses, reply only for conversations on supp
     platform: 'win32', title: 't', body: 'b', target: { workspaceId: 'w1', channelId: '', dmSessionId: '' }, doNotDisturb: false,
   }), { title: 't', body: 'b' });
 });
+
+test('the tray menu is rebuilt only when what it shows changes', () => {
+  assert.equal(s.trayMenuKey({ doNotDisturb: false, launchAtLogin: false }), s.trayMenuKey({}));
+  assert.notEqual(s.trayMenuKey({ doNotDisturb: true }), s.trayMenuKey({ doNotDisturb: false }));
+  assert.notEqual(s.trayMenuKey({ launchAtLogin: true }), s.trayMenuKey({ launchAtLogin: false }));
+});

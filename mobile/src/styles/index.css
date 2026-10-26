@@ -149,6 +149,12 @@
   --text-2xs--line-height: 1rem;
   --radius-card: 0.75rem;
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  /* A soft spring: a touch of overshoot (the drawer, the tab indicator). */
+  --ease-spring: cubic-bezier(0.32, 1.28, 0.56, 1);
+  /* Motion durations, the same as the web app (client/src/styles/motion.css). */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 250ms;
 }
 
 @layer base {
@@ -327,6 +333,22 @@
   .animate-search-grow, .animate-drop-in { animation: none; }
 }
 
+/* A new or sent message: a short fade and rise (only new ones, see lib/motion.js useArrivals). */
+@keyframes msg-in {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+/* An unread count or a reaction that went up. */
+@keyframes bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+/* backwards, not both: once it has played the row's own transform (swipe to reply) works again. */
+.animate-msg-in { animation: msg-in var(--motion-base) var(--ease-out-soft) backwards; }
+.animate-bump { animation: bump var(--motion-slow) var(--ease-spring); }
+.animate-tab-in { animation: fade-in var(--motion-base) ease-out both; }
+
 .animate-screen-in { animation: screen-in 220ms var(--ease-out-soft) both; }
 .animate-fade-in { animation: fade-in 180ms ease-out both; }
 .animate-sheet-in { animation: sheet-in 220ms var(--ease-out-soft) both; }
@@ -460,4 +482,17 @@
 .animate-nudge-up { animation: nudge-up 2.6s ease-in-out 1.5s infinite; }
 @media (prefers-reduced-motion: reduce) {
   .animate-nudge-up { animation: none; }
+}
+
+/* Reduced motion: nothing slides, pops or fades anywhere in the app (spinners still turn, slowly). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin { animation-duration: 1.5s !important; animation-iteration-count: infinite !important; }
 }

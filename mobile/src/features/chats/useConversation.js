@@ -137,7 +137,8 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
         patch((items) => {
           // The realtime echo may already have added the saved message.
           const withoutTemp = items.filter((m) => m.id !== tempId);
-          return withoutTemp.some((m) => m.id === saved.id) ? withoutTemp : [...withoutTemp, saved];
+          // tempId: the row it replaces (so it isn't animated in a second time).
+          return withoutTemp.some((m) => m.id === saved.id) ? withoutTemp : [...withoutTemp, { ...saved, tempId }];
         });
         if (threadOf) invalidate(`messages:${conv.id}`);
         // @ai (or a chat with an agent, where every message is for it): the assistant answers here,
