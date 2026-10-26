@@ -269,8 +269,8 @@ function useMentions({ kind, id, meta, me }) {
     return {
       composer: { people, channels: (channels || []).filter((c) => !c.private || c.isMember), me, inChannel, allowBroadcast },
       people: all,
-      // Channel admins (and workspace admins) manage the channel: /topic.
-      canManage: Boolean(policy?.canManage) || ['admin', 'owner'].includes(workspace?.role),
+      // Channel admins (and the workspace owner) manage the channel: /topic.
+      canManage: Boolean(policy?.canManage) || workspace?.role === 'owner',
       textFor: (text) => mentionTextFor(text, usernames, { allowBroadcast: inChannel && allowBroadcast }),
       // The people named, as { id, name, username }, for the assistant when the message is for it.
       peopleFor: (text) => peopleInText(text, { people: all, me }),
@@ -715,8 +715,9 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
 
   const resolvedBy = info?.resolvedBy?.id ? directory[info.resolvedBy.id]?.name || info.resolvedBy.username : null;
   const isGroup = kind === 'dm' && Boolean(meta?.isGroup);
+  const huddlesOn = useHuddlesAvailable();
   const commands = phoneCommands({
-    conv, ws, me, meta, label, isGroup, threadOf: messageId, canPost: !info?.locked, canManage: mentions.canManage, convo, mentions, people: mentions.people, aiOn,
+    conv, ws, me, meta, label, isGroup, threadOf: messageId, canPost: !info?.locked, canManage: mentions.canManage, convo, mentions, people: mentions.people, aiOn, huddlesOn,
     onSummarize: () => setSheet('summary'),
   });
   const header = convo.parent ? (

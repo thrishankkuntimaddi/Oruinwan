@@ -359,15 +359,18 @@ export default function FooterInput({
   // ── Slash commands ──
   // The actions every composer has; the conversation adds the rest through `slashContext`.
   const skipCommandRef = useRef(false);
+  const sendForCommand = async (text, extra = {}) => {
+    const handles = (String(text).match(/@[\w.-]+/g) || []).join(' ');
+    const r = await onSend(text, { mentionText: handles, ...extra });
+    const id = r?.message?._id || r?.message?.id || r?.id || null;
+    return id ? { id: String(id) } : null;
+  };
   const slashCtx = {
     where: conversationType === 'channel' ? 'channel' : 'dm',
     canPost: !blocked && !disabled,
-    send: async (text) => {
-      const handles = (String(text).match(/@[\w.-]+/g) || []).join(' ');
-      const r = await onSend(text, { mentionText: handles });
-      const id = r?.message?._id || r?.message?.id || r?.id || null;
-      return id ? { id: String(id) } : null;
-    },
+    send: (text) => sendForCommand(text),
+    // The "what happened" line a command posts (Task created…): no offers or AI on it.
+    notice: (text) => sendForCommand(text, { notice: true }),
     insert: (text) => insertText(text),
     showHelp: () => setSlashNotice({ kind: 'help', lines: helpLines(slashCtxRef.current) }),
     toast: (message, tone) => showToast?.(message, tone),

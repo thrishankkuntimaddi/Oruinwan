@@ -243,20 +243,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         return () => rawSocket.off('thread:resolved', onResolved);
     }, [rawSocket]);
 
-    // Slash commands from the composer that need the chat window.
-    const handleSlashCommand = (name, args) => {
-        switch (name) {
-            case 'call':
-            case 'video':
-                if (!features.huddles) { showToast('Calls are turned off in this workspace.', 'info'); return true; }
-                startOrJoinCall(name === 'video'); return true;
-            case 'meet': setShowMeetingModal(true); return true;
-            case 'poll':
-                if (!features.polls) { showToast('Polls are turned off in this workspace.', 'info'); return true; }
-                setShowPollModal(true); return true;
-            case 'ai': window.dispatchEvent(new CustomEvent('oruinwan-ai:open', { detail: { prompt: args || null } })); return true;
-            default: return false;
-        }
+    // /meet (web only) from the composer; the shared commands use `slashContext` below.
+    const handleSlashCommand = (name) => {
+        if (name === 'meet') { setShowMeetingModal(true); return true; }
+        return false;
     };
 
     // /call @person opens their DM with { startCall } in the route state: start the call here.
@@ -1032,7 +1022,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const { preview: linkPreview, loading: linkPreviewLoading, clearPreview: clearLinkPreview } = useLinkPreview(newMessage);
 
     
-    const handleSend = useCallback(async (markdown, { mentionText = '' } = {}) => {
+    const handleSend = useCallback(async (markdown, { mentionText = '', notice = false } = {}) => {
         const messageData = {
             text: markdown,
             // Plaintext @handles only (never the message body); the server uses
@@ -1107,16 +1097,17 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             setReplyingTo(null);
             setNewMessage('');
 
-            if (chat?.type === 'channel') {
+            // A slash command's "what happened" line (notice) doesn't offer to add people.
+            if (!notice && chat?.type === 'channel') {
                 const inChannel = (chat?.members || []).map((m) => String(m.user?._id || m.user || m._id || m));
                 const outsiders = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, inChannel, currentUserId);
                 if (outsiders.length) setMentionInvite(outsiders);
-            } else if (chat?.type === 'dm' && chat?.isGroup) {
+            } else if (!notice && chat?.type === 'dm' && chat?.isGroup) {
                 // A group: mentioning someone who isn't in it offers to add them.
                 const inGroup = (chat?.members || []).map((m) => String(m?._id || m?.id || m?.user?._id || m?.user || m));
                 const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [...inGroup, currentUserId], currentUserId);
                 if (others.length) setGroupOffer(others);
-            } else if (chat?.type === 'dm' && !chat?.isAgent && dmOtherUserId) {
+            } else if (!notice && chat?.type === 'dm' && !chat?.isAgent && dmOtherUserId) {
                 const others = mentionedOutsiders(`${mentionText || ''} ${markdown}`, workspaceMembers, [dmOtherUserId, currentUserId], currentUserId);
                 if (others.length) setGroupOffer(others);
             }
@@ -1127,7 +1118,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             if (conversationAI.isFollowUp(null) && mentionsPerson(mentionText)) conversationAI.endFollowUp(null);
             // A DM with an agent (Claude, ChatGPT…): every message is for it, no mention needed.
             const agentDm = chat?.isAgent && chat?.agentId;
-            if (agentDm || mentionsAI(markdown) || followUp) {
+            if (!notice && (agentDm || mentionsAI(markdown) || followUp)) {
                 // People @mentioned go along as { id, name }, so the assistant can message them. In my
                 // own chat with an agent it also gets my DM with them, decrypted here, to search.
                 const people = peopleFromHandles(`${mentionText || ''} ${markdown}`, workspaceMembers);
