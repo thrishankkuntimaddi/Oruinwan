@@ -52,13 +52,20 @@ export async function sendQuickReply(reply, deps) {
     const { encrypt, post } = deps || await defaultDeps();
     const isChannel = Boolean(r.channelId);
     const conversationId = isChannel ? r.channelId : r.dmSessionId;
-    const { ciphertext, messageIv } = await encrypt(r.text, conversationId, isChannel ? 'channel' : 'dm', null);
-    if (!ciphertext || !messageIv) throw new Error('Encryption produced no ciphertext');
-    const common = { ciphertext, messageIv, isEncrypted: true, attachments: [], clientTempId: tempId() };
-    if (isChannel) {
-        await post('/api/v2/messages/channel', { channelId: r.channelId, ...common });
-    } else {
-        await post('/api/v2/messages/direct', { dmSessionId: r.dmSessionId, workspaceId: r.workspaceId, ...common });
+    const clientTempId = tempId();
+    const sendOnce = async () => {
+        const { ciphertext, messageIv, keyVersion } = await encrypt(r.text, conversationId, isChannel ? 'channel' : 'dm', null);
+        if (!ciphertext || !messageIv) throw new Error('Encryption produced no ciphertext');
+        const common = { ciphertext, messageIv, isEncrypted: true, attachments: [], clientTempId, ...(keyVersion ? { keyVersion } : {}) };
+        if (isChannel) await post('/api/v2/messages/channel', { channelId: r.channelId, ...common });
+        else await post('/api/v2/messages/direct', { dmSessionId: r.dmSessionId, workspaceId: r.workspaceId, ...common });
+    };
+    try {
+        await sendOnce();
+    } catch (err) {
+        // The conversation got a new key meanwhile (the old one was dropped): encrypt again, once.
+        if (err?.response?.data?.code !== 'KEY_ROTATED') throw err;
+        await sendOnce();
     }
     return true;
 }

@@ -44,3 +44,17 @@ export function notifyKeyRotated(conversationId, conversationType) {
         try { fn(String(conversationId), conversationType); } catch { /* a listener failing never blocks the others */ }
     }
 }
+
+/**
+ * Runs `send(attempt)`; if the server answers 409 KEY_ROTATED (the conversation got a new key
+ * meanwhile, and the old one was just dropped), runs it once more so it encrypts with the new key.
+ * `attempt` is 0, then 1: on 1 the caller encrypts again.
+ */
+export async function retryOnKeyRotated(send) {
+    try {
+        return await send(0);
+    } catch (err) {
+        if (err?.response?.data?.code !== 'KEY_ROTATED') throw err;
+        return send(1);
+    }
+}

@@ -51,12 +51,13 @@ export function remindOnMessage({ messageId, at, note, forUserId }) {
 export async function scheduleEncrypted({ workspaceId, conversationType, conversationId, text, at }) {
     const enc = await encryptMessageForSending(text, conversationId, conversationType === 'channel' ? 'channel' : 'dm');
     if (!enc?.ciphertext) throw new Error("This conversation's encryption key isn't ready yet.");
+    // keyVersion: which of the conversation's keys encrypted it (checked when it is sent).
     const { data } = await api.post('/api/v2/scheduled-messages', {
         workspaceId,
         kind: conversationType === 'channel' ? 'channel' : 'dm',
         conversationId,
         sendAt: new Date(at).toISOString(),
-        body: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true },
+        body: { ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true, ...(enc.keyVersion ? { keyVersion: enc.keyVersion } : {}) },
     }).catch(rethrow('Could not schedule the message.'));
     return data?.scheduled;
 }

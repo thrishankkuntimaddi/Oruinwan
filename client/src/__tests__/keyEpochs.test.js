@@ -86,3 +86,24 @@ describe('conversation key versions on the web', () => {
         expect(seen).toEqual([['c9', 'dm']]);
     });
 });
+
+describe('retryOnKeyRotated', () => {
+    it('sends once more after KEY_ROTATED, telling the sender it is the second attempt', async () => {
+        const { retryOnKeyRotated } = await import('../services/keyVersions');
+        const attempts = [];
+        const out = await retryOnKeyRotated(async (n) => {
+            attempts.push(n);
+            if (n === 0) throw Object.assign(new Error('409'), { response: { status: 409, data: { code: 'KEY_ROTATED' } } });
+            return 'ok';
+        });
+        expect(out).toBe('ok');
+        expect(attempts).toEqual([0, 1]);
+    });
+
+    it('does not retry other errors', async () => {
+        const { retryOnKeyRotated } = await import('../services/keyVersions');
+        let calls = 0;
+        await expect(retryOnKeyRotated(async () => { calls += 1; throw Object.assign(new Error('403'), { response: { status: 403, data: {} } }); })).rejects.toThrow('403');
+        expect(calls).toBe(1);
+    });
+});

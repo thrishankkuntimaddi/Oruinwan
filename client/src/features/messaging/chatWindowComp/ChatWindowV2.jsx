@@ -41,6 +41,7 @@ import { peopleFromHandles, withTranscripts } from '../../../utils/aiMentions';
 import { mentionCandidates, mentionedOutsiders, outsidersSentence } from '../mentionInvite';
 import { createGroupDM, addGroupDMMembers, addedMessage } from '../groupDm/groupDmApi';
 import HistoryChoice from '../groupDm/HistoryChoice';
+import { retryOnKeyRotated } from '../../../services/keyVersions';
 import {
     commandPeople, createCommandTask, remindOnMessage, scheduleEncrypted, setConversationMuted, setMyStatus, setMyPresence,
     setChannelTopic, leaveConversation, addToChannel, dmWith,
@@ -1594,7 +1595,11 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 payload: { editedAt: nowIso, ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true, version: nextVersion, restoredFromVersion: null },
             });
             try {
-                const { data } = await api.patch(`/api/v2/messages/${id}`, { ciphertext: enc.ciphertext, messageIv: enc.messageIv });
+                // A key change meanwhile: encrypt again with the new key and save once more.
+                const { data } = await retryOnKeyRotated(async (attempt) => {
+                    const e = attempt === 0 ? enc : await encryptMessageForSending(text, conversationId, conversationType);
+                    return api.patch(`/api/v2/messages/${id}`, { ciphertext: e.ciphertext, messageIv: e.messageIv });
+                });
                 const saved = data?.message;
                 if (saved) {
                     const fields = {

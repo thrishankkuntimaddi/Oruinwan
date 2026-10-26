@@ -68,6 +68,22 @@ describe('sendQuickReply', () => {
         expect(d.post).not.toHaveBeenCalled();
     });
 
+    it('the conversation got a new key meanwhile: encrypts again with it and sends once more', async () => {
+        const d = deps();
+        d.encrypt.mockResolvedValueOnce({ ...encrypted, keyVersion: 1 }).mockResolvedValueOnce({ ciphertext: 'bmV3', messageIv: 'aXYy', keyVersion: 2 });
+        d.post.mockRejectedValueOnce(Object.assign(new Error('409'), { response: { status: 409, data: { code: 'KEY_ROTATED' } } }));
+        await expect(sendQuickReply({ workspaceId: 'w1', channelId: 'c1', text: 'hi' }, d)).resolves.toBe(true);
+        expect(d.post).toHaveBeenCalledTimes(2);
+        expect(d.post.mock.calls[1][1]).toMatchObject({ ciphertext: 'bmV3', keyVersion: 2, clientTempId: d.post.mock.calls[0][1].clientTempId });
+    });
+
+    it('other refusals are not retried', async () => {
+        const d = deps();
+        d.post.mockRejectedValueOnce(Object.assign(new Error('403'), { response: { status: 403, data: { code: 'FORBIDDEN' } } }));
+        await expect(sendQuickReply({ workspaceId: 'w1', channelId: 'c1', text: 'hi' }, d)).rejects.toThrow();
+        expect(d.post).toHaveBeenCalledTimes(1);
+    });
+
     it('never posts an empty ciphertext', async () => {
         const d = deps();
         d.encrypt.mockResolvedValue({});

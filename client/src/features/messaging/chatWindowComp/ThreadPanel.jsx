@@ -12,6 +12,7 @@ import ThreadSummaryModal from "./modals/ThreadSummaryModal";
 import FooterInput from "./footer/footerInput";
 
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
+import { retryOnKeyRotated } from "../../../services/keyVersions";
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";
 import logger from '../../../utils/logger';
@@ -513,14 +514,19 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setReplies((prev) => [...prev, optimisticReply]);
 
             
-            const res = await api.post(`/api/v2/messages/thread/${messageId}`, {
-                    ciphertext: encryptedPayload.ciphertext,
-                    messageIv: encryptedPayload.messageIv,
+            // A key change while sending (someone was added to or removed from a group): encrypt
+            // again with the new key and send once more.
+            const res = await retryOnKeyRotated(async (attempt) => {
+                const enc = attempt === 0 ? encryptedPayload : await encryptMessageForSending(replyText, channelId, conversationType);
+                return api.post(`/api/v2/messages/thread/${messageId}`, {
+                    ciphertext: enc.ciphertext,
+                    messageIv: enc.messageIv,
                     attachments: [],
                     clientTempId: tempId,
                     // Plain mention handles only (@name, @here, @channel), so mentions notify.
                     mentionText: ((mentionText || replyText).match(/@[\w.-]+/g) || []).join(' '),
                 });
+            });
 
             // Addressed to the AI: an @mention, or a follow-up right after it answered me here.
             // In a chat with an agent (Claude, ChatGPT…) every reply in its threads is for it.
@@ -623,9 +629,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         if (current && text === (current.decryptedContent || current.text || '')) { setEditingId(null); return; }
         setSavingEdit(true);
         try {
-            const enc = await encryptMessageForSending(text, channelId, conversationType);
-            if (!enc?.ciphertext || !enc?.messageIv) throw new Error('Could not encrypt your edit, so it was not saved.');
-            const { data } = await api.patch(`/api/v2/messages/${id}`, { ciphertext: enc.ciphertext, messageIv: enc.messageIv });
+            let enc;
+            const { data } = await retryOnKeyRotated(async () => {
+                enc = await encryptMessageForSending(text, channelId, conversationType);
+                if (!enc?.ciphertext || !enc?.messageIv) throw new Error('Could not encrypt your edit, so it was not saved.');
+                return api.patch(`/api/v2/messages/${id}`, { ciphertext: enc.ciphertext, messageIv: enc.messageIv });
+            });
             setReplies(prev => prev.map(r => (r._id === id ? {
                 ...r, decryptedContent: text, text, editedAt: data?.message?.editedAt || new Date().toISOString(),
                 payload: { ...(r.payload || {}), ciphertext: enc.ciphertext, messageIv: enc.messageIv },
