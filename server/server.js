@@ -457,6 +457,8 @@ connectDatabase()
       // Each job runs on one instance per interval fleet-wide (Redis lock in src/shared/jobs/scheduler.js).
       require('./src/features/reminders/reminders.cron').startRemindersCron(io);
       require('./src/features/tasks/tasks.cron').startRecurringTasksCron();
+      // Retries task comment ↔ chat thread copies that failed (tasks.threadSync.js).
+      require('./src/features/tasks/tasks.threadSync').startTaskThreadSyncJob();
       require('./src/features/security/retention.cron').startRetentionCron();
       require('./src/features/automations/automation.cron').startAutomationCron(io);
       require('./src/features/drive-backup/driveBackup.cron').startDriveBackupCron();

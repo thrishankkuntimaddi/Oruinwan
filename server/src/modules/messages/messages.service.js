@@ -1,6 +1,6 @@
 'use strict';
 
-const { emitAboutMessage } = require('../conversations/conversationRooms');
+const { emitAboutMessage, messageAudience } = require('../conversations/conversationRooms');
 const Message = require('./message.model.js');
 const DMSession = require('../../../models/DMSession');
 const _Channel = require('../../features/channels/channel.model.js');
@@ -198,8 +198,11 @@ async function createMessage(messageData, io = null) {
         messageObject.isPinned = messageObject.isPinned || false;
 
         if (parentId) {
-            // A thread reply: it goes to the thread, never the main conversation.
-            io.to(rooms).emit('thread-reply', { parentId: String(parentId), reply: messageObject, clientTempId });
+            // A thread reply: it goes to the thread, never the main conversation, and in a group
+            // only to the members who can see the thread (not people who joined after its parent).
+            const anchor = parent || await Message.findById(parentId).select('createdAt').lean();
+            const target = await messageAudience(io, { channel, dm }, { anchor, alsoRooms: rooms.slice(1) });
+            if (target) target.emit('thread-reply', { parentId: String(parentId), reply: messageObject, clientTempId });
         } else {
             io.to(rooms).emit('new-message', messageObject);
         }
@@ -242,6 +245,8 @@ async function threadReplyFollowUp(message, hydrated, { channel, dm, parentId, p
     if (updated) threads.emitThreadCounters(io, { _id: parentId, channel, dm }, updated);
     const parentDoc = parent ? { ...parent, _id: parentId } : await Message.findById(parentId).lean();
     if (!parentDoc) return;
+    // Into the discussions of tasks linked to this thread.
+    await require('../../features/tasks/tasks.threadSync').replyToTasks(message.toObject ? message.toObject() : message, parentDoc, io);
     await threads.followAndNotify(io, {
         parent: parentDoc,
         replierId: sender,
@@ -1005,6 +1010,10 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv, key
     if (String(message.sender?._id || message.sender) !== userId.toString()) {
         throw httpError(403, 'Unauthorized: only the sender can edit this message');
     }
+    // A copy of a task comment belongs to the task's discussion (tasks.threadSync.js).
+    if (message.taskComment) {
+        throw Object.assign(httpError(400, "This reply comes from a task's discussion, so it can't be edited here."), { code: 'TASK_COMMENT_COPY' });
+    }
 
     if (message.isDeleted || message.isDeletedUniversally) {
         throw httpError(400, 'Cannot edit a deleted message');
@@ -1038,6 +1047,8 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv, key
     await message.save();
 
     if (io) await emitAboutMessage(io, message, 'message:edited', await messageForClient(message));
+    // A thread reply's copies in linked tasks show the new text.
+    if (message.parentId) await require('../../features/tasks/tasks.threadSync').replyEdited(message, io);
 
     return message;
 }
@@ -1089,6 +1100,7 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
     await message.save();
 
     if (io) await emitAboutMessage(io, message, 'message:edited', await messageForClient(message));
+    if (message.parentId) await require('../../features/tasks/tasks.threadSync').replyEdited(message, io);
 
     return message;
 }
@@ -1165,7 +1177,9 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     }
 
     // A deleted reply no longer counts: recount the thread and update the parent everywhere.
+    // Its copies in linked tasks' discussions go too.
     if (message.parentId) {
+        await require('../../features/tasks/tasks.threadSync').replyDeleted(message, io);
         try {
             const threads = require('../threads/threads.service');
             const counters = await threads.recountThread(message.parentId);

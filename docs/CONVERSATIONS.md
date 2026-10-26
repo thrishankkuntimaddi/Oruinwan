@@ -98,7 +98,25 @@ before key versions can't send in a conversation whose key changed until they ar
   for channel tasks, the creator, assignees, watchers and people added to the discussion.
 - A task made from a message links to that message's chat thread: the chat thread gets a
   "📋 Task created" reply, and the discussion shows a preview of the thread's latest replies, only
-  to people who can read that thread in chat. Comments are not copied between the two.
+  to people who can read that thread in chat.
+- **From then on comments and replies are shared both ways**
+  (`server/src/features/tasks/tasks.threadSync.js`), each side keeping its own rules:
+  - A **task comment** is posted in the thread as a reply from its author (encrypted with the
+    conversation key, like other server-written replies) when its author may post there, the
+    thread isn't locked, and everyone who can read the thread may also see the task. Otherwise it
+    stays in the task and says why ("Only here: …").
+  - A **thread reply** shows in each linked task's discussion as a comment from its author when
+    its author may see and comment on the task. Its text stays end-to-end encrypted (the apps
+    decrypt it), and it is shown only to people who can read the thread in chat: on every read,
+    live event and notification.
+  - The original owns its copy: deleting a comment deletes its reply; deleting a reply for
+    everyone, or editing it, updates its copies. Deleting a copy only removes it on that side; a
+    reply copied from a task can't be edited in chat. Copies are never copied back, and the
+    "📋 Task created" reply and automatic entries are never copied.
+  - Every copy points to its original (`Message.taskComment`, `TaskComment.mirror.messageId`,
+    unique), so retries never duplicate. A failed copy is marked pending and retried every five
+    minutes, up to five times (`task-thread-sync` job).
+  - Replies written before the task was made are not copied (the preview shows the latest ones).
 
 ## One send path
 

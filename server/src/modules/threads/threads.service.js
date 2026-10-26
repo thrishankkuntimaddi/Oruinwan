@@ -257,7 +257,7 @@ module.exports.followAndNotify = followAndNotify;
  * Used by server-side senders such as the assistant's reply_in_thread / create_thread tools.
  * `parent` is the lean parent message (channel/dm, workspace, company, sender, replyCount).
  */
-async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv, keyVersion = null, mentionText = '' }) {
+async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv, keyVersion = null, mentionText = '', extra = {} }) {
     const { hydrate, USER_MIN } = require('../../identity/hydrate');
     const logger = require('../../../utils/logger');
     const parentId = parent._id;
@@ -271,6 +271,8 @@ async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv,
         workspace: parent.workspace,
         company: parent.company,
         ...(parent.dm ? { dm: parent.dm } : { channel: parent.channel }),
+        // Server-side fields only (e.g. taskComment for a reply copied from a task's discussion).
+        ...extra,
     });
     const replyOut = await hydrate(reply.toObject(), { sender: USER_MIN });
     const lastReplyAt = replyOut.createdAt || new Date();
@@ -300,6 +302,8 @@ async function postEncryptedReply(io, { parent, senderId, ciphertext, messageIv,
     // Same as the REST path: following and notifications never fail the reply.
     await followAndNotify(io, { parent, replierId: senderId, senderUsername: replyOut.sender?.username, mentionText, replyId: reply._id })
         .catch((err) => logger.error('[THREADS] Follow/notify error (non-fatal):', err.message));
+    // Into the discussions of tasks linked to this thread (never for copies of task comments).
+    await require('../../features/tasks/tasks.threadSync').replyToTasks(reply.toObject(), parent, io);
     return replyOut;
 }
 

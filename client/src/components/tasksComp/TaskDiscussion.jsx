@@ -9,6 +9,7 @@ import { batchDecryptMessages } from '../../services/messageEncryptionService';
 import MessageMarkdown from '../../shared/components/messages/MessageMarkdown';
 import { statusLabel, priorityLabel, taskErrorMessage } from '../../utils/taskMeta';
 import { UserAvatar, fmtDate, FONT, tint } from './taskUi';
+import { syncLabel } from '@platform/tasks/discussionSync.js';
 
 const idOf = (v) => (v == null ? '' : String(v._id || v.id || v));
 
@@ -34,6 +35,41 @@ export function describeDiscussionEvent(e) {
         case 'thread_linked': return <>created this task from a thread{ev.meta?.channelName ? <> in <b>#{ev.meta.channelName}</b></> : ''}</>;
         default: return String(ev.type || 'updated').replace(/_/g, ' ');
     }
+}
+
+/** Where a comment stands with the linked chat thread (shared wording: platform/tasks). */
+export { syncLabel };
+
+/**
+ * Copies of chat-thread replies carry the reply's encrypted text: decrypted here with the
+ * conversation's key. Returns Map(entry id → text).
+ */
+export function useMirrorTexts(entries) {
+    const [texts, setTexts] = useState(() => new Map());
+    const key = (entries || []).filter((e) => e.mirror?.payload?.ciphertext).map((e) => `${e._id}:${e.mirror.payload.messageIv}`).join('|');
+    useEffect(() => {
+        const mirrors = (entries || []).filter((e) => e.mirror?.payload?.ciphertext);
+        if (!mirrors.length) return undefined;
+        let alive = true;
+        const byConv = new Map();
+        for (const e of mirrors) {
+            const k = `${e.mirror.conversationType}:${e.mirror.conversationId}`;
+            if (!byConv.has(k)) byConv.set(k, []);
+            byConv.get(k).push({ id: e._id, _id: e._id, type: 'message', payload: e.mirror.payload, createdAt: e.createdAt });
+        }
+        Promise.all([...byConv.entries()].map(([k, list]) => {
+            const [type, id] = k.split(':');
+            return batchDecryptMessages(list, id, type, null).catch(() => []);
+        })).then((groups) => {
+            if (!alive) return;
+            const next = new Map();
+            for (const m of groups.flat()) if (m?.decryptedContent && !m.keyUnavailable) next.set(idOf(m), m.decryptedContent);
+            setTexts(next);
+        });
+        return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+    return texts;
 }
 
 function threadHref(workspaceId, linked) {
@@ -143,7 +179,9 @@ export function useTaskDiscussion(taskId) {
 
     const append = useCallback((entry) => {
         setData((d) => {
-            if (!d || !entry || d.entries.some((e) => e._id === entry._id)) return d;
+            if (!d || !entry) return d;
+            // The same entry again: an update (a chat reply was edited, or a comment was shared).
+            if (d.entries.some((e) => e._id === entry._id)) return { ...d, entries: d.entries.map((e) => (e._id === entry._id ? entry : e)) };
             const next = { ...d, entries: [...d.entries, entry] };
             if (entry.kind === 'comment') next.commentCount = (d.commentCount || 0) + 1;
             if (entry.event?.type === 'resolved') next.resolved = true;
@@ -237,6 +275,7 @@ export default function TaskDiscussion({ taskId, workspaceId, members = [], curr
     const toast = (msg, type) => showToast?.(msg, type);
 
     const entries = data?.entries || [];
+    const mirrorTexts = useMirrorTexts(entries);
     useEffect(() => { endRef.current?.scrollIntoView?.({ block: 'end' }); }, [entries.length]);
 
     const participantIds = useMemo(() => new Set((data?.participants || []).map((p) => idOf(p))), [data]);
@@ -391,8 +430,14 @@ export default function TaskDiscussion({ taskId, workspaceId, members = [], curr
                                         )}
                                     </div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.55, wordBreak: 'break-word' }}>
-                                        <MessageMarkdown text={e.text || ''} />
+                                        <MessageMarkdown text={e.mirror ? (mirrorTexts.get(e._id) || (e.mirror.payload ? 'Encrypted message' : '')) : (e.text || '')} />
+                                        {e.mirror?.hasAttachments && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>📎 Attachment in the chat thread</span>}
                                     </div>
+                                    {syncLabel(e) && (
+                                        <div data-testid="task-comment-sync" style={{ marginTop: '2px', fontSize: '10px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Hash size={9} aria-hidden="true" /> {syncLabel(e)}
+                                        </div>
+                                    )}
                                     {(e.attachments || []).map((a) => (
                                         <a key={a.url} href={a.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '11px', color: 'var(--accent)' }}>📎 {a.name || 'Attachment'}</a>
                                     ))}

@@ -386,7 +386,23 @@ export function mapDiscussionEntry(e) {
     attachments: (e.attachments || []).map((a) => ({ url: absolute(a.url), name: a.name || 'Attachment' })),
     event: e.event || null,
     at: e.createdAt,
+    // A reply from the linked chat thread (its text is decrypted in mapDiscussion), and where a
+    // comment stands with that thread (server: tasks.threadSync.js).
+    fromThread: Boolean(e.mirror),
+    mirror: e.mirror ? { conv: { kind: e.mirror.conversationType === 'channel' ? 'channel' : 'dm', id: String(e.mirror.conversationId) }, rootId: idOf(e.mirror.rootId), payload: e.mirror.payload || null, hasAttachments: Boolean(e.mirror.hasAttachments) } : null,
+    sync: e.sync?.state ? { state: e.sync.state, reason: e.sync.reason || null } : null,
   };
+}
+
+/** The text of a chat reply copied into a task: decrypted with the conversation's key. */
+async function readMirror(mirror) {
+  if (!mirror?.payload?.ciphertext) return '';
+  try {
+    const r = await readMessage(mirror.conv, { type: 'message', payload: mirror.payload });
+    return r.state === 'ok' ? r.text : 'Encrypted message';
+  } catch {
+    return 'Encrypted message';
+  }
 }
 
 async function mapLinkedThread(t) {
@@ -421,7 +437,11 @@ export async function mapDiscussion(d) {
     resolved: Boolean(d?.resolved),
     resolvedAt: d?.resolvedAt || null,
     participants: (d?.participants || []).map((p) => ({ id: idOf(p), username: p.username || null, avatarUrl: absolute(p.profilePicture), roles: p.roles || [] })),
-    entries: (d?.entries || []).map(mapDiscussionEntry),
+    entries: await Promise.all((d?.entries || []).map(async (raw) => {
+      const e = mapDiscussionEntry(raw);
+      if (e?.mirror) e.text = await readMirror(e.mirror);
+      return e;
+    })),
     permissions: { canComment: Boolean(d?.permissions?.canComment), canAddPeople: Boolean(d?.permissions?.canAddPeople), canModerate: Boolean(d?.permissions?.canModerate) },
     linkedThread: await mapLinkedThread(d?.linkedThread),
   };

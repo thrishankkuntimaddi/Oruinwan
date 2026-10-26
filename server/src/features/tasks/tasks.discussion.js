@@ -14,7 +14,9 @@
  *                  from the task's status, so it can never drift.
  *   Linked thread  a task created from a message keeps it (task.linkedMessage): the discussion
  *                  shows that thread's latest replies (end-to-end encrypted payloads the client
- *                  decrypts) and the thread gets a "Task created: …" reply pointing back.
+ *                  decrypts) and the thread gets a "Task created: …" reply pointing back. From
+ *                  then on comments and thread replies are shared both ways
+ *                  (tasks.threadSync.js), each side keeping its own access rules.
  *   Real time      `task:discussion` { taskId, entry } / `task:discussion-removed` { taskId,
  *                  commentId } to the task's audience; participants get a `task_comment`
  *                  notification for each comment (their notification preferences apply).
@@ -121,6 +123,18 @@ function entryOut(c, users) {
         } : null,
         createdAt: c.createdAt,
         editedAt: c.editedAt || null,
+        // A copy of a reply in the linked chat thread: its encrypted text, for the app to decrypt.
+        mirror: c.mirror?.messageId ? {
+            source: 'thread',
+            messageId: sid(c.mirror.messageId),
+            rootId: sid(c.mirror.rootId),
+            conversationId: sid(c.mirror.conversationId),
+            conversationType: c.mirror.conversationType,
+            payload: c.mirror.payload || null,
+            hasAttachments: !!c.mirror.hasAttachments,
+        } : null,
+        // A comment shared to the linked thread: synced, skipped (reason) or pending.
+        sync: c.sync?.state ? { state: c.sync.state, reason: c.sync.reason || null, messageId: sid(c.sync.messageId) } : null,
     };
 }
 
@@ -291,7 +305,9 @@ async function getDiscussion(userId, taskId) {
     ]);
     const ids = participantIds(task, discussion);
     const users = await hydrateUsers(ids);
-    const entries = await entriesOut(list);
+    // Copies of thread replies only for people who can read that thread in chat.
+    const sync = require('./tasks.threadSync');
+    const entries = await entriesOut(await sync.visibleEntries(list, userId));
     let linkedThread = null;
     try {
         linkedThread = await linkedThreadFor(task, userId);
@@ -366,7 +382,11 @@ async function postComment(userId, taskId, { text, attachments = [] } = {}, io =
         await tasksService()._setWatchers(sid(task._id), { add: [...joinAsWatcher, ...addedByMention] });
     }
     const discussion = await touchDiscussion(task, { comment: true, addParticipants: addedByMention });
-    const [entry] = await entriesOut([doc.toObject ? doc.toObject() : doc]);
+    // Shared to the linked chat thread when its rules allow (tasks.threadSync.js).
+    const synced = await require('./tasks.threadSync').commentToThread(doc.toObject ? doc.toObject() : doc, task, io)
+        .catch(() => ({ state: 'pending' }));
+    const stored = synced.state === 'none' ? doc.toObject?.() || doc : (await TaskComment.findById(doc._id).lean()) || doc;
+    const [entry] = await entriesOut([stored.toObject ? stored.toObject() : stored]);
     const audienceTask = { ...task, watchers: [...(task.watchers || []), ...joinAsWatcher, ...addedByMention] };
     await emitEntry(io, audienceTask, discussion, entry);
 
@@ -398,9 +418,11 @@ async function deleteComment(userId, taskId, commentId, io = null) {
     if (!own && !permissionsFor(task, userId, isManager).canModerate) {
         throw httpError(403, 'Only the author, the task creator or a workspace admin can delete this comment');
     }
-    await TaskComment.updateOne({ _id: commentId }, { $set: { deletedAt: new Date(), text: '', attachments: [] } });
+    await TaskComment.updateOne({ _id: commentId }, { $set: { deletedAt: new Date(), text: '', attachments: [], ...(comment.mirror ? { 'mirror.payload': null } : {}) } });
     const { TaskDiscussion } = models();
     await TaskDiscussion.updateOne({ task: sid(task._id) }, { $inc: { commentCount: -1 } });
+    // Its reply in the linked thread goes too (a copy of a thread reply only leaves the task).
+    if (!comment.mirror) await require('./tasks.threadSync').commentDeleted(comment, io, { deletedBy: userId });
     const socket = getIo(io);
     if (socket) {
         const discussion = await TaskDiscussion.findOne({ task: sid(task._id) }).lean();
@@ -508,6 +530,8 @@ async function linkTaskToThread({ task, message, userId, io = null }) {
 
         if (dbReady()) {
             const { TaskComment } = models();
+            // From now on comments and replies are shared (tasks.threadSync.js).
+            await require('./tasks.threadSync').linkThread(task, rootId);
             await TaskComment.create({
                 task: sid(task._id),
                 workspace: task.workspace ? sid(task.workspace) : null,
@@ -547,8 +571,9 @@ async function linkTaskToThread({ task, message, userId, io = null }) {
             const { hydrate } = require('../../identity/hydrate');
             const out = reply.toObject();
             await hydrate(out, { sender: { type: 'user', fields: ['username', 'profilePicture'] } });
-            const room = root.channel ? `channel:${sid(root.channel)}` : `dm:${sid(root.dm)}`;
-            socket.to(room).emit('thread-reply', { parentId: rootId, reply: out });
+            // In a group, only members who can see the thread (not people who joined after it).
+            const { emitAboutMessage } = require('../../modules/conversations/conversationRooms');
+            await emitAboutMessage(socket, root, 'thread-reply', { parentId: rootId, reply: out });
             require('../../modules/threads/threads.service').emitThreadCounters(socket, root, updatedParent || {});
         }
         const me = await identity().users.findById(userId).catch(() => null);
@@ -564,6 +589,7 @@ async function linkTaskToThread({ task, message, userId, io = null }) {
 
 module.exports = {
     _env: env,
+    _entriesOut: entriesOut,
     isExplicitParticipant,
     participantIds,
     permissionsFor,

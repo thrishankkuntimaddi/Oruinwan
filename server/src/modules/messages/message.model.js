@@ -220,6 +220,13 @@ const MessageSchema = new mongoose.Schema({
   
   
   linkedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
+  // A thread reply copied from a task's discussion (features/tasks/tasks.threadSync.js): the
+  // comment it came from and its task. Such replies are never copied back.
+  taskComment: { type: mongoose.Schema.Types.ObjectId, default: undefined },
+  taskCommentTask: { type: mongoose.Schema.Types.ObjectId, default: undefined },
+  // 'pending' / 'failed' while copying this reply into linked tasks failed (retried by the job).
+  taskMirror: { type: String, default: undefined },
+  taskMirrorAttempts: { type: Number, default: undefined },
 
   
   isPinned: { type: Boolean, default: false },
@@ -261,6 +268,8 @@ MessageSchema.index({ company: 1, dm: 1, createdAt: -1 });
 MessageSchema.index({ workspace: 1, createdAt: -1 }); 
 MessageSchema.index({ platformSession: 1, createdAt: -1 });
 MessageSchema.index({ parentId: 1 }); 
+MessageSchema.index({ taskComment: 1 }, { unique: true, partialFilterExpression: { taskComment: { $type: 'objectId' } } });
+MessageSchema.index({ taskMirror: 1 }, { partialFilterExpression: { taskMirror: 'pending' } });
 // The Threads view: threads a person follows, latest activity first.
 MessageSchema.index({ followers: 1, lastReplyAt: -1 }, { partialFilterExpression: { replyCount: { $gt: 0 } } });
 MessageSchema.index({ createdAt: -1 });

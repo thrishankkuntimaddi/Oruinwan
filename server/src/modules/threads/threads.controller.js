@@ -256,11 +256,12 @@ exports.postThreadReply = async (req, res) => {
 
         const io = req.app?.get("io");
         if (io && updatedParent) {
-            const roomName = parentMessage.channel ? `channel:${parentMessage.channel}` : `dm:${parentMessage.dm}`;
+            // The thread's audience: in a group, not people who joined after its parent was written.
+            const target = await require('../conversations/conversationRooms').messageAudience(io, parentMessage);
             const lastReplyIso = new Date(lastReplyAt).toISOString();
 
-            if (updatedParent.replyCount === 1) {
-                io.to(roomName).emit("thread:created", {
+            if (target && updatedParent.replyCount === 1) {
+                target.emit("thread:created", {
                     parentMessageId: messageId,
                     channelId: parentMessage.channel,
                     dmId: parentMessage.dm,
@@ -269,8 +270,8 @@ exports.postThreadReply = async (req, res) => {
                     parentMessage: updatedParent
                 });
             }
-            io.to(roomName).emit("thread-reply", { parentId: messageId, reply: replyOut, clientTempId });
-            io.to(roomName).emit("message-updated", {
+            if (target) target.emit("thread-reply", { parentId: messageId, reply: replyOut, clientTempId });
+            if (target) target.emit("message-updated", {
                 messageId,
                 channelId: parentMessage.channel ? String(parentMessage.channel) : null,
                 dmId: parentMessage.dm ? String(parentMessage.dm) : null,
@@ -278,6 +279,10 @@ exports.postThreadReply = async (req, res) => {
                 fullMessage: updatedParent
             });
         }
+
+        // Into the discussions of tasks linked to this thread (never fails the reply).
+        require('../../features/tasks/tasks.threadSync').replyToTasks(reply.toObject(), parentMessage, io)
+            .catch((err) => logger.warn('[THREADS] Task sync error (non-fatal):', err.message));
 
         // Following and notifications never delay or fail the reply.
         followAndNotify(io, { parent: parentMessage, replierId: userId, senderUsername: replyOut.sender?.username, mentionText: typeof req.body?.mentionText === "string" ? req.body.mentionText : "", replyId: reply._id })

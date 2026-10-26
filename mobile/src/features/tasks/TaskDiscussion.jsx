@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { syncLabel } from '../../../../platform/tasks/discussionSync.js';
 import { CheckCircle2, Hash, Lock, MessagesSquare, RotateCcw, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
@@ -244,6 +245,8 @@ export function TaskDiscussionScreen({ id, title = '' }) {
                           )}
                         </div>
                         <Markdown text={e.text} className="text-sm" />
+                        {e.mirror?.hasAttachments && <p className="text-xs text-text-2">📎 Attachment in the chat thread</p>}
+                        {syncLabel(e) && <p data-testid="task-comment-sync" className="mt-0.5 text-[11px] text-text-2"># {syncLabel(e)}</p>}
                         {e.attachments.map((a) => (
                           <a key={a.url} href={a.url} target="_blank" rel="noreferrer" className="block text-xs text-accent-ink">
                             📎 {a.name}

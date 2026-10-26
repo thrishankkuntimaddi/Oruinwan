@@ -181,6 +181,14 @@ describe('message toolbar', () => {
             expect(doc.restoredFromVersion).toBeNull();
             expect(doc.editHistory[2]).toMatchObject({ ciphertext: 'Y3VycmVudA==', restoredFromVersion: 1 });
         });
+
+        it("refuses to edit a reply copied from a task's discussion (the task owns it)", async () => {
+            const doc = makeDoc({ taskComment: oid(77) });
+            Message.findById = jest.fn(() => query(doc));
+            await expect(messagesService.editMessage(MSG, SENDER, { ciphertext: 'bmV3', messageIv: 'aXY0' }, null))
+                .rejects.toMatchObject({ status: 400, code: 'TASK_COMMENT_COPY' });
+            expect(doc.save).not.toHaveBeenCalled();
+        });
     });
 
     describe('getMessageVersions', () => {

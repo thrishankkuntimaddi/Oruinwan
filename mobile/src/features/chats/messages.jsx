@@ -424,6 +424,7 @@ export function MessageItem({
           </span>
         )}
         <TranslationNote m={m} />
+        {m.fromTaskId != null && <span data-testid="message-from-task" className="mr-1 text-[11px] text-text-3">From the task's discussion</span>}
         {m.edited &&
           (m.editCount > 0 && m.state === 'ok' ? (
             <button
@@ -666,7 +667,9 @@ export function MessageActions({
     readable && onTask && !message.linkedTaskId && { icon: ListTodo, label: 'Convert to task', run: onTask },
     // Already a task: open it with its details.
     message.linkedTaskId && { icon: ListTodo, label: 'Open task', run: () => nav.push('task', { id: message.linkedTaskId }, { tab: 'tasks' }) },
-    mine && readable && onEdit && message.type !== 'checklist' && { icon: Pencil, label: 'Edit message', run: onEdit },
+    mine && readable && onEdit && message.type !== 'checklist' && message.fromTaskId == null && { icon: Pencil, label: 'Edit message', run: onEdit },
+    // A reply that came from a task's discussion: open that task.
+    message.fromTaskId && { icon: ListTodo, label: 'Open task', run: () => nav.push('task', { id: message.fromTaskId }, { tab: 'tasks' }) },
     readable && message.editCount > 0 && onHistory && { icon: History, label: 'Edit history', run: onHistory },
     mine && onInfo && !message.pending && { icon: Info, label: 'Message info', run: onInfo },
     onDelete && !message.pending && { icon: EyeOff, label: 'Delete for me', danger: true, run: () => setConfirm('me'), keepOpen: true },

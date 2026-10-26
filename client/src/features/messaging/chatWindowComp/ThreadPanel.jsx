@@ -1042,9 +1042,11 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             <ProfileTrigger userId={senderIdOf(reply)} username={senderName}><span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span></ProfileTrigger>
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
                                                             {reply.editedAt && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>(edited)</span>}
+                                                            {reply.taskComment && <span data-testid="thread-reply-from-task" style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>· from the task's discussion</span>}
                                                             {(String(senderIdOf(reply)) === String(currentUserId) || permissions.canModerate) && !String(reply._id).startsWith('temp-') && editingId !== reply._id && (
                                                                 <span className="thread-reply-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '2px' }}>
-                                                                    {String(senderIdOf(reply)) === String(currentUserId) && (
+                                                                    {/* A copy of a task comment is edited (or not) in the task, never here. */}
+                                                                    {String(senderIdOf(reply)) === String(currentUserId) && !reply.taskComment && (
                                                                         <button type="button" className="gl-icon-btn" title="Edit reply" aria-label="Edit reply" onClick={() => startEdit(reply)} style={{ width: 22, height: 22 }}>
                                                                             <Pencil size={11} />
                                                                         </button>

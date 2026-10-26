@@ -68,6 +68,8 @@ export function messageExtras(m, meId) {
     resolved: Boolean(m.resolvedThreadAt),
     following: mine(m.followers),
     linkedTaskId: idOf(m.linkedTaskId),
+    // A reply copied from a task's discussion (server: tasks.threadSync.js): not edited here.
+    fromTaskId: m.taskComment ? idOf(m.taskCommentTask) || '' : null,
   };
 }
 

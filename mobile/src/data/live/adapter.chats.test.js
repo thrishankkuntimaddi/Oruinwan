@@ -47,6 +47,9 @@ describe('mapping', () => {
       { checked: false, checkedBy: null, text: '' },
     ]);
     expect(messageExtras({}, 'me')).toMatchObject({ type: 'message', saved: false, editCount: 0, checklist: null });
+    // A reply copied from a task's discussion knows its task (and is not edited in chat).
+    expect(messageExtras({}, 'me').fromTaskId).toBeNull();
+    expect(messageExtras({ taskComment: 'c1', taskCommentTask: 't9' }, 'me').fromTaskId).toBe('t9');
   });
 
   it('reads checklist text and conversations', () => {

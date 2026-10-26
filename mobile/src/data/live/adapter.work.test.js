@@ -20,7 +20,10 @@ vi.mock('./http.js', () => ({
   refreshSession: vi.fn(),
   serverUrl: () => 'https://api.example',
 }));
-vi.mock('./crypto.js', () => ({ conversationKey: vi.fn(), encryptText: vi.fn(), decryptPayload: vi.fn(), withCurrentKey: async (conv, getKey, send) => send(await getKey()) }));
+vi.mock('./crypto.js', () => ({
+  conversationKey: vi.fn(), encryptText: vi.fn(), decryptPayload: vi.fn(), withCurrentKey: async (conv, getKey, send) => send(await getKey()),
+  readMessage: vi.fn(async (conv, m) => ({ state: 'ok', text: `plain(${m.payload?.ciphertext}) in ${conv.kind}:${conv.id}` })),
+}));
 vi.mock('./realtime.js', () => ({ socketRequest: vi.fn(), socketEmit: vi.fn() }));
 
 const { workAdapter: a, blockersOf, mapTaskTime, mapPlanningTask } = await import('./adapter.work.js');
@@ -165,5 +168,20 @@ describe('file sharing', () => {
     expect(f).toMatchObject({ access: 'restricted', myRole: 'owner' });
     await a.shareFile('f1', [], { access: 'workspace' });
     expect(mockApi.post).toHaveBeenLastCalledWith('/v2/files/f1/share', { access: 'workspace' });
+  });
+});
+
+describe('task discussion: replies copied from the chat thread', () => {
+  it('decrypts their text with the conversation key and keeps each comment\'s sync state', async () => {
+    mockApi.get.mockResolvedValueOnce({
+      entries: [
+        { _id: 'c1', kind: 'comment', author: { _id: 'u1', username: 'nani' }, text: 'Ship', sync: { state: 'skipped', reason: 'audience' } },
+        { _id: 'c2', kind: 'comment', author: { _id: 'u2', username: 'mani' }, text: '', mirror: { conversationType: 'dm', conversationId: 'g1', rootId: 'r1', payload: { ciphertext: 'C', messageIv: 'iv' } } },
+      ],
+      permissions: {},
+    });
+    const d = await a.taskDiscussion('t1');
+    expect(d.entries[0]).toMatchObject({ text: 'Ship', fromThread: false, sync: { state: 'skipped', reason: 'audience' } });
+    expect(d.entries[1]).toMatchObject({ text: 'plain(C) in dm:g1', fromThread: true });
   });
 });

@@ -96,13 +96,15 @@ async function evictFromWorkspace(io, workspaceId, userId, { channelIds = null }
  * each through their own room. `anchor` is the message whose date decides (the thread's parent).
  * Returns a Socket.IO target, or null when nobody may receive it.
  */
-async function messageAudience(io, message, { anchor = null } = {}) {
+async function messageAudience(io, message, { anchor = null, alsoRooms = [] } = {}) {
     if (!io || !message) return null;
     const channel = message.channel?._id || message.channel;
     const dm = message.dm?._id || message.dm;
-    if (channel) return io.to(`channel:${channel}`);
+    // `alsoRooms` (e.g. each participant's own room) go along when nobody has to be left out.
+    const withAlso = (r) => (alsoRooms.length ? [r, ...alsoRooms] : r);
+    if (channel) return io.to(withAlso(`channel:${channel}`));
     if (!dm) return null;
-    const room = `dm:${dm}`;
+    const room = withAlso(`dm:${dm}`);
     let session = null;
     try {
         const DMSession = require('../../../models/DMSession');

@@ -88,6 +88,23 @@ describe('task discussion (phone)', () => {
     expect(push).toHaveBeenCalledWith('taskDiscussion', { id: 't1', title: 'Ship it' });
   });
 
+  it('shows replies from the chat thread and where each comment stands', async () => {
+    fake.taskDiscussion.mockImplementation(async () => discussion({
+      entries: [
+        { id: 'c1', kind: 'comment', author: { id: 'me', username: 'me' }, text: 'Ship Friday', mentions: [], attachments: [], event: null, at: '2026-10-20T10:01:00Z', sync: { state: 'synced' } },
+        { id: 'c2', kind: 'comment', author: { id: 'me', username: 'me' }, text: 'Budget', mentions: [], attachments: [], event: null, at: '2026-10-20T10:02:00Z', sync: { state: 'skipped', reason: 'audience' } },
+        { id: 'c3', kind: 'comment', author: { id: 'u2', username: 'ana' }, text: 'On it (decrypted)', mentions: [], attachments: [], event: null, at: '2026-10-20T10:03:00Z', fromThread: true, mirror: { conv: { kind: 'channel', id: 'ch1' }, payload: {} } },
+      ],
+    }));
+    render(<TaskDiscussionScreen id="t1" title="Ship it" />);
+    await screen.findByTestId('task-discussion');
+    const rows = screen.getAllByTestId('task-discussion-comment');
+    expect(rows[0].textContent).toContain('Also in the chat thread');
+    expect(rows[1].textContent).toContain("Only here: some people in the chat thread can't see this task");
+    expect(rows[2].textContent).toContain('On it (decrypted)');
+    expect(rows[2].textContent).toContain('From the chat thread');
+  });
+
   it('describes reassignments and due dates', () => {
     expect(describeEntry({ event: { type: 'reassigned', to: ['u2'], names: { u2: 'ana' } } })).toBe('reassigned it to ana');
     expect(describeEntry({ event: { type: 'due_date', from: null, to: null } })).toBe('cleared the due date');

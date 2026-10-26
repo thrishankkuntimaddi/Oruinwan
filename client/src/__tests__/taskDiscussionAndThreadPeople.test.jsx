@@ -10,7 +10,7 @@ vi.mock('../services/messageEncryptionService', () => ({
     batchDecryptMessages: vi.fn(async (list) => list.map((m) => ({ ...m, decryptedContent: `plain:${m.payload.ciphertext}` }))),
 }));
 
-import TaskDiscussion, { describeDiscussionEvent } from '../components/tasksComp/TaskDiscussion';
+import TaskDiscussion, { describeDiscussionEvent, syncLabel } from '../components/tasksComp/TaskDiscussion';
 import ThreadPeopleModal from '../features/messaging/chatWindowComp/modals/ThreadPeopleModal';
 
 const ME = 'a'.repeat(24);
@@ -99,6 +99,34 @@ describe('task discussion', () => {
         expect(container).toHaveTextContent('reassigned it to bob');
         const { container: c2 } = render(<p>{describeDiscussionEvent({ event: { type: 'due_date', from: null, to: null } })}</p>);
         expect(c2).toHaveTextContent('cleared the due date');
+    });
+});
+
+describe('task discussion ↔ chat thread', () => {
+    it('shows a chat reply copied into the task, decrypted, and where each comment stands', async () => {
+        mockApi.get.mockResolvedValue({ data: discussion({
+            entries: [
+                { _id: 'c1', kind: 'comment', author: { _id: ME, username: 'me' }, text: 'Ship Friday', sync: { state: 'synced' }, createdAt: '2026-10-20T10:01:00Z' },
+                { _id: 'c2', kind: 'comment', author: { _id: ME, username: 'me' }, text: 'Budget', sync: { state: 'skipped', reason: 'audience' }, createdAt: '2026-10-20T10:02:00Z' },
+                { _id: 'c3', kind: 'comment', author: { _id: BOB, username: 'bob' }, text: '', createdAt: '2026-10-20T10:03:00Z',
+                    mirror: { source: 'thread', messageId: 'm9', rootId: 'r1', conversationId: 'ch1', conversationType: 'channel', payload: { ciphertext: 'CIPHER', messageIv: 'iv' } } },
+            ],
+        }) });
+        render(<TaskDiscussion taskId={TASK} workspaceId="ws1" members={[]} currentUserId={ME} />);
+        await screen.findByTestId('task-discussion');
+        const rows = screen.getAllByTestId('task-discussion-comment');
+        expect(rows[0]).toHaveTextContent('Also in the chat thread');
+        expect(rows[1]).toHaveTextContent("Only here: some people in the chat thread can't see this task");
+        await waitFor(() => expect(rows[2]).toHaveTextContent('plain:CIPHER'));
+        expect(rows[2]).toHaveTextContent('From the chat thread');
+    });
+
+    it('labels every sync state in plain words', () => {
+        expect(syncLabel({ sync: { state: 'pending' } })).toBe('Sharing to the chat thread…');
+        expect(syncLabel({ sync: { state: 'failed' } })).toBe("Couldn't share to the chat thread");
+        expect(syncLabel({ sync: { state: 'skipped', reason: 'thread_locked' } })).toBe('Only here: the chat thread is locked');
+        expect(syncLabel({ sync: { state: 'skipped', reason: 'author_cannot_post' } })).toMatch(/can't post/);
+        expect(syncLabel({ text: 'plain' })).toBeNull();
     });
 });
 
