@@ -19,7 +19,7 @@ const MAX_PENDING = 50;
 const MIN_LEAD_MS = 20 * 1000;
 const MAX_LEAD_MS = 366 * 24 * 60 * 60 * 1000;
 // Fields of the send body a scheduled message may carry (nothing that names another sender).
-const BODY_FIELDS = ['ciphertext', 'messageIv', 'isEncrypted', 'type', 'attachments', 'quotedMessageId', 'mentionText', 'linkPreview', 'checklistCount'];
+const BODY_FIELDS = ['ciphertext', 'messageIv', 'keyVersion', 'isEncrypted', 'type', 'attachments', 'quotedMessageId', 'mentionText', 'linkPreview', 'checklistCount'];
 
 function fail(status, message, code) {
     return Object.assign(new Error(message), { statusCode: status, ...(code ? { code } : {}) });
@@ -34,7 +34,7 @@ const shape = (s) => ({
     error: s.error || null,
     createdAt: s.createdAt,
     // The encrypted text, for the sender's own app to show what will be sent.
-    body: { ciphertext: s.body?.ciphertext || null, messageIv: s.body?.messageIv || null, type: s.body?.type || 'message', attachments: s.body?.attachments || [] },
+    body: { ciphertext: s.body?.ciphertext || null, messageIv: s.body?.messageIv || null, keyVersion: s.body?.keyVersion ?? null, type: s.body?.type || 'message', attachments: s.body?.attachments || [] },
 });
 
 async function canPost(userId, workspaceId, kind, id) {
@@ -130,6 +130,10 @@ async function deliver(doc, io) {
         },
     };
     await (doc.kind === 'channel' ? controller.sendChannelMessage : controller.sendDirectMessage)(req, res);
+    if (status === 409 && payload?.code === 'KEY_ROTATED') {
+        // Encrypted with a key the conversation no longer uses (someone was added or removed since).
+        throw fail(409, 'The conversation changed since you scheduled this (someone was added or removed). Schedule it again.', 'KEY_ROTATED');
+    }
     if (status >= 400) throw fail(status, payload?.message || 'Could not send');
     const sent = payload?.message || payload?.data || payload;
     return sent?._id || sent?.id || null;

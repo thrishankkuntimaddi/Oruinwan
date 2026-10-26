@@ -2,6 +2,7 @@ import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519, importPublicKeyPEM } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
 import api from './api';
+import { onKeyRotated } from './keyVersions';
 import logger from '../utils/logger';
 
 // Current user id from the initialized identity (set on login/rehydration),
@@ -29,6 +30,11 @@ class ConversationKeyService {
 
         
         this.setupLogoutListener();
+        // A conversation got a new key (409 KEY_ROTATED, or the live event): fetch it next time.
+        onKeyRotated((conversationId, conversationType) => {
+            if (conversationType) this.forget(conversationId, conversationType);
+            else { this.forget(conversationId, 'dm'); this.forget(conversationId, 'channel'); }
+        });
     }
 
     
@@ -139,7 +145,7 @@ class ConversationKeyService {
 
             
             const cacheKey = `${conversationType}:${conversationId}`;
-            this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+            this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256', version: 1, previous: new Map() });
 
             return { conversationKey, encryptedKeys };
         } catch (error) {
@@ -268,7 +274,8 @@ class ConversationKeyService {
         }
 
         const conversationKey = await importKey(conversationKeyBytes);
-        this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+        const previous = await this._openPrevious(data.previous, privateKey, cacheKey);
+        this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256', version: data.version || 1, previous });
 
         // An older key without a server copy can't be given to people who join later. Send it
         // once (in the background) so the server can hand it to every member.
@@ -330,6 +337,69 @@ class ConversationKeyService {
                 logger.warn(`[E2EE] Public key of ${userId} did not import:`, err?.message);
             }
         }
+    }
+
+    /**
+     * Earlier keys of a conversation (the server sends the ones I may use: `previous`), opened:
+     * Map(version → CryptoKey). A copy that doesn't open is skipped; messages it encrypted show
+     * as unreadable rather than blocking the conversation.
+     */
+    async _openPrevious(list, privateKey, cacheKey) {
+        const out = new Map();
+        for (const e of Array.isArray(list) ? list : []) {
+            try {
+                out.set(Number(e.version), await importKey(await this._unwrap(e, privateKey)));
+            } catch (err) {
+                logger.warn(`[E2EE] Earlier key ${e?.version} of ${cacheKey} did not open:`, err?.message);
+            }
+        }
+        return out;
+    }
+
+    /** The current key's version (1 until a conversation's key changes). */
+    getCurrentVersion(conversationId, conversationType) {
+        return this.conversationKeys.get(`${conversationType}:${conversationId}`)?.version || 1;
+    }
+
+    /**
+     * Keys that may open a message of this conversation, the likeliest first: the version the
+     * message names (when known), then the current key, then earlier ones (newest first).
+     */
+    async getDecryptionKeys(conversationId, conversationType, keyVersion = null) {
+        const current = await this.getConversationKey(conversationId, conversationType);
+        if (!(current instanceof CryptoKey)) return [];
+        const entry = this.conversationKeys.get(`${conversationType}:${conversationId}`) || {};
+        const earlier = [...(entry.previous || new Map()).entries()].sort((a, b) => b[0] - a[0]).map(([, k]) => k);
+        const keys = [current, ...earlier];
+        const named = keyVersion != null && Number(keyVersion) !== (entry.version || 1) ? entry.previous?.get(Number(keyVersion)) : null;
+        return named ? [named, ...keys.filter((k) => k !== named)] : keys;
+    }
+
+    /** Drops my cached key, so the next use fetches the current one (after the key changed). */
+    forget(conversationId, conversationType) {
+        this.conversationKeys.delete(`${conversationType}:${conversationId}`);
+    }
+
+    /**
+     * After a message didn't open with any key I have: fetch the keys again in case the
+     * conversation got a new one since. At most once a minute per conversation. True when
+     * something changed.
+     */
+    async refreshIfStale(conversationId, conversationType) {
+        const cacheKey = `${conversationType}:${conversationId}`;
+        this.lastRefresh = this.lastRefresh || new Map();
+        const at = this.lastRefresh.get(cacheKey) || 0;
+        if (Date.now() - at < 60_000) return false;
+        this.lastRefresh.set(cacheKey, Date.now());
+        const before = this.conversationKeys.get(cacheKey);
+        this.conversationKeys.delete(cacheKey);
+        const key = await this.getConversationKey(conversationId, conversationType).catch(() => null);
+        const after = this.conversationKeys.get(cacheKey);
+        if (!(key instanceof CryptoKey)) {
+            if (before) this.conversationKeys.set(cacheKey, before);
+            return false;
+        }
+        return !before || (after?.version || 1) !== (before.version || 1) || (after?.previous?.size || 0) !== (before.previous?.size || 0);
     }
 
     async _unwrap({ encryptedKey, ephemeralPublicKey, algorithm }, privateKey) {
@@ -422,7 +492,8 @@ class ConversationKeyService {
                     const conversationKey = await importKey(conversationKeyBytes);
 
                     const cacheKey = `${conversationType}:${conversationId}`;
-                    this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+                    const previous = await this._openPrevious(ck.previous, privateKey, cacheKey);
+                    this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256', version: ck.version || 1, previous });
 
                 } catch (error) {
                     logger.error(`Failed to decrypt key for ${conversationType}:${conversationId}:`, error);

@@ -1,6 +1,50 @@
 import { deriveThreadKey, generateIV } from '../utils/crypto';
 import conversationKeyService from './conversationKeyService';
 import logger from '../utils/logger';
+import { rememberKeyVersion as rememberVersion } from './keyVersions';
+
+export { keyVersionOf } from './keyVersions';
+
+/*
+ * Conversation keys have versions: a group that adds someone "from now on", or removes someone,
+ * gets a new key (server: conversations/keyEpochs.js). Messages are encrypted with the current
+ * key and record its version (services/keyVersions.js adds it to requests); older messages open
+ * with the earlier keys I hold.
+ */
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function openWith(keys, ciphertextBase64, ivBase64, parentMessageId) {
+    const ciphertext = b64(ciphertextBase64);
+    const iv = b64(ivBase64);
+    let lastErr = new Error('No key opens this message');
+    for (const k of keys) {
+        try {
+            const key = parentMessageId ? await deriveThreadKey(k, parentMessageId) : k;
+            const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, ciphertext);
+            return new TextDecoder().decode(plain);
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    throw lastErr;
+}
+
+/**
+ * Plaintext of `{ ciphertext, iv }` with any key of the conversation I hold (the one named by
+ * `keyVersion` first). When none opens it, the keys are fetched once more in case the
+ * conversation got a new key since (at most once a minute). Throws when it can't be opened.
+ */
+export async function decryptWithConversationKeys(ciphertextBase64, ivBase64, conversationId, conversationType, { parentMessageId = null, keyVersion = null } = {}) {
+    const keys = await conversationKeyService.getDecryptionKeys(conversationId, conversationType, keyVersion);
+    if (!keys.length) throw Object.assign(new Error(`No encryption key available for ${conversationType}:${conversationId}`), { code: 'KEY_UNAVAILABLE' });
+    try {
+        return await openWith(keys, ciphertextBase64, ivBase64, parentMessageId);
+    } catch (err) {
+        if (!(await conversationKeyService.refreshIfStale(conversationId, conversationType))) throw err;
+        const fresh = await conversationKeyService.getDecryptionKeys(conversationId, conversationType, keyVersion);
+        return openWith(fresh, ciphertextBase64, ivBase64, parentMessageId);
+    }
+}
 
 export async function encryptMessageForSending(plaintext, conversationId, conversationType, parentMessageId = null) {
     try {
@@ -39,11 +83,14 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
         
         const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
         const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
+        const keyVersion = conversationKeyService.getCurrentVersion(conversationId, conversationType);
+        rememberVersion(ciphertextBase64, keyVersion);
 
         return {
             ciphertext: ciphertextBase64,
             messageIv: ivBase64,
-            isEncrypted: true
+            isEncrypted: true,
+            keyVersion
         };
     } catch (error) {
         logger.error('Message encryption failed:', error);
@@ -51,43 +98,11 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
     }
 }
 
-export async function decryptReceivedMessage(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null) {
+export async function decryptReceivedMessage(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null, keyVersion = null) {
     try {
-        
-        
-        let decryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
-
-        if (!(decryptionKey instanceof CryptoKey)) {
-            throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
-        }
-
-        
-        if (parentMessageId) {
-            decryptionKey = await deriveThreadKey(decryptionKey, parentMessageId);
-        }
-
-        
-        const ciphertext = Uint8Array.from(atob(ciphertextBase64), c => c.charCodeAt(0));
-        const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
-
-        
-        const plaintextBytes = await crypto.subtle.decrypt(
-            {
-                name: 'AES-GCM',
-                iv: iv,
-                tagLength: 128
-            },
-            decryptionKey,
-            ciphertext
-        );
-
-        
-        const plaintext = new TextDecoder().decode(plaintextBytes);
-
-        return plaintext;
+        return await decryptWithConversationKeys(ciphertextBase64, ivBase64, conversationId, conversationType, { parentMessageId, keyVersion });
     } catch (error) {
         logger.error('Message decryption failed:', error);
-        
         return '🔒 Unable to decrypt message';
     }
 }
@@ -97,16 +112,10 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
  * Unlike decryptReceivedMessage this never returns a placeholder string:
  * it resolves to the plaintext, or `null` when decryption is impossible.
  */
-export async function decryptTextOrNull(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null) {
+export async function decryptTextOrNull(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null, keyVersion = null) {
     if (!ciphertextBase64 || !ivBase64 || !conversationId) return null;
     try {
-        let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
-        if (!(key instanceof CryptoKey)) return null;
-        if (parentMessageId) key = await deriveThreadKey(key, parentMessageId);
-        const ciphertext = Uint8Array.from(atob(ciphertextBase64), c => c.charCodeAt(0));
-        const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
-        const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, ciphertext);
-        return new TextDecoder().decode(plain);
+        return await decryptWithConversationKeys(ciphertextBase64, ivBase64, conversationId, conversationType, { parentMessageId, keyVersion });
     } catch (error) {
         logger.warn('decryptTextOrNull failed:', error?.message);
         return null;
@@ -131,7 +140,8 @@ export async function decryptMessageGracefully(message, conversationId, conversa
             payload.messageIv,
             conversationId,
             conversationType,
-            parentId
+            parentId,
+            payload.keyVersion ?? null
         );
     } catch (error) {
         logger.error('Graceful decryption failed:', error);
@@ -218,29 +228,12 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         };
                     }
 
-                    let decryptionKey = conversationKey;
-                    
-                    
-                    if (parentId && message.isThreadEncrypted === true) {
-                        decryptionKey = await deriveThreadKey(conversationKey, parentId);
-                    }
-
-                    
-                    const ciphertextBytes = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-                    const iv = Uint8Array.from(atob(messageIv), c => c.charCodeAt(0));
-
-                    
-                    const plaintextBytes = await crypto.subtle.decrypt(
-                        {
-                            name: 'AES-GCM',
-                            iv: iv,
-                            tagLength: 128
-                        },
-                        decryptionKey,
-                        ciphertextBytes
-                    );
-
-                    const plaintext = new TextDecoder().decode(plaintextBytes);
+                    // Any key of the conversation I hold: the one the message names first, then
+                    // the current one, then earlier ones (a group that changed its key).
+                    const plaintext = await decryptWithConversationKeys(ciphertext, messageIv, conversationId, conversationType, {
+                        parentMessageId: parentId && message.isThreadEncrypted === true ? parentId : null,
+                        keyVersion: encryptionPayload.keyVersion ?? null,
+                    });
 
                     return {
                         ...message,

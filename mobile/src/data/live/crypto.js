@@ -13,6 +13,7 @@
 // password is typed on any device (sealUmekOnServer). Everything here uses WebCrypto.
 import { api } from './http.js';
 import { setE2ee } from '../e2ee.js';
+import { on } from '../../lib/bus.js';
 
 const subtle = globalThis.crypto?.subtle;
 const enc = new TextEncoder();
@@ -69,6 +70,22 @@ const cacheDelete = (key) => idb('readwrite', (s) => s.delete(key)).catch(() => 
 let identity = null; // { userId, privateKey, publicKeyPem, algorithm }
 const convKeys = new Map(); // 'channel:<id>' | 'dm:<id>' → CryptoKey
 const wrapped = new Map(); // prefetched, still-wrapped workspace keys
+// Conversation keys have versions (server conversations/keyEpochs.js): a group that adds someone
+// "from now on", or removes someone, gets a new key. For each current key: its conversation, its
+// version and the earlier keys this account holds (version → CryptoKey).
+const ring = new WeakMap();
+const lastRefresh = new Map();
+
+/** Forgets a conversation's cached key (it changed): the next use fetches the current one. */
+export function forgetConversationKey(conv) {
+  for (const kind of conv.kind ? [conv.kind] : ['dm', 'channel']) {
+    convKeys.delete(`${kind}:${conv.id}`);
+    wrapped.delete(`${kind}:${conv.id}`);
+  }
+}
+on('key:rotated', ({ conversationId, conversationType } = {}) => {
+  if (conversationId) forgetConversationKey({ id: String(conversationId), kind: conversationType });
+});
 
 const RSA = { name: 'RSA-OAEP', hash: 'SHA-256' };
 const IDENTITY_ALGORITHM = 'RSA-2048';
@@ -446,7 +463,9 @@ async function createDmKey(conv, opts) {
     throw err;
   }
   api.post(`/v2/conversations/${conv.id}/keys/escrow`, { type: 'dm', key: toB64(raw) }).catch(() => {});
-  return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  const key = await subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  ring.set(key, { conv: { id: conv.id, kind: conv.kind }, version: 1, previous: new Map() });
+  return key;
 }
 
 /**
@@ -532,6 +551,7 @@ async function fetchConversationKey(conv, id) {
     opened = await openEntry(conv, await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind }));
   }
   const key = await subtle.importKey('raw', opened.raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  ring.set(key, { conv: { id: conv.id, kind: conv.kind }, version: opened.entry?.version || entry?.version || 1, previous: await openPrevious(opened.entry?.previous || entry?.previous) });
   convKeys.set(id, key);
   wrapped.delete(id);
   // An older key without a server copy can't be given to people who join later: send it once.
@@ -543,15 +563,89 @@ async function fetchConversationKey(conv, id) {
 
 // ---------------------------------------------------------------- messages
 
+/** Earlier keys sent with a conversation key (`previous`), opened: Map(version → CryptoKey). */
+async function openPrevious(list) {
+  const out = new Map();
+  for (const e of Array.isArray(list) ? list : []) {
+    try {
+      out.set(Number(e.version), await subtle.importKey('raw', await unwrapRaw(e), { name: 'AES-GCM' }, false, ['decrypt']));
+    } catch {
+      /* a copy that doesn't open: the messages it encrypted show as unreadable */
+    }
+  }
+  return out;
+}
+
+/** The version of a conversation key (1 until the conversation's key changes). */
+export function keyVersionOf(key) {
+  return ring.get(key)?.version || null;
+}
+
+/**
+ * Runs `send(key)` with the conversation's current key. If the server answers KEY_ROTATED (the
+ * conversation got a new key meanwhile), fetches the new key and sends once more.
+ */
+export async function withCurrentKey(conv, getKey, send) {
+  try {
+    return await send(await getKey());
+  } catch (err) {
+    if (err?.code !== 'KEY_ROTATED') throw err;
+    forgetConversationKey(conv);
+    return send(await getKey());
+  }
+}
+
+/** Encrypts with a conversation's current key; `keyVersion` tells the server which key it was. */
 export async function encryptText(key, text) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, enc.encode(text));
-  return { ciphertext: toB64(ct), messageIv: toB64(iv), isEncrypted: true };
+  const keyVersion = keyVersionOf(key);
+  return { ciphertext: toB64(ct), messageIv: toB64(iv), isEncrypted: true, ...(keyVersion ? { keyVersion } : {}) };
 }
 
-export async function decryptPayload(key, payload) {
+async function openWith(key, payload) {
   const plain = await subtle.decrypt({ name: 'AES-GCM', iv: fromB64(payload.messageIv), tagLength: 128 }, key, fromB64(payload.ciphertext));
   return dec.decode(plain);
+}
+
+/** The keys to try for a message: the one it names, the current one, then earlier ones. */
+function candidates(key, payload) {
+  const info = ring.get(key);
+  const earlier = info ? [...info.previous.entries()].sort((a, b) => b[0] - a[0]).map(([, k]) => k) : [];
+  const named = payload?.keyVersion != null && info && Number(payload.keyVersion) !== info.version ? info.previous.get(Number(payload.keyVersion)) : null;
+  const all = [key, ...earlier];
+  return named ? [named, ...all.filter((k) => k !== named)] : all;
+}
+
+/**
+ * Plaintext of a message, with whichever of the conversation's keys opens it. When none does,
+ * the keys are fetched again once (at most once a minute per conversation) in case the
+ * conversation got a new key since.
+ */
+export async function decryptPayload(key, payload) {
+  let lastErr;
+  for (const k of candidates(key, payload)) {
+    try {
+      return await openWith(k, payload);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  const conv = ring.get(key)?.conv;
+  const id = conv && `${conv.kind}:${conv.id}`;
+  if (!conv || Date.now() - (lastRefresh.get(id) || 0) < 60_000) throw lastErr;
+  lastRefresh.set(id, Date.now());
+  forgetConversationKey(conv);
+  const fresh = await conversationKey(conv).catch(() => null);
+  if (!fresh || fresh === key) throw lastErr;
+  for (const k of candidates(fresh, payload)) {
+    try {
+      return await openWith(k, payload);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
 }
 
 /** Returns { text, state } for a server message. state: ok | locked | nokey | failed | deleted | attachment | system */

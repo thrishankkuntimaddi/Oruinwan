@@ -50,6 +50,11 @@ export class ApiError extends Error {
     // A free-plan limit (HTTP 403 { code: 'PLAN_LIMIT', limit, max, used, plan, upgradeUrl }):
     // keep its fields on the error, and tell the app so it can offer the upgrade sheet
     // (features/plan/UpgradeSheet.jsx). Every adapter error is built here, so one place covers all.
+    // The conversation got a new key (a group added or removed someone): drop the cached one
+    // (data/live/crypto.js), so sending again encrypts with the new key.
+    if (status === 409 && data && typeof data === 'object' && data.code === 'KEY_ROTATED') {
+      emit('key:rotated', { conversationId: data.conversationId, conversationType: data.conversationType });
+    }
     if (data && typeof data === 'object' && data.code === 'PLAN_LIMIT') {
       this.planLimit = true;
       for (const k of ['limit', 'max', 'used', 'plan', 'upgradeUrl']) this[k] = data[k] ?? null;

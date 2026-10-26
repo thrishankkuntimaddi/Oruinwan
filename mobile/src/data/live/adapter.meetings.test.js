@@ -12,7 +12,7 @@ vi.mock('./http.js', () => ({
   refreshSession: vi.fn(),
   serverUrl: () => 'https://api.example',
 }));
-vi.mock('./crypto.js', () => ({ conversationKey: vi.fn(), encryptText: vi.fn(), decryptPayload: vi.fn() }));
+vi.mock('./crypto.js', () => ({ conversationKey: vi.fn(), encryptText: vi.fn(), decryptPayload: vi.fn(), withCurrentKey: async (conv, getKey, send) => send(await getKey()) }));
 vi.mock('./realtime.js', () => ({ socketRequest: vi.fn(), socketEmit: vi.fn() }));
 
 const { workAdapter: a, mapMeeting, mapSummary, mapActionItem } = await import('./adapter.work.js');

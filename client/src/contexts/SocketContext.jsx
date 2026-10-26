@@ -3,6 +3,7 @@ import sdkSocketClient from '@platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
 import { refreshAccessToken } from '../services/api';
 import logger from '../utils/logger';
+import { notifyKeyRotated } from '../services/keyVersions';
 
 const SocketContext = createContext(null);
 
@@ -94,6 +95,11 @@ export const SocketProvider = ({ children }) => {
         socketInstance.on('disconnect', () => {
             if (cancelled) return;
             setIsConnected(false);
+        });
+
+        // A conversation got a new key (a group added or removed someone): fetch it next time.
+        socketInstance.on('conversation:key_rotated', ({ conversationId, conversationType } = {}) => {
+            notifyKeyRotated(conversationId, conversationType);
         });
 
         socketInstance.on('connect_error', async (error) => {

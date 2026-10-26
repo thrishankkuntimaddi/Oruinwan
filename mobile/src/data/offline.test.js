@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPersister, selectPersistable } from './persist.js';
 import { getQueryData, hydrateQueries, clearQueries, setQueryData, snapshotQueries } from './query.js';
-import { clearOutbox, enqueue, flush, persistable, useOutbox } from './outbox.js';
+import { clearOutbox, enqueue, flush, persistable, sendItem, useOutbox } from './outbox.js';
 
 function memoryStore() {
   const m = new Map();
@@ -117,5 +117,33 @@ describe('offline message queue', () => {
     expect(saved).toHaveLength(1);
     expect(saved[0].status).toBe('queued');
     expect(JSON.stringify(saved)).not.toContain('hello');
+  });
+});
+
+describe('a queued message after the conversation key changed', () => {
+  const conv = { kind: 'dm', id: 'g1' };
+  const rotated = () => Object.assign(new Error('key changed'), { status: 409, code: 'KEY_ROTATED' });
+
+  it('is encrypted again with the new key (text read back from the queued ciphertext) and sent once more', async () => {
+    const sent = [];
+    const a = {
+      readPrepared: vi.fn(async () => 'hello'),
+      prepareMessage: vi.fn(async (c, text) => ({ path: '/v2/messages/direct', body: { ciphertext: `v2(${text})`, keyVersion: 2 } })),
+      sendPrepared: vi.fn(async (p) => {
+        sent.push(p.body);
+        if (p.body.keyVersion !== 2) throw rotated();
+        return { _id: 'm1' };
+      }),
+    };
+    const item = { id: 'q1', conv, prepared: { path: '/v2/messages/direct', body: { ciphertext: 'v1', keyVersion: 1 } } };
+    await expect(sendItem(item, a)).resolves.toEqual({ _id: 'm1' });
+    expect(sent).toEqual([{ ciphertext: 'v1', keyVersion: 1 }, { ciphertext: 'v2(hello)', keyVersion: 2 }]);
+    expect(a.prepareMessage).toHaveBeenCalledWith(conv, 'hello', expect.objectContaining({ clientMessageId: 'q1' }));
+  });
+
+  it('other refusals are not retried', async () => {
+    const a = { prepareMessage: vi.fn(), sendPrepared: vi.fn(async () => { throw Object.assign(new Error('no'), { status: 403 }); }) };
+    await expect(sendItem({ id: 'q2', conv, prepared: { path: '/p', body: {} } }, a)).rejects.toMatchObject({ status: 403 });
+    expect(a.prepareMessage).not.toHaveBeenCalled();
   });
 });

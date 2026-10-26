@@ -22,6 +22,7 @@ vi.mock('./http.js', () => ({
 const mockEncrypt = vi.fn(async (key, text) => ({ ciphertext: `enc(${text})`, messageIv: 'iv', isEncrypted: true }));
 vi.mock('./crypto.js', () => ({
   conversationKey: vi.fn(async () => 'key'),
+  withCurrentKey: async (conv, getKey, send) => send(await getKey()),
   encryptText: (...a) => mockEncrypt(...a),
   forgetIdentity: vi.fn(),
   prefetchWorkspaceKeys: vi.fn(),

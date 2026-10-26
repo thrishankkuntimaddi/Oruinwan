@@ -64,14 +64,25 @@ export async function enqueue({ conv, key, parentId = null, text, clientMessageI
 }
 
 /** Sends one item: the prepared ciphertext, or encrypts now when there was no key. */
-async function sendItem(item) {
+export async function sendItem(item, a = api()) {
   let prepared = item.prepared;
   if (!prepared) {
     const text = plain.get(item.id);
     if (text == null) throw Object.assign(new Error('This message could not be recovered.'), { permanent: true });
-    prepared = await api().prepareMessage(item.conv, text, { parentId: item.parentId, clientMessageId: item.id, mentionText: mentions.get(item.id), workspaceId: useSession.getState().workspaceId });
+    prepared = await a.prepareMessage(item.conv, text, { parentId: item.parentId, clientMessageId: item.id, mentionText: mentions.get(item.id), workspaceId: useSession.getState().workspaceId });
   }
-  return api().sendPrepared(prepared);
+  try {
+    return await a.sendPrepared(prepared);
+  } catch (err) {
+    // The conversation got a new key while this waited (someone was added or removed): encrypt it
+    // again with the new key and send once more. The text comes from memory or, after a restart,
+    // from the queued ciphertext (this device still holds the earlier key).
+    if (err?.code !== 'KEY_ROTATED') throw err;
+    const text = plain.get(item.id) ?? (await a.readPrepared?.(item.conv, prepared).catch(() => null));
+    if (text == null) throw err;
+    const again = await a.prepareMessage(item.conv, text, { parentId: item.parentId, clientMessageId: item.id, mentionText: mentions.get(item.id), workspaceId: useSession.getState().workspaceId });
+    return a.sendPrepared(again);
+  }
 }
 
 /**

@@ -3,6 +3,7 @@ import sdkApiClient from '@platform/sdk/api/apiClient.js';
 import logger from '../utils/logger';
 import { handlePlanLimitError } from '../features/plan/planLimit';
 import { getDeviceId, adoptDeviceId } from '../utils/deviceId';
+import { withKeyVersion, notifyKeyRotated } from './keyVersions';
 
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -139,6 +140,9 @@ api.interceptors.request.use((config) => {
     }
     if (config.data instanceof FormData) {
         delete config.headers['Content-Type'];
+    } else {
+        // Encrypted content says which conversation key encrypted it (services/keyVersions.js).
+        config.data = withKeyVersion(config.data);
     }
     return config;
 }, (error) => {
@@ -162,6 +166,11 @@ api.interceptors.response.use(
 
         // Free plan refusals (403 PLAN_LIMIT) open the app-wide upgrade dialog.
         handlePlanLimitError(error);
+        // The conversation got a new key: drop the cached one, so sending again uses the new key.
+        const body = error?.response?.data;
+        if (error?.response?.status === 409 && body?.code === 'KEY_ROTATED') {
+            notifyKeyRotated(body.conversationId, body.conversationType);
+        }
 
         if (!shouldAttemptRefresh(originalRequest, error.response)) {
             return Promise.reject(error);

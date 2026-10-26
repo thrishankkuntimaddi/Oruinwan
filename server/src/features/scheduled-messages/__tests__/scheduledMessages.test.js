@@ -77,3 +77,27 @@ test('a send the server refuses is marked failed with the reason', async () => {
     expect(claimed.status).toBe('failed');
     expect(claimed.error).toBe('Not a channel member');
 });
+
+test('keeps the key version it was encrypted with, and passes it to the send', async () => {
+    await service.create(ME, { workspaceId: WS, kind: 'channel', conversationId: CH, sendAt: inAnHour(), body: { ...enc, keyVersion: 2 } });
+    expect(ScheduledMessage.create.mock.calls[0][0].body).toEqual({ ...enc, keyVersion: 2, type: 'message' });
+    const doc = { _id: oid(97), user: ME, workspace: WS, kind: 'channel', conversation: CH, body: { ...enc, keyVersion: 2, type: 'message' }, status: 'scheduled', save: jest.fn() };
+    ScheduledMessage.find.mockReturnValue({ sort: () => ({ limit: async () => [doc] }) });
+    ScheduledMessage.findOneAndUpdate.mockResolvedValueOnce({ ...doc, save: doc.save });
+    const room = { emit: jest.fn() };
+    room.to = () => room;
+    await service.sendDue({ to: () => room });
+    expect(mockSendChannel.mock.calls[0][0].body.keyVersion).toBe(2);
+});
+
+test('the conversation key changed since scheduling: failed, with a plain reason to schedule again', async () => {
+    mockSendChannel.mockImplementationOnce(async (req, res) => res.status(409).json({ message: 'key changed', code: 'KEY_ROTATED', currentVersion: 3 }));
+    const claimed = { _id: oid(96), user: ME, workspace: WS, kind: 'channel', conversation: CH, body: { ...enc, keyVersion: 2 }, status: 'sending', save: jest.fn() };
+    ScheduledMessage.find.mockReturnValue({ sort: () => ({ limit: async () => [claimed] }) });
+    ScheduledMessage.findOneAndUpdate.mockResolvedValueOnce(claimed);
+    const room = { emit: jest.fn() };
+    room.to = () => room;
+    await service.sendDue({ to: () => room });
+    expect(claimed.status).toBe('failed');
+    expect(claimed.error).toMatch(/Schedule it again/);
+});

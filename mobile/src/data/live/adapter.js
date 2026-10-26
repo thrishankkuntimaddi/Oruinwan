@@ -5,7 +5,7 @@ import {
 } from './http.js';
 import {
   conversationKey, encryptText, forgetIdentity, healServerCopies, prefetchWorkspaceKeys, protectIdentityWithPassword, readMessage, restoreIdentity, unlockIdentity, decryptPayload,
-  unlockWithWrappedUmek,
+  unlockWithWrappedUmek, withCurrentKey,
 } from './crypto.js';
 import { challengeError, signinAdapter } from './adapter.signin.js';
 import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, realtimeSocket, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
@@ -852,24 +852,25 @@ export const liveAdapter = {
   },
   async sendMessage(conv, text, { parentId, clientTempId, mentionText, quotedMessageId } = {}) {
     const dm = dmCache.get(conv.id);
-    const key = await conversationKey(conv, {
+    const getKey = () => conversationKey(conv, {
       workspaceId: currentWs,
       participantIds: dm ? dm.participantIds : undefined,
       create: conv.kind === 'dm',
     }).catch((err) => {
       throw new Error(useE2ee.getState().status !== 'ready' ? 'Unlock your messages first (Chats → Unlock).' : err.message);
     });
-    const body = {
-      ...(await encryptText(key, text)),
-      clientTempId,
-      clientMessageId: clientTempId, // server dedupes on clientMessageId
-      ...(mentionText ? { mentionText } : {}),
-      ...(quotedMessageId ? { quotedMessageId } : {}),
-    };
-    let data;
-    if (parentId) data = await api.post(`/v2/messages/thread/${parentId}`, body);
-    else if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });
-    else data = await api.post('/v2/messages/direct', { ...body, dmSessionId: conv.id });
+    const data = await withCurrentKey(conv, getKey, async (key) => {
+      const body = {
+        ...(await encryptText(key, text)),
+        clientTempId,
+        clientMessageId: clientTempId, // server dedupes on clientMessageId
+        ...(mentionText ? { mentionText } : {}),
+        ...(quotedMessageId ? { quotedMessageId } : {}),
+      };
+      if (parentId) return api.post(`/v2/messages/thread/${parentId}`, body);
+      if (conv.kind === 'channel') return api.post('/v2/messages/channel', { ...body, channelId: conv.id });
+      return api.post('/v2/messages/direct', { ...body, dmSessionId: conv.id });
+    });
     const saved = data.message || data.reply || data;
     return mapMessage(conv, saved);
   },
@@ -885,10 +886,10 @@ export const liveAdapter = {
   async sendAttachment(conv, attachment, { parentId, clientTempId } = {}) {
     let data;
     if (parentId) {
-      const key = await conversationKey(conv).catch(() => {
+      const getKey = () => conversationKey(conv).catch(() => {
         throw new Error('Unlock your messages first (Chats → Unlock).');
       });
-      data = await api.post(`/v2/messages/thread/${parentId}`, { ...(await encryptText(key, attachment.name)), attachments: [attachmentDoc(attachment)], clientTempId });
+      data = await withCurrentKey(conv, getKey, async (key) => api.post(`/v2/messages/thread/${parentId}`, { ...(await encryptText(key, attachment.name)), attachments: [attachmentDoc(attachment)], clientTempId }));
     } else {
       data = await api.post(conv.kind === 'channel' ? '/v2/messages/channel' : '/v2/messages/direct', attachmentMessageBody(conv, attachment, { workspaceId: currentWs, clientTempId }));
     }
@@ -902,9 +903,10 @@ export const liveAdapter = {
   },
 
   async editMessage(conv, id, text) {
-    const key = await conversationKey(conv);
-    const { ciphertext, messageIv } = await encryptText(key, text);
-    await api.patch(`/v2/messages/${id}`, { ciphertext, messageIv });
+    await withCurrentKey(conv, () => conversationKey(conv), async (key) => {
+      const { ciphertext, messageIv, keyVersion } = await encryptText(key, text);
+      return api.patch(`/v2/messages/${id}`, { ciphertext, messageIv, ...(keyVersion ? { keyVersion } : {}) });
+    });
   },
   /** scope: 'everyone' (mine, or a channel admin) or 'me' (hidden for me only). */
   async deleteMessage(conv, id, scope = 'everyone') {

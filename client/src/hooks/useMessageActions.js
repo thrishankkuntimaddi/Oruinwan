@@ -23,7 +23,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, []);
 
     
-    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, meeting = null, checklist = null, linkPreview = null, mentionText = '' }) => {
+    const sendMessageOnce = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, meeting = null, checklist = null, linkPreview = null, mentionText = '' }) => {
 
         // A checklist is an encrypted message whose body is JSON; the server only
         // stores one checked/unchecked slot per item.
@@ -263,6 +263,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             return {
                 success: false,
                 tempId,
+                code: err.response?.data?.code || null,
                 error: err.response?.data?.message || 'Failed to send message',
                 optimisticMessage: {
                     ...optimisticMessage,
@@ -271,6 +272,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             };
         }
     }, [conversationId, conversationType, workspaceId, user, socket, encryptionReady, generateTempId]); 
+
+    // The conversation got a new key while this was being sent (a group added or removed
+    // someone): the old key was dropped (services/keyVersions.js), so encrypt again and resend once.
+    const sendMessage = useCallback(async (input) => {
+        const first = await sendMessageOnce(input);
+        if (first?.success || first?.code !== 'KEY_ROTATED') return first;
+        return sendMessageOnce(input);
+    }, [sendMessageOnce]);
 
     
     const addReaction = useCallback(async (messageId, emoji) => {

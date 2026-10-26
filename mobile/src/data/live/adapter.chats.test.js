@@ -8,6 +8,7 @@ const mockEncrypt = vi.fn(async (key, text) => ({ ciphertext: `enc(${text})`, me
 const mockDecrypt = vi.fn(async (key, p) => String(p.ciphertext).replace(/^enc\((.*)\)$/, '$1'));
 vi.mock('./crypto.js', () => ({
   conversationKey: vi.fn(async () => 'key'),
+  withCurrentKey: async (conv, getKey, send) => send(await getKey()),
   encryptText: (...a) => mockEncrypt(...a),
   decryptPayload: (...a) => mockDecrypt(...a),
 }));

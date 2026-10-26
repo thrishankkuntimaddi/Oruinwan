@@ -2,7 +2,7 @@
 // adapter.js). Message text is end-to-end encrypted: everything sent to AI here is text the
 // phone decrypted, and checklists are encrypted like any message (the server keeps only ticks).
 import { absolute, api } from './http.js';
-import { conversationKey, decryptPayload, encryptText } from './crypto.js';
+import { conversationKey, decryptPayload, encryptText, withCurrentKey } from './crypto.js';
 import { useE2ee } from '../e2ee.js';
 
 const idOf = (v) => (v && typeof v === 'object' ? String(v._id || v.id || '') : v ? String(v) : null);
@@ -252,12 +252,12 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
     // ---- Checklists
     /** { title, items: [text] } as an encrypted checklist message (not in threads: replies carry text only). */
     async sendChecklist(conv, { title, items }, { clientTempId } = {}) {
-      const key = await keyFor(conv);
       const clean = items.map((i) => String(i).trim()).filter(Boolean).slice(0, 50);
-      const body = { ...(await encryptText(key, JSON.stringify({ title: title || '', items: clean }))), type: 'checklist', checklistCount: clean.length, clientTempId };
-      let data;
-      if (conv.kind === 'channel') data = await api.post('/v2/messages/channel', { ...body, channelId: conv.id });
-      else data = await api.post('/v2/messages/direct', { ...body, dmSessionId: conv.id, workspaceId: ws() });
+      const data = await withCurrentKey(conv, () => keyFor(conv), async (key) => {
+        const body = { ...(await encryptText(key, JSON.stringify({ title: title || '', items: clean }))), type: 'checklist', checklistCount: clean.length, clientTempId };
+        if (conv.kind === 'channel') return api.post('/v2/messages/channel', { ...body, channelId: conv.id });
+        return api.post('/v2/messages/direct', { ...body, dmSessionId: conv.id, workspaceId: ws() });
+      });
       return mapMessage(conv, data.message || data);
     },
     async toggleChecklistItem(conv, id, index) {
