@@ -86,6 +86,8 @@ test.describe('home activity', () => {
 
     await spaNavigate(bob, `/workspace/${workspaceId}/channel/${channelId}`);
     await bob.waitForURL(new RegExp(`/channel/${channelId}`));
+    // The channel itself is on screen (not the DM still closing), so the message goes there.
+    await expect(bob.getByText(`Welcome to #${CHANNEL}`).first()).toBeVisible({ timeout: 30_000 });
     await sendText(bob, `@alice ${mentionText}`);
 
     const chRow = activity.locator('[data-testid="activity-row"][data-kind="channel"]').filter({ hasText: CHANNEL });
