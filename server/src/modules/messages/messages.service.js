@@ -1083,9 +1083,6 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
 async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId = null) {
     const message = await messageInReach(messageId, userId);
 
-    const room = message.channel
-        ? `channel:${message.channel}`
-        : `dm:${message.dm}`;
 
     
     if (scope === 'me') {
@@ -1252,9 +1249,6 @@ async function addReaction(messageId, userId, emoji, io) {
         await message.save();
     }
 
-    const room = message.channel
-        ? `channel:${message.channel}`
-        : `dm:${message.dm}`;
 
     if (io) {
         await emitAboutMessage(io, message, 'message:reaction_added', await reactionEvent(message, { messageId, userId, emoji }));
@@ -1287,9 +1281,6 @@ async function removeReaction(messageId, userId, emoji, io) {
     );
     await message.save();
 
-    const room = message.channel
-        ? `channel:${message.channel}`
-        : `dm:${message.dm}`;
 
     if (io) {
         await emitAboutMessage(io, message, 'message:reaction_removed', await reactionEvent(message, { messageId, userId, emoji }));
@@ -1318,7 +1309,6 @@ async function checklistToggle(messageId, itemIndex, userId, io) {
     message.markModified('checklist');
     await message.save();
 
-    const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
     if (io) {
         await emitAboutMessage(io, message, 'message:checklist_updated', {
             messageId,
@@ -1341,7 +1331,6 @@ async function resolveThread(messageId, userId, io) {
     message.resolvedBy       = isNowResolved ? userId : null;
     await message.save();
 
-    const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
     if (io) {
         await emitAboutMessage(io, message, 'thread:resolved', {
             messageId,
