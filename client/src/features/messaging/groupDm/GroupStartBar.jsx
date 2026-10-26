@@ -64,6 +64,11 @@ export default function GroupStartBar({ workspaceId, selected, onClear, onStarte
                     </button>
                 </div>
             )}
+            {ready && !name.trim() && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Already in a group with exactly these people? It opens that one. Name the group to start a separate one.
+                </div>
+            )}
             {error && <div role="alert" style={{ fontSize: '11px', color: 'var(--state-danger)' }}>{error}</div>}
         </div>
     );

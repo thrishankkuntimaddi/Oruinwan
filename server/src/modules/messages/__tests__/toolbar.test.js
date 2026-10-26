@@ -88,7 +88,8 @@ describe('message toolbar', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         Channel.findById = jest.fn(() => query(privateChannel([SENDER, OTHER])));
-        identity.workspaces.findById.mockResolvedValue(null);
+        // SENDER and OTHER are active members of the workspace; OUTSIDER is not.
+        identity.workspaces.findById.mockResolvedValue({ _id: WS, members: [{ user: SENDER, status: 'active' }, { user: OTHER, status: 'active' }] });
         DMSession.findById = jest.fn(() => query(null));
     });
 
@@ -107,9 +108,26 @@ describe('message toolbar', () => {
         });
 
         it('checks DM participants', async () => {
-            DMSession.findById = jest.fn(() => query({ participants: [SENDER, OTHER] }));
+            DMSession.findById = jest.fn(() => query({ participants: [SENDER, OTHER], workspace: WS }));
             expect(await canAccessMessage({ dm: oid(40) }, OTHER)).toBe(true);
             expect(await canAccessMessage({ dm: oid(40) }, OUTSIDER)).toBe(false);
+        });
+
+        it('denies channel members and DM participants who are no longer active in the workspace', async () => {
+            identity.workspaces.findById.mockResolvedValue({ _id: WS, members: [{ user: SENDER, status: 'active' }, { user: OTHER, status: 'removed' }] });
+            expect(await canAccessMessage({ channel: CH }, OTHER)).toBe(false);
+            DMSession.findById = jest.fn(() => query({ participants: [SENDER, OTHER], workspace: WS }));
+            expect(await canAccessMessage({ dm: oid(40) }, OTHER)).toBe(false);
+            expect(await canAccessMessage({ dm: oid(40) }, SENDER)).toBe(true);
+        });
+
+        it('hides group messages from before a member joined', async () => {
+            const joined = new Date('2026-03-01T10:00:00Z');
+            DMSession.findById = jest.fn(() => query({ participants: [SENDER, OTHER], workspace: WS, isGroup: true, memberSince: [{ user: OTHER, at: joined }] }));
+            expect(await canAccessMessage({ dm: oid(40), createdAt: new Date('2026-02-01') }, OTHER)).toBe(false);
+            expect(await canAccessMessage({ dm: oid(40), createdAt: new Date('2026-03-02') }, OTHER)).toBe(true);
+            // Founding members (no memberSince row) see everything.
+            expect(await canAccessMessage({ dm: oid(40), createdAt: new Date('2026-02-01') }, SENDER)).toBe(true);
         });
     });
 
@@ -240,7 +258,7 @@ describe('message toolbar', () => {
 
         it('creates DM tasks without a channel', async () => {
             Message.findById = jest.fn(() => query(makeDoc({ channel: null, dm: oid(70), workspace: null, linkedTaskId: null })));
-            DMSession.findById = jest.fn(() => query({ _id: oid(70), participants: [SENDER, OTHER] }));
+            DMSession.findById = jest.fn(() => query({ _id: oid(70), participants: [SENDER, OTHER], workspace: WS }));
             Message.findByIdAndUpdate = jest.fn().mockResolvedValue({});
             Task.create = jest.fn(async (data) => ({ _id: oid(61), ...data }));
             mockTaskDeps();

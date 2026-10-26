@@ -12,6 +12,10 @@ async function getSessionAsParticipant(dmId, userId) {
     if (!session) throw Object.assign(new Error('DM session not found'), { status: 404 });
     const isParticipant = session.participants.some(p => String(p) === String(userId));
     if (!isParticipant) throw Object.assign(new Error('Not a participant'), { status: 403 });
+    const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');
+    if (!(await isActiveWorkspaceMember(session.workspace, userId))) {
+        throw Object.assign(new Error('You are no longer a member of this workspace'), { status: 403, code: 'WORKSPACE_ACCESS_DENIED' });
+    }
     return session;
 }
 

@@ -7,8 +7,6 @@ const messagesController = require('./messages.controller');
 const threadsController = require('../threads/threads.controller');
 const requireAuth = require('../../shared/middleware/auth');
 const Message = require('./message.model');
-const Channel = require('../../features/channels/channel.model');
-const DMSession = require('../../../models/DMSession');
 const mongoose = require('mongoose');
 
 router.use(requireAuth);
@@ -88,37 +86,23 @@ router.get('/missed', async (req, res) => {
             return res.status(400).json({ message: 'Invalid lastSeenMessageId' });
         }
 
-        
-        if (type === 'channel') {
-            const channel = await Channel.findById(conversationId).select('members isPrivate isDefault').lean();
-            if (!channel) return res.status(404).json({ message: 'Channel not found' });
-
-            const isMember = !channel.isPrivate || channel.isDefault ||
-                channel.members.some(m => {
-                    const memberId = m.user ? m.user.toString() : m.toString();
-                    return memberId === userId.toString();
-                });
-
-            if (!isMember) return res.status(403).json({ message: 'Not a member of this channel' });
-
-        } else { 
-            const dmSession = await DMSession.findById(conversationId).select('participants').lean();
-            if (!dmSession) return res.status(404).json({ message: 'DM session not found' });
-
-            const isParticipant = dmSession.participants.some(p => p.toString() === userId.toString());
-            if (!isParticipant) return res.status(403).json({ message: 'Not a participant of this DM' });
+        // Same rule as the conversation itself: workspace member, channel member or DM
+        // participant, and nothing before a group member joined (or cleared the chat).
+        const { checkConversationAccess, historyFilter } = require('../conversations/conversationAccess');
+        const access = await checkConversationAccess(type === 'channel' ? { channel: conversationId } : { dm: conversationId }, userId);
+        if (!access.ok || (type === 'channel' && !access.isMember)) {
+            return res.status(access.ok ? 403 : access.status === 404 ? 404 : 403).json({ message: type === 'channel' ? 'Not a member of this channel' : 'Not a participant of this DM' });
         }
 
-        
-        const query = type === 'channel'
-            ? { channel: conversationId }
-            : { dm: conversationId };
+        const query = {
+            ...(type === 'channel' ? { channel: conversationId } : { dm: conversationId }),
+            ...historyFilter(access),
+        };
 
         if (lastSeenMessageId) {
             query._id = { $gt: new mongoose.Types.ObjectId(lastSeenMessageId) };
         }
 
-        
         query.hiddenFor = { $ne: userId };
 
         

@@ -241,8 +241,11 @@ async function linkedThreadFor(task, userId) {
     const root = await Message.findById(rootId).lean();
     if (!root) return null;
 
+    // The thread is shown only to people who can read it in chat (a group member who joined after
+    // it was posted sees it as restricted, like someone outside the conversation).
     const access = await checkConversationAccess({ channel: root.channel, dm: root.dm }, userId);
-    if (!access.ok) return { messageId: rootId, sourceMessageId: sid(source._id), restricted: true };
+    const tooEarly = access.ok && access.since && root.createdAt && new Date(root.createdAt) < new Date(access.since);
+    if (!access.ok || tooEarly) return { messageId: rootId, sourceMessageId: sid(source._id), restricted: true };
 
     let channelName = null;
     if (root.channel) {

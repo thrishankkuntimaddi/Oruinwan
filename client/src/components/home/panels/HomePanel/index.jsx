@@ -139,38 +139,13 @@ const HomePanel = ({ title }) => {
 
     
 
-    const [workspaceMembers, setWorkspaceMembers] = useState([]);
-
-    
-    React.useEffect(() => {
-        const fetchWorkspaceMembers = async () => {
-            if (!activeWorkspace?.id) return;
-
-            try {
-                const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
-                setWorkspaceMembers(response.data.members || []);
-            } catch (err) {
-                logger.error('Error fetching workspace members:', err);
-            }
-        };
-
-        fetchWorkspaceMembers();
-    }, [activeWorkspace?.id]);
-
-    
-
+    // Opens the 1:1 DM with this person: the one in the list, or /dm/new/:userId, which the
+    // server resolves to the pair's single DM (it is never duplicated).
     const handleStartDM = (selectedUser) => {
         if (!activeWorkspace?.id) return;
-
-        
-        const userId = selectedUser.id || selectedUser._id || selectedUser.user?._id;
-        const userName = selectedUser.username || selectedUser.name || selectedUser.user?.username;
-
-        
-        const existingDM = items.find(i =>
-            i.type === 'dm' && !i.isGroup &&
-            (i.userId === userId || i.label === userName)
-        );
+        const userId = String(selectedUser._id || selectedUser.id || selectedUser.user?._id || '');
+        if (!userId) return;
+        const existingDM = items.find(i => i.type === 'dm' && !i.isGroup && String(i.userId) === userId);
 
         if (existingDM) {
             navigate(`/workspace/${activeWorkspace.id}/home/dm/${existingDM.id}`);
@@ -629,9 +604,9 @@ const HomePanel = ({ title }) => {
 
             {}
             <NewDMModal
+                workspaceId={activeWorkspace?.id}
                 showNewDMModal={showNewDMModal}
                 setShowNewDMModal={setShowNewDMModal}
-                workspaceMembers={workspaceMembers}
                 handleStartDM={handleStartDM}
                 currentUserId={authUser?._id || authUser?.id || authUser?.sub}
             />

@@ -517,7 +517,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
             ? `Add ${groupOffer.people.length === 1 ? groupOffer.people[0].name : `${groupOffer.people.length} people`} to the group?`
             : `Start a group with ${meta?.user?.name || 'them'} and ${groupOffer?.people.length === 1 ? groupOffer.people[0].name : `${groupOffer?.people.length || 0} others`}?`
         }
-        body={groupOffer?.add ? "They aren't in this group yet. Added, they see the whole conversation." : "They aren't in this chat. The group is a new conversation; your message goes there to carry on."}
+        body={groupOffer?.add ? "They aren't in this group yet. Added, they'll see messages from now on, not earlier ones." : "They aren't in this chat. The group is a new conversation and this chat stays as it is; your message goes there to carry on."}
         confirmLabel={groupOffer?.add ? 'Add to group' : 'Start group'}
         cancelLabel="Not now"
         busy={mentionInviteBusy}

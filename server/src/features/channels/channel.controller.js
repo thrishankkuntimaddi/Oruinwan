@@ -310,6 +310,7 @@ exports.inviteToChannel = async (req, res) => {
     const activeIn = (uid) => (workspace?.members || []).find(
       (m) => String(m.user) === String(uid) && (m.status || 'active') === 'active'
     );
+    if (!activeIn(userId)) return forbidden(res, "You are not a member of this workspace");
     const myRole = activeIn(userId)?.role;
     const workspaceAdmin = myRole === 'owner' || myRole === 'admin';
     if (channel.isPrivate) {
@@ -447,6 +448,8 @@ exports.removeChannelMember = async (req, res) => {
       (m) => m.user.toString() !== victimId.toString()
     );
     await saveWithRetry(channel);
+    // Gone from the channel: no live messages, no key copy.
+    await require('../../modules/conversations/conversationRooms').evictFromChannel(req.app?.get("io"), channelId, victimId);
 
     const io = req.app?.get("io");
     if (io) {
@@ -471,6 +474,11 @@ exports.joinChannel = async (req, res) => {
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
     if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel without an invitation" });
+    // Only the channel's own workspace members can join it (same rule as join-via-link).
+    const { isActiveWorkspaceMember } = require('../../modules/conversations/conversationAccess');
+    if (!(await isActiveWorkspaceMember(channel.workspace, userId))) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
 
 
     
@@ -691,6 +699,8 @@ exports.exitChannel = async (req, res) => {
     }
 
     await saveWithRetry(channel);
+    // Left the channel: no live messages, no key copy.
+    await require('../../modules/conversations/conversationRooms').evictFromChannel(req.app?.get("io"), channelId, userId);
 
     
     const systemMessage = await Message.create({
@@ -1165,6 +1175,8 @@ exports.removeMember = async (req, res) => {
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
 
     await saveWithRetry(channel);
+    // Gone from the channel: no live messages, no key copy.
+    await require('../../modules/conversations/conversationRooms').evictFromChannel(req.app?.get("io"), channelId, targetUserId);
 
     
     const removerUser = await identity.users.findById(userId);

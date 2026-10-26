@@ -124,14 +124,9 @@ async function searchByName(userId, text, { limit = 10 } = {}) {
 async function searchPeople(workspace, excludeUserId, text, { limit = 10, offset = 0 } = {}) {
     const like = `%${String(text || '').replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
     const params = [str(excludeUserId), like, limit, offset];
-    let scope;
-    if (workspace.company) {
-        params.push(str(workspace.company));
-        scope = `u.company_id = $${params.length}`;
-    } else {
-        params.push(str(workspace._id));
-        scope = `u.id IN (SELECT user_id FROM workspace_members WHERE workspace_id = $${params.length} AND status = 'active')`;
-    }
+    // People in this workspace only (company workspaces too): anyone found here can be messaged.
+    params.push(str(workspace._id));
+    const scope = `u.id IN (SELECT user_id FROM workspace_members WHERE workspace_id = $${params.length} AND status = 'active')`;
     const { rows } = await query(
         `SELECT u.id, u.username, u.email, u.profile_picture, u.is_online, u.user_status, u.profile->>'name' AS name
          FROM users u

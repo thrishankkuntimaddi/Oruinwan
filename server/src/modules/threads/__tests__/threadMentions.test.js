@@ -4,7 +4,13 @@ jest.mock('../../messages/message.model.js', () => ({ updateOne: jest.fn(), find
 jest.mock('../../../features/channels/channel.model.js', () => ({ findById: jest.fn() }));
 jest.mock('../../../../models/DMSession', () => ({ findById: jest.fn() }));
 jest.mock('../../notifications/notificationService', () => ({ mention: jest.fn(), threadReply: jest.fn() }));
-jest.mock('../../../identity', () => ({ users: { findManyByIds: jest.fn() } }));
+jest.mock('../../../identity', () => ({
+    users: { findManyByIds: jest.fn() },
+    workspaces: {
+        // Everyone in these tests is an active member of the workspace.
+        findById: jest.fn(async () => ({ members: new Proxy([], { get: (t, k) => (k === 'some' ? () => true : t[k]) }) })),
+    },
+}));
 jest.mock('../../../features/channels/channelMute.controller', () => ({ canManageChannel: jest.fn() }));
 jest.mock('../../../features/presence/presence.service', () => ({ getBulkPresenceAsync: jest.fn() }));
 
@@ -26,7 +32,7 @@ beforeEach(() => {
     followers = ['alice', 'bob', 'carol'];
     Message.updateOne.mockImplementation(async () => ({}));
     Message.findById.mockImplementation(() => q({ followers }));
-    Channel.findById.mockImplementation(() => q({ name: 'general', members: [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }, { user: 'dave' }] }));
+    Channel.findById.mockImplementation(() => q({ name: 'general', workspace: 'w1', members: [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }, { user: 'dave' }] }));
     const all = [{ _id: 'alice', username: 'alice' }, { _id: 'bob', username: 'Bob' }, { _id: 'carol', username: 'carol' }, { _id: 'dave', username: 'dave' }];
     identity.users.findManyByIds.mockImplementation(async (ids) => users(all.filter((u) => ids.includes(u._id))));
 });
@@ -59,7 +65,7 @@ test('the replier mentioning themselves is ignored and no mentionText behaves as
 });
 
 test('DM threads resolve mentions against the participants', async () => {
-    DMSession.findById.mockImplementation(() => q({ participants: ['alice', 'bob'] }));
+    DMSession.findById.mockImplementation(() => q({ participants: ['alice', 'bob'], workspace: 'w1' }));
     followers = ['alice'];
     await followAndNotify(null, { parent: { _id: 'p2', dm: 'd1', workspace: 'w1', replyCount: 1 }, replierId: 'alice', senderUsername: 'alice', mentionText: '@bob @dave' });
     expect(notificationService.mention).toHaveBeenCalledTimes(1);
@@ -69,7 +75,7 @@ test('DM threads resolve mentions against the participants', async () => {
 
 describe('@channel / @here in a thread reply', () => {
     const members = [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }, { user: 'dave' }];
-    const channelWith = (extra) => () => q({ name: 'general', members, ...extra });
+    const channelWith = (extra) => () => q({ name: 'general', workspace: 'w1', members, ...extra });
     const notified = () => notificationService.mention.mock.calls.map(([, a]) => [a.mentionedUserId, !!a.isEveryone]).sort();
 
     test('@channel notifies every channel member except the replier and muted members, without following', async () => {
@@ -106,10 +112,17 @@ describe('@channel / @here in a thread reply', () => {
     });
 
     test('@channel in a DM thread does nothing extra', async () => {
-        DMSession.findById.mockImplementation(() => q({ participants: ['alice', 'bob'] }));
+        DMSession.findById.mockImplementation(() => q({ participants: ['alice', 'bob'], workspace: 'w1' }));
         followers = ['alice', 'bob'];
         await followAndNotify(null, { parent: { _id: 'p2', dm: 'd1', workspace: 'w1', replyCount: 1 }, replierId: 'alice', senderUsername: 'alice', mentionText: '@channel' });
         expect(notificationService.mention).not.toHaveBeenCalled();
         expect(notificationService.threadReply).toHaveBeenCalledWith(null, expect.objectContaining({ followerIds: ['bob'] }));
     });
+});
+
+test('people who left the channel stop hearing about its threads', async () => {
+    // Carol still follows the thread but is no longer a member of the (private) channel.
+    Channel.findById.mockImplementation(() => q({ name: 'general', workspace: 'w1', isPrivate: true, members: [{ user: 'alice' }, { user: 'bob' }] }));
+    await followAndNotify(null, { parent, replierId: 'alice', senderUsername: 'alice' });
+    expect(notificationService.threadReply).toHaveBeenCalledWith(null, expect.objectContaining({ followerIds: ['bob'] }));
 });

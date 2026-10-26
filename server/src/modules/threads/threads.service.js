@@ -138,6 +138,22 @@ async function resolveThreadMentions(parent, replierId, mentionText) {
     return { userIds, broadcastIds };
 }
 
+/** A filter keeping the people who may see this thread now (conversations/conversationAccess.js). */
+async function audienceFilter(parent) {
+    const { checkMessageAccess } = require('../conversations/conversationAccess');
+    const msg = { _id: parent._id, channel: parent.channel?._id || parent.channel, dm: parent.dm?._id || parent.dm, createdAt: parent.createdAt };
+    const cache = new Map();
+    return async (ids) => {
+        const out = [];
+        for (const id of ids || []) {
+            const key = String(id);
+            if (!cache.has(key)) cache.set(key, (await checkMessageAccess(msg, key)).ok);
+            if (cache.get(key)) out.push(key);
+        }
+        return out;
+    };
+}
+
 /**
  * Reply-side effects shared by the REST and socket send paths: the replier (and, on the
  * first reply, the parent's author) follow the thread, and every other follower is notified.
@@ -170,17 +186,23 @@ async function followAndNotify(io, { parent, replierId, senderUsername, mentionT
             logger.warn({ err: err.message }, '[threads] DM participants not auto-followed');
         }
     }
-    await Message.updateOne({ _id: parent._id }, { $addToSet: { followers: { $each: [...new Set(autoFollow)] } } });
+    // Only people who can still see the thread follow it or hear about it (not people who left
+    // the conversation or the workspace, nor group members who joined after the parent was posted).
+    const canSee = await audienceFilter(parent);
+    const followNow = (await canSee([...new Set(autoFollow)])).concat(String(replierId));
+    await Message.updateOne({ _id: parent._id }, { $addToSet: { followers: { $each: [...new Set(followNow)] } } });
     // Replying reads the thread for the replier (their own reply is never unread).
     require('./threadControls').markRead(parent._id, replierId).catch(() => {});
     if (replyId && mentionedIds.length > 0) {
         await Message.updateOne({ _id: replyId }, { $set: { mentions: mentionedIds } }).catch(() => {});
     }
 
+    mentionedIds = await canSee(mentionedIds);
+    broadcastIds = await canSee(broadcastIds);
     const mentionedSet = new Set([...mentionedIds, ...broadcastIds]);
     // Mentioned people get a mention notification instead of the generic "new reply".
-    const recipientIds = (await getFollowerIds(parent._id))
-        .filter((id) => id !== String(replierId) && !mentionedSet.has(id));
+    const recipientIds = await canSee((await getFollowerIds(parent._id))
+        .filter((id) => id !== String(replierId) && !mentionedSet.has(id)));
     if (recipientIds.length === 0 && mentionedSet.size === 0) return 0;
 
     let channelName = null;

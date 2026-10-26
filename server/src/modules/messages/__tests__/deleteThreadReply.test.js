@@ -9,11 +9,17 @@ jest.mock('../message.model.js', () => ({
     updateOne: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('../../../../models/DMSession', () => ({}));
-jest.mock('../../../identity', () => ({ users: { findById: jest.fn().mockResolvedValue({ username: 'alice' }) }, workspaces: {} }));
+// ME and OTHER are active members of the workspace (oid 30).
+jest.mock('../../../identity', () => ({
+    users: { findById: jest.fn().mockResolvedValue({ username: 'alice' }) },
+    workspaces: { findById: jest.fn().mockResolvedValue({ members: ['000000000000000000000001', '000000000000000000000002'].map((user) => ({ user, status: 'active' })) }) },
+}));
 jest.mock('../../conversations/conversationKeys.service', () => ({}));
 jest.mock('../../../shared/events/bus', () => ({ publish: jest.fn().mockResolvedValue() }));
+// Both people are members of the channel; admins vary per test.
+const mockChannel = (over = {}) => ({ select: () => ({ lean: async () => ({ members: [{ user: '000000000000000000000001' }, { user: '000000000000000000000002' }], admins: [], createdBy: '000000000000000000000002', workspace: '00000000000000000000001e', ...over }) }) });
 jest.mock('../../../features/channels/channel.model.js', () => ({
-    findById: jest.fn(() => ({ select: () => ({ lean: async () => null }) })),
+    findById: jest.fn(() => mockChannel()),
 }));
 
 const Message = require('../message.model.js');
@@ -58,7 +64,6 @@ describe('who may delete someone else\'s reply for everyone', () => {
     const Channel = require('../../../features/channels/channel.model.js');
     const identity = require('../../../identity');
     const OTHER = oid(2);
-    const WS = oid(30);
     const reply = () => ({ _id: REPLY, parentId: PARENT, channel: CHANNEL, sender: OTHER, hiddenFor: [], save: jest.fn().mockResolvedValue() });
 
     beforeEach(() => {
@@ -68,7 +73,7 @@ describe('who may delete someone else\'s reply for everyone', () => {
     });
 
     test('a channel admin can', async () => {
-        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [ME], createdBy: OTHER, workspace: WS }) }) }));
+        Channel.findById.mockImplementation(() => mockChannel({ admins: [ME] }));
         const doc = reply();
         Message.findById.mockResolvedValue(doc);
         await messagesService.deleteMessage(REPLY, ME, null, 'everyone');
@@ -76,7 +81,7 @@ describe('who may delete someone else\'s reply for everyone', () => {
     });
 
     test('a workspace owner/admin can', async () => {
-        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [], createdBy: OTHER, workspace: WS }) }) }));
+        Channel.findById.mockImplementation(() => mockChannel());
         identity.workspaces.membership.mockResolvedValue({ member: true, isAdmin: true });
         const doc = reply();
         Message.findById.mockResolvedValue(doc);
@@ -85,7 +90,7 @@ describe('who may delete someone else\'s reply for everyone', () => {
     });
 
     test('a plain member cannot', async () => {
-        Channel.findById.mockImplementationOnce(() => ({ select: () => ({ lean: async () => ({ admins: [], createdBy: OTHER, workspace: WS }) }) }));
+        Channel.findById.mockImplementation(() => mockChannel());
         Message.findById.mockResolvedValue(reply());
         await expect(messagesService.deleteMessage(REPLY, ME, null, 'everyone')).rejects.toMatchObject({ status: 403 });
     });

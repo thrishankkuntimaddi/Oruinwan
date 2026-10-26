@@ -1,50 +1,28 @@
 'use strict';
 
 /**
- * Message access control shared by the v2 messages module and the legacy
- * bookmark / reminder routes.
- *
- * A user can access a message when they can read the conversation it lives in:
- *   - channel: an explicit channel member, or (for public / default channels)
- *     an active member of the channel's workspace;
- *   - DM: a participant of the DM session.
- * Messages that belong to neither are not accessible through these endpoints.
+ * Message access for the v2 messages module and the bookmark / reminder routes. The rule itself
+ * is conversations/conversationAccess.js: an active workspace member who can read the
+ * conversation, and (in groups) not a message from before they joined.
  */
 
 const mongoose = require('mongoose');
-const Channel = require('../../features/channels/channel.model.js');
-const DMSession = require('../../../models/DMSession');
-const identity = require('../../identity');
-
-function sameId(a, b) {
-    return a != null && b != null && String(a._id || a) === String(b._id || b);
-}
+const { checkMessageAccess } = require('../conversations/conversationAccess');
 
 async function canAccessMessage(message, userId) {
     if (!message || !userId) return false;
+    const access = await checkMessageAccess(message, userId);
+    return access.ok;
+}
 
-    if (message.channel) {
-        const channel = await Channel.findById(message.channel._id || message.channel)
-            .select('members isPrivate isDefault workspace')
-            .lean();
-        if (!channel) return false;
-
-        const explicitMember = (channel.members || []).some(m => sameId(m && m.user ? m.user : m, userId));
-        if (explicitMember) return true;
-        if (channel.isPrivate && !channel.isDefault) return false;
-
-        // Public/default channel: any active member of the owning workspace may read it.
-        if (!channel.workspace) return false;
-        const ws = await identity.workspaces.findById(channel.workspace);
-        return !!ws && ws.members.some(m => sameId(m.user, userId) && m.status !== 'removed');
-    }
-
-    if (message.dm) {
-        const dm = await DMSession.findById(message.dm._id || message.dm).select('participants').lean();
-        return !!dm && (dm.participants || []).some(p => sameId(p, userId));
-    }
-
-    return false;
+// The access check needs these; an inclusion projection must carry them.
+const ACCESS_FIELDS = ['channel', 'dm', 'createdAt'];
+function withAccessFields(select) {
+    if (typeof select !== 'string' || !select.trim()) return select;
+    const tokens = select.trim().split(/\s+/);
+    const inclusion = tokens.some((t) => !t.startsWith('+') && !t.startsWith('-'));
+    if (!inclusion) return select;
+    return [...new Set([...tokens, ...ACCESS_FIELDS])].join(' ');
 }
 
 /**
@@ -56,17 +34,18 @@ async function loadAccessibleMessage(Message, messageId, userId, { select, popul
         throw Object.assign(new Error('Invalid message id'), { status: 400 });
     }
     let query = Message.findById(messageId);
-    if (select && query.select) query = query.select(select);
+    if (select && query.select) query = query.select(withAccessFields(select));
     if (populate && query.populate) {
         for (const p of [].concat(populate)) query = query.populate(p);
     }
     if (lean && query.lean) query = query.lean();
     const message = await query;
     if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
-    if (!(await canAccessMessage(message, userId))) {
+    const access = await checkMessageAccess(message, userId);
+    if (!access.ok) {
         throw Object.assign(new Error('You do not have access to this message'), { status: 403 });
     }
     return message;
 }
 
-module.exports = { canAccessMessage, loadAccessibleMessage };
+module.exports = { canAccessMessage, loadAccessibleMessage, withAccessFields };

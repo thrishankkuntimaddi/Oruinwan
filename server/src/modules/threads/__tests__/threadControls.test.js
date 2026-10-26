@@ -22,7 +22,11 @@ jest.mock('../../../identity', () => ({
         findById: jest.fn(async (id) => ({ _id: id, username: `name-${id}` })),
         findManyByIds: jest.fn(async (ids) => new Map(ids.map((id) => [id, { _id: id, username: `name-${id}` }]))),
     },
-    workspaces: { membership: jest.fn() },
+    workspaces: {
+        membership: jest.fn(),
+        // Everyone in these tests is an active member of the workspace.
+        findById: jest.fn(async () => ({ members: new Proxy([], { get: (t, k) => (k === 'some' ? () => true : t[k]) }) })),
+    },
 }));
 jest.mock('../threadAccess', () => ({ checkConversationAccess: jest.fn(), checkThreadAccess: jest.fn() }));
 
@@ -159,7 +163,7 @@ describe('followers', () => {
 
 describe('auto-follow and unread', () => {
     test('the first reply in a DM thread makes every participant follow it', async () => {
-        DMSession.findById.mockImplementation(() => lean({ participants: [STARTER, MEMBER] }));
+        DMSession.findById.mockImplementation(() => lean({ participants: [STARTER, MEMBER], workspace: oid(30) }));
         Message.findById.mockImplementation(() => lean({ followers: [STARTER, MEMBER] }));
         const dmParent = { _id: PARENT, dm: DM, sender: STARTER, replyCount: 0, workspace: oid(30) };
         await followAndNotify(null, { parent: dmParent, replierId: MEMBER, senderUsername: 'member' });

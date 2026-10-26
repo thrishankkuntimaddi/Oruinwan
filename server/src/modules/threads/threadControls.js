@@ -235,9 +235,11 @@ async function followedThreads(userId, { workspaceId = null, channelId = null, l
         const key = m.channel ? `c:${sid(m.channel)}` : `d:${sid(m.dm)}`;
         if (!allowed.has(key)) {
             const access = await checkConversationAccess({ channel: m.channel, dm: m.dm }, userId);
-            allowed.set(key, access.ok);
+            allowed.set(key, access.ok ? { since: access.since } : null);
         }
-        if (allowed.get(key)) visible.push(m);
+        const access = allowed.get(key);
+        // Not threads from before the person joined the group.
+        if (access && (!access.since || new Date(m.createdAt) >= access.since)) visible.push(m);
         if (visible.length >= (Number(limit) || 50)) break;
     }
 

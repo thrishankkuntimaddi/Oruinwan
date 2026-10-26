@@ -143,19 +143,37 @@ async function addMember(workspaceId, userId, { role = 'member', status = 'activ
     );
 }
 
+/**
+ * Someone stopped being an active member (removed, left or suspended): their devices leave the
+ * workspace's channel, DM and workspace rooms right away. Never fails the membership change.
+ */
+function afterMembershipEnded(workspaceId, userId) {
+    try {
+        const io = require('../socket/getIO').getIO();
+        if (!io) return;
+        require('../modules/conversations/conversationRooms')
+            .evictFromWorkspace(io, str(workspaceId), str(userId))
+            .catch(() => {});
+    } catch { /* live rooms are best effort; access checks already refuse them */ }
+}
+
 async function updateMember(workspaceId, userId, patch) {
     const map = { role: 'role', status: 'status', suspendedAt: 'suspended_at', suspendedBy: 'suspended_by', removedAt: 'removed_at', removedBy: 'removed_by' };
     const { sets, params, next } = buildUpdate(patch, map);
     if (!sets.length) return;
     await query(`UPDATE workspace_members SET ${sets.join(', ')} WHERE workspace_id = $${next} AND user_id = $${next + 1}`, [...params, str(workspaceId), str(userId)]);
+    if (patch.status && patch.status !== 'active') afterMembershipEnded(workspaceId, userId);
 }
 
 async function removeMember(workspaceId, userId, { by = null, hard = false } = {}) {
-    if (hard) return query('DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2', [str(workspaceId), str(userId)]);
-    return query(
-        `UPDATE workspace_members SET status = 'removed', removed_at = now(), removed_by = $3 WHERE workspace_id = $1 AND user_id = $2`,
-        [str(workspaceId), str(userId), by ? str(by) : null]
-    );
+    const result = hard
+        ? await query('DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2', [str(workspaceId), str(userId)])
+        : await query(
+            `UPDATE workspace_members SET status = 'removed', removed_at = now(), removed_by = $3 WHERE workspace_id = $1 AND user_id = $2`,
+            [str(workspaceId), str(userId), by ? str(by) : null]
+        );
+    afterMembershipEnded(workspaceId, userId);
+    return result;
 }
 
 async function listMembers(workspaceId, { status = 'active' } = {}) {

@@ -224,6 +224,7 @@ export function GroupInfoScreen({ id }) {
         footer={<Button block loading={busy} disabled={picked.length === 0} onClick={() => run(() => api().addGroupDmMembers(id, picked), () => setAdding(false))}>Add {picked.length || ''}</Button>}
       >
         <div className="px-2 pb-4">
+          <p className="px-3 pb-2 text-[13px] text-text-2">People you add see messages from now on, not earlier ones.</p>
           {candidates.length ? (
             <RowGroup>
               {candidates.map((u) => (

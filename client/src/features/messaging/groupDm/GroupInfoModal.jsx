@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, UserPlus, LogOut, Pencil } from 'lucide-react';
-import api from '@services/api';
+import useWorkspaceRecipients from '../recipients/useWorkspaceRecipients';
+import { filterRecipients } from '../recipients/recipients';
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { getErrorMessage } from '../../../utils/apiHelpers';
 import {
@@ -17,7 +18,6 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
     const [name, setName] = useState('');
     const [editing, setEditing] = useState(false);
     const [adding, setAdding] = useState(false);
-    const [members, setMembers] = useState([]);
     const [picked, setPicked] = useState([]);
     const [query, setQuery] = useState('');
     const [busy, setBusy] = useState(false);
@@ -30,21 +30,12 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
         return () => { alive = false; };
     }, [dmId]);
 
-    useEffect(() => {
-        if (!adding || !workspaceId) return;
-        api.get(`/api/workspaces/${workspaceId}/members`)
-            .then((res) => setMembers((res.data.members || []).map((m) => ({
-                _id: String(m.user?._id || m._id || m.id),
-                username: m.user?.username || m.username || m.email,
-                profilePicture: m.user?.profilePicture || m.profilePicture || null,
-            }))))
-            .catch((err) => setError(getErrorMessage(err)));
-    }, [adding, workspaceId]);
+    // The same people and search as "New message" (active workspace members, shared matcher).
+    const { list: members, error: membersError } = useWorkspaceRecipients(workspaceId, currentUserId, adding);
+    useEffect(() => { if (membersError) setError(membersError); }, [membersError]);
 
     const inGroup = useMemo(() => new Set((group?.participants || []).map((p) => String(p._id))), [group]);
-    const candidates = members
-        .filter((m) => !inGroup.has(m._id))
-        .filter((m) => !query.trim() || (m.username || '').toLowerCase().includes(query.trim().toLowerCase()));
+    const candidates = filterRecipients(members.filter((m) => !inGroup.has(m._id)), query);
     const isCreator = group && String(group.createdBy) === String(currentUserId);
     const room = MAX_GROUP_MEMBERS - (group?.participants?.length || 0);
 
@@ -127,15 +118,16 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people" aria-label="Search people to add" autoFocus
                                         style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', marginBottom: '6px' }} />
                                     <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                                        {candidates.length === 0 && <div style={small}>Everyone in this workspace is already here.</div>}
+                                        <div style={{ ...small, marginBottom: '6px' }}>People you add see messages from now on, not earlier ones.</div>
+                                        {candidates.length === 0 && <div style={small}>{query.trim() ? 'No one matches.' : 'Everyone in this workspace is already here.'}</div>}
                                         {candidates.map((m) => {
                                             const on = picked.includes(m._id);
                                             return (
                                                 <label key={m._id} style={{ ...row, cursor: 'pointer' }}>
                                                     <input type="checkbox" checked={on} disabled={!on && picked.length >= room}
                                                         onChange={() => setPicked((p) => (on ? p.filter((x) => x !== m._id) : [...p, m._id]))} />
-                                                    <UserAvatarImage userId={m._id} name={m.username} src={m.profilePicture} size={24} />
-                                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{m.username}</span>
+                                                    <UserAvatarImage userId={m._id} name={m.name} src={m.profilePicture} size={24} />
+                                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{m.name}</span>
                                                 </label>
                                             );
                                         })}

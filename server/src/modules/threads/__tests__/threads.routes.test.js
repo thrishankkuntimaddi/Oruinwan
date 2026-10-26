@@ -45,7 +45,14 @@ jest.mock('../../messages/message.model.js', () => ({
 jest.mock('../../../features/channels/channel.model.js', () => ({ findById: jest.fn() }));
 jest.mock('../../../../models/DMSession', () => ({ findById: jest.fn() }));
 jest.mock('../../../identity', () => ({
-    workspaces: { membership: jest.fn().mockResolvedValue(null) },
+    workspaces: {
+        membership: jest.fn().mockResolvedValue(null),
+        // Alice and Bob are active members of the channel's workspace (oid 50); the stranger is not.
+        findById: jest.fn().mockResolvedValue({ _id: '000000000000000000000032', members: [
+            { user: '000000000000000000000001', status: 'active' },
+            { user: '000000000000000000000002', status: 'active' },
+        ] }),
+    },
     users: { findById: jest.fn().mockResolvedValue({ _id: 'x', username: 'alice' }) },
 }));
 jest.mock('../../../identity/hydrate', () => ({ hydrate: jest.fn(async (doc) => doc) }));
@@ -53,6 +60,7 @@ jest.mock('../../notifications/notificationService', () => ({ threadReply: jest.
 
 const Message = require('../../messages/message.model.js');
 const Channel = require('../../../features/channels/channel.model.js');
+const identity = require('../../../identity');
 const router = require('../threads.routes');
 
 function makeIo() {
@@ -90,6 +98,7 @@ const parentDoc = (over = {}) => ({ _id: PARENT, channel: CHANNEL, workspace: oi
 
 beforeEach(() => {
     jest.clearAllMocks();
+    identity.workspaces.findById.mockResolvedValue({ _id: oid(50), members: [ALICE, BOB].map((user) => ({ user, status: 'active' })) });
     Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }], isPrivate: true, workspace: oid(50), name: 'general' }));
 });
 
@@ -191,7 +200,7 @@ describe('locked threads over HTTP', () => {
 
     it('reading a thread says whether it is locked and what the reader may do', async () => {
         const lockedAt = new Date('2026-10-20T10:00:00Z');
-        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }], admins: [ALICE], isPrivate: true, workspace: null, name: 'general' }));
+        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }], admins: [ALICE], isPrivate: true, workspace: oid(50), name: 'general' }));
         Message.findById.mockImplementation(() => query(parentDoc({ sender: BOB, threadLockedAt: lockedAt, threadLockedBy: ALICE, threadLockedByName: 'alice' })));
         Message.find.mockImplementation(() => query([]));
 
@@ -204,9 +213,11 @@ describe('locked threads over HTTP', () => {
     });
 
     it('a member who did not start the thread cannot lock it; a channel admin can', async () => {
-        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }, { user: STRANGER }], admins: [ALICE], isPrivate: true, workspace: null, name: 'general' }));
+        Channel.findById.mockImplementation(() => query({ _id: CHANNEL, members: [{ user: ALICE }, { user: BOB }, { user: STRANGER }], admins: [ALICE], isPrivate: true, workspace: oid(50), name: 'general' }));
         Message.findById.mockImplementation(() => query(parentDoc({ sender: BOB })));
         Message.findByIdAndUpdate.mockImplementation((id, update) => query(parentDoc({ ...update.$set })));
+        // Here the stranger is a member of the workspace and the channel, just not the thread's starter.
+        identity.workspaces.findById.mockResolvedValue({ _id: oid(50), members: [ALICE, BOB, STRANGER].map((user) => ({ user, status: 'active' })) });
 
         const denied = await call('POST', `/api/threads/${PARENT}/lock`, STRANGER, {});
         expect(denied.status).toBe(403);

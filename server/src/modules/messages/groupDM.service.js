@@ -3,11 +3,16 @@
 /**
  * Group DMs: a DM with 3 or more people (DMSession with isGroup: true).
  *
- * - Anyone in the group can rename it, add people and leave. Only the person who created
- *   the group can remove someone else.
- * - The conversation key is shared like a channel's: people who are added get the key, but
- *   only see messages from the moment they joined (memberSince). People who leave or are
- *   removed lose their copy of the key and their access on the server.
+ * The rules (docs/CONVERSATIONS.md):
+ * - A 1:1 DM never changes its people. Adding someone starts a new group; the DM stays as it is.
+ * - Creating a group with exactly the same people as an unnamed group reopens that group;
+ *   giving the new group a name always makes a new one.
+ * - Anyone in the group can rename it, add people and leave. The group's admin (its creator)
+ *   can remove someone else; when the admin leaves, the longest-standing member takes over.
+ * - People who are added see messages from the moment they joined (memberSince), never
+ *   earlier ones. The server enforces that on every read (conversations/conversationAccess.js).
+ * - People who leave or are removed lose their copy of the key, their access on the server and
+ *   their live connection to the conversation at once.
  */
 
 const DMSession = require('../../../models/DMSession');
@@ -56,6 +61,8 @@ async function loadGroup(dmId, userId) {
     if (!session) throw fail(404, 'Conversation not found');
     if (!session.isGroup) throw fail(400, 'This is not a group conversation', 'NOT_A_GROUP');
     if (!session.participants.some((p) => String(p) === String(userId))) throw fail(403, 'You are not in this conversation');
+    const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');
+    if (!(await isActiveWorkspaceMember(session.workspace, userId))) throw fail(403, 'You are no longer a member of this workspace', 'WORKSPACE_ACCESS_DENIED');
     return session;
 }
 
@@ -242,6 +249,16 @@ async function removeMember({ dmId, actorId, userId }, io) {
     session.participants = session.participants.filter((p) => String(p) !== target);
     session.memberSince = (session.memberSince || []).filter((m) => String(m.user) !== target);
     session.mutedBy = (session.mutedBy || []).filter((m) => String(m.user) !== target);
+    // The admin left: the person who has been in the group longest takes over.
+    let newAdmin = null;
+    if (String(session.createdBy) === target && session.participants.length > 0) {
+        const since = (id) => {
+            const row = (session.memberSince || []).find((m) => String(m.user) === String(id));
+            return row?.at ? new Date(row.at).getTime() : 0; // founding members of old groups: 0
+        };
+        newAdmin = [...session.participants].map(String).sort((a, b) => since(a) - since(b))[0];
+        session.createdBy = newAdmin;
+    }
     await session.save();
 
     // No more key on the server for them; the server also refuses their requests from now on.
@@ -249,6 +266,15 @@ async function removeMember({ dmId, actorId, userId }, io) {
         await conversationKeysService.removeParticipant(session._id, 'dm', target);
     } catch (err) {
         logger.warn({ err, dmSessionId: String(session._id) }, '[GROUP_DM][E2EE] Could not remove the key copy');
+    }
+
+    if (newAdmin) {
+        const adminName = await usernameOf(newAdmin);
+        await systemLine(io, session, {
+            event: 'group_admin_changed',
+            text: `${adminName} now manages the group`,
+            data: { userId: String(newAdmin), userName: adminName },
+        });
     }
 
     moveSockets(io, [target], session._id, false);

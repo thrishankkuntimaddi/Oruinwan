@@ -4,9 +4,13 @@ import api from '@services/api';
 /** Largest group, the creator included (server: DMSession.MAX_GROUP_DM_MEMBERS). */
 export const MAX_GROUP_MEMBERS = 10;
 
+/**
+ * Start a group with these people (the creator is added by the server). Without a name, a group
+ * with exactly the same people is reopened instead (`created: false`).
+ */
 export async function createGroupDM(workspaceId, memberIds, name) {
     const res = await api.post('/api/v2/dm/group', { workspaceId, memberIds, name: name?.trim() || undefined });
-    return res.data.dm;
+    return { ...res.data.dm, created: res.data.created !== false };
 }
 
 export async function getDMDetails(dmId) {

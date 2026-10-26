@@ -164,13 +164,22 @@ router.post('/:agentId/dm', member, async (req, res) => {
 
     const participants = [new mongoose.Types.ObjectId(String(req.user.sub)), new mongoose.Types.ObjectId(String(bot._id))]
       .sort((a, b) => a.toString().localeCompare(b.toString()));
-    let dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 }, isGroup: { $ne: true } });
+    // One chat per person and agent (the same unique pair key as people's DMs; the agent's
+    // bot user is not a workspace member, so this doesn't go through findOrCreateDMSession).
+    const pairKey = DMSession.dmPairKey(req.aiWorkspace.id, req.user.sub, bot._id);
+    let dm = await DMSession.findOne({ pairKey })
+      || await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 }, isGroup: { $ne: true } });
+    if (dm && !dm.pairKey) await DMSession.updateOne({ _id: dm._id }, { $set: { pairKey } }).catch(() => {});
     if (!dm) {
       try {
-        dm = await DMSession.create({ workspace: req.aiWorkspace.id, company: ws?.company || null, participants, createdAt: new Date() });
+        dm = await DMSession.findOneAndUpdate(
+          { pairKey },
+          { $setOnInsert: { pairKey, workspace: req.aiWorkspace.id, company: ws?.company || null, participants, isGroup: false, lastMessageAt: new Date() } },
+          { upsert: true, new: true }
+        );
       } catch (err) {
         if (err.code !== 11000) throw err;
-        dm = await DMSession.findOne({ workspace: req.aiWorkspace.id, participants: { $all: participants, $size: 2 }, isGroup: { $ne: true } });
+        dm = await DMSession.findOne({ pairKey });
       }
     }
     // The person holds the key; the server keeps its escrowed copy to encrypt the agent's answers.

@@ -41,6 +41,10 @@ const DMSessionSchema = new mongoose.Schema(
       }
     },
 
+    // 1:1 DMs: "<workspace>:<smaller user id>:<larger user id>", unique, so the same two people
+    // never get two conversations in one workspace. Not set on groups.
+    pairKey: { type: String, default: undefined },
+
     // Group DMs: 3+ people when created. Stays a group even if people leave.
     isGroup: { type: Boolean, default: false },
     name: { type: String, trim: true, maxlength: 80, default: null },
@@ -115,6 +119,8 @@ DMSessionSchema.index({ workspace: 1, participants: 1 });
 
 DMSessionSchema.index({ company: 1, participants: 1 });
 
+DMSessionSchema.index({ pairKey: 1 }, { unique: true, partialFilterExpression: { pairKey: { $type: 'string' } } });
+
 DMSessionSchema.pre("save", function (next) {
   const count = this.participants ? this.participants.length : 0;
   const ok = this.isGroup ? count >= 1 && count <= MAX_GROUP_DM_MEMBERS : count === 2;
@@ -124,6 +130,13 @@ DMSessionSchema.pre("save", function (next) {
   next();
 });
 
+/** The pair key of a 1:1 DM between two people in a workspace. */
+function dmPairKey(workspaceId, userA, userB) {
+  const [a, b] = [String(userA), String(userB)].sort();
+  return `${String(workspaceId)}:${a}:${b}`;
+}
+
 const DMSession = mongoose.model("DMSession", DMSessionSchema);
 DMSession.MAX_GROUP_DM_MEMBERS = MAX_GROUP_DM_MEMBERS;
+DMSession.dmPairKey = dmPairKey;
 module.exports = DMSession;

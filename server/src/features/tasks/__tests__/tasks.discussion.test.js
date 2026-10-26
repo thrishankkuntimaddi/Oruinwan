@@ -299,4 +299,11 @@ describe('linked thread', () => {
         checkConversationAccess.mockResolvedValueOnce({ ok: false, status: 404 });
         expect(await discussion.linkedThreadFor(task, OUTSIDER)).toEqual({ messageId: ROOT, sourceMessageId: REPLY, restricted: true });
     });
+
+    test('a group member who joined after the thread started sees it as restricted', async () => {
+        task.linkedMessage = ROOT;
+        messages[ROOT].createdAt = new Date('2026-04-01');
+        checkConversationAccess.mockResolvedValueOnce({ ok: true, since: new Date('2026-05-01') });
+        expect(await discussion.linkedThreadFor(task, ASSIGNEE)).toEqual({ messageId: ROOT, sourceMessageId: ROOT, restricted: true });
+    });
 });

@@ -6,25 +6,10 @@ const identity = require('../../identity');
 const { hydrate } = require('../../identity/hydrate');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
-const conversationKeysService = require('../conversations/conversationKeys.service');
 const mongoose = require('mongoose');
 const { canAccessMessage, loadAccessibleMessage } = require('./messageAccess');
 const { redactReadBy, readersHidingReceipts } = require('../../features/auth/privacy.service');
-const { sanitizeAttachments } = require('../uploads/attachmentSanitizer');
 const { withReadTimes } = require('./readReceipts.service');
-
-// Validated attachments, or null after answering the request with the error.
-async function cleanAttachmentsOrRespond(res, attachments, senderId) {
-    try {
-        return await sanitizeAttachments(attachments, senderId);
-    } catch (err) {
-        if (err && err.status && err.status < 500) {
-            res.status(err.status).json({ message: err.message, code: err.code });
-            return null;
-        }
-        throw err;
-    }
-}
 
 // 201 for a new message; 200 + duplicate:true when an offline-queue resend
 // (same clientMessageId) matched a message that was already stored.
@@ -42,226 +27,108 @@ function sendError(res, err, label) {
     return handleError(res, err, label);
 }
 
-exports.sendDirectMessage = async (req, res) => {
-    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: sendDirectMessage');
+/** Body fields both send endpoints accept. */
+function sendBody(body = {}) {
+    const {
+        attachments, replyTo, parentId, quotedMessageId, ciphertext, messageIv, isEncrypted,
+        clientTempId, clientMessageId, mentionText = '', type = 'message', poll = null,
+        contact = null, meeting = null, checklistCount = 0, linkPreview = null,
+    } = body;
+    return {
+        attachments, parentId: parentId || replyTo || null, quotedMessageId: quotedMessageId || null,
+        ciphertext, messageIv, isEncrypted, clientTempId, clientMessageId, mentionText, type, poll,
+        contact, meeting, checklistCount, linkPreview,
+    };
+}
+
+// Structured messages (files, polls, contacts, meetings) may skip the encrypted body; text may not.
+const STRUCTURED_TYPES = ['image', 'video', 'file', 'voice', 'poll', 'contact', 'meeting'];
+
+/**
+ * One send for both endpoints: the shared rules (sendRules.prepareSend), then createMessage,
+ * which stores the message and tells the conversation (or the thread, for a reply).
+ */
+async function sendTo(req, res, target, label) {
     try {
         const senderId = req.user.sub;
-        const {
-            receiverId,
-            dmSessionId,  
-            workspaceId,
-            attachments,
-            replyTo,
-            ciphertext,
-            messageIv,
-            isEncrypted,
-            clientTempId, clientMessageId,
-            mentionText = '',   
-            
-            type = 'message',
-            poll = null,
-            contact = null,
-            meeting = null,
-            checklistCount = 0,
-            linkPreview = null,
-        } = req.body;
-
-        
-        
-        
-        const STRUCTURED_TYPES_DM = ['image', 'video', 'file', 'voice', 'poll', 'contact', 'meeting'];
-        if (!STRUCTURED_TYPES_DM.includes(type) && (!ciphertext || !messageIv || !isEncrypted)) {
-            return res.status(400).json({
-                message: 'E2EE required: ciphertext and messageIv must be provided'
-            });
+        // Scheduled sends (scheduledMessages.service) pass io through req.app.
+        const io = req.io || req.app?.get?.('io') || null;
+        const b = sendBody(req.body);
+        if (!STRUCTURED_TYPES.includes(b.type) && (!b.ciphertext || !b.messageIv || !b.isEncrypted)) {
+            return res.status(400).json({ message: 'E2EE required: ciphertext and messageIv must be provided' });
         }
-
-        
-        
-        
-        let dmSession;
-
-        if (dmSessionId) {
-            
-            logger.info('📨 [sendDirectMessage] Using DM session ID:', dmSessionId);
-
-            dmSession = await DMSession.findById(dmSessionId);
-            if (!dmSession) {
-                return res.status(404).json({ message: 'DM Session not found' });
-            }
-
-            
-            const isParticipant = dmSession.participants.some(
-                (p) => String(p) === String(senderId)
-            );
-            if (!isParticipant) {
-                return res.status(403).json({
-                    message: 'Not authorized to send messages in this DM'
-                });
-            }
-
-            logger.info('✅ [sendDirectMessage] DM session verified, participants:',
-                dmSession.participants.map(p => String(p)));
-
-        } else if (receiverId) {
-            
-            logger.info('📨 [sendDirectMessage] Using receiver ID:', receiverId);
-
-            
-            if (!workspaceId) {
-                return res.status(400).json({ message: 'workspaceId required when using receiverId' });
-            }
-
-            
-            const receiver = await identity.users.findById(receiverId);
-            if (!receiver) {
-                return res.status(404).json({ message: 'Receiver not found' });
-            }
-
-            const ws = await identity.workspaces.findById(workspaceId);
-            const memberIds = new Set((ws?.members || []).filter(m => m.status !== 'removed').map(m => String(m.user)));
-            if (!ws || !memberIds.has(String(senderId)) || !memberIds.has(String(receiverId))) {
-                return res.status(403).json({ message: 'Both users must be members of this workspace' });
-            }
-
-            dmSession = await messagesService.findOrCreateDMSession(
-                senderId,
-                receiverId,
-                workspaceId
-            );
-
-            logger.info('✅ [sendDirectMessage] DM session resolved:', dmSession._id);
-        } else {
-            return res.status(400).json({
-                message: 'Either dmSessionId or receiverId must be provided'
-            });
-        }
-
-        // Either side having blocked the other stops the conversation.
-        const blocks = dmSession.blockedBy || [];
-        if (blocks.some(b => String(b.user) === String(senderId))) {
-            return res.status(403).json({ code: 'YOU_BLOCKED', message: 'You blocked this person. Unblock them to send messages.' });
-        }
-        if (blocks.length > 0) {
-            return res.status(403).json({ code: 'BLOCKED', message: "You can't send messages to this person." });
-        }
-
-        // A new message brings a deleted (hidden) conversation back for both people.
-        if ((dmSession.hiddenFor || []).length > 0) {
-            await DMSession.updateOne({ _id: dmSession._id }, { $set: { hiddenFor: [] } });
-        }
-
-        const cleanAttachments = await cleanAttachmentsOrRespond(res, attachments, senderId);
-        if (!cleanAttachments) return undefined;
-        if (['image', 'video', 'file', 'voice'].includes(type) && cleanAttachments.length === 0) {
+        const { prepareSend } = require('./sendRules');
+        const prepared = await prepareSend(senderId, { ...target, parentId: b.parentId, quotedMessageId: b.quotedMessageId, attachments: b.attachments }, io);
+        if (['image', 'video', 'file', 'voice'].includes(b.type) && prepared.attachments.length === 0) {
             return res.status(400).json({ message: 'An attachment message needs a file' });
         }
-
-        const message = await messagesService.createMessage(
-            {
-                type,
-                company: dmSession.company,
-                workspace: dmSession.workspace,
-                dm: dmSession._id,
-                sender: senderId,
-                attachments: cleanAttachments,
-                parentId: replyTo || null,
-                quotedMessageId: req.body.quotedMessageId || null,
-                ciphertext,
-                messageIv,
-                isEncrypted,
-                clientTempId, clientMessageId,
-                mentionText,
-                
-                poll,
-                contact,
-                meeting,
-                checklistCount,
-                linkPreview,
-            },
-            req.io
-        );
-
+        const { target: t, parent } = prepared;
+        const message = await messagesService.createMessage({
+            type: b.type,
+            company: t.company,
+            workspace: t.workspace,
+            channel: t.channel,
+            dm: t.dm,
+            participants: t.participants,
+            sender: senderId,
+            attachments: prepared.attachments,
+            parentId: parent ? parent._id : null,
+            parent,
+            quotedMessageId: b.quotedMessageId,
+            ciphertext: b.ciphertext,
+            messageIv: b.messageIv,
+            isEncrypted: b.isEncrypted,
+            clientTempId: b.clientTempId,
+            clientMessageId: b.clientMessageId,
+            mentionText: b.mentionText,
+            poll: b.poll,
+            contact: b.contact,
+            meeting: b.meeting,
+            checklistCount: b.checklistCount,
+            linkPreview: b.linkPreview,
+        }, io);
         return sentResponse(res, message);
     } catch (err) {
-        return handleError(res, err, 'SEND DM ERROR');
+        if (err && err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message, ...(err.code ? { code: err.code } : {}) });
+        }
+        return handleError(res, err, label);
     }
+}
+
+exports.sendDirectMessage = (req, res) => {
+    const { dmSessionId, receiverId, workspaceId } = req.body || {};
+    return sendTo(req, res, dmSessionId ? { dmSessionId } : { receiverId, workspaceId }, 'SEND DM ERROR');
 };
 
 exports.getDMs = async (req, res) => {
-    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: getDMs');
     try {
         const userId = req.user.sub;
         const { workspaceId, dmSessionId, dmId } = req.params;
         const { limit, before, after, around } = req.query;
-
-        logger.info('🔍 [getDMs] DEBUG:', {
-            userId,
-            workspaceId,
-            dmSessionId,
-            dmId,
-            allParams: req.params,
-            fullPath: req.path,
-            originalUrl: req.originalUrl
-        });
-
-        
         const sessionId = dmSessionId || dmId;
+        if (!mongoose.isValidObjectId(String(sessionId))) return res.status(400).json({ message: 'Invalid conversation id' });
 
-        logger.info('🔍 [getDMs] Looking up DM session:', {
-            sessionId,
-            workspaceId
-        });
-
-        
-        let dmSession = await DMSession.findById(sessionId);
-
-        
-        
-        
-        
+        // Older links carry the other person's user id instead of the conversation id: open
+        // (or start) the DM with them, as long as both are members of this workspace.
+        let dmSession = await DMSession.findById(sessionId).select('_id').lean();
         if (!dmSession) {
-            logger.info('⚠️ [getDMs] DM session not found, attempting to resolve as userId...');
-            logger.info('🔄 [getDMs] Treating sessionId as otherUserId and creating DM session');
-
             try {
-                
-                dmSession = await messagesService.findOrCreateDMSession(
-                    userId,           
-                    sessionId,        
-                    workspaceId
-                );
-
-                logger.info('✅ [getDMs] DM session resolved/created:', {
-                    newSessionId: dmSession._id,
-                    originalIdWasUserId: true
-                });
+                dmSession = await messagesService.findOrCreateDMSession(userId, sessionId, workspaceId);
             } catch (resolveError) {
-                logger.error('❌ [getDMs] Failed to resolve DM session:', resolveError.message);
-                return res.status(404).json({
-                    message: 'DM Session not found and could not be created',
-                    details: resolveError.message
-                });
+                const status = resolveError.status && resolveError.status < 500 ? resolveError.status : 404;
+                return res.status(status === 400 ? 404 : status).json({ message: 'Conversation not found' });
             }
         }
 
-        
-        const isParticipant = dmSession.participants.some(
-            (p) => String(p) === String(userId)
-        );
-        if (!isParticipant) {
-            return res.status(403).json({ message: 'Not a participant in this DM' });
-        }
+        const { checkConversationAccess, historyFilter } = require('../conversations/conversationAccess');
+        const access = await checkConversationAccess({ dm: dmSession._id }, userId);
+        if (!access.ok) return res.status(access.status === 404 ? 403 : access.status).json({ message: 'Not a participant in this DM', code: access.code });
 
-        
         // "Clear chat" hides everything before this user's clear time, for them only. A group
         // member also only sees messages from when they joined.
-        const cleared = (dmSession.clearedAt || []).find(c => String(c.user) === String(userId));
-        const joinedAt = require('./groupDM.service').memberSinceFor(dmSession, userId);
-        const hideBefore = [cleared?.clearedAt, joinedAt].filter(Boolean).map(d => new Date(d)).sort((a, b) => b - a)[0] || null;
-
         const result = await messagesService.fetchMessages(
-            { dm: dmSession._id },  
+            { dm: dmSession._id },
             {
                 limit: parseInt(limit) || 50,
                 before,
@@ -269,24 +136,18 @@ exports.getDMs = async (req, res) => {
                 around,
                 populateReplies: true,
                 userId,
-                userJoinedAt: hideBefore,
+                userJoinedAt: historyFilter(access).createdAt?.$gte || null,
             }
         );
         // Readers who turned read receipts off are hidden from everyone but themselves.
         result.messages = await redactReadBy(result.messages, userId);
 
-        
-        
         const wasAutoResolved = String(sessionId) !== String(dmSession._id);
-
         return res.json({
             ...result,
-            
             dmSessionId: dmSession._id,
             redirectRequired: wasAutoResolved,
-            ...(wasAutoResolved && {
-                notice: 'DM session was resolved from user ID to session ID'
-            })
+            ...(wasAutoResolved && { notice: 'DM session was resolved from user ID to session ID' }),
         });
     } catch (err) {
         return handleError(res, err, 'GET DMs ERROR');
@@ -320,186 +181,27 @@ exports.getWorkspaceActivity = async (req, res) => {
 };
 
 exports.resolveDMSession = async (req, res) => {
-    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: resolveDMSession');
     try {
         const { workspaceId, userId: otherUserId } = req.params;
-        const currentUserId = req.user.sub;
-
-        
-        
-        const workspace = await identity.workspaces.findById(workspaceId);
-
-        if (!workspace) {
-            return res.status(404).json({ message: 'Workspace not found' });
-        }
-
-        
-        const memberIds = workspace.members.filter(m => m.status !== 'removed').map(m => String(m.user));
-        if (!memberIds.includes(String(currentUserId))) {
-            return res.status(403).json({ message: 'You are not a member of this workspace' });
-        }
-        if (!memberIds.includes(String(otherUserId))) {
-            return res.status(403).json({ message: 'Target user is not a member of this workspace' });
-        }
-
-        
-        const sortedParticipants = [
-            new mongoose.Types.ObjectId(currentUserId),
-            new mongoose.Types.ObjectId(otherUserId)
-        ].sort((a, b) => a.toString().localeCompare(b.toString()));
-
-        
-        let dmSession = await DMSession.findOne({
-            workspace: workspaceId,
-            participants: {
-                $all: sortedParticipants,
-                $size: 2
-            },
-            isGroup: { $ne: true }
-        });
-
-        let isNewSession = false;
-
-        
-        if (!dmSession) {
-            try {
-                dmSession = await DMSession.create({
-                    workspace: workspaceId,
-                    company: workspace.company || null,
-                    participants: sortedParticipants,
-                    createdAt: new Date()
-                });
-                isNewSession = true;
-            } catch (createErr) {
-                
-                if (createErr.code === 11000) {
-                    dmSession = await DMSession.findOne({
-                        workspace: workspaceId,
-                        participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
-                    });
-                    if (!dmSession) throw createErr; 
-                    isNewSession = false;
-                } else {
-                    throw createErr;
-                }
-            }
-        }
-
-        
-        
-        // New or existing: make sure the key exists and both participants hold it.
-        try {
-            await conversationKeysService.ensureDMConversationKey(dmSession._id);
-        } catch (keyErr) {
-            logger.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key ensure failed (non-fatal):`, keyErr.message);
-        }
-        logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] ${isNewSession ? 'Created' : 'Found'} DM session ${dmSession._id}`);
-
+        // Both people must be active members of the workspace; one DM per pair.
+        const dmSession = await messagesService.findOrCreateDMSession(req.user.sub, otherUserId, workspaceId);
         return res.json({
             success: true,
             dmSessionId: dmSession._id,
-            otherUserId: otherUserId,
+            otherUserId,
             workspaceId: dmSession.workspace,
-            participants: dmSession.participants
+            participants: dmSession.participants,
         });
     } catch (err) {
-        logger.error('[MESSAGES:MODULAR][RESOLVE_DM] ERROR:', err);
+        if (err && err.status && err.status < 500) return res.status(err.status).json({ message: err.message, code: err.code });
         return handleError(res, err, 'RESOLVE DM SESSION ERROR');
     }
 };
 
-exports.sendChannelMessage = async (req, res) => {
-    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: sendChannelMessage');
-    try {
-        const senderId = req.user.sub;
-        const {
-            channelId,
-            attachments,
-            replyTo,          
-            quotedMessageId,  
-            ciphertext,
-            messageIv,
-            isEncrypted,
-            clientTempId, clientMessageId,
-            mentionText = '',   
-            
-            type = 'message',
-            poll = null,
-            contact = null,
-            meeting = null,
-            checklistCount = 0,
-            linkPreview = null,
-        } = req.body;
-
-        
-        
-        
-        const STRUCTURED_TYPES_CH = ['image', 'video', 'file', 'voice', 'poll', 'contact', 'meeting'];
-        if (!STRUCTURED_TYPES_CH.includes(type) && (!ciphertext || !messageIv || !isEncrypted)) {
-            return res.status(400).json({
-                message: 'E2EE required: ciphertext and messageIv must be provided'
-            });
-        }
-
-        
-        if (!channelId) {
-            return res.status(400).json({ message: 'channelId required' });
-        }
-
-        
-        const channel = await Channel.findById(channelId);
-        if (!channel) {
-            return res.status(404).json({ message: 'Channel not found' });
-        }
-
-        
-        if (!channel.isMember(senderId)) {
-            return res.status(403).json({ message: 'Not a channel member' });
-        }
-
-        // Announcement channels: only channel admins (or workspace owners/admins) start messages.
-        if (channel.postingPolicy === 'admins') {
-            const { canManageChannel } = require('../../features/channels/channelMute.controller');
-            if (!(await canManageChannel(channel, senderId))) {
-                return res.status(403).json({ code: 'POSTING_RESTRICTED', message: 'Only channel admins can post in this channel.' });
-            }
-        }
-
-        const cleanAttachments = await cleanAttachmentsOrRespond(res, attachments, senderId);
-        if (!cleanAttachments) return undefined;
-        if (['image', 'video', 'file', 'voice'].includes(type) && cleanAttachments.length === 0) {
-            return res.status(400).json({ message: 'An attachment message needs a file' });
-        }
-
-        const message = await messagesService.createMessage(
-            {
-                type,
-                company: channel.company,
-                workspace: channel.workspace,
-                channel: channelId,
-                sender: senderId,
-                attachments: cleanAttachments,
-                parentId: replyTo || null,
-                quotedMessageId: quotedMessageId || null,
-                ciphertext,
-                messageIv,
-                isEncrypted,
-                clientTempId, clientMessageId,
-                mentionText,
-                
-                poll,
-                contact,
-                meeting,
-                checklistCount,
-                linkPreview,
-            },
-            req.io
-        );
-
-        return sentResponse(res, message);
-    } catch (err) {
-        return handleError(res, err, 'SEND CHANNEL ERROR');
-    }
+exports.sendChannelMessage = (req, res) => {
+    const { channelId } = req.body || {};
+    if (!channelId) return res.status(400).json({ message: 'channelId required' });
+    return sendTo(req, res, { channelId }, 'SEND CHANNEL ERROR');
 };
 
 exports.getChannelMessages = async (req, res) => {
@@ -510,18 +212,18 @@ exports.getChannelMessages = async (req, res) => {
         const { limit, before, after, around } = req.query;
 
         
+        if (!mongoose.isValidObjectId(String(channelId))) return res.status(400).json({ message: 'Invalid channel id' });
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
         }
 
-        
-        const isUserMember = channel.isMember(userId);
-        if (!isUserMember) {
+        // Members only, and only while they're active members of the workspace.
+        const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');
+        if (!channel.isMember(userId) || !(await isActiveWorkspaceMember(channel.workspace, userId))) {
             return res.status(403).json({ message: 'Not a channel member' });
         }
 
-        
         const userJoinedAt = channel.getUserJoinDate(userId);
 
         
@@ -581,107 +283,50 @@ exports.forwardMessage = async (req, res) => {
         }
 
         
-        const Message = require('./message.model');
-        const originalMessage = await Message.findById(messageId);
-
-        if (!originalMessage) {
-            return res.status(404).json({ message: 'Original message not found' });
-        }
-
-        
-        
-        if (originalMessage.channel) {
-            const channel = await Channel.findById(originalMessage.channel);
-            if (!channel || !channel.isMember(userId)) {
-                return res.status(403).json({ message: 'Not authorized to access this message' });
-            }
-        } else if (originalMessage.dm) {
-            const dmSession = await DMSession.findById(originalMessage.dm);
-            if (!dmSession || !dmSession.participants.some(p => String(p) === String(userId))) {
-                return res.status(403).json({ message: 'Not authorized to access this message' });
-            }
+        // The source must be a message the person can see; each target follows the send rules.
+        let originalMessage;
+        try {
+            originalMessage = await loadAccessibleMessage(Message, messageId, userId);
+        } catch (e) {
+            const status = e.status === 400 ? 400 : e.status === 404 ? 404 : 403;
+            return res.status(status).json({ message: status === 403 ? 'Not authorized to access this message' : e.message });
         }
 
         // A photo/voice/file message is forwarded as the same kind of message (it has no
         // encrypted text); anything else is forwarded as its encrypted text.
         const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
         const forwardType = ATTACHMENT_TYPES.includes(originalMessage.type) ? originalMessage.type : 'message';
+        const { prepareSend } = require('./sendRules');
 
         let forwardedCount = 0;
         const errors = [];
-
-        
         for (const target of targets) {
             try {
-                const { type, id } = target;
-
-                if (type === 'channel') {
-                    
-                    const channel = await Channel.findById(id);
-                    if (!channel) {
-                        errors.push({ target, error: 'Channel not found' });
-                        continue;
-                    }
-                    if (!channel.isMember(userId)) {
-                        errors.push({ target, error: 'Not a member of target channel' });
-                        continue;
-                    }
-
-                    
-                    const srcCiphertext = originalMessage.payload?.ciphertext || originalMessage.ciphertext;
-                    const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
-
-                    await messagesService.createMessage({
-                        type: forwardType,
-                        company: channel.company,
-                        workspace: channel.workspace,
-                        channel: id,
-                        sender: userId,
-                        ciphertext: srcCiphertext,
-                        messageIv: srcMessageIv,
-                        isEncrypted: true,
-                        attachments: originalMessage.payload?.attachments || originalMessage.attachments || [],
-                        forwardedFrom: messageId
-                    }, req.io);
-
-                    forwardedCount++;
-
-                } else if (type === 'dm') {
-                    
-                    const dmSession = await DMSession.findById(id);
-                    if (!dmSession) {
-                        errors.push({ target, error: 'DM session not found' });
-                        continue;
-                    }
-                    if (!dmSession.participants.some(p => String(p) === String(userId))) {
-                        errors.push({ target, error: 'Not a participant in target DM' });
-                        continue;
-                    }
-
-                    
-                    const srcCiphertext = originalMessage.payload?.ciphertext || originalMessage.ciphertext;
-                    const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
-
-                    await messagesService.createMessage({
-                        type: forwardType,
-                        company: dmSession.company,
-                        workspace: dmSession.workspace,
-                        dm: id,
-                        sender: userId,
-                        ciphertext: srcCiphertext,
-                        messageIv: srcMessageIv,
-                        isEncrypted: true,
-                        attachments: originalMessage.payload?.attachments || originalMessage.attachments || [],
-                        forwardedFrom: messageId
-                    }, req.io);
-
-                    forwardedCount++;
-                } else {
+                const { type, id } = target || {};
+                if (type !== 'channel' && type !== 'dm') {
                     errors.push({ target, error: 'Invalid target type (must be channel or dm)' });
+                    continue;
                 }
+                // The files stay the original sender's uploads; the forwarder can already read them.
+                const { target: t } = await prepareSend(userId, type === 'channel' ? { channelId: id } : { dmSessionId: id }, req.io);
+                await messagesService.createMessage({
+                    type: forwardType,
+                    company: t.company,
+                    workspace: t.workspace,
+                    channel: t.channel,
+                    dm: t.dm,
+                    participants: t.participants,
+                    sender: userId,
+                    ciphertext: originalMessage.payload?.ciphertext || originalMessage.ciphertext,
+                    messageIv: originalMessage.payload?.messageIv || originalMessage.messageIv,
+                    isEncrypted: true,
+                    attachments: originalMessage.attachments || [],
+                    forwardedFrom: messageId,
+                }, req.io);
+                forwardedCount++;
             } catch (targetError) {
-                logger.error(`Error forwarding to ${target.type}:${target.id}:`, targetError);
-                errors.push({ target, error: targetError.message });
+                errors.push({ target, error: targetError.status && targetError.status < 500 ? targetError.message : 'Could not forward there' });
+                if (!targetError.status || targetError.status >= 500) logger.error({ err: targetError }, '[forward] target failed');
             }
         }
 
@@ -829,93 +474,12 @@ exports.removeReaction = async (req, res) => {
 
 exports.pinMessage = async (req, res) => {
     try {
-        const { messageId } = req.params;
-        const userId = req.user.sub;
         const body = req.body || {};
         const pin = body.pin === undefined ? true : !(body.pin === false || body.pin === 'false');
-
-        let message;
-        try {
-            message = await loadAccessibleMessage(Message, messageId, userId);
-        } catch (e) {
-            if (e.status === 403) return res.status(403).json({ message: 'You must be a member of this conversation to pin messages' });
-            throw e;
-        }
-        if (message.isDeleted || message.isDeletedUniversally) {
-            return res.status(400).json({ message: 'Cannot pin a deleted message' });
-        }
-        if (message.type === 'system') {
-            return res.status(400).json({ message: 'System messages cannot be pinned' });
-        }
-
-        // Idempotent: nothing to change, no events or system messages.
-        if (!!message.isPinned === pin) {
-            return res.json({ message, changed: false });
-        }
-
-        message.isPinned = pin;
-        message.pinnedBy = pin ? userId : null;
-        message.pinnedAt = pin ? new Date() : null;
-        await message.save();
-
-        if (message.channel) {
-            await Channel.updateOne(
-                { _id: message.channel },
-                pin ? { $addToSet: { pinnedMessages: message._id } } : { $pull: { pinnedMessages: message._id } }
-            ).catch(e => logger.warn('[PIN] channel pinnedMessages sync failed:', e.message));
-        }
-
-        const pinner = await identity.users.findById(userId).catch(() => null);
-        const pinnedByName = pinner?.username || null;
-
-        const io = req.app?.get('io');
-        const pinRoom = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
-        if (io) {
-            io.to(pinRoom).emit(pin ? 'message-pinned' : 'message-unpinned', {
-                messageId: String(message._id),
-                // Content fields included so clients that merge this into the
-                // message's `payload` keep the ciphertext needed to decrypt it.
-                ciphertext: message.payload?.ciphertext,
-                messageIv: message.payload?.messageIv,
-                isEncrypted: message.payload?.isEncrypted,
-                isPinned: pin,
-                pinnedBy: pin ? String(userId) : null,
-                pinnedByName: pin ? pinnedByName : null,
-                pinnedAt: message.pinnedAt,
-                channelId: message.channel ? String(message.channel) : null,
-                dmId: message.dm ? String(message.dm) : null,
-            });
-        }
-
-        // Timeline system event. Message content is E2EE, so no snippet is available server-side
-        // except for legacy plaintext messages.
-        try {
-            const snippet = message.payload?.ciphertext ? '' : (message.text || '');
-            const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
-            const systemMsg = await Message.create({
-                type: 'system',
-                systemEvent: message.channel
-                    ? (pin ? 'message_pinned' : 'message_unpinned')
-                    : (pin ? 'dm_message_pinned' : 'dm_message_unpinned'),
-                sender: userId,
-                channel: message.channel || null,
-                dm: message.channel ? null : message.dm,
-                workspace: message.workspace,
-                company: message.company || null,
-                systemData: {
-                    userId,
-                    userName: pinnedByName || 'Someone',
-                    messageSnippet,
-                    pinnedMessageId: String(message._id),
-                },
-            });
-            if (io) io.to(pinRoom).emit('new-message', systemMsg);
-        } catch (sysErr) {
-            logger.error('[SYSTEM MSG] pin system message failed:', sysErr);
-        }
-
-        return res.json({ message, changed: true });
+        const result = await messagesService.setPinned(req.params.messageId, req.user.sub, pin, req.app?.get('io'));
+        return res.json(result);
     } catch (err) {
+        if (err && err.status === 403 && !err.code) return res.status(403).json({ message: 'You must be a member of this conversation to pin messages' });
         return sendError(res, err, 'PIN MESSAGE ERROR');
     }
 };
@@ -951,56 +515,25 @@ exports.createPollMessage = async (req, res) => {
             totalVotes: 0,
         };
 
-        let messagePayload;
+        // Same rules as any message: membership, blocked DMs, announcement channels.
+        const { prepareSend } = require('./sendRules');
+        const { target: t } = await prepareSend(senderId, channelId ? { channelId } : { dmSessionId: dmId }, req.io);
+        const messagePayload = {
+            type: 'poll',
+            company: t.company,
+            workspace: t.workspace,
+            channel: t.channel,
+            dm: t.dm,
+            participants: t.participants,
+            sender: senderId,
+            poll: pollDoc,
+        };
 
-        if (channelId) {
-            
-            const channel = await Channel.findById(channelId);
-            if (!channel) return res.status(404).json({ message: 'Channel not found' });
-            if (!channel.isMember(senderId)) {
-                return res.status(403).json({ message: 'Not a channel member' });
-            }
-            if (channel.postingPolicy === 'admins') {
-                const { canManageChannel } = require('../../features/channels/channelMute.controller');
-                if (!(await canManageChannel(channel, senderId))) {
-                    return res.status(403).json({ code: 'POSTING_RESTRICTED', message: 'Only channel admins can post in this channel.' });
-                }
-            }
-
-            messagePayload = {
-                type: 'poll',
-                company: channel.company,
-                workspace: channel.workspace,
-                channel: channelId,
-                sender: senderId,
-                poll: pollDoc,
-            };
-        } else {
-            
-            const DMSession = require('../../../models/DMSession');
-            const dmSession = await DMSession.findById(dmId).select('participants workspace company').lean();
-            if (!dmSession) return res.status(404).json({ message: 'DM session not found' });
-
-            const isParticipant = dmSession.participants.some(p => String(p) === String(senderId));
-            if (!isParticipant) {
-                return res.status(403).json({ message: 'Not a participant in this DM' });
-            }
-
-            messagePayload = {
-                type: 'poll',
-                company: dmSession.company || null,
-                workspace: dmSession.workspace,
-                dm: dmId,
-                sender: senderId,
-                poll: pollDoc,
-            };
-        }
-
-        
         const message = await messagesService.createMessage(messagePayload, req.io);
 
         return res.status(201).json({ message });
     } catch (err) {
+        if (err && err.status && err.status < 500) return res.status(err.status).json({ message: err.message, ...(err.code ? { code: err.code } : {}) });
         return handleError(res, err, 'CREATE POLL MESSAGE ERROR');
     }
 };
@@ -1412,7 +945,8 @@ exports.getJumpAnchor = async (req, res) => {
             return res.status(404).json({ message: 'Channel not found' });
         }
 
-        const isUserMember = channel.isMember(userId);
+        const { isActiveWorkspaceMember } = require('../conversations/conversationAccess');
+        const isUserMember = channel.isMember(userId) && await isActiveWorkspaceMember(channel.workspace, userId);
         if (!isUserMember) {
             return res.status(403).json({ message: 'Not a channel member' });
         }
@@ -1512,13 +1046,13 @@ exports.getPinnedMessages = async (req, res) => {
     try {
         const { channelId, dmId } = req.query;
         if (!channelId && !dmId) return res.status(400).json({ message: 'channelId or dmId required' });
-        const { checkConversationAccess } = require('../threads/threadAccess');
+        const { checkConversationAccess, historyFilter } = require('../conversations/conversationAccess');
         const access = await checkConversationAccess({ channel: channelId, dm: channelId ? null : dmId }, req.user.sub);
         if (!access.ok) return res.status(access.status).json({ message: access.error });
 
-        const Message = require('./message.model');
         const messages = await Message.find({
             ...(channelId ? { channel: channelId } : { dm: dmId }),
+            ...historyFilter(access),
             isPinned: true,
             isDeletedUniversally: { $ne: true },
             hiddenFor: { $nin: [req.user.sub] },

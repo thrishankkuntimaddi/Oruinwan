@@ -41,13 +41,22 @@ describe('starting a group', () => {
     });
 
     test('two people start a named group with me included in the count', async () => {
-        api.post.mockResolvedValue({ data: { dm: { id: 'g9', isGroup: true } } });
+        api.post.mockResolvedValue({ data: { created: true, dm: { id: 'g9', isGroup: true } } });
         const onStarted = vi.fn();
         render(<GroupStartBar workspaceId="ws1" selected={people(2)} onClear={() => {}} onStarted={onStarted} />);
         fireEvent.change(screen.getByLabelText('Group name'), { target: { value: '  Launch  ' } });
         fireEvent.click(screen.getByRole('button', { name: 'Start group (3)' }));
-        await waitFor(() => expect(onStarted).toHaveBeenCalledWith({ id: 'g9', isGroup: true }));
+        await waitFor(() => expect(onStarted).toHaveBeenCalledWith({ id: 'g9', isGroup: true, created: true }));
         expect(api.post).toHaveBeenCalledWith('/api/v2/dm/group', { workspaceId: 'ws1', memberIds: ['u1', 'u2'], name: 'Launch' });
+    });
+
+    test('without a name, the bar says an existing group with the same people opens instead', async () => {
+        api.post.mockResolvedValue({ data: { created: false, dm: { id: 'g1', isGroup: true } } });
+        const onStarted = vi.fn();
+        render(<GroupStartBar workspaceId="ws1" selected={people(2)} onClear={() => {}} onStarted={onStarted} />);
+        expect(screen.getByText(/It opens that one/)).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Start group (3)' }));
+        await waitFor(() => expect(onStarted).toHaveBeenCalledWith({ id: 'g1', isGroup: true, created: false }));
     });
 
     test('too many people', () => {

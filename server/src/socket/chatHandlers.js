@@ -7,6 +7,7 @@ const messagesService = require("../modules/messages/messages.service");
 const { isDuplicateSend } = require("../modules/messages/clientMessageId");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
+const { checkConversationAccess, checkMessageAccess } = require("../modules/conversations/conversationAccess");
 const privacyService = require("../features/auth/privacy.service");
 const readReceipts = require("../modules/messages/readReceipts.service");
 
@@ -19,15 +20,7 @@ const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../../platform/sdk/eve
 // ---------------------------------------------------------------------------
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 
-function isChannelMember(channel, uid) {
-  if (!channel || !Array.isArray(channel.members)) return false;
-  return channel.members.some(m => sameId(extractMemberId(m), uid));
-}
 
-function isDMParticipant(dm, uid) {
-  if (!dm || !Array.isArray(dm.participants)) return false;
-  return dm.participants.some(p => sameId(p?._id ?? p, uid));
-}
 
 function isWorkspaceMember(workspace, uid) {
   if (!workspace || !Array.isArray(workspace.members)) return false;
@@ -38,21 +31,22 @@ function isWorkspaceMember(workspace, uid) {
  * Load a message and verify the user can access its conversation.
  * Returns { message, room, channel, dm } or null when not found / not allowed.
  */
-async function loadAuthorizedMessage(messageId, uid, select = "channel dm workspace") {
-  if (!messageId) return null;
-  const message = await Message.findById(messageId).select(select);
+async function loadAuthorizedMessage(messageId, uid, select = "channel dm workspace createdAt") {
+  if (!messageId || !/^[a-f\d]{24}$/i.test(String(messageId))) return null;
+  const fields = [...new Set(String(select).split(/\s+/).concat(["channel", "dm", "createdAt"]))].join(" ");
+  const message = await Message.findById(messageId).select(fields);
   if (!message) return null;
-  if (message.channel) {
-    const channel = await Channel.findById(message.channel).select("members workspace").lean();
-    if (!isChannelMember(channel, uid)) return null;
-    return { message, channel, dm: null, room: `channel:${message.channel}` };
-  }
-  if (message.dm) {
-    const dm = await DMSession.findById(message.dm).select("participants workspace").lean();
-    if (!isDMParticipant(dm, uid)) return null;
-    return { message, channel: null, dm, room: `dm:${message.dm}` };
-  }
-  return null;
+  const access = await checkMessageAccess(message, uid);
+  if (!access.ok) return null;
+  return access.type === "channel"
+    ? { message, channel: access.conversation, dm: null, room: `channel:${message.channel}` }
+    : { message, channel: null, dm: access.conversation, room: `dm:${message.dm}` };
+}
+
+/** Socket errors carry the same status/code the REST API would answer with. */
+function socketError(err) {
+  const known = err && err.status && err.status < 500;
+  return { code: (known && err.code) || (known ? "FORBIDDEN" : "SERVER_ERROR"), message: known ? err.message : "Something went wrong" };
 }
 
 const { sharesReadReceipts } = readReceipts;
@@ -98,11 +92,13 @@ module.exports = function registerChatHandlers(io, socket) {
 
     try {
       
+      // Only conversations in workspaces this person is still an active member of.
+      const workspaceIds = await identity.workspaces.memberWorkspaceIds(userId);
       const [dmSessions, channels] = await Promise.all([
-        DMSession.find({ participants: userId })
+        DMSession.find({ participants: userId, workspace: { $in: workspaceIds } })
           .select('_id')
           .lean(),
-        Channel.find({ 'members.user': userId })
+        Channel.find({ 'members.user': userId, workspace: { $in: workspaceIds } })
           .select('_id')
           .lean()
       ]);
@@ -138,122 +134,54 @@ module.exports = function registerChatHandlers(io, socket) {
   })();
 
   
-  socket.on("join-dm", async ({ dmSessionId }) => {
+  // Rooms follow the shared conversation rule: an active workspace member who is a DM
+  // participant or a channel member.
+  socket.on("join-dm", async ({ dmSessionId } = {}) => {
     try {
-      logger.socket('[JOIN][RECEIVE]', {
-        event: 'join-dm',
-        receivedIdOrPayload: { dmSessionId },
-        userId: socket.user?.id
-      });
-
       if (!dmSessionId) {
-        logger.error("join-dm: missing dmSessionId");
         socket.emit("join-error", { event: "join-dm", code: "MISSING_ID", message: "dmSessionId is required" });
         return;
       }
-
-      
-      const dmSession = await DMSession.findById(dmSessionId).select("participants").lean();
-      if (!dmSession) {
-        socket.emit("join-error", { event: "join-dm", code: "NOT_FOUND", message: "DM session not found" });
+      const access = await checkConversationAccess({ dm: dmSessionId }, userId);
+      if (!access.ok) {
+        socket.emit("join-error", { event: "join-dm", code: access.status === 404 ? "NOT_FOUND" : "UNAUTHORIZED", message: access.error });
         return;
       }
-
-      const isParticipant = dmSession.participants.some(p => p.toString() === userId.toString());
-      if (!isParticipant) {
-        logger.error(`[SECURITY] Unauthorized join-dm attempt by user ${userId} on session ${dmSessionId}`);
-        socket.emit("join-error", { event: "join-dm", code: "UNAUTHORIZED", message: "You are not a participant of this DM" });
-        return;
-      }
-
-      const room = `dm:${dmSessionId}`;
-      socket.join(room);
-      logger.info(`✅ [join-dm] User ${socket.user?.id} joined ${room}`);
+      socket.join(`dm:${dmSessionId}`);
     } catch (err) {
       logger.error("Error joining DM room:", err);
       socket.emit("join-error", { event: "join-dm", code: "SERVER_ERROR", message: "Failed to join DM room" });
     }
   });
 
-  
+  const joinChannelRoom = async (channelId) => {
+    if (!channelId) return { error: "Channel ID is required", code: "MISSING_CHANNEL_ID" };
+    const access = await checkConversationAccess({ channel: channelId }, userId);
+    if (!access.ok || !access.isMember) return { error: "Not a member of this channel", code: "UNAUTHORIZED", channelId };
+    socket.join(`channel:${channelId}`);
+    return { success: true };
+  };
+
   socket.on("join-channel", async ({ channelId } = {}) => {
     try {
-      if (!channelId) {
-        logger.error("join-channel: missing channelId");
-        return;
-      }
-      const channel = await Channel.findById(channelId).select("members").lean();
-      if (!isChannelMember(channel, userId)) {
-        logger.warn(`[SECURITY] Unauthorized join-channel attempt by user ${userId} on channel ${channelId}`);
-        socket.emit("join-error", { event: "join-channel", code: "UNAUTHORIZED", message: "Not a member of this channel" });
-        return;
-      }
-      socket.join(`channel:${channelId}`);
+      const result = await joinChannelRoom(channelId);
+      if (result.error) socket.emit("join-error", { event: "join-channel", code: result.code, message: result.error });
     } catch (err) {
       logger.error("Error joining channel room:", err);
       socket.emit("join-error", { event: "join-channel", code: "SERVER_ERROR", message: "Failed to join channel room" });
     }
   });
 
-  
   socket.on("chat:join", async (channelId, callback) => {
     try {
-      logger.socket('[DEBUG][JOIN][RECEIVE]', {
-        event: 'chat:join',
-        receivedIdOrPayload: channelId,
-        userId: socket.user?.id
-      });
-
-      if (!channelId) {
-        logger.error("chat:join: missing channelId");
-        if (callback) callback({ error: 'Channel ID is required', code: 'MISSING_CHANNEL_ID' });
-        return;
-      }
-
-      const channel = await Channel.findById(channelId);
-
-      if (!channel) {
-        if (callback) callback({
-          error: 'Channel not found',
-          code: 'CHANNEL_NOT_FOUND',
-          channelId
-        });
-        return;
-      }
-
-      const isMember = channel.members.some(m => {
-        const memberId =
-          m?.user?._id?.toString() ??
-          m?.user?.toString() ??
-          m?.toString();
-        return memberId === userId.toString();
-      });
-
-      if (!isMember) {
-        if (callback) callback({
-          error: 'Not a member of this channel',
-          code: 'UNAUTHORIZED',
-          channelId
-        });
-        return;
-      }
-
-      const room = `channel:${channelId}`;
-      socket.join(room);
-      logger.info(`✅ [chat:join] User ${userId} joined ${room}`);
-
-      if (callback) callback({ success: true });
-
+      const result = await joinChannelRoom(channelId);
+      if (callback) callback(result);
     } catch (err) {
       logger.error("Error joining channel room (chat:join):", err);
-      if (callback) callback({
-        error: 'Internal server error',
-        code: 'SERVER_ERROR'
-      });
+      if (callback) callback({ error: 'Internal server error', code: 'SERVER_ERROR' });
     }
   });
 
-  
   socket.on("join-workspace", async ({ workspaceId }) => {
     try {
       if (!workspaceId) {
@@ -271,7 +199,7 @@ module.exports = function registerChatHandlers(io, socket) {
 
       const isMember = workspace.members.some(m => {
         const memberId = m?.user?.toString() ?? m?.toString();
-        return memberId === userId.toString();
+        return memberId === userId.toString() && (m?.status || 'active') === 'active';
       });
 
       if (!isMember) {
@@ -319,164 +247,53 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   
+  // Same rules and events as POST /v2/messages/channel and /direct (sendRules.prepareSend,
+  // then createMessage). The sender also gets "message-sent" (or "send-error").
   socket.on("send-message", async (data = {}) => {
     const clientTempId = data?.clientTempId;
-    const fail = (code, message) => socket.emit("send-error", { clientTempId, code, message });
-
     try {
-      const {
-        dmSessionId,
-        receiverId,
-        channelId,
-        workspaceId,
-        ciphertext,
-        messageIv,
-        attachments = [],
-        replyTo = null,
-        parentId: rawParentId = null,
-        quotedMessageId = null,
-      } = data;
-
-      if (!dmSessionId && !channelId && !receiverId) {
-        return fail("MISSING_TARGET", "dmSessionId, channelId or receiverId required");
-      }
-
-      // E2EE is mandatory for text messages (mirrors messages.service.createMessage / REST path).
+      const { dmSessionId, receiverId, channelId, workspaceId, ciphertext, messageIv, attachments = [], replyTo = null, parentId = null, quotedMessageId = null } = data;
       if (!ciphertext || !messageIv) {
-        return fail("E2EE_REQUIRED", "Encrypted payload required (ciphertext + messageIv)");
+        socket.emit("send-error", { clientTempId, code: "E2EE_REQUIRED", message: "Encrypted payload required (ciphertext + messageIv)" });
+        return;
       }
-
-      let channelDoc = null;
-      let dmDoc = null;
-      let createdDM = false;
-
-      if (channelId) {
-        channelDoc = await Channel.findById(channelId).select("members workspace company").lean();
-        if (!channelDoc) return fail("NOT_FOUND", "Channel not found");
-        if (!isChannelMember(channelDoc, userId)) return fail("FORBIDDEN", "Not a member of this channel");
-      } else if (dmSessionId) {
-        dmDoc = await DMSession.findById(dmSessionId).select("participants workspace company").lean();
-        if (!dmDoc) return fail("NOT_FOUND", "DM session not found");
-        if (!isDMParticipant(dmDoc, userId)) return fail("FORBIDDEN", "Not a participant of this DM");
-      } else {
-        // New DM via receiverId: both users must belong to the given workspace.
-        if (!workspaceId) return fail("MISSING_WORKSPACE", "workspaceId required");
-        if (sameId(receiverId, userId)) return fail("INVALID_TARGET", "Cannot DM yourself");
-        const ws = await identity.workspaces.findById(workspaceId);
-        if (!ws) return fail("NOT_FOUND", "Workspace not found");
-        if (!isWorkspaceMember(ws, userId) || !isWorkspaceMember(ws, receiverId)) {
-          return fail("FORBIDDEN", "Both users must be members of this workspace");
-        }
-        const session = await messagesService.findOrCreateDMSession(userId, receiverId, workspaceId);
-        dmDoc = {
-          _id: session._id,
-          participants: session.participants,
-          workspace: session.workspace || workspaceId,
-          company: session.company || ws.company || null,
-        };
-        createdDM = true;
-      }
-
-      const targetChannel = channelDoc ? channelDoc._id : null;
-      const targetDM = dmDoc ? dmDoc._id : null;
-      const workspace = (channelDoc || dmDoc).workspace || null;
-      const company = (channelDoc || dmDoc).company || null;
-
-      // Thread parent must live in the same conversation.
-      const parentId = rawParentId || replyTo || null;
-      let parentDoc = null;
-      if (parentId) {
-        parentDoc = await Message.findById(parentId).select("channel dm parentId sender replyCount workspace threadLockedAt threadLockedByName").lean();
-        const sameConv = parentDoc && (targetChannel ? sameId(parentDoc.channel, targetChannel) : sameId(parentDoc.dm, targetDM));
-        if (!sameConv) return fail("INVALID_PARENT", "Parent message not found in this conversation");
-        if (parentDoc.parentId) return fail("INVALID_PARENT", "Reply in the original thread instead");
-        const locked = require("../modules/threads/threadControls").lockedError(parentDoc);
-        if (locked) return fail(locked.code, locked.message);
-        if (workspace) {
-          const { isFeatureEnabled } = require("../shared/workspaceFeatures");
-          if (!(await isFeatureEnabled(workspace, "threads"))) return fail("FEATURE_DISABLED", "Threads are turned off in this workspace.");
-        }
-      }
-      if (quotedMessageId) {
-        const quoted = await Message.findById(quotedMessageId).select("channel dm").lean();
-        const sameConv = quoted && (targetChannel ? sameId(quoted.channel, targetChannel) : sameId(quoted.dm, targetDM));
-        if (!sameConv) return fail("INVALID_QUOTE", "Quoted message not found in this conversation");
-      }
-
-      if (createdDM) {
-        const otherId = (dmDoc.participants || []).map(p => String(p?._id ?? p)).find(p => p !== String(userId)) || String(receiverId);
-        io.to(`user_${userId}`).emit("new-dm-session", { dmSessionId: targetDM, otherUserId: otherId });
-        io.to(`user_${otherId}`).emit("new-dm-session", { dmSessionId: targetDM, otherUserId: userId });
-        socket.join(`dm:${targetDM}`);
-      }
-
+      const { prepareSend } = require("../modules/messages/sendRules");
+      const target = channelId ? { channelId } : dmSessionId ? { dmSessionId } : { receiverId, workspaceId };
+      const prepared = await prepareSend(userId, { ...target, parentId: parentId || replyTo || null, quotedMessageId, attachments }, io);
+      if (prepared.newDM) socket.join(`dm:${prepared.target.dm}`);
+      const t = prepared.target;
       const saved = await messagesService.createMessage({
         type: "message",
-        company,
-        workspace,
-        channel: targetChannel,
-        dm: targetDM,
+        company: t.company,
+        workspace: t.workspace,
+        channel: t.channel,
+        dm: t.dm,
+        participants: t.participants,
         sender: userId,
-        attachments: Array.isArray(attachments) ? attachments : [],
-        parentId,
+        attachments: prepared.attachments,
+        parentId: prepared.parent ? prepared.parent._id : null,
+        parent: prepared.parent,
         quotedMessageId,
         ciphertext,
         messageIv,
+        mentionText: typeof data.mentionText === "string" ? data.mentionText : "",
+        clientTempId,
         clientMessageId: data.clientMessageId,
-      });
+      }, io);
 
-      // Offline-queue resend of a message already stored: confirm it to the
-      // sender only; the conversation already received it the first time.
-      if (isDuplicateSend(saved)) {
-        socket.emit("message-sent", { message: saved, clientTempId, clientMessageId: saved.clientMessageId, duplicate: true });
-        return;
-      }
-
-      let updatedParent = null;
-      if (parentId) {
-        updatedParent = await Message.findByIdAndUpdate(parentId, {
-          $inc: { replyCount: 1 },
-          $set: { lastReplyAt: new Date() },
-        }, { new: true, select: "replyCount lastReplyAt" }).lean();
-      }
-
-      const populated = saved && typeof saved.toObject === "function" ? saved.toObject() : saved;
-
-      const eventName = parentId ? "thread-reply" : "new-message";
-      const payload = parentId
-        ? { parentId, reply: populated, clientTempId }
-        : { message: populated, clientTempId };
-
-      // One emit to every room, so a socket in several of them gets the event once.
-      const rooms = targetDM
-        ? [`dm:${targetDM}`, ...(dmDoc.participants || []).map(p => `user_${p?._id ?? p}`)]
-        : [`channel:${targetChannel}`];
-      io.to(rooms).emit(eventName, payload);
-
-      if (parentId && updatedParent) {
-        const threads = require("../modules/threads/threads.service");
-        threads.emitThreadCounters(io, { _id: parentId, channel: targetChannel, dm: targetDM }, updatedParent);
-        const replier = await identity.users.findById(userId).catch(() => null);
-        threads.followAndNotify(io, { parent: parentDoc ? { ...parentDoc, _id: parentId } : { _id: parentId }, replierId: userId, senderUsername: replier?.username, mentionText: typeof data.mentionText === "string" ? data.mentionText : "", replyId: saved?._id })
-          .catch(err => logger.warn("[send-message] thread follow/notify failed:", err.message));
-      }
-
-      socket.emit("message-sent", { message: populated, clientTempId });
+      socket.emit("message-sent", { message: saved, clientTempId, clientMessageId: saved?.clientMessageId, ...(isDuplicateSend(saved) ? { duplicate: true } : {}) });
+      if (isDuplicateSend(saved)) return;
 
       activityService.emitWithIo(io, {
         type:        ACTIVITY_TYPES.MESSAGE,
         subtype:     ACTIVITY_SUBTYPES.SENT,
         actor:       userId,
-        workspaceId: workspace || null,
-        payload: {
-          context:   targetChannel ? "channel" : "dm",
-          contextId: targetChannel || targetDM,
-          preview:   "",
-        },
+        workspaceId: t.workspace || null,
+        payload: { context: t.channel ? "channel" : "dm", contextId: t.channel || t.dm, preview: "" },
       }).catch(() => {});
     } catch (err) {
-      logger.error("❌ [SOCKET] send-message failed:", err);
-      fail("SERVER_ERROR", "Failed to send message");
+      if (!err?.status || err.status >= 500) logger.error("❌ [SOCKET] send-message failed:", err);
+      socket.emit("send-error", { clientTempId, ...socketError(err) });
     }
   });
 
@@ -541,201 +358,58 @@ module.exports = function registerChatHandlers(io, socket) {
   });
 
   
+  // Reactions, deletes and pins: the same service calls (and events) as the REST API.
   socket.on("add-reaction", async ({ messageId, emoji } = {}) => {
     try {
-      if (!emoji || typeof emoji !== "string" || emoji.length > 64) {
-        socket.emit("reaction-error", { messageId, code: "INVALID_EMOJI", error: "Invalid emoji" });
-        return;
-      }
-      const ctx = await loadAuthorizedMessage(messageId, userId);
-      if (!ctx) {
-        socket.emit("reaction-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
-      }
-
-      await Message.updateOne({ _id: messageId }, { $pull: { reactions: { userId } } });
-      const updated = await Message.findOneAndUpdate(
-        { _id: messageId },
-        { $push: { reactions: { emoji, userId } } },
-        { new: true, select: "reactions channel dm" }
-      );
-      if (!updated) {
-        socket.emit("reaction-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
-      }
-
-      io.to(ctx.room).emit("reaction-added", {
-        messageId,
-        userId,
-        emoji,
-        reactions: updated.reactions,
-      });
-
+      await messagesService.addReaction(messageId, userId, emoji, io);
       activityService.emitWithIo(io, {
-        type:    ACTIVITY_TYPES.REACTION,
-        subtype: ACTIVITY_SUBTYPES.ADDED,
-        actor:   userId,
-        payload: { messageId, emoji },
+        type: ACTIVITY_TYPES.REACTION, subtype: ACTIVITY_SUBTYPES.ADDED, actor: userId, payload: { messageId, emoji },
       }).catch(() => {});
     } catch (err) {
-      logger.error("ADD REACTION ERROR:", err);
-      socket.emit("reaction-error", { messageId, code: "SERVER_ERROR", error: "Failed to add reaction" });
+      const e = socketError(err);
+      socket.emit("reaction-error", { messageId, code: e.code === "FORBIDDEN" ? "NOT_FOUND" : e.code, error: e.message });
     }
   });
 
-  
-  socket.on("remove-reaction", async ({ messageId } = {}) => {
+  // Without an emoji, removes all of this person's reactions on the message.
+  socket.on("remove-reaction", async ({ messageId, emoji = null } = {}) => {
     try {
-      const ctx = await loadAuthorizedMessage(messageId, userId);
-      if (!ctx) {
-        socket.emit("reaction-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
-      }
-
-      const updated = await Message.findOneAndUpdate(
-        { _id: messageId },
-        { $pull: { reactions: { userId } } },
-        { new: true, select: "reactions channel dm" }
-      );
-      if (!updated) {
-        socket.emit("reaction-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
-      }
-
-      io.to(ctx.room).emit("reaction-removed", {
-        messageId,
-        userId,
-        reactions: updated.reactions,
-      });
+      await messagesService.removeReaction(messageId, userId, emoji, io);
     } catch (err) {
-      logger.error("REMOVE REACTION ERROR:", err);
-      socket.emit("reaction-error", { messageId, code: "SERVER_ERROR", error: "Failed to remove reaction" });
+      const e = socketError(err);
+      socket.emit("reaction-error", { messageId, code: e.code === "FORBIDDEN" ? "NOT_FOUND" : e.code, error: e.message });
     }
   });
 
-  
+  // Delete for everyone when allowed (the sender, or a channel's moderators); otherwise, or with
+  // localOnly, hide it for this person only.
   socket.on("delete-message", async ({ messageId, localOnly = false } = {}) => {
     try {
-      const ctx = await loadAuthorizedMessage(messageId, userId, "channel dm workspace sender hiddenFor parentId");
-      if (!ctx) {
-        socket.emit("delete-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
+      let scope = localOnly ? "me" : "everyone";
+      try {
+        await messagesService.deleteMessage(messageId, userId, io, scope, socket.id);
+      } catch (err) {
+        if (scope !== "everyone" || err?.status !== 403 || /access/i.test(err.message)) throw err;
+        scope = "me";
+        await messagesService.deleteMessage(messageId, userId, io, scope, socket.id);
       }
-      const { message } = ctx;
-
-      const isOwnMessage = sameId(message.sender, userId);
-      let isAdmin = false;
-
-      // Admin rights derive from the message's own channel -> workspace, never from client input:
-      // channel admins, the channel's creator and workspace owners/admins.
-      if (!isOwnMessage && message.channel) {
-        isAdmin = await require("../modules/threads/threadControls").canModerateThread(message, userId).catch(() => false);
-      }
-
-      const hideLocally = async () => {
-        if (!(message.hiddenFor || []).some(h => sameId(h, userId))) {
-          message.hiddenFor.push(userId);
-        }
-        await message.save();
-        socket.emit("message-deleted", { messageId, isLocal: true });
-      };
-
-      if (localOnly || !(isAdmin || isOwnMessage)) {
-        await hideLocally();
-        return;
-      }
-
-      const currentUser = await identity.users.findById(userId);
-      const deleterName = currentUser ? currentUser.username : "Unknown";
-
-      message.isDeletedUniversally = true;
-      message.deletedBy = userId;
-      message.deletedByName = deleterName;
-      message.deletedAt = new Date();
-      await message.save();
-
-      io.to(ctx.room).emit("message-deleted", {
-        messageId,
-        dm: message.dm || null,
-        channel: message.channel || null,
-        parentId: message.parentId ? String(message.parentId) : null,
-        deletedBy: userId,
-        deletedByName: deleterName,
-        isUniversal: true,
-      });
-      if (message.parentId) {
-        const threads = require("../modules/threads/threads.service");
-        const counters = await threads.recountThread(message.parentId);
-        threads.emitThreadCounters(io, { _id: message.parentId, channel: message.channel, dm: message.dm }, counters);
-      }
+      if (scope === "me") socket.emit("message-deleted", { messageId, isLocal: true });
     } catch (err) {
-      logger.error("DELETE MESSAGE ERROR:", err);
-      socket.emit("delete-error", { messageId, code: "SERVER_ERROR", error: "Failed to delete message" });
+      const e = socketError(err);
+      socket.emit("delete-error", { messageId, code: e.code === "FORBIDDEN" ? "NOT_FOUND" : e.code, error: e.message });
     }
   });
 
-  
-  socket.on("pin-message", async ({ messageId } = {}) => {
-    try {
-      const ctx = await loadAuthorizedMessage(messageId, userId);
-      if (!ctx || !ctx.channel) {
-        socket.emit("pin-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
+  for (const [event, pin] of [["pin-message", true], ["unpin-message", false]]) {
+    socket.on(event, async ({ messageId } = {}) => {
+      try {
+        await messagesService.setPinned(messageId, userId, pin, io);
+      } catch (err) {
+        const e = socketError(err);
+        socket.emit("pin-error", { messageId, code: e.code === "FORBIDDEN" ? "NOT_FOUND" : e.code, error: e.message });
       }
-      const channelId = ctx.message.channel;
-
-      const pinnedCount = await Message.countDocuments({ channel: channelId, isPinned: true });
-      if (pinnedCount >= 3) {
-        socket.emit("pin-error", {
-          messageId,
-          code: "PIN_LIMIT",
-          error: "Maximum 3 pins allowed per channel. Unpin a message first.",
-        });
-        return;
-      }
-
-      const message = await Message.findOneAndUpdate(
-        { _id: messageId, channel: channelId },
-        { isPinned: true, pinnedBy: userId, pinnedAt: new Date() },
-        { new: true }
-      ).lean();
-      if (message) await require("../identity/hydrate").hydrate(message, { pinnedBy: { type: "user", fields: ["username"] } });
-
-      const pinner = await identity.users.findById(userId);
-
-      io.to(`channel:${channelId}`).emit("message-pinned", {
-        messageId,
-        pinnedBy: userId,
-        pinnedByName: pinner?.username || "Unknown",
-        message,
-      });
-    } catch (err) {
-      logger.error("PIN MESSAGE ERROR:", err);
-      socket.emit("pin-error", { messageId, code: "SERVER_ERROR", error: "Failed to pin message" });
-    }
-  });
-
-  
-  socket.on("unpin-message", async ({ messageId } = {}) => {
-    try {
-      const ctx = await loadAuthorizedMessage(messageId, userId);
-      if (!ctx || !ctx.channel) {
-        socket.emit("pin-error", { messageId, code: "NOT_FOUND", error: "Message not found" });
-        return;
-      }
-      const channelId = ctx.message.channel;
-
-      await Message.updateOne(
-        { _id: messageId, channel: channelId },
-        { isPinned: false, pinnedBy: null, pinnedAt: null }
-      );
-
-      io.to(`channel:${channelId}`).emit("message-unpinned", { messageId });
-    } catch (err) {
-      logger.error("UNPIN MESSAGE ERROR:", err);
-      socket.emit("pin-error", { messageId, code: "SERVER_ERROR", error: "Failed to unpin message" });
-    }
-  });
+    });
+  }
 
   
   socket.on("knowledge:join", async ({ pageId } = {}) => {

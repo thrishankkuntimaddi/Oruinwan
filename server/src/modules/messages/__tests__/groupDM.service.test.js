@@ -34,7 +34,7 @@ jest.mock('../../../../models/DMSession', () => {
             && s.participants.length === q.participants.$size
             && q.participants.$all.every((p) => s.participants.map(String).includes(String(p)))) || null),
         findById: jest.fn(async (id) => mockStore.sessions.find((s) => String(s._id) === String(id)) || null),
-        create: jest.fn(async (fields) => mockMakeSession(fields)),
+        create: jest.fn(async (fields) => mockMakeSession({ ...fields, _id: mockStore.sessions.length ? mockOid(70 + mockStore.sessions.length) : mockOid(70) })),
     };
     return model;
 });
@@ -170,6 +170,32 @@ describe('members', () => {
         expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_member_removed', text: 'asha removed chen' }));
     });
 
+    test('when the admin leaves, the longest-standing member takes over and can remove people', async () => {
+        await group();
+        const session = mockStore.sessions[0];
+        // Ben joined first, Chen later; Divya is added last.
+        session.memberSince = [
+            { user: mockASHA, at: new Date('2026-01-01') },
+            { user: mockBEN, at: new Date('2026-01-02') },
+            { user: mockCHEN, at: new Date('2026-01-03') },
+        ];
+        await svc.addMembers({ dmId: mockDM, actorId: mockASHA, userIds: [mockDIVYA] }, null);
+        jest.clearAllMocks();
+
+        await svc.removeMember({ dmId: mockDM, actorId: mockASHA, userId: mockASHA }, null);
+        expect(session.createdBy).toBe(mockBEN);
+        expect(Message.create).toHaveBeenCalledWith(expect.objectContaining({ systemEvent: 'group_admin_changed', text: 'ben now manages the group' }));
+        await svc.removeMember({ dmId: mockDM, actorId: mockBEN, userId: mockDIVYA }, null);
+        expect(session.participants).toEqual([mockBEN, mockCHEN]);
+    });
+
+    test('someone no longer in the workspace cannot act on the group', async () => {
+        await group();
+        const identity = require('../../../identity');
+        identity.workspaces.findById.mockResolvedValueOnce({ _id: mockWS, members: [{ user: mockBEN, status: 'removed' }] });
+        await expect(svc.rename({ dmId: mockDM, actorId: mockBEN, name: 'x' }, null)).rejects.toMatchObject({ status: 403, code: 'WORKSPACE_ACCESS_DENIED' });
+    });
+
     test('rename posts a line; a 1:1 mockDM is not a group', async () => {
         await group();
         await svc.rename({ dmId: mockDM, actorId: mockBEN, name: 'Ship it' }, null);
@@ -189,4 +215,39 @@ test('display names', () => {
     expect(svc.groupDisplayName({ participants: [p(mockASHA, 'asha'), p(mockBEN, 'ben'), p(mockCHEN, 'chen'), p(mockDIVYA, 'divya')] }, mockASHA)).toBe('ben, chen and 1 other');
     expect(svc.groupDisplayName({ participants: [p(mockASHA), p(mockBEN, 'b'), p(mockCHEN, 'c'), p(mockDIVYA, 'd'), p(mockOUTSIDER, 'e')] }, mockASHA)).toBe('b, c and 2 others');
     expect(svc.memberSinceFor({ isGroup: false }, mockASHA)).toBeNull();
+});
+
+describe('the conversation scenarios (docs/CONVERSATIONS.md)', () => {
+    // Nani, Mani, Teja and Nikil.
+    const [NANI, MANI, TEJA, NIKIL] = [mockASHA, mockBEN, mockCHEN, mockDIVYA];
+
+    test('B–E: a DM never grows, groups are separate by people, adding grows a group, same people reopen it', async () => {
+        // B: Nani ↔ Mani is a 1:1 DM; adding Teja to it is refused, a new group is made instead.
+        const dm = mockMakeSession({ _id: mockOid(60), participants: [NANI, MANI], isGroup: false });
+        await expect(svc.addMembers({ dmId: dm._id, actorId: MANI, userIds: [TEJA] }, null)).rejects.toMatchObject({ code: 'NOT_A_GROUP' });
+        const nmt = (await svc.createGroup({ creatorId: MANI, workspaceId: mockWS, memberIds: [NANI, TEJA] }, null)).session;
+        expect(String(nmt._id)).not.toBe(String(dm._id));
+        expect(dm.participants).toEqual([NANI, MANI]);
+
+        // C: Nani + Mani + Nikil is a different group.
+        const nmk = (await svc.createGroup({ creatorId: NANI, workspaceId: mockWS, memberIds: [MANI, NIKIL] }, null)).session;
+        expect(String(nmk._id)).not.toBe(String(nmt._id));
+
+        // D: adding Nikil to Nani + Mani + Teja grows that group; Nikil only sees messages from now.
+        const before = Date.now();
+        await svc.addMembers({ dmId: nmt._id, actorId: NANI, userIds: [NIKIL] }, null);
+        expect(nmt.participants).toEqual([MANI, NANI, TEJA, NIKIL]);
+        expect(new Date(svc.memberSinceFor(nmt, NIKIL)).getTime()).toBeGreaterThanOrEqual(before);
+        expect(svc.memberSinceFor(nmt, NANI)).not.toBeNull();
+
+        // E: an unnamed group of those four reopens it; a named one is separate.
+        const again = await svc.createGroup({ creatorId: TEJA, workspaceId: mockWS, memberIds: [NANI, MANI, NIKIL] }, null);
+        expect(again.created).toBe(false);
+        expect(again.session).toBe(nmt);
+        const named = await svc.createGroup({ creatorId: TEJA, workspaceId: mockWS, memberIds: [NANI, MANI, NIKIL], name: 'Launch crew' }, null);
+        expect(named.created).toBe(true);
+        expect(String(named.session._id)).not.toBe(String(nmt._id));
+        // Every conversation keeps its own id, so history stays separate.
+        expect(new Set(mockStore.sessions.map((x) => String(x._id))).size).toBe(mockStore.sessions.length);
+    });
 });

@@ -7,7 +7,13 @@ jest.mock('../../messages/message.model.js', () => ({ create: jest.fn(), findByI
 jest.mock('../../../features/channels/channel.model.js', () => ({ findById: jest.fn() }));
 jest.mock('../../../../models/DMSession', () => ({ findById: jest.fn() }));
 jest.mock('../../notifications/notificationService', () => ({ mention: jest.fn(), threadReply: jest.fn() }));
-jest.mock('../../../identity', () => ({ users: { findManyByIds: jest.fn(async () => new Map()) } }));
+jest.mock('../../../identity', () => ({
+    users: { findManyByIds: jest.fn(async () => new Map()) },
+    workspaces: {
+        // Everyone in these tests is an active member of the workspace.
+        findById: jest.fn(async () => ({ members: new Proxy([], { get: (t, k) => (k === 'some' ? () => true : t[k]) }) })),
+    },
+}));
 jest.mock('../../../identity/hydrate', () => ({ hydrate: async (x) => x, USER_MIN: {} }));
 jest.mock('../../../features/channels/channelMute.controller', () => ({ canManageChannel: jest.fn() }));
 jest.mock('../../../features/presence/presence.service', () => ({ getBulkPresenceAsync: jest.fn() }));
@@ -33,7 +39,7 @@ beforeEach(() => {
     Message.findByIdAndUpdate.mockImplementation(() => ({ lean: async () => ({ _id: 'p1', channel: 'c1', replyCount: 1 }) }));
     Message.updateOne.mockResolvedValue({});
     Message.findById.mockImplementation(() => q({ followers: ['alice'] }));
-    Channel.findById.mockImplementation(() => q({ name: 'general', members: [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }] }));
+    Channel.findById.mockImplementation(() => q({ name: 'general', workspace: 'w1', members: [{ user: 'alice' }, { user: 'bob' }, { user: 'carol' }] }));
 });
 
 test('stores the encrypted reply and emits thread:created, thread-reply and message-updated to the channel', async () => {

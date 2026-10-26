@@ -14,16 +14,14 @@ exports.getChannelThreads = async (req, res) => {
         const userId = req.user.sub;
 
         
-        const channel = await Channel.findById(channelId);
-
-        if (!channel) {
-            return res.status(404).json({ message: "Channel not found" });
+        // Members, and workspace members for public channels (the shared conversation rule).
+        const { checkConversationAccess } = require('../conversations/conversationAccess');
+        const access = await checkConversationAccess({ channel: channelId }, userId);
+        if (!access.ok) {
+            return res.status(access.status === 404 ? 403 : access.status).json({ message: "Access denied: You are not a member of this channel" });
         }
-
-        const memberEntry = channel.members.find(m => String(m.user || m) === String(userId));
-        if (!memberEntry && !channel.isDefault) {
-            return res.status(403).json({ message: "Access denied: You are not a member of this channel" });
-        }
+        const channel = access.conversation;
+        const memberEntry = (channel.members || []).find(m => String(m.user || m) === String(userId));
 
         
         const userJoinedAt = memberEntry?.joinedAt || memberEntry?.createdAt || null;

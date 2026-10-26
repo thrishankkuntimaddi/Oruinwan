@@ -189,9 +189,14 @@ async function searchContacts(workspaceId, userId, searchRegex, { limit, offset 
             : String(searchRegex || '');
         const contacts = await wsQueries.searchPeople(workspace, userId, text, { limit: limit || 10, offset: offset || 0 });
 
+        // `_id` and `username` match the member list (GET /workspaces/:id/members), so the
+        // apps can treat a search result like any member; `id` and `name` stay for older apps.
         return contacts.map(user => ({
             id: user._id,
+            _id: user._id,
             type: 'contact',
+            username: user.username || null,
+            displayName: user.name || null,
             name: user.username || user.name || user.email,
             email: user.email,
             profilePicture: user.profilePicture,
@@ -212,18 +217,28 @@ async function searchContacts(workspaceId, userId, searchRegex, { limit, offset 
 async function accessibleScopes(workspaceId, userId) {
     const [channels, dms] = await Promise.all([
         Channel.find({ workspace: workspaceId, 'members.user': userId }).select('_id').lean(),
-        DMSession.find({ workspace: workspaceId, participants: userId }).select('_id').lean(),
+        DMSession.find({ workspace: workspaceId, participants: userId }).select('_id isGroup memberSince').lean(),
     ]);
+    // Group members only find messages from when they joined.
+    const { groupJoinedAt } = require('../../modules/conversations/conversationAccess');
+    const dmSince = [];
+    const dmIds = [];
+    for (const d of dms || []) {
+        const since = groupJoinedAt(d, userId);
+        if (since) dmSince.push({ dm: d._id, since: new Date(since) });
+        else dmIds.push(d._id);
+    }
     return {
         channelIds: (channels || []).map(c => c._id),
-        dmIds: (dms || []).map(d => d._id),
+        dmIds,
+        dmSince,
     };
 }
 exports.accessibleScopes = accessibleScopes;
 
 async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, channelId, limit, offset, scopes, meta } = {}) {
     try {
-        const { channelIds, dmIds } = scopes || await accessibleScopes(workspaceId, userId);
+        const { channelIds, dmIds, dmSince = [] } = scopes || await accessibleScopes(workspaceId, userId);
         let channelScope = channelIds;
         if (channelId) {
             channelScope = channelIds.filter(id => String(id) === String(channelId));
@@ -234,7 +249,10 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
             channelScope = channelScope.filter(id => wanted.has(String(id)));
         }
         const parentScope = [{ channel: { $in: channelScope } }];
-        if (!channelId && !meta?.channelIds) parentScope.push({ dm: { $in: dmIds } });
+        if (!channelId && !meta?.channelIds) {
+            parentScope.push({ dm: { $in: dmIds } });
+            for (const { dm, since } of dmSince) parentScope.push({ dm, createdAt: { $gte: since } });
+        }
 
         const query = {
             workspace: workspaceId,

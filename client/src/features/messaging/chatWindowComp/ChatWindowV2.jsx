@@ -1865,8 +1865,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     style={{ position: 'absolute', left: 16, right: 16, bottom: 96, zIndex: 25, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', boxShadow: '0 8px 28px rgba(0,0,0,0.14)' }}>
                     <span style={{ flex: 1, fontSize: 13 }}>
                         {groupOffer.map((p) => `@${p.username}`).join(', ')} {groupOffer.length === 1 ? "isn't" : "aren't"} in this chat. {chat?.isGroup
-                            ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group? They see the whole conversation.`
-                            : `Start a group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}?`}
+                            ? `Add ${groupOffer.length === 1 ? 'them' : 'them all'} to the group? They'll see messages from now on, not earlier ones.`
+                            : `Start a new group with ${chat?.name || 'them'} and ${groupOffer.length === 1 ? 'them' : 'everyone you mentioned'}? This chat stays as it is.`}
                     </span>
                     <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm" onClick={() => setGroupOffer(null)} disabled={mentionInviteBusy}>Not now</button>
                     <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="group-offer-start" disabled={mentionInviteBusy}

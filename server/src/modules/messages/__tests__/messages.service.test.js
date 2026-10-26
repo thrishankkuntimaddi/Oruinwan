@@ -117,48 +117,79 @@ describe('Messages Service', () => {
                 mockIo
             );
 
-            expect(mockIo.to).toHaveBeenCalledWith('channel:ch123');
+            expect(mockIo.to).toHaveBeenCalledWith(['channel:ch123']);
             expect(mockIo.emit).toHaveBeenCalledWith('new-message', expect.anything());
         });
     });
 
     describe('findOrCreateDMSession', () => {
-        it('should return existing DM session if found', async () => {
-            const mockSession = {
-                _id: 'dm123',
-                participants: ['user1', 'user2'],
-                lastMessageAt: new Date(),
-                save: jest.fn()
-            };
+        const U1 = 'a'.repeat(24);
+        const U2 = 'b'.repeat(24);
+        const WS = 'c'.repeat(24);
+        const KEY = `${WS}:${U1}:${U2}`;
+        const sortable = (v) => ({ sort: jest.fn().mockResolvedValue(v), then: (res, rej) => Promise.resolve(v).then(res, rej) });
+        const workspace = (members) => ({ _id: WS, company: null, members: members.map(([user, status]) => ({ user, status })) });
 
-            DMSession.findOne = jest.fn().mockResolvedValue(mockSession);
-
-            const result = await messagesService.findOrCreateDMSession(
-                'user1',
-                'user2',
-                'ws123'
-            );
-
-            expect(DMSession.findOne).toHaveBeenCalled();
-            expect(result._id).toBe('dm123');
-            expect(mockSession.save).toHaveBeenCalled();
+        beforeEach(() => {
+            DMSession.dmPairKey = (w, a, b) => `${w}:${[String(a), String(b)].sort().join(':')}`;
+            DMSession.updateOne = jest.fn().mockResolvedValue({});
         });
 
-        it('should create new DM session if not found', async () => {
-            const mockWorkspace = { _id: 'ws123', company: 'comp123' };
-            const mockNewSession = { _id: 'dm456', participants: ['user1', 'user2'] };
+        it('returns the existing DM of the pair', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active'], [U2, 'active']]));
+            DMSession.findOne = jest.fn().mockReturnValueOnce(sortable({ _id: 'dm123', pairKey: KEY, participants: [U1, U2] }));
+            const result = await messagesService.findOrCreateDMSession(U2, U1, WS);
+            expect(DMSession.findOne).toHaveBeenCalledWith({ pairKey: KEY });
+            expect(result._id).toBe('dm123');
+        });
 
-            DMSession.findOne = jest.fn().mockResolvedValue(null);
-            identity.workspaces.findById.mockResolvedValue(mockWorkspace);
-            
-            DMSession.findOneAndUpdate = jest.fn().mockResolvedValue(mockNewSession);
+        it('finds a DM from before pair keys and gives it the key', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active'], [U2, 'active']]));
+            DMSession.findOne = jest.fn()
+                .mockReturnValueOnce(sortable(null))
+                .mockReturnValueOnce(sortable({ _id: 'dmOld', participants: [U1, U2] }));
+            const result = await messagesService.findOrCreateDMSession(U1, U2, WS);
+            expect(result._id).toBe('dmOld');
+            expect(DMSession.updateOne).toHaveBeenCalledWith({ _id: 'dmOld' }, { $set: { pairKey: KEY } });
+        });
 
-            const result = await messagesService.findOrCreateDMSession('user1', 'user2', 'ws123');
-
-            expect(DMSession.findOneAndUpdate).toHaveBeenCalled();
+        it('creates one DM per pair with an upsert on the pair key', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active'], [U2, 'active']]));
+            DMSession.findOne = jest.fn().mockReturnValue(sortable(null));
+            DMSession.findOneAndUpdate = jest.fn().mockResolvedValue({ _id: 'dm456', participants: [U1, U2] });
+            const result = await messagesService.findOrCreateDMSession(U1, U2, WS);
+            expect(DMSession.findOneAndUpdate).toHaveBeenCalledWith(
+                { pairKey: KEY },
+                { $setOnInsert: expect.objectContaining({ pairKey: KEY, participants: [U1, U2], isGroup: false }) },
+                { upsert: true, new: true },
+            );
             expect(result._id).toBe('dm456');
         });
 
+        it('returns the DM the other request made when both open it at once', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active'], [U2, 'active']]));
+            DMSession.findOne = jest.fn()
+                .mockReturnValueOnce(sortable(null))
+                .mockReturnValueOnce(sortable(null))
+                .mockReturnValueOnce(sortable({ _id: 'dmRace', pairKey: KEY }));
+            DMSession.findOneAndUpdate = jest.fn().mockRejectedValue(Object.assign(new Error('dup'), { code: 11000 }));
+            const result = await messagesService.findOrCreateDMSession(U1, U2, WS);
+            expect(result._id).toBe('dmRace');
+        });
+
+        it('refuses people who are not active members of the workspace', async () => {
+            identity.workspaces.findById.mockResolvedValue(workspace([[U1, 'active'], [U2, 'removed']]));
+            DMSession.findOne = jest.fn();
+            await expect(messagesService.findOrCreateDMSession(U1, U2, WS)).rejects.toMatchObject({ status: 403 });
+            identity.workspaces.findById.mockResolvedValue(workspace([[U2, 'active']]));
+            await expect(messagesService.findOrCreateDMSession(U1, U2, WS)).rejects.toMatchObject({ status: 403 });
+            expect(DMSession.findOne).not.toHaveBeenCalled();
+        });
+
+        it('refuses invalid ids and a DM with yourself', async () => {
+            await expect(messagesService.findOrCreateDMSession('x', U2, WS)).rejects.toMatchObject({ status: 400 });
+            await expect(messagesService.findOrCreateDMSession(U1, U1, WS)).rejects.toMatchObject({ status: 400 });
+        });
     });
 
     describe('fetchMessages', () => {

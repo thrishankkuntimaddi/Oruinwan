@@ -44,7 +44,11 @@ jest.mock('../../messages/message.model.js', () => ({
 jest.mock('../../../features/channels/channel.model.js', () => ({ findById: jest.fn() }));
 jest.mock('../../../../models/DMSession', () => ({ findById: jest.fn() }));
 jest.mock('../../../identity', () => ({
-    workspaces: { membership: jest.fn().mockResolvedValue(null) },
+    workspaces: {
+        membership: jest.fn().mockResolvedValue(null),
+        // Alice and Bob are active members of the channel's workspace.
+        findById: jest.fn().mockResolvedValue({ members: ['000000000000000000000001', '000000000000000000000002'].map((user) => ({ user, status: 'active' })) }),
+    },
     users: { findById: jest.fn().mockResolvedValue({ _id: 'x', username: 'bob' }) },
 }));
 jest.mock('../../../identity/hydrate', () => ({ hydrate: jest.fn(async (doc) => doc) }));

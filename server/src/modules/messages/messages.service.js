@@ -82,6 +82,11 @@ async function createMessage(messageData, io = null) {
         
         mentionText = '',
         clientMessageId: rawClientMessageId = null,
+        clientTempId = null,
+        // DM participants (their own rooms hear about the message too) and, for a thread reply,
+        // the parent message (sendRules.prepareSend returns both).
+        participants = null,
+        parent = null,
     } = messageData;
 
     // Offline-queue resend of a message this sender already stored: hand back the
@@ -156,6 +161,11 @@ async function createMessage(messageData, io = null) {
     }
 
     
+    if (dm && !parentId) {
+        DMSession.updateOne({ _id: dm }, { $set: { lastMessageAt: message.createdAt || new Date() } })
+            .catch(err => logger.warn({ err: err?.message }, '[createMessage] DM lastMessageAt not updated'));
+    }
+
     if (message.quotedMessageId) {
         await message.populate('quotedMessageId');
     }
@@ -170,15 +180,24 @@ async function createMessage(messageData, io = null) {
     
     
     if (io) {
-        const room = channel ? `channel:${channel}` : `dm:${dm}`;
-        const messageObject = { ...hydratedMessage };
-
-        
+        const { roomsFor } = require('./sendRules');
+        const rooms = roomsFor({ channel, dm, participants });
+        const messageObject = { ...hydratedMessage, ...(clientTempId ? { clientTempId } : {}) };
         messageObject.replyCount = 0;
         messageObject.reactions = messageObject.reactions || [];
         messageObject.isPinned = messageObject.isPinned || false;
 
-        io.to(room).emit('new-message', messageObject);
+        if (parentId) {
+            // A thread reply: it goes to the thread, never the main conversation.
+            io.to(rooms).emit('thread-reply', { parentId: String(parentId), reply: messageObject, clientTempId });
+        } else {
+            io.to(rooms).emit('new-message', messageObject);
+        }
+    }
+    if (parentId) {
+        // Counters on the parent, then followers and @mentions in the thread.
+        threadReplyFollowUp(message, hydratedMessage, { channel, dm, parentId, parent, sender, mentionText }, io)
+            .catch(err => logger.warn({ err: err?.message }, '[createMessage] thread follow-up failed (non-fatal)'));
     }
 
     
@@ -201,6 +220,25 @@ async function createMessage(messageData, io = null) {
 
     // Plain object with `sender` filled in (what clients and callers read).
     return hydratedMessage;
+}
+
+/** After a thread reply: parent counters live everywhere, then followers and @mentions. */
+async function threadReplyFollowUp(message, hydrated, { channel, dm, parentId, parent, sender, mentionText }, io) {
+    const threads = require('../threads/threads.service');
+    const updated = await Message.findByIdAndUpdate(parentId, {
+        $inc: { replyCount: 1 },
+        $set: { lastReplyAt: message.createdAt || new Date() },
+    }, { new: true, select: 'replyCount lastReplyAt' }).lean();
+    if (updated) threads.emitThreadCounters(io, { _id: parentId, channel, dm }, updated);
+    const parentDoc = parent ? { ...parent, _id: parentId } : await Message.findById(parentId).lean();
+    if (!parentDoc) return;
+    await threads.followAndNotify(io, {
+        parent: parentDoc,
+        replierId: sender,
+        senderUsername: hydrated?.sender?.username,
+        mentionText: typeof mentionText === 'string' ? mentionText : '',
+        replyId: message._id,
+    });
 }
 
 /**
@@ -582,65 +620,57 @@ async function fetchMessages(query, options = {}) {
     }
 }
 
+/**
+ * The 1:1 DM of two people in a workspace, created when missing. Both must be active members
+ * of the workspace. One conversation per pair: `pairKey` is unique, and DMs made before it
+ * existed are found by their participants and given the key.
+ */
 async function findOrCreateDMSession(userId1, userId2, workspaceId) {
-    
-    
-    
-    
-    
-    
-    
-    const sortedParticipants = [String(userId1), String(userId2)].sort();
+    const a = String(userId1);
+    const b = String(userId2);
+    const fail = (status, message, code) => Object.assign(new Error(message), { status, statusCode: status, code });
+    if (![a, b, String(workspaceId)].every((id) => mongoose.isValidObjectId(id))) throw fail(400, 'Invalid conversation', 'INVALID_ID');
+    if (a === b) throw fail(400, 'Cannot start a direct message with yourself', 'INVALID_TARGET');
 
-    
-    let dmSession = await DMSession.findOne({
-        workspace: workspaceId,
-        participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
-    });
+    const workspace = await identity.workspaces.findById(workspaceId, { activeOnly: true });
+    if (!workspace) throw fail(404, 'Workspace not found', 'WORKSPACE_NOT_FOUND');
+    const active = new Set((workspace.members || [])
+        .filter((m) => (m.status || 'active') === 'active')
+        .map((m) => String(m.user?._id || m.user)));
+    if (!active.has(a)) throw fail(403, 'You are not a member of this workspace', 'WORKSPACE_ACCESS_DENIED');
+    if (!active.has(b)) throw fail(403, 'That person is not a member of this workspace', 'NOT_A_MEMBER');
 
+    const pairKey = DMSession.dmPairKey(workspaceId, a, b);
+    const sorted = [a, b].sort();
+    let dmSession = await DMSession.findOne({ pairKey })
+        || await DMSession.findOne({ workspace: workspaceId, participants: { $all: sorted, $size: 2 }, isGroup: { $ne: true } }).sort({ createdAt: 1 });
+
+    if (dmSession && !dmSession.pairKey) {
+        // A DM from before pair keys: claim the key (another copy may already hold it).
+        await DMSession.updateOne({ _id: dmSession._id }, { $set: { pairKey } }).catch(() => {});
+    }
     if (!dmSession) {
-        
-        const workspace = await identity.workspaces.findById(workspaceId);
-        if (!workspace) {
-            throw new Error('Workspace not found');
-        }
-
-        
-        
-        
-        
         try {
             dmSession = await DMSession.findOneAndUpdate(
-                {
-                    workspace: workspaceId,
-                    participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
-                },
+                { pairKey },
                 {
                     $setOnInsert: {
+                        pairKey,
                         workspace: workspaceId,
                         company: workspace.company || null,
-                        participants: sortedParticipants,
-                        lastMessageAt: new Date()
-                    }
+                        participants: sorted,
+                        isGroup: false,
+                        lastMessageAt: new Date(),
+                    },
                 },
                 { upsert: true, new: true }
             );
-        } catch (upsertErr) {
-            
-            if (upsertErr.code === 11000) {
-                dmSession = await DMSession.findOne({
-                    workspace: workspaceId,
-                    participants: { $all: sortedParticipants, $size: 2 }, isGroup: { $ne: true }
-                });
-                if (!dmSession) throw upsertErr;
-            } else {
-                throw upsertErr;
-            }
+        } catch (err) {
+            // Both people opened the DM at the same moment: the other request made it.
+            if (err?.code !== 11000) throw err;
+            dmSession = await DMSession.findOne({ pairKey });
+            if (!dmSession) throw err;
         }
-
-    } else {
-        dmSession.lastMessageAt = new Date();
-        await dmSession.save();
     }
 
     // Every call (not only creation) makes sure the key exists and both
@@ -917,6 +947,19 @@ function httpError(status, message) {
     return Object.assign(new Error(message), { status });
 }
 
+/** The message, when the person can still see it (and, with forWrite, act in its conversation). */
+async function messageInReach(messageId, userId, { forWrite = false } = {}) {
+    if (!mongoose.isValidObjectId(String(messageId))) throw httpError(400, 'Invalid message id');
+    const message = await Message.findById(messageId);
+    if (!message) throw httpError(404, 'Message not found');
+    const { checkMessageAccess } = require('../conversations/conversationAccess');
+    const access = await checkMessageAccess(message, userId, { forWrite });
+    if (!access.ok) {
+        throw Object.assign(httpError(access.status === 404 ? 404 : 403, access.status === 404 ? 'Message not found' : access.error), access.code ? { code: access.code } : {});
+    }
+    return message;
+}
+
 function roomFor(message) {
     if (message.channel) return `channel:${message.channel._id || message.channel}`;
     if (message.dm) return `dm:${message.dm._id || message.dm}`;
@@ -945,8 +988,8 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
         throw httpError(400, 'messageIv is required with ciphertext');
     }
 
-    const message = await Message.findById(messageId);
-    if (!message) throw httpError(404, 'Message not found');
+    // Still in the conversation (a removed member can't change what they wrote there).
+    const message = await messageInReach(messageId, userId);
 
     if (String(message.sender?._id || message.sender) !== userId.toString()) {
         throw httpError(403, 'Unauthorized: only the sender can edit this message');
@@ -993,8 +1036,7 @@ async function editMessage(messageId, userId, { text, ciphertext, messageIv } = 
  * editHistory first, so no version is ever lost.
  */
 async function restoreMessageVersion(messageId, userId, versionIndex, io) {
-    const message = await Message.findById(messageId);
-    if (!message) throw httpError(404, 'Message not found');
+    const message = await messageInReach(messageId, userId);
 
     const senderId = message.sender?._id || message.sender;
     if (String(senderId) !== String(userId)) {
@@ -1044,8 +1086,7 @@ async function restoreMessageVersion(messageId, userId, versionIndex, io) {
 }
 
 async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId = null) {
-    const message = await Message.findById(messageId);
-    if (!message) throw httpError(404, 'Message not found');
+    const message = await messageInReach(messageId, userId);
 
     const room = message.channel
         ? `channel:${message.channel}`
@@ -1132,9 +1173,80 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     return message;
 }
 
+/**
+ * Pin or unpin a message (REST and Socket.IO). Anyone in the conversation may, unless the
+ * company turned `pinMessages` off for their role. Idempotent: no events when nothing changes.
+ */
+async function setPinned(messageId, userId, pin, io) {
+    const { companyPermission } = require('../../shared/companyPermissions');
+    if ((await companyPermission(userId, 'pinMessages')) === false) {
+        throw Object.assign(httpError(403, 'Your role cannot pin messages'), { code: 'PERMISSION_DENIED' });
+    }
+    const message = await messageInReach(messageId, userId);
+    if (message.isDeleted || message.isDeletedUniversally) throw httpError(400, 'Cannot pin a deleted message');
+    if (message.type === 'system') throw httpError(400, 'System messages cannot be pinned');
+    if (!!message.isPinned === !!pin) return { message, changed: false };
+
+    message.isPinned = !!pin;
+    message.pinnedBy = pin ? userId : null;
+    message.pinnedAt = pin ? new Date() : null;
+    await message.save();
+
+    if (message.channel) {
+        await _Channel.updateOne(
+            { _id: message.channel },
+            pin ? { $addToSet: { pinnedMessages: message._id } } : { $pull: { pinnedMessages: message._id } }
+        ).catch(e => logger.warn('[PIN] channel pinnedMessages sync failed:', e.message));
+    }
+
+    const pinner = await identity.users.findById(userId).catch(() => null);
+    const pinnedByName = pinner?.username || null;
+    const room = roomFor(message);
+    if (io && room) {
+        io.to(room).emit(pin ? 'message-pinned' : 'message-unpinned', {
+            messageId: String(message._id),
+            // Content fields included so clients that merge this into the
+            // message's `payload` keep the ciphertext needed to decrypt it.
+            ciphertext: message.payload?.ciphertext,
+            messageIv: message.payload?.messageIv,
+            isEncrypted: message.payload?.isEncrypted,
+            isPinned: !!pin,
+            pinnedBy: pin ? String(userId) : null,
+            pinnedByName: pin ? pinnedByName : null,
+            pinnedAt: message.pinnedAt,
+            channelId: message.channel ? String(message.channel) : null,
+            dmId: message.dm ? String(message.dm) : null,
+        });
+    }
+
+    // Timeline line. Message content is end-to-end encrypted, so no snippet except for
+    // legacy plaintext messages.
+    try {
+        const snippet = message.payload?.ciphertext ? '' : (message.text || '');
+        const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
+        const systemMsg = await Message.create({
+            type: 'system',
+            systemEvent: message.channel
+                ? (pin ? 'message_pinned' : 'message_unpinned')
+                : (pin ? 'dm_message_pinned' : 'dm_message_unpinned'),
+            sender: userId,
+            channel: message.channel || null,
+            dm: message.channel ? null : message.dm,
+            workspace: message.workspace,
+            company: message.company || null,
+            systemData: { userId, userName: pinnedByName || 'Someone', messageSnippet, pinnedMessageId: String(message._id) },
+        });
+        if (io && room) io.to(room).emit('new-message', systemMsg);
+    } catch (sysErr) {
+        logger.error('[SYSTEM MSG] pin system message failed:', sysErr);
+    }
+    return { message, changed: true };
+}
+
 async function addReaction(messageId, userId, emoji, io) {
-    const message = await Message.findById(messageId);
-    if (!message) throw new Error('Message not found');
+    if (typeof emoji !== 'string' || !emoji.trim() || emoji.length > 64) throw httpError(400, 'Invalid emoji');
+    // Only people in the conversation react (not in a blocked DM).
+    const message = await messageInReach(messageId, userId, { forWrite: true });
 
     // Several reactions per person (each emoji once); DELETE /react removes one.
     const already = message.reactions.some(
@@ -1171,12 +1283,12 @@ async function addReaction(messageId, userId, emoji, io) {
     return message;
 }
 
+/** Removes this person's `emoji` reaction, or all of their reactions when emoji is empty. */
 async function removeReaction(messageId, userId, emoji, io) {
-    const message = await Message.findById(messageId);
-    if (!message) throw new Error('Message not found');
+    const message = await messageInReach(messageId, userId);
 
     message.reactions = message.reactions.filter(
-        r => !(r.userId.toString() === userId.toString() && r.emoji === emoji)
+        r => !(r.userId.toString() === userId.toString() && (!emoji || r.emoji === emoji))
     );
     await message.save();
 
@@ -1434,7 +1546,7 @@ async function toggleBookmark(messageId, userId) {
 async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
     const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
     const sk = Math.max(parseInt(skip, 10) || 0, 0);
-    return Message.find({
+    const rows = await Message.find({
         bookmarkedBy: userId,
         isDeletedUniversally: { $ne: true },
         hiddenFor: { $ne: userId },
@@ -1444,8 +1556,16 @@ async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
         .limit(lim)
         .select('-hiddenFor -bookmarkedBy -editHistory')
         .populate('channel', 'name')
-        .lean()
-        .then((rows) => hydrate(rows, { sender: SENDER_MIN }));
+        .lean();
+    // Saved earlier, but only shown while the person can still read the conversation.
+    const { checkMessageAccess } = require('../conversations/conversationAccess');
+    const visible = [];
+    for (const m of rows) {
+        const access = await checkMessageAccess({ ...m, channel: m.channel?._id || m.channel }, userId);
+        if (access.ok) visible.push(m);
+    }
+    await hydrate(visible, { sender: SENDER_MIN });
+    return visible;
 }
 
 module.exports = {
@@ -1455,6 +1575,7 @@ module.exports = {
     fetchMessages,
     findOrCreateDMSession,
     getUserDMSessions,
+    setPinned,
     getChannelUnreadCounts,
     getChannelLastMessages,
     messagePreviewLabel,
