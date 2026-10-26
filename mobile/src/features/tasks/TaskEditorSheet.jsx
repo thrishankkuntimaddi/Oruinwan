@@ -85,8 +85,12 @@ export function PeoplePicker({ open, onClose, value, onChange, title = 'Assignee
   );
 }
 
-/** Create a task. `initial` pre-fills it (e.g. from a message). */
-export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
+/**
+ * Create a task. `initial` pre-fills it (e.g. from a message). With `source` ({ kind: 'note' | 'file', id })
+ * the task is made from that note or file and both link to each other; `onExisting(taskId)` runs
+ * when it already had a task.
+ */
+export function TaskEditorSheet({ open, onClose, initial, onCreated, source, onExisting }) {
   const ws = useSession((s) => s.workspaceId);
   const me = useSession((s) => s.user);
   const { data: members } = useMembers();
@@ -117,14 +121,27 @@ export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
     if (!title.trim() || limitKey) return;
     setBusy(true);
     try {
-      const task = await api().createTask(ws, {
+      const fields = {
         title: title.trim(),
         description: description.trim(),
         priority,
         due: fromDateInput(due),
         assigneeIds: assignees,
-        channelId: initial?.channelId || null,
-      });
+      };
+      if (source) {
+        const task = await api().makeTaskFrom(source.kind, source.id, fields);
+        invalidate('tasks', `${source.kind}:${source.id}`);
+        onClose();
+        if (task.existing) {
+          toast(`This ${source.kind} is already a task`);
+          onExisting?.(task.id);
+        } else {
+          toast('Task created', 'success');
+          onCreated?.(task);
+        }
+        return;
+      }
+      const task = await api().createTask(ws, { ...fields, channelId: initial?.channelId || null });
       invalidate('tasks');
       toast('Task created', 'success');
       onClose();
@@ -141,10 +158,10 @@ export function TaskEditorSheet({ open, onClose, initial, onCreated }) {
       <Sheet
         open={open}
         onClose={onClose}
-        title="New task"
+        title={source ? `Make a task from this ${source.kind}` : 'New task'}
         footer={
           <Button block onClick={submit} loading={busy} disabled={!title.trim() || Boolean(limitKey)}>
-            Create task
+            {source ? 'Make task' : 'Create task'}
           </Button>
         }
       >

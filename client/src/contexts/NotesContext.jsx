@@ -58,7 +58,9 @@ const mapNote = (note) => ({
     isArchived: note.isArchived || false,
     attachments: note.attachments || [],
     tags: note.tags || [],
-    type: note.type || "note"
+    type: note.type || "note",
+    // The task made from this note ("Make a task"), if any.
+    linkedTaskId: note.linkedTaskId ? idOf(note.linkedTaskId) : null,
 });
 
 function errorMessage(error, fallback) {
@@ -145,6 +147,11 @@ export const NotesProvider = ({ children }) => {
         const inflight = inflightRef.current[mapped.id];
         if (!pending && !inflight) return mapped;
         return { ...mapped, ...(inflight || {}), ...(pending || {}), updatedAt: prevNote?.updatedAt || mapped.updatedAt };
+    }, []);
+
+    /** Remember the task made from a note (after "Make a task"), without a save. */
+    const setNoteTask = useCallback((noteId, taskId) => {
+        setNotes(prev => prev.map(n => (n.id === String(noteId) ? { ...n, linkedTaskId: taskId ? String(taskId) : null } : n)));
     }, []);
 
     const loadNotes = useCallback(async () => {
@@ -241,12 +248,18 @@ export const NotesProvider = ({ children }) => {
         socket.on("note-updated", handleNoteUpdated);
         socket.on("note-deleted", handleNoteDeleted);
         socket.on("note-shared", handleNoteShared);
+        const handleNoteTask = ({ noteId, taskId } = {}) => {
+            if (!noteId) return;
+            setNotes(prev => prev.map(n => (n.id === String(noteId) ? { ...n, linkedTaskId: taskId ? String(taskId) : null } : n)));
+        };
+        socket.on("note:task_created", handleNoteTask);
 
         return () => {
             socket.off("note-created", handleNoteCreated);
             socket.off("note-updated", handleNoteUpdated);
             socket.off("note-deleted", handleNoteDeleted);
             socket.off("note-shared", handleNoteShared);
+            socket.off("note:task_created", handleNoteTask);
         };
     }, [socket, showToast, mergeServerNote, currentUserId]);
 
@@ -523,6 +536,7 @@ export const NotesProvider = ({ children }) => {
             shareNote,
             fetchNote,
             getNoteAccess,
+            setNoteTask,
             matchesSearch,
             searchQuery,
             setSearchQuery,

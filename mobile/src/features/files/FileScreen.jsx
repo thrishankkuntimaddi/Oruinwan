@@ -1,7 +1,7 @@
 // One file from the workspace library: open it, tags, versions (upload a new one, restore an
 // old one), comments and who it is shared with.
 import { useRef, useState } from 'react';
-import { ExternalLink, File, Globe, Lock, MessageSquare, RotateCcw, Send, Tag, Upload, UserMinus, X } from 'lucide-react';
+import { ExternalLink, File, Globe, Lock, MessageSquare, RotateCcw, Send, SquareCheckBig, Tag, Upload, UserMinus, X } from 'lucide-react';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useDirectory } from '../../data/hooks.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
@@ -18,7 +18,9 @@ import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { openFile } from '../media/media.js';
-import { PeoplePicker } from '../tasks/TaskEditorSheet.jsx';
+import { PeoplePicker, TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
+import { fileTaskInitial, sourceTaskAction } from '../tasks/sourceTask.js';
+import { nav } from '../../app/nav.js';
 import { normalizeTags } from './filesUi.js';
 
 const ROLES = { view: 'Can view', edit: 'Can edit', download: 'Can download' };
@@ -297,6 +299,29 @@ function Sharing({ file }) {
   );
 }
 
+/** "Make a task" / "Open task" for a library file; the task links back to the file. */
+function FileTaskButton({ file }) {
+  const [making, setMaking] = useState(false);
+  if (!api().makeTaskFrom) return null;
+  const openTask = (taskId) => nav.push('task', { id: taskId }, { tab: 'tasks' });
+  const linkTask = (taskId) => setQueryData(`file:${file.id}`, (f) => (f ? { ...f, linkedTaskId: taskId } : f));
+  return (
+    <>
+      <Button size="sm" variant="secondary" icon={SquareCheckBig} onClick={() => (file.linkedTaskId ? openTask(file.linkedTaskId) : setMaking(true))}>
+        {sourceTaskAction(file.linkedTaskId)}
+      </Button>
+      <TaskEditorSheet
+        open={making}
+        onClose={() => setMaking(false)}
+        source={{ kind: 'file', id: file.id }}
+        initial={making ? fileTaskInitial(file) : null}
+        onCreated={(task) => linkTask(task.id)}
+        onExisting={(taskId) => { linkTask(taskId); openTask(taskId); }}
+      />
+    </>
+  );
+}
+
 export function FileScreen({ id }) {
   const { data: file, loading, refetch } = useQuery(`file:${id}`, () => api().fileDetail(id));
   if (!file) {
@@ -322,6 +347,9 @@ export function FileScreen({ id }) {
           <Button size="sm" icon={ExternalLink} onClick={() => openFile(file)}>
             Open
           </Button>
+        </div>
+        <div className="mx-4 mt-3 flex">
+          <FileTaskButton file={file} />
         </div>
         {file.description && <p className="mx-4 mt-3 text-sm text-text-2">{file.description}</p>}
         <Tags file={file} />

@@ -31,7 +31,7 @@ function now() {
 const ACTION_LABELS = {
   get_current_workspace: 'looked up workspace', get_user_channels: 'listed channels', get_workspace_members: 'listed members',
   send_message_to_channel: 'sent channel message', send_direct_message: 'sent direct message', create_task: 'created task',
-  list_my_tasks: 'listed tasks', update_task_status: 'updated task', create_note: 'created note', list_recent_notes: 'listed notes',
+  list_my_tasks: 'listed tasks', update_task_status: 'updated task', create_note: 'created note', make_task_from_note: 'made task', make_task_from_file: 'made task', list_recent_notes: 'listed notes',
   search_workspace: 'searched workspace', schedule_meeting: 'scheduled meeting',
   search_messages_with_person: 'searched your messages',
   create_thread: 'started thread', reply_in_thread: 'replied in thread', append_to_note: 'updated note', set_reminder: 'set reminder',
@@ -42,7 +42,7 @@ const ACTION_LABELS = {
 const TOOL_PROGRESS = {
   get_current_workspace: 'Checking your workspace', get_user_channels: 'Looking up channels', get_workspace_members: 'Looking up members',
   send_message_to_channel: 'Sending the message', send_direct_message: 'Sending the message', create_task: 'Creating the task',
-  list_my_tasks: 'Reading your tasks', update_task_status: 'Updating the task', create_note: 'Creating the note', list_recent_notes: 'Reading your notes',
+  list_my_tasks: 'Reading your tasks', update_task_status: 'Updating the task', create_note: 'Creating the note', make_task_from_note: 'Making the task', make_task_from_file: 'Making the task', list_recent_notes: 'Reading your notes',
   search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling the meeting',
   search_messages_with_person: 'Searching your messages',
   create_thread: 'Starting the thread', reply_in_thread: 'Replying in the thread', append_to_note: 'Updating the note', set_reminder: 'Setting the reminder',

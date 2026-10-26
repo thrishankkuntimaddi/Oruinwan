@@ -496,6 +496,97 @@ async function createTaskForUser({ title, description, dueDate, priority, assign
     }
 }
 
+/** Plain text of a note's content (blocks JSON or legacy HTML), for a task description. */
+function noteText(content) {
+    return noteBlocks(content)
+        .map(b => String(b.content || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim())
+        .filter(Boolean).join('\n');
+}
+
+/** Shared tail of make_task_from_note / _file: an existing task is an answer, not an error. */
+async function linkedTaskResult(make, ctx, kind) {
+    try {
+        const { task } = await make();
+        return { success: true, taskId: task._id, issueKey: task.issueKey, title: task.title, from: kind, link: appLink(`/workspace/${ctx.workspaceId}/tasks/${task._id}`) };
+    } catch (err) {
+        const status = err.statusCode || err.status;
+        if (status === 409 && err.taskId) {
+            return { success: true, alreadyExisted: true, taskId: String(err.taskId), from: kind, link: appLink(`/workspace/${ctx.workspaceId}/tasks/${err.taskId}`) };
+        }
+        return fail(err.message || 'Failed to create task');
+    }
+}
+
+async function taskInputFor({ dueDate, priority, assignees }, ctx, ws) {
+    if (dueDate && Number.isNaN(new Date(dueDate).getTime())) return { error: fail('dueDate must be a date like 2026-11-02') };
+    const named = (Array.isArray(assignees) ? assignees : [assignees]).filter(Boolean);
+    const found = await findMembers(ws, named);
+    if (found.error) return { error: found.error };
+    const ids = found.users.map(u => String(u._id));
+    return { input: { dueDate: dueDate || null, priority, ...(ids.length ? { assigneeIds: ids } : {}) } };
+}
+
+/** "@ai make a task from this note": the note by id, the note open on screen, or by exact title. */
+async function makeTaskFromNote({ noteId, noteTitle, title, description, dueDate, priority, assignees }, ctx) {
+    const { ws, error } = await membership(ctx);
+    if (error) return error;
+    if (await featureOff(ctx.workspaceId, 'tasks')) return fail('Tasks are turned off in this workspace.');
+
+    const visible = { workspace: ctx.workspaceId, $or: [{ owner: ctx.userId }, { sharedWith: ctx.userId }, { isPublic: true }] };
+    let note = null;
+    const id = oid(noteId) ? noteId : (!noteTitle?.trim() && oid(ctx.currentNoteId) ? ctx.currentNoteId : null);
+    if (id) note = await Note.findOne({ _id: id, ...visible }).select('_id title content').lean();
+    else if (noteTitle?.trim()) {
+        const matches = await Note.find({ ...visible, isArchived: { $ne: true }, title: new RegExp(`^\\s*${escapeRe(noteTitle.trim())}\\s*$`, 'i') })
+            .sort({ updatedAt: -1 }).limit(2).select('_id title content').lean();
+        if (matches.length > 1) return fail(`More than one note is called "${noteTitle.trim()}". Use list_recent_notes and pass the noteId.`);
+        note = matches[0] || null;
+    } else return fail('Which note? Open it, or give its title.');
+    if (!note) return fail('Note not found, or you cannot see it.');
+
+    const prepared = await taskInputFor({ dueDate, priority, assignees }, ctx, ws);
+    if (prepared.error) return prepared.error;
+    const text = noteText(note.content);
+    const notesService = require('../src/features/notes/notes.service');
+    return linkedTaskResult(() => notesService.makeTask(ctx.userId, String(note._id), {
+        ...prepared.input,
+        title: cleanText(title, 200) || note.title || 'Untitled',
+        description: cleanText(description) || [text.slice(0, 500), `From note: ${note.title || 'Untitled'}`].filter(Boolean).join('\n\n'),
+    }, ioFrom(ctx)), ctx, 'note');
+}
+
+/** Make a task from a library file, by id or by name. */
+async function makeTaskFromFile({ fileId, fileName, title, dueDate, priority, assignees }, ctx) {
+    const { ws, error } = await membership(ctx);
+    if (error) return error;
+    if (await featureOff(ctx.workspaceId, 'tasks')) return fail('Tasks are turned off in this workspace.');
+    const filesService = require('../src/features/files/files.service');
+    const WorkspaceFile = require('../src/features/files/WorkspaceFile');
+
+    let id = oid(fileId) ? String(fileId) : null;
+    if (!id) {
+        if (!fileName?.trim()) return fail('Which file? Give its name.');
+        const matches = await WorkspaceFile.find({ workspaceId: ctx.workspaceId, isDeleted: false, name: new RegExp(`^\\s*${escapeRe(fileName.trim())}`, 'i') })
+            .sort({ updatedAt: -1 }).limit(2).select('_id name').lean();
+        if (matches.length > 1) return fail(`More than one file starts with "${fileName.trim()}". Give the full name.`);
+        id = matches[0] ? String(matches[0]._id) : null;
+    }
+    if (!id) return fail('File not found.');
+    let file;
+    try {
+        file = await filesService.loadVisibleFile(id, ctx.userId);
+    } catch {
+        return fail('File not found, or you cannot see it.');
+    }
+    const prepared = await taskInputFor({ dueDate, priority, assignees }, ctx, ws);
+    if (prepared.error) return prepared.error;
+    return linkedTaskResult(() => filesService.makeTask(ctx.userId, id, {
+        ...prepared.input,
+        title: cleanText(title, 200) || String(file.name || 'File').replace(/\.[^./\\]{1,8}$/, '') || file.name,
+        description: `From file: ${file.name}`,
+    }, ioFrom(ctx)), ctx, 'file');
+}
+
 async function listMyTasks({ status, limit = 20 }, ctx) {
     const { error } = await membership(ctx);
     if (error) return error;
@@ -858,6 +949,8 @@ module.exports = {
     createThread,
     replyInThread,
     createTaskForUser,
+    makeTaskFromNote,
+    makeTaskFromFile,
     listMyTasks,
     updateTaskStatus,
     createNote,

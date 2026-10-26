@@ -98,7 +98,8 @@ jest.mock('../../../shared/plans/planService', () => ({
 
 const mockCreateNote = jest.fn(async (_uid, data) => ({ note: { _id: NOTE, title: data.title } }));
 const mockUpdateNote = jest.fn(async () => ({ note: { _id: NOTE } }));
-jest.mock('../../notes/notes.service', () => ({ createNote: (...a) => mockCreateNote(...a), updateNote: (...a) => mockUpdateNote(...a) }));
+const mockMakeTask = jest.fn(async (_uid, _noteId, data) => ({ task: { _id: 'task-9', issueKey: 'ACM-9', title: data.title } }));
+jest.mock('../../notes/notes.service', () => ({ createNote: (...a) => mockCreateNote(...a), updateNote: (...a) => mockUpdateNote(...a), makeTask: (...a) => mockMakeTask(...a) }));
 const mockNotes = [];
 jest.mock('../../../../models/Note', () => {
   const editable = (n, q) => n.workspace === q.workspace && q.$or.some((c) => (c.owner && n.owner === c.owner) || (c.sharedWith && (n.sharedWith || []).includes(c.sharedWith) && n.allowEditing));
@@ -258,6 +259,42 @@ describe('notes', () => {
   });
 });
 
+describe('make_task_from_note', () => {
+  const content = JSON.stringify([{ id: 'a', type: 'text', content: '<p>Ship the <b>beta</b></p>' }]);
+
+  test('"make a task from this note" uses the note open on screen', async () => {
+    mockNotes.push({ _id: NOTE, workspace: WS, owner: ME, title: 'Launch plan', content });
+    const out = await actions.makeTaskFromNote({}, { ...privateChat, currentNoteId: NOTE });
+    expect(out).toMatchObject({ success: true, taskId: 'task-9', title: 'Launch plan', from: 'note' });
+    expect(out.link).toMatch(new RegExp(`/workspace/${WS}/tasks/task-9$`));
+    const [uid, noteId, data, passedIo] = mockMakeTask.mock.calls[0];
+    expect([uid, noteId, passedIo]).toEqual([ME, NOTE, io]);
+    expect(data.description).toBe('Ship the beta\n\nFrom note: Launch plan');
+  });
+
+  test('finds the note by title and assigns people by name', async () => {
+    mockNotes.push({ _id: NOTE, workspace: WS, owner: ME, title: 'Launch plan', content: '' });
+    const out = await actions.makeTaskFromNote({ noteTitle: 'launch plan', title: 'Book venue', assignees: ['bob'] }, inChannel);
+    expect(out.success).toBe(true);
+    expect(mockMakeTask.mock.calls[0][2]).toMatchObject({ title: 'Book venue', assigneeIds: [BOB] });
+  });
+
+  test('a note that is already a task answers with that task', async () => {
+    mockNotes.push({ _id: NOTE, workspace: WS, owner: ME, title: 'Launch plan', content: '' });
+    mockMakeTask.mockRejectedValueOnce(Object.assign(new Error('Note is already a task'), { statusCode: 409, taskId: 'task-1' }));
+    const out = await actions.makeTaskFromNote({ noteId: NOTE }, privateChat);
+    expect(out).toMatchObject({ success: true, alreadyExisted: true, taskId: 'task-1' });
+  });
+
+  test('no note open and none named, a note the user cannot see, or tasks off: refused', async () => {
+    expect((await actions.makeTaskFromNote({}, privateChat)).error).toMatch(/Which note/);
+    expect((await actions.makeTaskFromNote({ noteId: NOTE }, privateChat)).error).toMatch(/cannot see/);
+    mockFeatures.tasks = false;
+    expect((await actions.makeTaskFromNote({ noteId: NOTE }, privateChat)).error).toMatch(/turned off/);
+    expect(mockMakeTask).not.toHaveBeenCalled();
+  });
+});
+
 describe('set_reminder', () => {
   const later = new Date(Date.now() + 3_600_000).toISOString();
 
@@ -282,6 +319,18 @@ test('send_message_to_channel: by name, and only the @handles leave as mentionTe
   expect((await actions.sendMessageToChannel({ channelId: CH_NOT_MINE, message: 'x' }, privateChat)).success).toBe(false);
 });
 
+describe('wiring: the open note reaches the tools', () => {
+  test('"make a task from this note" offers the tool, and the note id survives the trip to the API', () => {
+    const ChatAgent = require('../../../../../ai/agents/chat.agent');
+    expect(ChatAgent.wantsTools('make a task from this note')).toBe(true);
+    expect([...ChatAgent.toolsFor('make a task from this note')]).toContain('make_task_from_note');
+    expect([...ChatAgent.toolsFor('turn this file into a task')]).toContain('make_task_from_file');
+    const { plainCtx } = require('../../../../../ai/service/actionsProxy');
+    const { sharedContext } = require('../ai.internal.routes');
+    expect(sharedContext(plainCtx({ userId: ME, workspaceId: WS, currentNoteId: NOTE })).currentNoteId).toBe(NOTE);
+  });
+});
+
 describe('wiring', () => {
   const { ACTION_FOR, DECLARATIONS } = require('../../../../../ai/tools/registry');
   const ChatAgent = require('../../../../../ai/agents/chat.agent');
@@ -289,7 +338,7 @@ describe('wiring', () => {
   const { sharedContext } = require('../ai.internal.routes');
 
   test('every new tool is declared and has a server action', () => {
-    for (const name of ['create_thread', 'reply_in_thread', 'append_to_note', 'set_reminder']) {
+    for (const name of ['create_thread', 'reply_in_thread', 'append_to_note', 'set_reminder', 'make_task_from_note', 'make_task_from_file']) {
       expect(DECLARATIONS.some((d) => d.name === name)).toBe(true);
       expect(typeof actions[ACTION_FOR[name]]).toBe('function');
     }

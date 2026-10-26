@@ -25,6 +25,8 @@ function plainCtx(ctx = {}) {
   // its threads / replies go by default. The API re-checks membership for all of it.
   if (ctx.shared) out.shared = true;
   if (ctx.channelId) out.channelId = String(ctx.channelId);
+  // The note open on screen ("make a task from this note").
+  if (ctx.currentNoteId) out.currentNoteId = String(ctx.currentNoteId);
   const c = ctx.conversation;
   if (c && c.id) {
     out.conversation = { id: String(c.id), type: c.type === 'dm' ? 'dm' : 'channel', parentId: idOrNull(c.parentId), triggerMessageId: idOrNull(c.triggerMessageId) };

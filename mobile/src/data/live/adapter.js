@@ -257,6 +257,9 @@ function mapTask(t) {
     channelId: idOf(t.channel),
     // Created from a message (convert to task): the task's Linked thread.
     linkedMessage: idOf(t.linkedMessage) || null,
+    // Made from a note or a library file ("Make a task").
+    linkedNote: idOf(t.linkedNote) || null,
+    linkedFile: idOf(t.linkedFile) || null,
   };
 }
 
@@ -313,6 +316,8 @@ function mapNote(n) {
     // Pages: the first page is the note in the list; each page is its own note.
     parentId: idOf(n.parentNote) || null,
     pages: Array.isArray(n.pages) ? n.pages.map((p, i) => ({ id: idOf(p), title: p.title || `Page ${i + 1}` })) : null,
+    // The task made from this note, if any.
+    linkedTaskId: idOf(n.linkedTaskId) || null,
   };
 }
 

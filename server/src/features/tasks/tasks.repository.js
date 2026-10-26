@@ -49,6 +49,7 @@ const COLUMNS = {
     priority: 'priority', storyPoints: 'story_points', estimatedHours: 'estimated_hours', actualHours: 'actual_hours',
     completedAt: 'completed_at', completedBy: 'completed_by', completionNote: 'completion_note', resolution: 'resolution',
     source: 'source', aiContext: 'ai_context', linkedMessage: 'linked_message_id', linkedDM: 'linked_dm_id',
+    linkedNote: 'linked_note_id', linkedFile: 'linked_file_id',
     tags: 'tags', labels: 'labels', externalLinks: 'external_links', attachments: 'attachments',
     transferRequest: 'transfer_request', deleted: 'deleted', deletedFor: 'deleted_for', deletedBy: 'deleted_by',
     deletedAt: 'deleted_at', revokedAt: 'revoked_at', revokedBy: 'revoked_by', timeTracking: 'time_tracking',
@@ -58,7 +59,7 @@ const COLUMNS = {
 const JSON_FIELDS = new Set(['aiContext', 'externalLinks', 'attachments', 'transferRequest', 'timeTracking', 'recurring', 'automationRules']);
 const ARRAY_FIELDS = new Set(['tags', 'labels', 'deletedFor']);
 const ID_FIELDS = new Set(['company', 'workspace', 'project', 'parentTask', 'epic', 'createdBy', 'channel', 'blockedBy',
-    'completedBy', 'linkedMessage', 'linkedDM', 'deletedBy', 'revokedBy', 'sprintId', 'milestoneId']);
+    'completedBy', 'linkedMessage', 'linkedDM', 'linkedNote', 'linkedFile', 'deletedBy', 'revokedBy', 'sprintId', 'milestoneId']);
 const DATE_FIELDS = new Set(['blockedAt', 'dueDate', 'dueSoonNotifiedAt', 'startDate', 'completedAt', 'deletedAt', 'revokedAt', 'createdAt', 'updatedAt']);
 const NUM_FIELDS = new Set(['storyPoints', 'estimatedHours', 'actualHours']);
 

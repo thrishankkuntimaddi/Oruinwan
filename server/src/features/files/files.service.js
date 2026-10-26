@@ -521,7 +521,47 @@ async function deleteFile(userId, fileId) {
     return { message: 'File deleted', file };
 }
 
+/**
+ * "Make a task" from a library file: anyone who can see the file (in its workspace) may.
+ * The task links to the file (linkedFile) and carries it as an attachment so it opens
+ * from the task; the file keeps the task's id (linkedTaskId). A second attempt answers
+ * 409 with the existing task's id.
+ */
+async function makeTask(userId, fileId, taskData = {}, io) {
+    const { file } = await loadFileForMember(fileId, userId, { lean: true });
+    const data = { ...taskData };
+    if (typeof data.description !== 'string' || !data.description.trim()) data.description = `From file: ${file.name}`;
+    const linked = require('../tasks/tasks.linked');
+    const task = await linked.createLinkedTask({
+        userId,
+        source: { kind: 'file', id: file._id, title: file.name, workspaceId: file.workspaceId, linkedTaskId: file.linkedTaskId },
+        taskData: data,
+        attachments: [{
+            name: file.name,
+            url: file.url,
+            fileId: String(file._id),
+            mimeType: file.mimeType || null,
+            size: file.size || 0,
+            uploadedBy: String(userId),
+            uploadedAt: new Date(),
+        }],
+        // Only link while the file still points where we checked (nothing, or a deleted task).
+        claim: async (t) => {
+            const r = await WorkspaceFile.updateOne({ _id: file._id, linkedTaskId: file.linkedTaskId || null }, { $set: { linkedTaskId: t._id } });
+            return (r.modifiedCount ?? r.nModified ?? 0) > 0;
+        },
+        io,
+    });
+    if (io) {
+        io.to([`workspace:${file.workspaceId}`, `file:${file._id}`]).emit('file:task_created', {
+            fileId: String(file._id), taskId: String(task._id), taskTitle: task.title,
+        });
+    }
+    return { task: linked.briefTask(task) };
+}
+
 module.exports = {
+    makeTask,
     uploadFile,
     getFiles,
     getFile,

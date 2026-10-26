@@ -45,6 +45,9 @@ const NoteSchema = new mongoose.Schema({
     // blank note. Free-plan limit: 2 notes per template per person per workspace.
     templateKey: { type: String, default: null },
 
+    // The task made from this note ("Make a task"); null when none.
+    linkedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task", default: null },
+
     
     attachments: [{
         name: { type: String },

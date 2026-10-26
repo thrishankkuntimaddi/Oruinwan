@@ -459,7 +459,10 @@ function createPgTaskService({ validateWorkspaceMember, getUserChannels, isWorks
         const { task, isWorkspaceAdmin: admin } = await loadForAdminAction(userId, taskId);
         if (!(String(task.createdBy) === String(userId) || admin)) throw httpError(403, 'Only task creator or workspace admin can permanently delete tasks');
         const ids = await repo.hardDelete(task._id); // links, deps, activity, assignees cascade in SQL
-        await Promise.allSettled([Message.updateMany({ linkedTaskId: { $in: ids } }, { $set: { linkedTaskId: null } })]);
+        await Promise.allSettled([
+            Message.updateMany({ linkedTaskId: { $in: ids } }, { $set: { linkedTaskId: null } }),
+            require('./tasks.linked').unlinkSources(ids),
+        ]);
         await logAction({ userId, action: 'task_permanently_deleted', description: `Permanently deleted task: ${task.title}`, resourceType: 'task', resourceId: taskId, companyId: task.company, req });
         await emitToTaskAudience(io, task, 'task-deleted', { taskId: String(task._id), permanent: true });
         return { message: 'Task permanently deleted' };

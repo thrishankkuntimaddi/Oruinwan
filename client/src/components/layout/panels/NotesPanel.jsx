@@ -6,7 +6,7 @@ import {
     ArrowUpDown, BookOpen, Layers, Hash,
     FileText, Trash2, FolderPlus,
     FolderOpen, Move, Users, StickyNote,
-    Check, X
+    Check, X, CheckSquare
 } from "lucide-react";
 import api from '@services/api';
 import { useNotes, noteContentToText } from "../../../contexts/NotesContext";
@@ -18,6 +18,8 @@ import { getUserPreferences } from '../../../hooks/useUserPreferences';
 import { useWorkspaceFeatures } from '../../../hooks/useWorkspaceFeatures';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
 import RoadmapPanelList from './RoadmapPanelList';
+import MakeTaskModal from '../../tasksComp/MakeTaskModal';
+import { noteTaskDraft, openTaskInApp, sourceTaskMenuLabel } from '../../../utils/sourceTask';
 import '../../../styles/gloss-x-panels.css';
 
 /** The Notes panel's tabs: workspace notes, channel canvases and the quarterly roadmap. */
@@ -127,7 +129,7 @@ const NotesPanel = ({ title }) => {
         addNote, updateNote, deleteNote,
         searchQuery, setSearchQuery,
         togglePin, toggleArchive,
-        matchesSearch, getNoteAccess,
+        matchesSearch, getNoteAccess, setNoteTask,
     } = useNotes();
 
     const { channels: canvasChannels } = useCanvasByChannel(workspaceId);
@@ -178,7 +180,8 @@ const NotesPanel = ({ title }) => {
 
     
     const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const [noteMenu, setNoteMenu] = useState(null); 
+    const [noteMenu, setNoteMenu] = useState(null);
+    const [makeTaskNote, setMakeTaskNote] = useState(null);
     const [showMovePicker, setShowMovePicker] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null); 
 
@@ -564,10 +567,18 @@ const NotesPanel = ({ title }) => {
 
             {noteMenu && ctxNote && (
                 <div ref={noteMenuRef} className="gl-x-menu" role="menu"
-                    style={{ position: 'fixed', zIndex: 50, width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 220) }}
+                    style={{ position: 'fixed', zIndex: 50, width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 260) }}
                 >
                     <button type="button" className="gl-x-menu-item" onClick={() => { navigate(`/workspace/${workspaceId}/notes/${ctxNote.id}`); setNoteMenu(null); }}>
                         <FileText size={13} /> Open
+                    </button>
+                    <button type="button" className="gl-x-menu-item" data-testid="note-menu-task"
+                        onClick={() => {
+                            if (ctxNote.linkedTaskId) openTaskInApp(workspaceId, ctxNote.linkedTaskId);
+                            else setMakeTaskNote(ctxNote);
+                            setNoteMenu(null);
+                        }}>
+                        <CheckSquare size={13} /> {sourceTaskMenuLabel(ctxNote.linkedTaskId)}
                     </button>
                     {ctxOwner && (
                         <button type="button" className={`gl-x-menu-item${ctxNote.isPinned ? ' is-active' : ''}`} onClick={() => { togglePin(ctxNote.id); setNoteMenu(null); }}>
@@ -593,6 +604,14 @@ const NotesPanel = ({ title }) => {
                         </button>
                     </>)}
                 </div>
+            )}
+
+            {makeTaskNote && (
+                <MakeTaskModal kind="note" sourceId={makeTaskNote.id}
+                    draft={noteTaskDraft(makeTaskNote.title, noteContentToText(makeTaskNote.content))}
+                    onClose={() => setMakeTaskNote(null)}
+                    onCreated={(task) => { if (task?._id) setNoteTask?.(makeTaskNote.id, task._id); }}
+                    onExisting={(taskId) => { setNoteTask?.(makeTaskNote.id, taskId); openTaskInApp(workspaceId, taskId); }} />
             )}
 
             {deleteTarget && (

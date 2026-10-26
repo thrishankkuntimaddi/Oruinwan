@@ -103,6 +103,39 @@ const DECLARATIONS = [
     },
   },
   {
+    name: 'make_task_from_note',
+    description: 'Make a task from a note ("make a task from this note"). The task links to the note and the note shows its task. '
+      + 'Without noteId or noteTitle it uses the note open on screen. If the note already has a task, returns that task instead. Returns taskId and a link.',
+    parameters: {
+      type: 'object',
+      properties: {
+        noteId: { type: 'string', description: 'Optional note id (from list_recent_notes); omit for the open note' },
+        noteTitle: { type: 'string', description: 'Optional exact note title, when there is no id and no open note' },
+        title: { type: 'string', description: 'Optional task title (defaults to the note title)' },
+        description: { type: 'string', description: 'Optional task description (defaults to the start of the note)' },
+        dueDate: { type: 'string', description: 'Due date YYYY-MM-DD (optional)' },
+        priority: { type: 'string', enum: ['lowest', 'low', 'medium', 'high', 'highest'], description: 'Priority (optional)' },
+        assignees: { type: 'array', items: { type: 'string' }, description: 'People to assign: user id, @username or name (optional; defaults to the user)' },
+      },
+    },
+  },
+  {
+    name: 'make_task_from_file',
+    description: 'Make a task from a file in the workspace Files library. The file is attached to the task and shows its task. '
+      + 'If the file already has a task, returns that task instead. Returns taskId and a link.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fileId: { type: 'string', description: 'Optional file id' },
+        fileName: { type: 'string', description: 'The file name, when there is no id' },
+        title: { type: 'string', description: 'Optional task title (defaults to the file name without its extension)' },
+        dueDate: { type: 'string', description: 'Due date YYYY-MM-DD (optional)' },
+        priority: { type: 'string', enum: ['lowest', 'low', 'medium', 'high', 'highest'], description: 'Priority (optional)' },
+        assignees: { type: 'array', items: { type: 'string' }, description: 'People to assign: user id, @username or name (optional; defaults to the user)' },
+      },
+    },
+  },
+  {
     name: 'list_my_tasks',
     description: "List the user's tasks in the current workspace, optionally filtered by status.",
     parameters: {
@@ -226,6 +259,8 @@ const ACTION_FOR = {
   create_thread: 'createThread',
   reply_in_thread: 'replyInThread',
   create_task: 'createTaskForUser',
+  make_task_from_note: 'makeTaskFromNote',
+  make_task_from_file: 'makeTaskFromFile',
   list_my_tasks: 'listMyTasks',
   update_task_status: 'updateTaskStatus',
   create_note: 'createNote',

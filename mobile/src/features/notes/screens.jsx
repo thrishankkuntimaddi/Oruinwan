@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FileText, Plus, Star, Users, EllipsisVertical, Archive, ArchiveRestore, BellRing, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
+  FileText, Plus, Star, Users, EllipsisVertical, SquareCheckBig, Archive, ArchiveRestore, BellRing, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -28,6 +28,8 @@ import { useFlag } from '../../config/flags.js';
 import { useKeyboard } from '../../native/keyboard.js';
 import { askAiAbout } from '../ai/aiUi.js';
 import { TEMPLATES } from './templates.js';
+import { TaskEditorSheet } from '../tasks/TaskEditorSheet.jsx';
+import { noteTaskInitial, sourceTaskAction } from '../tasks/sourceTask.js';
 import { usePlan } from '../plan/plan.js';
 import { isPlanLimit, templateKey, templateUsage } from '../plan/planText.js';
 import { prefs } from '../../native/storage.js';
@@ -285,7 +287,10 @@ export function NoteScreen({ id, fresh }) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reminding, setReminding] = useState(false);
+  const [makingTask, setMakingTask] = useState(false);
   const [aiBusy, setAiBusy] = useState(null);
+  const openLinkedTask = (taskId) => nav.push('task', { id: taskId }, { tab: 'tasks' });
+  const linkTask = (taskId) => setQueryData(`note:${id}`, (n) => (n ? { ...n, linkedTaskId: taskId } : n));
   const server = useSession((s) => s.server);
   const webBase = useWebUrl(server);
   const editorRef = useRef(null);
@@ -514,6 +519,12 @@ export function NoteScreen({ id, fresh }) {
           aiOn && contentEditable && api().noteAssist && { label: 'Fix spelling and grammar', icon: SpellCheck, onSelect: () => runAi('proofread') },
           aiOn && { label: 'Discuss with AI', hint: 'Ask questions about this note', icon: MessageSquareText, onSelect: () => askAiAbout(`About my note "${note.title}":\n\n${htmlToText(editorRef.current?.innerHTML || note.content, 3000)}\n\n`) },
           api().remindNote && { label: 'Remind me', hint: 'Get a notification about this note later', icon: BellRing, onSelect: () => setTimeout(() => setReminding(true), 220) },
+          api().makeTaskFrom && {
+            label: sourceTaskAction(note.linkedTaskId),
+            hint: note.linkedTaskId ? 'The task made from this note' : 'The task links back to this note',
+            icon: SquareCheckBig,
+            onSelect: () => (note.linkedTaskId ? openLinkedTask(note.linkedTaskId) : setTimeout(() => setMakingTask(true), 220)),
+          },
           note.ownerId === me && { label: 'Share…', hint: note.visibility === 'workspace' ? 'Shared with the whole workspace' : (note.sharedWith || []).length ? `Shared with ${(note.sharedWith || []).length}` : 'Only you', icon: Users, onSelect: () => setTimeout(() => setShare(true), 220) },
           webBase && { label: 'Copy link', icon: Link2, onSelect: async () => ((await copyText(`${webBase}/workspace/${ws}/notes/${id}`)) ? toast('Link copied') : toast("Couldn't copy", 'danger')) },
           { label: 'Duplicate', icon: Copy, onSelect: duplicate },
@@ -543,6 +554,14 @@ export function NoteScreen({ id, fresh }) {
             toast(err.message || 'Could not delete', 'danger');
           }
         }}
+      />
+      <TaskEditorSheet
+        open={makingTask}
+        onClose={() => setMakingTask(false)}
+        source={{ kind: 'note', id }}
+        initial={makingTask ? noteTaskInitial({ ...note, title: titleRef.current || note.title }, editorRef.current?.innerHTML ?? note.content) : null}
+        onCreated={(task) => linkTask(task.id)}
+        onExisting={(taskId) => { linkTask(taskId); openLinkedTask(taskId); }}
       />
       <ScheduleSheet
         open={reminding}

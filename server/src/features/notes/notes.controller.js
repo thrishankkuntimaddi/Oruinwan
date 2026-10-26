@@ -221,7 +221,20 @@ async function saveVersion(req, res) {
     }
 }
 
+async function makeTask(req, res) {
+    try {
+        const { title, description, priority, dueDate, assigneeIds } = req.body || {};
+        const result = await notesService.makeTask(req.user.sub, req.params.id, { title, description, priority, dueDate, assigneeIds }, req.io || req.app?.get('io'));
+        return res.status(201).json(result);
+    } catch (error) {
+        // 409 carries the existing task so the app can open it.
+        if (Number(error.statusCode || error.status) === 409) return res.status(409).json({ message: error.message, taskId: error.taskId || null });
+        return handleError(res, error);
+    }
+}
+
 module.exports = {
+    makeTask,
     getNotes,
     getNote,
     createNote,

@@ -49,6 +49,9 @@ router.delete('/:id', notesController.deleteNote);
 // Body: { userIds: string[], allowEditing?: boolean }
 router.post('/:id/share', notesController.shareNote);
 
+// "Make a task" from the note. Body: { title, description?, assigneeIds?, dueDate?, priority? }
+router.post('/:id/task', notesController.makeTask);
+
 router.post('/:id/attachments', notesController.addAttachment);
 
 router.delete('/:id/attachments/:attachmentId', notesController.removeAttachment);

@@ -16,6 +16,7 @@ import { SubtasksSection, DependenciesSection, LinkedTicketsSection, TimeTrackin
 import { RepeatBadge } from './RepeatPicker';
 import { AttachFromApps, usePickerTypes } from '../../features/integrations/CloudPicker';
 import TaskDiscussion, { TaskLinkedThread } from './TaskDiscussion';
+import TaskSourceRow, { taskSource } from './TaskSourceRow';
 
 const Section = ({ label, icon, action, children }) => (
     <section>
@@ -404,7 +405,14 @@ export default function WorkspaceTaskDetailPanel({
                                         {task.attachments.map((att, i) => (
                                             <div key={`${att.url}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
                                                 <Link2 size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                                                <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name || att.url}</a>
+                                                {att.fileId ? (
+                                                    // A file from Files opens there (its stored link needs sign-in).
+                                                    <a href={`/workspace/${aiWorkspaceId || (task.workspace?._id || task.workspace)}/files/${att.fileId}`}
+                                                        onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', e.currentTarget.getAttribute('href')); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                                                        style={{ flex: 1, minWidth: 0, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name || 'File'}</a>
+                                                ) : (
+                                                    <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name || att.url}</a>
+                                                )}
                                                 {can.edit && !deleted && (
                                                     <button type="button" className="tk-icon-btn danger" style={{ width: 20, height: 20 }} aria-label="Remove resource"
                                                         onClick={() => save({ attachments: task.attachments.filter((_, j) => j !== i) })}><X size={11} /></button>
@@ -443,6 +451,12 @@ export default function WorkspaceTaskDetailPanel({
                             <Section label={`Linked items${task.externalLinks?.length ? ` (${task.externalLinks.length})` : ''}`} icon={<GitPullRequest size={10} />}>
                                 <LinkedPullRequests links={task.externalLinks || []} workspaceId={aiWorkspaceId} />
                                 <AttachFromApps workspaceId={aiWorkspaceId} taskId={task._id || task.id} types={pickerTypes} />
+                            </Section>
+                        )}
+
+                        {taskSource(task) && (
+                            <Section label="Source" icon={<Link2 size={10} />}>
+                                <TaskSourceRow task={task} workspaceId={aiWorkspaceId || (task.workspace?._id || task.workspace) || null} />
                             </Section>
                         )}
 

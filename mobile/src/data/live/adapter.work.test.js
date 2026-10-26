@@ -27,6 +27,25 @@ const { workAdapter: a, blockersOf, mapTaskTime, mapPlanningTask } = await impor
 
 beforeEach(() => vi.clearAllMocks());
 
+describe('make a task from a note or a file', () => {
+  it('posts to the note / file and maps the task', async () => {
+    mockApi.post.mockResolvedValueOnce({ task: { _id: 't1', title: 'Launch plan', status: 'todo', issueKey: 'ACM-1' } });
+    const t = await a.makeTaskFrom('note', 'n1', { title: ' Launch plan ', description: ' ', priority: 'high', due: '2026-11-02T17:00:00.000Z', assigneeIds: ['u1'] });
+    expect(mockApi.post).toHaveBeenCalledWith('/v2/notes/n1/task', { title: 'Launch plan', priority: 'high', dueDate: '2026-11-02T17:00:00.000Z', assigneeIds: ['u1'] });
+    expect(t).toEqual({ id: 't1', title: 'Launch plan', status: 'todo', issueKey: 'ACM-1' });
+    mockApi.post.mockResolvedValueOnce({ task: { _id: 't2', title: 'budget' } });
+    await a.makeTaskFrom('file', 'f1', { title: 'budget' });
+    expect(mockApi.post).toHaveBeenLastCalledWith('/v2/files/f1/task', { title: 'budget' });
+  });
+
+  it('answers with the existing task on a second attempt; other errors still throw', async () => {
+    mockApi.post.mockRejectedValueOnce(new MockApiError('Note is already a task', 409, { taskId: 't7' }));
+    expect(await a.makeTaskFrom('note', 'n1', { title: 'x' })).toEqual({ id: 't7', existing: true });
+    mockApi.post.mockRejectedValueOnce(new MockApiError('Not authorized to view this note', 403, {}));
+    await expect(a.makeTaskFrom('note', 'n1', { title: 'x' })).rejects.toThrow('Not authorized');
+  });
+});
+
 describe('trash and time report (Tasks parity with the web)', () => {
   it('lists only trashed top-level tasks, restores and deletes for good', async () => {
     mockApi.get.mockResolvedValue({

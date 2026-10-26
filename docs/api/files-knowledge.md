@@ -26,7 +26,7 @@ Every file object returned by `GET /` and `GET /:id` carries `myRole`: `'owner' 
 
 `{ _id, workspaceId, createdBy, updatedBy, name, description, mimeType, size, url, gcsPath, folderId,
 tags: string[], permissions: [{ user, role }], access, currentVersion, currentVersionNote, isDeleted,
-createdAt, updatedAt }` — `updatedBy` is who uploaded/changed the current content (null on older files = owner).
+linkedTaskId, createdAt, updatedAt }` — `linkedTaskId` is the task made from the file (`POST /:id/task`, docs/api/tasks.md) — `updatedBy` is who uploaded/changed the current content (null on older files = owner).
 
 ### Routes
 
@@ -82,6 +82,7 @@ Rooms: `workspace:<workspaceId>` (library views) and `file:<fileId>` (join with 
 | `file:comment_updated` | file | `{ comment }` |
 | `file:comment_deleted` | file | `{ fileId, commentId }` |
 | `file:presence` | file | `{ fileId, userId, action: 'viewing' | 'left' }` (existing) |
+| `file:task_created` | workspace + file | `{ fileId, taskId, taskTitle }` |
 
 Note: `file:updated` goes to the whole workspace room, so for restricted files clients should
 re-check with `GET /:id` (a 404 means hide it) instead of trusting the payload for visibility.

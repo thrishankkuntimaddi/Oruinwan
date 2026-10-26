@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { useNotes } from "../../contexts/NotesContext";
+import { useNotes, noteContentToText } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
 import { Confirm, Btn } from "../../components/ui/page";
 import api from '@services/api';
@@ -29,6 +29,9 @@ import NoteInfoModal from "./notesComponents/ui/NoteInfoModal";
 import ShareNoteModal from "./notesComponents/ui/ShareNoteModal";
 import NotePagesBar from './notesComponents/ui/NotePagesBar';
 import RemindNoteModal from './notesComponents/ui/RemindNoteModal';
+import MakeTaskModal from '../../components/tasksComp/MakeTaskModal';
+import LinkedTaskPill from '../../components/tasksComp/LinkedTaskPill';
+import { noteTaskDraft, openTaskInApp, sourceTaskMenuLabel } from '../../utils/sourceTask';
 import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
 import { useAIContext } from "../../contexts/AIContext";
@@ -129,7 +132,7 @@ const Notes = () => {
     const [searchParams] = useSearchParams();
     const {
         allNotes, updateNote, flushNote, saveStatus, deleteNote, addNote, shareNote, loading,
-        noteVersions, addVersion, loadVersions, togglePin, toggleArchive, fetchNote, getNoteAccess,
+        noteVersions, addVersion, loadVersions, togglePin, toggleArchive, fetchNote, getNoteAccess, setNoteTask,
     } = useNotes();
     const { showToast } = useToast();
 
@@ -171,6 +174,7 @@ const Notes = () => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showRemind, setShowRemind] = useState(false);
+    const [showMakeTask, setShowMakeTask] = useState(false);
     const [showAI, setShowAI] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
@@ -632,12 +636,16 @@ ${blockHtml}
         );
     };
 
+    // "Make a task" / "Open task": the note and its task link to each other.
+    const openNoteTask = () => { setShowMenu(false); if (note.linkedTaskId) openTaskInApp(workspaceId, note.linkedTaskId); else setShowMakeTask(true); };
+
     const menuItems = [
         canEdit && { label: 'Duplicate', Icon: Copy, action: handleDuplicate },
         { label: 'Download as PDF', Icon: Download, action: handleDownloadPDF },
         { label: showShareTooltip ? 'Link copied' : 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); } },
         { label: 'Note details', Icon: Info, action: () => { setShowInfoModal(true); setShowMenu(false); } },
         { label: 'Remind me', Icon: BellRing, action: () => { setShowRemind(true); setShowMenu(false); } },
+        { label: sourceTaskMenuLabel(note.linkedTaskId), Icon: CheckSquare, action: openNoteTask },
     ].filter(Boolean);
 
     const QUICK_BLOCKS = [
@@ -672,6 +680,7 @@ ${blockHtml}
                             <Clock size={11} style={{ flexShrink: 0 }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formattedDate}</span>
                         </span>
+                        {note.linkedTaskId && <LinkedTaskPill taskId={note.linkedTaskId} workspaceId={workspaceId} />}
                         {live || collab.closedText
                             ? <CollabPresence collab={collab} />
                             : canEdit && <SaveIndicator status={saveStatus?.[id]} />}
@@ -864,6 +873,13 @@ ${blockHtml}
                 />
             )}
             {showRemind && <RemindNoteModal noteId={id} title={title} onClose={() => setShowRemind(false)} />}
+            {showMakeTask && (
+                <MakeTaskModal kind="note" sourceId={id}
+                    draft={noteTaskDraft(title || note.title, noteContentToText(JSON.stringify(blocks)))}
+                    onClose={() => setShowMakeTask(false)}
+                    onCreated={(task) => { if (task?._id) setNoteTask?.(id, task._id); }}
+                    onExisting={(taskId) => { setNoteTask?.(id, taskId); openTaskInApp(workspaceId, taskId); }} />
+            )}
             <Confirm
                 open={isDeleteModalOpen}
                 title={`Delete “${title || 'Untitled'}”?`}

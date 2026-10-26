@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { downloadAttachment } from '../../utils/uploadFile';
 import { fileKind, formatSize } from './fileKinds';
 import AttachmentPreview from './AttachmentPreview';
+import FileTaskButton from '../../components/tasksComp/FileTaskButton';
 import { toAttachment, whereLabel } from '../../hooks/useSharedFiles';
 
 export function WhereIcon({ item, size = 12 }) {
@@ -18,7 +19,7 @@ export function WhereIcon({ item, size = 12 }) {
  * Side panel for a file sent in a conversation: the conversation's own viewer
  * (image lightbox, players, PDF / text preview), the facts, Download and Go to message.
  */
-export default function SharedFilePreview({ item, onClose, onGoToMessage }) {
+export default function SharedFilePreview({ item, workspaceId, onClose, onGoToMessage }) {
     const { showToast } = useToast();
     const [downloading, setDownloading] = useState(false);
     const attachment = useMemo(() => toAttachment(item), [item]);
@@ -66,6 +67,7 @@ export default function SharedFilePreview({ item, onClose, onGoToMessage }) {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <Btn variant="primary" icon={Download} loading={downloading} onClick={download} style={{ flex: 1, justifyContent: 'center' }}>Download</Btn>
                         <Btn variant="ghost" icon={MessageSquareText} onClick={() => onGoToMessage(item)}>Go to message</Btn>
+                        <FileTaskButton kind="message" sourceId={item.messageId} name={item.name} linkedTaskId={item.linkedTaskId} workspaceId={workspaceId} variant="button" />
                     </div>
                 </div>
             </div>

@@ -15,6 +15,7 @@ import { useMediaUrl } from '../../utils/mediaUrl';
 import { downloadAttachment } from '../../utils/uploadFile';
 import { fileKind, formatSize, FILES_CHANGED, announceFilesChanged } from './fileKinds';
 import FilePreviewPanel from './FilePreviewPanel';
+import FileTaskButton from '../../components/tasksComp/FileTaskButton';
 import SharedFilePreview, { WhereIcon } from './SharedFilePreview';
 import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
 
@@ -31,14 +32,20 @@ function KindMark({ item, size = 16 }) {
     return <span className="gl-empty-mark" style={{ margin: 0, flexShrink: 0 }}><Icon size={size} /></span>;
 }
 
-function ItemActions({ item, onDownload, onGoTo, onDelete }) {
+function ItemActions({ item, onDownload, onGoTo, onDelete, workspaceId }) {
     return (
         <span className="fl-actions">
             <IconBtn label={`Download ${item.name}`} onClick={() => onDownload(item)}><Download size={14} /></IconBtn>
+            <FileTaskButton {...fileTaskSource(item)} name={item.name} linkedTaskId={item.linkedTaskId} workspaceId={workspaceId} />
             {item.messageId && <IconBtn label={`Go to the message with ${item.name}`} onClick={() => onGoTo(item)}><MessageSquareText size={14} /></IconBtn>}
             {item.source === 'library' && <IconBtn label={`Delete ${item.name}`} onClick={() => onDelete(item)}><Trash2 size={14} /></IconBtn>}
         </span>
     );
+}
+
+/** Library files link to their own task; chat files make one through their message. */
+export function fileTaskSource(item) {
+    return item.source === 'library' ? { kind: 'file', sourceId: item.fileId } : { kind: 'message', sourceId: item.messageId };
 }
 
 function Thumb({ item }) {
@@ -298,7 +305,7 @@ const FileLibrary = () => {
     const nothingAtAll = loaded && !loading && !error && total === 0 && !filtering;
     const firstLoad = !loaded;
     const clearFilters = () => { setKind('all'); setSource('all'); setSearch(''); setQ(''); setTagFilter(''); };
-    const actions = { onOpen: openItem, onDownload: downloadItem, onGoTo: goToMessage, onDelete: deleteItem };
+    const actions = { onOpen: openItem, onDownload: downloadItem, onGoTo: goToMessage, onDelete: deleteItem, workspaceId };
 
     return (
         <div className="fl-wrap" {...dropHandlers}>
@@ -417,7 +424,7 @@ const FileLibrary = () => {
                 />
             )}
             {selected?.type === 'chat' && (
-                <SharedFilePreview item={selected.item} onClose={closePreview} onGoToMessage={goToMessage} />
+                <SharedFilePreview item={selected.item} workspaceId={workspaceId} onClose={closePreview} onGoToMessage={goToMessage} />
             )}
 
             <Confirm

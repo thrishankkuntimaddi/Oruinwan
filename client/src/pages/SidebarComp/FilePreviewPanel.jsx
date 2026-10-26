@@ -3,6 +3,7 @@ import { X, Download, Trash2, MessageSquare, History, Send, Share2, Upload, Rota
 import { useNavigate, useInRouterContext } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import FileTaskButton from '../../components/tasksComp/FileTaskButton';
 import { Btn, IconBtn, Chip, EmptyState, LoadingState, Dialog, Confirm, Field, errorMessage, timeAgo } from '../../components/ui/page';
 import { fileKind, formatSize, announceFilesChanged } from './fileKinds';
 import FileTagsInput, { FILE_TAGS_CSS } from './FileTagsInput';
@@ -245,6 +246,8 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
                         <div style={{ display: 'flex', gap: 8 }}>
                             <Btn variant="primary" icon={Download} onClick={() => download()} style={{ flex: 1, justifyContent: 'center' }}>Download</Btn>
                             <Btn variant="ghost" icon={Share2} onClick={() => setShareOpen(true)}>Share</Btn>
+                            <FileTaskButton kind="file" sourceId={file._id} name={file.name} linkedTaskId={file.linkedTaskId} workspaceId={workspaceId} variant="button"
+                                onLinked={(taskId) => onFileChange?.({ ...file, linkedTaskId: taskId })} />
                             {isOwner && <Btn variant="ghost" icon={Trash2} onClick={onDelete}>Delete</Btn>}
                         </div>
                     </div>

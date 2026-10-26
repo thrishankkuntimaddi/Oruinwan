@@ -45,6 +45,7 @@ function sharedContext(ctx = {}) {
     const out = {};
     if (ctx.shared === true) out.shared = true;
     if (plainId(ctx.channelId)) out.channelId = plainId(ctx.channelId);
+    if (plainId(ctx.currentNoteId)) out.currentNoteId = plainId(ctx.currentNoteId);
     const c = ctx.conversation;
     if (c && plainId(c.id)) {
         out.conversation = { id: plainId(c.id), type: c.type === 'dm' ? 'dm' : 'channel', parentId: plainId(c.parentId), triggerMessageId: plainId(c.triggerMessageId) };

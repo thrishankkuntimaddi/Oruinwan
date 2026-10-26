@@ -25,6 +25,7 @@ import { useFlag } from '../../config/flags.js';
 import { TaskRow, StatusIcon } from './TaskRow.jsx';
 import { TaskExtras } from './TaskExtras.jsx';
 import { TaskDiscussionSection } from './TaskDiscussion.jsx';
+import { TaskSourceRow } from './TaskSource.jsx';
 import { BlockersSheet } from './BlockersSheet.jsx';
 import { blockersOf } from '../../data/live/adapter.work.js';
 import { TemplatePickerSheet } from './PlanningScreen.jsx';
@@ -643,6 +644,7 @@ export function TaskScreen({ id }) {
             </label>
             {task.project && <Row icon={FolderKanban} title="Project" value={task.project} />}
             {channel && <Row icon={Hash} title="Channel" value={`#${channel.name}`} />}
+            <TaskSourceRow task={task} />
             {reporter && <Row icon={Pencil} title="Reporter" value={reporter.name} />}
             {task.updatedAt && <Row icon={Clock} title="Updated" value={shortAgo(task.updatedAt)} />}
           </RowGroup>

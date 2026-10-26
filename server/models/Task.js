@@ -103,6 +103,9 @@ const TaskSchema = new mongoose.Schema({
     aiContext: { type: mongoose.Schema.Types.Mixed },
     linkedMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
     linkedDM: { type: mongoose.Schema.Types.ObjectId, ref: "DMSession", default: null },
+    // The note / library file this task was made from ("Make a task"; tasks.linked.js).
+    linkedNote: { type: mongoose.Schema.Types.ObjectId, ref: "Note", default: null },
+    linkedFile: { type: mongoose.Schema.Types.ObjectId, ref: "WorkspaceFile", default: null },
 
     
     tags: [{ type: String }],

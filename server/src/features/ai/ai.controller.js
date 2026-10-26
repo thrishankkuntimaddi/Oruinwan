@@ -53,7 +53,10 @@ gateway.configure({
 });
 
 function ctxFor(req, extra = {}) {
+  // The note open on screen (client context), so "make a task from this note" knows which.
+  const noteId = String(req.body?.context?.note?.id || '');
   return {
+    ...(/^[a-f\d]{24}$/i.test(noteId) ? { currentNoteId: noteId } : {}),
     userId: req.user.sub,
     workspaceId: req.aiWorkspace?.id || null,
     req,
@@ -107,7 +110,7 @@ function cleanChatContext(req, context) {
       id: str(context.conversation.id, 64), type: context.conversation.type === 'dm' ? 'dm' : 'channel',
       name: str(context.conversation.name, 100), messages: cleanMessages(context.conversation.messages).slice(-40),
     },
-    note: context.note && { title: str(context.note.title, 200), text: str(context.note.text, 20_000) },
+    note: context.note && { id: /^[a-f\d]{24}$/i.test(String(context.note.id || '')) ? String(context.note.id) : undefined, title: str(context.note.title, 200), text: str(context.note.text, 20_000) },
     task: context.task && { title: str(context.task.title, 200), description: str(context.task.description, 4000), status: str(context.task.status, 40) },
     selection: str(context.selection, 8000) || undefined,
   };

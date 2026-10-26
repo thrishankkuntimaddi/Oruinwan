@@ -84,6 +84,8 @@ const TOOL_GROUPS = [
   [/\b(members?|people|teammates?|who is)\b/i, ['get_workspace_members']],
   [/\b(workspace)\b/i, ['get_current_workspace']],
   [/\b(remember|forget|keep in mind|from now on|note that)\b/i, ['remember_about_user', 'forget_about_user']],
+  // "make a task from this note / file"
+  [/\b(tasks?|todos?|to-dos?)\b[^.?!]{0,40}\b(notes?|files?|documents?|docs?|attachments?)\b|\b(notes?|files?)\b[^.?!]{0,40}\b(tasks?|todos?)\b/i, ['make_task_from_note', 'make_task_from_file', 'list_recent_notes', 'get_workspace_members']],
 ];
 // With people @mentioned, these are always offered: the person's id is already known.
 const PERSON_TOOLS = ['send_direct_message', mentionTools.SEARCH_TOOL.name];
@@ -193,6 +195,7 @@ class ChatAgent extends BaseAgent {
     const toolCtx = {
       userId: context.userId, workspaceId: workspaceId || context.workspaceId || null, req: context.req || null, io: context.io || null,
       shared: !!context.shared, channelId: context.channelId || null, conversation: context.conversation || null,
+      currentNoteId: context.currentNoteId || null,
     };
     const toolsByName = new Map(this.tools.map((t) => [t.declaration.name, t]));
     // People @mentioned: their ids are known, and their messages with the user (decrypted on

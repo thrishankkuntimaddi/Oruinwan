@@ -321,6 +321,8 @@ function mapFile(f) {
     version: f.currentVersion || 1,
     access: f.access || 'workspace',
     myRole: f.myRole || null,
+    // The task made from this file, if any.
+    linkedTaskId: idOf(f.linkedTaskId) || null,
   };
 }
 
@@ -833,6 +835,30 @@ export const workAdapter = {
   mapActionItem,
   mapSummary,
   mapMeeting,
+
+  // ---- notes / files -> tasks
+  /**
+   * "Make a task" from a note or a library file: POST /v2/notes/:id/task, /v2/files/:id/task.
+   * Resolves { id, title, status, issueKey }; when the note or file already has a task,
+   * resolves { id, existing: true } so the app opens that one instead.
+   */
+  async makeTaskFrom(kind, id, { title, description, priority, due, assigneeIds } = {}) {
+    const path = kind === 'note' ? `/v2/notes/${id}/task` : `/v2/files/${id}/task`;
+    try {
+      const data = await api.post(path, {
+        title: String(title || '').trim().slice(0, 200),
+        ...(description?.trim() ? { description: description.trim() } : {}),
+        ...(priority ? { priority } : {}),
+        ...(due ? { dueDate: due } : {}),
+        ...(assigneeIds?.length ? { assigneeIds } : {}),
+      });
+      const t = data.task || {};
+      return { id: idOf(t), title: t.title, status: t.status || 'todo', issueKey: t.issueKey || null };
+    } catch (err) {
+      if (err?.status === 409 && err.data?.taskId) return { id: String(err.data.taskId), existing: true };
+      throw err;
+    }
+  },
 
   // ---- files
   async fileDetail(id) {

@@ -27,6 +27,8 @@ const workspaceFileSchema = new mongoose.Schema({
     isDeleted: { type: Boolean, default: false },
     currentVersion: { type: Number, default: 1 },
     currentVersionNote: { type: String, default: '' },
+    // The task made from this file ("Make a task"); null when none.
+    linkedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
 }, { timestamps: true });
 
 workspaceFileSchema.index({ name: 'text', description: 'text', tags: 'text' });

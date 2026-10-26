@@ -481,7 +481,40 @@ async function saveVersion(userId, noteId, snapshot) {
     return { version: entry };
 }
 
+/**
+ * "Make a task" from a note: anyone who can see the note (and is in its workspace)
+ * may. The task links to the note (linkedNote) and the note to the task (linkedTaskId);
+ * a second attempt answers 409 with the existing task's id.
+ */
+async function makeTask(userId, noteId, taskData = {}, io) {
+    const note = await loadNote(noteId, 'title workspace company owner sharedWith isPublic allowEditing channel linkedTaskId');
+    await policy.assertNoteAccess(note, userId, 'view');
+    const title = note.title || UNTITLED;
+    const data = { ...taskData };
+    if (typeof data.description !== 'string' || !data.description.trim()) data.description = `From note: ${title}`;
+    const linked = require('../tasks/tasks.linked');
+    const task = await linked.createLinkedTask({
+        userId,
+        source: {
+            kind: 'note', id: note._id, title, workspaceId: note.workspace, companyId: note.company,
+            channel: note.channel, linkedTaskId: note.linkedTaskId,
+        },
+        taskData: data,
+        // Only link while the note still points where we checked (nothing, or a deleted task).
+        claim: async (t) => {
+            const r = await Note.updateOne({ _id: note._id, linkedTaskId: note.linkedTaskId || null }, { $set: { linkedTaskId: t._id } });
+            return (r.modifiedCount ?? r.nModified ?? 0) > 0;
+        },
+        io,
+    });
+    if (io && note.workspace) {
+        io.to(`workspace_${idOf(note.workspace)}`).emit('note:task_created', { noteId: idOf(note._id), taskId: idOf(task._id), taskTitle: task.title });
+    }
+    return { task: linked.briefTask(task) };
+}
+
 module.exports = {
+    makeTask,
     createPage,
     pagesOf,
     getNotes,

@@ -17,7 +17,7 @@ const FOLLOW_UP_MS = 10 * 60 * 1000;
 const TOOL_PROGRESS = {
     get_current_workspace: 'Checking the workspace', get_user_channels: 'Looking up channels', get_workspace_members: 'Looking up members',
     send_message_to_channel: 'Sending a message', send_direct_message: 'Sending a message', create_task: 'Creating a task',
-    list_my_tasks: 'Reading tasks', update_task_status: 'Updating a task', create_note: 'Creating a note', list_recent_notes: 'Reading notes',
+    list_my_tasks: 'Reading tasks', update_task_status: 'Updating a task', create_note: 'Creating a note', make_task_from_note: 'Making a task', make_task_from_file: 'Making a task', list_recent_notes: 'Reading notes',
     search_workspace: 'Searching the workspace', schedule_meeting: 'Scheduling a meeting',
     search_messages_with_person: 'Searching your messages',
     create_thread: 'Starting a thread', reply_in_thread: 'Replying in the thread', append_to_note: 'Updating a note', set_reminder: 'Setting a reminder',

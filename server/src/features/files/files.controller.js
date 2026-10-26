@@ -27,6 +27,18 @@ function parseTags(tags) {
 }
 
 /** Tell everyone looking at the library (workspace room) and at this file (file room). */
+async function makeTask(req, res) {
+    try {
+        const { title, description, priority, dueDate, assigneeIds } = req.body || {};
+        const result = await filesService.makeTask(req.user.sub, req.params.id, { title, description, priority, dueDate, assigneeIds }, req.io || req.app?.get('io'));
+        return res.status(201).json(result);
+    } catch (err) {
+        // 409 carries the existing task so the app can open it.
+        if (err.statusCode === 409) return res.status(409).json({ message: err.message, taskId: err.taskId || null });
+        return handleError(res, err);
+    }
+}
+
 function emitFileEvent(req, event, file, extra = {}) {
     if (!req.io || !file) return;
     const rooms = [`workspace:${file.workspaceId}`, `file:${file._id}`];
@@ -193,6 +205,7 @@ async function updateTags(req, res) {
 }
 
 module.exports = {
+    makeTask,
     uploadFile, getFiles, getSharedFiles, getTags, getFile, updateFile, deleteFile, createVersion, getVersions, restoreVersion,
     getComments, addComment, updateComment, deleteComment, shareFile, updateTags, getDownload,
     _parseTags: parseTags,

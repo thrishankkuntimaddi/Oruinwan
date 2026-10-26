@@ -3,6 +3,7 @@ import {
     X, Loader2, Eye, Activity, ChevronRight, Plus, ArrowRight, User, Tag, AlertTriangle, Check, Trash2, MessagesSquare,
 } from 'lucide-react';
 import TaskDiscussion, { TaskLinkedThread } from '../../../../../components/tasksComp/TaskDiscussion';
+import TaskSourceRow, { taskSource } from '../../../../../components/tasksComp/TaskSourceRow';
 import api from '@services/api';
 import {
     TRANSITIONS, STATUS_META, PRIORITIES, PRIORITY_META, statusLabel,
@@ -197,6 +198,13 @@ export default function ChannelTaskDetail({
                                 </p>
                             )}
                         </div>
+
+                        {taskSource(task) && (
+                            <div>
+                                <p style={{ ...sectionLabel, margin: '0 0 6px' }}>Source</p>
+                                <TaskSourceRow task={task} workspaceId={task.workspace?._id || task.workspace || null} />
+                            </div>
+                        )}
 
                         {task.linkedMessage && (
                             <div>

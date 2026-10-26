@@ -836,6 +836,7 @@ async function permanentDeleteTask(userId, taskId, req) {
     await Promise.allSettled([
         TaskActivity.deleteMany({ task: { $in: ids } }),
         Message.updateMany({ linkedTaskId: { $in: ids } }, { $set: { linkedTaskId: null } }),
+        require('./tasks.linked').unlinkSources(ids),
     ]);
 
     await logAction({

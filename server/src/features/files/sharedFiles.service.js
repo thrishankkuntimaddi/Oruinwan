@@ -172,7 +172,7 @@ function attachmentPipeline(userId, clauses, opts) {
     const kind = kindMatch(opts.kind, 'attachments.');
     return [
         { $match: match },
-        { $project: { channel: 1, dm: 1, sender: 1, parentId: 1, createdAt: 1, attachments: 1 } },
+        { $project: { channel: 1, dm: 1, sender: 1, parentId: 1, createdAt: 1, attachments: 1, linkedTaskId: 1 } },
         { $unwind: { path: '$attachments', includeArrayIndex: 'index' } },
         { $match: { ...after, ...kind } },
     ];
@@ -208,6 +208,8 @@ function attachmentItem(row, convById) {
         sharedAt: row.createdAt,
         messageId: String(row._id),
         parentId: row.parentId ? String(row.parentId) : null,
+        // A chat file becomes a task through its message (messages convert-task).
+        linkedTaskId: row.linkedTaskId ? String(row.linkedTaskId) : null,
         conversation: { id: conv.id, type: conv.type, name: conv.name, isPrivate: conv.isPrivate || false, isGroup: conv.isGroup || false },
     };
 }
@@ -224,6 +226,7 @@ function libraryItem(f) {
         url: f.url,
         kind: kindOf(f),
         tags: f.tags || [],
+        linkedTaskId: f.linkedTaskId ? String(f.linkedTaskId) : null,
         sharedBy: f.createdBy,
         sharedAt: f.createdAt,
         messageId: null,

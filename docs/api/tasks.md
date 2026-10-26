@@ -101,6 +101,24 @@ All need the caller to be able to see the task (same visibility rules as `GET /:
 Unchanged: `POST /:id/subtasks { title, description?, assignedTo?: [id], priority?, dueDate?, tags? }`.
 Subtasks cannot be nested; the parent's `subtasks` list comes back on `GET /:id`.
 
+## Tasks from notes and files ("Make a task")
+
+| method | path | body | response |
+|---|---|---|---|
+| POST | `/api/v2/notes/:id/task` | `{ title, description?, assigneeIds?, dueDate?, priority? }` | 201 `{ task: { _id, issueKey, title, status, priority, dueDate, workspace } }` |
+| POST | `/api/v2/files/:id/task` | same | same |
+
+Works like message → task (`POST /api/v2/messages/:id/convert-task`). Anyone who can see the note or
+file and is an active member of its workspace may; the plan's task limits apply (403 `PLAN_LIMIT`).
+The task gets `linkedNote` / `linkedFile` (Postgres `linked_note_id` / `linked_file_id`, migration
+0017) and the source gets `linkedTaskId`. A file task also carries the file in `attachments`
+(`{ name, url, fileId, mimeType, size }`). A second attempt answers **409** `{ message, taskId }`
+with the existing task. Description defaults to `From note: <title>` / `From file: <name>`.
+Activity: `created` with `metadata.source = 'note' | 'file'`. Events: `task-created` (task
+audience), `note:task_created { noteId, taskId, taskTitle }` (workspace room), `file:task_created
+{ fileId, taskId, taskTitle }` (workspace + file rooms). Permanently deleting a task clears the link.
+The assistant's `make_task_from_note` / `make_task_from_file` tools use the same path.
+
 ## Task templates (`/api/task-templates`)
 
 Template fields: `name` (required), `title`, `description`, `priority`, `tags`, `estimatedHours`,

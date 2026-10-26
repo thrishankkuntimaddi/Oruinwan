@@ -22,6 +22,8 @@ router.post('/:id/comments', ctrl.addComment);
 router.patch('/:id/comments/:commentId', ctrl.updateComment);
 router.delete('/:id/comments/:commentId', ctrl.deleteComment);
 router.post('/:id/share', ctrl.shareFile);
+// "Make a task" from the file. Body: { title, description?, assigneeIds?, dueDate?, priority? }
+router.post('/:id/task', ctrl.makeTask);
 router.patch('/:id/tags', ctrl.updateTags);
 
 module.exports = router;
