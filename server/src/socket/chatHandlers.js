@@ -322,7 +322,8 @@ module.exports = function registerChatHandlers(io, socket) {
       // With the conversation's id, so apps that match reads by conversation (the phone) see it too.
       const where = ctx.message.channel ? { channelId: String(ctx.message.channel) } : { dmSessionId: String(ctx.message.dm) };
       if (receipts !== false && await sharesReadReceipts(readerId)) {
-        io.to(ctx.room).emit("read-update", { readerId, messageIds: [messageId], ...where });
+        // In a group, only members who can see that message (not people who joined after it).
+        await require("../modules/conversations/conversationRooms").emitAboutMessage(io, ctx.message, "read-update", { readerId, messageIds: [messageId], ...where });
       } else {
         // Only the reader's own tabs/devices learn about it.
         io.to(`user:${readerId}`).emit("read-update", { readerId, messageIds: [messageId], ...where });

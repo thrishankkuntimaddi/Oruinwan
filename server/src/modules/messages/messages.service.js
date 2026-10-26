@@ -1348,10 +1348,9 @@ async function checklistToggle(messageId, itemIndex, userId, io) {
 }
 
 async function resolveThread(messageId, userId, io) {
-    const message = await Message.findById(messageId).select(
-        'channel dm resolvedThreadAt resolvedBy'
-    );
-    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+    // Same access as reading the thread (a group member who joined after it: no).
+    const message = await messageInReach(messageId, userId);
+    if (message.parentId) throw httpError(400, 'Resolve the thread from its first message');
 
     const isNowResolved = !message.resolvedThreadAt; 
     message.resolvedThreadAt = isNowResolved ? new Date() : null;
