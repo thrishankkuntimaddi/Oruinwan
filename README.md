@@ -398,6 +398,8 @@ Backend code follows the feature-module layout in `server/src/features` and `ser
 
 ## Documentation
 
+- [docs/ONBOARDING.md](docs/ONBOARDING.md): the onboarding and knowledge-transfer kit for new engineers (start here)
+- [docs/PRD.md](docs/PRD.md), [docs/HLD.md](docs/HLD.md), [docs/LLD.md](docs/LLD.md): product requirements, high-level and low-level design
 - [docs/PRODUCT_MAP.md](docs/PRODUCT_MAP.md): how every feature links, what runs underneath, and the ranked gaps
 - [docs/CONVERSATIONS.md](docs/CONVERSATIONS.md): the rules for channels, DMs, groups, threads and task discussions (who sees what, adding people, history)
 - [docs/TEAM_WALKTHROUGH.md](docs/TEAM_WALKTHROUGH.md): a 5-person team uses everything for a week, GitHub and Jira included
