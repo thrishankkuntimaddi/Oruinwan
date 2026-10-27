@@ -18,6 +18,8 @@ import SplitPicker from "../../features/split/SplitPicker";
 import { split, useSplit } from "../../features/split/splitStore";
 import FirstRunTour from "../tour/FirstRunTour";
 import "./shell.css";
+import { usePhoneLayoutSwitch } from "../../appMode/phoneLayout";
+import WorkspacePictureHost from "../../features/workspace/WorkspacePictureHost";
 import AppErrorBoundary from "../../shared/components/ui/AppErrorBoundary";
 
 const WorkspaceNotificationPanel = () => {
@@ -211,6 +213,8 @@ function useCanSplit() {
 }
 
 const MainLayout = ({ children, sidePanel }) => {
+    // A phone-sized window gets the phone app's layout.
+    usePhoneLayoutSwitch();
     const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
     const [showAI, setShowAI] = useState(false);
@@ -569,6 +573,7 @@ const MainLayout = ({ children, sidePanel }) => {
             {canSplit && workspaceId && <SplitPicker workspaceId={workspaceId} />}
 
             <FirstRunTour workspaceId={workspaceId} />
+            <WorkspacePictureHost />
 
             {isMobile && (
                 <MobileBottomNav

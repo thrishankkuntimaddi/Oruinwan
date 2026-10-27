@@ -38,6 +38,9 @@ test.describe('home activity', () => {
       browser.newContext(),
       browser.newContext(),
     ]);
+    // A phone-sized browser window now switches to the phone app's layout; Alice chose "Use the
+    // full website" (the oru_web cookie), so this covers the website's own narrow layout.
+    await contexts[0].addCookies([{ name: 'oru_web', value: '1', url: E2E.webUrl }]);
     [alice, bob, carol] = await Promise.all(contexts.map((c) => c.newPage()));
     await login(bob, 'bob');
     await login(alice, 'alice');

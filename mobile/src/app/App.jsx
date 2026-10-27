@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useComputerLayoutSwitch } from './layoutSwitch.js';
 import { api, useSession } from '../data/session.js';
 import { useNav } from './nav.js';
 import { Shell } from './Shell.jsx';
@@ -40,6 +41,8 @@ function Splash() {
 }
 
 export function App() {
+  // The website's phone layout in a computer window made wide: back to the computer layout.
+  useComputerLayoutSwitch();
   const status = useSession((s) => s.status);
   const needsPassword = useSession((s) => s.needsPassword);
   const pickingWorkspace = useSession((s) => s.pickingWorkspace);

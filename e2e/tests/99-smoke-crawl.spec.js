@@ -222,6 +222,9 @@ test.describe('smoke crawl', () => {
     test(`${name} width: key pages`, async ({ browser }) => {
       const problems = [];
       const ctx = await browser.newContext({ viewport, isMobile: name === 'phone', hasTouch: true });
+      // A phone-sized window switches to the phone app's layout unless "Use the full website" was
+      // chosen: crawl the website's own narrow layout.
+      if (name === 'phone') await ctx.addCookies([{ name: 'oru_web', value: '1', url: E2E.webUrl }]);
       const page = await ctx.newPage();
       await login(page, 'alice');
       const w = ids.workspaceId;
