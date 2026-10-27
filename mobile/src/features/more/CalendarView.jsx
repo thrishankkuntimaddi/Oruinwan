@@ -1,12 +1,12 @@
 // Activity → Calendar, like Google Calendar's phone app: Schedule (what's coming up), Day,
 // 3 days, Week (an hour grid with events at their times and a line at "now") and Month (event
-// bars on each day). Filter by kind; + schedules a meeting (at the time tapped on the grid).
+// bars on each day), picked from one menu; a filter chooses which kinds show.
 // Layout math is shared with the web app (platform/calendar/calendarLayout.js).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock3, Headphones, Plus, SquareCheckBig, Video } from 'lucide-react';
+import { Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Headphones, ListFilter, SquareCheckBig, Video } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { useTasks } from '../../data/hooks.js';
-import { invalidate, useQuery } from '../../data/query.js';
+import { useQuery } from '../../data/query.js';
 import { nav } from '../../app/nav.js';
 import { prefs } from '../../native/storage.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -14,7 +14,7 @@ import { EmptyState } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { clock } from '../../lib/time.js';
 import { openStoredMessage } from '../chats/chatsUi.js';
-import { ScheduleMeetingSheet } from '../meetings/screens.jsx';
+import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
 import { calendarEvents } from './calendar.js';
 import {
   addDays, agenda, eventsOn, hourLabel, layoutDay, monthGrid, rangeTitle, sameDay, startOfDay, stepCursor, weekDays,
@@ -35,6 +35,8 @@ const VIEWS = [
   { id: 'month', label: 'Month' },
 ];
 const HOUR_PX = 52;
+// The view picked, kept while the app runs (it opens on Schedule each time).
+let sessionView = 'agenda';
 
 function openEvent(e) {
   if (e.kind === 'meeting' || e.kind === 'huddle') nav.push('meeting', { id: e.ref.id });
@@ -56,13 +58,14 @@ export function CalendarView() {
   const noteReminders = useQuery(api().noteReminders && ws && `noteReminders:${ws}`, () => api().noteReminders(ws), { staleMs: 60_000 });
   const scheduled = useQuery(api().scheduledMessages && ws && `scheduled:${ws}`, () => api().scheduledMessages(ws), { staleMs: 60_000 });
 
-  const [view, setViewState] = useState(() => prefs.get('calendar.view', 'agenda'));
+  // Opens on Schedule (what's coming up); the view picked stays while the app is open.
+  const [view, setViewState] = useState(() => sessionView);
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
   const [hidden, setHidden] = useState(() => new Set(prefs.get('calendar.hidden', [])));
-  const [scheduleAt, setScheduleAt] = useState(undefined); // undefined: closed
+  const [sheet, setSheet] = useState(null); // 'view' | 'filter'
   const setView = (v) => {
+    sessionView = v;
     setViewState(v);
-    prefs.set('calendar.view', v);
   };
   const toggleKind = (k) =>
     setHidden((prev) => {
@@ -91,52 +94,70 @@ export function CalendarView() {
   const title = view === '3day' ? cursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : rangeTitle(view, cursor);
 
   return (
-    <div className="relative flex flex-col pb-24" data-testid="activity-calendar">
+    <div className="relative flex flex-col pb-6" data-testid="activity-calendar">
+      {/* One row: Today, back / forward, the range, the view and the filter. */}
       <div className="flex items-center gap-1 px-3 pt-3">
-        <button type="button" onClick={() => setCursor(startOfDay(new Date()))} className="h-8 rounded-full border border-line px-3 text-[13px] font-medium active:bg-surface-2">
+        <button type="button" onClick={() => setCursor(startOfDay(new Date()))} className="h-8 shrink-0 rounded-full border border-line px-3 text-[13px] font-medium active:bg-surface-2">
           Today
         </button>
         {view !== 'agenda' && (
           <>
-            <button type="button" aria-label="Previous" onClick={() => step(-1)} className="grid h-8 w-8 place-items-center rounded-full text-text-2 active:bg-surface-2">
+            <button type="button" aria-label="Previous" onClick={() => step(-1)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-2 active:bg-surface-2">
               <Icon as={ChevronLeft} size={18} />
             </button>
-            <button type="button" aria-label="Next" onClick={() => step(1)} className="grid h-8 w-8 place-items-center rounded-full text-text-2 active:bg-surface-2">
+            <button type="button" aria-label="Next" onClick={() => step(1)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-2 active:bg-surface-2">
               <Icon as={ChevronRight} size={18} />
             </button>
           </>
         )}
-        <h2 className="ml-1 min-w-0 flex-1 truncate text-[16px] font-semibold" data-testid="calendar-title">{title}</h2>
+        <h2 className="ml-1 min-w-0 flex-1 truncate text-[15px] font-semibold" data-testid="calendar-title">{title}</h2>
+        <button
+          type="button"
+          onClick={() => setSheet('view')}
+          data-testid="calendar-view"
+          className="flex h-8 shrink-0 items-center gap-1 rounded-full border border-line px-3 text-[13px] font-medium active:bg-surface-2"
+        >
+          {VIEWS.find((v) => v.id === view)?.label} <Icon as={ChevronDown} size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setSheet('filter')}
+          aria-label={hidden.size ? `Filter, ${hidden.size} hidden` : 'Filter'}
+          data-testid="calendar-filter"
+          className={cx('relative grid h-8 w-8 shrink-0 place-items-center rounded-full border active:bg-surface-2', hidden.size ? 'border-accent text-accent-ink' : 'border-line text-text-2')}
+        >
+          <Icon as={ListFilter} size={15} />
+          {hidden.size > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-on-accent">{hidden.size}</span>}
+        </button>
       </div>
 
-      <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto px-3" role="tablist" aria-label="Calendar view">
-        {VIEWS.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            role="tab"
-            aria-selected={view === v.id}
-            onClick={() => setView(v.id)}
-            className={cx('h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', view === v.id ? 'border-accent bg-accent/12 text-accent-ink' : 'border-line text-text-2')}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-      <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto px-3" aria-label="Show">
-        {Object.entries(KIND).map(([k, K]) => (
-          <button
-            key={k}
-            type="button"
-            aria-pressed={!hidden.has(k)}
-            onClick={() => toggleKind(k)}
-            className={cx('flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[12px]', hidden.has(k) ? 'border-line text-text-3' : 'border-line-strong text-text')}
-          >
-            <span className="h-2 w-2 rounded-full" style={{ background: hidden.has(k) ? 'transparent' : K.color, boxShadow: `inset 0 0 0 1.5px ${K.color}` }} />
-            {K.label}
-          </button>
-        ))}
-      </div>
+      <ActionSheet
+        open={sheet === 'view'}
+        onClose={() => setSheet(null)}
+        title="View"
+        actions={VIEWS.map((v) => ({ label: view === v.id ? `${v.label} ✓` : v.label, onSelect: () => setView(v.id) }))}
+      />
+      <Sheet open={sheet === 'filter'} onClose={() => setSheet(null)} title="Show on the calendar">
+        <div className="px-2 pb-3" data-testid="calendar-filter-sheet">
+          {Object.entries(KIND).map(([k, K]) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={!hidden.has(k)}
+              onClick={() => toggleKind(k)}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left active:bg-surface-2"
+            >
+              <span className="grid h-8 w-8 place-items-center rounded-lg text-white" style={{ background: K.color }}>
+                <Icon as={K.icon} size={16} />
+              </span>
+              <span className="flex-1 text-[15px]">{K.label}</span>
+              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', hidden.has(k) ? 'border-line-strong' : 'border-accent bg-gold text-on-accent')}>
+                {!hidden.has(k) && <Icon as={Check} size={14} />}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Sheet>
 
       <div className="mt-3">
         {view === 'agenda' ? (
@@ -151,31 +172,10 @@ export function CalendarView() {
             }}
           />
         ) : (
-          <HourGrid days={days} events={events} onPickDay={(d) => (setCursor(d), setView('day'))} onCreate={(at) => setScheduleAt(at)} />
+          <HourGrid days={days} events={events} onPickDay={(d) => (setCursor(d), setView('day'))} />
         )}
       </div>
 
-      <button
-        type="button"
-        aria-label="Schedule a meeting"
-        onClick={() => setScheduleAt(null)}
-        className="pressable fixed right-4 z-10 grid h-14 w-14 place-items-center rounded-2xl bg-gold text-on-accent shadow-lg"
-        // Above the AI button, which sits in this corner.
-        style={{ bottom: 'calc(var(--sab) + 160px)' }}
-        data-testid="calendar-create"
-      >
-        <Icon as={Plus} size="lg" />
-      </button>
-      {scheduleAt !== undefined && (
-        <ScheduleMeetingSheet
-          open
-          startAt={scheduleAt ? scheduleAt.toISOString() : null}
-          onClose={() => {
-            setScheduleAt(undefined);
-            invalidate('calendar:');
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -253,7 +253,7 @@ function Month({ cursor, events, onPick }) {
   );
 }
 
-function HourGrid({ days, events, onPickDay, onCreate }) {
+function HourGrid({ days, events, onPickDay }) {
   const scroller = useRef(null);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -267,12 +267,6 @@ function HourGrid({ days, events, onPickDay, onCreate }) {
   }, [days.length, days[0]?.getTime()]);
   const cols = { gridTemplateColumns: `40px repeat(${days.length}, minmax(0, 1fr))` };
   const allDay = days.map((d) => eventsOn(events, d).filter((e) => e.allDay));
-
-  const tap = (day, e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const minutes = Math.floor(((e.clientY - r.top) / HOUR_PX) * 2) * 30;
-    onCreate(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, Math.max(0, Math.min(23 * 60 + 30, minutes))));
-  };
 
   return (
     <div data-testid={days.length === 1 ? 'calendar-day' : 'calendar-week'}>
@@ -315,7 +309,6 @@ function HourGrid({ days, events, onPickDay, onCreate }) {
             <div
               key={d.toISOString()}
               className="relative border-l border-line-soft"
-              onClick={(e) => tap(d, e)}
               style={{ backgroundImage: 'linear-gradient(to bottom, rgb(var(--c-line) / 0.8) 1px, transparent 1px)', backgroundSize: `100% ${HOUR_PX}px` }}
             >
               {layoutDay(events, d).map(({ event, top, height, column, columns }) => (

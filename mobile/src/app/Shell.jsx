@@ -26,6 +26,7 @@ import { HuddleLayer } from '../features/huddles/HuddleLayer.jsx';
 import { SHORTCUTS, shortcutFor } from './shortcuts.js';
 import { useOutbox } from '../data/outbox.js';
 import { SidePanel, useEdgeBack, useEdgeSwipe } from './SidePanel.jsx';
+import { WorkspaceDrawer, useLeftEdgeSwipe } from './WorkspaceDrawer.jsx';
 import { AiFab } from './AiFab.jsx';
 import { QuickAi } from './QuickAi.jsx';
 import { EXTRA_TABS, useTabBar } from './tabBarPrefs.js';
@@ -263,6 +264,8 @@ export function Shell() {
   const stack = stacks[tab];
   // Swipe in from the right edge on a tab's main screen: the side panel (phones and tablets).
   useEdgeSwipe(!wide && stack.length === 0 && tab !== 'ai');
+  // From the left edge on a tab's main screen: the workspace drawer.
+  useLeftEdgeSwipe(!wide && stack.length === 0 && tab !== 'ai');
   // …and from the left edge on a pushed screen (or AI) to go back.
   useEdgeBack(!wide && (stack.length > 0 || tab === 'ai'), goBack);
 
@@ -297,6 +300,7 @@ export function Shell() {
         <HuddleLayer />
         <OfflinePill />
         <SidePanel />
+      <WorkspaceDrawer />
         <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
       </div>
     );
@@ -318,6 +322,7 @@ export function Shell() {
       <HuddleLayer />
       <OfflinePill />
       <SidePanel />
+      <WorkspaceDrawer />
       <ShortcutsSheet open={help} onClose={() => setHelp(false)} />
     </div>
   );

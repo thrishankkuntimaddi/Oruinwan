@@ -67,6 +67,7 @@ export const ROUTES = {
   automations: pick(automations, 'AutomationsScreen'),
   automation: pick(automations, 'AutomationScreen'),
   admin: pick(admin, 'AdminScreen'),
+  calendar: pick(more, 'CalendarScreen'),
   'admin.workspace': pick(admin, 'AdminWorkspaceScreen'),
   'admin.analytics': pick(admin, 'AdminAnalyticsScreen'),
   'admin.features': pick(admin, 'AdminFeaturesScreen'),

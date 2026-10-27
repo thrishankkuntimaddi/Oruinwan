@@ -95,7 +95,8 @@ export function Fab({ icon, label, onClick, side = 'right', className, compact =
       title={label}
       onClick={onClick}
       className={cx(
-        'pressable absolute z-10 flex h-14 items-center justify-center gap-2 rounded-2xl bg-gold text-on-accent shadow-lg',
+        'pressable absolute z-10 flex h-14 items-center justify-center gap-2 rounded-[18px] bg-gold text-on-accent',
+        'ring-1 ring-inset ring-white/25 shadow-[0_10px_24px_-8px_rgb(var(--c-accent)/0.65),0_2px_6px_rgb(0_0_0/0.18)]',
         compact ? 'w-14' : 'px-5',
         side === 'left' ? 'left-4' : 'right-4',
         className,
@@ -103,7 +104,8 @@ export function Fab({ icon, label, onClick, side = 'right', className, compact =
       style={{ bottom: wide ? 'calc(var(--sab) + 20px)' : 'calc(var(--sab) + 76px)' }}
       {...rest}
     >
-      <Icon as={icon} size={compact ? 'lg' : 'md'} />
+      {/* A bolder glyph: the thin default looked faint on the gold. */}
+      <Icon as={icon} size={compact ? 26 : 'md'} strokeWidth={compact ? 2.4 : 2} />
       {!compact && <span className="text-[15px] font-semibold">{label}</span>}
     </button>
   );

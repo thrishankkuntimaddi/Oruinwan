@@ -101,6 +101,24 @@ const SECTIONS = [
         ),
     },
     {
+        id: 'providers',
+        icon: Lock,
+        title: 'Service Providers',
+        content: (
+            <>
+                <p>These companies process data on our behalf, only to run the parts of Oruinwan listed next to them:</p>
+                <ul>
+                    <li><strong>Amazon Web Services</strong> (hosting): our servers, databases and stored files run on AWS. Messages are end-to-end encrypted before they reach it.</li>
+                    <li><strong>Google Firebase</strong> (phone apps): delivers push notifications, and collects anonymous usage analytics (app opens, screens viewed, sign-ins; never message content). You can turn analytics off in the phone app under Settings → Privacy.</li>
+                    <li><strong>Brevo</strong> (email): sends account emails such as verification, invitations and password resets.</li>
+                    <li><strong>AI model providers</strong> (Oruinwan AI, when you use it): the question you ask and the content you choose to include are sent to the workspace's AI provider (for example Anthropic) to produce an answer. They are not used to train models.</li>
+                    <li><strong>Google</strong> (optional): Sign in with Google and Google Drive backup, described above.</li>
+                </ul>
+                <p>Each provider is bound by a data processing agreement and may use the data only to provide its service to us.</p>
+            </>
+        ),
+    },
+    {
         id: 'security',
         icon: Lock,
         title: 'Security',
@@ -144,7 +162,7 @@ export default function Privacy() {
                 icon={Shield}
                 title={<>Your privacy <span className="orw-gloss-text">matters.</span></>}
                 lead="We built Oruinwan with privacy as a foundation — not an afterthought. This policy explains exactly what we collect, how we use it, and how you stay in control."
-                meta={<span><CalendarDays size={14} aria-hidden="true" /> Last updated: October 22, 2026</span>}
+                meta={<span><CalendarDays size={14} aria-hidden="true" /> Last updated: October 27, 2026</span>}
             />
             <DocLayout numbered sections={SECTIONS} tocLabel="Contents" />
         </PublicPageShell>

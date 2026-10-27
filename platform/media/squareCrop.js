@@ -49,7 +49,9 @@ export function sourceSquare(natural, frame, crop) {
 }
 
 /** Draws the cropped square into a canvas and returns a JPEG Blob (`size` × `size`). */
-export function cropToBlob(image, natural, frame, crop, { size = OUTPUT_SIZE, type = 'image/jpeg', quality = 0.9 } = {}) {
+export async function cropToBlob(image, natural, frame, crop, { size = OUTPUT_SIZE, type = 'image/jpeg', quality = 0.9 } = {}) {
+  // A big photo may still be decoding: drawing it then gives an empty (black) picture.
+  if (typeof image?.decode === 'function') await image.decode().catch(() => {});
   const { sx, sy, size: s } = sourceSquare(natural, frame, crop);
   const canvas = document.createElement('canvas');
   canvas.width = size;

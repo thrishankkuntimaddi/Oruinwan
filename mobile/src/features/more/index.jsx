@@ -1,7 +1,7 @@
 // Secondary screens reached from Home, the header and Settings.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Bell, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug,
+  Bell, CalendarDays, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug,
   SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -13,7 +13,7 @@ import {
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { Chips, SearchField, Segmented } from '../../ui/Controls.jsx';
+import { Chips, SearchField } from '../../ui/Controls.jsx';
 import { prefs } from '../../native/storage.js';
 import { CalendarView } from './CalendarView.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
@@ -31,7 +31,7 @@ import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, messageTarget, whereLabel } f
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { groupActivity } from '../home/activityGroups.js';
-import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
+import { WorkspaceHero } from '../workspace/WorkspaceHero.jsx';
 import { InviteSheet, canInvite } from '../workspace/InviteSheet.jsx';
 import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote } from '../plan/planText.js';
@@ -53,15 +53,23 @@ const NOTIF_FILTERS = [
   { value: 'reviews', label: 'Reviews' },
 ];
 
+/** The calendar on its own screen (from the workspace drawer, the tab bar drawer and Activity). */
+export function CalendarScreen() {
+  return (
+    <Screen>
+      <Header title="Calendar" />
+      <Body>
+        <CalendarView />
+      </Body>
+    </Screen>
+  );
+}
+
 /** The Activity tab: notifications, with the same header as every other tab. */
 export function ActivityScreen() {
   return <NotificationsScreen asTab />;
 }
 
-const ACTIVITY_VIEWS = [
-  { value: 'list', label: 'Activity' },
-  { value: 'calendar', label: 'Calendar' },
-];
 
 /** Notifications. `asTab`: the Activity tab's root; otherwise a pushed screen (older links). */
 export function NotificationsScreen({ initial = 'all', asTab = false }) {
@@ -114,10 +122,21 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
   return (
     <Screen>
       {asTab ? (
-        <TabHeader title="Activity" actions={view === 'list' && unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}>
-          <div className="px-4 pb-2.5">
-            <Segmented label="View" value={view} onChange={pickView} options={ACTIVITY_VIEWS} size="sm" />
-          </div>
+        <TabHeader
+          title={view === 'calendar' ? 'Calendar' : 'Activity'}
+          actions={
+            <>
+              {view === 'list' && unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}
+              {/* Calendar and Activity, one tap apart. */}
+              <IconButton
+                icon={view === 'calendar' ? Bell : CalendarDays}
+                label={view === 'calendar' ? 'Show activity' : 'Show calendar'}
+                data-testid="activity-calendar-toggle"
+                onClick={() => pickView(view === 'calendar' ? 'list' : 'calendar')}
+              />
+            </>
+          }
+        >
           {view === 'list' && <Chips options={NOTIF_FILTERS} value={filter} onChange={setFilter} className="pb-3" />}
         </TabHeader>
       ) : (
@@ -397,18 +416,14 @@ export function WorkspaceScreen() {
     <Screen>
       <Header title="Workspace" />
       <Body>
-        {workspace.profile?.coverUrl && (
-          <div className="mx-4 mt-2 h-28 overflow-hidden rounded-card border border-line-soft" data-testid="workspace-cover">
-            <img src={workspace.profile.coverUrl} alt="" className="h-full w-full object-cover" />
-          </div>
-        )}
-        <div className={cx('flex flex-col items-center px-6 pb-2 text-center', workspace.profile?.coverUrl && '-mt-9')}>
-          <WorkspaceTile workspace={workspace} size={72} className={workspace.profile?.coverUrl ? 'ring-4 ring-[var(--bg)]' : undefined} />
-          <h1 className="mt-4 text-2xl font-bold">{workspace.name}</h1>
+        {/* Cover and picture; admins change them right here. */}
+        <WorkspaceHero workspace={workspace} editable={mode === 'live' && isAdmin} className="mx-4 mt-2" />
+        <div className="flex flex-col items-start px-5 pb-2 text-left">
+          <h1 className="mt-3 text-2xl font-bold">{workspace.name}</h1>
           {workspace.profile?.tagline && <p className="mt-1 text-[15px] font-medium">{workspace.profile.tagline}</p>}
           {workspace.description && <p className="mt-1 text-sm text-text-2">{workspace.description}</p>}
           {(workspace.profile?.website || workspace.profile?.location) && (
-            <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-text-2">
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-2">
               {workspace.profile.website && (
                 <button type="button" className="text-accent-ink" onClick={() => openExternal(workspace.profile.website)}>
                   {workspace.profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}

@@ -19,6 +19,7 @@ import { IconButton } from '../ui/Button.jsx';
 import { useOverlay } from '../ui/Overlay.jsx';
 import { WorkspaceTile } from '../features/workspace/WorkspaceTile.jsx';
 import { openSidePanel } from './SidePanel.jsx';
+import { openWorkspaceDrawer } from './WorkspaceDrawer.jsx';
 
 const QuickSearch = lazy(() => import('../features/search/QuickSearch.jsx').then((m) => ({ default: m.QuickSearch })));
 
@@ -150,8 +151,8 @@ export function TabHeader({ title, actions, children, className, onBack, context
         <div className="flex h-16 items-center gap-1 pl-4 pr-2">
           <button
             type="button"
-            onClick={() => useSession.setState({ pickingWorkspace: 'browse' })}
-            aria-label={`Workspace: ${workspace?.name || 'none'}. Your workspaces`}
+            onClick={openWorkspaceDrawer}
+            aria-label={`Workspace: ${workspace?.name || 'none'}. Workspace menu`}
             data-tour="workspace"
             className="pressable mr-1 flex min-w-0 flex-1 items-center gap-3 text-left"
           >

@@ -1,21 +1,20 @@
-// The side panel: your profile and status, the workspace you're in, and everything that isn't
-// a tab (saved, drafts and scheduled, files, settings, help). Opens from the profile picture in
-// every tab's header, or by swiping in from the right edge on a tab's main screen.
+// The side panel (right): you — your profile and status, account, saved, drafts and scheduled,
+// settings and help. Opens from the profile picture in every tab's header, or by swiping in from
+// the right edge on a tab's main screen. The workspace has its own drawer on the left
+// (WorkspaceDrawer.jsx).
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Bookmark, Building2, ChevronRight, CircleHelp, Clock3, LifeBuoy, LogOut, Repeat2, Send, Settings, Sparkles, UserRound,
+  Bookmark, ChevronRight, CircleHelp, Clock3, LifeBuoy, LogOut, Send, Settings, Sparkles, UserRound,
 } from 'lucide-react';
 import { create } from 'zustand';
-import { useSession, useWorkspace } from '../data/session.js';
+import { useSession } from '../data/session.js';
 import { useUpdate } from '../update/updater.js';
 import { nav } from './nav.js';
 import { useOverlay, usePresence } from '../ui/Overlay.jsx';
 import { Avatar } from '../ui/Avatar.jsx';
 import { Icon } from '../ui/Icon.jsx';
 import { cx } from '../ui/cx.js';
-import { WorkspaceTile } from '../features/workspace/WorkspaceTile.jsx';
-import { WorkspaceSheet } from '../features/workspace/WorkspaceSheet.jsx';
 
 export const useSidePanel = create(() => ({ open: false }));
 export const openSidePanel = () => useSidePanel.setState({ open: true });
@@ -44,9 +43,7 @@ function Item({ icon, label, hint, onClick, danger, testId }) {
 export function SidePanel() {
   const open = useSidePanel((s) => s.open);
   const user = useSession((s) => s.user);
-  const workspace = useWorkspace();
   const update = useUpdate((s) => s.status);
-  const [switcher, setSwitcher] = useState(false);
   const { mounted, closing } = usePresence(open, 200);
   useOverlay(open, closeSidePanel);
   const panel = useRef(null);
@@ -62,7 +59,7 @@ export function SidePanel() {
     fn();
   };
 
-  if (!mounted) return <WorkspaceSheet open={switcher} onClose={() => setSwitcher(false)} />;
+  if (!mounted) return null;
 
   // Drag the panel back to the right to close it.
   const touch = {
@@ -97,7 +94,7 @@ export function SidePanel() {
         <aside
           ref={panel}
           role="dialog"
-          aria-label="You and your workspace"
+          aria-label="You"
           className="glass absolute inset-y-0 right-0 flex w-[86%] max-w-[360px] flex-col border-l border-line-soft bg-bg pt-safe pb-safe shadow-2xl"
           style={{
             transform: closing ? 'translateX(100%)' : `translateX(${dx}px)`,
@@ -120,23 +117,6 @@ export function SidePanel() {
               </span>
             </button>
 
-            <p className="mt-5 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Workspace</p>
-            <button
-              type="button"
-              onClick={go(() => useSession.setState({ pickingWorkspace: 'browse' }))}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-surface-2"
-              data-testid="side-workspace"
-            >
-              <WorkspaceTile workspace={workspace} size={36} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium">{workspace?.name || 'No workspace'}</span>
-                <span className="block text-[12px] text-text-2">All your workspaces</span>
-              </span>
-              <Icon as={ChevronRight} size={16} className="text-text-3" />
-            </button>
-            <Item icon={Repeat2} label="Switch workspace" onClick={() => (closeSidePanel(), setSwitcher(true))} />
-            <Item icon={Building2} label="Workspace details" onClick={go(() => nav.push('workspace'))} />
-
             <p className="mt-5 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">You</p>
             <Item icon={Bookmark} label="Saved messages" onClick={go(() => nav.push('saved'))} />
             <Item icon={Clock3} label="Drafts & scheduled" onClick={go(() => nav.push('outgoing', { tab: 'scheduled' }))} testId="side-outgoing" />
@@ -158,7 +138,6 @@ export function SidePanel() {
           </div>
         </aside>
       </div>
-      <WorkspaceSheet open={switcher} onClose={() => setSwitcher(false)} />
     </>,
     document.body,
   );

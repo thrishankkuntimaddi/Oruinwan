@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBump } from '../lib/motion.js';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Bookmark, Bot, Check, ChevronDown, ChevronUp, Pencil, Plug, Settings, Workflow } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bookmark, Bot, CalendarDays, Check, ChevronDown, ChevronUp, Pencil, Plug, Settings, Workflow } from 'lucide-react';
 import { prefs } from '../native/storage.js';
 import { nav, useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
@@ -30,6 +30,7 @@ export function useDueSoonCount() {
 
 /** Drawer places that aren't tabs: opened as screens in the current tab. */
 const MORE = [
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, open: () => nav.push('calendar') },
   { id: 'automations', label: 'Automations', icon: Workflow, open: () => nav.push('automations') },
   { id: 'integrations', label: 'Integrations', icon: Plug, open: () => nav.push('integrations') },
   { id: 'agents', label: 'Agents', icon: Bot, open: () => nav.push('agents') },

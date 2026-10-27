@@ -2,7 +2,8 @@
 // touch (AiEyes). The same look on every tab; on Chats, Tasks and Notes it is smaller and sits just
 // above the tab's own button ("New task"…); on Home and Activity it takes that spot. Tapping it
 // opens the quick AI window (QuickAi.jsx) right there.
-import { nav } from './nav.js';
+import { useEffect, useRef, useState } from 'react';
+import { nav, useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
 import { useKeyboard } from '../native/keyboard.js';
 import { cx } from '../ui/cx.js';
@@ -19,6 +20,18 @@ export function AiFab({ tab, hidden = false }) {
   const aiOn = useFlag('ai');
   const keyboardOpen = useKeyboard((s) => s.open);
   const quickOpen = useQuickAi((s) => s.open);
+  // A little hop (legs out) each time the page changes.
+  const page = useNav((st) => {
+    const stack = st.stacks?.[st.tab] || [];
+    return `${st.tab}:${stack[stack.length - 1]?.key || 'root'}`;
+  });
+  const [hop, setHop] = useState(0);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return undefined; }
+    setHop((n) => n + 1);
+    return undefined;
+  }, [page]);
   if (!aiOn || tab === 'ai') return null;
   const small = TABS_WITH_FAB.has(tab);
   const size = small ? SMALL : BIG;
@@ -45,7 +58,14 @@ export function AiFab({ tab, hidden = false }) {
         transition: 'width 260ms var(--ease-out-soft), height 260ms var(--ease-out-soft), bottom 260ms var(--ease-out-soft), opacity 160ms ease-out',
       }}
     >
-      <AiEyes size={small ? 24 : 30} />
+      {/* Keyed by the hop count, so each page change replays the hop. */}
+      <span key={hop} className={cx('ai-fab-body grid place-items-center', hop > 0 && 'is-hopping')}>
+        <AiEyes size={small ? 24 : 30} />
+        <span className="ai-fab-legs" aria-hidden>
+          <i />
+          <i />
+        </span>
+      </span>
     </button>
   );
 }

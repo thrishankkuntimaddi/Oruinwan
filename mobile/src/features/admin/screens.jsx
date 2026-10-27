@@ -3,13 +3,12 @@
 // permission matrix, audit logs) appear when the account belongs to a company.
 // Privacy: analytics are counts only. Nothing here shows messages or who talks to whom.
 import { useMemo, useRef, useState } from 'react';
-import { SquareCropSheet } from '../../ui/SquareCropSheet.jsx';
+import { WorkspaceHero } from '../workspace/WorkspaceHero.jsx';
 import {
   Activity, Archive, BarChart3, Building2, ClipboardCheck, Copy, Crown, Download, FileJson, Gauge, Gavel, Hash, LayoutTemplate, Lock, LogOut, Megaphone, Network,
   ScrollText, Settings2, ShieldCheck, SlidersHorizontal, ToggleRight, Trash2, Upload, UserPlus, Users, UsersRound,
 } from 'lucide-react';
 import { InviteSheet } from '../workspace/InviteSheet.jsx';
-import { WorkspaceTile } from '../workspace/WorkspaceTile.jsx';
 import { nav } from '../../app/nav.js';
 import { useWide } from '../../app/layout.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -966,10 +965,6 @@ export function AdminWorkspaceScreen() {
     location: workspace?.profile?.location || '',
   }));
   const [saving, setSaving] = useState(false);
-  const [imageBusy, setImageBusy] = useState(null); // 'logo' | 'cover'
-  const [cropping, setCropping] = useState(null); // a picked workspace picture, being cropped
-  const logoInput = useRef(null);
-  const coverInput = useRef(null);
   const [dialog, setDialog] = useState(null); // 'transfer' | 'archive' | 'delete' | 'leave'
   const [newOwner, setNewOwner] = useState(null);
   const [typed, setTyped] = useState('');
@@ -1024,71 +1019,13 @@ export function AdminWorkspaceScreen() {
   };
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const setImage = async (kind, file) => {
-    if (file && file.size > 5 * 1024 * 1024) return toast('Images can be at most 5 MB', 'danger');
-    setImageBusy(kind);
-    try {
-      await api().setWorkspaceImage(workspace.id, kind, file);
-      await reload();
-      toast(file ? (kind === 'logo' ? 'Workspace picture updated' : 'Cover updated') : 'Removed', 'success');
-      if (kind === 'logo') setCropping(null);
-    } catch (err) {
-      toast(err.message || 'Upload failed', 'danger');
-    } finally {
-      setImageBusy(null);
-    }
-    return undefined;
-  };
-  // The logo (workspace picture) is cropped to a square first; the cover goes up as it is.
-  const pick = (kind) => (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (kind === 'logo') setCropping(file);
-    else setImage(kind, file);
-  };
-  const profile = workspace.profile || {};
   return (
     <Screen>
       <Header title="General" subtitle={workspace.name} />
       <Body>
         <Section title="Profile">
-          <div className="px-4">
-            <button
-              type="button"
-              onClick={() => coverInput.current?.click()}
-              className="relative block h-28 w-full overflow-hidden rounded-card border border-line-soft bg-surface-2 text-left"
-              style={profile.coverUrl ? undefined : { background: `linear-gradient(135deg, ${workspace.color || '#b8956a'}, color-mix(in srgb, ${workspace.color || '#b8956a'} 50%, var(--bg)))` }}
-              aria-label={profile.coverUrl ? 'Change cover image' : 'Add a cover image'}
-              data-testid="ws-cover-pick"
-            >
-              {profile.coverUrl && <img src={profile.coverUrl} alt="" className="h-full w-full object-cover" />}
-              <span className="absolute bottom-2 right-2 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-medium">
-                {imageBusy === 'cover' ? 'Uploading…' : profile.coverUrl ? 'Change cover' : 'Add cover'}
-              </span>
-            </button>
-            <div className="-mt-7 flex items-end gap-3 pl-3">
-              <button type="button" onClick={() => logoInput.current?.click()} aria-label="Change workspace picture" className="rounded-[12px] ring-4 ring-[var(--bg)]" data-testid="ws-logo-pick">
-                <WorkspaceTile workspace={workspace} size={60} />
-              </button>
-              <div className="flex gap-2 pb-1">
-                <Button size="sm" variant="secondary" loading={imageBusy === 'logo'} onClick={() => logoInput.current?.click()}>
-                  {profile.logoUrl ? 'Change picture' : 'Add picture'}
-                </Button>
-                {profile.logoUrl && <Button size="sm" variant="ghost" onClick={() => setImage('logo', null)}>Remove</Button>}
-                {profile.coverUrl && <Button size="sm" variant="ghost" onClick={() => setImage('cover', null)}>Remove cover</Button>}
-              </div>
-            </div>
-            <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pick('logo')} />
-            <SquareCropSheet
-              file={cropping}
-              title="Workspace picture"
-              busy={imageBusy === 'logo'}
-              onCancel={() => setCropping(null)}
-              onDone={(blob) => setImage('logo', new File([blob], 'workspace.jpg', { type: 'image/jpeg' }))}
-            />
-            <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pick('cover')} />
-          </div>
+          {/* Tap the cover or the + on the picture to change them. */}
+          <WorkspaceHero workspace={workspace} editable className="px-4" />
         </Section>
         <Section title="About this workspace">
           <div className="space-y-3 px-4">
