@@ -7,6 +7,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Btn, Chip, Confirm, Field, IconBtn, errorMessage } from '../../ui/page';
 import '../profileMenu.css';
+import SquareCropDialog from '../../../shared/components/media/SquareCropDialog';
 
 // Matches the server's limits on POST /api/auth/me/profile-picture (multer, field `profilePicture`).
 const MAX_PHOTO_MB = 5;
@@ -26,19 +27,25 @@ function PhotoField({ user }) {
         setUser?.((prev) => (prev ? { ...prev, profilePicture } : prev));
     };
 
-    const onFile = async (e) => {
+    // A picked photo is cropped to a square first, then uploaded.
+    const [cropping, setCropping] = useState(null);
+    const onFile = (e) => {
         const file = e.target.files?.[0];
         if (fileRef.current) fileRef.current.value = '';
         if (!file) return;
         if (!PHOTO_TYPES.includes(file.type)) { showToast('Use a JPG, PNG, WebP or GIF image', 'error'); return; }
         if (file.size > MAX_PHOTO_MB * 1024 * 1024) { showToast(`Images must be ${MAX_PHOTO_MB} MB or smaller`, 'error'); return; }
+        setCropping(file);
+    };
+    const uploadCropped = async (blob) => {
         setBusy(true);
         try {
             const form = new FormData();
-            form.append('profilePicture', file);
+            form.append('profilePicture', new File([blob], 'profile.jpg', { type: 'image/jpeg' }));
             const { data } = await api.post('/api/auth/me/profile-picture', form);
             if (data?.profilePicture) updateUser(data.profilePicture);
             showToast('Profile photo updated', 'success');
+            setCropping(null);
         } catch (err) {
             showToast(errorMessage(err, 'Could not upload your photo'), 'error');
         } finally {
@@ -79,6 +86,7 @@ function PhotoField({ user }) {
                 </div>
                 <span className="pm-hint">JPG, PNG, WebP or GIF, up to {MAX_PHOTO_MB} MB.</span>
                 <input ref={fileRef} type="file" accept={PHOTO_TYPES.join(',')} onChange={onFile} hidden />
+                {cropping && <SquareCropDialog file={cropping} title="Profile photo" round busy={busy} onCancel={() => setCropping(null)} onDone={uploadCropped} />}
             </div>
             <Confirm
                 open={confirmRemove}

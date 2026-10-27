@@ -3,6 +3,7 @@
 // permission matrix, audit logs) appear when the account belongs to a company.
 // Privacy: analytics are counts only. Nothing here shows messages or who talks to whom.
 import { useMemo, useRef, useState } from 'react';
+import { SquareCropSheet } from '../../ui/SquareCropSheet.jsx';
 import {
   Activity, Archive, BarChart3, Building2, ClipboardCheck, Copy, Crown, Download, FileJson, Gauge, Gavel, Hash, LayoutTemplate, Lock, LogOut, Megaphone, Network,
   ScrollText, Settings2, ShieldCheck, SlidersHorizontal, ToggleRight, Trash2, Upload, UserPlus, Users, UsersRound,
@@ -966,6 +967,7 @@ export function AdminWorkspaceScreen() {
   }));
   const [saving, setSaving] = useState(false);
   const [imageBusy, setImageBusy] = useState(null); // 'logo' | 'cover'
+  const [cropping, setCropping] = useState(null); // a picked workspace picture, being cropped
   const logoInput = useRef(null);
   const coverInput = useRef(null);
   const [dialog, setDialog] = useState(null); // 'transfer' | 'archive' | 'delete' | 'leave'
@@ -1028,7 +1030,8 @@ export function AdminWorkspaceScreen() {
     try {
       await api().setWorkspaceImage(workspace.id, kind, file);
       await reload();
-      toast(file ? (kind === 'logo' ? 'Logo updated' : 'Cover updated') : 'Removed', 'success');
+      toast(file ? (kind === 'logo' ? 'Workspace picture updated' : 'Cover updated') : 'Removed', 'success');
+      if (kind === 'logo') setCropping(null);
     } catch (err) {
       toast(err.message || 'Upload failed', 'danger');
     } finally {
@@ -1036,10 +1039,13 @@ export function AdminWorkspaceScreen() {
     }
     return undefined;
   };
+  // The logo (workspace picture) is cropped to a square first; the cover goes up as it is.
   const pick = (kind) => (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (file) setImage(kind, file);
+    if (!file) return;
+    if (kind === 'logo') setCropping(file);
+    else setImage(kind, file);
   };
   const profile = workspace.profile || {};
   return (
@@ -1062,18 +1068,25 @@ export function AdminWorkspaceScreen() {
               </span>
             </button>
             <div className="-mt-7 flex items-end gap-3 pl-3">
-              <button type="button" onClick={() => logoInput.current?.click()} aria-label="Change logo" className="rounded-[12px] ring-4 ring-[var(--bg)]" data-testid="ws-logo-pick">
+              <button type="button" onClick={() => logoInput.current?.click()} aria-label="Change workspace picture" className="rounded-[12px] ring-4 ring-[var(--bg)]" data-testid="ws-logo-pick">
                 <WorkspaceTile workspace={workspace} size={60} />
               </button>
               <div className="flex gap-2 pb-1">
                 <Button size="sm" variant="secondary" loading={imageBusy === 'logo'} onClick={() => logoInput.current?.click()}>
-                  {profile.logoUrl ? 'Change logo' : 'Upload logo'}
+                  {profile.logoUrl ? 'Change picture' : 'Add picture'}
                 </Button>
                 {profile.logoUrl && <Button size="sm" variant="ghost" onClick={() => setImage('logo', null)}>Remove</Button>}
                 {profile.coverUrl && <Button size="sm" variant="ghost" onClick={() => setImage('cover', null)}>Remove cover</Button>}
               </div>
             </div>
             <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pick('logo')} />
+            <SquareCropSheet
+              file={cropping}
+              title="Workspace picture"
+              busy={imageBusy === 'logo'}
+              onCancel={() => setCropping(null)}
+              onDone={(blob) => setImage('logo', new File([blob], 'workspace.jpg', { type: 'image/jpeg' }))}
+            />
             <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={pick('cover')} />
           </div>
         </Section>

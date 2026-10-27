@@ -656,6 +656,21 @@ export const liveAdapter = {
     prefs.set('live.user', me);
     return me;
   },
+  /** A new profile photo (a cropped square File/Blob), or null to remove it. Returns the user. */
+  async setProfilePhoto(file) {
+    let url = null;
+    if (file) {
+      const form = new FormData();
+      form.append('profilePicture', file, file.name || 'profile.jpg');
+      const data = await api.post('/auth/me/profile-picture', form);
+      url = data?.profilePicture || null;
+    } else {
+      await api.del('/auth/me/profile-picture');
+    }
+    me = { ...me, avatarUrl: url ? absolute(url) : null };
+    prefs.set('live.user', me);
+    return me;
+  },
   /** The first-run tour was finished or skipped: saved on the account, so it shows once everywhere. */
   async markTourDone() {
     await api.put('/auth/me', { preferences: { tour: { done: true } } });

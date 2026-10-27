@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, UserPlus, Settings, Edit3, LogOut, Plus, ArrowLeftRight } from 'lucide-react';
+import { ChevronRight, UserPlus, Settings, Edit3, LogOut, Plus, ArrowLeftRight, ImagePlus } from 'lucide-react';
+import { changeWorkspacePicture } from '../../../../features/workspace/WorkspacePictureHost';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { WorkspaceIcon } from '../../../../utils/workspaceIcons';
 import '../../../layout/shell.css';
@@ -75,6 +76,14 @@ const WorkspaceHeader = ({
                         <Settings size={14} />
                         Workspace Settings
                     </button>
+                    {isAdmin && (
+                        <button type="button" role="menuitem" className="gl-shell-menu-item" data-testid="workspace-picture"
+                            onClick={() => { setShowWorkspaceMenu(false); changeWorkspacePicture(); }}
+                        >
+                            <ImagePlus size={14} />
+                            {activeWorkspace?.profile?.logoUrl ? 'Change workspace picture' : 'Add workspace picture'}
+                        </button>
+                    )}
                     {isAdmin && (
                         <button type="button" role="menuitem" className="gl-shell-menu-item"
                             onClick={() => { setShowRenameModal(true); setShowWorkspaceMenu(false); setNewName(workspaceName); }}

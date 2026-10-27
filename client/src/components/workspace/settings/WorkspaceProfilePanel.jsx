@@ -4,6 +4,7 @@ import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 import { WorkspaceIcon, workspaceLogoSrc, DEFAULT_WORKSPACE_COLOR } from '../../../utils/workspaceIcons';
 import { Btn, Field, Panel } from '../../ui/page';
+import SquareCropDialog from '../../../shared/components/media/SquareCropDialog';
 
 const MAX_IMAGE = 5 * 1024 * 1024;
 const IMAGE_TYPES = 'image/jpeg,image/png,image/webp,image/gif';
@@ -20,6 +21,8 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
     const [uploading, setUploading] = useState(null);
     const [form, setForm] = useState({});
     const logoInput = useRef(null);
+    // The workspace picture is cropped to a square first (like a group icon).
+    const [cropping, setCropping] = useState(null);
     const coverInput = useRef(null);
 
     const start = () => {
@@ -57,7 +60,7 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
         setUploading(kind);
         try {
             await api.post(`/api/workspaces/${workspace.id}/profile/${kind}`, body, { headers: { 'Content-Type': 'multipart/form-data' } });
-            showToast(kind === 'logo' ? 'Logo updated' : 'Cover image updated', 'success');
+            showToast(kind === 'logo' ? 'Workspace picture updated' : 'Cover image updated', 'success');
             await onChanged?.();
         } catch (err) {
             showToast(err.response?.data?.message || 'Upload failed', 'error');
@@ -108,9 +111,9 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
                     {isAdmin && (
                         <span className="wsp-logo-actions">
                             <Btn size="sm" icon={ImagePlus} loading={uploading === 'logo'} onClick={() => logoInput.current?.click()}>
-                                {profile.logoUrl ? 'Change logo' : 'Upload logo'}
+                                {profile.logoUrl ? 'Change picture' : 'Add workspace picture'}
                             </Btn>
-                            {profile.logoUrl && <Btn size="sm" variant="ghost" icon={Trash2} aria-label="Remove logo" onClick={() => remove('logo')} />}
+                            {profile.logoUrl && <Btn size="sm" variant="ghost" icon={Trash2} aria-label="Remove workspace picture" onClick={() => remove('logo')} />}
                         </span>
                     )}
                 </div>
@@ -153,7 +156,19 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
                     </div>
                 )}
             </div>
-            <input ref={logoInput} type="file" accept={IMAGE_TYPES} hidden onChange={(e) => { upload('logo', e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={logoInput} type="file" accept={IMAGE_TYPES} hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropping(f); e.target.value = ''; }} />
+            {cropping && (
+                <SquareCropDialog
+                    file={cropping}
+                    title="Workspace picture"
+                    busy={uploading === 'logo'}
+                    onCancel={() => setCropping(null)}
+                    onDone={async (blob) => {
+                        await upload('logo', new File([blob], 'workspace.jpg', { type: 'image/jpeg' }));
+                        setCropping(null);
+                    }}
+                />
+            )}
             <input ref={coverInput} type="file" accept={IMAGE_TYPES} hidden onChange={(e) => { upload('cover', e.target.files?.[0]); e.target.value = ''; }} />
         </Panel>
     );

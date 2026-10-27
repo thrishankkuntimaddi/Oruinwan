@@ -1,6 +1,7 @@
 // Settings. Sections follow the web app (Account, Preferences, Assistant, Workspace)
 // plus app-only ones: Updates, Server connection, and Data & storage.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { SquareCropSheet } from '../../ui/SquareCropSheet.jsx';
 import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
   ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
@@ -246,10 +247,26 @@ export function SettingsScreen({ confirmSignOut = false }) {
 
 export function ProfileSettings() {
   const user = useSession((s) => s.user);
-  const web = useWebLink();
   const [name, setName] = useState(user?.name || '');
   const [about, setAbout] = useState(user?.about || '');
   const [busy, setBusy] = useState(false);
+  // Profile photo: pick, crop to a square, upload.
+  const photoInput = useRef(null);
+  const [cropping, setCropping] = useState(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const setPhoto = async (blob) => {
+    setPhotoBusy(true);
+    try {
+      const saved = await api().setProfilePhoto(blob ? new File([blob], 'profile.jpg', { type: 'image/jpeg' }) : null);
+      useSession.getState().setUser(saved);
+      toast(blob ? 'Profile photo updated' : 'Profile photo removed', 'success');
+      setCropping(null);
+    } catch (err) {
+      toast(err.message || 'Could not change your photo', 'danger');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
   const dirty = name.trim() !== (user?.name || '') || about.trim() !== (user?.about || '');
   const save = async () => {
     if (!name.trim()) return toast('Your name cannot be empty', 'danger');
@@ -269,14 +286,34 @@ export function ProfileSettings() {
       <Header title="Profile" />
       <Body>
         <div className="flex flex-col items-center pt-2 pb-4">
-          <Avatar name={name || user?.name} src={user?.avatarUrl} size="xl" />
-          {web('/settings?tab=profile') ? (
-            <button type="button" className="mt-3 text-[13px] font-medium text-accent-ink" onClick={web('/settings?tab=profile')}>
-              Change photo in the web app
+          <button type="button" aria-label="Change profile photo" onClick={() => photoInput.current?.click()} className="rounded-full" data-testid="profile-photo-pick">
+            <Avatar name={name || user?.name} src={user?.avatarUrl} size="xl" />
+          </button>
+          <div className="mt-3 flex gap-3">
+            <button type="button" className="text-[13px] font-medium text-accent-ink" onClick={() => photoInput.current?.click()}>
+              {user?.avatarUrl ? 'Change photo' : 'Add a photo'}
             </button>
-          ) : (
-            <p className="mt-3 text-xs text-text-3">Photos can be changed in the web app.</p>
-          )}
+            {user?.avatarUrl && (
+              <button type="button" className="text-[13px] font-medium text-text-2" disabled={photoBusy} onClick={() => setPhoto(null)}>
+                Remove
+              </button>
+            )}
+          </div>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              if (f.size > 5 * 1024 * 1024) return toast('Photos can be at most 5 MB', 'danger');
+              setCropping(f);
+              return undefined;
+            }}
+          />
+          <SquareCropSheet file={cropping} title="Profile photo" round busy={photoBusy} onCancel={() => setCropping(null)} onDone={setPhoto} />
         </div>
         <div className="space-y-4 px-4">
           <Field label="Display name" value={name} onChange={(e) => setName(e.target.value)} />

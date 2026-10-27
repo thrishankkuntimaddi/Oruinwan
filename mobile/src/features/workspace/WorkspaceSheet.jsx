@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Settings2, Globe, Link2, Plus, UserPlus } from 'lucide-react';
+import { Check, Settings2, Globe, Link2, Plus, UserPlus, ImagePlus } from 'lucide-react';
 import { useSession, useWorkspace } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
 import { Sheet } from '../../ui/Overlay.jsx';
@@ -57,6 +57,21 @@ export function WorkspaceSheet({ open, onClose }) {
           ))}
         </div>
         <div className="mx-4 mb-4 mt-1 overflow-hidden rounded-card border border-line-soft divide-y divide-line-soft">
+          {/* Owners and admins: the workspace's picture (shown like a group icon everywhere). */}
+          {mode === 'live' && ['owner', 'admin'].includes(workspace?.role) && (
+            <button
+              type="button"
+              data-testid="ws-picture"
+              onClick={() => {
+                onClose();
+                nav.push('admin.workspace');
+              }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
+            >
+              <Icon as={ImagePlus} size="sm" className="text-text-2" />
+              <span className="text-[15px]">{workspace?.profile?.logoUrl ? 'Change workspace picture' : 'Add a workspace picture'}</span>
+            </button>
+          )}
           {mode === 'live' && canInvite(workspace) && (
             <button
               type="button"
