@@ -47,7 +47,7 @@ function partsOf(iso) {
  * people stay). Either way the picked time is checked for clashes as it changes: the dialog
  * warns, suggests free times and still lets you go ahead.
  */
-export default function ScheduleMeetingModal({ onSchedule, onClose, conversationType = null, conversationId = null, meeting = null, workspaceId: workspaceIdProp = null }) {
+export default function ScheduleMeetingModal({ onSchedule, onClose, conversationType = null, conversationId = null, meeting = null, workspaceId: workspaceIdProp = null, initialStart = null }) {
     const params = useParams();
     const workspaceId = workspaceIdProp || params.workspaceId || (meeting ? String(meeting.workspaceId || '') : undefined);
     const editing = !!meeting;
@@ -70,7 +70,8 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
         return list.slice(0, 30);
     }, [members, memberQuery]);
     const toggleInvite = (id) => setInvited(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-    const [defaults] = useState(() => (meeting && partsOf(meeting.scheduledStart || meeting.startTime)) || { ...nextFullHour(), min: '00' });
+    // A meeting being edited, a time picked on the calendar, or the next full hour.
+    const [defaults] = useState(() => (meeting && partsOf(meeting.scheduledStart || meeting.startTime)) || (initialStart && partsOf(initialStart)) || { ...nextFullHour(), min: '00' });
     const [title,      setTitle]      = useState(meeting?.title || '');
     const [startDate,  setStartDate]  = useState(defaults.date);
     const [startHour,  setStartHour]  = useState(defaults.hour);

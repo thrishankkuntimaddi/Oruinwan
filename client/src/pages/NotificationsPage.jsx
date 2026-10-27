@@ -205,7 +205,8 @@ export default function NotificationsPage() {
             </div>
 
             <div className="gl-x-page-body">
-                <div className="gl-x-wrap gl-x-page-pad">
+                {/* The calendar uses the full width, like a calendar app. */}
+                <div className="gl-x-wrap gl-x-page-pad" style={activeTab === 'calendar' ? { maxWidth: 'none' } : undefined}>
                     {(activeTab === 'all' || activeTab === 'unread') && <UpdateCard />}
                     {activeTab === 'calendar' ? (
                         <ActivityCalendar workspaceId={workspaceId} />

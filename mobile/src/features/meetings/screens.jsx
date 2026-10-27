@@ -24,16 +24,18 @@ import { MeetingTabBar, MeetingTabContent, MeetingUnavailable, meetingKey, useMe
 
 const DURATIONS = [15, 30, 45, 60, 90].map((m) => ({ value: m, label: m < 60 ? `${m} min` : `${m / 60} h`.replace('1.5 h', '1½ h') }));
 
-export function ScheduleMeetingSheet({ open, onClose, channelId, meeting = null }) {
+export function ScheduleMeetingSheet({ open, onClose, channelId, meeting = null, startAt = null }) {
   const ws = useSession((s) => s.workspaceId);
   const me = useSession((s) => s.user?.id);
   const directory = useDirectory();
   const editing = Boolean(meeting);
   const [title, setTitle] = useState(meeting?.title || '');
-  const [date, setDate] = useState(() => toDateInput(meeting?.start || new Date().toISOString()));
+  // Editing: the meeting's time. From the calendar: the time tapped. Otherwise the next hour.
+  const [date, setDate] = useState(() => toDateInput(meeting?.start || startAt || new Date().toISOString()));
   const [time, setTime] = useState(() => {
-    const d = meeting?.start ? new Date(meeting.start) : new Date(Date.now() + 3_600_000);
-    return `${String(d.getHours()).padStart(2, '0')}:${meeting?.start ? String(d.getMinutes()).padStart(2, '0') : '00'}`;
+    const exact = meeting?.start || startAt;
+    const d = exact ? new Date(exact) : new Date(Date.now() + 3_600_000);
+    return `${String(d.getHours()).padStart(2, '0')}:${exact ? String(d.getMinutes()).padStart(2, '0') : '00'}`;
   });
   const [duration, setDuration] = useState(Number(meeting?.duration) || 30);
   const [priority, setPriority] = useState(normalizePriority(meeting?.priority));
