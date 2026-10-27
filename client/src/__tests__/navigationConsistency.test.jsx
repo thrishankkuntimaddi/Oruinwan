@@ -66,8 +66,8 @@ describe('workspace rail', () => {
 });
 
 describe('Notes panel tabs', () => {
-    it('adds Roadmap after Workspace and Canvases when Tasks is on', () => {
-        expect(notesPanelTabs().map((t) => t.label)).toEqual(['Workspace', 'Canvases', 'Roadmap']);
+    it('adds Roadmap after Notes and Canvases when Tasks is on', () => {
+        expect(notesPanelTabs().map((t) => t.label)).toEqual(['Notes', 'Canvases', 'Roadmap']);
         expect(notesPanelTabs({ roadmap: false }).map((t) => t.id)).toEqual(['workspace', 'canvas']);
     });
 

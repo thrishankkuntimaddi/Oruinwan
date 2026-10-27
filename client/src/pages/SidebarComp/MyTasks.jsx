@@ -62,7 +62,7 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.filter(Boolean).map((v) => [v.key, 
  * column); lists and sidebar counts use the same function without it.
  */
 function tasksForView(tasks, viewKey, me, { withClosed = false } = {}) {
-  const view = VIEW_BY_KEY[viewKey] || VIEW_BY_KEY['my-tasks'];
+  const view = VIEW_BY_KEY[viewKey] || VIEW_BY_KEY['all-tasks'];
   if (view.trash) return tasks.filter((t) => t.deleted);
   const inScope = tasks.filter((t) => !t.deleted && !t.isSubtask && view.scope(t, me));
   if (view.closed) return inScope.filter((t) => isClosed(t.status));
@@ -177,7 +177,8 @@ export default function MyTasks({ section, children }) {
   const navigate = useNavigate();
   const reviewsMode = section === 'reviews';
   const requestedView = new URLSearchParams(location.search).get('tab');
-  const activeView = VIEW_BY_KEY[requestedView] ? requestedView : 'my-tasks';
+  // All tasks unless another view is asked for (like the phone app).
+  const activeView = VIEW_BY_KEY[requestedView] ? requestedView : 'all-tasks';
   // The layout lives in the URL (?view=) so back and refresh keep it.
   const viewMode = reviewsMode ? null : viewModeFromSearch(location.search);
 

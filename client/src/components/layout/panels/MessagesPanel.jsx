@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import BumpCount from '../../motion/BumpCount';
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Plus, Search, Trash2, Check, Megaphone, Settings2, X, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Check, Megaphone, Settings2, X, MessageSquare } from "lucide-react";
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
 import "../shell.css";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
@@ -28,13 +28,11 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const notif = useNotifications();
     const seedConversationUnread = notif?.seedConversationUnread;
 
-    const [searchQuery, setSearchQuery] = useState("");
     const [reloadKey, setReloadKey] = useState(0);
     const [showCreateDM, setShowCreateDM] = useState(false);
     const [showBroadcast, setShowBroadcast] = useState(false);
     const [broadcasts, setBroadcasts] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [filter, setFilter] = useState("all");
 
     
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -95,7 +93,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             setContacts(prev => {
                 const idx = prev.findIndex(c => String(c.id) === dmId);
                 if (idx === -1) return prev;
-                const updated = { ...prev[idx], lastMessage: text || prev[idx].lastMessage, lastMessageId: msg._id ? String(msg._id) : prev[idx].lastMessageId };
+                const updated = { ...prev[idx], lastMessage: text || prev[idx].lastMessage, lastMessageId: msg._id ? String(msg._id) : prev[idx].lastMessageId, lastAt: msg.createdAt || new Date().toISOString() };
                 return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
             });
         };
@@ -146,9 +144,12 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         lastMessage: session.lastMessagePreview ? "" : (sanitizePreview(session.lastMessage) || ""),
                         preview: session.lastMessagePreview,
                         lastMessageId: session.lastMessageId ? String(session.lastMessageId) : null,
+                        lastAt: session.lastMessageAt || null,
                         type: "dm"
                     };
                 });
+                // Newest conversation first (DMs and groups alike), like the phone app.
+                formatted.sort((a, b) => (Date.parse(b.lastAt || 0) || 0) - (Date.parse(a.lastAt || 0) || 0));
                 setContacts(formatted);
                 decryptPreviews(formatted);
                 seedConversationUnread?.('dm', formatted.map(c => ({ id: c.id, unread: c.unread })));
@@ -201,13 +202,9 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const displayList = [...broadcasts, ...contacts];
 
     const unreadFor = (item) => (item.type === 'dm' && notif ? notif.getUnread('dm', item.id) : item.unread || 0);
-    const totalUnread = displayList.reduce((n, item) => n + (unreadFor(item) > 0 ? 1 : 0), 0);
 
-    const filteredList = displayList.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filter === "all" || (filter === "unread" && unreadFor(item) > 0);
-        return matchesSearch && matchesFilter;
-    });
+    // No search box or filter here: the search bar at the top finds anything.
+    const filteredList = displayList;
 
     const handleStartDM = async (selectedUser) => {
         setShowCreateDM(false);
@@ -418,23 +415,6 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                     ><Plus size={16} /></button>
                 </>
             )}
-            tools={(
-                <>
-                    <div className="gl-search">
-                        <Search size={13} />
-                        <input type="text" className="gl-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search messages..." aria-label="Search conversations" />
-                    </div>
-                    <div className="gl-tabs" role="tablist" aria-label="Filter conversations">
-                        {['all', 'unread'].map(f => (
-                            <button key={f} type="button" role="tab" className="gl-tab" aria-selected={filter === f} onClick={() => setFilter(f)}>
-                                {f.charAt(0).toUpperCase() + f.slice(1)}
-                                {f === 'unread' && totalUnread > 0 && <span className="gl-count" style={{ color: 'var(--accent)', background: 'var(--gl-accent-soft)' }}>{totalUnread > 99 ? '99+' : totalUnread}</span>}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            )}
             bodyClassName="custom-scrollbar"
             bodyProps={{ style: { paddingTop: isSelectionMode ? 0 : undefined } }}
         >
@@ -460,10 +440,6 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 </div>
             ) : filteredList.length > 0 ? (
                 filteredList.map(renderItem)
-            ) : searchQuery ? (
-                <PanelEmpty icon={Search} title="No conversations found" text="Try a different name." />
-            ) : filter === 'unread' ? (
-                <PanelEmpty icon={MessageSquare} title="You're all caught up" text="No unread conversations." />
             ) : (
                 <PanelEmpty
                     icon={MessageSquare}

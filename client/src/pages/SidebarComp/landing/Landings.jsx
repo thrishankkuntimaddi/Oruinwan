@@ -85,7 +85,9 @@ export function HomeLanding() {
             ...(contacts?.channels || []).filter((c) => c.isMember).map((c) => ({ ...c, kind: 'channel' })),
             ...(contacts?.dms || []).map((d) => ({ ...d, kind: 'dm' })),
         ].map((c) => ({ ...c, unread: notif?.getUnread?.(c.kind, c.id) || c.unreadCount || 0, mention: notif?.hasMention?.(c.kind, c.id) || false }));
-        return list.sort((a, b) => Number(b.mention) - Number(a.mention) || b.unread - a.unread).slice(0, 6);
+        // Mentions and unread first, then the most recent conversations.
+        const recent = (c) => Date.parse(c.lastAt || 0) || 0;
+        return list.sort((a, b) => Number(b.mention) - Number(a.mention) || b.unread - a.unread || recent(b) - recent(a)).slice(0, 6);
     }, [contacts?.channels, contacts?.dms, notif]);
     const mentions = conversations.filter((c) => c.mention).length;
     // Up next: meetings for everyone, ones I organise, and ones I'm invited to (the server drops finished ones).
@@ -281,12 +283,12 @@ export function MessagesLanding({ onNewMessage }) {
 
     const me = String(user?._id || user?.id || '');
     const dms = (contacts?.dms || []).map((d) => ({ ...d, unread: notif?.getUnread?.('dm', d.id) || d.unreadCount || 0 }))
-        .sort((a, b) => b.unread - a.unread).slice(0, 8);
+        .sort((a, b) => b.unread - a.unread || (Date.parse(b.lastAt || 0) || 0) - (Date.parse(a.lastAt || 0) || 0)).slice(0, 8);
     const withDm = new Set((contacts?.dms || []).map((d) => String(d.userId)));
     const q = query.trim().toLowerCase();
+    // People you haven't talked to yet (the ones you already talk to are under Recent).
     const people = (contacts?.members || [])
-        .filter((m) => String(m.id) !== me && (!q || `${m.username} ${m.email}`.toLowerCase().includes(q)))
-        .sort((a, b) => Number(withDm.has(String(a.id))) - Number(withDm.has(String(b.id))));
+        .filter((m) => String(m.id) !== me && !withDm.has(String(m.id)) && (!q || `${m.username} ${m.email}`.toLowerCase().includes(q)));
     const installed = agents.filter((a) => a.installed);
 
     const message = (m) => navigate(`/workspace/${workspaceId}/messages/dm/${m.id}`);
@@ -322,7 +324,7 @@ export function MessagesLanding({ onNewMessage }) {
                 </Section>
             )}
 
-            <Section title="Start a conversation" lead="Everyone in this workspace." action={<SearchBox value={query} onChange={setQuery} placeholder="Find a person" label="Find a person" />}>
+            <Section title="Start a conversation" lead="People you haven’t messaged yet." action={<SearchBox value={query} onChange={setQuery} placeholder="Find a person" label="Find a person" />}>
                 {people.length === 0 ? (
                     <Panel>
                         <EmptyState icon={Users} title={q ? 'No one matches' : 'It’s just you so far'} text={q ? 'Try another name or email.' : 'Invite teammates from Workspace admin or the workspace menu.'} />

@@ -30,7 +30,7 @@ export default function ContactsProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState([]);
-  const { socket } = useSocket();
+  const { socket, addNotificationListener } = useSocket() || {};
   const dmIdsRef = useRef(new Set());
   dmIdsRef.current = new Set(dms.map((d) => String(d.id)));
 
@@ -81,7 +81,9 @@ export default function ContactsProvider({ children }) {
         isPrivate: ch.isPrivate,
         isDiscoverable: ch.isDiscoverable ?? true, 
         isMember: ch.isMember ?? true, 
-        description: ch.description
+        description: ch.description,
+        // Lists are newest first: the latest message (or when the channel was made).
+        lastAt: ch.lastMessageAt || ch.createdAt || null,
       }));
 
       
@@ -136,6 +138,7 @@ export default function ContactsProvider({ children }) {
             isFavorite: favoriteItemIds.includes(String(session.id)),
             lastMessage: session.lastMessage,
             unreadCount: session.unreadCount || 0,
+            lastAt: session.lastMessageAt || null,
             status: 'offline',
             avatar: null,
           };
@@ -153,6 +156,7 @@ export default function ContactsProvider({ children }) {
           isFavorite: favoriteItemIds.includes(String(session.id)),
           lastMessage: session.lastMessage,
           unreadCount: session.unreadCount || 0,
+          lastAt: session.lastMessageAt || null,
           status: userStatus,
           avatarColor: avatarColor, 
           avatar: otherUser?.profilePicture 
@@ -199,7 +203,22 @@ export default function ContactsProvider({ children }) {
     }
   }, [loadAllData]);
 
-  
+  // A conversation had a new message: newest first in every list.
+  const touch = useCallback((type, id, at) => {
+    const bump = (list) => list.map((c) => (String(c.id) === String(id) && (!c.lastAt || Date.parse(at) > Date.parse(c.lastAt)) ? { ...c, lastAt: at } : c));
+    if (type === 'channel') setChannels(bump);
+    else setDms(bump);
+  }, []);
+
+  // Activity anywhere in the workspace (also conversations whose room this tab hasn't joined).
+  useEffect(() => {
+    if (!addNotificationListener) return undefined;
+    return addNotificationListener((event, payload) => {
+      if (event !== 'conversation:activity' || !payload?.conversationId) return;
+      touch(payload.conversationType === 'channel' ? 'channel' : 'dm', String(payload.conversationId), payload.createdAt || payload.at || new Date().toISOString());
+    });
+  }, [addNotificationListener, touch]);
+
   useEffect(() => {
     if (!socket) return;
 
@@ -261,7 +280,12 @@ export default function ContactsProvider({ children }) {
     // is listed with the other DMs and not only counted as unread.
     const reloadedFor = new Set();
     const handleNewMessage = (msg) => {
+      // Whatever it's in moves to the top of the lists.
+      const chId = String(msg?.channel?._id || msg?.channel || '');
+      const at = msg?.createdAt || new Date().toISOString();
+      if (chId) touch('channel', chId, at);
       const dmId = String(msg?.dm?._id || msg?.dm || '');
+      if (dmId) touch('dm', dmId, at);
       if (!dmId || reloadedFor.has(dmId) || dmIdsRef.current.has(dmId)) return;
       reloadedFor.add(dmId);
       const currentWsId = getCurrentWorkspaceId();
@@ -294,10 +318,11 @@ export default function ContactsProvider({ children }) {
       socket.off('new-dm-session', handleNewDMSession);
       socket.off('channel-privacy-changed', handlePrivacyChanged);
     };
-  }, [socket, loadAllData]);
+  }, [socket, loadAllData, touch]);
 
-  
-  const allItems = [...channels, ...dms];
+  // Newest conversation first (channels, DMs and groups alike), like the phone app.
+  const byRecent = (a, b) => (Date.parse(b.lastAt || 0) || 0) - (Date.parse(a.lastAt || 0) || 0);
+  const allItems = [...channels, ...dms].sort(byRecent);
 
   const deleteItem = (id) => {
     setChannels(prev => prev.filter(item => item.id !== id));
@@ -378,8 +403,8 @@ export default function ContactsProvider({ children }) {
     <ContactsContext.Provider value={{
       contacts,
       allItems,
-      channels,
-      dms,
+      channels: [...channels].sort(byRecent),
+      dms: [...dms].sort(byRecent),
       members,
       allMembers,
       setAllItems: setContacts,

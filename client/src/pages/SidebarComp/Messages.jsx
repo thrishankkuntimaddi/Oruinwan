@@ -299,7 +299,9 @@ export default function Messages() {
     if (workspaceId && userId) openDMWithUser(workspaceId, userId);
   };
 
-  const isCompose = /\/messages\/new\/?$/.test(location.pathname);
+  // New message (the To: bar) is what the Messages page shows when no conversation is open.
+  const isCompose = /\/messages\/new\/?$/.test(location.pathname)
+    || (/\/messages\/?$/.test(location.pathname) && !selectedChat && !currentBroadcast && !searchParams.get('channel') && !searchParams.get('dm') && !searchParams.get('newDM'));
 
   return (
     <div className="flex flex-col h-full w-full">

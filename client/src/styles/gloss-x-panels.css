@@ -15,6 +15,8 @@
     scrollbar-width: none;
 }
 .gl-x-chips::-webkit-scrollbar { display: none; }
+/* Chips that scroll sideways fade out at the edge instead of being cut mid-word. */
+.gl-x-chips:not(.gl-x-chips--wrap) { mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent); padding-right: 14px; }
 .gl-x-chips--wrap { flex-wrap: wrap; overflow: visible; }
 .gl-x-chip {
     flex-shrink: 0;

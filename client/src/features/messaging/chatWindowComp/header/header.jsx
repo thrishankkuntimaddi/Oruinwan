@@ -72,6 +72,10 @@ export default function Header({
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const isGroup = chat.type === 'dm' && !!chat.isGroup;
+  const openDetails = chat.isAgent ? null
+    : chat.type === 'channel' ? (setShowChannelManagement ? () => setShowChannelManagement('members') : null)
+      : isGroup ? () => setShowGroupInfo(true)
+        : setShowContactInfo ? () => setShowContactInfo(true) : null;
 
   const isDefaultChannel = chat.isDefault || ['general', 'announcements'].includes(chat.name?.toLowerCase().replace(/^#/, ''));
   const isWorkspaceAdmin = chat.workspaceRole === 'owner' || chat.workspaceRole === 'admin';
@@ -174,7 +178,17 @@ export default function Header({
             />
           )}
 
-          <div style={{ minWidth: 0 }}>
+          {/* The name opens the details: a person's profile, group info, or the channel's details. */}
+          <div
+            role={openDetails ? 'button' : undefined}
+            tabIndex={openDetails ? 0 : undefined}
+            onClick={openDetails || undefined}
+            onKeyDown={openDetails ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetails(); } } : undefined}
+            data-testid="chat-header-details"
+            title={openDetails ? (chat.type === 'channel' ? 'Channel details' : isGroup ? 'Group info' : 'View profile') : undefined}
+            className={openDetails ? 'chat-header-details' : undefined}
+            style={{ minWidth: 0, cursor: openDetails ? 'pointer' : 'default', borderRadius: 2, padding: '2px 4px', margin: '-2px -4px' }}
+          >
             <div style={{
               fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -187,7 +201,7 @@ export default function Header({
               {/* Groups: "+" turns into the To: bar with this group's people, to add or remove
                   someone and open that conversation instead. */}
               {isGroup && onEditPeople && (
-                <button type="button" onClick={onEditPeople} data-testid="group-edit-people"
+                <button type="button" onClick={(e) => { e.stopPropagation(); onEditPeople(); }} data-testid="group-edit-people"
                   title="Add or remove people (opens the To: bar)" aria-label="Add or remove people"
                   style={{ marginLeft: 6, verticalAlign: 'middle', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2, cursor: 'pointer', color: 'var(--text-secondary)', padding: 0 }}>
                   <Plus size={12} />

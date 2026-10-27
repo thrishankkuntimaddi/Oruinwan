@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import BumpCount from '../../motion/BumpCount';
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Hash, Search, Trash2, X, Check, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
+import { Plus, Hash, Trash2, X, Check, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
 import "../shell.css";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
@@ -9,6 +9,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext";
+import { useContacts } from "../../../contexts/ContactsContext";
 import { useNotifications } from "../../../features/notifications/NotificationsContext";
 import CreateChannelModal from "../../../features/messaging/CreateChannelModal";
 import logger from '../../../utils/logger';
@@ -28,7 +29,6 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
     const notif = useNotifications();
     const seedConversationUnread = notif?.seedConversationUnread;
 
-    const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     // "Create channel" on the Channels page opens this panel's dialog.
     useEffect(() => {
@@ -44,6 +44,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
     
     const [channels, setChannels] = useState([]);
+    const { channels: contactChannels } = useContacts() || {};
     const [isLoadingChannels, setIsLoadingChannels] = useState(true);
     const [reloadKey, setReloadKey] = useState(0);
     const hasChannelsRef = useRef(false);
@@ -72,7 +73,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     isMember: ch.isMember ?? false, 
                     description: ch.description || '',
                     canDelete: !ch.isDefault,
-                    workspaceId: ch.workspace
+                    workspaceId: ch.workspace,
+                    lastAt: ch.lastMessageAt || ch.createdAt || null,
                 }));
 
                 setChannels(mappedChannels);
@@ -118,7 +120,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             isMember: ch.isMember ?? false,
                             description: ch.description || '',
                             canDelete: !ch.isDefault,
-                            workspaceId: ch.workspace
+                            workspaceId: ch.workspace,
+                            lastAt: ch.lastMessageAt || ch.createdAt || null,
                         }));
                         setChannels(mappedChannels);
                     } catch (err) {
@@ -285,16 +288,10 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         }
     };
 
-    const filteredChannels = channels.filter(channel =>
-        (channel.label || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    
-    const sortedChannels = filteredChannels.sort((a, b) => {
-        if (a.isDefault && !b.isDefault) return -1;
-        if (!a.isDefault && b.isDefault) return 1;
-        return 0;
-    });
+    // Newest activity first, like the phone app; live times come from the contacts list.
+    const liveAt = new Map((contactChannels || []).map((c) => [String(c.id), c.lastAt]));
+    const lastOf = (c) => Math.max(Date.parse(c.lastAt || 0) || 0, Date.parse(liveAt.get(String(c.id)) || 0) || 0);
+    const sortedChannels = [...channels].sort((a, b) => lastOf(b) - lastOf(a));
 
     const userRole = activeWorkspace?.role?.toLowerCase() || '';
     const canCreateChannel = userRole === 'admin' || userRole === 'owner' || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
@@ -415,19 +412,6 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     </button>
                 </>
             )}
-            tools={(
-                <div className="gl-search">
-                    <Search size={13} />
-                    <input
-                        type="text"
-                        className="gl-input"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search channels..."
-                        aria-label="Search channels"
-                    />
-                </div>
-            )}
             bodyClassName="custom-scrollbar"
             bodyProps={{ style: { paddingTop: isSelectionMode ? 0 : undefined } }}
         >
@@ -461,8 +445,6 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     </div>
                     {sortedChannels.map(renderItem)}
                 </>
-            ) : searchQuery ? (
-                <PanelEmpty icon={Search} title={<>No results for &ldquo;{searchQuery}&rdquo;</>} text="Try a different search term" />
             ) : (
                 <PanelEmpty
                     icon={Hash}

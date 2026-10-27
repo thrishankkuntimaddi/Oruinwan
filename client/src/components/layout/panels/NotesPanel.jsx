@@ -24,7 +24,7 @@ import '../../../styles/gloss-x-panels.css';
 
 /** The Notes panel's tabs: workspace notes, channel canvases and the quarterly roadmap. */
 export const notesPanelTabs = ({ roadmap = true } = {}) => [
-    { id: 'workspace', label: 'Workspace' },
+    { id: 'workspace', label: 'Notes' },
     { id: 'canvas', label: 'Canvases' },
     ...(roadmap ? [{ id: 'roadmap', label: 'Roadmap' }] : []),
 ];
@@ -372,12 +372,12 @@ const NotesPanel = ({ title }) => {
 
     const tools = (
         <>
-            <div className="gl-tabs" role="tablist" aria-label="Notes source">
+            <div className="gl-tabs gl-tabs--auto" role="tablist" aria-label="Notes source">
                 {notesPanelTabs({ roadmap: roadmapOn }).map(tab => {
                     const count = tab.id === 'workspace' ? activeNotes.length : tab.id === 'canvas' ? totalCanvas : null;
                     return (
                         <button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} className="gl-tab" onClick={() => selectTab(tab.id)}>
-                            {tab.label}{count !== null && <span className="gl-count">{count}</span>}
+                            <span className="gl-tab-label">{tab.label}</span>{count !== null && <span className="gl-count">{count}</span>}
                         </button>
                     );
                 })}

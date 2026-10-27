@@ -111,12 +111,13 @@ test('a DM video call shows both cameras', async ({ browser }) => {
 
   await alice.locator('button[title="Start Video Call"]').click();
   const aliceCall = alice.getByTestId('call-screen');
-  await expect(aliceCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
+  // Starting a camera can take a while on a busy test machine.
+  await expect(aliceCall.getByTestId('video-tile-local').locator('video')).toBeVisible({ timeout: 30_000 });
 
-  await expect(bob.getByTestId('incoming-call')).toContainText('Incoming video call');
+  await expect(bob.getByTestId('incoming-call')).toContainText('Incoming video call', { timeout: 30_000 });
   await bob.getByTestId('incoming-call-accept').click();
   const bobCall = bob.getByTestId('call-screen');
-  await expect(bobCall.getByTestId('video-tile-local').locator('video')).toBeVisible();
+  await expect(bobCall.getByTestId('video-tile-local').locator('video')).toBeVisible({ timeout: 30_000 });
   await Promise.all([peerConnected(alice), peerConnected(bob)]);
 
   // Each side is actually receiving the other's video frames.

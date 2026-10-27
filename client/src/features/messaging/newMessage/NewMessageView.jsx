@@ -59,6 +59,8 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
     const [draft, setDraft] = useState('');
     const [groupName, setGroupName] = useState('');
     const [busy, setBusy] = useState(false);
+    // The people list is open while the To field has focus (a click elsewhere closes it).
+    const [menuOpen, setMenuOpen] = useState(true);
     const inputRef = useRef(null);
     const { list: others, loading } = useWorkspaceRecipients(workspaceId, currentUserId, true);
 
@@ -73,11 +75,26 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
     const pickedIds = useMemo(() => new Set(picked.map((p) => p._id)), [picked]);
     const pickedMe = picked.some((p) => p.isMe);
     const results = useMemo(
-        () => (query.trim() || picked.length === 0
+        () => (!menuOpen ? [] : query.trim() || picked.length === 0
             ? filterRecipients(list, query).filter((p) => !pickedIds.has(p._id) && !(p.isMe && picked.length)).slice(0, 8)
             : []),
-        [list, query, pickedIds, picked.length],
+        [list, query, pickedIds, picked.length, menuOpen],
     );
+
+    // Typing anywhere on this screen (nothing else focused) goes into the To field.
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.key.length !== 1) return;
+            const el = document.activeElement;
+            if (el && el !== document.body && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName))) return;
+            e.preventDefault();
+            setMenuOpen(true);
+            setQuery((q) => q + e.key);
+            inputRef.current?.focus();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
     useEffect(() => { setActive(0); }, [query]);
 
     // Who's in the To bar decides the conversation: look it up without creating anything.
@@ -119,6 +136,14 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
         setQuery('');
         inputRef.current?.focus();
     };
+    // Close: start over (on the Messages page this view is the default screen).
+    const close = () => {
+        setPicked([]);
+        setQuery('');
+        setDraft('');
+        setGroupName('');
+        navigate(home);
+    };
     const remove = (id) => setPicked((p) => p.filter((x) => x._id !== id));
 
     const onKey = (e) => {
@@ -126,7 +151,7 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
         else if ((e.key === 'Enter' || e.key === 'Tab') && results[active] && query.trim()) { e.preventDefault(); add(results[active]); }
         else if (e.key === 'Backspace' && !query && picked.length) setPicked((p) => p.slice(0, -1));
-        else if (e.key === 'Escape') navigate(home);
+        else if (e.key === 'Escape') { if (menuOpen && (query || !picked.length)) { setMenuOpen(false); setQuery(''); } else close(); }
     };
 
     // No conversation yet: make it (a 1:1 DM, or a new group), then open it; the first message,
@@ -164,12 +189,12 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
             <div style={{ padding: '0 16px 12px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0, position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 }}>
                     <h2 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>New message</h2>
-                    <button type="button" aria-label="Close" title="Close" onClick={() => navigate(home)}
+                    <button type="button" aria-label="Close" title="Close" onClick={close}
                         style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 2 }}>
                         <X size={16} />
                     </button>
                 </div>
-                <div onClick={() => inputRef.current?.focus()}
+                <div onClick={() => { setMenuOpen(true); inputRef.current?.focus(); }}
                     style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 2, background: 'var(--bg-input)', cursor: 'text' }}>
                     <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>To:</span>
                     {picked.map((p) => (
@@ -188,7 +213,9 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
                         aria-label="To"
                         placeholder={picked.length ? 'Add someone else…' : 'Type a name, username or email'}
                         value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(e) => { setQuery(e.target.value); setMenuOpen(true); }}
+                        onFocus={() => setMenuOpen(true)}
+                        onBlur={() => setMenuOpen(false)}
                         onKeyDown={onKey}
                         autoComplete="off"
                         style={{ flex: 1, minWidth: 140, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font)', padding: '4px 0' }}

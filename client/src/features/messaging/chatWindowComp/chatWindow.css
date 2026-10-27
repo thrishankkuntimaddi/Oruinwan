@@ -115,3 +115,7 @@ html.light input[type="date"] {
         border-left: none !important;
     }
 }
+
+/* The header's name opens the conversation's details. */
+.chat-header-details:hover,
+.chat-header-details:focus-visible { background: var(--bg-hover); outline: none; }

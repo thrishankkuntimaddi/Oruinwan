@@ -101,3 +101,28 @@ describe('To: bar extras', () => {
         expect(await screen.findByTestId('chat-window')).toHaveTextContent('group g1');
     });
 });
+
+describe('To: bar behaviour', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        apiMock.get.mockResolvedValue({ data: { members: MEMBERS } });
+    });
+
+    it('the people list closes when the To field loses focus', async () => {
+        renderView();
+        const to = screen.getByLabelText('To');
+        fireEvent.focus(to);
+        expect(await screen.findAllByTestId('to-option')).not.toHaveLength(0);
+        fireEvent.blur(to);
+        expect(screen.queryAllByTestId('to-option')).toHaveLength(0);
+    });
+
+    it('typing anywhere on the screen searches in the To field', async () => {
+        renderView();
+        const to = screen.getByLabelText('To');
+        to.blur();
+        fireEvent.keyDown(window, { key: 'm' });
+        expect(to).toHaveValue('m');
+        expect(to).toHaveFocus();
+    });
+});

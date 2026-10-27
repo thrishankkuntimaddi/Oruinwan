@@ -20,20 +20,20 @@ async function signIn(browser, user) {
   return page;
 }
 
-// The page shows a real DM: /messages/dm/<id>, where <id> is not the person's user id.
-const isRealDm = (personId) => (url) => url.pathname.includes('/messages/dm/') && !url.pathname.endsWith(personId);
-
 test('a first DM started on the Messages page sends', async ({ browser }) => {
   test.setTimeout(180_000);
   const text = `first message ${Date.now()}`;
 
   const sender = await signIn(browser, SENDER);
   const workspaceId = sender.url().match(/\/workspace\/([a-f0-9]{24})\//)[1];
+  // The Messages page opens on New message (the To: bar): one person opens our real DM below it.
   await sender.goto(`${E2E.webUrl}/workspace/${workspaceId}/messages`);
-  await sender.getByLabel('Find a person').fill(RECIPIENT);
-  await sender.getByText(RECIPIENT, { exact: true }).first().click();
-
-  await sender.waitForURL(isRealDm(seedData().users[RECIPIENT].id), { timeout: 30_000 });
+  const view = sender.getByTestId('new-message-view');
+  await view.getByLabel('To').fill(RECIPIENT);
+  await view.getByTestId('to-option').filter({ hasText: RECIPIENT }).first().click();
+  const conv = view.getByTestId('to-conversation');
+  await expect(conv).toBeVisible({ timeout: 30_000 });
+  expect(await conv.getAttribute('data-conversation-id')).not.toBe(seedData().users[RECIPIENT].id);
   await sendText(sender, text);
 
   const recipient = await signIn(browser, RECIPIENT);

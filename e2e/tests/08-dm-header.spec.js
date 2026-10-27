@@ -28,6 +28,13 @@ test.describe('DM header actions', () => {
     await expect(alice.getByText(E2E.users.bob.email)).toBeHidden();
   });
 
+  test("clicking the person's name in the header opens their profile", async () => {
+    await alice.getByTestId('chat-header-details').click();
+    await expect(alice.getByText(E2E.users.bob.email)).toBeVisible();
+    await alice.keyboard.press('Escape');
+    await expect(alice.getByText(E2E.users.bob.email)).toBeHidden();
+  });
+
   test('search filters the decrypted conversation', async () => {
     const stamp = Date.now();
     await sendText(alice, `apples ${stamp}`);

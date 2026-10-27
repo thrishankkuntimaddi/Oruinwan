@@ -404,6 +404,11 @@ html.light .gl-btn--primary { border-color: rgba(140, 100, 50, 0.35); }
 html.light .gl-tab[aria-selected='true'], html.light .gl-tab.is-active { box-shadow: var(--gl-spec-strong), 0 1px 2px rgba(60, 44, 20, 0.1), 0 0 0 1px rgba(80, 60, 30, 0.06); }
 .gl-tab:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--gl-accent-line, var(--accent)); }
 .gl-tab .gl-count { flex-shrink: 0; }
+/* A label wider than its tab shortens with "…" instead of being cut on both sides. */
+.gl-tab { justify-content: safe center; }
+.gl-tab-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Tabs sized by their labels (narrow side panels): short ones take less room than long ones. */
+.gl-tabs--auto .gl-tab { flex: 1 1 auto; padding: 0 8px; }
 .gl-count {
     min-width: 18px;
     height: 16px;
