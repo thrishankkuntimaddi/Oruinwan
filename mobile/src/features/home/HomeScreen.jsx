@@ -1,10 +1,10 @@
 // Home: a greeting, a row of small cards for what needs you (unread, open tasks, huddles, saved,
 // drafts, scheduled, sent, Ask AI), the latest activity (5), your active tasks (3), Quick jump
 // (up to 5 places you choose), Jump to (every part of the workspace) and recent notes.
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-  Bookmark, BookOpen, Check, ChevronRight, Clock3, Download, FileText, FolderOpen, Hash, Headphones, Lock, Megaphone, MessageCircle, Pencil, PenLine, Plug, Plus, Send, Sparkles,
-  SquareCheckBig, UserPlus, Users, Workflow,
+  Bookmark, BookOpen, Check, ChevronRight, Clock3, Download, FileText, FolderOpen, Hash, Headphones, Lock, Megaphone, MessageCircle, PenLine, Plug, Send, Sparkles,
+  SquareCheckBig, UserPlus, Users, Workflow, Pin,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav } from '../../app/nav.js';
@@ -31,7 +31,9 @@ import { ActivityRow } from './ActivityRow.jsx';
 import { groupActivity } from './activityGroups.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
 import { draftsIn, useDrafts } from '../chats/drafts.js';
-import { MAX_QUICK, quickJumpItems, setQuickJump, useQuickJump } from './quickJump.js';
+import { MAX_PINS, RECENT_IN_ROW, quickJumpItems, setQuickJump, togglePin, useQuickJump } from './quickJump.js';
+import { toast } from '../../lib/bus.js';
+
 import { InviteSheet, canInvite } from '../workspace/InviteSheet.jsx';
 
 /** The most recent conversations, channels and DMs mixed, newest first. */
@@ -92,8 +94,10 @@ const PLACES = {
   ai: { label: 'Oruinwan AI', icon: Sparkles, open: () => nav.openAi() },
 };
 
-/** A Quick jump bubble: a person, a channel or a place. */
+/** A Quick jump bubble: a person, a group, a channel or a place. Long-press pins or unpins it. */
 function QuickBubble({ entry, channels, dms }) {
+  const pressTimer = useRef(null);
+  const longPressed = useRef(false);
   let label = '';
   let visual = null;
   let open = null;
@@ -123,10 +127,39 @@ function QuickBubble({ entry, channels, dms }) {
       );
     open = () => openConversation(entry.kind, item.id);
   }
+  const pin = () => {
+    const result = togglePin(entry);
+    toast(result === 'full' ? `You can pin up to ${MAX_PINS}. Unpin one first.` : result === 'pinned' ? `Pinned ${label}` : `Unpinned ${label}`, result === 'full' ? 'danger' : 'success');
+  };
+  const startPress = () => {
+    longPressed.current = false;
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      longPressed.current = true;
+      pin();
+    }, 500);
+  };
+  const endPress = () => clearTimeout(pressTimer.current);
   return (
-    <button type="button" onClick={open} className="pressable relative flex w-[64px] shrink-0 flex-col items-center gap-1.5" data-testid="quick-jump-item">
+    <button
+      type="button"
+      onClick={() => (longPressed.current ? (longPressed.current = false) : open?.())}
+      onPointerDown={startPress}
+      onPointerUp={endPress}
+      onPointerLeave={endPress}
+      onPointerCancel={endPress}
+      onContextMenu={(e) => e.preventDefault()}
+      aria-label={`${label}${entry.pinned ? ', pinned' : ''}. Long-press to ${entry.pinned ? 'unpin' : 'pin'}`}
+      className="pressable relative flex w-[64px] shrink-0 snap-start flex-col items-center gap-1.5"
+      data-testid="quick-jump-item"
+    >
       {visual}
       {unread && <span className="absolute top-0 right-2 h-3 w-3 rounded-full bg-gold ring-2 ring-bg" aria-label="Unread" />}
+      {entry.pinned && (
+        <span className="absolute top-0 left-1 grid h-4 w-4 place-items-center rounded-full bg-surface text-accent-ink ring-1 ring-line" aria-hidden data-testid="quick-jump-pin">
+          <Icon as={Pin} size={10} />
+        </span>
+      )}
       <span className="w-full truncate text-center text-[11px] text-text-2">{label}</span>
     </button>
   );
@@ -136,7 +169,7 @@ function QuickJumpEditor({ open, onClose, channels, dms, current }) {
   const [picked, setPicked] = useState(current);
   const key = (x) => `${x.kind}:${x.id}`;
   const has = (x) => picked.some((p) => key(p) === key(x));
-  const toggle = (x) => setPicked((p) => (has(x) ? p.filter((y) => key(y) !== key(x)) : p.length < MAX_QUICK ? [...p, x] : p));
+  const toggle = (x) => setPicked((p) => (has(x) ? p.filter((y) => key(y) !== key(x)) : p.length < MAX_PINS ? [...p, x] : p));
   const options = [
     ...Object.entries(PLACES).map(([id, p]) => ({ kind: 'place', id, label: p.label, icon: p.icon })),
     ...channels.filter((c) => c.isMember).map((c) => ({ kind: 'channel', id: c.id, label: `#${c.name}`, icon: c.private ? Lock : Hash })),
@@ -146,12 +179,12 @@ function QuickJumpEditor({ open, onClose, channels, dms, current }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Quick jump · ${picked.length}/${MAX_QUICK}`}
+      title={`Pinned · ${picked.length}/${MAX_PINS}`}
       full
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => (setQuickJump(null), onClose())}>
-            Use recent chats
+            Clear pins
           </Button>
           <Button className="flex-1" onClick={() => (setQuickJump(picked), onClose())} data-testid="quick-jump-save">
             Save
@@ -159,7 +192,7 @@ function QuickJumpEditor({ open, onClose, channels, dms, current }) {
         </div>
       }
     >
-      <p className="px-5 pb-2 text-[13px] text-text-2">Pick up to {MAX_QUICK} places for the top of Home.</p>
+      <p className="px-5 pb-2 text-[13px] text-text-2">Pinned places stay first in Quick jump; your latest chats follow. Pin up to {MAX_PINS} (or long-press a bubble).</p>
       <ul className="px-2 pb-2">
         {options.map((o) => (
           <li key={key(o)}>
@@ -241,7 +274,7 @@ export function HomeScreen() {
     () => (channels || []).filter((c) => c.isMember && c.unread > 0 && !c.muted).length + (dms || []).filter((d) => d.unread > 0).length,
     [channels, dms],
   );
-  const recent = useMemo(() => recentConversations(channels || [], dms || []), [channels, dms]);
+  const recent = useMemo(() => recentConversations(channels || [], dms || [], RECENT_IN_ROW), [channels, dms]);
   const quick = quickJumpItems(customQuick, recent);
   const activity = useMemo(() => {
     const all = notifications || [];
@@ -342,17 +375,18 @@ export function HomeScreen() {
           </>
         )}
 
-        <SectionHead title="Quick jump" action="Edit" onAction={() => setEditingQuick(true)} />
-        <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1" data-testid="quick-jump">
+        <SectionHead title="Quick jump" action="Pins" onAction={() => setEditingQuick(true)} />
+        {/* Sideways: pins first, then the latest conversations. */}
+        <div className="no-scrollbar flex snap-x gap-3 overflow-x-auto px-4 pb-1" data-testid="quick-jump">
           {quick.map((e) => (
             <QuickBubble key={`${e.kind}:${e.id}`} entry={e} channels={channels || []} dms={dms || []} />
           ))}
-          {quick.length < MAX_QUICK && (
-            <button type="button" onClick={() => setEditingQuick(true)} className="pressable flex w-[64px] shrink-0 flex-col items-center gap-1.5">
+          {(customQuick?.length || 0) < MAX_PINS && (
+            <button type="button" onClick={() => setEditingQuick(true)} className="pressable flex w-[64px] shrink-0 flex-col items-center gap-1.5" data-testid="quick-jump-add">
               <span className="grid h-12 w-12 place-items-center rounded-2xl border border-dashed border-line-strong text-text-2">
-                <Icon as={customQuick ? Plus : Pencil} size={18} />
+                <Icon as={Pin} size={18} />
               </span>
-              <span className="text-[11px] text-text-2">{customQuick ? 'Add' : 'Choose'}</span>
+              <span className="text-[11px] text-text-2">Pin</span>
             </button>
           )}
         </div>
@@ -390,7 +424,7 @@ export function HomeScreen() {
           </>
         )}
       </Body>
-      <QuickJumpEditor key={editingQuick ? 'open' : 'closed'} open={editingQuick} onClose={() => setEditingQuick(false)} channels={channels || []} dms={dms || []} current={quick} />
+      <QuickJumpEditor key={editingQuick ? 'open' : 'closed'} open={editingQuick} onClose={() => setEditingQuick(false)} channels={channels || []} dms={dms || []} current={customQuick || []} />
       <InviteSheet open={inviting} onClose={() => setInviting(false)} workspace={workspace} />
     </Screen>
   );
