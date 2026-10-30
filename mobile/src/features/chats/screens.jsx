@@ -688,7 +688,8 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
   const ws = useSession((s) => s.workspaceId);
   const directory = useDirectory();
   const label = kind === 'channel' ? `#${meta?.name || ''}` : meta?.user?.name || '';
-  const convo = useConversation(conv, { threadOf: messageId, name: label });
+  // In a chat with an agent, every reply in a thread is for it too: it answers in the thread.
+  const convo = useConversation(conv, { threadOf: messageId, name: label, agentId: meta?.agentId || null });
   const aiReplies = useAiReplies(convId, messageId);
   const { data: assistants } = useAssistants();
   const aiOn = useFlag('ai');
@@ -927,6 +928,7 @@ export function ChannelInfoScreen({ id }) {
     );
   }
   const members = (channel.memberIds || []).map((m) => directory[m]).filter(Boolean);
+  const admins = [...new Set(channel.adminIds || [])].map((m) => directory[m]).filter(Boolean);
   // Same rule as the server: workspace owners/admins add to any channel, channel admins to
   // theirs, and members of a public channel to it.
   const workspaceAdmin = ['owner', 'admin'].includes(workspace?.role);
@@ -1006,6 +1008,22 @@ export function ChannelInfoScreen({ id }) {
             </RowGroup>
           </Section>
         )}
+        {admins.length > 0 && (
+          <Section title="Channel admins">
+            <RowGroup footer="They manage this channel's settings and members, along with the workspace's owner and admins.">
+              {admins.map((u, i) => (
+                <Row
+                  key={u.id}
+                  leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
+                  title={u.name}
+                  subtitle={i === 0 && channel.adminIds[0] === u.id ? 'Created the channel' : 'Channel admin'}
+                  trailing={<span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-semibold text-accent-ink">Admin</span>}
+                  onClick={() => nav.push('profile', { userId: u.id })}
+                />
+              ))}
+            </RowGroup>
+          </Section>
+        )}
         <Section title={`Members · ${members.length}`}>
           <RowGroup>
             {canAdd && (
@@ -1023,6 +1041,7 @@ export function ChannelInfoScreen({ id }) {
                 leading={<Avatar name={u.name} src={u.avatarUrl} size="sm" presence={u.presence} />}
                 title={u.name}
                 subtitle={u.title || PRESENCE_TEXT[u.presence]}
+                trailing={(channel.adminIds || []).includes(u.id) ? <span className="text-[11px] font-medium text-accent-ink">Admin</span> : null}
                 onClick={() => nav.push('profile', { userId: u.id })}
               />
             ))}

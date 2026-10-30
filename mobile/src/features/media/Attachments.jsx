@@ -1,12 +1,15 @@
 // Attachments inside a message: photos and videos inline, audio with a player, and other files
 // as a card that opens or downloads them. Uploads in progress show their progress and Cancel.
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { File, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, Play, X } from 'lucide-react';
 import { Icon } from '../../ui/Icon.jsx';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { extOf, fileIconKind, fitBox, formatBytes, formatDuration, previewKind } from '../../lib/files.js';
 import { openFile, useMediaUrl } from './media.js';
+
+/** The conversation's photos and videos (MessageList provides it), so the viewer swipes through all of them. */
+export const ConversationMedia = createContext(null);
 
 export const FILE_ICONS = { image: FileImage, video: FileVideo, audio: FileAudio, pdf: FileText, sheet: FileSpreadsheet, doc: File };
 
@@ -73,6 +76,9 @@ function Photo({ file, siblings, upload, onCancel }) {
 
 function Video({ file, siblings, upload, onCancel }) {
   const box = fitBox(file.width, file.height, 260, 220);
+  // A frame from the video as its thumbnail (the browser loads just enough to draw it).
+  const { url } = useMediaUrl(file.localUrl || upload ? null : file);
+  const [frame, setFrame] = useState(false);
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-line-soft bg-surface-2"
@@ -85,6 +91,17 @@ function Video({ file, siblings, upload, onCancel }) {
         className="grid h-full w-full place-items-center"
       >
         {file.localUrl && <video src={file.localUrl} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />}
+        {!file.localUrl && url && (
+          <video
+            src={`${url}#t=0.5`}
+            muted
+            playsInline
+            preload="metadata"
+            onLoadedData={() => setFrame(true)}
+            className={cx('pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity', frame ? 'opacity-100' : 'opacity-0')}
+            aria-hidden
+          />
+        )}
         <span className="relative grid h-12 w-12 place-items-center rounded-full bg-gold text-on-accent" style={{ boxShadow: 'var(--shadow-pop)' }}>
           <Icon as={Play} size={20} className="translate-x-px" />
         </span>
@@ -146,8 +163,10 @@ function FileCard({ file, upload, onCancel }) {
 
 /** Every attachment of one message. `upload`: { progress, sending } while it uploads. */
 export function Attachments({ files, upload, onCancel, className }) {
+  const gallery = useContext(ConversationMedia);
   if (!files?.length) return null;
-  const media = files.filter((f) => ['image', 'video'].includes(previewKind(f)));
+  const own = files.filter((f) => ['image', 'video'].includes(previewKind(f)));
+  const media = gallery && own.length && own.every((f) => gallery.includes(f)) ? gallery : own;
   return (
     <div className={cx('mt-1 flex flex-col items-start gap-1.5', className)}>
       {files.map((f, i) => {

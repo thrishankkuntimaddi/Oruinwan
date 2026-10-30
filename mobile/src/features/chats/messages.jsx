@@ -1,6 +1,6 @@
 // Message list, message rows and the composer. Rows are left-aligned with avatar and name,
 // the same layout as the web client, so conversations read the same on every device.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, BarChart3, BellRing, Bookmark, Camera, Check, CheckCheck, CheckCircle2, Clock3, Copy, CornerDownRight, CornerUpLeft, Ellipsis, EyeOff, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, SmilePlus, Sparkles, Trash2, TriangleAlert, Paperclip, X,
 } from 'lucide-react';
@@ -18,7 +18,8 @@ import { copyText, tap } from '../../native/index.js';
 import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
-import { Attachments } from '../media/Attachments.jsx';
+import { Attachments, ConversationMedia } from '../media/Attachments.jsx';
+import { previewKind } from '../../lib/files.js';
 import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.js';
 import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
 import { MentionSuggestions, MicButton, RecordingBar, SmartReplies, canRecordVoice, useVoiceRecorder } from './composerExtras.jsx';
@@ -566,7 +567,14 @@ export function MessageList({
     return () => ro.disconnect();
   }, [atBottom]);
 
+  // Every photo and video in the loaded conversation, oldest first: the viewer swipes through them.
+  const gallery = useMemo(
+    () => items.flatMap((m) => (m.state === 'deleted' || m.pending ? [] : (m.attachments || []).filter((f) => ['image', 'video'].includes(previewKind(f))))),
+    [items],
+  );
+
   return (
+    <ConversationMedia.Provider value={gallery}>
     <div className="relative min-h-0 flex-1">
       <div
         ref={ref}
@@ -654,6 +662,7 @@ export function MessageList({
         </button>
       )}
     </div>
+    </ConversationMedia.Provider>
   );
 }
 

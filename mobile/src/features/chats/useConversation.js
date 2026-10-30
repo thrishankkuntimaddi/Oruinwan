@@ -146,7 +146,9 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
         // @ai (or a chat with an agent, where every message is for it): the assistant answers here,
         // with the recent conversation as context.
         if ((agentId || mentionsAI(body)) && api().askAiInConversation) {
-          const recent = (getQueryData(key)?.items || []).slice(-40).map((m) => ({
+          // In a thread: the message it started from, then its replies.
+          const cached = getQueryData(key);
+          const recent = [...(threadOf && cached?.parent ? [cached.parent] : []), ...(cached?.items || [])].slice(-40).map((m) => ({
             sender: m.authorId === me ? 'Me' : m.author?.name || 'Someone',
             text: m.text,
             isMe: m.authorId === me,

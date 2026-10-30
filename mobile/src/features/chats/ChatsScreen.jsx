@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { clearUnreadLocally } from '../../data/unread.js';
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Bot, CheckCheck, Compass, Hash, Info, KeyRound, Lock, LogOut, Megaphone, MessageCirclePlus, Pin, PinOff, SquarePen, Trash2, UserRound,
+  Archive, ArchiveRestore, Bell, BellOff, Bot, Check, CheckCheck, ListChecks, Compass, Hash, Info, KeyRound, Lock, LogOut, Megaphone, MessageCirclePlus, Pin, PinOff, SquarePen, Trash2, UserRound,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -13,12 +13,12 @@ import { api, useSession } from '../../data/session.js';
 import { toast } from '../../lib/bus.js';
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
-import { Fab } from '../../ui/Button.jsx';
+import { Button, Fab } from '../../ui/Button.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { StandingTag } from '../../ui/StandingTag.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { Segmented } from '../../ui/Controls.jsx';
-import { ActionSheet, Dialog } from '../../ui/Overlay.jsx';
+import { Field, Segmented } from '../../ui/Controls.jsx';
+import { ActionSheet, Dialog, Sheet, useOverlay } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { chatListTime } from '../../lib/time.js';
@@ -86,7 +86,7 @@ function ChatAvatar({ row, agentIcon }) {
 const titleOf = (row) => (row.kind === 'channel' ? row.item.name : row.item.user?.name || row.item.name || 'Conversation');
 
 /** One chat: picture, name and time on top; last message and unread count below. */
-export function ChatRow({ row, agentIcon, onMenu }) {
+export function ChatRow({ row, agentIcon, onMenu, selecting = false, checked = false, onToggle }) {
   const { kind, item } = row;
   const me = useSession((s) => s.user?.id);
   const directory = useDirectory();
@@ -98,13 +98,19 @@ export function ChatRow({ row, agentIcon, onMenu }) {
   return (
     <button
       type="button"
-      onClick={() => openConversation(kind, item.id)}
-      {...(onMenu ? press : {})}
+      onClick={() => (selecting ? onToggle?.(row) : openConversation(kind, item.id))}
+      {...(onMenu && !selecting ? press : {})}
       aria-current={selected ? 'true' : undefined}
+      aria-pressed={selecting ? checked : undefined}
       data-unread={unread ? 'true' : undefined}
       data-testid={`chat-${row.key}`}
-      className={cx('flex w-full select-none items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
+      className={cx('flex w-full select-none items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', (selected || checked) && 'bg-surface-2')}
     >
+      {selecting && (
+        <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full border-2', checked ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
+          {checked && <Icon as={Check} size={14} strokeWidth={3} />}
+        </span>
+      )}
       <ChatAvatar row={row} agentIcon={agentIcon} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
@@ -137,7 +143,7 @@ function markReadLocally(row) {
 }
 
 /** The long-press menu of a chat. */
-function ChatMenu({ row, prefs, onClose }) {
+function ChatMenu({ row, prefs, onClose, onSelectMode }) {
   const kind = row?.kind;
   const item = row?.item;
   const { muted } = useConversationStatus(kind || 'channel', item?.id, item);
@@ -168,6 +174,7 @@ function ChatMenu({ row, prefs, onClose }) {
 
   const actions = row
     ? [
+        onSelectMode && { label: 'Select chats', icon: ListChecks, hint: 'Archive, mute, delete or message several at once', onSelect: () => onSelectMode(row) },
         { label: row.pinnedAt ? 'Unpin' : 'Pin to top', icon: row.pinnedAt ? PinOff : Pin, hint: row.pinnedAt ? null : 'Up to 3 chats stay at the top', onSelect: () => setChatPref(conv, { pinned: !row.pinnedAt }, prefs) },
         isUnreadRow(row) && { label: 'Mark as read', icon: CheckCheck, onSelect: markRead },
         !item.agentId && { label: muted ? 'Unmute notifications' : 'Mute notifications', icon: muted ? Bell : BellOff, onSelect: toggleMute },
@@ -278,6 +285,16 @@ export function ChatsScreen() {
   const { data: agents } = useAgents();
   const prefs = useConversationPrefs();
   const [menu, setMenu] = useState(null);
+  // Selecting several chats (long-press → Select chats): row keys.
+  const [picked, setPicked] = useState(null);
+  const selecting = picked !== null;
+  const togglePick = (row) =>
+    setPicked((p) => {
+      const next = new Set(p || []);
+      if (next.has(row.key)) next.delete(row.key);
+      else next.add(row.key);
+      return next;
+    });
 
   const rows = useMemo(() => allChats(channels || [], dms || [], prefs), [channels, dms, prefs]);
   const list = useMemo(() => chatListFor(rows, segment), [rows, segment]);
@@ -318,7 +335,14 @@ export function ChatsScreen() {
             <div role="list" aria-label="Chats" className="pt-1">
               {list.map((row) => (
                 <div role="listitem" key={row.key}>
-                  <ChatRow row={row} agentIcon={agentIcons.get(row.item.agentId)} onMenu={setMenu} />
+                  <ChatRow
+                    row={row}
+                    agentIcon={agentIcons.get(row.item.agentId)}
+                    onMenu={setMenu}
+                    selecting={selecting}
+                    checked={Boolean(picked?.has(row.key))}
+                    onToggle={togglePick}
+                  />
                 </div>
               ))}
             </div>
@@ -357,9 +381,99 @@ export function ChatsScreen() {
           </>
         )}
       </Body>
-      <Fab compact icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
-      <ChatMenu row={menu} prefs={prefs} onClose={() => setMenu(null)} />
+      {selecting ? (
+        <SelectionBar rows={list.filter((r) => picked.has(r.key))} prefs={prefs} onDone={() => setPicked(null)} onAll={() => setPicked(new Set(list.map((r) => r.key)))} />
+      ) : (
+        <Fab compact icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
+      )}
+      <ChatMenu row={menu} prefs={prefs} onClose={() => setMenu(null)} onSelectMode={(row) => setPicked(new Set([row.key]))} />
     </Screen>
+  );
+}
+
+/**
+ * Several chats at once: mark read, mute, archive, delete (DMs) or leave (channels, groups), or
+ * send one message to all of them (each encrypted for its own conversation).
+ */
+function SelectionBar({ rows, prefs, onDone, onAll }) {
+  const [confirm, setConfirm] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  useOverlay(true, onDone);
+  const n = rows.length;
+  const each = async (fn, done) => {
+    setBusy(true);
+    let failed = 0;
+    for (const r of rows) {
+      try {
+        await fn(r);
+      } catch {
+        failed += 1;
+      }
+    }
+    setBusy(false);
+    invalidate('channels', 'dms', 'convPrefs');
+    toast(failed ? `${done}, but ${failed} didn’t work` : done, failed ? 'warning' : 'success');
+    onDone();
+  };
+  const conv = (r) => ({ kind: r.kind, id: r.item.id });
+  const markRead = () => each(async (r) => (markReadLocally(r), api().markRead(conv(r))), 'Marked as read');
+  const mute = () => each((r) => (r.kind === 'channel' ? api().setChannelMuted(r.item.id, true) : api().setDmMuted(r.item.id, true)), 'Muted');
+  const archive = () => each((r) => setChatPref(conv(r), { archived: true }, prefs), 'Archived');
+  const remove = () =>
+    each((r) => {
+      if (r.kind === 'channel') return r.item.isDefault ? Promise.reject(new Error('default')) : api().leaveChannel(r.item.id);
+      if (r.item.isGroup) return api().leaveGroupDm(r.item.id);
+      return api().deleteDm(r.item.id);
+    }, 'Done');
+  const send = () => each((r) => api().sendMessage(conv(r), text.trim(), { clientTempId: `multi-${Date.now()}-${r.item.id}` }), `Sent to ${n} chat${n === 1 ? '' : 's'}`);
+  const Action = ({ icon, label, onClick, danger }) => (
+    <button type="button" disabled={!n || busy} onClick={onClick} className={cx('flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium disabled:opacity-40 active:bg-surface-2', danger ? 'text-danger' : 'text-text')}>
+      <Icon as={icon} size={20} />
+      {label}
+    </button>
+  );
+  return (
+    <>
+      <div className="glass-strong absolute inset-x-3 z-20 rounded-2xl border px-2 pt-2 pb-1.5 shadow-xl" style={{ bottom: 'calc(var(--sab) + 72px)' }} data-testid="chat-selection">
+        <div className="flex items-center justify-between px-2 pb-1.5">
+          <span className="text-[14px] font-semibold">{n} selected</span>
+          <span className="flex gap-3">
+            <button type="button" className="text-[13px] font-medium text-accent-ink" onClick={onAll}>Select all</button>
+            <button type="button" className="text-[13px] font-medium text-text-2" onClick={onDone}>Cancel</button>
+          </span>
+        </div>
+        <div className="flex">
+          <Action icon={SquarePen} label="Message" onClick={() => setWriting(true)} />
+          <Action icon={CheckCheck} label="Read" onClick={markRead} />
+          <Action icon={BellOff} label="Mute" onClick={mute} />
+          <Action icon={Archive} label="Archive" onClick={archive} />
+          <Action icon={Trash2} label="Delete" danger onClick={() => setConfirm(true)} />
+        </div>
+      </div>
+      <Dialog
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        title={`Delete or leave ${n} chat${n === 1 ? '' : 's'}?`}
+        body="Direct messages are deleted for you. You leave channels and groups (default channels stay)."
+        confirmLabel="Delete"
+        danger
+        busy={busy}
+        onConfirm={() => (setConfirm(false), remove())}
+      />
+      <Sheet
+        open={writing}
+        onClose={() => setWriting(false)}
+        title={`Message ${n} chat${n === 1 ? '' : 's'}`}
+        footer={<Button block loading={busy} disabled={!text.trim()} onClick={() => (setWriting(false), send())}>Send to {n}</Button>}
+      >
+        <div className="px-5 pb-4">
+          <Field multiline rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write once, sent to each chat separately" autoFocus />
+          <p className="mt-2 text-[12px] text-text-2">Each chat gets its own copy, end-to-end encrypted for that conversation.</p>
+        </div>
+      </Sheet>
+    </>
   );
 }
 
