@@ -27,7 +27,7 @@ import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import {
   FEATURE_LABELS, MATRIX_ROLES, PERMISSION_LABELS, actionLabel, exportFileName, flattenTree, isCompanyAdmin, isWorkspaceAdmin, memberActions, ownerCandidates,
-  parseBundle, toggleCell, workspaceInfoChanges,
+  parseBundle, toggleCell, workspaceInfoChanges, STARTER_TEMPLATES,
 } from './adminUi.js';
 
 const useCompany = () => useQuery('company:ctx', () => api().companyContext(), { staleMs: 5 * 60_000 });
@@ -105,7 +105,10 @@ export function AdminScreen() {
         <Section title="People">
           <RowGroup>
             <Row icon={UserPlus} tile="accent" title="Invite people" subtitle="Share a link or send email invitations" onClick={() => setInviting(true)} />
-            <Row icon={Users} tile="accent" title="Directory" subtitle="Search members and employees" onClick={() => nav.push('admin.directory')} />
+            <Row icon={Users} tile="accent" title="Members & roles" subtitle="Everyone here: make admins, suspend or remove" onClick={() => nav.push('admin.directory')} />
+            {workspace.role === 'owner' && !workspace.isPersonal && (
+              <Row icon={Crown} tile="accent" title="Transfer ownership" subtitle="Hand this workspace to an admin or a trusted member" onClick={() => nav.push('admin.workspace', { transfer: true })} />
+            )}
             <Row icon={Network} tile="accent" title="Org chart" disabled={!hasCompany} subtitle={hasCompany ? 'Who reports to whom' : 'Company accounts only'} onClick={hasCompany ? () => nav.push('admin.org') : undefined} />
             <Row icon={UsersRound} tile="accent" title="Departments & teams" disabled={!hasCompany} subtitle={hasCompany ? 'Company structure' : 'Company accounts only'} onClick={hasCompany ? () => nav.push('admin.departments') : undefined} />
           </RowGroup>
@@ -389,11 +392,11 @@ function ChannelPolicySheet({ channel, onClose }) {
         <div className="space-y-5 px-5 pb-5">
           <div>
             <p className="mb-1.5 text-[13px] font-medium text-text-2">Who can post</p>
-            <Segmented size="sm" options={POLICY} value={data.posting} onChange={(v) => save('posting', v)} />
+            <Segmented size="sm" options={POLICY} value={data.posting} disabled={!data.canManage && !isWorkspaceAdmin(workspace)} onChange={(v) => save('posting', v)} />
           </div>
           <div>
             <p className="mb-1.5 text-[13px] font-medium text-text-2">Who can use @channel and @here</p>
-            <Segmented size="sm" options={POLICY} value={data.mentions} onChange={(v) => save('mentions', v)} />
+            <Segmented size="sm" options={POLICY} value={data.mentions} disabled={!data.canManage && !isWorkspaceAdmin(workspace)} onChange={(v) => save('mentions', v)} />
           </div>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -564,7 +567,7 @@ export function AdminDirectoryScreen({ holds = false }) {
   const members = useQuery(ok && `directory:${workspace.id}`, () => api().memberDirectory(workspace.id));
   const companyId = company?.companyId;
   const employees = useQuery(ok && scope === 'company' && companyId && `employees:${companyId}:${query.trim()}`, () => api().employees(companyId, { search: query.trim() }), { staleMs: 30_000 });
-  if (!ok) return <NotAdmin title="Directory" />;
+  if (!ok) return <NotAdmin title="Members & roles" />;
   const q = query.trim().toLowerCase();
   const list = scope === 'company'
     ? employees.data?.people || []
@@ -572,7 +575,7 @@ export function AdminDirectoryScreen({ holds = false }) {
   const loading = scope === 'company' ? employees.loading : members.loading;
   return (
     <Screen>
-      <Header title={holds ? 'Legal holds' : 'Directory'} subtitle={holds ? 'Pick a person to place or lift a hold' : null}>
+      <Header title={holds ? 'Legal holds' : 'Members & roles'} subtitle={holds ? 'Pick a person to place or lift a hold' : null}>
         <div className="space-y-3 px-4 pb-3">
           {companyId && (
             <Segmented size="sm" options={[{ value: 'workspace', label: 'This workspace' }, { value: 'company', label: 'Company' }]} value={scope} onChange={setScope} />
@@ -798,18 +801,86 @@ export function AdminAuditScreen({ kind = 'audit' }) {
 
 // ---------------------------------------------------------------- templates
 
+function TemplateRow({ t, onPick }) {
+  return (
+    <Row
+      leading={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-lg">{t.icon || '🗂️'}</span>}
+      title={t.name}
+      subtitle={[t.description, t.channels?.length ? t.channels.map((c) => `#${Array.isArray(c) ? c[0] : c}`).join(' ') : t.category].filter(Boolean).join(' · ')}
+      multiline
+      onClick={() => onPick(t)}
+    />
+  );
+}
+
+/** Share the current workspace as a template (structure only: public channels and settings). */
+function SaveTemplateSheet({ open, onClose, workspace }) {
+  const [name, setName] = useState(workspace?.name || '');
+  const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    if (name.trim().length < 3) return toast('Give the template a name of at least 3 characters', 'warning');
+    if (description.trim().length < 10) return toast('Describe the template in a sentence (10 characters or more)', 'warning');
+    setBusy(true);
+    try {
+      const res = await api().publishWorkspaceTemplate(workspace.id, { name: name.trim(), description: description.trim() });
+      toast(res.status === 'pending' ? 'Template sent. It appears in the gallery once it’s reviewed.' : 'Template saved', 'success');
+      invalidate('wstemplates');
+      onClose();
+    } catch (err) {
+      toast(err.message || "Couldn't save the template", 'danger');
+    } finally {
+      setBusy(false);
+    }
+    return undefined;
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title="Save as a template" footer={<Button block loading={busy} onClick={save}>Save template</Button>}>
+      <div className="space-y-3 px-5 pb-4">
+        <p className="text-[13px] text-text-2">
+          Copies {workspace?.name || 'this workspace'}’s public channels, their descriptions and its settings. No messages, files or people.
+        </p>
+        <Field label="Template name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+        <Field label="What it's for" multiline rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. A product team with planning, reviews and releases" maxLength={1000} />
+      </div>
+    </Sheet>
+  );
+}
+
 export function AdminTemplatesScreen() {
-  const { data, loading, error } = useQuery('wstemplates', () => api().workspaceTemplates(), { staleMs: 5 * 60_000 });
+  const workspace = useWorkspace();
+  const { data, loading } = useQuery('wstemplates', () => api().workspaceTemplates(), { staleMs: 5 * 60_000 });
   const [picked, setPicked] = useState(null);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const pick = (t) => {
+    setName(t.name);
+    setPicked(t);
+  };
   const create = async () => {
     setBusy(true);
     try {
-      const ws = await api().createWorkspaceFromTemplate({ name: name.trim(), templateId: picked.id });
-      if (ws.templateError) toast(`Created, but the template could not be applied: ${ws.templateError}`, 'warning');
-      else if (ws.skippedMessage) toast(`${ws.name} is ready. ${ws.skippedMessage}.`, 'warning');
-      else toast(`${ws.name} is ready`, 'success');
+      let ws;
+      if (picked.id.startsWith('starter:')) {
+        // Built-in starter: the workspace, then its channels.
+        ws = await api().createWorkspace({ name: name.trim(), color: picked.color, icon: 'rocket' });
+        let failed = 0;
+        for (const [channel, topic] of picked.channels) {
+          try {
+            await api().createChannel(ws.id, { name: channel, topic, isPrivate: false });
+          } catch {
+            failed += 1;
+          }
+        }
+        if (failed) toast(`${ws.name} is ready, but ${failed} channel${failed === 1 ? '' : 's'} couldn't be made`, 'warning');
+        else toast(`${ws.name} is ready`, 'success');
+      } else {
+        ws = await api().createWorkspaceFromTemplate({ name: name.trim(), templateId: picked.id });
+        if (ws.templateError) toast(`Created, but the template could not be applied: ${ws.templateError}`, 'warning');
+        else if (ws.skippedMessage) toast(`${ws.name} is ready. ${ws.skippedMessage}.`, 'warning');
+        else toast(`${ws.name} is ready`, 'success');
+      }
       setPicked(null);
       await useSession.getState().finishCreateWorkspace(ws);
     } catch (err) {
@@ -818,40 +889,44 @@ export function AdminTemplatesScreen() {
       setBusy(false);
     }
   };
+  const channelsOf = (t) => (t?.channels || []).map((c) => `#${Array.isArray(c) ? c[0] : c}`);
   return (
     <Screen>
       <Header title="New from a template" />
       <Body>
+        {isWorkspaceAdmin(workspace) && (
+          <Section>
+            <RowGroup>
+              <Row icon={LayoutTemplate} tile="accent" title="Save this workspace as a template" subtitle="Reuse its channels and settings, or share them" onClick={() => setSaving(true)} />
+            </RowGroup>
+          </Section>
+        )}
         {loading ? (
-          <SkeletonRows count={4} />
-        ) : error && !data ? (
-          <ErrorState error={error} />
+          <SkeletonRows count={3} />
         ) : data?.length ? (
-          <RowGroup className="mt-1">
-            {data.map((t) => (
-              <Row
-                key={t.id}
-                leading={<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-lg">{t.icon || '🗂️'}</span>}
-                title={t.name}
-                subtitle={t.description || (t.channels.length ? t.channels.map((c) => `#${c}`).join(' ') : t.category)}
-                multiline
-                onClick={() => {
-                  setName(t.name);
-                  setPicked(t);
-                }}
-              />
+          <Section title="Your team’s and community templates">
+            <RowGroup>
+              {data.map((t) => (
+                <TemplateRow key={t.id} t={t} onPick={pick} />
+              ))}
+            </RowGroup>
+          </Section>
+        ) : null}
+        <Section title="Starter templates">
+          <RowGroup footer="Each comes with #general and #random too. You can rename or remove channels later.">
+            {STARTER_TEMPLATES.map((t) => (
+              <TemplateRow key={t.id} t={t} onPick={pick} />
             ))}
           </RowGroup>
-        ) : (
-          <EmptyState icon={LayoutTemplate} title="No templates" body="Your server has no workspace templates yet." />
-        )}
+        </Section>
       </Body>
       <Sheet open={Boolean(picked)} onClose={() => setPicked(null)} title={picked ? `New workspace from “${picked.name}”` : ''} footer={<Button block loading={busy} disabled={!name.trim()} onClick={create}>Create workspace</Button>}>
         <div className="space-y-3 px-5 pb-4">
           <Field label="Workspace name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          {picked?.channels?.length > 0 && <p className="text-sm text-text-2">Comes with {picked.channels.map((c) => `#${c}`).join(', ')}.</p>}
+          {channelsOf(picked).length > 0 && <p className="text-sm text-text-2">Comes with {channelsOf(picked).join(', ')}.</p>}
         </div>
       </Sheet>
+      {saving && <SaveTemplateSheet open onClose={() => setSaving(false)} workspace={workspace} />}
     </Screen>
   );
 }
@@ -953,7 +1028,7 @@ export function AdminDataScreen() {
 // ---------------------------------------------------------------- general & danger zone
 
 /** Name, description and rules (admins); transfer, archive and delete (owner); leave (admins). */
-export function AdminWorkspaceScreen() {
+export function AdminWorkspaceScreen({ transfer = false }) {
   const { workspace, ok } = useAdminGuard();
   const isOwner = workspace?.role === 'owner';
   const [form, setForm] = useState(() => ({
@@ -965,7 +1040,8 @@ export function AdminWorkspaceScreen() {
     location: workspace?.profile?.location || '',
   }));
   const [saving, setSaving] = useState(false);
-  const [dialog, setDialog] = useState(null); // 'transfer' | 'archive' | 'delete' | 'leave'
+  // Admin → Transfer ownership opens straight on the picker.
+  const [dialog, setDialog] = useState(transfer ? 'transfer' : null); // 'transfer' | 'archive' | 'delete' | 'leave'
   const [newOwner, setNewOwner] = useState(null);
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1059,8 +1135,8 @@ export function AdminWorkspaceScreen() {
         {members.loading ? (
           <SkeletonRows count={4} />
         ) : candidates.length ? (
-          <RowGroup className="mb-4">
-            {candidates.map((m) => (
+          <RowGroup className="mb-4" footer="Admins are listed first. You become an admin after the transfer.">
+            {[...candidates].sort((a, b) => (a.role === 'admin') === (b.role === 'admin') ? a.name.localeCompare(b.name) : a.role === 'admin' ? -1 : 1).map((m) => (
               <Row key={m.id} leading={<Avatar name={m.name} src={m.avatarUrl} size="sm" />} title={m.name} subtitle={roleLabel(m.role)} onClick={() => setNewOwner(m)} />
             ))}
           </RowGroup>

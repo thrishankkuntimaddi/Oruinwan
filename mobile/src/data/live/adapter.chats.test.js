@@ -215,7 +215,7 @@ describe('AI and search', () => {
 
   it('reads the channel mention policy', async () => {
     mockApi.get.mockResolvedValueOnce({ isMuted: false, postingPolicy: 'everyone', broadcastMentions: 'admins', canManage: false });
-    expect(await a.channelPolicy('c1')).toEqual({ broadcastMentions: 'admins', canManage: false, postingPolicy: 'everyone', muted: false });
+    expect(await a.channelPolicy('c1')).toEqual({ broadcastMentions: 'admins', postingPolicy: 'everyone', mentions: 'admins', posting: 'everyone', canManage: false, muted: false });
   });
 });
 

@@ -5,6 +5,7 @@
 // Wide windows have all of these in the sidebar, so there the header is the title and actions.
 // `onBack` (the AI screen, which isn't on the tab bar) swaps the switcher for a back button and
 // leaves out the buttons.
+import { selfPresence } from '../lib/presence.js';
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronDown, Search, X } from 'lucide-react';
@@ -174,7 +175,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
             onClick={openSidePanel}
             className="pressable relative rounded-full p-1"
           >
-            <Avatar name={user?.name} src={user?.avatarUrl} size="sm" presence={user?.presence} />
+            <Avatar name={user?.name} src={user?.avatarUrl} size="sm" presence={selfPresence(user)} />
             {(update === 'available' || update === 'required') && (
               <span className="absolute top-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" aria-label="Update available" />
             )}

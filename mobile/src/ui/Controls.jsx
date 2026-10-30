@@ -33,9 +33,9 @@ export function Toggle({ checked, onChange, label, disabled }) {
 
 /** Segmented control. options: [{ value, label, count? }] */
 /** A segmented control. `scroll`: many options in a row that scrolls sideways (phone widths). */
-export function Segmented({ options, value, onChange, className, size = 'md', scroll = false, label }) {
+export function Segmented({ options, value, onChange, className, size = 'md', scroll = false, label, disabled = false }) {
   return (
-    <div role="tablist" aria-label={label} className={cx('flex rounded-xl bg-surface-2 p-1 border border-line-soft', scroll && 'no-scrollbar overflow-x-auto', className)}>
+    <div role="tablist" aria-label={label} aria-disabled={disabled || undefined} className={cx('flex rounded-xl bg-surface-2 p-1 border border-line-soft', scroll && 'no-scrollbar overflow-x-auto', disabled && 'opacity-60', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -44,6 +44,7 @@ export function Segmented({ options, value, onChange, className, size = 'md', sc
             type="button"
             role="tab"
             aria-selected={active}
+            disabled={disabled}
             onClick={() => {
               if (!active) tap('select');
               onChange(o.value);

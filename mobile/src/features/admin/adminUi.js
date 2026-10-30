@@ -127,3 +127,18 @@ export function workspaceInfoChanges(current = {}, form = {}) {
   }
   return out;
 }
+
+/**
+ * Starter templates built into the app, for servers with no workspace templates of their own.
+ * Creating one makes the workspace (with #general and #random) and then these channels.
+ */
+export const STARTER_TEMPLATES = [
+  { id: 'starter:engineering', icon: '🛠️', name: 'Engineering team', color: '#0ea5e9', description: 'Ship software together: planning, reviews and incidents.', channels: [['dev', 'Day-to-day engineering'], ['code-review', 'Pull requests that need eyes'], ['releases', 'What shipped and when'], ['incidents', 'Something is broken: start here']] },
+  { id: 'starter:startup', icon: '🚀', name: 'Startup', color: '#b8956a', description: 'A small team doing everything at once.', channels: [['product', 'What we build next'], ['growth', 'Users, marketing and sales'], ['wins', 'Celebrate the good news'], ['ops', 'Admin, tools and money']] },
+  { id: 'starter:marketing', icon: '📣', name: 'Marketing', color: '#ec4899', description: 'Campaigns, content and launches.', channels: [['campaigns', 'Running and upcoming campaigns'], ['content', 'Posts, blogs and videos'], ['social', 'Social media'], ['launches', 'Launch plans and checklists']] },
+  { id: 'starter:sales', icon: '💼', name: 'Sales', color: '#10b981', description: 'Pipeline, deals and customer conversations.', channels: [['pipeline', 'Deals in progress'], ['wins', 'Closed deals'], ['leads', 'New leads to follow up'], ['customer-feedback', 'What customers tell us']] },
+  { id: 'starter:support', icon: '🎧', name: 'Customer support', color: '#f59e0b', description: 'Tickets, escalations and help articles.', channels: [['tickets', 'Questions from customers'], ['escalations', 'Needs a specialist'], ['bugs', 'Problems to pass to engineering'], ['help-articles', 'Answers worth writing down']] },
+  { id: 'starter:design', icon: '🎨', name: 'Design studio', color: '#8b5cf6', description: 'Briefs, critiques and handoffs.', channels: [['briefs', 'New work coming in'], ['critique', 'Share work for feedback'], ['handoff', 'Ready for development'], ['inspiration', 'Things worth seeing']] },
+  { id: 'starter:class', icon: '🎓', name: 'Class or study group', color: '#14b8a6', description: 'Lessons, homework and questions.', channels: [['announcements', 'From the teacher or organiser'], ['homework', 'Assignments and deadlines'], ['questions', 'Ask anything'], ['resources', 'Notes, links and files']] },
+  { id: 'starter:event', icon: '🎉', name: 'Event planning', color: '#ef4444', description: 'Venue, speakers, schedule and the day itself.', channels: [['logistics', 'Venue, travel and catering'], ['speakers', 'Talks and guests'], ['schedule', 'The running order'], ['day-of', 'On the day: where is everyone?']] },
+];

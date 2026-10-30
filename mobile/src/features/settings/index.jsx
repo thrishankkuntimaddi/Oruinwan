@@ -136,39 +136,45 @@ export function SettingsScreen({ confirmSignOut = false }) {
           </div>
         </div>
 
-        <Section title="Account">
+        <Section title="You">
           <RowGroup>
-            <Row icon={User} tile="accent" title="Profile" onClick={() => nav.push('settings.profile')} />
-            <Row icon={KeyRound} tile="accent" title="Password & security" onClick={() => nav.push('settings.security')} />
-            <Row icon={Laptop} tile="accent" title="Devices" onClick={() => nav.push('settings.devices')} />
+            <Row icon={User} tile="accent" title="Profile" subtitle="Name, photo, title and about" onClick={() => nav.push('settings.profile')} />
+            <Row icon={Palette} tile="accent" title="Appearance" subtitle="Theme and text size" onClick={() => nav.push('settings.appearance')} />
+            <Row icon={Lock} tile="accent" title="Privacy" subtitle="Read receipts, typing, who can find you" onClick={() => nav.push('settings.privacy')} />
+          </RowGroup>
+        </Section>
+
+        <Section title="Sign-in & security">
+          <RowGroup>
+            <Row icon={KeyRound} tile="accent" title="Password & security" subtitle="Password, two-step verification, encryption" onClick={() => nav.push('settings.security')} />
+            <Row icon={Laptop} tile="accent" title="Devices" subtitle="Where you're signed in" onClick={() => nav.push('settings.devices')} />
             <Row icon={ScanQrCode} tile="accent" title="Scan to sign in" subtitle="Sign in on a computer with a QR code" onClick={openScanToSignIn} />
-            <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
-            <Row icon={CloudUpload} tile="accent" title="Backup" subtitle="Google Drive backup and restore" onClick={() => nav.push('settings.backup')} />
+          </RowGroup>
+        </Section>
+
+        <Section title={workspace?.name ? `Workspace · ${workspace.name}` : 'Workspace'}>
+          <RowGroup>
+            <Row icon={Building2} tile="accent" title="Workspace details" subtitle="About, members and channels" onClick={() => nav.push('workspace')} />
+            <Row icon={Bell} tile="accent" title="Notifications" subtitle="Push, email and digest for this workspace" onClick={() => nav.push('settings.notifications')} />
+            <Row icon={Plug} tile="accent" title="Integrations" subtitle="Connected apps" onClick={() => nav.push('integrations')} />
             <Row icon={Gauge} tile="accent" title="Plan & usage" subtitle="Your plan, its limits and what you've used" onClick={() => nav.push('settings.plan')} />
-          </RowGroup>
-        </Section>
-
-        <Section title="Preferences">
-          <RowGroup>
-            <Row icon={Bell} tile="accent" title="Notifications" onClick={() => nav.push('settings.notifications')} />
-            <Row icon={Palette} tile="accent" title="Appearance" onClick={() => nav.push('settings.appearance')} />
-            <Row icon={Lock} tile="accent" title="Privacy" onClick={() => nav.push('settings.privacy')} />
-          </RowGroup>
-        </Section>
-
-        <Section title="Assistant">
-          <RowGroup>
-            <Row icon={Sparkles} tile="accent" title="Oruinwan AI" onClick={() => nav.push('settings.ai')} />
-          </RowGroup>
-        </Section>
-
-        <Section title="Workspace">
-          <RowGroup>
-            <Row icon={Building2} tile="accent" title={workspace?.name || 'Workspace'} subtitle="Members and workspace settings" onClick={() => nav.push('workspace')} />
-            <Row icon={Plug} tile="accent" title="Integrations" onClick={() => nav.push('integrations')} />
             {['owner', 'admin'].includes(workspace?.role) && (
               <Row icon={ShieldCheck} tile="accent" title="Admin" subtitle="Features, permissions, people and compliance" onClick={() => nav.push('admin')} />
             )}
+          </RowGroup>
+        </Section>
+
+        <Section title="AI">
+          <RowGroup>
+            <Row icon={Sparkles} tile="accent" title="Oruinwan AI" subtitle="How the assistant works for you" onClick={() => nav.push('settings.ai')} />
+          </RowGroup>
+        </Section>
+
+        <Section title="Data & backup">
+          <RowGroup>
+            <Row icon={CloudUpload} tile="accent" title="Backup" subtitle="Google Drive backup and restore" onClick={() => nav.push('settings.backup')} />
+            <Row icon={Download} tile="accent" title="Your data" subtitle="Export a copy, message retention" onClick={() => nav.push('settings.account-data')} />
+            <Row icon={Database} tile="accent" title="Data & storage" subtitle="Cache, offline data, delete account" onClick={() => nav.push('settings.data')} />
           </RowGroup>
         </Section>
 
@@ -186,7 +192,6 @@ export function SettingsScreen({ confirmSignOut = false }) {
               }
               onClick={() => nav.push('settings.updates')}
             />
-            <Row icon={Database} tile="accent" title="Data & storage" onClick={() => nav.push('settings.data')} />
             {/* The website on a phone (this UI in a browser): the Android app, or the full website. */}
             {isWeb && /Android/i.test(navigator.userAgent) && (
               <Row icon={Smartphone} tile="accent" title="Get the Android app" subtitle="Notifications and calls even when it's closed" onClick={() => openExternal(ANDROID_APK)} />

@@ -3,6 +3,7 @@
 // Chats, Tasks, Notes, Activity), then Oruinwan AI and Search (the phone header's buttons).
 // Search, saved items, files and knowledge open in the Home tab's detail pane, so the list on
 // the left keeps its place.
+import { selfPresence } from '../lib/presence.js';
 import { useState } from 'react';
 import {
   Bell, Bookmark, BookOpen, ChevronDown, FileText, FolderOpen, Headphones, House, MessagesSquare, Search, Settings, Sparkles, SquareCheckBig, Workflow,
@@ -153,7 +154,7 @@ export function Sidebar() {
           )}
         >
           <span className="relative">
-            <Avatar name={user?.name} src={user?.avatarUrl} size="sm" presence={user?.presence} />
+            <Avatar name={user?.name} src={user?.avatarUrl} size="sm" presence={selfPresence(user)} />
             {(update === 'available' || update === 'required') && (
               <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" aria-label="Update available" />
             )}

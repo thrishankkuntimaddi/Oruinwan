@@ -118,7 +118,7 @@ describe('Plan & usage', () => {
     fake.getPlan.mockImplementation(async () => ({ ...PLAN, plan: 'company', exempt: true, blocked: {} }));
     render(<PlanScreen />);
     expect(await screen.findByText('Your company plan has no free-plan limits.')).toBeTruthy();
-    expect(screen.getByText('Company')).toBeTruthy();
+    expect(screen.getAllByText('Company').length).toBeGreaterThan(0);
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });

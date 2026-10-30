@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { selfPresence } from '../../lib/presence.js';
 import {
   ChevronDown, Headphones, Video, Info, Hash, Lock, BellOff, Bell, BellRing, LogOut, Users, MessageCircle, Mail, AtSign, Plus, Check, Clock, Sparkles, Ellipsis, CheckCircle2, RotateCcw, LockOpen, UserPlus, X,
 } from 'lucide-react';
@@ -1128,6 +1129,8 @@ export function ProfileScreen({ userId }) {
       setOpening(null);
     }
   };
+  // Looking at your own profile: you're online.
+  const presence = userId === me ? selfPresence(user) : user.presence;
   const actions = [
     { id: 'message', label: 'Message', icon: MessageCircle },
     huddlesOn && { id: 'voice', label: 'Voice', icon: Headphones },
@@ -1138,12 +1141,12 @@ export function ProfileScreen({ userId }) {
       <Header title="" />
       <Body>
         <div className="flex flex-col items-center px-6 pb-4 text-center">
-          <Avatar name={user.name} src={user.avatarUrl} size="xl" presence={user.presence} />
+          <Avatar name={user.name} src={user.avatarUrl} size="xl" presence={presence} />
           <h1 className="mt-4 text-2xl font-bold">{user.name}</h1>
           <StandingTag person={user} className="mt-1.5" />
           {user.title && <p className="mt-0.5 text-sm text-text-2">{user.title}</p>}
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-text-2">
-            <Icon as={Clock} size={13} /> {PRESENCE_TEXT[user.presence] || 'Offline'}
+            <Icon as={Clock} size={13} /> {PRESENCE_TEXT[presence] || 'Offline'}
           </p>
           {userId !== me && (
             <div className="mt-5 grid w-full max-w-sm gap-2" style={{ gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))` }}>

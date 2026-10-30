@@ -111,3 +111,29 @@ export function timeWarningText(w) {
   if (n <= 1) return '1 minute left';
   return `${n} minutes left — free plan calls end at ${positive(w.maxMinutes, DEFAULT_CALL_MINUTES)} minutes`;
 }
+
+/** The plans, for the cards on Plan & usage (the same as the website's /pricing). */
+export const PLAN_CARDS = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: '$0',
+    note: 'Free forever, no card',
+    features: ['Every feature: chat, huddles, tasks, notes, AI, integrations', 'Create 2 workspaces, join 2', 'Owner + 10 people per workspace', 'Huddles up to 10 people, 30 minutes', '50 AI requests a day'],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 'Coming soon',
+    note: 'For growing teams',
+    features: ['Up to 100 people per workspace', 'Unlimited channels and notes', 'Huddles up to 25 people, 5 hours', '500 AI requests a day', 'Everything in Free'],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 'Contact us',
+    note: 'For organisations',
+    features: ['No limits', 'Single sign-on (SSO) and admin controls across workspaces', 'Compliance tools and longer retention', 'Priority support', 'Everything in Pro'],
+  },
+];
+export const SALES_EMAIL = 'admin@poelys.com';

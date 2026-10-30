@@ -6,6 +6,7 @@ import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { on, toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
 import { isBlocked, pricingUrl } from './planText.js';
+import { webUrlFor } from '../../data/live/webUrl.js';
 
 export const planKey = (ws) => `plan:${ws || 'me'}`;
 export const aiKey = (ws) => `planai:${ws || 'me'}`;
@@ -40,8 +41,9 @@ export const closeUpgrade = () => useUpgrade.setState({ info: null });
 
 /** "See plans": the server's pricing page in the system browser. */
 export function openPricing(upgradeUrl) {
+  // The website's pricing page (oruinwan.example.com/pricing), not the API host's.
   const server = useSession.getState().server;
-  return openExternal(pricingUrl(server, upgradeUrl));
+  return openExternal(pricingUrl(webUrlFor(server), upgradeUrl));
 }
 
 const left = (max, used) => (max === null || max === undefined ? null : Math.max(0, max - (used || 0)));

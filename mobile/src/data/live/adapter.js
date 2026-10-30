@@ -193,6 +193,7 @@ function mapWorkspace(w) {
     rules: w.rules || '',
     settings: w.settings || {},
     plan: w.plan || null,
+    createdAt: w.createdAt || null,
     // Workspace profile: logo and cover images (full URLs), tagline, website, location.
     profile: {
       logoUrl: absolute(w.profile?.logoUrl) || null,

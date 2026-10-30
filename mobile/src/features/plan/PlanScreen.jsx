@@ -1,6 +1,8 @@
 // Settings → Plan & usage: which plan this is, what the free plan allows and how much of it is
 // used (from GET /api/plan). Company accounts and workspaces have no free-plan limits.
-import { Building2, Gauge, Phone, Sparkles } from 'lucide-react';
+import { Building2, Check, Gauge, History, LifeBuoy, Mail, Phone, Rocket, Sparkles } from 'lucide-react';
+import { nav } from '../../app/nav.js';
+import { openExternal } from '../../native/index.js';
 import { useSession, useWorkspace } from '../../data/session.js';
 import { invalidate } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
@@ -11,7 +13,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { TEMPLATES } from '../notes/templates.js';
 import { openPricing, usePlan } from './plan.js';
-import { COMING_SOON, EXEMPT_TEXT, planName, resetText, templateKey, templateUsage } from './planText.js';
+import { COMING_SOON, EXEMPT_TEXT, PLAN_CARDS, SALES_EMAIL, planName, resetText, templateKey, templateUsage } from './planText.js';
 
 function UsageBar({ used, max, atLimit }) {
   const pct = max ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -45,6 +47,73 @@ export function UsageRow({ item }) {
   );
 }
 
+const mail = (subject, body = '') => openExternal(`mailto:${SALES_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+
+/** Free, Pro and Enterprise side by side (swipe), the current one marked. */
+function PlanCards({ current, workspaceName }) {
+  return (
+    <Section title="Plans">
+      <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" data-testid="plan-cards">
+        {PLAN_CARDS.map((p) => {
+          const on = p.id === current;
+          return (
+            <div
+              key={p.id}
+              className={cx('flex w-[78%] max-w-[300px] shrink-0 snap-start flex-col rounded-card border p-4', on ? 'border-accent bg-accent/8' : 'border-line-soft bg-surface')}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[17px] font-semibold">{p.name}</p>
+                {on && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-on-accent">Current</span>}
+              </div>
+              <p className="mt-1 text-[20px] font-bold tracking-tight">{p.price}</p>
+              <p className="text-[12px] text-text-2">{p.note}</p>
+              <ul className="mt-3 flex-1 space-y-1.5">
+                {p.features.map((f) => (
+                  <li key={f} className="flex gap-2 text-[13px] leading-snug">
+                    <Icon as={Check} size={14} className="mt-0.5 shrink-0 text-success" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              {!on && p.id === 'pro' && (
+                <Button className="mt-3" size="sm" variant="secondary" icon={Rocket} onClick={() => mail('Notify me: Oruinwan Pro', `Please let me know when Pro is available for ${workspaceName || 'my workspace'}.`)}>
+                  Notify me
+                </Button>
+              )}
+              {!on && p.id === 'enterprise' && (
+                <Button className="mt-3" size="sm" icon={Mail} onClick={() => mail('Oruinwan Enterprise', `We'd like to talk about Enterprise for ${workspaceName || 'our organisation'}.`)}>
+                  Contact sales
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/** Help with the plan, and its history. */
+function PlanFooter({ plan, workspace }) {
+  const since = workspace?.createdAt ? new Date(workspace.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  return (
+    <>
+      <Section title="Help">
+        <RowGroup>
+          <Row icon={LifeBuoy} tile="accent" title="Contact support" subtitle="Problems, billing questions, limits" onClick={() => nav.push('settings.support')} />
+          <Row icon={Building2} title="Talk to us about Enterprise" subtitle={SALES_EMAIL} onClick={() => mail('Oruinwan Enterprise')} />
+          <Row icon={Gauge} title="Compare plans on the website" onClick={() => openPricing(plan?.upgradeUrl)} />
+        </RowGroup>
+      </Section>
+      <Section title="Plan history">
+        <RowGroup footer="Paid plans aren't available yet, so there are no invoices.">
+          <Row icon={History} title={planName(plan)} subtitle={since ? `Since ${since}` : 'Current plan'} value="Current" chevron={false} />
+        </RowGroup>
+      </Section>
+    </>
+  );
+}
+
 export function PlanScreen() {
   const ws = useSession((s) => s.workspaceId);
   const workspace = useWorkspace();
@@ -63,11 +132,15 @@ export function PlanScreen() {
         {loading ? (
           <SkeletonRows count={5} avatar={false} />
         ) : !plan ? (
-          <EmptyState
-            icon={Gauge}
-            title={error ? "Couldn't load your plan" : 'No plan limits'}
-            body={error ? error.message || 'Try again in a moment.' : "This server doesn't limit what you can create."}
-          />
+          <>
+            <EmptyState
+              icon={Gauge}
+              title={error ? "Couldn't load your plan" : 'No plan limits'}
+              body={error ? error.message || 'Pull down to try again.' : "This server doesn't limit what you can create."}
+            />
+            <PlanCards current={error ? null : 'free'} workspaceName={workspace?.name} />
+            <PlanFooter plan={plan} workspace={workspace} />
+          </>
         ) : (
           <>
             <div
@@ -197,6 +270,8 @@ export function PlanScreen() {
                 )}
               </>
             )}
+            {!plan.exempt && <PlanCards current={plan.plan || 'free'} workspaceName={workspace?.name} />}
+            <PlanFooter plan={plan} workspace={workspace} />
           </>
         )}
       </Body>

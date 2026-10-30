@@ -2,6 +2,7 @@
 // settings and help. Opens from the profile picture in every tab's header, or by swiping in from
 // the right edge on a tab's main screen. The workspace has its own drawer on the left
 // (WorkspaceDrawer.jsx).
+import { selfPresence } from '../lib/presence.js';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -110,10 +111,10 @@ export function SidePanel() {
               className="flex w-full items-center gap-3.5 rounded-card border border-line-soft bg-surface p-3.5 text-left"
               style={{ backgroundImage: 'var(--glass)' }}
             >
-              <Avatar name={user?.name} src={user?.avatarUrl} size="lg" presence={user?.presence} />
+              <Avatar name={user?.name} src={user?.avatarUrl} size="lg" presence={selfPresence(user)} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[17px] font-semibold">{user?.name}</span>
-                <span className="block truncate text-[13px] text-text-2">{PRESENCE[user?.presence] || 'Active'} · Edit profile</span>
+                <span className="block truncate text-[13px] text-text-2">{PRESENCE[selfPresence(user)] || 'Active'} · Edit profile</span>
               </span>
             </button>
 

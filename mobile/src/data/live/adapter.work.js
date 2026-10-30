@@ -1005,6 +1005,11 @@ export const workAdapter = {
     const data = await api.post('/workspaces/create', { name, templateId, ...(icon ? { icon } : {}), ...(color ? { color } : {}) });
     return { id: idOf(data.workspace), name: data.workspace?.name, templateError: data.templateError || null, ...planSkips(data) };
   },
+  /** Share this workspace's structure (public channels, settings) as a community template; reviewed before it's listed. */
+  async publishWorkspaceTemplate(ws, { name, description, icon }) {
+    const data = await api.post('/workspace-templates/community/publish', { workspaceId: ws, name, description, ...(icon ? { icon } : {}) });
+    return { id: idOf(data.template), status: data.template?.community?.status || 'pending' };
+  },
   async cloneWorkspace(ws, { name, includeMembers }) {
     const data = await api.post(`/workspace-os/${ws}/clone`, { name, includeMembers: Boolean(includeMembers) });
     return { id: idOf(data.workspace), name: data.workspace?.name, ...planSkips(data) };
@@ -1100,10 +1105,7 @@ export const workAdapter = {
     const data = await api.put(`/workspaces/${ws}/features`, { featureToggles });
     return data.featureToggles || featureToggles;
   },
-  async channelPolicy(id) {
-    const data = await api.get(`/channels/${id}/mute`);
-    return { posting: data.postingPolicy || 'everyone', mentions: data.broadcastMentions || 'everyone', canManage: Boolean(data.canManage) };
-  },
+  // channelPolicy(id) lives in adapter.chats.js (posting, mentions, canManage, muted).
   async setChannelPosting(id, postingPolicy) {
     await api.patch(`/channels/${id}/posting-policy`, { postingPolicy });
   },

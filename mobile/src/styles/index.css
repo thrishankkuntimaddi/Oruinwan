@@ -315,9 +315,10 @@
 }
 
 /* The header search: grows out of the search button (right) across the header. */
+/* The header search field fades in where it stands (no sweep across the header). */
 @keyframes search-grow {
-  from { clip-path: inset(0 0 0 calc(100% - 44px) round 999px); opacity: 0.4; }
-  to { clip-path: inset(0 0 0 0 round 999px); opacity: 1; }
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes drop-in {
   from { transform: translateY(-8px); opacity: 0; }
@@ -331,7 +332,7 @@
   from { transform: translateX(-100%); }
   to { transform: none; }
 }
-.animate-search-grow { animation: search-grow 240ms var(--ease-out-soft) both; }
+.animate-search-grow { animation: search-grow 160ms var(--ease-out-soft) both; }
 .animate-drop-in { animation: drop-in 200ms var(--ease-out-soft) both; }
 @media (prefers-reduced-motion: reduce) {
   .animate-search-grow, .animate-drop-in { animation: none; }

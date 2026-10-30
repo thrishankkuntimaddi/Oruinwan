@@ -368,7 +368,11 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
     /** Who may use @channel/@here: { broadcastMentions, canManage, postingPolicy, muted }. */
     async channelPolicy(id) {
       const data = await api.get(`/channels/${id}/mute`);
-      return { broadcastMentions: data.broadcastMentions || 'everyone', canManage: Boolean(data.canManage), postingPolicy: data.postingPolicy || 'everyone', muted: Boolean(data.isMuted) };
+      const posting = data.postingPolicy || 'everyone';
+      const mentions = data.broadcastMentions || 'everyone';
+      // Both names: the chat screens read postingPolicy/broadcastMentions, Admin → Channel settings
+      // reads posting/mentions (this method replaces adapter.work.js's one).
+      return { broadcastMentions: mentions, postingPolicy: posting, posting, mentions, canManage: Boolean(data.canManage), muted: Boolean(data.isMuted) };
     },
     /** A channel's threads, newest activity first (the web's Threads view). */
     async channelThreads(channelId) {
