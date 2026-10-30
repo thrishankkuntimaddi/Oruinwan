@@ -8,6 +8,28 @@ import { invalidate } from '../../data/query.js';
 import { emit, toast } from '../../lib/bus.js';
 import { openPush } from '../home/openTarget.js';
 import { MESSAGE_ACTIONS, repostWithActions } from '../../native/push.js';
+import { latestText } from '../../data/live/messageIndex.js';
+import { clipPreview, isGenericPreview } from '../../lib/preview.js';
+
+/**
+ * The message's own words for its notification. The server only knows "New message" (messages
+ * are end-to-end encrypted), so fetch the conversation's newest messages and decrypt them here.
+ * Gives up after a few seconds and keeps the server's text.
+ */
+export async function decryptedBody(conv, { timeoutMs = 4000 } = {}) {
+  try {
+    const me = useSession.getState().user?.id;
+    const fetched = api().messages?.(conv);
+    if (!fetched) return null;
+    const res = await Promise.race([fetched, new Promise((r) => setTimeout(() => r(null), timeoutMs))]);
+    const items = res?.items || [];
+    const last = [...items].reverse().find((m) => m.authorId !== me && m.state === 'ok' && m.text);
+    const text = last?.text || latestText(conv.id);
+    return text ? clipPreview(text, 120) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** The conversation a push is about: { kind, id, parentId } or null. */
 export function conversationOf(data = {}) {
@@ -111,5 +133,10 @@ export function handleReceived(notification) {
   }
   const conv = conversationOf(notification?.data);
   if (!conv || !isMessagePush(notification?.data)) return;
-  repostWithActions(notification, { show: openConversationId() !== conv.id });
+  const show = openConversationId() !== conv.id;
+  if (!show || !isGenericPreview(notification?.body || notification?.data?.body)) {
+    repostWithActions(notification, { show });
+    return;
+  }
+  decryptedBody(conv).then((body) => repostWithActions(notification, { show, body }));
 }

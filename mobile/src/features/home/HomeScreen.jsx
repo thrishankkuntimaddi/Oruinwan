@@ -98,6 +98,7 @@ const PLACES = {
 function QuickBubble({ entry, channels, dms }) {
   const pressTimer = useRef(null);
   const longPressed = useRef(false);
+  const startAt = useRef(null);
   let label = '';
   let visual = null;
   let open = null;
@@ -123,7 +124,7 @@ function QuickBubble({ entry, channels, dms }) {
           <Icon as={item.isGroup ? Users : item.private ? Lock : Hash} size={18} />
         </span>
       ) : (
-        <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="lg" presence={item.user?.presence} />
+        <Avatar name={item.user?.name} src={item.user?.avatarUrl} size="ml" presence={item.user?.presence} />
       );
     open = () => openConversation(entry.kind, item.id);
   }
@@ -131,8 +132,9 @@ function QuickBubble({ entry, channels, dms }) {
     const result = togglePin(entry);
     toast(result === 'full' ? `You can pin up to ${MAX_PINS}. Unpin one first.` : result === 'pinned' ? `Pinned ${label}` : `Unpinned ${label}`, result === 'full' ? 'danger' : 'success');
   };
-  const startPress = () => {
+  const startPress = (e) => {
     longPressed.current = false;
+    startAt.current = { x: e.clientX, y: e.clientY };
     clearTimeout(pressTimer.current);
     pressTimer.current = setTimeout(() => {
       longPressed.current = true;
@@ -140,27 +142,36 @@ function QuickBubble({ entry, channels, dms }) {
     }, 500);
   };
   const endPress = () => clearTimeout(pressTimer.current);
+  // Scrolling the row isn't a long-press.
+  const movePress = (e) => {
+    const s = startAt.current;
+    if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) endPress();
+  };
   return (
     <button
       type="button"
       onClick={() => (longPressed.current ? (longPressed.current = false) : open?.())}
       onPointerDown={startPress}
+      onPointerMove={movePress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
       onPointerCancel={endPress}
       onContextMenu={(e) => e.preventDefault()}
       aria-label={`${label}${entry.pinned ? ', pinned' : ''}. Long-press to ${entry.pinned ? 'unpin' : 'pin'}`}
-      className="pressable relative flex w-[64px] shrink-0 snap-start flex-col items-center gap-1.5"
+      className="relative flex w-[64px] shrink-0 snap-start flex-col items-center gap-1.5 active:opacity-80"
       data-testid="quick-jump-item"
     >
-      {visual}
-      {unread && <span className="absolute top-0 right-2 h-3 w-3 rounded-full bg-gold ring-2 ring-bg" aria-label="Unread" />}
-      {entry.pinned && (
-        <span className="absolute top-0 left-1 grid h-4 w-4 place-items-center rounded-full bg-surface text-accent-ink ring-1 ring-line" aria-hidden data-testid="quick-jump-pin">
-          <Icon as={Pin} size={10} />
-        </span>
-      )}
-      <span className="w-full truncate text-center text-[11px] text-text-2">{label}</span>
+      {/* Every bubble is the same 48px square, so names line up across the row. */}
+      <span className="relative grid h-12 w-12 shrink-0 place-items-center">
+        {visual}
+        {unread && <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-gold ring-2 ring-bg" aria-label="Unread" />}
+        {entry.pinned && (
+          <span className="absolute -top-1 -left-1 grid h-4 w-4 place-items-center rounded-full bg-surface text-accent-ink ring-1 ring-line" aria-hidden data-testid="quick-jump-pin">
+            <Icon as={Pin} size={10} />
+          </span>
+        )}
+      </span>
+      <span className="w-full truncate text-center text-[11px] leading-4 text-text-2">{label}</span>
     </button>
   );
 }
@@ -377,16 +388,16 @@ export function HomeScreen() {
 
         <SectionHead title="Quick jump" action="Pins" onAction={() => setEditingQuick(true)} />
         {/* Sideways: pins first, then the latest conversations. */}
-        <div className="no-scrollbar flex snap-x gap-3 overflow-x-auto px-4 pb-1" data-testid="quick-jump">
+        <div className="no-scrollbar flex snap-x scroll-px-4 items-start gap-3 overflow-x-auto px-4 pt-1 pb-1" data-testid="quick-jump">
           {quick.map((e) => (
             <QuickBubble key={`${e.kind}:${e.id}`} entry={e} channels={channels || []} dms={dms || []} />
           ))}
           {(customQuick?.length || 0) < MAX_PINS && (
-            <button type="button" onClick={() => setEditingQuick(true)} className="pressable flex w-[64px] shrink-0 flex-col items-center gap-1.5" data-testid="quick-jump-add">
+            <button type="button" onClick={() => setEditingQuick(true)} className="flex w-[64px] shrink-0 snap-start flex-col items-center gap-1.5 active:opacity-80" data-testid="quick-jump-add">
               <span className="grid h-12 w-12 place-items-center rounded-2xl border border-dashed border-line-strong text-text-2">
                 <Icon as={Pin} size={18} />
               </span>
-              <span className="text-[11px] text-text-2">Pin</span>
+              <span className="text-[11px] leading-4 text-text-2">Pin</span>
             </button>
           )}
         </div>

@@ -1,7 +1,7 @@
 // Secondary screens reached from Home, the header and Settings.
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Bell, CalendarDays, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug,
+  Archive, ArchiveRestore, Bell, CalendarDays, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug, Share2, Star, StarOff, Trash2,
   SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -20,16 +20,16 @@ import { prefs } from '../../native/storage.js';
 import { CalendarView } from './CalendarView.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
-import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
+import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
-import { fileIconKind, formatBytes, previewKind } from '../../lib/files.js';
-import { downloadFile, openFile } from '../media/media.js';
-import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, messageTarget, whereLabel } from '../files/filesUi.js';
+import { fileIconKind, formatBytes } from '../../lib/files.js';
+import { canShareFiles, downloadFile, openFile, shareFile } from '../media/media.js';
+import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, fileMarks, messageTarget, toggleFileMark, useFileMarks, whereLabel } from '../files/filesUi.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { groupActivity } from '../home/activityGroups.js';
@@ -179,10 +179,37 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
 
 const FILE_SOURCES = [
   { value: 'all', label: 'Everywhere' },
+  { value: 'starred', label: 'Starred' },
   { value: 'library', label: 'Uploads' },
   { value: 'channels', label: 'Channels' },
   { value: 'dms', label: 'Direct messages' },
+  { value: 'archived', label: 'Archived' },
 ];
+// Starred and Archived are kept on this phone; the server is asked for everything.
+const LOCAL_SOURCES = new Set(['starred', 'archived']);
+
+/** One file: icon, name (with a star), details, and ⋯ for its actions, all on one centred line. */
+function FileRow({ item, starred, onOpen, onMore }) {
+  return (
+    <div className="flex items-center">
+      <button type="button" onClick={onOpen} className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left active:bg-surface-2">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent/12 text-accent-ink">
+          <Icon as={FILE_ICONS[fileIconKind(item)] || File} size="sm" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1 text-[15px] text-text">
+            <span className="truncate">{item.name}</span>
+            {starred && <Icon as={Star} size={12} className="shrink-0 fill-current text-gold" aria-label="Starred" />}
+          </span>
+          <span className="mt-0.5 block truncate text-[13px] text-text-2">
+            {[formatBytes(item.size), item.byName, whereLabel(item), shortAgo(item.at)].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+      </button>
+      <IconButton icon={MoreHorizontal} label={`More for ${item.name}`} className="mx-1 shrink-0" onClick={onMore} />
+    </div>
+  );
+}
 
 /**
  * Every file shared with the person in this workspace: attachments from their channels,
@@ -197,18 +224,41 @@ export function FilesScreen() {
   const [sort, setSort] = useState('newest');
   const [limit, setLimit] = useState(50);
   const [menu, setMenu] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const ws = useSession((st) => st.workspaceId);
+  const marks = useFileMarks((st) => st.byWs[ws]) || fileMarks(ws);
   useEffect(() => {
     const t = setTimeout(() => setQ(query.trim()), 300);
     return () => clearTimeout(t);
   }, [query]);
-  const { data, loading, error } = useSharedFiles({ kind, source, q, sort, limit });
-  const items = data?.items || [];
+  const { data, loading, error } = useSharedFiles({ kind, source: LOCAL_SOURCES.has(source) ? 'all' : source, q, sort, limit });
+  const all = data?.items || [];
+  const items =
+    source === 'starred' ? all.filter((i) => marks.starred.includes(i.id))
+      : source === 'archived' ? all.filter((i) => marks.archived.includes(i.id))
+        : all.filter((i) => !marks.archived.includes(i.id));
   const filtering = Boolean(q) || kind !== 'all' || source !== 'all';
-  const media = items.filter((i) => ['image', 'video'].includes(previewKind(i)));
+  // Swipe sideways between the files in the list (uploads open their own page instead).
+  const swipeable = items.filter((i) => !(i.source === 'library' && i.fileId));
 
   const open = (item) => {
     if (item.source === 'library' && item.fileId) nav.push('file', { id: item.fileId });
-    else openFile(item, media.includes(item) ? media : undefined);
+    else openFile(item, swipeable);
+  };
+  const mark = (kindOf, item) => {
+    const on = toggleFileMark(ws, kindOf, item.id);
+    toast(kindOf === 'starred' ? (on ? 'Starred' : 'Removed from Starred') : on ? 'Archived. Find it under Archived.' : 'Back in your files', 'success');
+  };
+  const remove = async () => {
+    const item = deleting;
+    setDeleting(null);
+    try {
+      await api().deleteLibraryFile(item.fileId);
+      toast(`${item.name} was deleted`, 'success');
+      invalidate('files');
+    } catch (err) {
+      toast(err.message || "Couldn't delete that file", 'danger');
+    }
   };
   const goToMessage = (item) => {
     const target = messageTarget(item);
@@ -250,18 +300,7 @@ export function FilesScreen() {
           <>
             <RowGroup className="mt-1">
               {items.map((item) => (
-                <div key={item.id} className="flex items-center pr-2">
-                  <Row
-                    className="flex-1"
-                    icon={FILE_ICONS[fileIconKind(item)] || File}
-                    tile="accent"
-                    title={item.name}
-                    subtitle={[formatBytes(item.size), item.byName, whereLabel(item), shortAgo(item.at)].filter(Boolean).join(' · ')}
-                    chevron={false}
-                    onClick={() => open(item)}
-                  />
-                  <IconButton icon={MoreHorizontal} label={`More for ${item.name}`} onClick={() => setMenu(item)} />
-                </div>
+                <FileRow key={item.id} item={item} starred={marks.starred.includes(item.id)} onOpen={() => open(item)} onMore={() => setMenu(item)} />
               ))}
             </RowGroup>
             {data?.hasMore && (
@@ -272,6 +311,12 @@ export function FilesScreen() {
               </div>
             )}
           </>
+        ) : source === 'starred' || source === 'archived' ? (
+          <EmptyState
+            icon={source === 'starred' ? Star : Archive}
+            title={source === 'starred' ? 'No starred files' : 'Nothing archived'}
+            body={source === 'starred' ? 'Tap ⋯ on a file and Star it to keep it here.' : 'Archive files you’re done with: they leave the list but stay here.'}
+          />
         ) : filtering ? (
           <EmptyState
             icon={FolderOpen}
@@ -294,8 +339,25 @@ export function FilesScreen() {
         actions={menu ? [
           { label: 'Open', icon: ExternalLink, onSelect: () => open(menu) },
           menu.messageId && { label: 'Go to message', hint: `In ${whereLabel(menu)}`, icon: MessageCircle, onSelect: () => goToMessage(menu) },
+          marks.starred.includes(menu.id)
+            ? { label: 'Remove star', icon: StarOff, onSelect: () => mark('starred', menu) }
+            : { label: 'Star', icon: Star, onSelect: () => mark('starred', menu) },
+          canShareFiles() && { label: 'Share…', icon: Share2, onSelect: () => shareFile(menu) },
           { label: 'Download', icon: Download, onSelect: () => downloadFile(menu) },
+          marks.archived.includes(menu.id)
+            ? { label: 'Unarchive', icon: ArchiveRestore, onSelect: () => mark('archived', menu) }
+            : { label: 'Archive', hint: 'Hide it from the list; it stays under Archived', icon: Archive, onSelect: () => mark('archived', menu) },
+          menu.source === 'library' && menu.fileId && { label: 'Delete', hint: 'For everyone in the workspace', icon: Trash2, danger: true, onSelect: () => setDeleting(menu) },
         ] : []}
+      />
+      <Dialog
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        title={`Delete ${deleting?.name || 'this file'}?`}
+        body="It's removed from the workspace's Files for everyone. Files sent in chats stay in their conversations."
+        confirmLabel="Delete"
+        danger
+        onConfirm={remove}
       />
     </Screen>
   );

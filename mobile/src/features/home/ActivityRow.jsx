@@ -3,6 +3,29 @@ import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { shortAgo } from '../../lib/time.js';
 import { openNotification } from './openTarget.js';
+import { useSession } from '../../data/session.js';
+import { getQueryData } from '../../data/query.js';
+import { latestText } from '../../data/live/messageIndex.js';
+import { clipPreview, isGenericPreview } from '../../lib/preview.js';
+
+const MESSAGE_KINDS = new Set(['dm', 'mention', 'thread']);
+
+/**
+ * The server can't read end-to-end encrypted messages, so its preview is "New message". Show
+ * what this phone has decrypted instead: the sender's newest message in that conversation, or
+ * the chat list's last message. Shortened to one line.
+ */
+export function messagePreview(item, ws) {
+  if (!isGenericPreview(item.preview)) return item.preview;
+  if (!MESSAGE_KINDS.has(item.type) || !item.target) return item.preview && !isGenericPreview(item.preview) ? item.preview : '';
+  const conv = item.target.conv || item.target.id;
+  const fromIndex = latestText(conv, item.actorId) || latestText(conv);
+  if (fromIndex) return clipPreview(fromIndex);
+  const kind = item.target.convKind || item.target.kind;
+  const list = getQueryData(kind === 'channel' ? `channels:${ws}` : `dms:${ws}`) || [];
+  const row = list.find((c) => c.id === conv);
+  return row?.lastText && !isGenericPreview(row.lastText) ? clipPreview(row.lastText) : '';
+}
 
 export const NOTIF_ICON = {
   mention: AtSign, dm: MessageCircle, task: SquareCheckBig, thread: GitBranch, meeting: CalendarClock, reaction: Smile, note: FileText,
@@ -12,6 +35,8 @@ export const NOTIF_ICON = {
 export function ActivityRow({ item, directory }) {
   const actor = directory[item.actorId];
   const Glyph = NOTIF_ICON[item.type] || Bell;
+  const ws = useSession((st) => st.workspaceId);
+  const preview = messagePreview(item, ws);
   return (
     <button
       type="button"
@@ -38,7 +63,7 @@ export function ActivityRow({ item, directory }) {
           </span>
           <span className="shrink-0 text-[11px] text-text-3">{shortAgo(item.at)}</span>
         </span>
-        {item.preview && <span className="mt-0.5 block truncate text-[13px] text-text-2">{item.preview}</span>}
+        {preview && <span className="mt-0.5 block truncate text-[13px] text-text-2">{preview}</span>}
       </span>
       {!item.read && (item.count > 1 ? (
         <span className="mt-1 shrink-0 rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-on-accent" aria-label={`${item.count} unread`}>{item.count > 99 ? '99+' : item.count}</span>

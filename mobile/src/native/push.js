@@ -137,7 +137,7 @@ export function notificationIdFor(key) {
  * Android: replaces a message push the plugin displayed with one that has Reply and Mark as
  * read. `show` false only removes it (the conversation is already open on screen).
  */
-export async function repostWithActions(notification, { show = true } = {}) {
+export async function repostWithActions(notification, { show = true, body = null } = {}) {
   if (!pushAvailable || !isAndroid) return;
   const data = notification?.data || {};
   const conv = data.conversationId || data.channelId || data.dmSessionId;
@@ -152,7 +152,7 @@ export async function repostWithActions(notification, { show = true } = {}) {
         {
           id: notificationIdFor(conv),
           title: notification.title || data.title || 'Oruinwan',
-          body: notification.body || data.body || '',
+          body: body || notification.body || data.body || '',
           channelId: 'messages',
           group: String(conv),
           actionTypeId: MESSAGE_ACTIONS,

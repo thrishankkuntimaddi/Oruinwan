@@ -16,8 +16,8 @@ export function toneFor(seed = '') {
   return TONES[h % TONES.length];
 }
 
-const SIZE = { xs: 'h-6 w-6 text-[10px]', sm: 'h-8 w-8 text-xs', md: 'h-10 w-10 text-sm', lg: 'h-14 w-14 text-lg', xl: 'h-20 w-20 text-2xl' };
-const DOT = { xs: 'h-2 w-2', sm: 'h-2.5 w-2.5', md: 'h-3 w-3', lg: 'h-3.5 w-3.5', xl: 'h-4 w-4' };
+const SIZE = { xs: 'h-6 w-6 text-[10px]', sm: 'h-8 w-8 text-xs', md: 'h-10 w-10 text-sm', ml: 'h-12 w-12 text-base', lg: 'h-14 w-14 text-lg', xl: 'h-20 w-20 text-2xl' };
+const DOT = { xs: 'h-2 w-2', sm: 'h-2.5 w-2.5', md: 'h-3 w-3', ml: 'h-3 w-3', lg: 'h-3.5 w-3.5', xl: 'h-4 w-4' };
 const PRESENCE = { active: 'bg-success', online: 'bg-success', away: 'bg-warning', dnd: 'bg-danger', offline: 'bg-text-3' };
 
 export function Avatar({ name, src, size = 'md', presence, square = false, className }) {

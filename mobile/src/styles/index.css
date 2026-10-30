@@ -320,6 +320,15 @@
   from { opacity: 0; transform: translateY(-3px); }
   to { opacity: 1; transform: none; }
 }
+/* The media viewer: the next file slides in from the side you swiped towards. */
+@keyframes media-in-next {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes media-in-prev {
+  from { transform: translateX(-28px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
 @keyframes drop-in {
   from { transform: translateY(-8px); opacity: 0; }
   to { transform: none; opacity: 1; }

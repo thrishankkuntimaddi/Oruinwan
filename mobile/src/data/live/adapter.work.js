@@ -881,6 +881,10 @@ export const workAdapter = {
   },
 
   // ---- files
+  /** Deletes a file uploaded to the workspace library (its uploader or an admin). */
+  async deleteLibraryFile(id) {
+    await api.del(`/v2/files/${id}`);
+  },
   async fileDetail(id) {
     const data = await api.get(`/v2/files/${id}`);
     return mapFile(data.file || data);

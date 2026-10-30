@@ -56,6 +56,10 @@ export const pdfInApp = !isNative;
  * the viewer (or the phone's PDF app on Android), anything else in the open / download sheet.
  * `siblings`: other photos and videos to swipe through.
  */
+/**
+ * Opens a file. With `siblings` (the list it's in), the viewer swipes between them; files it
+ * can't draw show a card to open them.
+ */
 export function openFile(file, siblings) {
   if (!file) return;
   if (!file.url && !file.gcsPath && !file.localUrl) {
@@ -63,8 +67,9 @@ export function openFile(file, siblings) {
     return;
   }
   const kind = previewKind(file);
-  if (kind === 'image' || kind === 'video' || kind === 'audio' || (kind === 'pdf' && pdfInApp)) {
-    const list = siblings?.length ? siblings : [file];
+  const inList = siblings?.length > 1 && siblings.includes(file);
+  if (inList || kind === 'image' || kind === 'video' || kind === 'audio' || (kind === 'pdf' && pdfInApp)) {
+    const list = inList ? siblings : [file];
     useViewer.getState().openMedia(list, Math.max(0, list.indexOf(file)));
     return;
   }

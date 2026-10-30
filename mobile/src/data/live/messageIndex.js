@@ -54,6 +54,18 @@ export function indexMessages(conv, list, { complete = false } = {}) {
   conversations.set(conv.id, entry);
 }
 
+/** The newest decrypted text in a conversation (from `authorId` when given), or ''. */
+export function latestText(convId, authorId = null) {
+  const entry = conversations.get(String(convId));
+  if (!entry) return '';
+  let best = null;
+  for (const m of entry.messages.values()) {
+    if (!m.text || (authorId && m.authorId !== authorId)) continue;
+    if (!best || new Date(m.at) > new Date(best.at)) best = m;
+  }
+  return best?.text || '';
+}
+
 export function forgetMessage(convId, messageId) {
   conversations.get(convId)?.messages.delete(messageId);
 }

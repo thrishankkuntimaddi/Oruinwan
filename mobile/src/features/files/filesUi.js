@@ -1,3 +1,5 @@
+import { create } from 'zustand';
+import { prefs } from '../../native/storage.js';
 /** Tags as the server stores them: trimmed, lower case, no blanks or duplicates. */
 export function normalizeTags(list) {
   const out = [];
@@ -88,4 +90,39 @@ export function messageTarget(item) {
   if (!item?.messageId || !item.conv) return null;
   if (item.parentId) return { route: 'thread', params: { kind: item.conv.kind, convId: item.conv.id, messageId: item.parentId } };
   return { route: 'conversation', params: { kind: item.conv.kind, id: item.conv.id, highlight: item.messageId } };
+}
+
+// ---------------------------------------------------------------- Starred and archived
+// Kept on this phone per workspace: star files you come back to, archive ones you're done with
+// (they leave the main list but stay in Archived; nothing is deleted).
+
+const marksKey = (ws) => `files.marks:${ws}`;
+const readMarks = (ws) => {
+  try {
+    const v = prefs.get(marksKey(ws));
+    return { starred: Array.isArray(v?.starred) ? v.starred : [], archived: Array.isArray(v?.archived) ? v.archived : [] };
+  } catch {
+    return { starred: [], archived: [] };
+  }
+};
+export const useFileMarks = create(() => ({ byWs: {} }));
+export function fileMarks(ws) {
+  const s = useFileMarks.getState().byWs[ws];
+  if (s) return s;
+  const m = readMarks(ws);
+  useFileMarks.setState((st) => ({ byWs: { ...st.byWs, [ws]: m } }));
+  return m;
+}
+/** Flip a mark ('starred' | 'archived') on a file; returns whether it's now on. */
+export function toggleFileMark(ws, kind, id) {
+  const m = fileMarks(ws);
+  const on = !m[kind].includes(id);
+  const next = { ...m, [kind]: on ? [id, ...m[kind]].slice(0, 500) : m[kind].filter((x) => x !== id) };
+  useFileMarks.setState((st) => ({ byWs: { ...st.byWs, [ws]: next } }));
+  try {
+    prefs.set(marksKey(ws), next);
+  } catch {
+    /* storage not ready */
+  }
+  return on;
 }

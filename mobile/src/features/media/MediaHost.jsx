@@ -1,5 +1,5 @@
-// The full-screen viewer for photos, videos, audio and PDFs, and the sheet that opens or downloads
-// any other file. Rendered once at the app root; anything calls openFile() (media.js) to use them.
+// The full-screen viewer for photos, videos, audio and PDFs (swipe sideways between files; others
+// show a card to open them), and the sheet that opens or downloads any other file. Rendered once at the app root; anything calls openFile() (media.js) to use them.
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Download, ExternalLink, FileText, Music, Share2, TriangleAlert, X } from 'lucide-react';
@@ -11,7 +11,7 @@ import { cx } from '../../ui/cx.js';
 import { formatBytes, previewKind } from '../../lib/files.js';
 import { finePointer } from '../../app/layout.js';
 import { deviceNoun, isNative } from '../../native/index.js';
-import { canShareFiles, downloadFile, openWithSystem, shareFile, useMediaUrl, useViewer } from './media.js';
+import { canShareFiles, downloadFile, openWithSystem, pdfInApp, shareFile, useMediaUrl, useViewer } from './media.js';
 
 function Failed({ file }) {
   return (
@@ -87,6 +87,7 @@ function MediaItem({ file }) {
   const { url, error, retry, retried } = useMediaUrl(file);
   const kind = previewKind(file);
   const onError = () => (retried ? null : retry());
+  if (!VIEWABLE.has(kind) || (kind === 'pdf' && !pdfInApp)) return <FileCard file={file} />;
   if (error || (!url && !file.url && !file.gcsPath && !file.localUrl)) return <Failed file={file} />;
   if (!url) return <Spinner className="text-text-2" />;
   if (kind === 'image') return <ImageView key={url} file={file} url={url} onError={onError} />;
@@ -104,10 +105,24 @@ function MediaItem({ file }) {
       </div>
     );
   }
-  if (kind === 'pdf') return <PdfView file={file} url={url} />;
+  if (kind === 'pdf' && pdfInApp) return <PdfView file={file} url={url} />;
+  return <FileCard file={file} />;
+}
+
+const VIEWABLE = new Set(['image', 'video', 'audio', 'pdf']);
+
+/** Anything the viewer can't draw (documents, archives, PDFs on phones): a card to open it. */
+function FileCard({ file }) {
   return (
-    <div className="flex flex-col items-center text-text-2">
-      <Icon as={FileText} size={40} />
+    <div className="flex max-w-xs flex-col items-center px-6 text-center">
+      <span className="mb-4 grid h-20 w-20 place-items-center rounded-3xl border border-accent/30 bg-accent/10 text-accent-ink">
+        <Icon as={FileText} size={36} />
+      </span>
+      <p className="max-w-full truncate text-[15px] font-medium">{file.name || 'File'}</p>
+      {file.size ? <p className="mt-1 text-sm text-text-2">{formatBytes(file.size)}</p> : null}
+      <Button variant="secondary" size="sm" className="mt-5" icon={isNative ? ExternalLink : Download} onClick={() => (isNative ? openWithSystem(file) : downloadFile(file))}>
+        {isNative ? 'Open with…' : 'Download'}
+      </Button>
     </div>
   );
 }
@@ -124,11 +139,15 @@ function Viewer({ media, onClose }) {
     if (media) setIndex(media.index || 0);
   }, [media]);
   const swipe = useRef(null);
+  const dir = useRef(0);
   if (!mounted || !shown) return null;
   const items = shown.items;
   const file = items[Math.min(index, items.length - 1)];
   const many = items.length > 1;
-  const go = (d) => setIndex((i) => (i + d + items.length) % items.length);
+  const go = (d) => {
+    dir.current = d;
+    setIndex((i) => (i + d + items.length) % items.length);
+  };
 
   return createPortal(
     <div
@@ -160,19 +179,30 @@ function Viewer({ media, onClose }) {
         </div>
       </header>
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center pb-safe"
-        onPointerDown={(e) => {
-          swipe.current = { x: e.clientX, y: e.clientY };
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden pb-safe"
+        // Touch events, not pointer events: Android cancels the pointer as soon as a sideways
+        // drag starts, so a swipe never reached pointerup.
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          // A zoomed photo pans instead.
+          swipe.current = e.touches.length === 1 && !e.target.closest?.('.overflow-auto') ? { x: t.clientX, y: t.clientY } : null;
         }}
-        onPointerUp={(e) => {
+        onTouchEnd={(e) => {
           const s = swipe.current;
           swipe.current = null;
-          if (!many || !s || e.pointerType === 'mouse') return;
-          const dx = e.clientX - s.x;
-          if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(e.clientY - s.y) * 1.5) go(dx < 0 ? 1 : -1);
+          const t = e.changedTouches[0];
+          if (!many || !s || !t) return;
+          const dx = t.clientX - s.x;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(t.clientY - s.y) * 1.5) go(dx < 0 ? 1 : -1);
         }}
       >
-        <MediaItem key={`${index}:${file.url || file.localUrl || file.name}`} file={file} />
+        <div
+          key={`${index}:${file.url || file.localUrl || file.name}`}
+          className="flex h-full w-full items-center justify-center"
+          style={{ animation: dir.current ? `media-in-${dir.current > 0 ? 'next' : 'prev'} 200ms var(--ease-out-soft) both` : undefined }}
+        >
+          <MediaItem file={file} />
+        </div>
         {many && finePointer() && (
           <>
             <IconButton icon={ChevronLeft} label="Previous" onClick={() => go(-1)} className="absolute left-3 bg-surface-2" />

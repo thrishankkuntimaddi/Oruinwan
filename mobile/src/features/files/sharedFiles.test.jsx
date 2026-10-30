@@ -82,7 +82,8 @@ describe('FilesScreen', () => {
   it('opens chat files in the viewer and uploads in their details', async () => {
     render(<FilesScreen />);
     fireEvent.click(await screen.findByText('roadmap.pdf'));
-    expect(openFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'roadmap.pdf' }), undefined);
+    // With the other chat files, so the viewer swipes between them.
+    expect(openFile).toHaveBeenCalledWith(expect.objectContaining({ name: 'roadmap.pdf' }), expect.arrayContaining([expect.objectContaining({ name: 'roadmap.pdf' })]));
     fireEvent.click(screen.getByText('brand.zip'));
     expect(push).toHaveBeenCalledWith('file', { id: 'f1' });
   });
