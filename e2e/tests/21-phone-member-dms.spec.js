@@ -54,12 +54,14 @@ async function phoneOpenDm(page, username) {
 async function phoneSend(page, username, text) {
   await page.getByRole('textbox', { name: `Message ${username}` }).fill(text);
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(text, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+  // In the open conversation's messages: Home's activity also shows the (decrypted) text, on a hidden tab.
+  await expect(page.locator('[data-mid]').getByText(text, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
 }
 
 async function phoneReads(page, username, text) {
   await phoneOpenDm(page, username);
-  await expect(page.getByText(text, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+  // In the open conversation's messages: Home's activity also shows the (decrypted) text, on a hidden tab.
+  await expect(page.locator('[data-mid]').getByText(text, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
 }
 
 async function webSignIn(browser, key) {
