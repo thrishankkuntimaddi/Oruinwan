@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { Badge } from '../../ui/Feedback.jsx';
 import { WorkspaceTile } from './WorkspaceTile.jsx';
 import { JoinWithLinkSheet } from './JoinWorkspace.jsx';
+import { prefs } from '../../native/storage.js';
 
 /**
  * Right after signing in: "Welcome back", and the workspaces this account belongs to.
@@ -105,7 +106,7 @@ export function WorkspacePicker() {
 
         <p className="mt-8 text-center text-sm text-text-2">
           Not you?{' '}
-          <button type="button" className="font-medium text-accent-ink underline" onClick={() => signOut()}>
+          <button type="button" className="font-medium text-accent-ink underline" onClick={() => { prefs.set('auth.next', 'start'); prefs.set('lastEmail', null); signOut(); }}>
             Use a different account
           </button>
         </p>

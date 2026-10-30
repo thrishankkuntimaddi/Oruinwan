@@ -83,7 +83,7 @@ export function SidePanel() {
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[58]" role="presentation">
+      <div className="fixed inset-0 z-[60]" role="presentation">
         <button
           type="button"
           aria-label="Close"

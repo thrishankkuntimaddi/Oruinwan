@@ -13,7 +13,9 @@ import {
 import { invalidate, setQueryData } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
-import { Chips, SearchField } from '../../ui/Controls.jsx';
+import { Chips, Field, SearchField } from '../../ui/Controls.jsx';
+import { BrandLogo } from '../../ui/BrandLogo.jsx';
+import { useWebUrl } from '../../data/live/webUrl.js';
 import { prefs } from '../../native/storage.js';
 import { CalendarView } from './CalendarView.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
@@ -36,10 +38,6 @@ import { InviteSheet, canInvite } from '../workspace/InviteSheet.jsx';
 import { usePlanBlock } from '../plan/plan.js';
 import { blockedNote } from '../plan/planText.js';
 import { PlanLimitNote } from '../plan/PlanLimitNote.jsx';
-import githubLogo from '../../assets/integrations/github.svg';
-import gitlabLogo from '../../assets/integrations/gitlab.svg';
-import jiraLogo from '../../assets/integrations/jira.svg';
-import zoomLogo from '../../assets/integrations/zoom.svg';
 
 // ---------------------------------------------------------------- Notifications
 
@@ -305,67 +303,172 @@ export function FilesScreen() {
 
 // ---------------------------------------------------------------- Integrations
 
-const LOGOS = { github: githubLogo, gitlab: gitlabLogo, jira: jiraLogo, zoom: zoomLogo };
 const FALLBACK_ICON = { webhooks: Webhook, api: KeyRound };
 
 function IntegrationLogo({ item, size = 40 }) {
-  const logo = LOGOS[item.id];
-  if (logo) return <img src={logo} alt="" width={size} height={size} className="shrink-0 rounded-[10px]" />;
   return (
-    <span className="grid shrink-0 place-items-center rounded-[10px] bg-accent/12 text-accent-ink" style={{ width: size, height: size }}>
-      <Icon as={FALLBACK_ICON[item.id] || Plug} size="sm" />
-    </span>
+    <BrandLogo
+      id={item.id}
+      size={size}
+      fallback={
+        <span className="grid shrink-0 place-items-center rounded-[10px] bg-accent/12 text-accent-ink" style={{ width: size, height: size }}>
+          <Icon as={FALLBACK_ICON[item.id] || Plug} size="sm" />
+        </span>
+      }
+    />
+  );
+}
+
+/** Connect (or reconnect) an app with its keys, right on the phone. Admins only. */
+function ConnectForm({ item, ws, onDone }) {
+  const [values, setValues] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const fields = (item.form || []).filter((f) => !f.kind || f.kind === 'text' || f.kind === 'secret' || f.kind === 'url' || f.kind === 'email');
+  const submit = async (e) => {
+    e.preventDefault();
+    const missing = fields.find((f) => f.required && !String(values[f.key] || '').trim());
+    if (missing) return setError(`${missing.label} is needed.`);
+    setBusy(true);
+    setError('');
+    try {
+      const config = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v).trim()]).filter(([, v]) => v));
+      await api().connectIntegration(ws, item.id, config);
+      toast(`${item.name} is connected`, 'success');
+      invalidate('integrations');
+      onDone();
+    } catch (err) {
+      setError(err.message || `Couldn't connect ${item.name}`);
+    } finally {
+      setBusy(false);
+    }
+    return undefined;
+  };
+  return (
+    <form onSubmit={submit} className="mt-4 space-y-3" noValidate>
+      {item.setup?.length > 0 && (
+        <ol className="list-decimal space-y-1.5 rounded-xl border border-line-soft bg-surface-2 py-3 pl-8 pr-3.5 text-[13px] text-text-2">
+          {item.setup.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      )}
+      {fields.map((f) => (
+        <Field
+          key={f.key}
+          label={`${f.label}${f.required ? '' : ' (optional)'}`}
+          type={f.secret || f.kind === 'secret' ? 'password' : 'text'}
+          value={values[f.key] || ''}
+          onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+          placeholder={f.placeholder}
+          hint={f.hint}
+          autoCapitalize="none"
+          autoComplete="off"
+        />
+      ))}
+      {error && <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">{error}</p>}
+      <Button type="submit" block loading={busy} icon={Plug}>
+        {item.connected ? 'Update keys' : `Connect ${item.name}`}
+      </Button>
+    </form>
   );
 }
 
 export function IntegrationsScreen() {
   const { data, loading } = useIntegrations();
+  const workspace = useWorkspace();
+  const ws = useSession((s) => s.workspaceId);
   const mode = useSession((s) => s.mode);
   const server = useSession((s) => s.server);
+  const webBase = useWebUrl(server);
+  const isAdmin = ['owner', 'admin'].includes(workspace?.role);
   const [active, setActive] = useState(null);
+  const [connecting, setConnecting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
   const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = (data || []).filter((it) => !q || `${it.name} ${it.description} ${it.category}`.toLowerCase().includes(q));
+    // What's connected first, then each category.
     const map = new Map();
-    for (const it of data || []) {
-      const key = it.category || 'Other';
+    const on = list.filter((i) => i.connected);
+    if (on.length) map.set('Connected', on);
+    for (const it of list.filter((i) => !i.connected)) {
+      const key = it.category || 'Other apps';
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(it);
     }
     return [...map.entries()];
-  }, [data]);
+  }, [data, query]);
   const connected = (data || []).filter((i) => i.connected).length;
+  const close = () => {
+    setActive(null);
+    setConnecting(false);
+  };
+  const disconnect = async () => {
+    setBusy(true);
+    try {
+      await api().disconnectIntegration(ws, active.id);
+      toast(`${active.name} was disconnected`, 'success');
+      invalidate('integrations');
+      close();
+    } catch (err) {
+      toast(err.message || 'That didn’t work', 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <Screen>
       <Header title="Integrations" subtitle={data ? `${connected} connected` : ''} />
       <Body onRefresh={() => invalidate('integrations')}>
+        {!loading && (data || []).length > 6 && (
+          <div className="px-4 pt-2">
+            <SearchField value={query} onChange={setQuery} placeholder="Search apps" />
+          </div>
+        )}
         {loading ? (
           <SkeletonRows />
-        ) : !groups.length ? (
-          <EmptyState icon={Plug} title="No integrations available" body="Your workspace admin can enable integrations in the web app." />
+        ) : !(data || []).length ? (
+          <EmptyState
+            icon={Plug}
+            title="Integrations are off"
+            body={isAdmin ? 'Integrations are switched off for this workspace. Turn them on in Admin → Features.' : 'Integrations are switched off for this workspace. Ask an owner or admin to turn them on.'}
+            action={isAdmin ? <Button onClick={() => nav.push('admin.features')}>Open Admin → Features</Button> : null}
+          />
         ) : (
-          groups.map(([category, items]) => (
-            <Section key={category} title={category}>
-              <RowGroup>
-                {items.map((it) => (
-                  <Row
-                    key={it.id}
-                    leading={<IntegrationLogo item={it} />}
-                    title={it.name}
-                    subtitle={it.connected ? it.detail || 'Connected' : it.description}
-                    trailing={
-                      <span className={cx('rounded-full px-2 py-0.5 text-[11px] font-medium', it.connected ? 'bg-success/12 text-success' : 'bg-surface-3 text-text-2')}>
-                        {it.connected ? 'On' : 'Off'}
-                      </span>
-                    }
-                    onClick={() => setActive(it)}
-                  />
-                ))}
-              </RowGroup>
-            </Section>
-          ))
+          <>
+            {!isAdmin && (
+              <p className="mx-4 mt-2 rounded-xl border border-line-soft bg-surface px-3.5 py-2.5 text-[13px] text-text-2">
+                Owners and admins connect apps for the workspace. Tap one to see what it does.
+              </p>
+            )}
+            {groups.map(([category, items]) => (
+              <Section key={category} title={category}>
+                <RowGroup>
+                  {items.map((it) => (
+                    <Row
+                      key={it.id}
+                      leading={<IntegrationLogo item={it} />}
+                      title={it.name}
+                      subtitle={it.connected ? it.detail || 'Connected' : it.description}
+                      trailing={
+                        <span className={cx('whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium', it.connected ? 'bg-success/12 text-success' : isAdmin ? 'bg-accent/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
+                          {it.connected ? 'On' : isAdmin ? 'Connect' : 'Off'}
+                        </span>
+                      }
+                      onClick={() => setActive(it)}
+                    />
+                  ))}
+                </RowGroup>
+              </Section>
+            ))}
+            {!groups.length && <EmptyState icon={Plug} title="No apps match" body="Try another name." />}
+          </>
         )}
       </Body>
-      <Sheet open={Boolean(active)} onClose={() => setActive(null)}>
+      <Sheet open={Boolean(active)} onClose={close}>
         {active && (
           <div className="px-5 pb-5">
             <div className="flex items-center gap-3.5">
@@ -378,12 +481,20 @@ export function IntegrationsScreen() {
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-text-2">{active.description}</p>
-            <p className="mt-4 rounded-xl border border-line-soft bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">
-              Connecting and configuring apps needs a browser sign-in with the provider, so it happens in the Oruinwan web app.
-            </p>
-            {mode === 'live' && server && (
-              <Button block className="mt-4" icon={ExternalLink} onClick={() => openExternal(`${server}/settings?tab=integrations`)}>
-                Manage in the web app
+            {mode === 'live' && isAdmin && (connecting || !active.connected) && active.form?.length > 0 ? (
+              <ConnectForm item={active} ws={ws} onDone={close} />
+            ) : (
+              !isAdmin && <p className="mt-4 rounded-xl border border-line-soft bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">Ask a workspace owner or admin to connect {active.name}.</p>
+            )}
+            {mode === 'live' && isAdmin && active.connected && !connecting && (
+              <div className="mt-4 space-y-2">
+                {active.form?.length > 0 && <Button block variant="secondary" icon={KeyRound} onClick={() => setConnecting(true)}>Update keys</Button>}
+                <Button block variant="secondary" className="text-danger" loading={busy} onClick={disconnect}>Disconnect</Button>
+              </div>
+            )}
+            {mode === 'live' && webBase && (
+              <Button block variant="ghost" className="mt-2" icon={ExternalLink} onClick={() => openExternal(`${webBase}/settings?tab=integrations`)}>
+                Channel routing and more in the web app
               </Button>
             )}
           </div>

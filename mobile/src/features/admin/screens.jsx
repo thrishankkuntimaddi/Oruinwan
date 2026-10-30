@@ -244,8 +244,8 @@ function MatrixEditor({ canEdit }) {
   const wide = useWide();
   const { data: matrix, loading, error } = useQuery('permmatrix', () => api().permissionMatrix());
   const [role, setRole] = useState('member');
-  if (loading) return <SkeletonRows count={6} avatar={false} />;
   if (error && !matrix) return <ErrorState error={error} />;
+  if (loading || matrix === undefined) return <SkeletonRows count={6} avatar={false} />;
   const keys = Object.keys(PERMISSION_LABELS);
   const toggle = async (r, k) => {
     const row = toggleCell(matrix, r, k);
@@ -319,10 +319,10 @@ export function AdminPermissionsScreen() {
     <Screen>
       <Header title="Permissions" subtitle={workspace.name} />
       <Body>
-        {loading ? (
-          <SkeletonRows count={3} avatar={false} />
-        ) : error && !data ? (
+        {error && !data ? (
           <ErrorState error={error} />
+        ) : loading || !data ? (
+          <SkeletonRows count={3} avatar={false} />
         ) : (
           <>
             <Section title="Who can invite people">

@@ -14,6 +14,7 @@ import { Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
+import { BrandLogo } from '../../ui/BrandLogo.jsx';
 import { toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
 import { useWebUrl } from '../../data/live/webUrl.js';
@@ -93,7 +94,7 @@ function AgentSheet({ agent, ws, policy, onClose }) {
   return (
     <div className="px-5 pb-5" data-testid="agent-sheet">
       <div className="flex items-center gap-3.5">
-        <img src={agent.icon} alt="" className="h-12 w-12 shrink-0 rounded-xl" />
+        <BrandLogo id={agent.id} size={48} className="!rounded-xl" fallback={<img src={agent.icon} alt="" className="h-12 w-12 shrink-0 rounded-xl" />} />
         <div className="min-w-0">
           <h2 className="text-lg font-semibold">{agent.name}</h2>
           <p className="text-[13px] text-text-2">by {agent.maker}</p>
@@ -185,7 +186,7 @@ export function AgentsScreen({ connect = false }) {
                 {agents.map((a) => {
                   const s = statusOf(a);
                   return (
-                    <Row key={a.id} leading={<img src={a.icon} alt="" className="h-10 w-10 shrink-0 rounded-xl" />}
+                    <Row key={a.id} leading={<BrandLogo id={a.id} size={40} className="!rounded-xl" fallback={<img src={a.icon} alt="" className="h-10 w-10 shrink-0 rounded-xl" />} />}
                       title={a.name} subtitle={a.maker} trailing={<Pill tone={s.tone}>{s.text}</Pill>}
                       onClick={() => setActive(a.id)} />
                   );
@@ -194,11 +195,12 @@ export function AgentsScreen({ connect = false }) {
             </Section>
             {tools.length > 0 && (
               <Section title="Tools">
-                <RowGroup footer="GitHub and Jira sign in with the provider, so you connect them in the web app.">
+                <RowGroup footer="GitHub and Jira sign in with the provider: Connect opens the sign-in page in your browser, then come back here.">
                   {tools.map((t) => (
-                    <Row key={t.id} icon={Plug} title={t.name} multiline
+                    <Row key={t.id} title={t.name} multiline
+                      leading={<BrandLogo id={t.id} size={40} className="!rounded-xl" fallback={<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink"><Icon as={Plug} size="sm" /></span>} />}
                       subtitle={t.connectedForYou ? `Connected for you${t.connectedForYou.login ? ` · ${t.connectedForYou.login}` : ''}` : t.actsAs}
-                      trailing={webPage ? <Icon as={ExternalLink} size="sm" className="text-text-3" /> : null}
+                      trailing={t.connectedForYou ? <Pill tone="success">Connected</Pill> : webPage ? <Pill tone="accent">Connect <Icon as={ExternalLink} size={11} className="inline" /></Pill> : null}
                       onClick={webPage ? () => openExternal(webPage) : undefined} />
                   ))}
                 </RowGroup>

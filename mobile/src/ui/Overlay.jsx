@@ -1,3 +1,5 @@
+// Overlays (sheets, dialogs, drawers) share one layer, z-[60]: the one opened last is appended
+// last to <body>, so it is always on top of whatever opened it.
 // Sheets and dialogs render through a portal on document.body, so an animated parent
 // can never trap them under the tab bar. Each one registers with the nav store so the
 // Android back button (or Escape) closes it first. On wide windows a sheet is a centred dialog.
@@ -99,7 +101,7 @@ export function Sheet({ open, onClose, title, children, footer, className, full 
   if (!mounted) return null;
   const offset = drag.dy > 0 ? drag.dy : 0;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center lg:p-8" role="presentation">
+    <div className="fixed inset-0 z-[60] flex flex-col justify-end lg:items-center lg:justify-center lg:p-8" role="presentation">
       <button
         type="button"
         aria-label="Close"

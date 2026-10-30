@@ -136,7 +136,7 @@ function Viewer({ media, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-label={file.name || 'Preview'}
-      className={cx('fixed inset-0 z-[70] flex flex-col bg-bg text-text', closing ? 'opacity-0 transition-opacity duration-150' : 'animate-fade-in')}
+      className={cx('fixed inset-0 z-[60] flex flex-col bg-bg text-text', closing ? 'opacity-0 transition-opacity duration-150' : 'animate-fade-in')}
       onKeyDown={(e) => {
         if (many && e.key === 'ArrowRight') go(1);
         if (many && e.key === 'ArrowLeft') go(-1);

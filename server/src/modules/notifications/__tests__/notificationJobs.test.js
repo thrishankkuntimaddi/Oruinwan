@@ -265,6 +265,14 @@ describe('digest emails', () => {
         expect(mails.find((m) => m.to === 'u2@x.io').text).toContain('Direct messages: 4');
     });
 
+    test('a workspace with every notification switched off is left out of the digest', async () => {
+        require('../notificationPreferenceService').getUserPreferences.mockResolvedValue({ message: false, threadReply: false, task: false, meeting: false });
+        const out = await jobs.sendDigestEmails(null, { now: NOW });
+        expect(out.emails).toBe(0);
+        expect(email.sendEmailNotification).not.toHaveBeenCalled();
+        require('../notificationPreferenceService').getUserPreferences.mockResolvedValue(undefined);
+    });
+
     test('weekly subscribers are skipped on other days; nothing before the digest hour', async () => {
         const tuesday = new Date('2026-10-20T09:00:00Z');
         await jobs.sendDigestEmails(null, { now: tuesday });

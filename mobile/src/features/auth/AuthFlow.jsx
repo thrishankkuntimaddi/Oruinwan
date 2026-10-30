@@ -14,6 +14,7 @@ import { normalizeServerUrl, probeServer } from '../../data/live/server.js';
 import { openExternal } from '../../native/index.js';
 import { useNav } from '../../app/nav.js';
 import { googleSignInToken, googleSupported } from '../../data/live/google.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
 import { Intro } from './Intro.jsx';
 import { QrSignIn } from './QrSignIn.jsx';
 import { SignInChallenge } from './SignInChallenge.jsx';
@@ -31,7 +32,10 @@ function useServerAddress() {
   useEffect(() => {
     check();
   }, []);
-  return { server: SERVER_URL, base: SERVER_URL, probe, check, known: true };
+  // `web` is the web app's address (oruinwan.example.com), not the API's (api.oruinwan.example.com):
+  // pages like Terms and Privacy live there.
+  const web = useWebUrl(SERVER_URL);
+  return { server: SERVER_URL, base: SERVER_URL, web, probe, check, known: true };
 }
 
 /** Only shown when the server can't be reached. */
@@ -258,12 +262,12 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>
-            Messages are encrypted in transit and at rest. Oruinwan's server keeps a sealed copy of your key so your devices unlock automatically.
+            End-to-end encrypted.
             {base && (
               <>
                 {' '}
                 {googleSupported ? 'Forgotten your password?' : 'Google sign-in or a forgotten password?'}{' '}
-                <button type="button" className="font-medium text-accent-ink underline" onClick={() => openExternal(`${base}/login`)}>
+                <button type="button" className="font-medium text-accent-ink underline" onClick={() => openExternal(`${addr.web || base}/login`)}>
                   Open the web app
                 </button>
                 .
@@ -620,7 +624,7 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
         </p>
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
-          <span>Messages are encrypted in transit and at rest. Oruinwan's server keeps a sealed copy of your key, so your messages unlock automatically on every device you sign in on.</span>
+          <span>End-to-end encrypted.</span>
         </div>
       </form>
     </div>
@@ -786,11 +790,11 @@ function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa, on
         <p className="mt-2 text-center text-[13px] text-text-3">Signed in on a computer? Show its code under Settings → Devices → Sign in a phone.</p>
         <p className="mt-6 text-center text-[13px] text-text-3">
           By continuing you agree to the{' '}
-          <button type="button" className="underline" onClick={() => openExternal(`${addr.base || ''}/terms`)} disabled={!addr.base}>
+          <button type="button" className="underline" onClick={() => openExternal(`${addr.web}/terms`)} disabled={!addr.web}>
             Terms
           </button>{' '}
           and{' '}
-          <button type="button" className="underline" onClick={() => openExternal(`${addr.base || ''}/privacy`)} disabled={!addr.base}>
+          <button type="button" className="underline" onClick={() => openExternal(`${addr.web}/privacy`)} disabled={!addr.web}>
             Privacy Policy
           </button>
           .
@@ -801,7 +805,12 @@ function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa, on
 }
 
 export function AuthFlow() {
-  const [step, setStep] = useState('welcome');
+  // "Use a different account" signs out and lands on the email step, not the welcome page.
+  const [step, setStep] = useState(() => {
+    const next = prefs.get('auth.next');
+    if (next) prefs.set('auth.next', null);
+    return next === 'start' ? 'start' : 'welcome';
+  });
   // "Continue with Google" for an email with no account: the server's sign-up ticket.
   const [googleTicket, setGoogleTicket] = useState(null);
   // Where a verification link went: { email, server, reason: 'signup' | 'unverified' }.

@@ -37,7 +37,11 @@ export async function loadWebUrl(server, probe = probeServer) {
   } catch { /* storage not ready */ }
   const result = await probe(server).catch(() => null);
   const url = result?.state === 'ok' && typeof result.info?.webUrl === 'string' ? result.info.webUrl.replace(/\/+$/, '') : '';
-  if (/^https?:\/\//.test(url)) {
+  // A server configured with its own API address as the web address would send links to the API
+  // (api.x.com/terms); keep the guess instead.
+  let sameHost = false;
+  try { sameHost = new URL(url).host === new URL(server).host && new URL(server).hostname.startsWith('api.'); } catch { /* not a URL */ }
+  if (/^https?:\/\//.test(url) && !sameHost) {
     remember(server, url);
     try { prefs.set(cacheKey(server), url); } catch { /* ignore */ }
   }

@@ -605,7 +605,7 @@ const NOTIF_ROWS = [
   { key: 'tasks', title: 'Tasks', subtitle: 'Assigned to you, status changes, due soon' },
   { key: 'meetings', title: 'Meetings', subtitle: 'Invitations and reminders before meetings start' },
   { key: 'aiSuggestions', title: 'Suggestions', subtitle: 'Nudges about overdue tasks and meeting action items' },
-  { key: 'email', title: 'Email notifications', subtitle: 'Mentions and messages while you are away' },
+  { key: 'email', title: 'Email when I am away', subtitle: 'Mentions and messages you missed, by email' },
 ];
 
 const DIGEST_OPTIONS = [
@@ -632,10 +632,23 @@ function DigestSection() {
   const setSignIn = (on) => save({ newSignInEmails: on }, () => api().saveNewSignInEmails?.(on));
   return (
     <Section title="Email">
-      <RowGroup footer="Smart: an email on days unread mentions, messages or tasks wait for you and you haven't opened Oruinwan, otherwise a weekly roundup on Mondays. Nothing is sent when there's nothing new. Applies to all workspaces.">
-        <div className="px-4 py-3">
-          <Segmented size="sm" options={DIGEST_OPTIONS} value={data.digestFrequency} onChange={set} />
-        </div>
+      <RowGroup
+        footer={
+          data.digestFrequency === 'off'
+            ? 'No digest emails. Applies to all your workspaces.'
+            : "Smart: an email on days unread mentions, messages or tasks wait for you and you haven't opened Oruinwan, otherwise a weekly roundup on Mondays. Workspaces with all notifications off are left out. Choose Off to stop digest emails in every workspace."
+        }
+      >
+        <Row
+          title="Activity digest"
+          subtitle={data.digestFrequency === 'off' ? 'Off' : `${DIGEST_OPTIONS.find((o) => o.value === data.digestFrequency)?.label || 'Smart'} · all workspaces`}
+          trailing={<Toggle checked={data.digestFrequency !== 'off'} onChange={(on) => set(on ? 'smart' : 'off')} label="Activity digest email" />}
+        />
+        {data.digestFrequency !== 'off' && (
+          <div className="px-4 py-3">
+            <Segmented size="sm" options={DIGEST_OPTIONS.filter((o) => o.value !== 'off')} value={data.digestFrequency} onChange={set} />
+          </div>
+        )}
       </RowGroup>
       {api().saveNewSignInEmails && (
         <RowGroup footer="Emails about password changes and signing out everywhere are always sent.">

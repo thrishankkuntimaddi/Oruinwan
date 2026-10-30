@@ -166,7 +166,7 @@ export function App() {
     <>
       {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace && !browsing ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
       {status === 'signed-in' && browsing && !creatingWorkspace && !joinToken && (
-        <div className="animate-fade-in fixed inset-0 z-[55] bg-bg">
+        <div className="animate-fade-in fixed inset-0 z-[60] bg-bg">
           <WorkspacePicker />
         </div>
       )}

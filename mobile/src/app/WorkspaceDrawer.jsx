@@ -11,6 +11,7 @@ import { useMembers } from '../data/hooks.js';
 import { nav } from './nav.js';
 import { useOverlay, usePresence } from '../ui/Overlay.jsx';
 import { Icon } from '../ui/Icon.jsx';
+import { Avatar } from '../ui/Avatar.jsx';
 import { cx } from '../ui/cx.js';
 import { WorkspaceHero } from '../features/workspace/WorkspaceHero.jsx';
 import { WorkspaceSheet } from '../features/workspace/WorkspaceSheet.jsx';
@@ -30,6 +31,28 @@ function Item({ icon, label, hint, onClick, testId }) {
       </span>
       <Icon as={ChevronRight} size={16} className="text-text-3" />
     </button>
+  );
+}
+
+/** Who runs this workspace: the owner, then its admins, so every member knows who to ask. */
+export function Leaders({ members, onOpen }) {
+  const people = (members || []).filter((m) => m.workspaceRole === 'owner' || m.workspaceRole === 'admin');
+  if (!people.length) return null;
+  people.sort((a, b) => (a.workspaceRole === b.workspaceRole ? a.name.localeCompare(b.name) : a.workspaceRole === 'owner' ? -1 : 1));
+  return (
+    <div className="mt-3 rounded-xl border border-line-soft bg-surface px-1 py-1" data-testid="workspace-leaders">
+      <p className="px-2.5 pt-1.5 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Owner and admins</p>
+      {people.slice(0, 6).map((p) => (
+        <button key={p.id} type="button" onClick={() => onOpen?.(p.id)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left active:bg-surface-2">
+          <Avatar name={p.name} src={p.avatarUrl} size="sm" presence={p.presence} />
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{p.name}</span>
+          <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', p.workspaceRole === 'owner' ? 'bg-gold/20 text-accent-ink' : 'bg-surface-3 text-text-2')}>
+            {p.workspaceRole === 'owner' ? 'Owner' : 'Admin'}
+          </span>
+        </button>
+      ))}
+      {people.length > 6 && <p className="px-2.5 pb-1.5 text-[12px] text-text-2">and {people.length - 6} more admins</p>}
+    </div>
   );
 }
 
@@ -83,7 +106,7 @@ export function WorkspaceDrawer() {
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[58]" role="presentation">
+      <div className="fixed inset-0 z-[60]" role="presentation">
         <button
           type="button"
           aria-label="Close"
@@ -114,6 +137,7 @@ export function WorkspaceDrawer() {
                   </p>
                   {workspace.profile?.tagline && <p className="mt-1 text-[13px]">{workspace.profile.tagline}</p>}
                 </div>
+                <Leaders members={members} onOpen={(id) => (closeWorkspaceDrawer(), nav.push('profile', { userId: id }))} />
               </>
             ) : (
               <p className="px-3 py-6 text-[15px] text-text-2">No workspace selected</p>
@@ -147,12 +171,15 @@ export function useLeftEdgeSwipe(enabled) {
     let start = null;
     const down = (e) => {
       const t = e.touches[0];
-      start = t.clientX < 28 ? { x: t.clientX, y: t.clientY } : null;
+      // Android's back gesture owns the outermost pixels, so a swipe may start a little further in.
+      // Not on things that slide sideways themselves (chat rows, carousels, sliders).
+      const own = e.target?.closest?.('[data-swipe], input[type="range"], .overflow-x-auto, .snap-x');
+      start = t.clientX < 64 && !own ? { x: t.clientX, y: t.clientY } : null;
     };
     const move = (e) => {
       if (!start) return;
       const t = e.touches[0];
-      if (t.clientX - start.x > 50 && Math.abs(t.clientY - start.y) < 40) {
+      if (t.clientX - start.x > 60 && Math.abs(t.clientY - start.y) < 40) {
         start = null;
         openWorkspaceDrawer();
       }

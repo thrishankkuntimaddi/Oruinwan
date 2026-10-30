@@ -103,7 +103,9 @@ export function useQuery(key, fetcher, { staleMs = 20_000, enabled = true } = {}
     data: snap.data,
     error: snap.error,
     status: snap.status,
-    loading: snap.status === 'loading' && snap.data === undefined,
+    // Before the first fetch starts (status 'idle') there's no data yet either: that's loading
+    // too, so screens never render "loaded" with nothing in hand.
+    loading: snap.data === undefined && (snap.status === 'loading' || (snap.status === 'idle' && Boolean(key) && enabled)),
     refreshing: snap.status === 'refreshing',
     refetch,
   };

@@ -44,6 +44,44 @@ function presenceOf(u) {
   return u.isOnline || s === 'online' || s === 'active' ? 'active' : 'offline';
 }
 
+const INTEGRATION_CATEGORY = { developer: 'Developer tools', communication: 'Communication', files: 'Files', docs: 'Docs and wikis', automation: 'Automation', meetings: 'Meetings' };
+
+// GitHub, Jira and Zoom have their own server modules, so they aren't in the connector catalog.
+const DEV_INTEGRATIONS = [
+  {
+    id: 'github',
+    name: 'GitHub',
+    category: 'developer',
+    description: 'Pull requests and issues in channels, linked tasks, and AI code review.',
+    setup: ['In GitHub → Settings → Developer settings, create a personal access token with repo access and paste it below.'],
+    form: [{ key: 'token', label: 'Personal access token', kind: 'secret', required: true, placeholder: 'ghp_…', secret: true }],
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    category: 'developer',
+    description: 'Jira issues in channels, task sync, and creating Jira issues from tasks.',
+    setup: ['In Atlassian → Account settings → Security, create an API token. Use the email of that account.'],
+    form: [
+      { key: 'baseUrl', label: 'Site address', required: true, placeholder: 'https://your-team.atlassian.net' },
+      { key: 'email', label: 'Account email', required: true, placeholder: 'you@company.com' },
+      { key: 'apiToken', label: 'API token', kind: 'secret', required: true, secret: true },
+    ],
+  },
+  {
+    id: 'zoom',
+    name: 'Zoom',
+    category: 'meetings',
+    description: 'Start Zoom meetings from channels and the calendar.',
+    setup: ['In the Zoom App Marketplace, create a Server-to-Server OAuth app and copy its account ID, client ID and client secret.'],
+    form: [
+      { key: 'accountId', label: 'Account ID', required: true },
+      { key: 'clientId', label: 'Client ID', required: true },
+      { key: 'clientSecret', label: 'Client secret', kind: 'secret', required: true, secret: true },
+    ],
+  },
+];
+
 export function mapUser(u) {
   if (!u) return null;
   return {
@@ -739,7 +777,14 @@ export const liveAdapter = {
   async members(ws) {
     const data = await api.get(`/workspaces/${ws}/members`, { includeFormer: 1 });
     return (data.members || [])
-      .map((m) => ({ ...mapUser(m), standing: m.standing || 'active', deactivated: Boolean(m.standing && m.standing !== 'active') }))
+      .map((m) => ({
+        ...mapUser(m),
+        // You're connected while you're looking at this: never show yourself offline.
+        ...(m.isCurrentUser && presenceOf(m) === 'offline' ? { presence: 'active' } : {}),
+        workspaceRole: m.role || 'member',
+        standing: m.standing || 'active',
+        deactivated: Boolean(m.standing && m.standing !== 'active'),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 
@@ -1181,21 +1226,47 @@ export const liveAdapter = {
     await api.patch('/notifications/read-all', {}, { workspaceId: ws });
   },
 
+  /**
+   * Everything that can be connected (the server's catalog, plus GitHub, Jira and Zoom), with
+   * what's connected already. Each item: { id, name, description, category, connected, detail,
+   * form: [{ key, label, kind, required, placeholder, hint, secret }], setup: [steps] }.
+   */
   async integrations(ws) {
+    let records = [];
     try {
       const data = await api.get('/v2/integrations', { workspaceId: ws });
-      return (data.integrations || []).map((i) => ({
-        id: i.provider || i.type || idOf(i),
-        name: i.name || i.provider,
-        description: i.description || '',
-        connected: Boolean(i.connected ?? i.enabled ?? i.isActive),
-        detail: i.account || i.detail || null,
-        category: i.category || 'Connected apps',
-      }));
+      records = data.integrations || [];
     } catch (err) {
       if (err.status === 404 || err.code === 'FEATURE_DISABLED') return [];
       throw err;
     }
+    let catalog = [];
+    try {
+      catalog = (await api.get('/v2/integrations/catalog', { workspaceId: ws })).connectors || [];
+    } catch {
+      /* older server: only what's connected */
+    }
+    const byType = new Map(records.map((i) => [i.provider || i.type || idOf(i), i]));
+    const items = [...DEV_INTEGRATIONS, ...catalog.map((c) => ({ id: c.type, name: c.label, description: c.description || '', category: c.category, form: c.form || [], setup: c.setup || [] }))];
+    const known = new Set(items.map((i) => i.id));
+    for (const [type, r] of byType) {
+      if (!known.has(type)) items.push({ id: type, name: r.name || type, description: r.description || '', category: r.category, form: [], setup: [] });
+    }
+    return items.map((it) => {
+      const r = byType.get(it.id);
+      return {
+        ...it,
+        category: INTEGRATION_CATEGORY[it.category] || it.category || 'Other apps',
+        connected: Boolean(r && (r.status ? r.status === 'connected' : r.connected ?? r.enabled ?? r.isActive)),
+        detail: r?.label || r?.account || r?.detail || null,
+      };
+    });
+  },
+  async connectIntegration(ws, type, config) {
+    await api.post('/v2/integrations/connect', { workspaceId: ws, type, config });
+  },
+  async disconnectIntegration(ws, type) {
+    await api.post('/v2/integrations/disconnect', { workspaceId: ws, type });
   },
 
   async sessions() {

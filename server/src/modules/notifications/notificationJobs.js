@@ -396,6 +396,16 @@ const SMART_STALE_MS = 6 * 60 * 60 * 1000;
  * Only notification counts per type and workspace links are sent — never message content.
  * Grouped chat rows count every message they hold. Users with nothing new get nothing.
  */
+/** True when the person turned off every kind of notification in this workspace. */
+async function workspaceMuted(uid, ws) {
+    try {
+        const p = await getPrefs().getUserPreferences(uid, ws);
+        return Boolean(p) && ['message', 'threadReply', 'task', 'meeting'].every((k) => p[k] === false);
+    } catch {
+        return false;
+    }
+}
+
 async function sendDigestEmails(_io, { now = new Date() } = {}) {
     const { digestHourUtc } = config();
     if (now.getUTCHours() < digestHourUtc) return { emails: 0 };
@@ -441,10 +451,14 @@ async function sendDigestEmails(_io, { now = new Date() } = {}) {
             const field = cadence === 'weekly' ? 'week' : pref === 'smart' ? 'unread' : 'day';
 
             const sections = new Map();
+            const muted = new Map();
             for (const g of groups) {
                 const count = g[field];
                 if (!count) continue;
                 const ws = String(g._id.workspaceId);
+                // A workspace whose notifications are all switched off stays out of the digest too.
+                if (!muted.has(ws)) muted.set(ws, await workspaceMuted(uid, ws));
+                if (muted.get(ws)) continue;
                 if (!sections.has(ws)) sections.set(ws, { workspaceId: ws, lines: [], unread: 0 });
                 const s = sections.get(ws);
                 s.lines.push({ label: DIGEST_LABELS[g._id.type] || g._id.type.replace(/_/g, ' '), count });
