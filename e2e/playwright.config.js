@@ -14,7 +14,8 @@ module.exports = defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   forbidOnly: isCI,
-  reporter: isCI ? [['list'], ['html', { open: 'never' }]] : [['list']],
+  // github: failing tests show as annotations on the run (the job log is mostly database output).
+  reporter: isCI ? [['list'], ['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: E2E.webUrl,
     trace: 'retain-on-failure',

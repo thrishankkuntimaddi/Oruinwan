@@ -39,10 +39,6 @@ function taskLink(workspaceId, taskId) {
     return taskId ? `/workspace/${ws}/tasks/${taskId}` : `/workspace/${ws}/tasks`;
 }
 
-/**
- * Set of user ids that are active members of an active workspace, or null
- * when the id is malformed / the workspace does not exist.
- */
 /** { ct, iv, kv } from a stored ciphertext preview, when it fits in a push (FCM data is 4 KB). */
 function encryptedPreview(preview) {
     if (!preview?.ciphertext || !preview?.messageIv) return {};
@@ -54,6 +50,10 @@ function encryptedPreview(preview) {
     };
 }
 
+/**
+ * Set of user ids that are active members of an active workspace, or null
+ * when the id is malformed / the workspace does not exist.
+ */
 async function activeMemberIds(workspaceIdOrDoc) {
     const workspaceId = workspaceIdOrDoc && workspaceIdOrDoc._id ? workspaceIdOrDoc._id : workspaceIdOrDoc;
     if (!isValidId(workspaceId)) return null;
