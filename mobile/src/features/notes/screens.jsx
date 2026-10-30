@@ -34,6 +34,7 @@ import { usePlan } from '../plan/plan.js';
 import { isPlanLimit, templateKey, templateUsage } from '../plan/planText.js';
 import { prefs } from '../../native/storage.js';
 import { RoadmapScreen } from '../roadmap/screens.jsx';
+import { useLongPress } from '../chats/messages.jsx';
 import { useLiveDocument } from '../../lib/collab/useCollab.js';
 import { useNoteBinding } from '../../lib/collab/useEditorBinding.js';
 import { collabView } from '../../lib/collab/state.js';
@@ -69,16 +70,25 @@ export function NotesScreen() {
   return section === 'roadmap' ? <RoadmapScreen section={control} /> : <NotesList section={control} />;
 }
 
-function NoteRow({ note, directory }) {
+function NoteRow({ note, directory, onMenu, selecting = false, checked = false, onToggle }) {
   const shared = (note.sharedWith || []).map((id) => directory[id]).filter(Boolean);
   const selected = useIsOpen('note', note.id);
+  const press = useLongPress(() => onMenu?.(note));
   return (
     <button
       type="button"
-      onClick={() => nav.push('note', { id: note.id })}
+      onClick={() => (selecting ? onToggle?.(note) : nav.push('note', { id: note.id }))}
+      {...(onMenu && !selecting ? press : {})}
       aria-current={selected ? 'true' : undefined}
-      className={cx('flex w-full flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2', selected && 'bg-surface-2')}
+      aria-pressed={selecting ? checked : undefined}
+      data-testid={`note-row-${note.id}`}
+      className={cx('relative flex w-full select-none flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2', (selected || checked) && 'bg-surface-2', selecting && 'pl-12')}
     >
+      {selecting && (
+        <span className={cx('absolute top-4 left-4 grid h-5 w-5 place-items-center rounded-full border-2', checked ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
+          {checked && <Icon as={Check} size={12} strokeWidth={3} />}
+        </span>
+      )}
       <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent-ink">
         {NOTE_TYPES[note.type] || 'Document'}
         {note.pinned && <Icon as={Star} size={12} className="fill-current" aria-label="Starred" />}
@@ -105,6 +115,44 @@ function NotesList({ section }) {
   const query = '';
   const [filter, setFilter] = useState('all');
   const [templates, setTemplates] = useState(false);
+  // Long-press a note for its tools; "Select" picks several for one action.
+  const [menu, setMenu] = useState(null);
+  const [picked, setPicked] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const selecting = picked !== null;
+  const toggle = (n) =>
+    setPicked((p) => {
+      const next = new Set(p || []);
+      if (next.has(n.id)) next.delete(n.id);
+      else next.add(n.id);
+      return next;
+    });
+  const bulk = async (ids, fn, done) => {
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await fn(id);
+      } catch {
+        failed += 1;
+      }
+    }
+    invalidate('notes');
+    setPicked(null);
+    toast(failed ? `${done}, but ${failed} didn’t work` : done, failed ? 'warning' : 'success');
+  };
+  const star = (ids, on) => bulk(ids, (id) => api().updateNote(id, { pinned: on }), on ? 'Added to favorites' : 'Removed from favorites');
+  const archive = (ids, on) => bulk(ids, (id) => api().archiveNote(id, on), on ? 'Archived' : 'Restored');
+  const remove = (ids) => bulk(ids, (id) => api().deleteNote(id), 'Deleted');
+  const duplicateNote = async (n) => {
+    try {
+      const copy = await api().createNote(ws, { title: `${n.title || 'Untitled'} (copy)`, type: n.type, content: n.content });
+      invalidate('notes');
+      toast('Duplicated', 'success');
+      nav.push('note', { id: copy.id });
+    } catch (err) {
+      toast(err.message || 'Could not duplicate', 'danger');
+    }
+  };
 
   const notes = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -153,7 +201,7 @@ function NotesList({ section }) {
         ) : notes.length ? (
           <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
             {notes.map((n) => (
-              <NoteRow key={n.id} note={n} directory={directory} />
+              <NoteRow key={n.id} note={n} directory={directory} onMenu={setMenu} selecting={selecting} checked={Boolean(picked?.has(n.id))} onToggle={toggle} />
             ))}
           </div>
         ) : (
@@ -165,7 +213,61 @@ function NotesList({ section }) {
           />
         )}
       </Body>
-      <Fab compact icon={Plus} label="New note" onClick={() => setTemplates(true)} />
+      {selecting ? (
+        <div className="glass-strong absolute inset-x-3 z-20 rounded-2xl border px-2 pt-2 pb-1.5 shadow-xl" style={{ bottom: 'calc(var(--sab) + 72px)' }} data-testid="note-selection">
+          <div className="flex items-center justify-between px-2 pb-1.5">
+            <span className="text-[14px] font-semibold">{picked.size} selected</span>
+            <span className="flex gap-3">
+              <button type="button" className="text-[13px] font-medium text-accent-ink" onClick={() => setPicked(new Set(notes.map((n) => n.id)))}>Select all</button>
+              <button type="button" className="text-[13px] font-medium text-text-2" onClick={() => setPicked(null)}>Cancel</button>
+            </span>
+          </div>
+          <div className="flex">
+            {[
+              { icon: Star, label: 'Favorite', run: () => star([...picked], true) },
+              filter === 'archived'
+                ? { icon: ArchiveRestore, label: 'Restore', run: () => archive([...picked], false) }
+                : { icon: Archive, label: 'Archive', run: () => archive([...picked], true) },
+              { icon: Trash2, label: 'Delete', danger: true, run: () => setConfirmDelete([...picked]) },
+            ].map((a) => (
+              <button key={a.label} type="button" disabled={!picked.size} onClick={a.run} className={cx('flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium disabled:opacity-40 active:bg-surface-2', a.danger ? 'text-danger' : 'text-text')}>
+                <Icon as={a.icon} size={20} />
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Fab compact icon={Plus} label="New note" onClick={() => setTemplates(true)} />
+      )}
+      <ActionSheet
+        open={Boolean(menu)}
+        onClose={() => setMenu(null)}
+        title={menu?.title || 'Untitled'}
+        actions={menu ? [
+          { label: 'Open', icon: FileText, onSelect: () => nav.push('note', { id: menu.id }) },
+          { label: 'Select notes', icon: ListChecks, hint: 'Favorite, archive or delete several at once', onSelect: () => setPicked(new Set([menu.id])) },
+          { label: menu.pinned ? 'Remove from favorites' : 'Add to favorites', icon: Star, onSelect: () => star([menu.id], !menu.pinned) },
+          { label: 'Duplicate', icon: Copy, onSelect: () => duplicateNote(menu) },
+          menu.ownerId === me && (menu.archived
+            ? { label: 'Restore', icon: ArchiveRestore, onSelect: () => archive([menu.id], false) }
+            : { label: 'Archive', icon: Archive, onSelect: () => archive([menu.id], true) }),
+          menu.ownerId === me && api().deleteNote && { label: 'Delete', icon: Trash2, danger: true, onSelect: () => setConfirmDelete([menu.id]) },
+        ] : []}
+      />
+      <Dialog
+        open={Boolean(confirmDelete)}
+        onClose={() => setConfirmDelete(null)}
+        title={confirmDelete?.length > 1 ? `Delete ${confirmDelete.length} notes?` : 'Delete this note?'}
+        body="Deleted notes can't be brought back. Archive instead to keep them out of the way."
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          const ids = confirmDelete;
+          setConfirmDelete(null);
+          remove(ids);
+        }}
+      />
       <Sheet open={templates} onClose={() => setTemplates(false)} title="New note">
         <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
           {TEMPLATES.map((t) => {

@@ -185,3 +185,21 @@ export function clashMarker(m) {
   const n = new Set(list.flatMap((c) => c.userIds || [])).size || list.length;
   return `${n} ${n === 1 ? 'person' : 'people'} double-booked`;
 }
+
+const blank = (html) => !String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+
+/**
+ * The tabs worth showing: once a meeting or huddle is over, tabs nobody used (no notes, no
+ * agenda, no transcript) are left out instead of showing an empty page.
+ */
+export function visibleTabs(meeting) {
+  const over = ['ended', 'completed', 'cancelled'].includes(meeting?.status);
+  if (!over) return MEETING_TABS;
+  const agendaNotes = (meeting.agenda || []).some((a) => !blank(a.notes));
+  return MEETING_TABS.filter((t) => {
+    if (t.value === 'notes') return !blank(meeting.notes) || agendaNotes || Boolean(meeting.noteId);
+    if (t.value === 'agenda') return (meeting.agenda || []).length > 0;
+    if (t.value === 'transcript') return Boolean(meeting.hasTranscript || meeting.transcript);
+    return true;
+  });
+}

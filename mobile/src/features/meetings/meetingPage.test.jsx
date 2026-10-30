@@ -57,7 +57,7 @@ const { clearQueries } = await import('../../data/query.js');
 const { emit } = await import('../../lib/bus.js');
 const { prefs } = await import('../../native/storage.js');
 const { MeetingScreen } = await import('./screens.jsx');
-const { MEETING_TABS, meetingTab } = await import('./meetingsUi.js');
+const { MEETING_TABS, meetingTab, visibleTabs } = await import('./meetingsUi.js');
 const { HuddlesScreen } = await import('../huddles/HuddlesScreen.jsx');
 const { RecapBanner } = await import('../huddles/HuddleLayer.jsx');
 const { bindRecap, useRecap, __resetRecap } = await import('./recap.js');
@@ -85,7 +85,8 @@ describe('meeting page tabs', () => {
     render(<MeetingScreen id="m1" />);
     expect(await screen.findByTestId('meeting-status')).toHaveProperty('textContent', 'Ended');
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent.replace(/\d+$/, ''));
-    expect(tabs).toEqual(MEETING_TABS.map((t) => t.label));
+    // Over: tabs nobody used (no agenda, no transcript) are left out.
+    expect(tabs).toEqual(visibleTabs(await fake.meeting.mock.results[0].value).map((t) => t.label));
     expect(screen.getByText('# design')).toBeTruthy();
     expect(screen.getByTestId('meeting-recording-badge').textContent).toContain('Recorded');
     // An ended quick huddle can't be rejoined; nothing to end either.

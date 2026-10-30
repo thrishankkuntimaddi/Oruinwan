@@ -33,7 +33,7 @@ import { mergeSegments, transcriptText } from '../huddles/callMedia.js';
 import { toggleCallCaptions, useCallExtras } from '../huddles/callExtras.js';
 import { AskMeetingSheet, TranscriptList, useActiveRecorder } from '../huddles/CallExtras.jsx';
 import {
-  BOARD_H, BOARD_W, MEETING_TABS, STATUS_LABEL, STICKY_COLORS, applyBrainstormEvent, conversationLabel, durationLabel, isAccessError,
+  BOARD_H, BOARD_W, visibleTabs, STATUS_LABEL, STICKY_COLORS, applyBrainstormEvent, conversationLabel, durationLabel, isAccessError,
   meetingWhen, newStrokeId, normalizePriority, priorityLabel, roundPoint, strokeHit, summaryText, timeRange,
 } from './meetingsUi.js';
 
@@ -97,7 +97,7 @@ export function MeetingUnavailable({ error, loading }) {
 
 export function MeetingTabBar({ meeting, tab, onChange, className }) {
   const open = (meeting?.actionItems || []).filter((a) => !a.done).length;
-  const options = MEETING_TABS.map((t) => (t.value === 'summary' && open ? { ...t, count: open } : t));
+  const options = visibleTabs(meeting).map((t) => (t.value === 'summary' && open ? { ...t, count: open } : t));
   return <Segmented scroll size="sm" label="Meeting" options={options} value={tab} onChange={onChange} className={className} />;
 }
 

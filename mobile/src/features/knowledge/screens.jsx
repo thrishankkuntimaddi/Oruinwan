@@ -2,8 +2,9 @@
 // Members can read, create, edit and delete pages; edits save as you type (the server keeps
 // earlier versions).
 import { useEffect, useRef, useState } from 'react';
+import { useFlag } from '../../config/flags.js';
 import { PageExtras } from './PageExtras.jsx';
-import { BookOpen, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Link2, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, Upload, Users, Workflow } from 'lucide-react';
+import { BookOpen, Sparkles, ChevronDown, ChevronRight, Ellipsis, FilePlus2, FileText, GraduationCap, Link2, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, Upload, Users, Workflow } from 'lucide-react';
 import { IMPORT_ACCEPT, readImportFiles } from './importPages.js';
 import { nav } from '../../app/nav.js';
 import { api, useSession } from '../../data/session.js';
@@ -192,6 +193,84 @@ async function createFromTemplate(ws, t) {
   nav.push('page', { id: page.id, edit: true });
 }
 
+/** Ask a question; Oruinwan AI answers from the workspace's pages and meeting notes, with links. */
+function AskKnowledge() {
+  const ws = useSession((s) => s.workspaceId);
+  const [question, setQuestion] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const ask = async (e) => {
+    e?.preventDefault();
+    const q = question.trim();
+    if (!q || busy) return;
+    setBusy(true);
+    try {
+      setResult({ q, ...(await api().askKnowledge(ws, q)) });
+    } catch (err) {
+      toast(err.message || 'Couldn’t answer that right now', 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mx-4 mt-2 rounded-card border border-accent/30 bg-accent/5 p-3" data-testid="ask-knowledge">
+      <form onSubmit={ask} className="flex items-center gap-2">
+        <Icon as={Sparkles} size={18} className="shrink-0 text-accent-ink" />
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask the knowledge base…"
+          enterKeyHint="send"
+          className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-text-3"
+        />
+        <Button size="sm" type="submit" loading={busy} disabled={!question.trim()}>Ask</Button>
+      </form>
+      {result && (
+        <div className="mt-3 border-t border-line-soft pt-3">
+          <p className="mb-1 text-[12px] font-medium text-text-2">{result.q}</p>
+          <div className="text-[14px] leading-relaxed">
+            <Markdown text={result.answer || 'Nothing in the knowledge base answers that yet.'} />
+          </div>
+          {result.references?.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {result.references.map((r) => (
+                <button
+                  key={`${r.kind}:${r.id}`}
+                  type="button"
+                  onClick={() => (r.kind === 'page' ? nav.push('page', { id: r.id }) : r.kind === 'meeting' ? nav.push('meeting', { id: r.id }) : nav.push('note', { id: r.id }))}
+                  className="flex items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] active:bg-surface-2"
+                >
+                  <Icon as={FileText} size={12} /> {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The five pages changed most recently, sideways. */
+function RecentPages({ pages }) {
+  const recent = [...pages].filter((p) => p.updatedAt).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 5);
+  if (recent.length < 2) return null;
+  return (
+    <div className="mt-3">
+      <p className="px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">Recently updated</p>
+      <div className="no-scrollbar flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
+        {recent.map((p) => (
+          <button key={p.id} type="button" onClick={() => nav.push('page', { id: p.id })} className="flex w-40 shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface p-3 text-left active:bg-surface-2">
+            <span className="text-lg" aria-hidden>{p.icon || '📄'}</span>
+            <span className="mt-1 truncate text-[14px] font-medium">{p.title || 'Untitled'}</span>
+            <span className="text-[11px] text-text-3">{shortAgo(p.updatedAt)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function KnowledgeScreen() {
   const ws = useSession((s) => s.workspaceId);
   const { data, loading, error, refetch } = useKnowledge();
@@ -240,6 +319,7 @@ export function KnowledgeScreen() {
   const roots = pages.filter((p) => !p.parentId || !ids.has(p.parentId));
   const kidsOf = (id) => pages.filter((p) => p.parentId === id);
   const toggle = (id) => setOpen((o) => ({ ...o, [id]: !o[id] }));
+  const aiOn = useFlag('ai');
   const q = query.trim().toLowerCase();
   const matches = q ? pages.filter((p) => p.title.toLowerCase().includes(q) || p.excerpt?.toLowerCase().includes(q)) : null;
 
@@ -271,12 +351,17 @@ export function KnowledgeScreen() {
         ) : !pages.length ? (
           <KnowledgeWelcome onWrite={write} onImport={() => importRef.current?.click()} importing={importing} />
         ) : (
+          <>
+          {!matches && aiOn && api().askKnowledge && <AskKnowledge />}
+          {!matches && <RecentPages pages={pages} />}
+          {!matches && <p className="px-5 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">All pages · {pages.length}</p>}
           <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
             {(matches || roots).map((p) => (
               <PageRow key={p.id} page={p} depth={0} open={matches ? {} : open} toggle={toggle} kidsOf={matches ? () => [] : kidsOf} />
             ))}
             {matches && !matches.length && <p className="px-4 py-6 text-center text-sm text-text-2">No pages match.</p>}
           </div>
+          </>
         )}
       </Body>
       <NewPageSheet open={creating} onClose={() => setCreating(false)} />

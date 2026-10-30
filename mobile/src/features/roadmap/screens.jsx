@@ -4,6 +4,7 @@
 // the creator can edit it (docs/api/roadmap.md).
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Flag, GanttChart, List as ListIcon, Map as MapIcon, MoreHorizontal, Pencil, Plus, SquareCheckBig, Trash2, User } from 'lucide-react';
+import { prefs } from '../../native/storage.js';
 import { nav, useIsOpen } from '../../app/nav.js';
 import { useSplit, useWide } from '../../app/layout.js';
 import { TabHeader } from '../../app/TabHeader.jsx';
@@ -232,17 +233,61 @@ export function RoadmapScreen({ section }) {
           <EmptyState
             icon={MapIcon}
             title={status === 'all' ? 'No roadmap yet' : `Nothing ${STATUS_META[status].label.toLowerCase()}`}
-            body={data?.canCreate ? 'Add the big pieces of work your team is planning, then link tasks and milestones to track progress.' : "Workspace admins plan the roadmap. It'll show up here."}
+            body={data?.canCreate
+              ? 'The roadmap is the big picture: what your team plans to deliver this quarter and next (a launch, a redesign, a hiring push). Add an item, link its tasks and milestones, and its progress fills in by itself as the work gets done.'
+              : "Workspace admins plan the roadmap: what the team will deliver this quarter and next, with progress from the linked tasks. It'll show up here."}
             action={data?.canCreate && status === 'all' ? <Button icon={Plus} onClick={() => setCreating(true)}>New item</Button> : null}
           />
         ) : shown === 'timeline' ? (
-          <Timeline items={items} />
+          <>
+            <RoadmapIntro />
+            <Timeline items={items} />
+          </>
         ) : (
-          <QuarterList items={items} directory={directory} />
+          <>
+            <RoadmapIntro />
+            <QuarterList items={items} directory={directory} />
+          </>
         )}
       </Body>
       <RoadmapEditorSheet open={creating} onClose={() => setCreating(false)} manager={Boolean(data?.canCreate)} />
     </Screen>
+  );
+}
+
+const INTRO_KEY = 'roadmap.intro.hidden';
+
+/** What the roadmap is for, once, until dismissed. */
+function RoadmapIntro() {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return Boolean(prefs.get(INTRO_KEY));
+    } catch {
+      return false;
+    }
+  });
+  if (hidden) return null;
+  return (
+    <div className="mx-4 mt-2 mb-1 rounded-card border border-line-soft bg-surface px-4 py-3 text-[13px] text-text-2" data-testid="roadmap-intro">
+      <p className="font-semibold text-text">Plan the big picture</p>
+      <p className="mt-1 leading-relaxed">
+        Tasks are today's work; the roadmap is what they add up to. Each item is a goal for a quarter. Link its tasks and milestones and the progress bar moves as they're done, so anyone can see what's on track without asking.
+      </p>
+      <button
+        type="button"
+        className="mt-2 font-medium text-accent-ink"
+        onClick={() => {
+          setHidden(true);
+          try {
+            prefs.set(INTRO_KEY, true);
+          } catch {
+            /* storage not ready */
+          }
+        }}
+      >
+        Got it
+      </button>
+    </div>
   );
 }
 

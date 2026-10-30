@@ -1,7 +1,7 @@
 // Huddles: every call in the workspace I can open, as one list of meeting records — Live now ·
 // Upcoming · Past (scheduled meetings and quick huddles alike; docs/api/meetings-unified.md →
 // Lists). Rows open the meeting page. Also the controls a conversation shows (start / join).
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { CalendarClock, CalendarPlus, Headphones, Phone, Radio } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { nav } from '../../app/nav.js';
@@ -9,7 +9,8 @@ import { invalidate, useQuery } from '../../data/query.js';
 import { useFlag } from '../../config/flags.js';
 import { on, toast } from '../../lib/bus.js';
 import { prefs } from '../../native/storage.js';
-import { Header, Screen, Body } from '../../ui/Screen.jsx';
+import { Header, Screen, Body, TabRootContext } from '../../ui/Screen.jsx';
+import { TabHeader } from '../../app/TabHeader.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Chips, SearchField } from '../../ui/Controls.jsx';
 import { Row, RowGroup } from '../../ui/List.jsx';
@@ -125,6 +126,7 @@ export function HuddlesScreen() {
   const [scheduling, setScheduling] = useState(false);
   const [starting, setStarting] = useState(false);
   const pages = useMeetingPages(ws, list, q);
+  const tabRoot = useContext(TabRootContext);
 
   useEffect(() => {
     const t = setTimeout(() => setQ(search.trim()), 300);
@@ -162,27 +164,27 @@ export function HuddlesScreen() {
 
   return (
     <Screen>
-      <Header
-        title="Huddles"
-        subtitle="Calls and meetings, live, upcoming and past"
-        actions={
-          <>
-            {available && <IconButton icon={Headphones} label="Start a huddle" disabled={starting || Boolean(call)} onClick={startOne} />}
-            <IconButton icon={CalendarPlus} label="Schedule" onClick={() => setScheduling(true)} />
-          </>
-        }
-      >
-        <SearchField value={search} onChange={setSearch} placeholder="Search meetings and huddles" className="mx-4 mb-2" />
-        <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
-      </Header>
+      {/* On the tab bar it has the same header as the other tabs; opened from elsewhere, a back arrow.
+          Start and Schedule are the two buttons below (not repeated up here). */}
+      {tabRoot ? (
+        <TabHeader title="Huddles" context="home">
+          <SearchField value={search} onChange={setSearch} placeholder="Search meetings and huddles" className="mx-4 mb-2" />
+          <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
+        </TabHeader>
+      ) : (
+        <Header title="Huddles" subtitle="Calls and meetings, live, upcoming and past">
+          <SearchField value={search} onChange={setSearch} placeholder="Search meetings and huddles" className="mx-4 mb-2" />
+          <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
+        </Header>
+      )}
       <Body onRefresh={pages.refetch}>
-        <div className="mx-4 mt-1 mb-3 flex gap-2">
+        <div className="mx-4 mt-2 mb-3 grid grid-cols-2 gap-2">
           {available && (
-            <Button size="sm" icon={Headphones} loading={starting} disabled={Boolean(call)} onClick={startOne}>
+            <Button icon={Headphones} loading={starting} disabled={Boolean(call)} onClick={startOne}>
               Start a huddle
             </Button>
           )}
-          <Button size="sm" variant="secondary" icon={CalendarPlus} onClick={() => setScheduling(true)}>
+          <Button variant="secondary" icon={CalendarPlus} onClick={() => setScheduling(true)} className={available ? '' : 'col-span-2'}>
             Schedule
           </Button>
         </div>
