@@ -1,6 +1,7 @@
-// Automations on the phone: see what runs, switch rules on and off, run one now, and read its
-// run history. Building or editing an automation (triggers, conditions, multi-step actions)
-// stays on the web and desktop app, where there's room for the builder; the screens link there.
+// Automations on the phone: start one from a template (pick a channel, done), see what runs,
+// switch rules on and off, run one now, and read its run history. Building one from scratch or
+// editing it (triggers, conditions, multi-step actions) is on the web and desktop app, where
+// there's room for the builder; the screens link there.
 import { useState } from 'react';
 import { CircleAlert, CircleCheck, CircleMinus, CircleSlash, ExternalLink, Play, RefreshCw, Workflow, Zap } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -9,10 +10,12 @@ import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { toast } from '../../lib/bus.js';
 import { shortAgo } from '../../lib/time.js';
 import { openExternal } from '../../native/index.js';
+import { useWebUrl } from '../../data/live/webUrl.js';
+import { useChannels } from '../../data/hooks.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Toggle } from '../../ui/Controls.jsx';
-import { Dialog } from '../../ui/Overlay.jsx';
+import { Dialog, Sheet } from '../../ui/Overlay.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { Icon } from '../../ui/Icon.jsx';
@@ -25,9 +28,11 @@ function useAutomationsWeb(id) {
   const server = useSession((s) => s.server);
   const mode = useSession((s) => s.mode);
   const ws = useSession((s) => s.workspaceId);
-  if (mode !== 'live' || !server || !ws) return null;
+  // The web app's address, not the API's (api.… serves no pages).
+  const web = useWebUrl(server);
+  if (mode !== 'live' || !web || !ws) return null;
   const path = `/workspace/${ws}/automations${id ? `/${id}/edit` : ''}`;
-  return () => openExternal(`${server}${path}`);
+  return () => openExternal(`${web}${path}`);
 }
 
 const canManage = (workspace) => ['owner', 'admin'].includes(workspace?.role);
@@ -47,6 +52,74 @@ function WebNote({ id }) {
         />
       </RowGroup>
     </Section>
+  );
+}
+
+const needsChannel = (t) => (t?.actions || []).some((a) => a.type === 'send_message' && !a.config?.channelId);
+
+/** Ready-made automations, one tap to add (admins). */
+function TemplatePicker({ ws, onCreated }) {
+  const { data: templates } = useQuery('automationTemplates', () => api().automationTemplates(), { staleMs: 10 * 60_000 });
+  const { data: channels } = useChannels();
+  const [picked, setPicked] = useState(null);
+  const [channelId, setChannelId] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!templates?.length) return null;
+  const mine = (channels || []).filter((c) => c.isMember);
+  const create = async () => {
+    setBusy(true);
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await api().createAutomationFromTemplate(ws, picked, { channelId, timezone });
+      toast(`${picked.name} is on`, 'success');
+      setPicked(null);
+      onCreated();
+    } catch (err) {
+      toast(err.message || "Couldn't add that automation", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <Section title="Start from a template">
+        <RowGroup footer="Each one starts switched on. Change its steps on the web.">
+          {templates.map((t) => (
+            <Row
+              key={t.id}
+              leading={<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-lg" aria-hidden>{t.icon || '⚡'}</span>}
+              title={t.name}
+              subtitle={t.description}
+              multiline
+              onClick={() => {
+                setChannelId(mine[0]?.id || '');
+                setPicked(t);
+              }}
+            />
+          ))}
+        </RowGroup>
+      </Section>
+      <Sheet
+        open={Boolean(picked)}
+        onClose={() => setPicked(null)}
+        title={picked?.name || ''}
+        footer={<Button block loading={busy} disabled={needsChannel(picked) && !channelId} onClick={create}>Add automation</Button>}
+      >
+        <div className="space-y-3 px-5 pb-4">
+          <p className="text-[14px] text-text-2">{picked?.description}</p>
+          {needsChannel(picked) && (
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-text-2">Post in</span>
+              <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="h-11 w-full rounded-xl border border-line bg-input px-3 text-[15px]">
+                {mine.map((c) => (
+                  <option key={c.id} value={c.id}>#{c.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      </Sheet>
+    </>
   );
 }
 
@@ -107,8 +180,15 @@ export function AutomationsScreen() {
             {!admin && <p className="mx-5 mt-2 text-xs text-text-2">Workspace admins can switch automations on and off and run them.</p>}
           </>
         ) : (
-          <EmptyState icon={Workflow} title="No automations yet" body="Automations post messages, create tasks and call webhooks when something happens in your workspace." />
+          <EmptyState
+            icon={Workflow}
+            title="No automations yet"
+            body={admin
+              ? 'Automations do routine work for you: when something happens (a task is done, a file is uploaded, every weekday at 9:30) they post a message, create a task or notify people. Pick a template below to add one.'
+              : 'Automations post messages, create tasks and notify people when something happens in your workspace. Workspace admins set them up.'}
+          />
         )}
+        {admin && ws && <TemplatePicker ws={ws} onCreated={() => invalidate('automations')} />}
         <WebNote />
       </Body>
     </Screen>

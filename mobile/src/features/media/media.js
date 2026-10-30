@@ -35,6 +35,12 @@ export function useMediaUrl(file) {
   return { ...state, retry, retried: attempt > 0 };
 }
 
+/**
+ * Where a file came from, for the viewer's actions: { messageId, authorName, at }. Set by the
+ * conversation for its photos and videos (chats/messages.jsx MessageList).
+ */
+export const fileMeta = new WeakMap();
+
 export const useViewer = create((set) => ({
   media: null, // { items: [file], index }
   actions: null, // file shown in the "open / download" sheet

@@ -19,6 +19,7 @@ import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
 import { Attachments, ConversationMedia } from '../media/Attachments.jsx';
+import { fileMeta } from '../media/media.js';
 import { previewKind } from '../../lib/files.js';
 import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.js';
 import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
@@ -569,8 +570,16 @@ export function MessageList({
 
   // Every photo and video in the loaded conversation, oldest first: the viewer swipes through them.
   const gallery = useMemo(
-    () => items.flatMap((m) => (m.state === 'deleted' || m.pending ? [] : (m.attachments || []).filter((f) => ['image', 'video'].includes(previewKind(f))))),
-    [items],
+    () =>
+      items.flatMap((m) => {
+        if (m.state === 'deleted' || m.pending) return [];
+        const media = (m.attachments || []).filter((f) => ['image', 'video'].includes(previewKind(f)));
+        const author = m.author || directory?.[m.authorId];
+        // The viewer shows who sent it and when, and can go back to the message.
+        for (const f of media) fileMeta.set(f, { messageId: m.id, authorName: m.authorId === me ? 'You' : author?.name || 'Someone', at: m.at });
+        return media;
+      }),
+    [items, directory, me],
   );
 
   return (

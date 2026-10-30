@@ -2,7 +2,7 @@
 // show a card to open them), and the sheet that opens or downloads any other file. Rendered once at the app root; anything calls openFile() (media.js) to use them.
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Download, ExternalLink, FileText, Music, Share2, TriangleAlert, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, ExternalLink, FileText, MessageSquare, Music, Share2, TriangleAlert, X } from 'lucide-react';
 import { ActionSheet, useOverlay, usePresence } from '../../ui/Overlay.jsx';
 import { IconButton, Button } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
@@ -11,7 +11,8 @@ import { cx } from '../../ui/cx.js';
 import { formatBytes, previewKind } from '../../lib/files.js';
 import { finePointer } from '../../app/layout.js';
 import { deviceNoun, isNative } from '../../native/index.js';
-import { canShareFiles, downloadFile, openWithSystem, pdfInApp, shareFile, useMediaUrl, useViewer } from './media.js';
+import { canShareFiles, downloadFile, fileMeta, openWithSystem, pdfInApp, shareFile, useMediaUrl, useViewer } from './media.js';
+import { clock, dayLabel } from '../../lib/time.js';
 
 function Failed({ file }) {
   return (
@@ -127,6 +128,15 @@ function FileCard({ file }) {
   );
 }
 
+function ViewerAction({ icon, label, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className="flex min-w-16 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[11px] font-medium text-text active:bg-surface-2">
+      <Icon as={icon} size={20} />
+      {label}
+    </button>
+  );
+}
+
 function Viewer({ media, onClose }) {
   const open = Boolean(media);
   useOverlay(open, onClose);
@@ -144,6 +154,7 @@ function Viewer({ media, onClose }) {
   const items = shown.items;
   const file = items[Math.min(index, items.length - 1)];
   const many = items.length > 1;
+  const meta = fileMeta.get(file) || null;
   const go = (d) => {
     dir.current = d;
     setIndex((i) => (i + d + items.length) % items.length);
@@ -170,16 +181,11 @@ function Viewer({ media, onClose }) {
               {[formatBytes(file.size), many && `${index + 1} of ${items.length}`].filter(Boolean).join(' · ')}
             </p>
           </div>
-          {canShareFiles() && <IconButton icon={Share2} label="Share" onClick={() => shareFile(file)} />}
-          <IconButton
-            icon={isNative ? ExternalLink : Download}
-            label={isNative ? 'Open with…' : 'Download'}
-            onClick={() => (isNative ? openWithSystem(file) : downloadFile(file))}
-          />
+
         </div>
       </header>
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden pb-safe"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
         // Touch events, not pointer events: Android cancels the pointer as soon as a sideways
         // drag starts, so a swipe never reached pointerup.
         onTouchStart={(e) => {
@@ -203,13 +209,40 @@ function Viewer({ media, onClose }) {
         >
           <MediaItem file={file} />
         </div>
-        {many && finePointer() && (
+        {many && (
           <>
-            <IconButton icon={ChevronLeft} label="Previous" onClick={() => go(-1)} className="absolute left-3 bg-surface-2" />
-            <IconButton icon={ChevronRight} label="Next" onClick={() => go(1)} className="absolute right-3 bg-surface-2" />
+            <IconButton icon={ChevronLeft} label="Previous" onClick={() => go(-1)} className={cx('absolute left-2 bg-surface-2/80 backdrop-blur', !finePointer() && 'h-9 w-9 opacity-80')} />
+            <IconButton icon={ChevronRight} label="Next" onClick={() => go(1)} className={cx('absolute right-2 bg-surface-2/80 backdrop-blur', !finePointer() && 'h-9 w-9 opacity-80')} />
           </>
         )}
       </div>
+      {/* What you can do with it: share, save, go back to its message; who sent it and when. */}
+      <footer className="shrink-0 border-t border-line-soft px-2 pt-1.5 pb-safe" data-testid="media-actions">
+        {meta && (
+          <p className="truncate px-2 pb-1 text-center text-[12px] text-text-2">
+            {[meta.authorName, meta.at && `${dayLabel(meta.at)} ${clock(meta.at)}`].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        <div className="flex justify-around pb-1">
+          {canShareFiles() && <ViewerAction icon={Share2} label="Share" onClick={() => shareFile(file)} />}
+          <ViewerAction icon={isNative ? ExternalLink : Download} label={isNative ? 'Open / save' : 'Save'} onClick={() => (isNative ? openWithSystem(file) : downloadFile(file))} />
+          {meta?.messageId && (
+            <ViewerAction
+              icon={MessageSquare}
+              label="Show in chat"
+              onClick={() => {
+                onClose();
+                // The conversation is right behind the viewer: scroll to the message and flash it.
+                setTimeout(() => {
+                  const el = document.querySelector(`[data-mid="${String(meta.messageId).replace(/"/g, '')}"]`);
+                  el?.scrollIntoView?.({ block: 'center' });
+                  el?.animate?.([{ backgroundColor: 'rgb(var(--c-accent) / 0.25)' }, { backgroundColor: 'transparent' }], { duration: 1400 });
+                }, 220);
+              }}
+            />
+          )}
+        </div>
+      </footer>
     </div>,
     document.body,
   );

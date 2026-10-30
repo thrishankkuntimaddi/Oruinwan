@@ -31,7 +31,9 @@ router.post('/register', requireAuth, async (req, res) => {
     // deviceId ties the token to a device session so revoking the device removes it (/api/v2/devices).
     const rawDeviceId = req.headers['x-device-id'] || req.body?.deviceId;
     const deviceId = typeof rawDeviceId === 'string' && rawDeviceId.length <= 256 ? rawDeviceId : undefined;
-    tokens.push({ token, platform, registeredAt: new Date(), ...(deviceId ? { deviceId } : {}) });
+    // decrypts: the app decrypts message pushes itself (Android 3.4+), so it may get data-only ones.
+    const decrypts = req.body?.decrypts === true;
+    tokens.push({ token, platform, registeredAt: new Date(), ...(deviceId ? { deviceId } : {}), ...(decrypts ? { decrypts: true } : {}) });
     // Keep the newest few: old phones that never unregistered shouldn't pile up.
     await identity.users.update(userId, { deviceTokens: tokens.slice(-MAX_TOKENS_PER_USER) });
 

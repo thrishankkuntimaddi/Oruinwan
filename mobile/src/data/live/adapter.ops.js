@@ -133,6 +133,26 @@ export const opsAdapter = {
     const d = await api.get('/v2/automations', { workspaceId: ws, limit: 100 }).catch(softly({ automations: [] }));
     return (d.automations || []).map(mapAutomation);
   },
+  /** Ready-made automations: [{ id, name, description, icon, category, trigger, conditions, actions, schedule }]. */
+  async automationTemplates() {
+    const d = await api.get('/v2/automations/templates').catch(softly({ templates: [] }));
+    return d.templates || [];
+  },
+  /** Creates an automation from a template, with `channelId` filled into its "post a message" steps. */
+  async createAutomationFromTemplate(ws, template, { name, channelId, timezone } = {}) {
+    const actions = (template.actions || []).map((a) => (a.type === 'send_message' ? { ...a, config: { ...a.config, channelId: channelId || a.config?.channelId } } : a));
+    const schedule = template.schedule ? { ...template.schedule, ...(template.schedule.type === 'cron' && timezone ? { timezone } : {}) } : undefined;
+    const d = await api.post('/v2/automations', {
+      workspaceId: ws,
+      name: name || template.name,
+      description: template.description,
+      trigger: template.trigger,
+      conditions: template.conditions || [],
+      actions,
+      ...(schedule ? { schedule } : {}),
+    });
+    return mapAutomation(d.automation || d);
+  },
   async automation(ws, id) {
     const d = await api.get(`/v2/automations/${id}`, { workspaceId: ws });
     return mapAutomation(d.automation || d);

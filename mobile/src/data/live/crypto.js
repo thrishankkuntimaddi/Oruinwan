@@ -11,6 +11,7 @@
 // automatically: the server keeps a sealed copy of the UMEK and wraps it for each signed-in
 // device. Accounts whose UMEK is still password-derived move to that mode the next time the
 // password is typed on any device (sealUmekOnServer). Everything here uses WebCrypto.
+import { keepForNotifications } from '../../native/notifyKeys.js';
 import { api } from './http.js';
 import { setE2ee } from '../e2ee.js';
 import { on } from '../../lib/bus.js';
@@ -551,7 +552,10 @@ async function fetchConversationKey(conv, id) {
     opened = await openEntry(conv, await api.get(`/v2/conversations/${conv.id}/keys`, { type: conv.kind }));
   }
   const key = await subtle.importKey('raw', opened.raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-  ring.set(key, { conv: { id: conv.id, kind: conv.kind }, version: opened.entry?.version || entry?.version || 1, previous: await openPrevious(opened.entry?.previous || entry?.previous) });
+  const version = opened.entry?.version || entry?.version || 1;
+  // Android shows the message in its notification even when the app is closed (notifyKeys.js).
+  keepForNotifications(conv.id, version, opened.raw);
+  ring.set(key, { conv: { id: conv.id, kind: conv.kind }, version, previous: await openPrevious(opened.entry?.previous || entry?.previous, conv.id) });
   convKeys.set(id, key);
   wrapped.delete(id);
   // An older key without a server copy can't be given to people who join later: send it once.
@@ -564,11 +568,13 @@ async function fetchConversationKey(conv, id) {
 // ---------------------------------------------------------------- messages
 
 /** Earlier keys sent with a conversation key (`previous`), opened: Map(version → CryptoKey). */
-async function openPrevious(list) {
+async function openPrevious(list, conversationId = null) {
   const out = new Map();
   for (const e of Array.isArray(list) ? list : []) {
     try {
-      out.set(Number(e.version), await subtle.importKey('raw', await unwrapRaw(e), { name: 'AES-GCM' }, false, ['decrypt']));
+      const raw = await unwrapRaw(e);
+      keepForNotifications(conversationId, e.version, raw);
+      out.set(Number(e.version), await subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['decrypt']));
     } catch {
       /* a copy that doesn't open: the messages it encrypted show as unreadable */
     }

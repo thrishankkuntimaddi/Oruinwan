@@ -1,6 +1,7 @@
 // Session: who is signed in, to which server, and which workspace is open.
 import { create } from 'zustand';
 import { prefs, wipeDevice } from '../native/storage.js';
+import { forgetNotificationKeys } from '../native/notifyKeys.js';
 import { clearQueries, invalidate } from './query.js';
 import { emit, on, toast } from '../lib/bus.js';
 import { logEvent } from '../config/remote.js';
@@ -415,6 +416,8 @@ export const useSession = create((set, get) => ({
     await clearCache().catch(() => {});
     clearQueries();
     prefs.set('workspaces.cache', null);
+    // The keys Android kept for message notifications go with the account.
+    forgetNotificationKeys();
     if (wipe) await wipeDevice();
     set({ status: 'signed-out', mode: null, user: null, workspaces: [], workspaceId: null, needsPassword: false, pickingWorkspace: false, creatingWorkspace: false, challenge: null });
     get().persist();

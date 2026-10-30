@@ -1,5 +1,6 @@
 // Live adapter: the Oruinwan server. Screens reach it through api() in ../session.js;
 // every server shape is mapped into the app's own models here and nowhere else.
+import { notifyKeysSupported } from '../../native/notifyKeys.js';
 import {
   api, absolute, accessToken, configure, currentRefreshToken, endSession, loadTokens, refreshSession, saveTokens, serverUrl, settleRefresh, request, ApiError,
 } from './http.js';
@@ -1497,7 +1498,8 @@ export const liveAdapter = {
     return api.get('/push/status');
   },
   async registerPushToken(token, platform) {
-    await api.post('/push/register', { token, platform });
+    // decrypts: this app decrypts message pushes itself, so the server may send them encrypted.
+    await api.post('/push/register', { token, platform, ...((await notifyKeysSupported()) ? { decrypts: true } : {}) });
   },
   async unregisterPushToken(token) {
     await api.post('/push/unregister', { token });

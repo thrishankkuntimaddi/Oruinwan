@@ -82,6 +82,23 @@ test('sends Android notifications through Firebase with string data', async () =
   expect(identity.users.update).not.toHaveBeenCalled();
 });
 
+test('an encrypted message goes data-only to apps that decrypt, as a normal notification to older ones', async () => {
+  process.env.FIREBASE_SERVICE_ACCOUNT = serviceAccount;
+  mockUser.deviceTokens = [
+    { token: 'new'.padEnd(40, 'x'), platform: 'android', decrypts: true },
+    { token: 'old'.padEnd(40, 'x'), platform: 'android' },
+  ];
+  axios.post.mockResolvedValue({ data: {} });
+
+  await push.sendToUser('u1', 'Priya', 'New message', { type: 'dm', dmSessionId: 'd1', workspaceId: 'ws1', ct: 'Y2lwaGVy', iv: 'aXY=', kv: '2' });
+
+  const sent = Object.fromEntries(axios.post.mock.calls.map(([, body]) => [body.message.token.slice(0, 3), body.message]));
+  expect(sent.new.notification).toBeUndefined();
+  expect(sent.new.data).toMatchObject({ ct: 'Y2lwaGVy', iv: 'aXY=', kv: '2', title: 'Priya', body: 'New message', dmSessionId: 'd1' });
+  expect(sent.old.notification).toEqual({ title: 'Priya', body: 'New message' });
+  expect(sent.old.data.ct).toBeUndefined();
+});
+
 test('removes tokens Firebase says are gone, and old Expo tokens', async () => {
   process.env.FIREBASE_SERVICE_ACCOUNT = serviceAccount;
   mockUser.deviceTokens = [

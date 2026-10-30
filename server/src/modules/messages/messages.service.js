@@ -364,7 +364,7 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
 
     const isText = type === 'message' || type === 'integration';
     const preview = isText && message.payload?.ciphertext
-        ? { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv }
+        ? { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv, ...(message.payload.keyVersion ? { keyVersion: message.payload.keyVersion } : {}) }
         : null;
     const kindLabel = ATTACHMENT_LABELS[type] || null;
 

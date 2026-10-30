@@ -191,6 +191,26 @@ public class CallSessionPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Keeps a conversation key (base64) for decrypting message notifications while closed. */
+    @PluginMethod
+    public void storeConversationKey(PluginCall call) {
+        String id = call.getString("id");
+        String key = call.getString("key");
+        if (id == null || key == null) {
+            call.reject("id and key are required");
+            return;
+        }
+        NotifyKeys.store(getContext(), id, String.valueOf(call.getInt("version", 1)), key);
+        call.resolve();
+    }
+
+    /** Signing out: forget every kept conversation key. */
+    @PluginMethod
+    public void clearConversationKeys(PluginCall call) {
+        NotifyKeys.clear(getContext());
+        call.resolve();
+    }
+
     /** on: true for the loudspeaker, false for the earpiece (or a connected headset). */
     @PluginMethod
     public void setSpeaker(PluginCall call) {

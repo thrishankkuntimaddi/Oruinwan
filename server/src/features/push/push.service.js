@@ -289,10 +289,18 @@ async function sendToUser(userId, title, body, data = {}) {
     const full = { ...data, conversationId };
     // `category` in the data tells the Android app which pushes to re-post with the reply actions.
     const message = { title, body, data: isMessagePush(full) ? { ...full, category: MESSAGE_CATEGORY } : full };
+    // Android with the encrypted message attached: a data-only push, so the app's own handler
+    // runs even when it's closed, decrypts it on the phone and shows the real text (falling
+    // back to `title`/`body`, sent along in the data). Other platforms never see `ct`.
+    const encrypted = Boolean(full.ct && full.iv);
+    const plain = encrypted ? { ...message, data: Object.fromEntries(Object.entries(message.data).filter(([k]) => !['ct', 'iv', 'kv'].includes(k))) } : message;
     await deliver(userId, async (service, entry) => {
-      if (service === 'fcm') return sendFcm(entry.token, message);
-      if (service === 'apns') return sendApns(entry.token, message);
-      if (service === 'webpush') return sendWebPush(entry.token, { ...message, tag: conversationId ? String(conversationId) : undefined });
+      if (service === 'fcm' && encrypted && entry.decrypts) {
+        return sendFcm(entry.token, { dataOnly: true, data: { ...message.data, title, body } });
+      }
+      if (service === 'fcm') return sendFcm(entry.token, plain);
+      if (service === 'apns') return sendApns(entry.token, plain);
+      if (service === 'webpush') return sendWebPush(entry.token, { ...plain, tag: conversationId ? String(conversationId) : undefined });
       return 'gone';
     });
   } catch (err) {

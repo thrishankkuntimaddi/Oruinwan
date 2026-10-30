@@ -43,6 +43,17 @@ function taskLink(workspaceId, taskId) {
  * Set of user ids that are active members of an active workspace, or null
  * when the id is malformed / the workspace does not exist.
  */
+/** { ct, iv, kv } from a stored ciphertext preview, when it fits in a push (FCM data is 4 KB). */
+function encryptedPreview(preview) {
+    if (!preview?.ciphertext || !preview?.messageIv) return {};
+    if (String(preview.ciphertext).length > 2600) return {};
+    return {
+        ct: String(preview.ciphertext),
+        iv: String(preview.messageIv),
+        ...(preview.keyVersion ? { kv: String(preview.keyVersion) } : {}),
+    };
+}
+
 async function activeMemberIds(workspaceIdOrDoc) {
     const workspaceId = workspaceIdOrDoc && workspaceIdOrDoc._id ? workspaceIdOrDoc._id : workspaceIdOrDoc;
     if (!isValidId(workspaceId)) return null;
@@ -228,6 +239,10 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
                 ...(meta.channelId && { channelId: String(meta.channelId) }),
                 ...(meta.dmSessionId && { dmSessionId: String(meta.dmSessionId) }),
                 ...(meta.parentMessageId && { parentMessageId: String(meta.parentMessageId) }),
+                // The message itself, still end-to-end encrypted: the Android app decrypts it on
+                // the phone (with the conversation key it keeps there) to show the real text.
+                ...encryptedPreview(meta.preview),
+                ...(meta.senderUsername && { sender: String(meta.senderUsername) }),
             }).catch(() => {});
         }
 
