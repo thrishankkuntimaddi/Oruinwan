@@ -13,6 +13,7 @@ import { Markdown } from '../ui/Markdown.jsx';
 import { Spinner } from '../ui/Feedback.jsx';
 import { cx } from '../ui/cx.js';
 import { AiEyes } from './AiEyes.jsx';
+import { currentAiContext } from './aiContext.js';
 
 export const useQuickAi = create((set) => ({
   open: false,
@@ -37,11 +38,21 @@ export function QuickAi() {
   const input = useRef(null);
   const abort = useRef(null);
   const scroller = useRef(null);
+  // What's on screen when the window opens (a chat, a task, a note), so "summarise this" works.
+  const [ctx, setCtx] = useState(null);
+  const [useCtx, setUseCtx] = useState(true);
   useOverlay(open, hide);
 
   useEffect(() => {
-    if (open) setTimeout(() => input.current?.focus(), 60);
-    else abort.current?.abort();
+    if (open) {
+      setTimeout(() => input.current?.focus(), 60);
+      try {
+        setCtx(currentAiContext());
+      } catch {
+        setCtx(null);
+      }
+      setUseCtx(true);
+    } else abort.current?.abort();
   }, [open]);
   useEffect(() => {
     scroller.current?.scrollTo?.({ top: scroller.current.scrollHeight });
@@ -53,7 +64,9 @@ export function QuickAi() {
   const ask = async (text = q) => {
     const question = String(text || '').trim();
     if (!question || busy || !api().aiAsk) return;
-    const history = quickHistory(turns, question);
+    // The screen's context goes with the first question of a chat (and stays in its history).
+    const withCtx = useCtx && ctx?.text && !turns.length ? `${ctx.text}\n\nMy question: ${question}` : question;
+    const history = quickHistory(turns, withCtx);
     setTurns((list) => [...list, { q: question, a: '' }]);
     setQ('');
     setBusy(true);
@@ -133,11 +146,27 @@ export function QuickAi() {
           </div>
         ) : (
           <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-3 pt-2">
-            {SUGGESTIONS.map((s) => (
+            {(useCtx && ctx?.suggestions ? ctx.suggestions : SUGGESTIONS).map((s) => (
               <button key={s} type="button" onClick={() => ask(s)} className="pressable shrink-0 rounded-full border border-line bg-surface px-3 py-1 text-[12px] text-text-2">
                 {s}
               </button>
             ))}
+          </div>
+        )}
+        {ctx?.label && ctx.text && !turns.length && (
+          <div className="flex items-center gap-1.5 px-3.5 pt-2 text-[12px]" data-testid="quick-ai-context">
+            {useCtx ? (
+              <span className="flex min-w-0 items-center gap-1 rounded-full bg-accent/12 py-0.5 pr-1 pl-2.5 text-accent-ink">
+                <span className="truncate">About: {ctx.label}</span>
+                <button type="button" aria-label="Don't use what's on screen" onClick={() => setUseCtx(false)} className="grid h-5 w-5 place-items-center rounded-full active:bg-accent/20">
+                  <Icon as={X} size={11} />
+                </button>
+              </span>
+            ) : (
+              <button type="button" onClick={() => setUseCtx(true)} className="text-text-3 underline-offset-2 active:underline">
+                Use what's on screen ({ctx.label})
+              </button>
+            )}
           </div>
         )}
         <form
@@ -152,7 +181,7 @@ export function QuickAi() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             enterKeyHint="send"
-            placeholder={turns.length ? 'Ask a follow-up' : 'Ask Oruinwan AI anything'}
+            placeholder={turns.length ? 'Ask a follow-up' : useCtx && ctx?.text && ctx.label ? `Ask about ${ctx.label}` : 'Ask Oruinwan AI anything'}
             aria-label="Ask Oruinwan AI"
             className="h-10 min-w-0 flex-1 rounded-full border border-line bg-input px-4 text-[15px] outline-none focus:border-accent/70"
           />

@@ -3,6 +3,7 @@
 // Pixel 8". Native side: android/app/src/main/java/com/oruinwan/app/CallSessionPlugin.java.
 // Everything is a safe no-op where the plugin isn't there (the web build, iOS, tests).
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { create } from 'zustand';
 import { startWebRinging, stopWebRinging } from './webRinger.js';
 
 const CallSession = registerPlugin('CallSession');
@@ -132,4 +133,19 @@ export function onCallAction(fn) {
     gone = true;
     sub?.remove();
   };
+}
+
+/**
+ * Android picture-in-picture: the app shrinks to a floating window when you leave it during a
+ * call (MainActivity.onUserLeaveHint). `usePip` is true while it's that small window, so the call
+ * screen shows just the call, without its buttons.
+ */
+export const usePip = create(() => ({ on: false }));
+let pipBound = false;
+export function bindPip() {
+  if (pipBound || !hasCallSession()) return;
+  pipBound = true;
+  CallSession.addListener('pip', (e) => usePip.setState({ on: Boolean(e?.pip) })).catch(() => {
+    pipBound = false;
+  });
 }

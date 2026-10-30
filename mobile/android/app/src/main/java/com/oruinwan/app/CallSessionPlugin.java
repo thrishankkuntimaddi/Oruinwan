@@ -54,6 +54,27 @@ public class CallSessionPlugin extends Plugin {
     // Call actions from notifications that arrived before the app's JavaScript was listening.
     private static final List<JSObject> pendingCallActions = new ArrayList<>();
     private boolean audioChanged = false;
+    // A call is on (start → stop): leaving the app shrinks it into a picture-in-picture window.
+    private static volatile boolean inCall = false;
+    private static volatile boolean inCallVideo = false;
+
+    /** True while a call is on, so MainActivity can enter picture-in-picture on the way out. */
+    static boolean pipWanted() {
+        return inCall;
+    }
+
+    static boolean pipVideo() {
+        return inCallVideo;
+    }
+
+    /** Picture-in-picture started or ended: the call screen switches to its compact layout. */
+    static void dispatchPip(boolean on) {
+        CallSessionPlugin plugin = instance;
+        if (plugin == null) return;
+        JSObject data = new JSObject();
+        data.put("pip", on);
+        plugin.notifyListeners("pip", data);
+    }
 
     @Override
     public void load() {
@@ -132,6 +153,8 @@ public class CallSessionPlugin extends Plugin {
         }
         try {
             ContextCompat.startForegroundService(getContext(), serviceIntent(CallService.ACTION_START, call));
+            inCall = true;
+            inCallVideo = Boolean.TRUE.equals(call.getBoolean("video", false));
             call.resolve();
         } catch (Exception e) {
             Log.w(TAG, "Could not start the call service", e);
@@ -147,6 +170,7 @@ public class CallSessionPlugin extends Plugin {
         }
         try {
             getContext().startService(serviceIntent(CallService.ACTION_UPDATE, call));
+            inCallVideo = Boolean.TRUE.equals(call.getBoolean("video", false));
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage());
@@ -155,6 +179,8 @@ public class CallSessionPlugin extends Plugin {
 
     @PluginMethod
     public void stop(PluginCall call) {
+        inCall = false;
+        inCallVideo = false;
         try {
             getContext().stopService(new Intent(getContext(), CallService.class));
         } catch (Exception e) {

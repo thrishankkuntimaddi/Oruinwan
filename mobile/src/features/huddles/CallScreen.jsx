@@ -4,6 +4,7 @@
 // The people are laid out by CallStage.jsx / callLayout.js: a paged grid, the speaker or a pinned
 // person (or a shared screen) large with a filmstrip, or a 1:1 call with my camera in a corner.
 // The controls fade while there's video and come back with a tap.
+import { bindPip, usePip } from '../../native/callSession.js';
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
   UserPlus,
@@ -164,7 +165,7 @@ function HeaderButton({ icon, label, onClick, active = false, muted = false, tes
   );
 }
 
-function FullCall({ title }) {
+function FullCall({ title, pip = false }) {
   const call = useHuddle((s) => s.call);
   const connecting = useHuddle((s) => s.connecting);
   const participants = useHuddle((s) => s.participants);
@@ -227,7 +228,7 @@ function FullCall({ title }) {
 
   // Controls fade away while there's video so they never sit on faces for long; any tap brings them back.
   const canHide = anyVideo && !menu && !panel;
-  const controlsShown = shown || !canHide;
+  const controlsShown = !pip && (shown || !canHide);
   useEffect(() => {
     if (!canHide || !shown) return undefined;
     const t = setTimeout(() => setShown(false), AUTO_HIDE_MS);
@@ -533,6 +534,11 @@ function MiniCall({ title }) {
 export function CallView({ title }) {
   const call = useHuddle((s) => s.call);
   const view = useHuddle((s) => s.view);
+  // In Android's floating window (you left the app during the call): the call alone, full size.
+  const pip = usePip((s) => s.on);
+  useEffect(() => {
+    if (call) bindPip();
+  }, [call]);
   useEffect(() => {
     if (!call) {
       miniPos = null;
@@ -540,5 +546,6 @@ export function CallView({ title }) {
     }
   }, [call]);
   if (!call) return null;
+  if (pip) return <FullCall title={title} pip />;
   return view === 'mini' ? <MiniCall title={title} /> : <FullCall title={title} />;
 }

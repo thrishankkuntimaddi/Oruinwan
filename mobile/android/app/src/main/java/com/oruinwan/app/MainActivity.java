@@ -1,6 +1,9 @@
 package com.oruinwan.app;
 
 import android.app.KeyguardManager;
+import android.app.PictureInPictureParams;
+import android.content.res.Configuration;
+import android.util.Rational;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -56,6 +59,33 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         foreground = false;
         super.onPause();
+    }
+
+    /**
+     * Leaving the app (Home, or switching apps) during a call: keep it on screen as a small
+     * floating window, like other calling apps. Back to full size with a tap on the window.
+     */
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        enterCallPip();
+    }
+
+    private void enterCallPip() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !CallSessionPlugin.pipWanted()) return;
+        try {
+            if (!getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return;
+            Rational ratio = CallSessionPlugin.pipVideo() ? new Rational(9, 16) : new Rational(3, 4);
+            enterPictureInPictureMode(new PictureInPictureParams.Builder().setAspectRatio(ratio).build());
+        } catch (Exception e) {
+            Log.w("MainActivity", "Could not enter picture-in-picture", e);
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        CallSessionPlugin.dispatchPip(isInPictureInPictureMode);
     }
 
     /** A tap on an incoming call's notification (Answer, or the full-screen ring). */

@@ -9,6 +9,7 @@ import { useKeyboard } from '../native/keyboard.js';
 import { cx } from '../ui/cx.js';
 import { AiEyes } from './AiEyes.jsx';
 import { useQuickAi } from './QuickAi.jsx';
+import { bindAiMood, pokeAi, setMood } from './aiMood.js';
 
 /** Tabs whose main screen has its own button (ui/Button.jsx Fab) bottom right. */
 export const TABS_WITH_FAB = new Set(['chats', 'tasks', 'notes']);
@@ -32,6 +33,10 @@ export function AiFab({ tab, hidden = false }) {
     setHop((n) => n + 1);
     return undefined;
   }, [page]);
+  // Its mood follows what happens around the app (aiMood.js).
+  useEffect(() => (aiOn ? bindAiMood() : undefined), [aiOn]);
+  const holdTimer = useRef(null);
+  const openTimer = useRef(null);
   if (!aiOn || tab === 'ai') return null;
   const small = TABS_WITH_FAB.has(tab);
   const size = small ? SMALL : BIG;
@@ -43,7 +48,23 @@ export function AiFab({ tab, hidden = false }) {
       title="Oruinwan AI"
       data-tour="ai"
       data-size={small ? 'small' : 'big'}
-      onClick={() => (useQuickAi.getState().show ? useQuickAi.getState().show() : nav.openAi())}
+      onClick={() => {
+        // One tap: a happy face, then the quick window. Quick taps play with it instead (the third
+        // sticks its tongue out), so the window waits a moment to see if another tap comes.
+        const mood = pokeAi();
+        clearTimeout(openTimer.current);
+        if (mood === 'tongue') return;
+        openTimer.current = setTimeout(() => {
+          if (useQuickAi.getState().show) useQuickAi.getState().show();
+          else nav.openAi();
+        }, 260);
+      }}
+      onPointerDown={() => {
+        clearTimeout(holdTimer.current);
+        holdTimer.current = setTimeout(() => setMood('surprised', 1500), 450);
+      }}
+      onPointerUp={() => clearTimeout(holdTimer.current)}
+      onPointerLeave={() => clearTimeout(holdTimer.current)}
       tabIndex={off ? -1 : 0}
       aria-hidden={off || undefined}
       className={cx(

@@ -1,6 +1,18 @@
 // Oruinwan AI's face for its button: two eyes that look toward where you touch (or point), and
-// blink now and then. Still when the system asks for reduced motion.
+// blink now and then, plus a mood (aiMood.js): happy, surprised, sad, tongue out, sleepy. Scrolling
+// makes it glance up or down. Still when the system asks for reduced motion.
 import { useEffect, useRef } from 'react';
+import { useAiMood } from './aiMood.js';
+
+// The mouth for each mood (24-unit drawing; the eyes sit around y 13).
+const MOUTH = {
+  idle: 'M10.4 20.2 Q12 21.1 13.6 20.2',
+  happy: 'M9.4 19.4 Q12 22.6 14.6 19.4',
+  surprised: null, // a little "o", drawn as a circle
+  sad: 'M9.8 21.4 Q12 19.4 14.2 21.4',
+  tongue: 'M9.4 19.4 Q12 22.6 14.6 19.4',
+  sleepy: 'M10.8 20.6 L13.2 20.6',
+};
 
 const MAX_LOOK = 2.4; // how far the pupils move (in the 24-unit drawing)
 
@@ -14,7 +26,10 @@ export function lookOffset(cx, cy, px, py, max = MAX_LOOK) {
   return { x: (dx / dist) * k, y: (dy / dist) * k };
 }
 
-export function AiEyes({ size = 24 }) {
+export function AiEyes({ size = 24, mood: fixedMood = null }) {
+  const live = useAiMood((st) => st.mood);
+  const glance = useAiMood((st) => st.glance);
+  const mood = fixedMood || live;
   const face = useRef(null);
   const left = useRef(null);
   const right = useRef(null);
@@ -68,16 +83,50 @@ export function AiEyes({ size = 24 }) {
     };
   }, []);
 
+  const happy = mood === 'happy' || mood === 'tongue';
+  const wide = mood === 'surprised';
+  // Eyes move up a little to make room for the mouth; a glance shifts the pupils with a scroll.
+  const ey = 11.6;
+  const ry = wide ? 4.6 : mood === 'sleepy' ? 1.6 : 3.8;
+  const pupil = wide ? 1.3 : 1.7;
+  const gy = glance * 1.4;
   return (
-    <svg ref={face} width={size} height={size} viewBox="0 0 24 24" aria-hidden data-testid="ai-eyes">
+    <svg ref={face} width={size} height={size} viewBox="0 0 24 24" aria-hidden data-testid="ai-eyes" data-mood={mood}>
       {/* A little sparkle above, so it still reads as "AI". */}
       <path d="M19.2 2.2l.55 1.45 1.45.55-1.45.55-.55 1.45-.55-1.45-1.45-.55 1.45-.55z" fill="currentColor" opacity="0.85" />
-      <g ref={lids} style={{ transformOrigin: '12px 13px', transformBox: 'view-box' }}>
-        <ellipse cx="8" cy="13" rx="3.6" ry="4.4" fill="var(--surface, #fff)" stroke="currentColor" strokeWidth="1.4" />
-        <ellipse cx="16" cy="13" rx="3.6" ry="4.4" fill="var(--surface, #fff)" stroke="currentColor" strokeWidth="1.4" />
-        <circle ref={left} cx="8" cy="13.4" r="1.8" fill="currentColor" style={{ transition: 'none' }} />
-        <circle ref={right} cx="16" cy="13.4" r="1.8" fill="currentColor" style={{ transition: 'none' }} />
+      {mood === 'sad' && (
+        <g stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+          <path d="M5.2 6.6 L9.6 5.6" />
+          <path d="M14.4 5.6 L18.8 6.6" />
+        </g>
+      )}
+      <g ref={lids} style={{ transformOrigin: `12px ${ey}px`, transformBox: 'view-box' }}>
+        {happy ? (
+          // ^ ^ eyes
+          <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d={`M5 ${ey + 1} Q8 ${ey - 3} 11 ${ey + 1}`} />
+            <path d={`M13 ${ey + 1} Q16 ${ey - 3} 19 ${ey + 1}`} />
+          </g>
+        ) : (
+          <>
+            <ellipse cx="8" cy={ey} rx="3.6" ry={ry} fill="var(--surface, #fff)" stroke="currentColor" strokeWidth="1.4" />
+            <ellipse cx="16" cy={ey} rx="3.6" ry={ry} fill="var(--surface, #fff)" stroke="currentColor" strokeWidth="1.4" />
+          </>
+        )}
+        <g style={{ transform: `translateY(${gy}px)`, transition: 'transform 200ms ease-out', opacity: happy || mood === 'sleepy' ? 0 : 1 }}>
+          <circle ref={left} cx="8" cy={ey + 0.4} r={pupil} fill="currentColor" style={{ transition: 'none' }} />
+          <circle ref={right} cx="16" cy={ey + 0.4} r={pupil} fill="currentColor" style={{ transition: 'none' }} />
+        </g>
       </g>
+      {mood === 'surprised' ? (
+        <ellipse cx="12" cy="20.4" rx="1.3" ry="1.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      ) : (
+        <path d={MOUTH[mood] || MOUTH.idle} fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      )}
+      {mood === 'tongue' && <path d="M11 20.9 Q12 23.6 13 20.9 Z" fill="#e8798b" stroke="currentColor" strokeWidth="0.6" />}
+      {mood === 'sleepy' && (
+        <text x="18.6" y="9" fontSize="4.6" fontWeight="700" fill="currentColor" opacity="0.8">z</text>
+      )}
     </svg>
   );
 }

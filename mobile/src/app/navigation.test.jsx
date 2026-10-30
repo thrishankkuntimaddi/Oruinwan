@@ -171,7 +171,8 @@ describe('tab header', () => {
     // The same face on every tab.
     expect(screen.getByTestId('ai-eyes')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Oruinwan AI' }));
-    expect(useQuickAi.getState().open).toBe(true);
+    // It opens a moment after the tap (quick taps play with the face instead).
+    await waitFor(() => expect(useQuickAi.getState().open).toBe(true));
     expect(useNav.getState().tab).not.toBe('ai');
     useQuickAi.getState().hide();
   });
