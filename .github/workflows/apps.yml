@@ -20,10 +20,17 @@ on:
   pull_request:
     paths: ['mobile/**', 'desktop/**', 'client/**', 'platform/**', 'yarn.lock', '.github/workflows/apps.yml']
   workflow_dispatch:
+    inputs:
+      publish:
+        # Releases without pushing a tag (when pushing one isn't possible): run on main with this on.
+        # The tag v<mobile/package.json version> is made by the publish job on the commit built.
+        description: 'Publish the GitHub Release for the version in mobile/package.json (main only)'
+        type: boolean
+        default: false
 
 concurrency:
   group: apps-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
 
 permissions:
   contents: read
@@ -38,7 +45,7 @@ env:
   RELEASE_CERT_SHA256: 95e2de0f297d8d22d2280645ebf6c020ea82482e2ad25efdfe889baf5493f7e5
   # SHA-256 of the (password-protected) release keystore file, to catch a damaged secret early.
   RELEASE_KEYSTORE_SHA256: 8193055c4e748cd0407d5e10d7b200bdf74d6a7512a7b1cf72ddbe66ac5b60bd
-  IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+  IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main') }}
   # Signed Android builds (release APK + Google Play bundle): tags, and manual runs (Actions →
   # Build apps → Run workflow), which make the Play bundle without publishing a GitHub Release.
   SIGNED_ANDROID: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
@@ -67,7 +74,8 @@ jobs:
         if: env.IS_RELEASE == 'true'
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+          # A manual "publish" run on main makes the tag itself (v${VERSION}).
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match mobile/package.json version ${VERSION}. Bump the version, commit, then tag v${VERSION}."
             exit 1
           fi
@@ -496,7 +504,7 @@ jobs:
 
   publish:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
     needs: [check, client-app, android, desktop]
     runs-on: ubuntu-24.04
     permissions:
@@ -534,7 +542,7 @@ jobs:
           if [ -z "$ORUINWAN_UPDATE_SIGNING_KEY" ]; then
             echo "::warning::ORUINWAN_UPDATE_SIGNING_KEY is not set, so the quick-update bundles are unsigned and apps will offer the full download instead. See docs/UPDATES.md."
           fi
-          RELEASE_TAG="$GITHUB_REF_NAME" node ../mobile/scripts/write-manifest.mjs Oruinwan-Android.apk latest.json --notes "$NOTES" \
+          RELEASE_TAG="v${VERSION}" node ../mobile/scripts/write-manifest.mjs Oruinwan-Android.apk latest.json --notes "$NOTES" \
             --bundle phone=Oruinwan-UI-phone.zip --bundle desktop=Oruinwan-UI-desktop.zip
           unset ORUINWAN_UPDATE_SIGNING_KEY
           row() { echo "| $1 | **$2** | $(( $(wc -c < "$2") / 1048576 )) MB | \`$(sha256sum "$2" | cut -d' ' -f1)\` |"; }
@@ -575,6 +583,9 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: Oruinwan ${{ env.VERSION }}
+          # The tag: the one pushed, or (manual publish run) made here on the commit that was built.
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           body_path: dist-release/body.md
           files: |
             dist-release/Oruinwan-Android.apk
