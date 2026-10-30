@@ -1,9 +1,10 @@
-// Activity → Calendar, like Google Calendar's phone app: Schedule (what's coming up), Day,
+// Activity → Calendar, like Google Calendar's phone app. Opens on Month. Schedule (what's coming up), Day,
 // 3 days, Week (an hour grid with events at their times and a line at "now") and Month (event
-// bars on each day), picked from one menu; a filter chooses which kinds show.
+// bars on each day), picked from one menu; a filter chooses which kinds show; + adds a personal
+// reminder (personalReminders.js).
 // Layout math is shared with the web app (platform/calendar/calendarLayout.js).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Headphones, ListFilter, SquareCheckBig, Video } from 'lucide-react';
+import { Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Headphones, ListFilter, Plus, SquareCheckBig, Trash2, Video } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { useTasks } from '../../data/hooks.js';
 import { useQuery } from '../../data/query.js';
@@ -16,6 +17,11 @@ import { clock } from '../../lib/time.js';
 import { openStoredMessage } from '../chats/chatsUi.js';
 import { ActionSheet, Sheet } from '../../ui/Overlay.jsx';
 import { calendarEvents } from './calendar.js';
+import { addPersonalReminder, personalReminders, removePersonalReminder, usePersonalReminders } from './personalReminders.js';
+import { Button } from '../../ui/Button.jsx';
+import { Field } from '../../ui/Controls.jsx';
+import { toast } from '../../lib/bus.js';
+import { deviceNoun } from '../../native/index.js';
 import {
   addDays, agenda, eventsOn, hourLabel, layoutDay, monthGrid, rangeTitle, sameDay, startOfDay, stepCursor, weekDays,
 } from '../../../../platform/calendar/calendarLayout.js';
@@ -35,15 +41,55 @@ const VIEWS = [
   { id: 'month', label: 'Month' },
 ];
 const HOUR_PX = 52;
-// The view picked, kept while the app runs (it opens on Schedule each time).
-let sessionView = 'agenda';
+// The view picked, kept while the app runs (it opens on the month each time).
+let sessionView = 'month';
 
 function openEvent(e) {
   if (e.kind === 'meeting' || e.kind === 'huddle') nav.push('meeting', { id: e.ref.id });
   else if (e.kind === 'task') nav.push('task', { id: e.ref.id });
+  else if (e.kind === 'reminder' && e.ref.personal) emitPersonal(e.ref);
   else if (e.kind === 'reminder' && e.ref.noteId) nav.push('note', { id: e.ref.noteId });
   else if (e.kind === 'reminder') openStoredMessage(e.ref.conv, e.ref.message);
   else if (e.kind === 'scheduled') nav.push('outgoing', { tab: 'scheduled' });
+}
+
+// Tapping a personal reminder opens its sheet in the mounted CalendarView.
+let personalHandler = null;
+const emitPersonal = (ref) => personalHandler?.(ref);
+
+const pad = (n) => String(n).padStart(2, '0');
+const localInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** New personal reminder: what, and when (defaults to the next whole hour on the picked day). */
+function NewReminderSheet({ open, onClose, ws, day }) {
+  const [title, setTitle] = useState('');
+  const [when, setWhen] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const base = new Date(day || Date.now());
+    const now = new Date();
+    base.setHours(base.toDateString() === now.toDateString() ? now.getHours() + 1 : 9, 0, 0, 0);
+    setWhen(localInput(base));
+    setTitle('');
+  }, [open, day]);
+  const save = async () => {
+    if (!title.trim() || !when) return;
+    setBusy(true);
+    await addPersonalReminder(ws, { title, at: new Date(when) });
+    setBusy(false);
+    toast('Reminder set', 'success');
+    onClose();
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title="New reminder" footer={<Button block loading={busy} disabled={!title.trim() || !when} onClick={save}>Set reminder</Button>}>
+      <div className="space-y-3 px-5 pb-4">
+        <Field label="Remind me to" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Call the bank" autoFocus maxLength={200} />
+        <Field label="When" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        <p className="text-[12px] text-text-2">Just for you. Kept on this {deviceNoun}, with a notification at the time.</p>
+      </div>
+    </Sheet>
+  );
 }
 
 const timeRange = (e) => (e.allDay ? 'All day' : e.end ? `${clock(e.at)} – ${clock(e.end)}` : clock(e.at));
@@ -62,7 +108,19 @@ export function CalendarView() {
   const [view, setViewState] = useState(() => sessionView);
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
   const [hidden, setHidden] = useState(() => new Set(prefs.get('calendar.hidden', [])));
-  const [sheet, setSheet] = useState(null); // 'view' | 'filter'
+  const [sheet, setSheet] = useState(null); // 'view' | 'filter' | 'new'
+  const [openReminder, setOpenReminder] = useState(null);
+  const personalStore = usePersonalReminders((st) => st.byWs[ws]);
+  useEffect(() => {
+    if (ws) personalReminders(ws); // load this workspace's from the phone
+  }, [ws]);
+  const personal = useMemo(() => personalStore || [], [personalStore]);
+  useEffect(() => {
+    personalHandler = setOpenReminder;
+    return () => {
+      if (personalHandler === setOpenReminder) personalHandler = null;
+    };
+  }, []);
   const setView = (v) => {
     sessionView = v;
     setViewState(v);
@@ -84,9 +142,10 @@ export function CalendarView() {
         reminders: reminders.data || [],
         noteReminders: noteReminders.data || [],
         scheduled: scheduled.data || [],
+        personal,
         me,
       }).filter((e) => !hidden.has(e.kind)),
-    [upcoming.data, past.data, tasks, reminders.data, noteReminders.data, scheduled.data, me, hidden],
+    [upcoming.data, past.data, tasks, reminders.data, noteReminders.data, scheduled.data, personal, me, hidden],
   );
 
   const step = (dir) => setCursor((c) => (view === '3day' ? addDays(c, 3 * dir) : stepCursor(view, c, dir)));
@@ -121,6 +180,15 @@ export function CalendarView() {
         </button>
         <button
           type="button"
+          onClick={() => setSheet('new')}
+          aria-label="New reminder"
+          data-testid="calendar-new-reminder"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gold text-on-accent active:opacity-80"
+        >
+          <Icon as={Plus} size={16} />
+        </button>
+        <button
+          type="button"
           onClick={() => setSheet('filter')}
           aria-label={hidden.size ? `Filter, ${hidden.size} hidden` : 'Filter'}
           data-testid="calendar-filter"
@@ -131,6 +199,13 @@ export function CalendarView() {
         </button>
       </div>
 
+      <NewReminderSheet open={sheet === 'new'} onClose={() => setSheet(null)} ws={ws} day={cursor} />
+      <ActionSheet
+        open={Boolean(openReminder)}
+        onClose={() => setOpenReminder(null)}
+        title={openReminder?.title || 'Reminder'}
+        actions={[{ label: 'Delete reminder', icon: Trash2, danger: true, onSelect: () => removePersonalReminder(ws, openReminder.id) }]}
+      />
       <ActionSheet
         open={sheet === 'view'}
         onClose={() => setSheet(null)}

@@ -11,8 +11,11 @@ export { dayKey };
  * events: [{ id, kind: 'meeting' | 'huddle' | 'task' | 'reminder' | 'scheduled', title, at, end?, allDay?, ref }]
  * sorted by time.
  */
-export function calendarEvents({ meetings = [], tasks = [], reminders = [], noteReminders = [], scheduled = [], me } = {}) {
+export function calendarEvents({ meetings = [], tasks = [], reminders = [], noteReminders = [], scheduled = [], personal = [], me } = {}) {
   const out = [];
+  for (const r of personal) {
+    if (r.at) out.push({ id: `p:${r.id}`, kind: 'reminder', title: r.title, at: r.at, ref: { personal: true, id: r.id, title: r.title } });
+  }
   for (const m of meetings) {
     const at = m.start || m.startedAt;
     if (!at) continue;

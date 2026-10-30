@@ -8,16 +8,17 @@ import { nav } from '../../app/nav.js';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import {
-  useChannels, useDirectory, useIntegrations, useMembers, useNotifications, useSharedFiles,
+  useChannels, useDirectory, useIntegrations, useMembers, useNotifications, useSharedFiles, useTasks,
 } from '../../data/hooks.js';
-import { invalidate, setQueryData } from '../../data/query.js';
+import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Chips, Field, SearchField } from '../../ui/Controls.jsx';
 import { BrandLogo } from '../../ui/BrandLogo.jsx';
 import { useWebUrl } from '../../data/live/webUrl.js';
-import { prefs } from '../../native/storage.js';
 import { CalendarView } from './CalendarView.jsx';
+import { calendarEvents } from './calendar.js';
+import { hasUpcoming, personalReminders, usePersonalReminders } from './personalReminders.js';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
 import { ActionSheet, Dialog, Sheet } from '../../ui/Overlay.jsx';
@@ -69,6 +70,24 @@ export function ActivityScreen() {
 }
 
 
+/** True when a meeting, task due, reminder or scheduled message is in the next 24 hours. */
+function useUpcomingSoon(enabled) {
+  const ws = useSession((s) => s.workspaceId);
+  const me = useSession((s) => s.user?.id);
+  const { data: tasks } = useTasks();
+  const upcoming = useQuery(enabled && ws && api().meetingsPage && `calendar:upcoming:${ws}`, () => api().meetingsPage(ws, { status: 'upcoming', limit: 100 }), { staleMs: 60_000 });
+  const reminders = useQuery(enabled && ws && `reminders:${ws}`, () => api().reminders(ws), { staleMs: 60_000 });
+  const personal = usePersonalReminders((s) => s.byWs[ws]);
+  useEffect(() => {
+    if (enabled && ws) personalReminders(ws);
+  }, [enabled, ws]);
+  return useMemo(() => {
+    if (!enabled) return false;
+    const events = calendarEvents({ meetings: upcoming.data?.meetings || [], tasks: tasks || [], reminders: reminders.data || [], personal: personal || [], me });
+    return hasUpcoming(events);
+  }, [enabled, upcoming.data, tasks, reminders.data, personal, me]);
+}
+
 /** Notifications. `asTab`: the Activity tab's root; otherwise a pushed screen (older links). */
 export function NotificationsScreen({ initial = 'all', asTab = false }) {
   const ws = useSession((s) => s.workspaceId);
@@ -76,11 +95,10 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
   const directory = useDirectory();
   const [filter, setFilter] = useState(initial);
   // The Activity tab can show a calendar of meetings, tasks due, reminders and scheduled messages.
-  const [view, setView] = useState(() => (asTab ? prefs.get('activity.view', 'list') : 'list'));
-  const pickView = (v) => {
-    prefs.set('activity.view', v);
-    setView(v);
-  };
+  // Opening the Activity tab shows activity; the calendar is one tap away (and opens on the month).
+  const [view, setView] = useState('list');
+  const pickView = setView;
+  const upcomingSoon = useUpcomingSoon(asTab && view === 'list');
   const list = useMemo(() => {
     const all = data || [];
     const shown = (() => {
@@ -126,12 +144,17 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
             <>
               {view === 'list' && unread > 0 && <IconButton icon={CheckCheck} label="Mark all as read" onClick={markAll} />}
               {/* Calendar and Activity, one tap apart. */}
-              <IconButton
-                icon={view === 'calendar' ? Bell : CalendarDays}
-                label={view === 'calendar' ? 'Show activity' : 'Show calendar'}
-                data-testid="activity-calendar-toggle"
-                onClick={() => pickView(view === 'calendar' ? 'list' : 'calendar')}
-              />
+              <span className="relative">
+                <IconButton
+                  icon={view === 'calendar' ? Bell : CalendarDays}
+                  label={view === 'calendar' ? 'Show activity' : upcomingSoon ? 'Show calendar, something coming up' : 'Show calendar'}
+                  data-testid="activity-calendar-toggle"
+                  onClick={() => pickView(view === 'calendar' ? 'list' : 'calendar')}
+                />
+                {view === 'list' && upcomingSoon && (
+                  <span className="pointer-events-none absolute top-2 right-2 h-2 w-2 rounded-full bg-gold ring-2 ring-bg" data-testid="calendar-upcoming-dot" />
+                )}
+              </span>
             </>
           }
         >
