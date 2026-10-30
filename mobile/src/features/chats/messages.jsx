@@ -411,18 +411,24 @@ export function MessageItem({
             <span className="truncate text-[14px] font-semibold">{author.name}</span>
             <StandingTag person={directory[m.authorId] || author} />
             <span className="shrink-0 text-[11px] text-text-3">{clock(m.at)}</span>
-            {tick && <Ticks state={tick} />}
+            {tick && <span className="flex shrink-0 items-center self-center"><Ticks state={tick} /></span>}
             {m.pinned && <Icon as={Pin} size={12} className="shrink-0 text-accent-ink" aria-label="Pinned" />}
             {m.saved && <Icon as={Bookmark} size={12} className="shrink-0 text-accent-ink" aria-label="Saved for later" />}
           </div>
         )}
         {m.quoted && m.state !== 'deleted' && <QuoteBlock quoted={m.quoted} directory={directory} me={me} onJump={onJumpTo} />}
-        <MessageBody m={m} onCancelUpload={onCancelUpload} me={me} directory={directory} />
-        {grouped && tick && (
-          <span className="float-right -mt-4 ml-2" aria-hidden={false}>
-            <Ticks state={tick} />
-          </span>
-        )}
+        {/* Follow-up messages carry their tick at the bottom right of the body: the same spot
+            for text, photos and files. */}
+        <div className="flex items-end gap-1.5">
+          <div className="min-w-0 flex-1">
+            <MessageBody m={m} onCancelUpload={onCancelUpload} me={me} directory={directory} />
+          </div>
+          {grouped && tick && (
+            <span className="mb-0.5 flex h-4 shrink-0 items-center" data-testid="message-tick">
+              <Ticks state={tick} />
+            </span>
+          )}
+        </div>
         <TranslationNote m={m} />
         {m.fromTaskId != null && <span data-testid="message-from-task" className="mr-1 text-[11px] text-text-3">From the task's discussion</span>}
         {m.edited &&
@@ -899,6 +905,22 @@ export function Composer({
   const beforeEdit = useRef(null);
   const latest = useRef(text);
   latest.current = text;
+  // Leaving the conversation (or the app) right after typing: save what's there now, not 400 ms
+  // later, so nothing typed is lost.
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
+  useEffect(() => {
+    if (!draftConv) return undefined;
+    const flush = () => {
+      if (!editingRef.current) saveDraft(draftWs, draftConv, latest.current);
+    };
+    const onHide = () => document.visibilityState === 'hidden' && flush();
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      flush();
+    };
+  }, [draftWs, draftConv?.kind, draftConv?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (editing) {
       if (beforeEdit.current == null) beforeEdit.current = latest.current;

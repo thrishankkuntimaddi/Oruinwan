@@ -116,12 +116,12 @@ function SearchSheet({ open, onClose, items, directory, onJump }) {
   );
 }
 
-function PinnedSheet({ open, onClose, conv, directory, onJump }) {
+export function PinnedSheet({ open, onClose, conv, directory, onJump }) {
   const { data, error } = useQuery(open && api().pinnedMessages && `pinned:${conv.id}`, () => api().pinnedMessages(conv), { staleMs: 10_000 });
   const unpin = async (m) => {
     setQueryData(`pinned:${conv.id}`, (list) => list?.filter((x) => x.id !== m.id));
     try {
-      await api().togglePin(conv, m.id);
+      await api().togglePin(conv, m.id, false);
       invalidate(`messages:${conv.id}`);
       toast('Unpinned');
     } catch (err) {
@@ -446,6 +446,36 @@ export function ConversationMenu({ open, onClose, conv, meta, label, status, ite
         busy={busy}
         onConfirm={confirmed}
       />
+    </>
+  );
+}
+
+/**
+ * A slim bar under the header when the conversation has pinned messages: "📌 2 pinned · <the
+ * latest>". Tap it for the list.
+ */
+export function PinnedBanner({ conv, directory, onJump }) {
+  const [open, setOpen] = useState(false);
+  const { data } = useQuery(api().pinnedMessages && conv?.id && `pinned:${conv.id}`, () => api().pinnedMessages(conv), { staleMs: 30_000 });
+  const list = data || [];
+  if (!list.length && !open) return null;
+  const latest = [...list].sort((a, b) => new Date(b.pinnedAt || b.at || 0) - new Date(a.pinnedAt || a.at || 0))[0];
+  const text = latest?.text ? String(latest.text).replace(/\s+/g, ' ') : latest?.attachments?.length ? 'Attachment' : 'Message';
+  return (
+    <>
+      {list.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          data-testid="pinned-banner"
+          className="flex w-full shrink-0 items-center gap-2 border-b border-line-soft bg-surface/80 px-4 py-1.5 text-left backdrop-blur active:bg-surface-2"
+        >
+          <Icon as={Pin} size={13} className="shrink-0 text-accent-ink" />
+          <span className="shrink-0 text-[12px] font-semibold text-accent-ink">{list.length === 1 ? 'Pinned' : `${list.length} pinned`}</span>
+          <span className="min-w-0 flex-1 truncate text-[12px] text-text-2">{text}</span>
+        </button>
+      )}
+      <PinnedSheet open={open} onClose={() => setOpen(false)} conv={conv} directory={directory} onJump={onJump} />
     </>
   );
 }

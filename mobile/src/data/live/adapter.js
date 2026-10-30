@@ -1046,9 +1046,10 @@ export const liveAdapter = {
     if (add === false) await api.del(`/v2/messages/${id}/react`, { emoji });
     else await api.post(`/v2/messages/${id}/react`, { emoji });
   },
-  async togglePin(conv, id) {
-    const data = await api.post(`/v2/messages/${id}/pin`, {});
-    return Boolean(data?.isPinned ?? data?.message?.isPinned ?? true);
+  /** Pins (pin true) or unpins (pin false) a message; returns whether it's pinned now. */
+  async togglePin(conv, id, pin = true) {
+    const data = await api.post(`/v2/messages/${id}/pin`, { pin: Boolean(pin) });
+    return Boolean(data?.isPinned ?? data?.message?.isPinned ?? pin);
   },
   /**
    * Records that I've read everything in the conversation (the server's readBy, which Message

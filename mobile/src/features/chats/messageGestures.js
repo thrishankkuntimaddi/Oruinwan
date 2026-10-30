@@ -36,6 +36,12 @@ export function useRowGestures({ onLongPress, onSwipe, onTap, onDoubleTap }) {
     onPointerDown: (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       const row = e.currentTarget;
+      // Sheets opened from inside the row (reaction picker, who reacted) render in a portal, but
+      // React still bubbles their events here: a tap there isn't a tap on the message.
+      if (!row.contains?.(e.target)) {
+        g.current = null;
+        return;
+      }
       g.current = { x: e.clientX, y: e.clientY, t: Date.now(), swiping: false, fired: false, row, target: e.target, mouse: e.pointerType === 'mouse', id: e.pointerId };
       if (!g.current.mouse && onLongPress) {
         g.current.long = setTimeout(() => {
@@ -80,7 +86,10 @@ export function useRowGestures({ onLongPress, onSwipe, onTap, onDoubleTap }) {
     onPointerUp: (e) => {
       const s = g.current;
       g.current = null;
-      if (!s) return;
+      if (!s || !s.row.contains?.(e.target)) {
+        if (s) clearTimeout(s.long);
+        return;
+      }
       clearTimeout(s.long);
       if (s.swiping) {
         setDx(0);
@@ -112,6 +121,7 @@ export function useRowGestures({ onLongPress, onSwipe, onTap, onDoubleTap }) {
     },
     onContextMenu: (e) => {
       e.preventDefault();
+      if (!e.currentTarget.contains?.(e.target)) return;
       if (g.current?.mouse || e.nativeEvent?.pointerType === 'mouse' || !('ontouchstart' in window)) {
         clearLong();
         g.current = null;

@@ -22,6 +22,18 @@ describe('message taps', () => {
     return { onTap, onDoubleTap, handlers: () => result.current.handlers };
   };
 
+  it('a tap in a sheet opened from the row (a portal) never opens the thread', () => {
+    const { onTap, onDoubleTap, handlers } = setup();
+    const row = document.createElement('div');
+    const sheetButton = document.createElement('button'); // elsewhere in the page
+    const ev = { pointerType: 'touch', button: 0, clientX: 10, clientY: 10, pointerId: 1, currentTarget: row, target: sheetButton };
+    handlers().onPointerDown(ev);
+    handlers().onPointerUp(ev);
+    act(() => vi.advanceTimersByTime(800));
+    expect(onTap).not.toHaveBeenCalled();
+    expect(onDoubleTap).not.toHaveBeenCalled();
+  });
+
   it('a single tap opens the thread', () => {
     const { onTap, handlers } = setup();
     tapOn(handlers());

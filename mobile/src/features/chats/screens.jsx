@@ -45,7 +45,7 @@ import { DayJumpSheet } from './DayJumpSheet.jsx';
 import { AiIsland } from './AiIsland.jsx';
 import { phoneCommands } from './slash.jsx';
 import { QUICK_REACTIONS } from '../../data/constants.js';
-import { ConversationMenu, useConversationStatus } from './ConversationMenu.jsx';
+import { ConversationMenu, PinnedBanner, useConversationStatus } from './ConversationMenu.jsx';
 import { EllipsisVertical, Share2, Copy, Link2 } from 'lucide-react';
 import { useWebUrl } from '../../data/live/webUrl.js';
 import { copyText, shareText } from '../../native/index.js';
@@ -103,9 +103,9 @@ function useMessageTools({ conv, convo, me, label, threadOf, onQuote }) {
           api().togglePin
             ? async () => {
                 try {
-                  const pinned = await api().togglePin(conv, active.id);
+                  const pinned = await api().togglePin(conv, active.id, !active.pinned);
                   toast(pinned ? 'Pinned to the conversation' : 'Unpinned');
-                  invalidate(`messages:${conv.id}`);
+                  invalidate(`messages:${conv.id}`, `pinned:${conv.id}`);
                 } catch (err) {
                   toast(err.message || 'Could not pin the message', 'danger');
                 }
@@ -438,6 +438,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         }
       />
       {!meta?.agentId && <HuddleBanner scope={huddleScope} title={label} />}
+      <PinnedBanner conv={conv} directory={directory} onJump={extras.jumpToMessage} />
       <div className="relative flex min-h-0 flex-1 flex-col">
       {showIsland && <AiIsland title={label} transcript={() => transcript(convo.items, directory, me).map(({ sender, text }) => ({ sender, text }))} />}
       <MessageList

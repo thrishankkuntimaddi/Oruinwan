@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { clearUnreadLocally } from '../../data/unread.js';
 import {
-  Archive, ArchiveRestore, Bell, BellOff, Bot, CheckCheck, Compass, Hash, Info, KeyRound, Lock, LogOut, Megaphone, MessageCirclePlus, Pin, PinOff, MessageSquarePlus, Trash2, UserRound,
+  Archive, ArchiveRestore, Bell, BellOff, Bot, CheckCheck, Compass, Hash, Info, KeyRound, Lock, LogOut, Megaphone, MessageCirclePlus, Pin, PinOff, SquarePen, Trash2, UserRound,
 } from 'lucide-react';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { nav, useIsOpen } from '../../app/nav.js';
@@ -357,7 +357,7 @@ export function ChatsScreen() {
           </>
         )}
       </Body>
-      <Fab compact icon={MessageSquarePlus} label="New message" onClick={() => nav.push('newMessage')} />
+      <Fab compact icon={SquarePen} label="New message" onClick={() => nav.push('newMessage')} />
       <ChatMenu row={menu} prefs={prefs} onClose={() => setMenu(null)} />
     </Screen>
   );

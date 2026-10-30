@@ -19,7 +19,7 @@ import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { matchMessage, parseSearchQuery } from '../../lib/searchQuery.js';
 import { personMatchRank, searchPeople, wordStartMatch } from '../../lib/peopleSearch.js';
-import { ChatRow, ChannelTile, chatWithAgent } from '../chats/ChatsScreen.jsx';
+import { ChannelTile, chatWithAgent } from '../chats/ChatsScreen.jsx';
 import { allChats, chatListFor, useConversationPrefs } from '../chats/chatList.js';
 import { openConversation } from '../chats/chatsUi.js';
 import { TaskRow } from '../tasks/TaskRow.jsx';
@@ -181,9 +181,22 @@ export function QuickSearch({ context = 'home', query, onClose }) {
           {k === 'chats' && (
             <div className="overflow-hidden">
               {results.chats.slice(0, limit(k)).map((row) => (
-                <div key={row.key} onClickCapture={onClose}>
-                  <ChatRow row={row} />
-                </div>
+                // Same path as message results: close the search, then open the chat, in one tap
+                // handler (no long-press or capture tricks that a phone's tap could miss).
+                <Row
+                  key={row.key}
+                  leading={
+                    row.kind === 'channel' ? (
+                      <ChannelTile channel={row.item} size={36} />
+                    ) : (
+                      <Avatar name={row.item.user?.name || row.item.name} src={row.item.user?.avatarUrl} size="sm" presence={row.item.isGroup ? undefined : row.item.user?.presence} />
+                    )
+                  }
+                  title={row.kind === 'channel' ? `#${row.item.name}` : row.item.user?.name || row.item.name || 'Chat'}
+                  subtitle={row.item.lastText ? plainPreview(row.item.lastText, 80) : row.kind === 'channel' ? 'Channel' : row.item.isGroup ? 'Group' : 'Direct message'}
+                  data-testid={`qs-chat-${row.key}`}
+                  onClick={go(() => openConversation(row.kind, row.item.id))}
+                />
               ))}
               {results.agents.slice(0, 3).map((a) => (
                 <Row key={a.id} leading={<img src={a.icon} alt="" className="h-9 w-9 rounded-xl" />} title={a.name} subtitle="Agent · start a chat" onClick={go(() => chatWithAgent(a))} />
@@ -235,7 +248,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
             </RowGroup>
           )}
           {k === 'tasks' && (
-            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClickCapture={onClose}>
+            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClick={onClose}>
               {results.tasks.slice(0, limit(k)).map((t) => (
                 <TaskRow key={t.id} task={t} directory={directory} compact />
               ))}
@@ -249,7 +262,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
             </RowGroup>
           )}
           {k === 'activity' && (
-            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClickCapture={onClose}>
+            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClick={onClose}>
               {results.activity.slice(0, limit(k)).map((n) => (
                 <ActivityRow key={n.id} item={n} directory={directory} />
               ))}

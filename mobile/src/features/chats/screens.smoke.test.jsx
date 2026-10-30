@@ -78,12 +78,15 @@ const { useLayout } = await import('../../app/layout.js');
 const { ConversationScreen, ThreadScreen, SavedScreen } = await import('./index.js');
 const { SearchScreen } = await import('../search/SearchScreen.jsx');
 const { clearQueries } = await import('../../data/query.js');
+const { useDrafts } = await import('./drafts.js');
 
 const LAYOUTS = { phone: { wide: false, split: false }, split: { wide: false, split: true }, wide: { wide: true, split: true } };
 
 beforeEach(() => {
   cleanup();
   clearQueries();
+  // Leaving a conversation keeps what was typed as a draft; each test starts with none.
+  useDrafts.setState({ all: {} });
   vi.clearAllMocks();
 });
 

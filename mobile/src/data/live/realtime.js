@@ -33,6 +33,9 @@ function changeEvent(p) {
   const dmId = p?.dmSessionId || p?.dmId || idOf(p?.dm) || idOf(msg?.dm);
   const parentId = p?.parentId || idOf(msg?.parentId);
   const keys = [channelId && `messages:${channelId}`, dmId && `messages:${dmId}`, parentId && `thread:${parentId}`].filter(Boolean);
+  // Pinned or unpinned: the pinned bar and list too.
+  if (channelId) keys.push(`pinned:${channelId}`);
+  if (dmId) keys.push(`pinned:${dmId}`);
   // A thread's own parent changed (edited or deleted): its thread view shows it too.
   const id = p?.messageId || idOf(msg);
   if (id) keys.push(`thread:${id}`);
