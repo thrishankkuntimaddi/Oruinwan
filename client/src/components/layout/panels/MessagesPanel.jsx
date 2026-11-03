@@ -76,7 +76,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         const onNewMessage = async (msg) => {
             const dmId = String(msg?.dm?._id || msg?.dm || '');
             if (!dmId || msg.parentId) return;
-            let text = LABELS[msg.type] || '';
+            const variant = msg.attachments?.[0]?.variant;
+            let text = (msg.type === 'image' && variant === 'sticker' && '🏷️ Sticker') || (msg.type === 'image' && variant === 'gif' && '🎞️ GIF') || LABELS[msg.type] || '';
             if (!text && msg.payload?.ciphertext) {
                 const { decryptTextOrNull } = await import('../../../services/messageEncryptionService');
                 text = (await decryptTextOrNull(msg.payload.ciphertext, msg.payload.messageIv, dmId, 'dm')) || 'Encrypted message';

@@ -377,6 +377,8 @@ app.use("/api/v2/status", require("./src/features/status/status.routes"));
 app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
 
 app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
+// A person's sticker library and GIPHY search (stickers.service.js).
+app.use("/api/v2/stickers", require("./src/features/stickers/stickers.routes"));
 
 app.use("/api/v2/files", require("./src/features/files/files.routes"));
 app.use("/api/v2/design-reviews", require("./src/features/design-review/designReview.routes"));

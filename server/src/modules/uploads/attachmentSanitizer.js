@@ -11,7 +11,8 @@ const { objectHandle } = require('./upload.service');
 const { canAccessFile } = require('./upload.access');
 
 const TYPES = new Set(['image', 'video', 'file', 'audio', 'voice']);
-const VARIANTS = new Set(['video_note', 'screen_recording']);
+// sticker / gif: an image shown without a frame (stickers.service.js).
+const VARIANTS = new Set(['video_note', 'screen_recording', 'sticker', 'gif']);
 const MAX_ATTACHMENTS = 10;
 const PROXY_PREFIX = '/api/v2/uploads/file?path=';
 

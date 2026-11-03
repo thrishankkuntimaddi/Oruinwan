@@ -4,6 +4,7 @@ import { useMediaUrl } from "../../../../../utils/mediaUrl";
 import { formatBytes } from "../../../../../utils/uploadFile";
 import MediaLightbox, { registerLightboxImage } from "./MediaLightbox";
 import FileMessage from "./FileMessage";
+import { stickerBox } from "@platform/media/stickerMaker.js";
 
 const MAX_W = 320;
 const MAX_H = 280;
@@ -15,8 +16,41 @@ function fitBox(w, h) {
     return { width: Math.max(40, Math.round(w * scale)), height: Math.max(40, Math.round(h * scale)) };
 }
 
-export default function ImageMessage({ msg }) {
+/** A sticker: no frame or file name, at sticker size, see-through parts showing the chat. */
+function StickerImage({ msg }) {
     const attachment = msg.attachment || {};
+    const { url, error, refresh, attempt } = useMediaUrl(attachment);
+    const [loaded, setLoaded] = useState(false);
+    const [broken, setBroken] = useState(false);
+    if (broken || error) return <FileMessage msg={msg} unavailableNote="Sticker unavailable" />;
+    const box = stickerBox(attachment.width, attachment.height, 160);
+    return (
+        <div data-testid="sticker-attachment" title="Sticker" style={{ marginTop: 6, width: box.width, height: box.height, position: 'relative' }}>
+            {!loaded && <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'var(--bg-hover)' }} />}
+            {url && (
+                <img
+                    src={url}
+                    alt="Sticker"
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    onLoad={() => setLoaded(true)}
+                    onError={() => (attempt < 1 ? refresh() : setBroken(true))}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', opacity: loaded ? 1 : 0, transition: 'opacity 150ms ease' }}
+                />
+            )}
+        </div>
+    );
+}
+
+export default function ImageMessage({ msg }) {
+    if (msg.attachment?.variant === 'sticker') return <StickerImage msg={msg} />;
+    return <PhotoMessage msg={msg} />;
+}
+
+function PhotoMessage({ msg }) {
+    const attachment = msg.attachment || {};
+    const isGif = attachment.variant === 'gif';
     const { name } = attachment;
     const sizeLabel = attachment.sizeFormatted || formatBytes(attachment.size);
     const hasFile = !!toProxyUrl(attachment);
@@ -71,8 +105,11 @@ export default function ImageMessage({ msg }) {
                             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: loaded ? 1 : 0, transition: 'opacity 150ms ease' }}
                         />
                     )}
+                    {isGif && (
+                        <span aria-hidden style={{ position: 'absolute', left: 6, bottom: 6, padding: '1px 5px', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', borderRadius: 2, background: 'rgba(0,0,0,0.55)', color: '#fff' }}>GIF</span>
+                    )}
                 </div>
-                {(name || sizeLabel) && (
+                {!isGif && (name || sizeLabel) && (
                     <div style={{
                         padding: '4px 10px', display: 'flex', justifyContent: 'space-between',
                         backgroundColor: 'var(--bg-active)', borderTop: '1px solid var(--border-subtle)',

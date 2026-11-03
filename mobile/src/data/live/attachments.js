@@ -25,7 +25,7 @@ export function mapAttachment(a) {
     width: a.width || null,
     height: a.height || null,
     duration: Number.isFinite(a.duration) ? a.duration : null,
-    variant: a.variant || null, // 'screen_recording' | 'video_note' (recorded on the web)
+    variant: a.variant || null, // 'screen_recording' | 'video_note' (recorded on the web) | 'sticker' | 'gif'
   };
 }
 
@@ -35,6 +35,7 @@ export function attachmentDoc(a) {
   if (Number.isFinite(a.duration)) doc.duration = a.duration;
   if (Number.isFinite(a.width)) doc.width = a.width;
   if (Number.isFinite(a.height)) doc.height = a.height;
+  if (a.variant) doc.variant = a.variant;
   return doc;
 }
 
@@ -53,11 +54,11 @@ function uploadError(status, data) {
   return new ApiError(msg || 'The upload failed. Try again.', status, data);
 }
 
-function postForm(form, { onProgress, signal }) {
+function postForm(form, { onProgress, signal, path = '/api/v2/uploads' } = {}) {
   return new Promise((resolve, reject) => {
     // XMLHttpRequest for upload progress. On Android and iOS, CapacitorHttp performs it natively.
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${serverUrl()}/api/v2/uploads`);
+    xhr.open('POST', `${serverUrl()}${path}`);
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('x-client-platform', clientPlatform);
     if (accessToken()) xhr.setRequestHeader('Authorization', `Bearer ${accessToken()}`);
@@ -103,6 +104,20 @@ export async function uploadFile(file, { conversationId, conversationType = 'cha
   if (status < 200 || status >= 300 || !data?.url) throw uploadError(status, data);
   onProgress?.(100);
   return mapAttachment(data);
+}
+
+/**
+ * POSTs a multipart form to another endpoint (e.g. /api/v2/stickers/upload), refreshing an
+ * expired session once. Resolves with the JSON answer; throws ApiError.
+ */
+export async function postMultipart(path, makeForm, { onProgress, signal } = {}) {
+  let { status, data } = await postForm(makeForm(), { onProgress, signal, path });
+  if (status === 401) {
+    await refreshSession();
+    ({ status, data } = await postForm(makeForm(), { onProgress, signal, path }));
+  }
+  if (status < 200 || status >= 300) throw uploadError(status, data);
+  return data;
 }
 
 // Stored files need authorization, which <img>, <video> and <audio> can't send. The server

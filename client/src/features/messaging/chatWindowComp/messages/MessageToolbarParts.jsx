@@ -3,8 +3,10 @@ import { isSameLanguage } from '../../../../utils/autoTranslate';
 import { createPortal } from 'react-dom';
 import {
     MessageSquare, Share, Pin, Copy, Trash2, Info, Pencil, Check, X, History, Globe,
-    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2, Link2, Share2,
+    Bookmark, Bell, CheckSquare, Sparkles, Reply, Loader2, Code2, Link2, Share2, Sticker,
 } from 'lucide-react';
+import { saveFromAttachment } from '../../../stickers/stickerStore';
+import { useOptionalToast } from '../../../../contexts/ToastContext';
 import { getMessageText, hasEditHistory, isBookmarkedBy } from '../../../../utils/messageActionUtils';
 import api from '@services/api';
 
@@ -300,6 +302,18 @@ export function useMessageToolbar({
     };
 
     const bookmarked = isBookmarkedBy(msg.bookmarkedBy, currentUserId);
+    const showToast = useOptionalToast()?.showToast;
+    // Stickers, GIFs and photos (still or animated) can be kept in "My stickers".
+    const stickerable = msg.type === 'image' && !!msg.attachment?.url && !msg.sending && !msg.failed
+        && /^image\/(png|jpe?g|webp|gif)$/i.test(msg.attachment.mimeType || 'image/png');
+    const saveSticker = async () => {
+        try {
+            const { existed } = await saveFromAttachment(msg.attachment);
+            showToast?.(existed ? 'Already in your stickers' : 'Saved to your stickers', 'success');
+        } catch (err) {
+            showToast?.(err.message, 'error');
+        }
+    };
     const isAdmin = !!toolbar.isChannelAdmin;
     const deleted = msg.isDeleted || msg.isDeletedUniversally;
     const hasReplies = threadCount > 0 || msg.replyCount > 0;
@@ -338,6 +352,11 @@ export function useMessageToolbar({
         ],
         [
             toolbar.togglePin && { label: msg.isPinned ? 'Unpin message' : 'Pin message', icon: <Pin size={13} />, onClick: act(() => toolbar.togglePin(msg)), accent: msg.isPinned },
+            stickerable && {
+                label: msg.attachment.variant === 'sticker' ? 'Save sticker' : 'Save as sticker',
+                icon: <Sticker size={13} />,
+                onClick: act(saveSticker),
+            },
             toolbar.toggleBookmark && {
                 label: bookmarked ? 'Remove from saved' : 'Save message',
                 icon: <Bookmark size={13} style={{ fill: bookmarked ? 'currentColor' : 'none' }} />,

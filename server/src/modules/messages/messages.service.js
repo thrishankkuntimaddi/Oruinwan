@@ -366,7 +366,10 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     const preview = isText && message.payload?.ciphertext
         ? { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv, ...(message.payload.keyVersion ? { keyVersion: message.payload.keyVersion } : {}) }
         : null;
-    const kindLabel = ATTACHMENT_LABELS[type] || null;
+    const variant = message.attachments?.[0]?.variant;
+    const kindLabel = (type === 'image' && variant === 'sticker' && '🏷️ Sticker')
+        || (type === 'image' && variant === 'gif' && '🎞️ GIF')
+        || ATTACHMENT_LABELS[type] || null;
 
     // @handles resolve against the channel's own members (works for personal
     // workspaces without a company too); @here / @channel address everyone.
@@ -824,6 +827,9 @@ async function getUserDMSessions(userId, workspaceId) {
 function messagePreviewLabel(lastMsg) {
     if (!lastMsg) return 'No messages yet';
     const t = lastMsg.type;
+    const variant = lastMsg.attachments?.[0]?.variant;
+    if (t === 'image' && variant === 'sticker') return '🏷️ Sticker';
+    if (t === 'image' && variant === 'gif') return '🎞️ GIF';
     if (t === 'image') return '📷 Photo';
     if (t === 'video') return '🎬 Video';
     if (t === 'voice' || t === 'audio') return '🎵 Voice note';

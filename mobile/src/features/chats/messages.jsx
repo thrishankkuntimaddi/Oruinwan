@@ -26,9 +26,11 @@ import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
 import { MentionSuggestions, MicButton, RecordingBar, SmartReplies, canRecordVoice, useVoiceRecorder } from './composerExtras.jsx';
 import { useTranslations } from './translate.js';
 import { Info } from 'lucide-react';
-import { Smile, Type } from 'lucide-react';
+import { Smile, Sticker, Type } from 'lucide-react';
 import { applyFormat, insertAt, insertLink } from './composerFormat.js';
 import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
+import { StickerSheet } from '../stickers/StickerSheet.jsx';
+import { canSaveAsSticker, saveFromAttachment } from '../stickers/stickers.js';
 import { SWIPE_TRIGGER, useRowGestures } from './messageGestures.js';
 import { ScheduleSheet } from './ScheduleSheet.jsx';
 import { clearDraft, draftFor, saveDraft } from './drafts.js';
@@ -573,7 +575,8 @@ export function MessageList({
     () =>
       items.flatMap((m) => {
         if (m.state === 'deleted' || m.pending) return [];
-        const media = (m.attachments || []).filter((f) => ['image', 'video'].includes(previewKind(f)));
+        // Stickers aren't photos: they stay out of the swipe-through viewer.
+        const media = (m.attachments || []).filter((f) => ['image', 'video'].includes(previewKind(f)) && f.variant !== 'sticker');
         const author = m.author || directory?.[m.authorId];
         // The viewer shows who sent it and when, and can go back to the message.
         for (const f of media) fileMeta.set(f, { messageId: m.id, authorName: m.authorId === me ? 'You' : author?.name || 'Someone', at: m.at });
@@ -697,6 +700,18 @@ export function MessageActions({
     onCopyLink && !message.pending && { icon: Link2, label: 'Copy link', run: onCopyLink },
     onShare && !message.pending && { icon: Share2, label: 'Share…', run: onShare },
     onPin && { icon: Pin, label: message.pinned ? 'Unpin from conversation' : 'Pin to conversation', run: onPin },
+    !message.pending && message.state !== 'deleted' && canSaveAsSticker(message.attachments?.[0]) && {
+      icon: Sticker,
+      label: message.attachments[0].variant === 'sticker' ? 'Save sticker' : 'Save as sticker',
+      run: async () => {
+        try {
+          const { existed } = await saveFromAttachment(message.attachments[0]);
+          toast(existed ? 'Already in your stickers' : 'Saved to your stickers');
+        } catch (err) {
+          toast(err?.message || "The sticker couldn't be saved.", 'danger');
+        }
+      },
+    },
     onSave && { icon: Bookmark, label: message.saved ? 'Remove from saved' : 'Save for later', run: onSave },
     onRemind && { icon: BellRing, label: 'Remind me about this', run: onRemind },
     readable && message.text && message.type !== 'checklist' && onTranslate && { icon: Languages, label: 'Translate', run: onTranslate },
@@ -788,6 +803,8 @@ export function Composer({
   mentions = null, recent = null, onVoice = null, quote = null, onCancelQuote = null, onSchedule = null, directory = null, me = null, scheduleRef = null, draftConv = null,
   // Slash commands: the actions here (see slash.jsx, phoneCommands). Null turns them off.
   commands = null,
+  // Sends a sticker or GIF (an attachment that is already stored). Null hides the sticker button.
+  onSticker = null,
 }) {
   // Unsent text is kept per conversation on this device (Drafts & sent lists it).
   const draftWs = useSession((s) => s.workspaceId);
@@ -874,6 +891,7 @@ export function Composer({
   // Formatting row (shown on demand, so the composer stays one line) and the emoji sheet.
   const [formatting, setFormatting] = useState(false);
   const [emoji, setEmoji] = useState(false);
+  const [stickers, setStickers] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const sendPress = useRef(null);
   const overlayRef = useRef(null);
@@ -1158,6 +1176,18 @@ export function Composer({
             >
               <Icon as={Smile} size={18} />
             </button>
+            {onSticker && !editing && (
+              <button
+                type="button"
+                aria-label="Stickers and GIFs"
+                title="Stickers and GIFs"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => setStickers(true)}
+                className="pressable mb-1 grid h-8 w-8 shrink-0 place-items-center self-end rounded-full text-text-2"
+              >
+                <Icon as={Sticker} size={18} />
+              </button>
+            )}
           </div>
           {showMic ? (
             <MicButton onClick={voice.start} />
@@ -1230,6 +1260,7 @@ export function Composer({
           applyEdit(insertAt(text, s, end, e));
         }}
       />
+      {onSticker && <StickerSheet open={stickers} onClose={() => setStickers(false)} onSend={onSticker} />}
     </div>
   );
 }

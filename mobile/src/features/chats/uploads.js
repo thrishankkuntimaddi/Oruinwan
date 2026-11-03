@@ -47,6 +47,7 @@ export function useUploads(key) {
 async function run(id) {
   const job = jobs.get(id);
   if (!job) return;
+  if (job.ready) return sendReady(id);
   const { file, conv, key, threadOf, size: sizeOf } = job;
   const controller = new AbortController();
   job.controller = controller;
@@ -140,6 +141,53 @@ export function sendFiles({ key, conv, threadOf, me, files }) {
     queued += 1;
   }
   return queued;
+}
+
+// A file that is already stored (a sticker, or a GIF copied from GIPHY): just send it.
+async function sendReady(id) {
+  const { ready, conv, key, threadOf } = jobs.get(id);
+  patchItem(key, id, { pending: true, failed: false, error: null, upload: null });
+  const previous = turns.get(key) || Promise.resolve();
+  let release;
+  const mine = new Promise((r) => {
+    release = r;
+  });
+  turns.set(key, previous.then(() => mine));
+  try {
+    await previous;
+    const saved = await api().sendAttachment(conv, ready, { parentId: threadOf || null, clientTempId: id });
+    setQueryData(key, (d) => (d && !d.items.some((m) => m.id === saved.id) ? { ...d, items: [...d.items, saved] } : d));
+    removeItem(key, id);
+    if (threadOf) invalidate(`messages:${conv.id}`);
+  } catch (err) {
+    // `upload` routes "Tap to retry" back here (useConversation retry → retryUpload).
+    patchItem(key, id, { pending: false, failed: true, error: err?.message || "The sticker couldn't be sent.", upload: { progress: 0, failed: true } });
+  } finally {
+    release();
+  }
+}
+
+/** Sends an attachment that is already stored (a sticker or GIF) as its own message. */
+export function sendStoredAttachment({ key, conv, threadOf, me, attachment }) {
+  if (!attachment?.url) return;
+  const id = uid('st');
+  jobs.set(id, { ready: attachment, conv, key, threadOf });
+  set(key, (list) => [
+    ...list,
+    {
+      id,
+      convId: conv.id,
+      authorId: me,
+      text: '',
+      state: 'attachment',
+      at: new Date().toISOString(),
+      reactions: {},
+      parentId: threadOf || null,
+      pending: true,
+      attachments: [{ ...attachment, type: 'image' }],
+    },
+  ]);
+  sendReady(id);
 }
 
 export function retryUpload(id) {

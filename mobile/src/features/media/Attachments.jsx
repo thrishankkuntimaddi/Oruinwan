@@ -7,6 +7,7 @@ import { Spinner } from '../../ui/Feedback.jsx';
 import { cx } from '../../ui/cx.js';
 import { extOf, fileIconKind, fitBox, formatBytes, formatDuration, previewKind } from '../../lib/files.js';
 import { openFile, useMediaUrl } from './media.js';
+import { stickerBox } from '../../../../platform/media/stickerMaker.js';
 
 /** The conversation's photos and videos (MessageList provides it), so the viewer swipes through all of them. */
 export const ConversationMedia = createContext(null);
@@ -47,6 +48,29 @@ function Progress({ upload, onCancel, inline = false }) {
   );
 }
 
+/** A sticker: no frame, at sticker size, see-through parts showing the chat. */
+function Sticker({ file, upload, onCancel }) {
+  const { url, retry, retried, error } = useMediaUrl(file);
+  const [loaded, setLoaded] = useState(false);
+  const box = stickerBox(file.width, file.height, 150);
+  return (
+    <div className="relative" style={{ width: box.width, height: box.height }} data-testid="sticker-attachment">
+      {url && !error && (
+        <img
+          src={url}
+          alt="Sticker"
+          draggable={false}
+          onLoad={() => setLoaded(true)}
+          onError={() => !retried && retry()}
+          className={cx('h-full w-full object-contain transition-opacity', loaded ? 'opacity-100' : 'opacity-0')}
+        />
+      )}
+      {!loaded && <span className="skeleton absolute inset-0 rounded-2xl" aria-hidden />}
+      <Progress upload={upload} onCancel={onCancel} />
+    </div>
+  );
+}
+
 function Photo({ file, siblings, upload, onCancel }) {
   const { url, retry, retried, error } = useMediaUrl(file);
   const [loaded, setLoaded] = useState(false);
@@ -68,6 +92,11 @@ function Photo({ file, siblings, upload, onCancel }) {
           />
         )}
         {!loaded && <span className="skeleton absolute inset-0" aria-hidden />}
+        {file.variant === 'gif' && (
+          <span className="absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 text-[10px] font-bold tracking-wider text-white" aria-hidden>
+            GIF
+          </span>
+        )}
       </button>
       <Progress upload={upload} onCancel={onCancel} />
     </div>
@@ -165,13 +194,14 @@ function FileCard({ file, upload, onCancel }) {
 export function Attachments({ files, upload, onCancel, className }) {
   const gallery = useContext(ConversationMedia);
   if (!files?.length) return null;
-  const own = files.filter((f) => ['image', 'video'].includes(previewKind(f)));
+  const own = files.filter((f) => ['image', 'video'].includes(previewKind(f)) && f.variant !== 'sticker');
   const media = gallery && own.length && own.every((f) => gallery.includes(f)) ? gallery : own;
   return (
     <div className={cx('mt-1 flex flex-col items-start gap-1.5', className)}>
       {files.map((f, i) => {
         const kind = previewKind(f);
         const props = { file: f, siblings: media, upload, onCancel };
+        if (kind === 'image' && f.variant === 'sticker') return <Sticker key={i} {...props} />;
         if (kind === 'image') return <Photo key={i} {...props} />;
         if (kind === 'video') return <Video key={i} {...props} />;
         if (kind === 'audio') return <Audio key={i} {...props} />;

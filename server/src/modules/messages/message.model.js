@@ -24,7 +24,7 @@ const AttachmentSchema = new mongoose.Schema({
   thumbnail: String,   
   width: Number,       // pixels, when known (images/videos), to reserve space before load
   height: Number,
-  variant: { type: String, enum: ['video_note', 'screen_recording'], default: undefined },
+  variant: { type: String, enum: ['video_note', 'screen_recording', 'sticker', 'gif'], default: undefined },
 }, { _id: false });
 
 // Plaintext metadata of an integration card (GitHub / Jira). The human summary

@@ -8,6 +8,8 @@ export const useToast = () => {
     if (!ctx) throw new Error('useToast must be used within a ToastProvider');
     return ctx;
 };
+/** The toast API, or null outside a ToastProvider (for components also rendered on their own). */
+export const useOptionalToast = () => useContext(ToastContext) || null;
 
 const MAX_VISIBLE = 4;
 

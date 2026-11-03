@@ -484,6 +484,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
           mentions={mentions.composer}
           recent={recent}
           onVoice={canPost ? (file) => convo.sendFiles([file]) : null}
+          onSticker={canPost && !blocked ? convo.sendSticker : null}
           disabled={readOnly || blocked}
           disabledReason={blocked ? (status.blocked ? 'You blocked this person. Unblock them from the ⋮ menu to send messages.' : "You can't send messages to this person.") : 'Only admins can post in this channel.'}
           initial={draft}
@@ -860,6 +861,7 @@ export function ThreadScreen({ kind, convId, messageId, draft = '' }) {
         assistants={assistants}
         mentions={mentions.composer}
         onVoice={(file) => convo.sendFiles([file])}
+        onSticker={info?.locked ? null : convo.sendSticker}
         initial={draft}
         editText={tools.editing?.text || ''}
         editing={Boolean(tools.editing)}

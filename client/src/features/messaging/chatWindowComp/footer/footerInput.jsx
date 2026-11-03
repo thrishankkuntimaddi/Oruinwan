@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Code, Bold, Italic, Link, List, Smile, Mic, SendHorizontal, Paperclip } from "lucide-react";
+import { Code, Bold, Italic, Link, List, Smile, Mic, SendHorizontal, Paperclip, Sticker } from "lucide-react";
 import EmojiPicker from "./emojiPicker";
+import StickerPicker from "../../../stickers/StickerPicker";
 import AttachMenu from "./attachMenu";
 import VoiceRecorder from "./VoiceRecorder";
 import TurndownService from "turndown";
@@ -99,6 +100,8 @@ export default function FooterInput({
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
+  const stickerRef = useRef(null);
+  const [showStickers, setShowStickers] = useState(false);
   const editableRef = useRef(null);
   const [hasText, setHasText] = useState(false);
 
@@ -228,10 +231,15 @@ export default function FooterInput({
       if (attachRef.current && !attachRef.current.contains(event.target) && showAttach) {
         setShowAttach(false);
       }
+      // The sticker maker opens as a dialog over the page: clicks there keep the panel open.
+      if (stickerRef.current && !stickerRef.current.contains(event.target) && showStickers
+        && !event.target.closest?.('[data-testid="sticker-maker"], [data-testid="square-crop"]')) {
+        setShowStickers(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmoji, showAttach, setShowEmoji, setShowAttach]);
+  }, [showEmoji, showAttach, showStickers, setShowEmoji, setShowAttach]);
 
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
@@ -831,7 +839,7 @@ export default function FooterInput({
                 icon={<Smile size={16} />}
                 title="Emoji"
                 active={showEmoji}
-                onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); setShowAttach(false); }}
+                onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); setShowAttach(false); setShowStickers(false); }}
               />
               {showEmoji && (
                 <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>
@@ -840,6 +848,23 @@ export default function FooterInput({
               )}
             </div>
 
+            {/* Stickers and GIFs: each one is sent as its own message. */}
+            {onSendAttachment && !blocked && (
+              <div style={{ position: 'relative' }} ref={stickerRef}>
+                <ToolBtn
+                  icon={<Sticker size={16} />}
+                  title="Stickers & GIFs"
+                  active={showStickers}
+                  onClick={(e) => { e.stopPropagation(); if (disabled) return; setShowStickers(!showStickers); setShowEmoji(false); setShowAttach(false); }}
+                />
+                {showStickers && (
+                  <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>
+                    <StickerPicker onSend={(attachment) => onSendAttachment(attachment)} onClose={() => setShowStickers(false)} />
+                  </div>
+                )}
+              </div>
+            )}
+
             {}
             {(onAttach || onCreatePoll || onCreateChecklist || onSendAttachment) && (
             <div style={{ position: 'relative' }} ref={attachRef}>
@@ -847,7 +872,7 @@ export default function FooterInput({
                 icon={<Paperclip size={16} />}
                 title="Attach"
                 active={showAttach}
-                onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); setShowEmoji(false); }}
+                onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); setShowEmoji(false); setShowStickers(false); }}
               />
               {showAttach && (
                 <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>

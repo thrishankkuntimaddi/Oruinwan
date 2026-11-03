@@ -8,7 +8,7 @@ import { on, toast } from '../../lib/bus.js';
 import { mapChecklist, mapPoll, mapReactions, mapReactorNames } from '../../data/live/adapter.chats.js';
 import { mentionsAI } from '../../lib/aiMention.js';
 import { withTranscripts } from '../../lib/aiPeople.js';
-import { cancelUpload, retryUpload, sendFiles, useUploads } from './uploads.js';
+import { cancelUpload, retryUpload, sendFiles, sendStoredAttachment, useUploads } from './uploads.js';
 import { enqueue, isNetworkError, isOffline, retryQueued, useQueuedMessages } from '../../data/outbox.js';
 
 /** Several reactions per person, each emoji once: tapping one I gave removes it, another adds it. */
@@ -283,6 +283,7 @@ export function useConversation(conv, { threadOf, name, agentId = null } = {}) {
     retry: (m) => (m.queued ? retryQueued(m.id) : m.upload ? retryUpload(m.id) : send(m.text, { retryId: m.id })),
     /** Uploads files and sends each one as its own message. */
     sendFiles: (files) => sendFiles({ key, conv, threadOf, me, files }),
+    sendSticker: (attachment) => sendStoredAttachment({ key, conv, threadOf, me, attachment }),
     cancelUpload,
     react,
     remove,
