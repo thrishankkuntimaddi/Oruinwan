@@ -13,13 +13,13 @@ import { adoptDeviceId } from '../../data/live/http.js';
 
 describe('call numbers', () => {
   it('come from the server, with 10 / 30 as fallbacks', () => {
-    expect(callFullText(6)).toBe('This call is full — 6 people on the free plan');
+    expect(callFullText(6)).toBe('This call is full — 6 people on your plan');
     expect(callFullText()).toBe(CALL_FULL);
     expect(CALL_FULL).toContain('10 people');
-    expect(timeLimitEndedText(45)).toContain("free plan's 45-minute limit");
+    expect(timeLimitEndedText(45)).toContain("your plan's 45-minute limit");
     expect(TIME_LIMIT_ENDED).toContain('30-minute');
-    expect(timeWarningText({ minutesLeft: 5, maxMinutes: 20 })).toBe('5 minutes left — free plan calls end at 20 minutes');
-    expect(timeWarningText({ minutesLeft: 5, maxMinutes: null })).toBe('5 minutes left — free plan calls end at 30 minutes');
+    expect(timeWarningText({ minutesLeft: 5, maxMinutes: 20 })).toBe('5 minutes left — calls on your plan end at 20 minutes');
+    expect(timeWarningText({ minutesLeft: 5, maxMinutes: null })).toBe('5 minutes left — calls on your plan end at 30 minutes');
   });
 });
 

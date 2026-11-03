@@ -6,7 +6,7 @@
  */
 
 jest.mock('../planService', () => ({
-    cachedWorkspacePlan: jest.fn(async (id) => (id === 'corp' ? { plan: 'company', exempt: true } : { plan: 'free', exempt: false })),
+    cachedWorkspacePlan: jest.fn(async (id) => (id === 'corp' ? { plan: 'company', exempt: true } : id === 'prows' ? { plan: 'pro', exempt: false } : { plan: 'free', exempt: false })),
     userPlan: jest.fn(async (id) => (id === 'employee' ? { plan: 'company', exempt: true } : { plan: 'free', exempt: false })),
 }));
 
@@ -96,4 +96,10 @@ describe('the gateway choke point', () => {
         await gateway.rerank({ query: 'q', docs: [] }, { userId: 'u1', workspaceId: 'w1' });
         expect((await quota.peek({ userId: 'u1', workspaceId: 'w1' })).userUsed).toBe(0);
     });
+});
+
+test('a free person inside a Pro workspace gets the Pro per-person allowance', async () => {
+    for (let i = 0; i < 60; i += 1) await quota.consume({ userId: 'u9', workspaceId: 'prows', now: NOW });
+    const usage = await quota.peek({ userId: 'u9', workspaceId: 'prows', now: NOW });
+    expect(usage).toMatchObject({ userUsed: 60, userMax: 100, workspaceMax: 2000 });
 });

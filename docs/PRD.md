@@ -24,7 +24,7 @@ are searchable in one place — privately: messages are end-to-end encrypted.
 ### Goals
 
 1. One place for a team's communication and work, on every device, with one account.
-2. Private by default: message content is end-to-end encrypted; the server never reads it.
+2. Private by default: message content is encrypted on the device with a key per conversation. The server stores a sealed copy of each key (for AI agents and account recovery), so we say "encrypted", never "zero-knowledge"; self-hosters hold that key themselves.
 3. Familiar: people who know Slack, WhatsApp, Notion or Google Calendar feel at home in minutes.
 4. Free for small teams; self-hostable for organisations that need to own their data.
 5. AI that helps inside the work (summaries, drafting, answering from the team's knowledge), not a
@@ -162,11 +162,20 @@ conversations are in [CONVERSATIONS.md](CONVERSATIONS.md).
 
 ## 5. Plans and limits
 
-The Free plan's limits are enforced by the server (`server/src/shared/plans/`) and shown in the apps
-(Settings → Plan & usage). Self-hosted servers can change every limit. Pro and Enterprise are
-planned. Current Free limits include: workspaces per person, people per workspace, channels, active
-tasks, notes per template, AI requests per person and per workspace per day, devices, call size.
-See `client/src/pages/pricing/plans.js` for the published list.
+Three plans, every feature in each; they differ in limits, support and who runs it. Full detail,
+prices and the sales process: [Business model](BUSINESS_MODEL.md).
+
+- **Free** ($0): workspaces per person, people per workspace, channels, active tasks, notes per
+  template, AI requests per person and per workspace per day, devices and call size are limited.
+- **Pro** ($5 per member a month yearly, $6 monthly): higher limits for everyone in the workspace;
+  switched on by the team after payment (no online checkout yet).
+- **Enterprise** (custom): set up by the Oruinwan team on the customer's servers or cloud, or a
+  dedicated instance; no limits, single sign-on, company console, priority support.
+
+Limits are enforced by the server (`server/src/shared/plans/`) and shown in the apps (Settings → Plan
+& usage). Self-hosted servers can change every limit. R-PLAN-1: reaching a limit refuses only the new
+addition and says how to upgrade; nothing existing is deleted or hidden. Published numbers:
+`client/src/pages/pricing/plans.js` (web) and `mobile/src/features/plan/planText.js` (phone).
 
 ## 6. Quality requirements (non-functional)
 

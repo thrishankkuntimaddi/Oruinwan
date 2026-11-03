@@ -4,8 +4,8 @@
  * Plans and their limits — the single source of truth.
  *
  *   free         the plan every individual account and its workspaces start on
- *   pro          coming soon (higher limits)
- *   enterprise   coming soon (no limits)
+ *   pro          paid, per member (higher limits); switched on by the operator after payment
+ *   enterprise   contract (no limits); set up by the Oruinwan team (docs/BUSINESS_MODEL.md)
  *   company      company accounts and company workspaces: never limited by these numbers
  *
  * A limit of `null` means unlimited. Keys are the `limit` values the API returns
@@ -61,7 +61,7 @@ const DEFAULT_PLANS = {
     pro: {
         id: 'pro',
         name: 'Pro',
-        comingSoon: true,
+        comingSoon: false,
         limits: {
             'workspaces.create': 10,
             'workspaces.join': 20,
@@ -74,11 +74,11 @@ const DEFAULT_PLANS = {
             'tasks.perWorkspace': 10000,
             'tasks.selfCreated': null,
             'tasks.assignedToOthers': null,
-            'ai.userDaily': 500,
-            'ai.workspaceDaily': 5000,
+            'ai.userDaily': 100, // ~$0.011 a request on the server key: see docs/BUSINESS_MODEL.md (unit economics)
+            'ai.workspaceDaily': 2000,
         },
     },
-    enterprise: { id: 'enterprise', name: 'Enterprise', comingSoon: true, limits: { ...UNLIMITED } },
+    enterprise: { id: 'enterprise', name: 'Enterprise', comingSoon: false, limits: { ...UNLIMITED } },
     company: { id: 'company', name: 'Company', comingSoon: false, limits: { ...UNLIMITED } },
 };
 
@@ -153,14 +153,26 @@ function publicPlans(env = process.env) {
     });
 }
 
-function limitMessage(key, max) {
+/** Display name of a plan id ('free' → 'Free'). */
+function planName(plan) {
+    return (DEFAULT_PLANS[normalizePlan(plan)] || DEFAULT_PLANS.free).name;
+}
+
+/** What to do next when a plan's limit is reached. */
+function upgradeLine(plan = 'free') {
+    return normalizePlan(plan) === 'free'
+        ? 'Upgrade to Pro for more room, or talk to us about Enterprise.'
+        : 'Talk to us about Enterprise for custom limits.';
+}
+
+function limitMessage(key, max, plan = 'free') {
     const words = LABELS[key] ? LABELS[key].noun(max) : `${max} ${key}`;
-    return `You've reached the free plan limit: ${words}. Pro and Enterprise are coming soon.`;
+    return `You've reached the ${planName(plan)} plan limit: ${words}. ${upgradeLine(plan)}`;
 }
 
 /** The body every PLAN_LIMIT refusal (HTTP 403 or socket) carries. */
 function planLimitBody(key, { max, used, plan = 'free', message } = {}) {
-    const text = message || limitMessage(key, max);
+    const text = message || limitMessage(key, max, plan);
     return {
         success: false,
         code: 'PLAN_LIMIT',
@@ -189,5 +201,5 @@ class PlanLimitError extends Error {
 module.exports = {
     UPGRADE_URL, LIMIT_KEYS, LABELS, DEFAULT_PLANS,
     getPlans, limitsFor, limitOf, publicPlans, normalizePlan, isUnlimitedServer,
-    limitMessage, planLimitBody, PlanLimitError,
+    limitMessage, planLimitBody, PlanLimitError, planName, upgradeLine,
 };

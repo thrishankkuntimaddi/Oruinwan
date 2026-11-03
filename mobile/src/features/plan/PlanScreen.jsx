@@ -13,7 +13,7 @@ import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { TEMPLATES } from '../notes/templates.js';
 import { openPricing, usePlan } from './plan.js';
-import { COMING_SOON, EXEMPT_TEXT, PLAN_CARDS, SALES_EMAIL, planName, resetText, templateKey, templateUsage } from './planText.js';
+import { COMING_SOON, EXEMPT_TEXT, PLAN_CARDS, SALES_EMAIL, enterpriseEmail, planName, resetText, templateKey, templateUsage, upgradeEmail } from './planText.js';
 
 function UsageBar({ used, max, atLimit }) {
   const pct = max ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -76,13 +76,13 @@ function PlanCards({ current, workspaceName }) {
                 ))}
               </ul>
               {!on && p.id === 'pro' && (
-                <Button className="mt-3" size="sm" variant="secondary" icon={Rocket} onClick={() => mail('Notify me: Oruinwan Pro', `Please let me know when Pro is available for ${workspaceName || 'my workspace'}.`)}>
-                  Notify me
+                <Button className="mt-3" size="sm" icon={Rocket} onClick={() => { const e = upgradeEmail(workspaceName); mail(e.subject, e.body); }}>
+                  Upgrade to Pro
                 </Button>
               )}
               {!on && p.id === 'enterprise' && (
-                <Button className="mt-3" size="sm" icon={Mail} onClick={() => mail('Oruinwan Enterprise', `We'd like to talk about Enterprise for ${workspaceName || 'our organisation'}.`)}>
-                  Contact sales
+                <Button className="mt-3" size="sm" variant="secondary" icon={Mail} onClick={() => { const e = enterpriseEmail(workspaceName); mail(e.subject, e.body); }}>
+                  Talk to us
                 </Button>
               )}
             </div>
@@ -161,7 +161,7 @@ export function PlanScreen() {
                 <p className="mt-3 text-sm text-text-2">{EXEMPT_TEXT}</p>
               ) : (
                 <>
-                  <p className="mt-3 text-sm text-text-2">{COMING_SOON}</p>
+                  {(plan.plan || 'free') === 'free' && <p className="mt-3 text-sm text-text-2">{COMING_SOON}</p>}
                   {plan.plans.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       {plan.plans.map((p) => (
@@ -173,7 +173,7 @@ export function PlanScreen() {
                           )}
                         >
                           {p.name}
-                          {p.comingSoon ? ' · coming soon' : ''}
+
                         </span>
                       ))}
                     </div>

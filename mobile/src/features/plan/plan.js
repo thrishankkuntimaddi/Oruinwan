@@ -90,7 +90,7 @@ export function bindPlan() {
     // Someone I invited couldn't join: they reached their own free-plan limit.
     on('plan:limit_reached', (p) => {
       const who = p?.username || 'Someone you invited';
-      toast(p?.message || `${who} couldn't join ${p?.workspaceName || 'your workspace'}: they reached their free plan limit.`, 'warning');
+      toast(p?.message || `${who} couldn't join ${p?.workspaceName || 'your workspace'}: they reached their plan limit.`, 'warning');
     }),
   ];
   return () => {

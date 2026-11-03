@@ -12,10 +12,11 @@ import PlatformTabs from './PlatformTabs';
 import AIConsole from './AIConsole';
 import FAQ from './FAQ';
 import LandingFooter from './LandingFooter';
-import { CAPABILITIES, FEATURES, REPO_URL, SECURITY, STEPS } from './data';
+import { CAPABILITIES, FEATURES, REPO_URL, SECURITY, STEPS, WHY } from './data';
 import { scrollToId, useRevealAll } from './hooks';
 import AppLink from './AppLink';
 import PlanCards from '../pricing/PlanCards';
+import { enterpriseHref } from '../pricing/plans';
 import './landing.css';
 
 // Release files keep the same names in every release (.github/workflows/apps.yml), so these
@@ -52,7 +53,7 @@ const Landing = () => {
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         const prevTitle = document.title;
-        document.title = `${BRAND.name} · Team chat, tasks and AI in one workspace`;
+        document.title = `${BRAND.name} · One workspace for every conversation`;
         if (!window.location.hash) window.scrollTo(0, 0);
         return () => {
             document.documentElement.classList.remove('public-scroll');
@@ -98,8 +99,8 @@ const Landing = () => {
                                 <span className="orw-gloss-text">Every conversation.</span>
                             </h1>
                             <p className="orw-hero__sub" data-reveal style={{ '--d': '160ms' }}>
-                                Chat, tasks, notes, huddles and AI in one place with <strong>{BRAND.name}</strong>, on the web,
-                                desktop, phone and tablet.
+                                Channels, DMs, huddles, tasks, notes and AI live in one workspace with <strong>{BRAND.name}</strong>,
+                                so your team follows one place instead of five apps. On the web, desktop, phone and tablet.
                             </p>
                             <div className="orw-hero__ctas" data-reveal style={{ '--d': '240ms' }}>
                                 {user ? (
@@ -140,6 +141,24 @@ const Landing = () => {
                         ))}
                     </ul>
                 </div>
+
+                {/* ── Why one workspace ───────────────────────────────── */}
+                <section id="why" className="orw-section" aria-label="Why one workspace">
+                    <div className="orw-container">
+                        <SectionHead center eyebrow="Why Oruinwan"
+                            title={<>Follow one workspace.<br /><span className="orw-gloss-text">Not five apps.</span></>}
+                            lead="Most teams talk in one app, meet in another, track work in a third and ask AI in a fourth, then lose the thread between them. In Oruinwan every conversation lives in one workspace, and everything that comes out of it stays linked to it." />
+                        <div className="orw-sec" data-reveal>
+                            {WHY.map(({ icon: Icon, title, desc }) => (
+                                <div className="orw-sec__item" key={title}>
+                                    <div className="orw-sec__icon"><Icon size={20} aria-hidden="true" /></div>
+                                    <h3>{title}</h3>
+                                    <p>{desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
 
                 {/* ── Platform ─────────────────────────────────────────── */}
                 <section id="platform" className="orw-section" aria-label="Platform">
@@ -283,14 +302,14 @@ const Landing = () => {
                 {/* ── Pricing teaser ───────────────────────────────────── */}
                 <section id="pricing" className="orw-section orw-section--slab" aria-label="Pricing">
                     <div className="orw-container">
-                        <SectionHead center eyebrow="Pricing" title="Free for teams. Bigger plans soon."
-                            lead="Every feature is in the Free plan. Pro and Enterprise, with bigger limits, longer calls, more AI and admin controls, are coming soon." />
+                        <SectionHead center eyebrow="Pricing" title="Start free. Grow into Pro."
+                            lead="Every feature is in the Free plan. Pro gives growing teams more room for $5 per member a month, and with Enterprise we set Oruinwan up for your whole company." />
                         <div className="prc-root">
                             <PlanCards site />
                         </div>
                         <p className="orw-plans__note" data-reveal>
-                            <Link to="/pricing">See every Free plan limit</Link>
-                            {' · '}Running a company? <AppLink to="/register-company">Register for the company console</AppLink>
+                            <Link to="/pricing">Compare every limit</Link>
+                            {' · '}Running a company? <a href={enterpriseHref()}>Talk to us about Enterprise</a>
                         </p>
                     </div>
                 </section>

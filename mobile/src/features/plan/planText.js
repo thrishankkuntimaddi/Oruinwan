@@ -1,18 +1,18 @@
 // Free-plan limits: the words and small decisions, kept free of React and the session so the
 // huddle client, the adapter tests and the screens can all share them.
 
-export const LIMIT_TITLE = 'Free plan limit reached';
-export const COMING_SOON = 'Pro and Enterprise are coming soon.';
+export const LIMIT_TITLE = 'Plan limit reached';
+export const COMING_SOON = 'Upgrade to Pro for more room, or talk to us about Enterprise.';
 export const EXEMPT_TEXT = 'Your company plan has no free-plan limits.';
 // The call numbers come from the server (huddle:error max, huddle:roster timeLimit, GET /api/plan);
 // these are only the fallbacks when an answer leaves them out.
 export const DEFAULT_CALL_PEOPLE = 10;
 export const DEFAULT_CALL_MINUTES = 30;
 const positive = (n, fallback) => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n) : fallback);
-/** "This call is full — 10 people on the free plan" with the server's number. */
-export const callFullText = (max) => `This call is full — ${positive(max, DEFAULT_CALL_PEOPLE)} people on the free plan`;
+/** "This call is full — 10 people on your plan" with the server's number. */
+export const callFullText = (max) => `This call is full — ${positive(max, DEFAULT_CALL_PEOPLE)} people on your plan`;
 /** The call ended at the plan's time limit, with the server's number of minutes. */
-export const timeLimitEndedText = (minutes) => `This call ended at the free plan's ${positive(minutes, DEFAULT_CALL_MINUTES)}-minute limit. Your notes are saved in the meeting notes.`;
+export const timeLimitEndedText = (minutes) => `This call ended at your plan's ${positive(minutes, DEFAULT_CALL_MINUTES)}-minute limit. Your notes are saved in the meeting notes.`;
 export const CALL_FULL = callFullText();
 export const TIME_LIMIT_ENDED = timeLimitEndedText();
 
@@ -39,19 +39,19 @@ export const isBlocked = (plan, key) => Boolean(plan && !plan.exempt && plan.blo
 const maxOf = (plan, key) => plan?.limits?.[key] ?? plan?.items?.find((i) => i.key === key)?.max ?? null;
 
 const NOTES = {
-  'workspaces.create': (m) => `You've created ${m ?? 'the most'} workspaces, the free plan's limit.`,
-  'workspaces.join': (m) => `You've joined ${m ?? 'the most'} workspaces, the free plan's limit.`,
-  'members.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} people (including pending invites), the free plan's limit.`,
-  'channels.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} channels besides #general, #random and its project channel, the free plan's limit.`,
-  'tasks.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} active tasks, the free plan's limit. Finish or close some to add more.`,
-  'tasks.selfCreated': (m) => `You have ${m ?? 'the most'} active tasks for yourself, the free plan's limit. Finish some to add more.`,
-  'tasks.assignedToOthers': (m) => `You have ${m ?? 'the most'} active tasks assigned to others, the free plan's limit. Finish some to add more.`,
+  'workspaces.create': (m) => `You've created ${m ?? 'the most'} workspaces, your plan's limit.`,
+  'workspaces.join': (m) => `You've joined ${m ?? 'the most'} workspaces, your plan's limit.`,
+  'members.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} people (including pending invites), your plan's limit.`,
+  'channels.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} channels besides #general, #random and its project channel, your plan's limit.`,
+  'tasks.perWorkspace': (m) => `This workspace has ${m ?? 'the most'} active tasks, your plan's limit. Finish or close some to add more.`,
+  'tasks.selfCreated': (m) => `You have ${m ?? 'the most'} active tasks for yourself, your plan's limit. Finish some to add more.`,
+  'tasks.assignedToOthers': (m) => `You have ${m ?? 'the most'} active tasks assigned to others, your plan's limit. Finish some to add more.`,
 };
 
 /** A short line explaining why a create action is off ("This workspace has 10 channels…"). */
 export function blockedNote(plan, key) {
   const m = maxOf(plan, key);
-  return (NOTES[key] || (() => "You've reached the free plan's limit here."))(m);
+  return (NOTES[key] || (() => "You've reached your plan's limit here."))(m);
 }
 
 /**
@@ -104,12 +104,12 @@ export function aiCounterText(q) {
   return `${left} of ${q.userMax} AI requests left today`;
 }
 
-/** The banner for huddle:time_warning: "5 minutes left — free plan calls end at 30 minutes". */
+/** The banner for huddle:time_warning: "5 minutes left — calls on your plan end at 30 minutes". */
 export function timeWarningText(w) {
   if (!w) return null;
   const n = Number(w.minutesLeft) || 0;
   if (n <= 1) return '1 minute left';
-  return `${n} minutes left — free plan calls end at ${positive(w.maxMinutes, DEFAULT_CALL_MINUTES)} minutes`;
+  return `${n} minutes left — calls on your plan end at ${positive(w.maxMinutes, DEFAULT_CALL_MINUTES)} minutes`;
 }
 
 /** The plans, for the cards on Plan & usage (the same as the website's /pricing). */
@@ -124,16 +124,28 @@ export const PLAN_CARDS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 'Coming soon',
-    note: 'For growing teams',
-    features: ['Up to 100 people per workspace', 'Unlimited channels and notes', 'Huddles up to 25 people, 5 hours', '500 AI requests a day', 'Everything in Free'],
+    price: '$5',
+    note: 'Per member / month, billed yearly · $6 monthly',
+    features: ['Up to 100 people per workspace', 'Unlimited channels and notes', 'Huddles up to 25 people, 5 hours', '100 AI requests a day (unlimited with your own key)', 'Up to 10 signed-in devices', 'Everything in Free'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 'Contact us',
-    note: 'For organisations',
-    features: ['No limits', 'Single sign-on (SSO) and admin controls across workspaces', 'Compliance tools and longer retention', 'Priority support', 'Everything in Pro'],
+    price: 'Custom',
+    note: 'Set up for your company',
+    features: ['We install and configure it on your servers or cloud, or host it for you', 'Single sign-on, your domain and the company console', 'No plan limits, unlimited devices', 'Onboarding and priority support', 'Everything in Pro'],
   },
 ];
+
+/** The upgrade request email (the team switches the workspace to Pro once it is paid). */
+export const upgradeEmail = (workspaceName) => ({
+  subject: 'Upgrade to Oruinwan Pro',
+  body: `Hi Oruinwan team,\n\nI would like to upgrade ${workspaceName || 'my workspace'} to Pro.\n\nAccount email (workspace owner):\nNumber of members:\nBilling: yearly ($5 per member per month) / monthly ($6 per member per month)\nBilling country:\n\nThanks`,
+});
+
+/** The Enterprise enquiry email. */
+export const enterpriseEmail = (workspaceName) => ({
+  subject: 'Oruinwan Enterprise enquiry',
+  body: `Hi Oruinwan team,\n\nWe would like to talk about Oruinwan Enterprise${workspaceName ? ` for ${workspaceName}` : ''}.\n\nCompany:\nYour name and role:\nNumber of people:\nWhere should it run: our own servers / our cloud / hosted by Oruinwan\nSign-in we use:\nPhone number (optional):\n\nThanks`,
+});
 export const SALES_EMAIL = 'admin@poelys.com';

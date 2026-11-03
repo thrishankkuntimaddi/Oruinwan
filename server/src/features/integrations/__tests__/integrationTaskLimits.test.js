@@ -48,7 +48,7 @@ test('over the limits: no task, the reason on the channel card and in the result
     expect(out.createdTasks).toEqual([]);
     expect(out.skippedTasks).toEqual([expect.objectContaining({ title: 'Fix login', limit: 'tasks.perWorkspace' })]);
     const card = bot.upsertCard.mock.calls[0][0].card;
-    expect(card.extra.planNote).toMatch(/^No task created: You've reached the free plan limit: 300 active tasks per workspace/);
+    expect(card.extra.planNote).toMatch(/^No task created: You've reached the Free plan limit: 300 active tasks per workspace/);
 });
 
 test('a task that arrives already done is not active and is not checked', async () => {

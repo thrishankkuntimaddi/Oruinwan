@@ -54,7 +54,7 @@ test('creating a third workspace answers 403 PLAN_LIMIT', async () => {
     expect(passed).toBe(false);
     expect(res.statusCode).toBe(403);
     expect(res.body).toMatchObject({ code: 'PLAN_LIMIT', limit: 'workspaces.create', max: 2, used: 2, plan: 'free', upgradeUrl: '/pricing' });
-    expect(res.body.message).toBe("You've reached the free plan limit: 2 workspaces you created. Pro and Enterprise are coming soon.");
+    expect(res.body.message).toBe("You've reached the Free plan limit: 2 workspaces you created. Upgrade to Pro for more room, or talk to us about Enterprise.");
 });
 
 test('a counting failure lets the request through', async () => {

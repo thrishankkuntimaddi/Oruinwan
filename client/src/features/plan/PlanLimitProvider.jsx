@@ -27,7 +27,7 @@ export default function PlanLimitProvider() {
         const onLimitReached = (payload) => {
             const who = payload?.username || 'Someone you invited';
             const where = payload?.workspaceName ? ` ${payload.workspaceName}` : ' your workspace';
-            const text = payload?.message || `${who} couldn't join${where}: they have reached a free plan limit.`;
+            const text = payload?.message || `${who} couldn't join${where}: they have reached a plan limit.`;
             showToast?.(text, 'warning', 9000, { title: 'Free plan limit', key: `plan-limit:${payload?.workspaceId || ''}:${payload?.userId || ''}` });
         };
         socket.on('huddle:error', onHuddleError);

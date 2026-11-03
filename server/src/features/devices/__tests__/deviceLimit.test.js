@@ -17,6 +17,9 @@ describe('deviceLimitFor', () => {
     expect(devices.deviceLimitFor({}, { DEVICE_LIMIT: '2' })).toBe(2);
     expect(devices.deviceLimitFor({}, { DEVICE_LIMIT: '0' })).toBe(0);
     expect(devices.deviceLimitFor({}, { DEVICE_LIMIT: 'lots' })).toBe(4);
+    expect(devices.deviceLimitFor({ plan: 'pro' }, {})).toBe(10);
+    expect(devices.deviceLimitFor({ plan: 'pro' }, { PRO_DEVICE_LIMIT: '6' })).toBe(6);
+    expect(devices.deviceLimitFor({ plan: 'enterprise' }, {})).toBe(0);
   });
 
   test('company accounts are not limited unless COMPANY_DEVICE_LIMIT is set', () => {

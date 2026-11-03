@@ -2,12 +2,13 @@ import {
     Hash, MessageCircle, GitBranch, Headphones, ListChecks, NotebookPen, Bot, Plug, Columns2,
     Workflow, FolderOpen, Search, Video, MessagesSquare, KanbanSquare, Captions, Map, PenTool,
     ShieldCheck, KeyRound, ScrollText, Lock, Users, EyeOff, Fingerprint, MonitorSmartphone, HardDriveUpload,
-    SquareSlash, CalendarDays, Clock, Presentation,
+    SquareSlash, CalendarDays, Clock, Presentation, Link2, Inbox, Sparkles, Wallet,
 } from 'lucide-react';
 import BRAND from '../../shared/brand';
 
 // `id` scrolls to a section of the landing page; `to` opens another page.
 export const NAV_LINKS = [
+    { id: 'why', label: 'Why Oruinwan' },
     { id: 'platform', label: 'Features' },
     { id: 'security', label: 'Security' },
     { id: 'download', label: 'Download' },
@@ -53,6 +54,14 @@ export const MOCK_CHANNELS = [
         ],
         typing: 'Product lead is typing',
     },
+];
+
+// ── Why one workspace (the product's angle) ─────────────────────────────
+export const WHY = [
+    { icon: Inbox, title: 'One place to follow', desc: 'Channels, DMs, groups, threads, huddles and agent chats sit in one sidebar. Nothing to check in another app.' },
+    { icon: Link2, title: 'Work stays linked to the talk', desc: 'Turn a message, note or file into a task, and the task points back to the conversation. Meeting recaps post to the channel that held the call.' },
+    { icon: Sparkles, title: 'AI where the conversation is', desc: 'Mention @ai in any chat to summarise, draft or make tasks, with Claude, ChatGPT, Gemini, Grok or your own model.' },
+    { icon: Wallet, title: 'One app, one bill', desc: 'Chat, calls, tasks, notes and AI in one subscription, instead of paying for a chat app, a meeting app, a task board and AI seats.' },
 ];
 
 // ── Marquee ────────────────────────────────────────────────────────────
@@ -182,7 +191,9 @@ export const STEPS = [
 // ── FAQ ────────────────────────────────────────────────────────────────
 export const FAQ = [
     { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a free workspace for teams: chat, threads, huddles, tasks, notes and AI in one place, on the web, desktop, phone and tablet.` },
-    { q: 'Is it really free?', a: 'Yes. The Free plan has every feature, with limits sized for small teams: up to 4 signed-in devices, 2 workspaces you create and 2 you join, the owner plus 10 members per workspace, huddles of up to 10 people for 30 minutes, and 50 AI requests per person and 300 AI requests per workspace per day. Pro and Enterprise, with bigger limits and admin controls, are coming soon.' },
+    { q: 'Is it really free?', a: 'Yes. The Free plan has every feature, with limits sized for small teams: up to 4 signed-in devices, 2 workspaces you create and 2 you join, the owner plus 10 members per workspace, huddles of up to 10 people for 30 minutes, and 50 AI requests per person and 300 AI requests per workspace per day.' },
+    { q: 'What do Pro and Enterprise cost?', a: 'Pro is $5 per member per month billed yearly, or $6 monthly. It raises every limit: 100 members, unlimited channels, calls of 25 people for up to 5 hours and twice the AI (unlimited with your own AI key). Enterprise is priced for your company: we install and configure Oruinwan on your servers or cloud (or host it for you), connect your single sign-on and domain, and support your team. Use “Talk to us” on the pricing page.' },
+    { q: 'How do I upgrade to Pro?', a: 'Choose Upgrade to Pro on the pricing page and send the short email it opens. We reply with an invoice, and switch your workspace to Pro as soon as it is paid, usually the same business day. Nothing in your workspace moves or changes, the limits just go up.' },
     { q: 'How do I sign in?', a: 'With your email and password, or with Google. New accounts verify their email address, and you can add passkeys and two-factor authentication in Settings.' },
     { q: 'How do I bring my team in?', a: 'Create a workspace with the setup wizard, then share a team invite link anyone on your team can use, or send one-time links that work once. You can also invite people by email.' },
     { q: 'Are messages encrypted?', a: `Yes. Messages in channels and DMs are encrypted on your device with per-conversation keys, and stay encrypted in transit and at rest. ${BRAND.name}'s server keeps a sealed copy of your key, protected by a server master key, so your devices unlock automatically after you sign in and AI agents can answer in encrypted conversations. Messages are never shown to admins. To hold that key yourself, run your own server.` },

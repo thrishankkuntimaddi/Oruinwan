@@ -287,7 +287,7 @@ function NotesList({ section }) {
                 </span>
                 <span className="mt-2 text-[14px] font-medium">{t.label}</span>
                 <span className={cx('text-xs', full ? 'text-warning' : 'text-text-2')}>
-                  {full ? `${usage.used} of ${usage.max} used on the free plan` : t.hint}
+                  {full ? `${usage.used} of ${usage.max} used on your plan` : t.hint}
                 </span>
               </button>
             );

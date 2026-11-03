@@ -77,7 +77,7 @@ export function PlanUsageView({ plan, workspaceName, onSeePlans }) {
                 <div style={{ padding: 16 }} className="pl-plan-head">
                     <span className="pl-plan-name" data-testid="plan-name">{planName}</span>
                     <Badge tone="accent">Current plan</Badge>
-                    <span className="pl-plan-soon">{COMING_SOON_LINE}</span>
+                    {(plan?.plan || "free") === "free" && <span className="pl-plan-soon">{COMING_SOON_LINE}</span>}
                     <span style={{ marginLeft: 'auto' }}>
                         <Button size="sm" icon={Sparkles} onClick={onSeePlans}>See plans</Button>
                     </span>

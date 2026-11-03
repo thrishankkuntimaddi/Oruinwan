@@ -12,9 +12,9 @@ describe('plan definitions', () => {
         });
     });
 
-    test('pro and enterprise are coming soon; enterprise and company are unlimited', () => {
+    test('pro and enterprise are available; enterprise and company are unlimited', () => {
         const list = plans.publicPlans({});
-        expect(list.map((p) => [p.id, p.comingSoon])).toEqual([['free', false], ['pro', true], ['enterprise', true]]);
+        expect(list.map((p) => [p.id, p.comingSoon])).toEqual([['free', false], ['pro', false], ['enterprise', false]]);
         expect(plans.limitOf('enterprise', 'ai.userDaily', {})).toBeNull();
         expect(plans.limitOf('company', 'workspaces.create', {})).toBeNull();
         expect(plans.limitOf('pro', 'ai.userDaily', {})).toBeGreaterThan(50);
@@ -46,7 +46,7 @@ describe('plan definitions', () => {
         expect(err.code).toBe('PLAN_LIMIT');
         expect(err.body).toEqual(expect.objectContaining({
             code: 'PLAN_LIMIT', limit: 'workspaces.create', max: 2, used: 2, plan: 'free', upgradeUrl: '/pricing',
-            message: "You've reached the free plan limit: 2 workspaces you created. Pro and Enterprise are coming soon.",
+            message: "You've reached the Free plan limit: 2 workspaces you created. Upgrade to Pro for more room, or talk to us about Enterprise.",
         }));
     });
 
@@ -57,5 +57,11 @@ describe('plan definitions', () => {
         expect(sendPlanLimit(res, new plans.PlanLimitError('channels.perWorkspace', { max: 10, used: 10 }))).toBe(true);
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json.mock.calls[0][0]).toMatchObject({ code: 'PLAN_LIMIT', limit: 'channels.perWorkspace', max: 10, used: 10 });
+    });
+
+    test('limit messages name the plan and the next step', () => {
+        expect(plans.limitMessage('huddles.participants', 25, 'pro'))
+            .toBe("You've reached the Pro plan limit: 25 people in a call. Talk to us about Enterprise for custom limits.");
+        expect(plans.upgradeLine('free')).toBe('Upgrade to Pro for more room, or talk to us about Enterprise.');
     });
 });

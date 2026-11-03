@@ -1,8 +1,22 @@
 # Plans and limits
 
-Every individual account and its workspaces are on the **Free** plan. **Pro** and **Enterprise** are
-coming soon (`comingSoon: true`). Company accounts (a user with a company) and company workspaces
-(a workspace with a `company`) are **never** limited by the free plan; they report plan `company`.
+Every individual account and its workspaces start on **Free**. **Pro** and **Enterprise** are sold
+(`comingSoon: false`) and switched on by the operator after payment, by setting `users.plan` /
+`workspaces.plan` (runbook: [Business model §7](../BUSINESS_MODEL.md#7-operating-the-plans-runbook)).
+Company accounts (a user with a company) and company workspaces (a workspace with a `company`) are
+**never** limited; they report plan `company`. A workspace with plan `enterprise` is unlimited too.
+
+### Pro rules
+
+- Pro limits (defaults): workspaces 10 / 20, members 101 (owner + 100), channels and notes unlimited,
+  calls 25 people for 300 minutes, 10,000 active tasks, AI 100 per person and 2,000 per workspace a day.
+- **AI inside a paid workspace:** the per-person allowance is the better of the person's own plan
+  and the workspace's plan, so a Free account in a Pro workspace gets 100 a day there
+  (`aiQuota.scopesFor`, and `ai.userDaily` in `GET /api/plan`).
+- **Calls:** when a plan allows more people than `HUDDLE_MAX_PARTICIPANTS` (default 10), the call
+  uses the higher technical cap `HUDDLE_MAX_PARTICIPANTS_UNLIMITED` (default 25).
+- **Devices:** Pro accounts may sign in on `PRO_DEVICE_LIMIT` devices (default 10); Enterprise
+  accounts have no device limit.
 
 Source of truth: `server/src/shared/plans/plans.js`. Checks: `planService.js` (called by the route
 guards in `planGuards.js`), AI counters: `aiQuota.js`, call timer: `huddleTimer.js`.
@@ -54,7 +68,7 @@ Every refused addition answers **HTTP 403**:
   "used": 2,
   "plan": "free",
   "upgradeUrl": "/pricing",
-  "message": "You've reached the free plan limit: 2 workspaces you created. Pro and Enterprise are coming soon.",
+  "message": "You've reached the Free plan limit: 2 workspaces you created. Upgrade to Pro for more room, or talk to us about Enterprise.",
   "success": false,
   "error": "…same as message…"
 }

@@ -48,6 +48,27 @@ export const ARTICLES = [
         ],
     },
     {
+        id: 'plans-upgrade',
+        topic: 'getting-started',
+        title: 'Plans and upgrading (Free, Pro, Enterprise)',
+        summary: 'Every plan has every feature. Pro gives a growing team more room; with Enterprise we set Oruinwan up for your company.',
+        keywords: 'plan plans pricing price free pro enterprise upgrade limit limits billing invoice pay payment seats members devices sso setup contact sales',
+        appPath: '/pricing',
+        appLabel: 'See plans',
+        body: [
+            '**Free** costs nothing and has every feature, with limits sized for small teams. **Pro** is **$5 per member a month** billed yearly ($6 monthly) and raises every limit: owner + 100 members, unlimited channels and notes, calls of 25 people for up to 5 hours, 10 signed-in devices and 100 AI requests per person a day. **Enterprise** is priced for your company: we install and configure Oruinwan on your servers or cloud (or host it for you), connect single sign-on and your domain, and support your team.',
+            '**Upgrade to Pro**',
+            { steps: [
+                'Open **Settings → Plan & usage** (or the pricing page) and choose **Upgrade to Pro**.',
+                'Send the email it opens, with your workspace name, the owner’s email and how many people you have.',
+                'We reply with an invoice or a payment link. Once it is paid we switch your workspace to Pro, usually the same business day.',
+            ] },
+            { note: 'Everyone inside a Pro workspace gets Pro limits there. If a plan ends, nothing is deleted: you just can’t add more than the Free limits allow. AI agents you connect with your own API key are unlimited on every plan.' },
+            '**Enterprise**',
+            'Choose **Talk to us** on the pricing page, or write to admin@poelys.com with your company, team size and where Oruinwan should run. We reply within two business days, plan the setup with you, and send a fixed proposal.',
+        ],
+    },
+    {
         id: 'invite-people',
         topic: 'getting-started',
         title: 'Invite people to a workspace',

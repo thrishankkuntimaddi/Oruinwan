@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Bell, Check, Sparkles, Building2, Leaf } from 'lucide-react';
+import { ArrowRight, Check, Sparkles, Building2, Leaf, Mail } from 'lucide-react';
 import AppLink from '../landing/AppLink';
-import { PLANS, notifyHref } from './plans';
+import { PLANS, upgradeHref, enterpriseHref } from './plans';
 import './pricing.css';
 
 const ICONS = { free: Leaf, pro: Sparkles, enterprise: Building2 };
@@ -22,14 +22,16 @@ const PlanCards = ({ site = false, currentPlan = null }) => {
                 const Icon = ICONS[plan.id] || Leaf;
                 const available = plan.status === 'available';
                 const current = currentPlan === plan.id;
+                const featured = plan.id === 'pro';
                 return (
-                    <article key={plan.id} className={`prc-card${available ? ' prc-card--featured' : ''}`} data-reveal style={{ '--d': `${i * 90}ms` }}
+                    <article key={plan.id} className={`prc-card${featured ? ' prc-card--featured' : ''}`} data-reveal style={{ '--d': `${i * 90}ms` }}
                         aria-labelledby={`prc-${plan.id}`}>
                         <div className="prc-card__top">
                             <span className="prc-card__icon"><Icon size={19} aria-hidden="true" /></span>
-                            {available
-                                ? <span className="prc-tag prc-tag--good">{current ? 'Your plan' : 'Available now'}</span>
-                                : <span className="prc-tag">Coming soon</span>}
+                            {current && <span className="prc-tag prc-tag--good">Your plan</span>}
+                            {!current && available && <span className="prc-tag prc-tag--good">Available now</span>}
+                            {!current && plan.id === 'pro' && <span className="prc-tag prc-tag--good">Most popular</span>}
+                            {!current && plan.id === 'enterprise' && <span className="prc-tag">Set up for you</span>}
                         </div>
                         <h3 id={`prc-${plan.id}`} className="prc-card__name">{plan.name}</h3>
                         <p className="prc-card__tagline">{plan.tagline}</p>
@@ -51,11 +53,17 @@ const PlanCards = ({ site = false, currentPlan = null }) => {
                                     ? <span className={btn(false)} aria-disabled="true">Your current plan</span>
                                     : <Link to="/workspaces" className={btn(true)}>Open your workspaces <ArrowRight size={15} aria-hidden="true" /></Link>
                             )}
-                            {!available && (
-                                <a href={notifyHref(plan.name)} className={btn(false)}>
-                                    <Bell size={14} aria-hidden="true" /> Notify me
+                            {plan.status === 'request' && !current && (
+                                <a href={upgradeHref()} className={btn(true)}>
+                                    {plan.cta.label} <ArrowRight size={15} aria-hidden="true" />
                                 </a>
                             )}
+                            {plan.status === 'contact' && !current && (
+                                <a href={enterpriseHref()} className={btn(false)}>
+                                    <Mail size={14} aria-hidden="true" /> {plan.cta.label}
+                                </a>
+                            )}
+                            {!available && current && <span className={btn(false)} aria-disabled="true">Your current plan</span>}
                         </div>
                     </article>
                 );

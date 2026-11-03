@@ -19,7 +19,7 @@ import { getCreatePolicy } from '../pages/workspaceSelectComponents/createPolicy
 
 const REFUSAL = {
     code: 'PLAN_LIMIT', limit: 'workspaces.create', max: 2, used: 2, plan: 'free', upgradeUrl: '/pricing',
-    message: "You've reached the free plan limit: 2 workspaces you created. Pro and Enterprise are coming soon.",
+    message: "You've reached the free plan limit: 2 workspaces you created. Upgrade to Pro for more room, or talk to us about Enterprise.",
 };
 
 const PLAN = {
@@ -109,9 +109,9 @@ describe('Upgrade dialog', () => {
         const onSeePlans = vi.fn();
         const onClose = vi.fn();
         render(<UpgradeDialog open message="You've reached the free plan limit: 10 channels." onSeePlans={onSeePlans} onClose={onClose} />);
-        expect(screen.getByRole('dialog', { name: 'Free plan limit reached' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Plan limit reached' })).toBeInTheDocument();
         expect(screen.getByText("You've reached the free plan limit: 10 channels.")).toBeInTheDocument();
-        expect(screen.getByText('Pro and Enterprise are coming soon.')).toBeInTheDocument();
+        expect(screen.getByText('Upgrade to Pro for more room, or talk to us about Enterprise.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /See plans/ }));
         expect(onSeePlans).toHaveBeenCalled();
         fireEvent.click(screen.getAllByRole('button', { name: 'Close' })[0]);
@@ -148,10 +148,10 @@ describe('Upgrade dialog', () => {
 });
 
 describe('Plan & usage section', () => {
-    it('shows the plan name, coming soon, and a progress bar per item and template', () => {
+    it('shows the plan name, the upgrade line, and a progress bar per item and template', () => {
         render(<PlanUsageView plan={PLAN} workspaceName="Acme" onSeePlans={() => {}} />);
         expect(screen.getByTestId('plan-name')).toHaveTextContent('Free');
-        expect(screen.getByText('Pro and Enterprise are coming soon.')).toBeInTheDocument();
+        expect(screen.getByText('Upgrade to Pro for more room, or talk to us about Enterprise.')).toBeInTheDocument();
         const bars = screen.getAllByRole('progressbar');
         // 5 items + 7 note templates
         expect(bars).toHaveLength(12);
@@ -217,7 +217,7 @@ describe('Workspace create policy', () => {
     it('follows GET /api/plan and falls back to 2 created workspaces', () => {
         const personal = { userType: 'personal' };
         expect(getCreatePolicy(personal, [], PLAN)).toMatchObject({ isLimitReached: true, canCreate: false });
-        expect(getCreatePolicy(personal, [], PLAN).limitMessage).toMatch(/free plan limit: 2 workspaces you created/);
+        expect(getCreatePolicy(personal, [], PLAN).limitMessage).toMatch(/Free plan limit: 2 workspaces you created/);
         expect(getCreatePolicy(personal, [], { ...PLAN, exempt: true }).isLimitReached).toBe(false);
         expect(getCreatePolicy(personal, [{ isOwner: true }, { isOwner: true }]).isLimitReached).toBe(true);
         expect(getCreatePolicy(personal, [{ isOwner: true }]).isLimitReached).toBe(false);

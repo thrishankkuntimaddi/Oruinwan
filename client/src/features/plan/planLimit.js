@@ -9,8 +9,8 @@
 
 export const PLAN_LIMIT_CODE = 'PLAN_LIMIT';
 export const UPGRADE_URL = '/pricing';
-export const COMING_SOON_LINE = 'Pro and Enterprise are coming soon.';
-export const UPGRADE_TITLE = 'Free plan limit reached';
+export const COMING_SOON_LINE = 'Upgrade to Pro for more room, or talk to us about Enterprise.';
+export const UPGRADE_TITLE = 'Plan limit reached';
 
 /** True for a PLAN_LIMIT body (HTTP 403 JSON or a socket refusal payload). */
 export function isPlanLimitBody(body) {
@@ -29,8 +29,8 @@ export function isPlanLimitError(error) {
 export function planLimitMessage(body) {
     if (body?.message) return body.message;
     if (body?.error && typeof body.error === 'string') return body.error;
-    if (body?.max != null) return `You've reached the free plan limit (${body.max}). ${COMING_SOON_LINE}`;
-    return `You've reached a free plan limit. ${COMING_SOON_LINE}`;
+    if (body?.max != null) return `You've reached your plan's limit (${body.max}). ${COMING_SOON_LINE}`;
+    return `You've reached a plan limit. ${COMING_SOON_LINE}`;
 }
 
 // ── Event bus ────────────────────────────────────────────────────────────────
@@ -96,13 +96,13 @@ export function __resetPlanBusForTests() {
 
 /** Short human reason for each blockable action. */
 const BLOCK_REASONS = {
-    'workspaces.create': (max) => `You've created ${max} workspaces, the free plan limit.`,
-    'workspaces.join': (max) => `You've joined ${max} workspaces, the free plan limit.`,
-    'members.perWorkspace': (max) => `This workspace has ${max} people (including pending invites), the free plan limit.`,
-    'channels.perWorkspace': (max) => `This workspace has ${max} channels besides #general, #random and its project channel, the free plan limit.`,
-    'tasks.perWorkspace': (max) => `This workspace has ${max} active tasks, the free plan limit.`,
-    'tasks.selfCreated': (max) => `You have ${max} active tasks for yourself, the free plan limit.`,
-    'tasks.assignedToOthers': (max) => `You've assigned ${max} active tasks to others, the free plan limit.`,
+    'workspaces.create': (max) => `You've created ${max} workspaces, your plan's limit.`,
+    'workspaces.join': (max) => `You've joined ${max} workspaces, your plan's limit.`,
+    'members.perWorkspace': (max) => `This workspace has ${max} people (including pending invites), your plan's limit.`,
+    'channels.perWorkspace': (max) => `This workspace has ${max} channels besides #general, #random and its project channel, your plan's limit.`,
+    'tasks.perWorkspace': (max) => `This workspace has ${max} active tasks, your plan's limit.`,
+    'tasks.selfCreated': (max) => `You have ${max} active tasks for yourself, your plan's limit.`,
+    'tasks.assignedToOthers': (max) => `You've assigned ${max} active tasks to others, your plan's limit.`,
     'ai.userDaily': (max) => `You've used all ${max} AI requests for today.`,
     'ai.workspaceDaily': (max) => `This workspace has used all ${max} AI requests for today.`,
 };
@@ -117,12 +117,12 @@ export function planBlock(plan, keys) {
     const key = list.find((k) => plan.blocked?.[k]);
     if (!key) return { blocked: false, key: null, reason: '', message: '' };
     const max = plan.limits?.[key] ?? plan.items?.find((i) => i.key === key)?.max;
-    const reason = (BLOCK_REASONS[key] || (() => 'You have reached a free plan limit.'))(max);
+    const reason = (BLOCK_REASONS[key] || (() => 'You have reached a plan limit.'))(max);
     return {
         blocked: true,
         key,
         reason: `${reason} ${COMING_SOON_LINE}`,
-        message: `You've reached the free plan limit. ${reason} ${COMING_SOON_LINE}`,
+        message: `You've reached your plan's limit. ${reason} ${COMING_SOON_LINE}`,
     };
 }
 

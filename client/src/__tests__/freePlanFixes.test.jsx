@@ -62,9 +62,9 @@ describe('device id from the server', () => {
 });
 
 describe('plan copy', () => {
-    it('mentions the workspace AI limit and no longer sells "more devices"', () => {
+    it('mentions the workspace AI limit; Pro devices match the server (PRO_DEVICE_LIMIT 10)', () => {
         expect(FREE_LIMITS.find((l) => l.id === 'ai').value).toContain('300 per workspace per day');
-        expect(PLANS.find((p) => p.id === 'pro').features.join(' ')).not.toMatch(/devices/);
+        expect(PLANS.find((p) => p.id === 'pro').features.join(' ')).toContain('Signed-in devices: Up to 10 per person');
         expect(FAQ.map((f) => f.a).join(' ')).toContain('300 AI requests per workspace per day');
     });
 });

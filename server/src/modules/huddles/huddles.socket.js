@@ -582,13 +582,15 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
             // The registry checks it in the same step that adds the person (no await in between).
             const source = planSourceOf(ensured.huddle);
             const limits = await planLimits(source.workspaceId, { userId: source.userId });
-            const unlimited = !!limits?.exempt;
+            // Unlimited workspaces and plans that allow more people than the default cap (Pro: 25)
+            // use the server's higher technical cap.
+            const unlimited = !!limits?.exempt || (limits?.participants || 0) > registry.capFor(false);
             const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id, max: limits?.participants || null, device, unlimited, sharing });
             if (joined.error === 'PLAN_LIMIT') {
-                const { planLimitBody } = require('../../shared/plans/plans');
+                const { planLimitBody, planName, upgradeLine } = require('../../shared/plans/plans');
                 const body = planLimitBody('huddles.participants', { max: limits.participants, used: joined.used, plan: limits.plan });
                 return socket.emit('huddle:error', { huddleId, ...body,
-                    message: `This call is full: the free plan allows ${limits.participants} people in a call at once. Pro and Enterprise are coming soon.` });
+                    message: `This call is full: the ${planName(limits.plan)} plan allows ${limits.participants} people in a call at once. ${upgradeLine(limits.plan)}` });
             }
             if (joined.error === 'HUDDLE_FULL') {
                 return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.capFor(unlimited)} people).`);

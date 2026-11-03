@@ -17,7 +17,7 @@ export function getCreatePolicy(user, workspaces = [], plan = null) {
     const isCompanyMember = user?.companyRole === 'member' && user?.userType !== 'personal';
     const companyName = user?.companyName || 'your company';
     const limitMessage = isLimitReached
-        ? `You've reached the free plan limit: ${max} workspaces you created. ${COMING_SOON_LINE}`
+        ? `You've reached the Free plan limit: ${max} workspaces you created. ${COMING_SOON_LINE}`
         : '';
     return { isLimitReached, isCompanyMember, companyName, canCreate: !isLimitReached && !isCompanyMember, limitMessage, maxCreated: max };
 }

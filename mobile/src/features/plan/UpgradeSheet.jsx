@@ -39,7 +39,7 @@ export function UpgradeSheet() {
           <Icon as={Gauge} size="sm" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] leading-snug">{info?.message || "You've reached a free plan limit."}</p>
+          <p className="text-[15px] leading-snug">{info?.message || "You've reached a plan limit."}</p>
           {info?.max !== null && info?.max !== undefined && info?.used !== null && info?.used !== undefined && (
             <p className="mt-1.5 text-[13px] text-text-2 tabular-nums">
               {info.used} of {info.max} used

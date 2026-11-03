@@ -349,11 +349,17 @@ function parseLimit(raw) {
 /**
  * How many devices may be signed in at once (0 = no limit).
  *   individual accounts   DEVICE_LIMIT (default 4)
+ *   Pro accounts          PRO_DEVICE_LIMIT (default 10)
+ *   Enterprise accounts   not limited
  *   company accounts      not limited, unless COMPANY_DEVICE_LIMIT is set
  */
+const DEFAULT_PRO_DEVICE_LIMIT = 10;
+
 function deviceLimitFor(user, env = process.env) {
   const isCompany = user && (user.userType === 'company' || user.companyId);
   if (isCompany) return parseLimit(env.COMPANY_DEVICE_LIMIT) ?? 0;
+  if (user?.plan === 'enterprise') return 0;
+  if (user?.plan === 'pro') return parseLimit(env.PRO_DEVICE_LIMIT) ?? DEFAULT_PRO_DEVICE_LIMIT;
   return parseLimit(env.DEVICE_LIMIT) ?? DEFAULT_DEVICE_LIMIT;
 }
 

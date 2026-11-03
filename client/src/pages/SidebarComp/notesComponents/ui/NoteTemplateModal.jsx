@@ -176,7 +176,7 @@ export function TemplateCard({ tmpl, onSelect, compact = false, limit = null }) 
     const atLimit = !!limit && limit.max != null && limit.used >= limit.max;
     const choose = () => {
         if (atLimit) {
-            emitPlanLimit({ limit: 'notes.perTemplate', max: limit.max, used: limit.used, message: `You've reached the free plan limit: ${limit.max} notes from the ${tmpl.label} template in this workspace. ${COMING_SOON_LINE}` });
+            emitPlanLimit({ limit: 'notes.perTemplate', max: limit.max, used: limit.used, message: `You've reached your plan's limit: ${limit.max} notes from the ${tmpl.label} template in this workspace. ${COMING_SOON_LINE}` });
             return;
         }
         onSelect(tmpl);

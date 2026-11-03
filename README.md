@@ -4,7 +4,7 @@
 
 # Oruinwan
 
-**The free, open-source workspace for teams: chat, tasks, notes, huddles and AI, on web, desktop, phone and tablet.**
+**One workspace for every conversation. Channels, DMs, huddles, tasks, notes and AI in one open-source app, so your team follows one place instead of five.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/thrishankkuntimaddi/Oruinwan/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Oruinwan/actions/workflows/ci.yml)
@@ -47,7 +47,9 @@ Oruinwan is a workspace for teams. Each **workspace** has public and private cha
 
 It runs in the browser, as a desktop app for macOS, Windows and Linux, and as an app for Android phones and tablets (with split and wide layouts on larger screens). Phones that open the website get the same interface as the phone app, with notifications and call ringing, so iPhone users get the full phone experience in Safari. Every app talks to one Oruinwan server: use the hosted one at **[oruinwan.poelys.com](https://oruinwan.poelys.com)**, or run your own.
 
-Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Enterprise plans are coming soon.
+**Why one workspace.** Most teams talk in one app, meet in another, track work in a third and ask AI in a fourth, and the context is lost between them. In Oruinwan every conversation (channel, DM, group, thread, huddle, agent chat) lives in one workspace, and what comes out of it stays linked to it: a message becomes a task that points back to it, a call's recap is posted to the channel that held it, and `@ai` works inside any chat.
+
+Oruinwan is MIT-licensed. The **Free** plan has every feature; **Pro** ($5 per member a month, billed yearly) gives growing teams more room; with **Enterprise** we set Oruinwan up for your company on your servers or ours. See [Plans](#plans) and the [business model](docs/BUSINESS_MODEL.md).
 
 ---
 
@@ -100,21 +102,28 @@ Oruinwan is free and MIT-licensed. The Free plan has every feature; Pro and Ente
 
 ## Plans
 
-| | **Free** · available now | **Pro** · coming soon | **Enterprise** · coming soon |
-|---|---|---|---|
-| Who it's for | Small teams, every feature | Growing teams | Organisations |
-| Signed-in devices | Up to 4 per person | Up to 4 per person | Up to 4 per person |
-| Workspaces | Create 2, join 2 | More | Custom |
-| Members per workspace | Owner + 10 | More | Custom |
-| Channels | 10 besides the ones made with the workspace (#general, #random, your project) | More | Custom |
-| Huddles | Up to 10 people, 30 minutes | Longer calls, more people | Custom |
-| Notes | 2 per template, blank notes unlimited | More | Custom |
-| Tasks | 300 active per workspace; 30 for yourself + 30 assigned per person | More | Custom |
-| AI requests | 50 per person per day, 300 per workspace per day | More | Custom |
-| Backup | Encrypted backup to your Google Drive | ✓ | ✓ |
-| Admin controls, SSO, compliance | | | ✓ |
+Every plan has every feature. Plans differ in room, support and who runs it ([business model](docs/BUSINESS_MODEL.md)).
 
-Prices for Pro and Enterprise aren't set yet. To hear when they launch, email [admin@poelys.com](mailto:admin@poelys.com?subject=Notify%20me%3A%20Oruinwan%20Pro). The limits apply to individual accounts; company accounts and company workspaces are not limited (the device limit doesn't depend on the plan, and company accounts have none unless `COMPANY_DEVICE_LIMIT` is set). On your own server you can change or remove them ([Configurable limits](#configurable-limits)).
+| | **Free** | **Pro** | **Enterprise** |
+|---|---|---|---|
+| Price | $0, no card | **$5 per member / month** billed yearly, $6 monthly | Custom: setup + yearly licence |
+| Who it's for | Small teams getting started | Teams that run their work in one workspace | Companies that want it set up for them |
+| Signed-in devices | Up to 4 per person | Up to 10 per person | Unlimited |
+| Workspaces | Create 2, join 2 | Create 10, join 20 | Unlimited |
+| Members per workspace | Owner + 10 | Owner + 100 | Unlimited |
+| Channels | 10 besides the ones made with the workspace (#general, #random, your project) | Unlimited | Unlimited |
+| Huddles | Up to 10 people, 30 minutes | Up to 25 people, 5 hours | Up to 25 people, no time cap |
+| Notes | 2 per template, blank notes unlimited | Unlimited | Unlimited |
+| Tasks | 300 active per workspace; 30 for yourself + 30 assigned per person | 10,000 active per workspace | Unlimited |
+| AI on Oruinwan's key | 50 per person, 300 per workspace a day | 100 per person, 2,000 per workspace a day | Unlimited, or your own keys and model |
+| AI with your own key | Unlimited | Unlimited | Unlimited |
+| Backup | Encrypted backup to your Google Drive | ✓ | ✓ |
+| Support | Docs and issue tracker | Email, within one business day | Priority, named contact |
+| Setup | Self-serve | Self-serve, switched on by us after payment | Done by us: install on your servers or cloud (or hosted by us), single sign-on, your domain and email, onboarding |
+
+**Upgrade to Pro:** press *Upgrade to Pro* on the [pricing page](https://oruinwan.poelys.com/pricing) (or in Settings → Plan & usage) and send the email it opens; we reply with an invoice and switch your workspace on once it's paid, usually the same business day. **Enterprise:** press *Talk to us*, or write to [admin@poelys.com](mailto:admin@poelys.com?subject=Oruinwan%20Enterprise%20enquiry) with your company, team size and where it should run.
+
+Everyone inside a Pro workspace gets Pro limits in it. Downgrading never deletes anything; only new additions over a limit are refused. Company accounts (registered and approved through *Register company*) are on Enterprise terms. On your own server you can change or remove every limit ([Configurable limits](#configurable-limits)).
 
 ---
 
@@ -177,12 +186,13 @@ The desktop and phone apps connect to the server they were built for (`VITE_SERV
 
 ## Configurable limits
 
-The Free plan limits live in one server-side configuration, so a self-hosted server can change them:
+Every plan's limits live in one server-side configuration (`server/src/shared/plans/plans.js`), so a self-hosted server can change them:
 
 | Variable | Effect |
 |---|---|
 | `PLAN_LIMITS_JSON` | JSON that overrides individual plan limits (workspaces, members, channels, huddle size and length, notes, tasks, AI requests); the keys are documented in `server/.env.example` |
 | `DEVICE_LIMIT` | How many devices one account can be signed in on at once (default 4) |
+| `PRO_DEVICE_LIMIT` | The same for Pro accounts (default 10); Enterprise accounts have no device limit |
 | `ORUINWAN_UNLIMITED` | `true` turns every plan limit off |
 
 Workspaces that were already over a limit when it was introduced keep working; they just can't grow further.
@@ -399,6 +409,7 @@ Backend code follows the feature-module layout in `server/src/features` and `ser
 ## Documentation
 
 - [docs/ONBOARDING.md](docs/ONBOARDING.md): the onboarding and knowledge-transfer kit for new engineers (start here)
+- [docs/BUSINESS_MODEL.md](docs/BUSINESS_MODEL.md): the angle, Free / Pro / Enterprise, prices, how Pro is sold and switched on, Enterprise setup, unit economics
 - [docs/PRD.md](docs/PRD.md), [docs/HLD.md](docs/HLD.md), [docs/LLD.md](docs/LLD.md): product requirements, high-level and low-level design
 - [docs/PRODUCT_MAP.md](docs/PRODUCT_MAP.md): how every feature links, what runs underneath, and the ranked gaps
 - [docs/CONVERSATIONS.md](docs/CONVERSATIONS.md): the rules for channels, DMs, groups, threads and task discussions (who sees what, adding people, history)

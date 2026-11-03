@@ -65,9 +65,9 @@ describe('upgrade sheet', () => {
     render(<PlanLayer />);
     expect(screen.queryByTestId('upgrade-sheet')).toBeNull();
     act(() => emit('plan:limit', { code: 'PLAN_LIMIT', limit: 'workspaces.create', max: 2, used: 2, upgradeUrl: '/pricing', message: "You've reached the free plan limit: 2 workspaces you created." }));
-    expect(await screen.findByText('Free plan limit reached')).toBeTruthy();
+    expect(await screen.findByText('Plan limit reached')).toBeTruthy();
     expect(screen.getByText("You've reached the free plan limit: 2 workspaces you created.")).toBeTruthy();
-    expect(screen.getByText('Pro and Enterprise are coming soon.')).toBeTruthy();
+    expect(screen.getByText('Upgrade to Pro for more room, or talk to us about Enterprise.')).toBeTruthy();
     expect(screen.getByText('2 of 2 used')).toBeTruthy();
     fireEvent.click(screen.getByText('See plans'));
     expect(openExternal).toHaveBeenCalledWith('https://chat.example/pricing');
@@ -98,7 +98,7 @@ describe('Plan & usage', () => {
   it('shows the plan, usage bars with the at-limit state, notes per template, calls and AI today', async () => {
     render(<PlanScreen />);
     expect((await screen.findByTestId('plan-card')).textContent).toContain('Your planFree');
-    expect(screen.getByText('Pro and Enterprise are coming soon.')).toBeTruthy();
+    expect(screen.getByText('Upgrade to Pro for more room, or talk to us about Enterprise.')).toBeTruthy();
     expect(screen.getByTestId('plan-item-workspaces.create').textContent).toContain('1 of 2');
     const channels = screen.getByTestId('plan-item-channels.perWorkspace');
     expect(channels.textContent).toContain('10 of 10');
@@ -182,7 +182,7 @@ describe('free-plan call length', () => {
   afterEach(() => act(() => huddle.__resetHuddles()));
 
   it('words the warnings', () => {
-    expect(text.timeWarningText({ minutesLeft: 5, maxMinutes: 30 })).toBe('5 minutes left — free plan calls end at 30 minutes');
+    expect(text.timeWarningText({ minutesLeft: 5, maxMinutes: 30 })).toBe('5 minutes left — calls on your plan end at 30 minutes');
     expect(text.timeWarningText({ minutesLeft: 1, maxMinutes: 30 })).toBe('1 minute left');
     expect(text.timeWarningText(null)).toBeNull();
   });
@@ -193,7 +193,7 @@ describe('free-plan call length', () => {
     expect(useHuddle.getState().timeLimit).toEqual({ maxMinutes: 30, startedAt: 'a', endsAt: 'b' });
     expect(screen.queryByTestId('call-time-warning')).toBeNull();
     act(() => emit('huddle', { event: 'huddle:time_warning', payload: { huddleId: 'h1', minutesLeft: 5, maxMinutes: 30, endsAt: 'b', plan: 'free' } }));
-    expect(screen.getByTestId('call-time-warning').textContent).toContain('5 minutes left — free plan calls end at 30 minutes');
+    expect(screen.getByTestId('call-time-warning').textContent).toContain('5 minutes left — calls on your plan end at 30 minutes');
     act(() => emit('huddle', { event: 'huddle:time_warning', payload: { huddleId: 'h1', minutesLeft: 1, maxMinutes: 30 } }));
     expect(screen.getByTestId('call-time-warning').textContent).toContain('1 minute left');
     // Another call's warning is not mine.

@@ -308,7 +308,7 @@ cross-database writes non-atomic.
   everywhere) cannot be turned off; the daily digest is on by default.
 - **Logs and health:** pino JSON logs to Docker stdout; `GET /api/health` checks Mongo, Postgres and
   Redis. No metrics, tracing, error tracking or alerting.
-- **Plans:** Free (limits in `server/src/shared/plans/plans.js`), Pro and Enterprise "coming soon",
+- **Plans:** Free, Pro and Enterprise (limits in `server/src/shared/plans/plans.js`, prices and process in [BUSINESS_MODEL.md](BUSINESS_MODEL.md)); Pro is switched on manually after payment,
   Company unlimited. No payment provider is connected yet.
 
 ---

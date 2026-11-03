@@ -107,7 +107,7 @@ export default function UpdatesTab() {
             )}
 
             <Section title="Oruinwan">
-                <Row label="Plans" description="Oruinwan is free. Pro and Enterprise are coming soon.">
+                <Row label="Plans" description="Free, Pro ($5 per member a month) and Enterprise, set up for your company.">
                     <Button icon={Tag} onClick={() => navigate('/pricing')}>See plans</Button>
                 </Row>
             </Section>

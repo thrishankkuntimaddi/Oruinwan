@@ -56,6 +56,12 @@ async function buildPlan(userId, workspace) {
         const userScoped = key.startsWith('workspaces.') || key === 'ai.userDaily';
         limits[key] = userScoped || !wsLimits ? userLimits[key] : wsLimits[key];
     }
+    // Inside a paid workspace everyone gets its per-person AI allowance (same rule as aiQuota).
+    if (wsLimits && !wp.exempt) {
+        const own = userLimits['ai.userDaily'];
+        const viaWs = wsLimits['ai.userDaily'];
+        limits['ai.userDaily'] = own === null || viaWs === null ? null : Math.max(own, viaWs);
+    }
 
     const wsId = workspace ? String(workspace._id) : null;
     const [counts, seats, channels, tasks, byTemplate, ai] = await Promise.all([

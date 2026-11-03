@@ -53,7 +53,14 @@ async function scopesFor({ userId, workspaceId }) {
     }
     if (uid) {
         const up = await planService.userPlan(uid).catch(() => ({ plan: 'free', exempt: false }));
-        if (!up.exempt) user = { id: uid, max: plans.limitOf(up.plan, 'ai.userDaily'), plan: up.plan };
+        if (!up.exempt) {
+            // Inside a paid workspace everyone gets that plan's per-person allowance (Pro is per member).
+            const own = plans.limitOf(up.plan, 'ai.userDaily');
+            const viaWs = workspace ? plans.limitOf(workspace.plan, 'ai.userDaily') : own;
+            const better = own === null || viaWs === null ? null : Math.max(own, viaWs);
+            const plan = better === own ? up.plan : workspace.plan;
+            user = { id: uid, max: better, plan };
+        }
         else if (!wid) return { user: null, workspace: null, exempt: true };
     }
     return { user, workspace, exempt: false };
