@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { useAiLanding } from '../../app/aiFlight.js';
 import { AiEyes } from '../../app/AiEyes.jsx';
 import { pokeAi, setMood } from '../../app/aiMood.js';
+import { onLeft, useAiCorner } from '../../app/aiCorner.js';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -26,6 +27,8 @@ export function AiIsland({ transcript, title }) {
   const drag = useRef(null);
   const input = useRef(null);
   const [landingRef, landingStyle] = useAiLanding();
+  // Same side as the floating AI button (aiCorner.js).
+  const left = onLeft(useAiCorner((st) => st.corner));
     // Always the small button in the top-right corner: the full pill covered the messages.
   const compact = true;
 
@@ -60,7 +63,7 @@ export function AiIsland({ transcript, title }) {
 
   if (!open && compact) {
     return (
-      <div className="pointer-events-none absolute right-3 top-2 z-[5]">
+      <div className={cx('pointer-events-none absolute top-2 z-[5]', left ? 'left-3' : 'right-3')}>
         <button
           ref={landingRef}
           style={landingStyle}

@@ -121,7 +121,11 @@ export function fly(from, to, onLand) {
     const o = path(t, Math.hypot(r1.left - r0.left, cy1 - cy0));
     ghost.style.width = `${w}px`;
     ghost.style.height = `${h}px`;
-    ghost.style.transform = `translate(${cx - w / 2 + o.x}px, ${cy - h / 2 + o.y}px) rotate(${o.spin}deg) scale(${o.scale})`;
+    // Never off the screen: some paths swing out, and both ends often sit at its edge.
+    const room = (Math.max(1, o.scale) - 1) * Math.max(w, h) * 0.5 + 6;
+    const gx = Math.min(Math.max(cx - w / 2 + o.x, room), window.innerWidth - w - room);
+    const gy = Math.min(Math.max(cy - h / 2 + o.y, room), window.innerHeight - h - room);
+    ghost.style.transform = `translate(${gx}px, ${gy}px) rotate(${o.spin}deg) scale(${o.scale})`;
     a.style.opacity = String(1 - Math.min(1, Math.max(0, (t - 0.35) / 0.4)));
     b.style.opacity = String(Math.min(1, Math.max(0, (t - 0.35) / 0.4)));
     if (t < 1) frame = requestAnimationFrame(step);
