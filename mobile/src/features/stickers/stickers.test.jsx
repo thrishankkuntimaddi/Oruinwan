@@ -13,9 +13,16 @@ vi.mock('../../data/live/http.js', () => ({
   serverUrl: () => 'https://api.example',
 }));
 vi.mock('../../native/index.js', async (orig) => ({ ...(await orig()), clientPlatform: 'android' }));
-vi.mock('../media/media.js', () => ({ useMediaUrl: (f) => ({ url: f?.url ? `https://signed${f.url}` : null, retry: () => {}, retried: false, error: null }), openFile: vi.fn() }));
+vi.mock('../media/media.js', () => ({
+  useMediaUrl: (f) => ({ url: f?.url ? `https://signed${f.url}` : null, retry: () => {}, retried: false, error: null }),
+  openFile: vi.fn(),
+  openWithSystem: vi.fn(),
+  downloadFile: vi.fn(),
+}));
 
-const { __resetStickersForTests, canSaveAsSticker, groupByPack, saveFromAttachment } = await import('./stickers.js');
+const { __resetStickersForTests, canSaveAsSticker, filesToImport, groupByPack, noteStickerUsed, recentStickers, saveFromAttachment } = await import('./stickers.js');
+const { PackPicker } = await import('./StickerMaker.jsx');
+const { alphaFromMask, keptBox, strokesFor } = await import('../../../../platform/media/cutout.js');
 const { StickerSheet } = await import('./StickerSheet.jsx');
 const { Attachments } = await import('../media/Attachments.jsx');
 const { attachmentDoc } = await import('../../data/live/attachments.js');
@@ -81,5 +88,51 @@ describe('sticker messages', () => {
     cleanup();
     render(<Attachments files={[{ type: 'image', url: '/api/v2/uploads/file?path=g.webp', name: 'g.webp', mimeType: 'image/webp', variant: 'gif', width: 300, height: 200 }]} />);
     expect(screen.getByText('GIF')).toBeTruthy();
+  });
+});
+
+describe('sticker packs and import', () => {
+  it('unpacks a WhatsApp .wastickers pack, named from title.txt, skipping the tray icon', async () => {
+    const { zipSync } = await import('fflate');
+    const text = (t) => Uint8Array.from(t, (c) => c.charCodeAt(0));
+    const zip = zipSync({ 'title.txt': text('Office memes'), 'tray.png': new Uint8Array([1]), '1.webp': new Uint8Array([2]), '2.webp': new Uint8Array([3]) });
+    const items = await filesToImport([new File([zip], 'office.wastickers'), new File([new Uint8Array([4])], 'cat.png', { type: 'image/png' })]);
+    expect(items.map((i) => [i.file.name, i.pack])).toEqual([
+      ['1.webp', 'Office memes'],
+      ['2.webp', 'Office memes'],
+      ['cat.png', null],
+    ]);
+    expect(items[0].file.type).toBe('image/webp');
+  });
+
+  it('remembers recently sent stickers, newest first', () => {
+    localStorage.clear();
+    const list = [sticker('a'), sticker('b'), sticker('c')];
+    noteStickerUsed('b');
+    noteStickerUsed('c');
+    noteStickerUsed('b');
+    expect(recentStickers(list).map((s) => s.id)).toEqual(['b', 'c']);
+  });
+
+  it('lets you type a new pack name', async () => {
+    mockApi.get.mockResolvedValue({ stickers: [sticker('a', 'Cats')], giphy: false });
+    const onChange = vi.fn();
+    render(<PackPicker value="My stickers" onChange={onChange} />);
+    expect(await screen.findByRole('button', { name: 'Cats' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /New pack/ }));
+    expect(onChange).toHaveBeenLastCalledWith('');
+  });
+});
+
+describe('cut-out masks', () => {
+  it('keeps what was tapped, whichever way the model answers', () => {
+    // 2x2: the tapped top-left pixel is 0 in the raw mask, so the mask is flipped.
+    const m = alphaFromMask({ width: 2, height: 2, data: [0, 1, 1, 1] }, [{ x: 0.1, y: 0.1, mode: 'add' }]);
+    expect(Array.from(m.alpha)).toEqual([255, 0, 0, 0]);
+    expect(keptBox(m)).toEqual({ x: 0, y: 0, w: 1, h: 1 });
+  });
+
+  it('turns taps into keep / remove strokes', () => {
+    expect(strokesFor([{ x: 2, y: 0.5, mode: 'remove' }])).toEqual([{ brushMode: 2, point: [{ x: 1, y: 0.5 }], isCompleted: true }]);
   });
 });

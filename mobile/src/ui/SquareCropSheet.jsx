@@ -85,6 +85,7 @@ export function SquareCropSheet({ file, title = 'Crop picture', round = false, b
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
+          data-no-swipe
           className="relative mx-auto touch-none select-none overflow-hidden bg-surface-2"
           style={{ width: FRAME, height: FRAME }}
         >

@@ -7,6 +7,7 @@ const logger = require('../../../utils/logger');
 const requireAuth = require('../../shared/middleware/auth');
 const service = require('./stickers.service');
 const giphy = require('./giphy');
+const aiImage = require('./aiImage');
 const { fixFilenameEncoding } = require('../../modules/uploads/upload.controller');
 
 const router = express.Router();
@@ -24,6 +25,16 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: service.MAX_STICKER_BYTES, files: 1 },
 });
+// A photo to turn into an AI picture (up to 8 MB; it is not stored).
+const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
+const aiImageLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 6,
+    keyGenerator: (req) => req.user?.sub ?? ipKeyGenerator(req),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Making AI pictures too quickly, wait a moment.' },
+});
 
 function sendError(res, err, label) {
     if (err?.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'Stickers can be up to 5 MB', code: 'STICKER_TOO_LARGE' });
@@ -35,10 +46,36 @@ function sendError(res, err, label) {
 /** The library, and whether GIF search is available here. */
 router.get('/', requireAuth, async (req, res) => {
     try {
-        res.json({ stickers: await service.list(req.user.sub), giphy: giphy.enabled() });
+        res.json({ stickers: await service.list(req.user.sub), giphy: giphy.enabled(), aiImages: aiImage.enabled() });
     } catch (err) {
         sendError(res, err, 'list');
     }
+});
+
+/**
+ * A fun AI picture from a photo ("turn me into a cat"): multipart `file` + `style`
+ * (cat, dog, lion, panda, monkey, bunny, fox, owl, custom) + `prompt` for custom.
+ * Answers { mimeType, data } (base64). Counted per person per day (aiImage.js).
+ */
+router.post('/ai-image', requireAuth, aiImageLimiter, (req, res) => {
+    photoUpload.single('file')(req, res, async (uploadErr) => {
+        let slot = null;
+        try {
+            if (uploadErr) throw uploadErr.code === 'LIMIT_FILE_SIZE' ? Object.assign(new Error('That photo is too large'), { status: 413 }) : uploadErr;
+            if (!aiImage.enabled()) throw Object.assign(new Error('AI pictures are not set up on this server'), { status: 503, code: 'AI_IMAGES_OFF' });
+            const { plan } = await require('../../shared/plans/planService').userPlan(req.user.sub);
+            slot = await aiImage.takeOne(String(req.user.sub), plan);
+            const picture = await aiImage.makePicture({
+                buffer: req.file?.buffer, mimeType: req.file?.mimetype, style: String(req.body?.style || ''), prompt: req.body?.prompt,
+            });
+            res.json({ ...picture, used: slot.used, max: slot.max });
+        } catch (err) {
+            // A picture that wasn't made doesn't count.
+            if (slot?.give && err?.code !== 'PLAN_LIMIT') await slot.give();
+            if (err?.code === 'PLAN_LIMIT') return res.status(403).json(err.body);
+            return sendError(res, err, 'ai image');
+        }
+    });
 });
 
 /** Save a picture from a conversation (by its stored URL). */

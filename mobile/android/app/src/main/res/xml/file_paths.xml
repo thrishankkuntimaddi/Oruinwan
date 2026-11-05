@@ -2,4 +2,6 @@
 <paths>
     <!-- Downloaded app updates, handed to the package installer (AppUpdaterPlugin). -->
     <cache-path name="updates" path="updates/" />
+    <!-- A sticker shared to another app (StickerExportPlugin.share). -->
+    <cache-path name="shared" path="shared/" />
 </paths>

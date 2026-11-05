@@ -39,6 +39,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GoogleSignInPlugin.class);
         // Huddles: background calls, ringing, speaker/earpiece, microphone and camera permissions.
         registerPlugin(CallSessionPlugin.class);
+        // Stickers to WhatsApp (sticker packs) and to any app (share).
+        registerPlugin(StickerExportPlugin.class);
         super.onCreate(savedInstanceState);
         handleCallIntent(getIntent());
     }

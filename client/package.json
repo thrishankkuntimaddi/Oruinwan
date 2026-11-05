@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.2.2",
     "@react-oauth/google": "^0.12.2",
     "@simplewebauthn/browser": "14.0.0",
     "axios": "^1.13.2",
@@ -25,9 +26,9 @@
     "socket.io-client": "^4.8.1",
     "turndown": "^7.2.2",
     "uuid": "^13.0.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "y-protocols": "^1.0.6",
-    "yjs": "^13.6.27",
-    "xlsx":"https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "yjs": "^13.6.27"
   },
   "scripts": {
     "start": "vite --host 0.0.0.0",

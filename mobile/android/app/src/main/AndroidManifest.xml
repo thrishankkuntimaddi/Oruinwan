@@ -62,6 +62,14 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Sticker packs for WhatsApp ("Add to WhatsApp", StickerExportPlugin). Only WhatsApp reads it. -->
+        <provider
+            android:name=".StickerContentProvider"
+            android:authorities="${applicationId}.stickercontentprovider"
+            android:enabled="true"
+            android:exported="true"
+            android:readPermission="com.whatsapp.sticker.READ" />
+
         <!-- Keeps a huddle running in the background with an ongoing "In call" notification
              (CallService.java, started from CallSessionPlugin when a call starts). shortService
              is only the fallback that lets it stop cleanly when Android refuses the call types. -->
@@ -124,5 +132,8 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <!-- "Add to WhatsApp" checks which WhatsApp apps are installed (Android 11+ hides them otherwise). -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
     </queries>
 </manifest>

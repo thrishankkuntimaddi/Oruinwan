@@ -9,6 +9,9 @@ export const STICKER_SIZE = 512;
 export const STICKER_MAX_BYTES = 5 * 1024 * 1024;
 export const STICKER_SHAPES = ['rounded', 'circle', 'full'];
 export const CAPTION_MAX = 40;
+/** Behind a cut-out: nothing (transparent), a colour, or a picture. */
+export const STICKER_BACKGROUNDS = ['none', 'color', 'image'];
+export const BACKGROUND_COLORS = ['#ffffff', '#111111', '#f5c46b', '#f39a6b', '#f87171', '#f9a8d4', '#a78bfa', '#93c5fd', '#86efac', '#fde68a'];
 
 const AS_IS = /^image\/(gif|webp|png)$/i;
 
@@ -68,16 +71,122 @@ function shapePath(ctx, shape, x, y, size) {
   ctx.closePath();
 }
 
+/** Caption at the bottom: white, heavy, with a dark edge so it reads on any picture. */
+function drawCaption(ctx, caption, S, bottom) {
+  const text = String(caption || '').trim();
+  if (!text) return;
+  const fontSize = Math.round(S * 0.1);
+  ctx.font = `800 ${fontSize}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  const lines = wrapCaption(ctx, text, S * 0.84);
+  const lineH = fontSize * 1.1;
+  let y = S - bottom - (lines.length - 1) * lineH;
+  for (const line of lines) {
+    ctx.lineWidth = fontSize * 0.22;
+    ctx.strokeStyle = '#111111';
+    ctx.strokeText(line, S / 2, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(line, S / 2, y);
+    y += lineH;
+  }
+}
+
+const sizeOf = (img) => ({ w: img.naturalWidth || img.videoWidth || img.width, h: img.naturalHeight || img.videoHeight || img.height });
+
+/** Draw `img` to cover a box (like CSS object-fit: cover). */
+function drawCover(ctx, img, x, y, w, h) {
+  const { w: iw, h: ih } = sizeOf(img);
+  const scale = Math.max(w / iw, h / ih);
+  const sw = w / scale;
+  const sh = h / scale;
+  ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, w, h);
+}
+
+/**
+ * A cut-out sticker: only the subject (the mask's kept part), sized to fill the sticker, with a
+ * white outline that follows its shape, over nothing, a colour or a picture.
+ * `maskImage` is a canvas the size of `image` whose alpha says what to keep (cutout.maskCanvas).
+ */
+function drawCutout(canvas, image, { maskImage, box, caption, outline, background }) {
+  const S = STICKER_SIZE;
+  const ctx = canvas.getContext('2d');
+  const { w: N } = sizeOf(image);
+  // The subject alone, at the picture's size.
+  const subject = document.createElement('canvas');
+  subject.width = N;
+  subject.height = N;
+  const sctx = subject.getContext('2d');
+  sctx.drawImage(image, 0, 0, N, N);
+  sctx.globalCompositeOperation = 'destination-in';
+  sctx.drawImage(maskImage, 0, 0, N, N);
+
+  // Fit the subject's box into the sticker, leaving room for the outline.
+  const ring = outline ? Math.round(S * 0.03) : 0;
+  const pad = Math.round(S * 0.04) + ring;
+  const b = box || { x: 0, y: 0, w: N, h: N };
+  const scale = Math.min((S - 2 * pad) / b.w, (S - 2 * pad) / b.h);
+  const dw = b.w * scale;
+  const dh = b.h * scale;
+  const dx = (S - dw) / 2;
+  const dy = (S - dh) / 2;
+
+  const kind = background?.kind || 'none';
+  if (kind !== 'none') {
+    const inset = Math.round(S * 0.02);
+    ctx.save();
+    shapePath(ctx, 'rounded', inset, inset, S - 2 * inset);
+    ctx.clip();
+    if (kind === 'image' && background.image) drawCover(ctx, background.image, inset, inset, S - 2 * inset, S - 2 * inset);
+    else {
+      ctx.fillStyle = background.color || '#ffffff';
+      ctx.fillRect(0, 0, S, S);
+    }
+    ctx.restore();
+  }
+
+  if (ring) {
+    // A white silhouette drawn all around the subject makes the outline; a soft shadow under it.
+    const white = document.createElement('canvas');
+    white.width = S;
+    white.height = S;
+    const wctx = white.getContext('2d');
+    wctx.drawImage(subject, b.x, b.y, b.w, b.h, dx, dy, dw, dh);
+    wctx.globalCompositeOperation = 'source-in';
+    wctx.fillStyle = '#ffffff';
+    wctx.fillRect(0, 0, S, S);
+    ctx.save();
+    if (kind === 'none') {
+      ctx.shadowColor = 'rgba(0,0,0,0.28)';
+      ctx.shadowBlur = S * 0.02;
+      ctx.shadowOffsetY = S * 0.006;
+    }
+    const steps = 24;
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      ctx.drawImage(white, Math.cos(a) * ring, Math.sin(a) * ring);
+    }
+    ctx.restore();
+  }
+  ctx.drawImage(subject, b.x, b.y, b.w, b.h, dx, dy, dw, dh);
+  drawCaption(ctx, caption, S, Math.round(S * 0.07));
+  return canvas;
+}
+
 /**
  * Draws the sticker into `canvas` (resized to STICKER_SIZE). `image` is the square crop (an
  * <img>, ImageBitmap or canvas). Options: { shape: rounded | circle | full, caption, outline }.
+ * With `maskImage` (a cut-out) it draws only the subject, over `background`
+ * ({ kind: none | color | image, color, image }); `box` is the subject's box in `image` pixels.
  */
-export function drawSticker(canvas, image, { shape = 'rounded', caption = '', outline = true } = {}) {
+export function drawSticker(canvas, image, { shape = 'rounded', caption = '', outline = true, maskImage = null, box = null, background = null } = {}) {
   const S = STICKER_SIZE;
   canvas.width = S;
   canvas.height = S;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, S, S);
+  if (maskImage) return drawCutout(canvas, image, { maskImage, box, caption, outline, background });
   const framed = shape !== 'full';
   const border = framed && outline ? Math.round(S * 0.035) : 0;
   const pad = framed ? Math.round(S * 0.04) : 0;
@@ -100,25 +209,7 @@ export function drawSticker(canvas, image, { shape = 'rounded', caption = '', ou
   ctx.drawImage(image, pad + border, pad + border, inner - 2 * border, inner - 2 * border);
   ctx.restore();
 
-  const text = String(caption || '').trim();
-  if (text) {
-    const fontSize = Math.round(S * 0.1);
-    ctx.font = `800 ${fontSize}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.lineJoin = 'round';
-    const lines = wrapCaption(ctx, text, S * 0.84);
-    const lineH = fontSize * 1.1;
-    let y = S - pad - border - S * 0.05 - (lines.length - 1) * lineH;
-    for (const line of lines) {
-      ctx.lineWidth = fontSize * 0.22;
-      ctx.strokeStyle = '#111111';
-      ctx.strokeText(line, S / 2, y);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(line, S / 2, y);
-      y += lineH;
-    }
-  }
+  drawCaption(ctx, caption, S, pad + border + S * 0.05);
   return canvas;
 }
 

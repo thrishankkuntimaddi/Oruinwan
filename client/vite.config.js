@@ -2,7 +2,8 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { copyFileSync, existsSync, readFileSync, rmSync } from 'fs';
+import { copyFileSync, cpSync, existsSync, readFileSync, rmSync } from 'fs';
+import { createRequire } from 'module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,6 +54,29 @@ const pagesFallback = (defaultOutDir) => {
   };
 };
 
+// The on-device sticker cut-out engine (MediaPipe WebAssembly, ~15 MB) for every app, served by
+// the server at /vendor/mediapipe/<version>/ (platform/media/cutout.js). Only the server-hosted
+// build carries it, so app updates stay small; apps download it the first time it's used.
+const mediapipeVendor = (defaultOutDir) => {
+  let outDir = defaultOutDir;
+  return {
+    name: 'oruinwan-mediapipe-vendor',
+    apply: 'build',
+    configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
+    closeBundle() {
+      const req = createRequire(import.meta.url);
+      // The package's main file sits at its root (its exports hide package.json).
+      const dir = path.dirname(req.resolve('@mediapipe/tasks-vision'));
+      const { version } = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'));
+      // Only the engine platform/media/cutout.js loads (vision_wasm_internal.*), not the module build.
+      cpSync(path.join(dir, 'wasm'), path.join(outDir, 'vendor', 'mediapipe', version), {
+        recursive: true,
+        filter: (src) => !/vision_wasm_module_internal/.test(src),
+      });
+    },
+  };
+};
+
 // The Oruinwan version (mobile/package.json, one number for every platform) and an id for this
 // build. The web app polls /version.json and offers "Reload" when a newer build is deployed
 // (src/appMode/updates/store.js).
@@ -82,7 +106,7 @@ export default defineConfig(({ mode }) => {
       }
     : {};
   return {
-    plugins: [react(), versionFile(), ...(app || site ? [pruneAppBundle(outDir)] : []), ...(site ? [pagesFallback(outDir)] : [])],
+    plugins: [react(), versionFile(), ...(app || site ? [pruneAppBundle(outDir)] : [mediapipeVendor(outDir)]), ...(site ? [pagesFallback(outDir)] : [])],
 
     base: site ? process.env.SITE_BASE || '/' : '/',
 

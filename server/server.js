@@ -165,6 +165,15 @@ if (!processRole.serves.http) {
 // Public icons (Oruinwan AI, agent avatars) are shown by the phone and desktop apps, which run on
 // another origin: let them load these images (everything else stays same-origin).
 app.use('/icons', (req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); });
+// The sticker cut-out engine (dist/vendor/mediapipe, platform/media/cutout.js): the phone and
+// desktop apps load it from their own origin, so it is readable cross-origin and cached long
+// (each version has its own folder).
+app.use('/vendor/mediapipe', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  next();
+});
 // Lets phones open invitation links in the Oruinwan app instead of the browser.
 app.use(require('./src/shared/routes/wellKnown').wellKnownRouter());
 // Phones get the phone app's interface (dist/m/, the same UI as the Android app).
@@ -467,6 +476,13 @@ connectDatabase()
       require('./src/features/automations/automation.cron').startAutomationCron(io);
       require('./src/features/drive-backup/driveBackup.cron').startDriveBackupCron();
       require('./src/features/billing/billing.cron').startBillingSeatSyncCron();
+      // Stale "online" flags (connections that dropped without a disconnect, server restarts).
+      scheduleJob({
+        name: 'presence-sweep',
+        intervalMs: 5 * 60 * 1000,
+        initialDelayMs: 2 * 60 * 1000,
+        run: () => require('./src/features/presence/presence.service').sweepStaleOnline(),
+      });
       require('./src/features/scheduled-messages/scheduledMessages.cron').startScheduledMessagesCron(io);
       scheduleJob({
         name: 'audit-digest',
