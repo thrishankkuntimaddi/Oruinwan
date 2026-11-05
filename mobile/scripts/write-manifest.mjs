@@ -60,6 +60,16 @@ const readOptional = (rel) => {
   }
 };
 
+/** platform/native-shells.json "minVersion": installed apps older than this must update (blocking screen). */
+function minVersionFromFile() {
+  try {
+    const v = JSON.parse(readOptional('platform/native-shells.json') || '{}').minVersion;
+    return typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 let bundles;
 const bundleArgs = all('bundle');
 if (bundleArgs.length) {
@@ -111,7 +121,7 @@ const manifest = {
   sha256: createHash('sha256').update(apkBytes).digest('hex'),
   size: apkBytes.length,
   notes: opt('notes') ? readFileSync(opt('notes'), 'utf8').trim() : '',
-  minVersion: opt('min') || null,
+  minVersion: opt('min') || minVersionFromFile() || null,
   publishedAt: new Date().toISOString(),
   downloads,
   bundles,
