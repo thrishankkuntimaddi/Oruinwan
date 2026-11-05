@@ -56,7 +56,7 @@ function MiniCard({ icon, label, value, detail, highlight, onClick, testId }) {
       onClick={onClick}
       data-testid={testId}
       aria-label={`${label}: ${value}${detail ? `, ${detail}` : ''}`}
-      className="pressable flex w-[118px] shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface px-3 py-2.5 text-left"
+      className="pressable flex w-[118px] shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface px-3 py-2.5 text-left @lg:w-auto"
       style={{ backgroundImage: 'var(--glass)' }}
     >
       <span className="flex items-center gap-1.5">
@@ -345,7 +345,9 @@ export function HomeScreen() {
           </button>
         )}
 
-        <div className="no-scrollbar mt-4 flex snap-x gap-2 overflow-x-auto scroll-px-4 px-4 pb-1" aria-label="At a glance">
+        {/* A scrolling row on a phone; a grid where there is room (tablets, the full-width dashboard). */}
+        <div className="@container">
+        <div className="no-scrollbar mt-4 flex snap-x gap-2 overflow-x-auto scroll-px-4 px-4 pb-1 @lg:grid @lg:grid-cols-3 @lg:overflow-visible @3xl:grid-cols-6" aria-label="At a glance">
           <MiniCard testId="home-unread" icon={MessageCircle} label="Unread" value={unreadMessages} highlight={unreadMessages > 0} detail={unreadConvs ? `in ${plural(unreadConvs, 'conversation')}` : 'Nothing new'} onClick={() => nav.push('unread')} />
           <MiniCard testId="home-tasks" icon={SquareCheckBig} label="My open tasks" value={myOpen.length} highlight={overdue > 0} detail={overdue ? `${overdue} overdue` : dueToday ? `${dueToday} due today` : 'Nothing due today'} onClick={() => nav.setTab('tasks')} />
           {huddlesOn && (
@@ -359,6 +361,7 @@ export function HomeScreen() {
             <MiniCard testId="home-invite" icon={UserPlus} label="Invite" value="+" detail="Add people to the team" onClick={() => setInviting(true)} />
           )}
           {flags.ai && <MiniCard testId="home-ai" icon={Sparkles} label="Ask AI" value="✦" detail="Draft or catch up" onClick={() => nav.openAi()} />}
+        </div>
         </div>
 
         <SectionHead title="Activity" action="View all" onAction={() => nav.setTab('activity')} />

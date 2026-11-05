@@ -2,7 +2,7 @@
 // the same layout as the web client, so conversations read the same on every device.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, BarChart3, BellRing, Bookmark, Camera, Check, CheckCheck, CheckCircle2, Clock3, Copy, CornerDownRight, CornerUpLeft, Ellipsis, EyeOff, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, SmilePlus, Sparkles, Trash2, TriangleAlert, Paperclip, X,
+  ArrowDown, BarChart3, Scissors, BellRing, Bookmark, Camera, Check, CheckCheck, CheckCircle2, Clock3, Copy, CornerDownRight, CornerUpLeft, Ellipsis, EyeOff, History, ImageIcon, Languages, Link2, ListChecks, ListTodo, Lock, Pencil, Pin, Plus, SendHorizontal, Share2, SmilePlus, Sparkles, Trash2, TriangleAlert, Paperclip, X,
 } from 'lucide-react';
 import { finePointer } from '../../app/layout.js';
 import { QUICK_REACTIONS } from '../../data/constants.js';
@@ -19,7 +19,7 @@ import { toast } from '../../lib/bus.js';
 import { Spinner } from '../../ui/Feedback.jsx';
 import { DEFAULT_ASSISTANT, assistantMentionAt } from '../../lib/aiMention.js';
 import { Attachments, ConversationMedia } from '../media/Attachments.jsx';
-import { fileMeta } from '../media/media.js';
+import { fileMeta, useMediaUrl } from '../media/media.js';
 import { previewKind } from '../../lib/files.js';
 import { applyMention, mentionAt, mentionSuggestions } from '../../lib/mentions.js';
 import { ChecklistCard, PollCard, TranslationNote } from './rich.jsx';
@@ -31,11 +31,12 @@ import { applyFormat, insertAt, insertLink } from './composerFormat.js';
 import { EmojiSheet, FormatToolbar } from './composerToolbar.jsx';
 import { StickerSheet } from '../stickers/StickerSheet.jsx';
 import { canSaveAsSticker, saveFromAttachment } from '../stickers/stickers.js';
+import { fileFromAttachment, openStickerMaker, useRegisterStickerSend } from '../stickers/makerHost.jsx';
 import { SWIPE_TRIGGER, useRowGestures } from './messageGestures.js';
 import { ScheduleSheet } from './ScheduleSheet.jsx';
 import { clearDraft, draftFor, saveDraft } from './drafts.js';
 import { hasFormatting, highlightSegments } from './composerHighlight.js';
-import { useSession } from '../../data/session.js';
+import { api, useSession } from '../../data/session.js';
 import { motion, useArrivals, useBump, useReducedMotion } from '../../lib/motion.js';
 import { SlashBar, SlashList, filterCommands, helpLines, prepareCommand, runPrepared, runsWithoutArgs, typingHint } from './slash.jsx';
 
@@ -305,22 +306,59 @@ function Reactions({ m, me, directory, onReact }) {
   );
 }
 
-/** The message a reply quotes: its author and a line of it; tapping shows the original. */
+/** What a quoted attachment is called in the quote ("Photo", "Sticker"…); documents keep their name. */
+export function quoteMediaLabel(a) {
+  if (!a) return null;
+  if (a.variant === 'sticker') return 'Sticker';
+  if (a.variant === 'gif' || /gif$/i.test(a.mimeType || '')) return 'GIF';
+  const kind = previewKind(a);
+  if (kind === 'image') return 'Photo';
+  if (kind === 'video') return 'Video';
+  if (kind === 'audio') return a.voice || /voice/i.test(a.name || '') ? 'Voice message' : 'Audio';
+  return null;
+}
+
+/** A small square preview of the quoted picture or video (a video shows its first frame). */
+function QuoteThumb({ attachment }) {
+  const { url } = useMediaUrl(attachment);
+  const kind = previewKind(attachment);
+  if (kind !== 'image' && kind !== 'video') return null;
+  return (
+    <span className="relative ml-2 h-11 w-11 shrink-0 overflow-hidden rounded-md bg-surface-3" data-testid="quote-thumb">
+      {url && kind === 'image' && <img src={url} alt="" draggable={false} className={cx('h-full w-full', attachment.variant === 'sticker' ? 'object-contain' : 'object-cover')} />}
+      {url && kind === 'video' && <video src={`${url}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
+    </span>
+  );
+}
+
+/** The message a reply quotes: its author and a line of it (or a preview of its picture); tapping shows the original. */
 export function QuoteBlock({ quoted, directory, me, onJump, compact = false }) {
   if (!quoted) return null;
   const name = quoted.authorId === me ? 'You' : quoted.authorName || directory?.[quoted.authorId]?.name || 'Someone';
-  const text = quoted.state === 'missing' || quoted.state === 'deleted' ? 'Original message not available' : quoted.text || (quoted.state === 'attachment' ? 'Attachment' : 'Message');
+  const a = quoted.attachment || null;
+  const label = quoteMediaLabel(a);
+  // A photo's "text" is its file name (26380.webp): say what it is instead.
+  const caption = a && quoted.text && quoted.text.trim() === String(a.name || '').trim() ? '' : quoted.text;
+  const text =
+    quoted.state === 'missing' || quoted.state === 'deleted'
+      ? 'Original message not available'
+      : label
+        ? [label, caption].filter(Boolean).join(' · ')
+        : quoted.text || (a?.name || (quoted.state === 'attachment' ? 'Attachment' : 'Message'));
   return (
     <button
       type="button"
       data-no-tap
       onPointerDown={(e) => e.stopPropagation()}
       onClick={() => onJump?.(quoted.id)}
-      className={cx('mb-1 block w-full max-w-md rounded-lg border-l-[3px] border-accent bg-surface-2/80 px-2.5 text-left', compact ? 'py-1' : 'py-1.5')}
+      className={cx('mb-1 flex w-full max-w-md items-center rounded-lg border-l-[3px] border-accent bg-surface-2/80 px-2.5 text-left', compact ? 'py-1' : 'py-1.5')}
       data-testid="quote-block"
     >
-      <span className="block truncate text-[12px] font-semibold text-accent-ink">{name}</span>
-      <span className="line-clamp-2 block text-[13px] text-text-2">{plainLine(text)}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[12px] font-semibold text-accent-ink">{name}</span>
+        <span className="line-clamp-2 block text-[13px] text-text-2">{plainLine(text)}</span>
+      </span>
+      {a && quoted.state !== 'missing' && quoted.state !== 'deleted' && <QuoteThumb attachment={a} />}
     </button>
   );
 }
@@ -712,6 +750,18 @@ export function MessageActions({
         }
       },
     },
+    // Like WhatsApp: a photo → a cut-out sticker (the subject picked automatically), sent here.
+    !message.pending && message.state !== 'deleted' && canSaveAsSticker(message.attachments?.[0]) && message.attachments[0].variant !== 'sticker' && !/gif$/i.test(message.attachments[0].mimeType || '') && {
+      icon: Scissors,
+      label: 'Make a sticker',
+      run: async () => {
+        try {
+          openStickerMaker(await fileFromAttachment(message.attachments[0], (a) => api().mediaUrl(a)));
+        } catch (err) {
+          toast(err?.message || "That picture couldn't be opened.", 'danger');
+        }
+      },
+    },
     onSave && { icon: Bookmark, label: message.saved ? 'Remove from saved' : 'Save for later', run: onSave },
     onRemind && { icon: BellRing, label: 'Remind me about this', run: onRemind },
     readable && message.text && message.type !== 'checklist' && onTranslate && { icon: Languages, label: 'Translate', run: onTranslate },
@@ -890,8 +940,9 @@ export function Composer({
   };
   // Formatting row (shown on demand, so the composer stays one line) and the emoji sheet.
   const [formatting, setFormatting] = useState(false);
-  const [emoji, setEmoji] = useState(false);
   const [stickers, setStickers] = useState(false);
+  // A sticker made from a photo in this conversation (press and hold → Make a sticker) is sent here.
+  useRegisterStickerSend(onSticker);
   const [scheduling, setScheduling] = useState(false);
   const sendPress = useRef(null);
   const overlayRef = useRef(null);
@@ -1084,7 +1135,12 @@ export function Composer({
       {quote && !editing && (
         <div className="flex items-start gap-2 px-3 pt-2" data-testid="composer-quote">
           <div className="min-w-0 flex-1">
-            <QuoteBlock quoted={{ id: quote.id, authorId: quote.authorId, authorName: quote.author?.name, text: quote.text, state: quote.state }} directory={directory} me={me} compact />
+            <QuoteBlock
+              quoted={{ id: quote.id, authorId: quote.authorId, authorName: quote.author?.name, text: quote.text, state: quote.state, attachment: quote.attachments?.[0] || null }}
+              directory={directory}
+              me={me}
+              compact
+            />
           </div>
           <button type="button" aria-label="Cancel reply" onClick={onCancelQuote} className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2">
             <Icon as={X} size={14} />
@@ -1165,29 +1221,18 @@ export function Composer({
             </div>
             <button
               type="button"
-              aria-label="Emoji"
-              title="Emoji"
+              aria-label="Emoji, GIFs and stickers"
+              title="Emoji, GIFs and stickers"
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
+                // One button for emoji, GIFs and stickers (tabs inside, like a phone keyboard).
                 rememberSelection();
-                setEmoji(true);
+                setStickers(true);
               }}
               className="pressable mb-1 grid h-8 w-8 shrink-0 place-items-center self-end rounded-full text-text-2"
             >
               <Icon as={Smile} size={18} />
             </button>
-            {onSticker && !editing && (
-              <button
-                type="button"
-                aria-label="Stickers and GIFs"
-                title="Stickers and GIFs"
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={() => setStickers(true)}
-                className="pressable mb-1 grid h-8 w-8 shrink-0 place-items-center self-end rounded-full text-text-2"
-              >
-                <Icon as={Sticker} size={18} />
-              </button>
-            )}
           </div>
           {showMic ? (
             <MicButton onClick={voice.start} />
@@ -1248,19 +1293,20 @@ export function Composer({
           }
         }}
       />
-      <EmojiSheet
-        open={emoji}
+      <StickerSheet
+        open={stickers}
         onClose={() => {
           savedSel.current = null;
-          setEmoji(false);
+          setStickers(false);
         }}
-        onPick={(e) => {
+        onSend={onSticker && !editing ? onSticker : undefined}
+        onEmoji={(e) => {
+          // Keep the sheet open: the caret moves past each emoji so several can be added.
           const [s, end] = selection();
-          setEmoji(false);
           applyEdit(insertAt(text, s, end, e));
+          savedSel.current = [s + e.length, s + e.length];
         }}
       />
-      {onSticker && <StickerSheet open={stickers} onClose={() => setStickers(false)} onSend={onSticker} />}
     </div>
   );
 }

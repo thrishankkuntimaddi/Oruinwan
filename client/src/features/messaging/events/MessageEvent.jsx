@@ -52,6 +52,8 @@ function MessageEvent({
     
     const immediateRepliedTo = rawRepliedTo ? {
         senderName: rawRepliedTo.senderName || rawRepliedTo.sender?.username || 'Someone',
+        // Its first picture or file: the quote shows a small preview (ReplyQuote.jsx).
+        attachment: (rawRepliedTo.attachments?.length ? rawRepliedTo.attachments : rawRepliedTo.payload?.attachments || [])[0] || rawRepliedTo.attachment || null,
         payload: {
             
             

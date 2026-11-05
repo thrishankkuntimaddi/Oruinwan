@@ -247,6 +247,8 @@ async function mapMessage(conv, m) {
       authorName: q.sender && typeof q.sender === 'object' ? mapUser(q.sender)?.name || null : null,
       text: read.text,
       state: read.state,
+      // Its first picture, video or file: the reply shows a small preview of it.
+      attachment: (q.attachments?.length ? q.attachments : q.payload?.attachments || []).map(mapAttachment).filter(Boolean)[0] || null,
     };
   } else if (m.quotedMessageId) mapped.quoted = { id: idOf(m.quotedMessageId), authorId: null, authorName: null, text: '', state: 'missing' };
   indexMessages(conv, [mapped]);

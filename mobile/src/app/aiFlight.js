@@ -53,6 +53,13 @@ export const PATHS = {
     return { x: 0, y: -hop, spin: 0, scale: 1 - Math.abs(Math.cos(Math.PI * 3 * t)) * 0.08 };
   },
   zigzag: (t, d) => ({ x: Math.sin(Math.PI * 4 * t) * Math.min(36, d * 0.08) * (1 - t), y: 0, spin: Math.sin(Math.PI * 4 * t) * 10, scale: 1 }),
+  // Little steps: a hop per step, leaning into each one.
+  walk: (t, d) => {
+    const steps = Math.max(3, Math.min(7, Math.round(d / 90)));
+    const phase = t * steps;
+    const hop = Math.abs(Math.sin(Math.PI * phase)) * Math.min(18, 8 + d * 0.02);
+    return { x: 0, y: -hop, spin: Math.sin(Math.PI * 2 * phase) * 9, scale: 1 - Math.abs(Math.cos(Math.PI * phase)) * 0.06 };
+  },
   spiral: (t, d) => {
     const r = Math.min(40, d * 0.1) * Math.sin(Math.PI * t);
     const a = Math.PI * 4 * t;
@@ -107,11 +114,15 @@ export function fly(from, to, onLand) {
   const path = PATHS[pickPath()];
   ghost.dataset.path = lastPath;
   const start = performance.now();
+  let lastTarget = null;
   let frame = 0;
   const step = (now) => {
     const t = Math.min(1, (now - start) / FLIGHT_MS);
     const k = ease(t);
-    const r1 = to.getBoundingClientRect();
+    // A target not laid out yet (a screen still sliding back in) keeps its last good place.
+    const seen = to.getBoundingClientRect();
+    if (seen.width && seen.height) lastTarget = seen;
+    const r1 = lastTarget || r0;
     const w = r0.width + (r1.width - r0.width) * k;
     const h = r0.height + (r1.height - r0.height) * k;
     const cx = r0.left + r0.width / 2 + (r1.left + r1.width / 2 - (r0.left + r0.width / 2)) * k;
@@ -176,4 +187,69 @@ export function useAiLanding() {
   }, []);
   // visibility, not opacity: a fade-in animation on the button would override opacity.
   return [ref, landing ? { visibility: 'hidden' } : undefined];
+}
+
+// ---------------------------------------------------------------- header buttons
+// Every screen's header has the AI button (HeaderAi.jsx). Opening a screen, its button arrives
+// from the header of the screen underneath (a new path each time); closing it, the button goes
+// back. The button waits invisible while its ghost travels.
+
+const headerSpots = []; // newest last: [{ el, land(from) }]
+
+const visibleEl = (el) => {
+  if (!el?.isConnected) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth && r.bottom > 0 && r.top < window.innerHeight;
+};
+const topVisible = (except) => [...headerSpots].reverse().find((s) => s.el !== except && visibleEl(s.el));
+
+export function _resetHeaderSpots() {
+  headerSpots.length = 0;
+}
+
+export function useAiHeaderSpot() {
+  const ref = useRef(null);
+  const [hidden, setHidden] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    let alive = true;
+    let stop = () => {};
+    let rest = null;
+    const entry = {
+      el,
+      land(from) {
+        if (!alive) return () => {};
+        setHidden(true);
+        return fly(from, el, () => alive && setHidden(false));
+      },
+    };
+    // Where it came from: a spot just left (the floating button, a chat's button), else the
+    // header of the screen this one opens over.
+    const below = topVisible(el);
+    const belowFrom = below ? { rect: below.el.getBoundingClientRect(), look: below.el.cloneNode(true) } : null;
+    headerSpots.push(entry);
+    const settle = setTimeout(() => {
+      rest = visibleEl(el) ? el.getBoundingClientRect() : null;
+    }, 700);
+    queueMicrotask(() => {
+      if (!alive) return;
+      const from = takeSpot() || belowFrom;
+      if (from && from.rect.width) stop = entry.land(from);
+    });
+    return () => {
+      alive = false;
+      clearTimeout(settle);
+      stop();
+      const i = headerSpots.indexOf(entry);
+      if (i >= 0) headerSpots.splice(i, 1);
+      // Closing: fly back to the header underneath (or leave the spot for whoever appears next).
+      const now = el.getBoundingClientRect();
+      const from = { rect: now.width && now.right > 0 && now.left < window.innerWidth ? now : rest || now, look: el.cloneNode(true) };
+      const back = topVisible(el) || [...headerSpots].reverse()[0];
+      if (back && from.rect.width) back.land(from);
+      else leaveSpot(el, rest);
+    };
+  }, []);
+  return [ref, hidden ? { visibility: 'hidden' } : undefined];
 }

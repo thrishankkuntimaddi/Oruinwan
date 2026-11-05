@@ -46,8 +46,10 @@
 .wsp-cover-actions { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
 .wsp-cover-actions .gl-btn { background: color-mix(in srgb, var(--bg-surface) 88%, transparent); backdrop-filter: blur(6px); }
 .wsp-body { padding: 0 16px 16px; }
-.wsp-logo-row { display: flex; align-items: flex-end; gap: 12px; margin-top: -28px; }
-.wsp-logo { border: 3px solid var(--bg-surface); overflow: hidden; }
+/* The logo overlaps the cover's bottom edge; positioned so it paints above the (positioned) cover. */
+.wsp-logo-row { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 12px; margin-top: -36px; }
+.wsp-logo { width: 72px; height: 72px; border: 3px solid var(--bg-surface); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); }
+.wsp-logo img { width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 0 !important; }
 .wsp-logo-actions { display: flex; gap: 6px; padding-bottom: 4px; }
 .wsp-text { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 .wsp-tagline { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }

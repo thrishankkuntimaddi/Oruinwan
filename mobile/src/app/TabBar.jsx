@@ -17,7 +17,8 @@ import { Sheet, useOverlay } from '../ui/Overlay.jsx';
 import { Button } from '../ui/Button.jsx';
 import { dueLabel } from '../lib/time.js';
 import { useKeyboard } from '../native/keyboard.js';
-import { tap } from '../native/index.js';
+import { isTablet, tap } from '../native/index.js';
+import { useLayout } from './layout.js';
 import { BAR_CHOICES, MAX_BAR, MIN_BAR, TAB_META, setBarItems, useTabBar } from './tabBarPrefs.js';
 
 export function useDueSoonCount() {
@@ -151,8 +152,49 @@ export function TabBar() {
   const drawerTabs = BAR_CHOICES.filter((t) => !bar.includes(t) && (t !== 'notes' || notesOn));
 
   const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / 4) * ROW_H + 24;
+  // Tablets: every place in the bar itself (no drawer and no handle), stretched across and
+  // scrolling sideways when they don't all fit.
+  const splitLayout = useLayout((st) => st.split);
+  const tablet = isTablet || splitLayout;
 
   if (keyboardOpen) return null;
+  if (tablet) {
+    const places = [
+      ...items.map((it) => ({ ...it, kind: 'tab' })),
+      ...drawerTabs.map((id) => ({ id, ...TAB_META[id], badge: badges[id] || 0, kind: 'tab' })),
+      ...MORE.map((m) => ({ ...m, badge: 0, kind: 'screen' })),
+    ];
+    return (
+      <nav aria-label="Main" className="glass-bar absolute inset-x-0 bottom-0 z-20 border-t border-[var(--glass-border)] pb-safe" data-testid="tabbar-tablet">
+        <div className="no-scrollbar flex h-[60px] items-stretch overflow-x-auto">
+          {places.map((it) => {
+            const active = it.kind === 'tab' && tab === it.id;
+            return (
+              <button
+                key={`${it.kind}:${it.id}`}
+                type="button"
+                aria-label={`${it.label}${it.badge ? `, ${it.badge} new` : ''}`}
+                aria-current={active ? 'page' : undefined}
+                data-tour={it.kind === 'tab' ? it.id : undefined}
+                onClick={() => (it.kind === 'tab' ? setTab(it.id) : it.open())}
+                className={cx(
+                  'relative flex min-w-[76px] flex-1 shrink-0 flex-col items-center justify-center gap-1 transition-colors duration-150',
+                  active ? 'text-accent-ink' : 'text-text-2',
+                )}
+              >
+                {active && <span aria-hidden className="absolute top-0 h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)]" />}
+                <span className="relative">
+                  <Icon as={it.icon} size={22} />
+                  {it.badge > 0 && <TabBadge count={it.badge} />}
+                </span>
+                <span className="text-[11px] font-medium whitespace-nowrap">{it.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
 
   const height = drag.current ? pull : open ? DRAWER_H : 0;
   const onHandleDown = (e) => {

@@ -42,7 +42,7 @@ import { startHuddle } from '../huddles/huddle.js';
 import { GroupTile, HistoryChoice, addedMessage } from './groupScreens.jsx';
 import { MessageInfoSheet } from './MessageInfoSheet.jsx';
 import { DayJumpSheet } from './DayJumpSheet.jsx';
-import { AiIsland } from './AiIsland.jsx';
+import { AiIsland, openChatAi } from './AiIsland.jsx';
 import { phoneCommands } from './slash.jsx';
 import { QUICK_REACTIONS } from '../../data/constants.js';
 import { ConversationMenu, PinnedBanner, useConversationStatus } from './ConversationMenu.jsx';
@@ -418,6 +418,7 @@ export function ConversationScreen({ kind, id, highlight = null, draft = '' }) {
         title={title}
         subtitle={subtitle}
         border
+        onAi={showIsland ? openChatAi : undefined}
         actions={
           <>
             {/* Groups: the To: bar with this group's people, to add or remove someone and open

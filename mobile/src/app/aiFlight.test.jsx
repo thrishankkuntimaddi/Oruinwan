@@ -69,3 +69,27 @@ describe('flight paths', () => {
     }
   });
 });
+
+describe('AI button between screen headers', () => {
+  it('flies from the screen underneath when a screen opens, and back when it closes', async () => {
+    const { useAiHeaderSpot, _resetHeaderSpots, PATHS } = await import('./aiFlight.js');
+    _resetHeaderSpots();
+    expect(PATHS.walk(0, 400).y).toBeCloseTo(0);
+    const place = (left) => (el) => el && (el.getBoundingClientRect = () => rect(left, 10, 40));
+    function HeaderButton({ left, id }) {
+      const [ref, style] = useAiHeaderSpot();
+      return <button ref={(el) => { ref.current = el; place(left)(el); }} style={style} data-testid={id}>AI</button>;
+    }
+    const below = render(<HeaderButton left={300} id="below" />);
+    await act(async () => {});
+    expect(document.querySelector('[data-testid="ai-flight"]')).toBeNull(); // first screen: nothing to fly from
+    const top = render(<HeaderButton left={320} id="top" />);
+    await act(async () => {});
+    expect(top.container.querySelector('[data-testid="top"]').style.visibility).toBe('hidden');
+    expect(document.querySelectorAll('[data-testid="ai-flight"]').length).toBe(1);
+    document.querySelectorAll('[data-testid="ai-flight"]').forEach((g) => g.remove());
+    act(() => top.unmount());
+    expect(below.container.querySelector('[data-testid="below"]').style.visibility).toBe('hidden'); // the button flies back down
+    expect(document.querySelectorAll('[data-testid="ai-flight"]').length).toBe(1);
+  });
+});

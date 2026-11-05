@@ -1,11 +1,16 @@
 // A small "Ask AI" pill at the top of a conversation, like a dynamic island: tap it, ask about
 // this conversation, and the answer appears right there. Swipe it up (or tap ×) to close.
 // The question goes with the messages decrypted on this device (nothing else is uploaded).
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAiLanding } from '../../app/aiFlight.js';
 import { AiEyes } from '../../app/AiEyes.jsx';
 import { pokeAi, setMood } from '../../app/aiMood.js';
-import { onLeft, useEffectiveCorner } from '../../app/aiCorner.js';
+import { onLeft, useAiCorner, useEffectiveCorner } from '../../app/aiCorner.js';
+import { create } from 'zustand';
+
+// The chat header's AI button opens the question box here (openChatAi).
+const useChatAi = create(() => ({ asked: 0 }));
+export const openChatAi = () => useChatAi.setState((s) => ({ asked: s.asked + 1 }));
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -29,6 +34,15 @@ export function AiIsland({ transcript, title }) {
   const [landingRef, landingStyle] = useAiLanding();
   // Same side as the floating AI button (aiCorner.js).
   const left = onLeft(useEffectiveCorner());
+  const floating = useAiCorner((st) => st.floating);
+  const asked = useChatAi((st) => st.asked);
+  const firstAsk = useRef(asked);
+  useEffect(() => {
+    if (asked === firstAsk.current) return;
+    firstAsk.current = asked;
+    setOpen(true);
+    setTimeout(() => input.current?.focus(), 60);
+  }, [asked]);
     // Always the small button in the top-right corner: the full pill covered the messages.
   const compact = true;
 
@@ -60,6 +74,9 @@ export function AiIsland({ transcript, title }) {
   };
 
   if (!api().askAboutConversation) return null;
+
+  // Without the floating button the chat's AI button is in the header (openChatAi).
+  if (!open && !floating) return null;
 
   if (!open && compact) {
     return (

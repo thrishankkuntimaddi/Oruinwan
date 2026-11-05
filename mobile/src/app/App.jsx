@@ -1,3 +1,7 @@
+import { setHeaderAiSlot } from '../ui/headerAiSlot.js';
+import { HeaderAiButton } from './HeaderAi.jsx';
+
+import { StickerMakerHost } from '../features/stickers/makerHost.jsx';
 import { useEffect } from 'react';
 import { useComputerLayoutSwitch } from './layoutSwitch.js';
 import { api, useSession } from '../data/session.js';
@@ -26,6 +30,9 @@ import { browserStartLink } from '../lib/openLink.js';
 import { BackupRestoreOffer } from '../features/settings/backup.jsx';
 import { PlanLayer } from '../features/plan/UpgradeSheet.jsx';
 import { ApprovalHost } from '../features/auth/ApprovalHost.jsx';
+
+// Every screen header gets Oruinwan AI's button (ui/Screen.jsx Header).
+setHeaderAiSlot(HeaderAiButton);
 
 /** While the app restores the session: the mark lands, then breathes until it's ready. */
 function Splash() {
@@ -171,6 +178,7 @@ export function App() {
         </div>
       )}
       {status === 'signed-in' && <MediaHost />}
+      {status === 'signed-in' && <StickerMakerHost />}
       {status === 'signed-in' && <ReminderLayer />}
       {/* Free-plan limits: the upgrade sheet for any refused addition (features/plan). */}
       {status === 'signed-in' && <PlanLayer />}

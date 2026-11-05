@@ -17,7 +17,7 @@ export const SETTINGS_INDEX = [
   { title: 'Privacy', route: 'settings.privacy', keywords: 'privacy read receipts typing indicator discoverable analytics stats' },
   { title: 'Read receipts', in: 'Privacy', route: 'settings.privacy', keywords: 'seen read receipts' },
   { title: 'Oruinwan AI', route: 'settings.ai', keywords: 'ai assistant conversations history memory model' },
-  { title: 'Move the AI button', route: 'settings.ai', keywords: 'ai button corner position drag move left right top bottom' },
+  { title: 'Floating AI button', route: 'settings.ai', keywords: 'ai button floating header corner position drag move left right top bottom' },
   { title: 'Workspace settings', action: 'workspace', keywords: 'workspace members invite people' },
   { title: 'Integrations', action: 'integrations', keywords: 'github jira slack integrations apps webhooks' },
   { title: 'Updates', route: 'settings.updates', keywords: 'update version new release download' },

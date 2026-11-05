@@ -1,5 +1,6 @@
 // Screen scaffolding: a header (large title on tab roots, compact with back on pushed
 // screens) and a scroll body that remembers its position.
+import { headerAiSlot } from './headerAiSlot.js';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNav } from '../app/nav.js';
@@ -14,7 +15,9 @@ export function Screen({ children, className }) {
   return <div className={cx('flex h-full flex-col bg-bg', className)}>{children}</div>;
 }
 
-export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack }) {
+/** `ai` (default on): Oruinwan AI's button after the actions; `onAi` replaces what it opens. */
+export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack, ai = true, onAi }) {
+  const Ai = ai ? headerAiSlot() : null;
   const pop = useNav((s) => s.pop);
   // The first screen in a wide window's detail pane sits beside its list: nothing to go back to.
   const { split, depth } = usePane();
@@ -33,7 +36,12 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
             </>
           )}
         </div>
-        {actions && <div className="flex shrink-0 items-center">{actions}</div>}
+        {(actions || Ai) && (
+          <div className="flex shrink-0 items-center">
+            {actions}
+            {Ai && <Ai onPress={onAi} />}
+          </div>
+        )}
       </div>
       {large && (
         <div className="px-4 pb-2">

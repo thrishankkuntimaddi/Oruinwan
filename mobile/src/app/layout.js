@@ -31,7 +31,8 @@ export function layoutFor(width, height) {
  */
 export function listColumnWidth(width, kind = layoutFor(width, MIN_PANE_HEIGHT)) {
   if (kind === 'phone') return width;
-  const [min, max, share] = kind === 'wide' ? [320, 420, 0.3] : [300, 380, 0.4];
+  // Landscape tablets (wide) get a roomier list: names and previews were cut short.
+  const [min, max, share] = kind === 'wide' ? [340, 460, 0.34] : [300, 380, 0.4];
   return Math.round(Math.min(max, Math.max(min, width * share)));
 }
 

@@ -79,6 +79,40 @@ export function mapSharedFile(it) {
   };
 }
 
+/** The same file in several places (sent to many chats, a sticker reused): the stored copy's
+ *  address, else its name and size. */
+// The stored address is the file (its ?path= names the stored object), so it is used whole.
+const sameFileKey = (i) => (i.url ? `u:${i.url}` : `n:${i.name}|${i.size ?? ''}|${i.byId || ''}`);
+
+/**
+ * One row per file: copies of the same file shared in several conversations are folded into the
+ * newest one, which keeps where else it was shared (`places`, e.g. ["#general", "Muzamil"]).
+ */
+export function dedupeFiles(items) {
+  const byKey = new Map();
+  const out = [];
+  for (const it of items || []) {
+    // The same stored copy, or the same picture sent again by the same person (each send uploads
+    // a new copy: same name, size and sender).
+    const keys = it.source === 'library' && it.fileId
+      ? [`f:${it.fileId}`]
+      : [sameFileKey(it), ...(it.size ? [`n:${it.name}|${it.size}|${it.byId || ''}`] : [])];
+    const seen = keys.map((k) => byKey.get(k)).find(Boolean);
+    if (!seen) {
+      const row = { ...it, places: [whereLabel(it)] };
+      for (const k of keys) byKey.set(k, row);
+      out.push(row);
+    } else {
+      const w = whereLabel(it);
+      if (!seen.places.includes(w)) seen.places.push(w);
+    }
+  }
+  return out;
+}
+
+/** "Muzamil" or "Shared in 3 places". */
+export const placesLabel = (item) => (item.places?.length > 1 ? `Shared in ${item.places.length} places` : whereLabel(item));
+
 /** "#general", a person's or group's name, or "Files" for uploads. */
 export function whereLabel(item) {
   if (!item?.conv) return 'Files';

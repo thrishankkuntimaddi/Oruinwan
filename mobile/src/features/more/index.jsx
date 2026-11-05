@@ -2,8 +2,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive, ArchiveRestore, Bell, CalendarDays, CheckCheck, Download, File, FolderOpen, MoreHorizontal, Plug, Share2, Star, StarOff, Trash2,
-  SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus,
+  SquareCheckBig, Users, Webhook, KeyRound, ExternalLink, Shield, MessageCircle, Settings2, UserPlus, LayoutGrid, List as ListIcon, Play,
 } from 'lucide-react';
+import { prefs } from '../../native/storage.js';
 import { nav } from '../../app/nav.js';
 import { TabHeader } from '../../app/TabHeader.jsx';
 import { api, useSession, useWorkspace } from '../../data/session.js';
@@ -29,8 +30,8 @@ import { shortAgo } from '../../lib/time.js';
 import { toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
 import { fileIconKind, formatBytes } from '../../lib/files.js';
-import { canShareFiles, downloadFile, openFile, shareFile } from '../media/media.js';
-import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, fileMarks, messageTarget, toggleFileMark, useFileMarks, whereLabel } from '../files/filesUi.js';
+import { canShareFiles, downloadFile, openFile, shareFile, useMediaUrl } from '../media/media.js';
+import { KIND_CHIPS, SORT_OPTIONS as SHARED_SORTS, dedupeFiles, fileMarks, messageTarget, placesLabel, toggleFileMark, useFileMarks, whereLabel } from '../files/filesUi.js';
 import { FILE_ICONS } from '../media/Attachments.jsx';
 import { ActivityRow } from '../home/ActivityRow.jsx';
 import { groupActivity } from '../home/activityGroups.js';
@@ -212,20 +213,62 @@ const FILE_SOURCES = [
 const LOCAL_SOURCES = new Set(['starred', 'archived']);
 
 /** One file: icon, name (with a star), details, and ⋯ for its actions, all on one centred line. */
+/** A photo's or video's own picture (loaded when it scrolls into view); other files show their icon. */
+function FileThumb({ item, className, iconSize = 'sm' }) {
+  const kind = fileIconKind(item);
+  const visual = kind === 'image' || kind === 'video';
+  const { url } = useMediaUrl(visual ? item : null);
+  return (
+    <span className={cx('relative grid shrink-0 place-items-center overflow-hidden bg-accent/12 text-accent-ink', className)}>
+      {visual && url ? (
+        kind === 'image' ? (
+          <img src={url} alt="" loading="lazy" draggable={false} className="h-full w-full object-cover" />
+        ) : (
+          <>
+            <video src={`${url}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+            <span className="absolute inset-0 grid place-items-center">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white">
+                <Icon as={Play} size={12} />
+              </span>
+            </span>
+          </>
+        )
+      ) : (
+        <Icon as={FILE_ICONS[kind] || File} size={iconSize} />
+      )}
+    </span>
+  );
+}
+
+/** Grid view: a tile per file, its picture first (like a phone's gallery). */
+function FileTile({ item, starred, onOpen, onMore }) {
+  return (
+    <div className="relative">
+      <button type="button" onClick={onOpen} onContextMenu={(e) => { e.preventDefault(); onMore(); }} className="block w-full text-left active:opacity-80" aria-label={item.name}>
+        <FileThumb item={item} className="aspect-square w-full rounded-xl" iconSize={28} />
+        <span className="mt-1 block truncate px-0.5 text-[12px] text-text">{item.name}</span>
+        <span className="block truncate px-0.5 text-[11px] text-text-3">{[formatBytes(item.size), shortAgo(item.at)].filter(Boolean).join(' · ')}</span>
+      </button>
+      {starred && <Icon as={Star} size={12} className="absolute top-1.5 left-1.5 fill-current text-gold" aria-label="Starred" />}
+      <button type="button" aria-label={`More for ${item.name}`} onClick={onMore} className="absolute top-1 right-1 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-white">
+        <Icon as={MoreHorizontal} size={14} />
+      </button>
+    </div>
+  );
+}
+
 function FileRow({ item, starred, onOpen, onMore }) {
   return (
     <div className="flex items-center">
       <button type="button" onClick={onOpen} className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left active:bg-surface-2">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent/12 text-accent-ink">
-          <Icon as={FILE_ICONS[fileIconKind(item)] || File} size="sm" />
-        </span>
+        <FileThumb item={item} className="h-11 w-11 rounded-[10px]" />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1 text-[15px] text-text">
             <span className="truncate">{item.name}</span>
             {starred && <Icon as={Star} size={12} className="shrink-0 fill-current text-gold" aria-label="Starred" />}
           </span>
           <span className="mt-0.5 block truncate text-[13px] text-text-2">
-            {[formatBytes(item.size), item.byName, whereLabel(item), shortAgo(item.at)].filter(Boolean).join(' · ')}
+            {[formatBytes(item.size), item.byName, placesLabel(item), shortAgo(item.at)].filter(Boolean).join(' · ')}
           </span>
         </span>
       </button>
@@ -248,6 +291,11 @@ export function FilesScreen() {
   const [limit, setLimit] = useState(50);
   const [menu, setMenu] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [view, setViewState] = useState(() => (prefs.get('files.view') === 'grid' ? 'grid' : 'list'));
+  const setView = (v) => {
+    prefs.set('files.view', v);
+    setViewState(v);
+  };
   const ws = useSession((st) => st.workspaceId);
   const marks = useFileMarks((st) => st.byWs[ws]) || fileMarks(ws);
   useEffect(() => {
@@ -255,7 +303,8 @@ export function FilesScreen() {
     return () => clearTimeout(t);
   }, [query]);
   const { data, loading, error } = useSharedFiles({ kind, source: LOCAL_SOURCES.has(source) ? 'all' : source, q, sort, limit });
-  const all = data?.items || [];
+  // A file sent to several chats is one row ("Shared in 3 places").
+  const all = useMemo(() => dedupeFiles(data?.items || []), [data]);
   const items =
     source === 'starred' ? all.filter((i) => marks.starred.includes(i.id))
       : source === 'archived' ? all.filter((i) => marks.archived.includes(i.id))
@@ -298,6 +347,14 @@ export function FilesScreen() {
         <Chips options={KIND_CHIPS} value={kind} onChange={setKind} className="pb-2" />
         <Chips options={FILE_SOURCES} value={source} onChange={setSource} className="pb-2" />
         <div className="flex items-center justify-end gap-2 px-4 pb-3">
+          <IconButton
+            icon={view === 'grid' ? ListIcon : LayoutGrid}
+            label={view === 'grid' ? 'Show as a list' : 'Show as a grid'}
+            size="sm"
+            onClick={() => setView(view === 'grid' ? 'list' : 'grid')}
+            data-testid="files-view-toggle"
+          />
+          <span className="flex-1" />
           <label htmlFor="files-sort" className="text-[12px] text-text-2">Sort</label>
           <select
             id="files-sort"
@@ -321,11 +378,19 @@ export function FilesScreen() {
           />
         ) : items.length ? (
           <>
-            <RowGroup className="mt-1">
-              {items.map((item) => (
-                <FileRow key={item.id} item={item} starred={marks.starred.includes(item.id)} onOpen={() => open(item)} onMore={() => setMenu(item)} />
-              ))}
-            </RowGroup>
+            {view === 'grid' ? (
+              <div className="mt-1 grid grid-cols-3 gap-x-2.5 gap-y-3 px-4 sm:grid-cols-4 lg:grid-cols-6" data-testid="files-grid">
+                {items.map((item) => (
+                  <FileTile key={item.id} item={item} starred={marks.starred.includes(item.id)} onOpen={() => open(item)} onMore={() => setMenu(item)} />
+                ))}
+              </div>
+            ) : (
+              <RowGroup className="mt-1">
+                {items.map((item) => (
+                  <FileRow key={item.id} item={item} starred={marks.starred.includes(item.id)} onOpen={() => open(item)} onMore={() => setMenu(item)} />
+                ))}
+              </RowGroup>
+            )}
             {data?.hasMore && (
               <div className="mt-4 flex justify-center">
                 <Button variant="secondary" size="sm" onClick={() => setLimit((n) => Math.min(100, n + 50))} disabled={limit >= 100}>
@@ -361,7 +426,7 @@ export function FilesScreen() {
         title={menu?.name}
         actions={menu ? [
           { label: 'Open', icon: ExternalLink, onSelect: () => open(menu) },
-          menu.messageId && { label: 'Go to message', hint: `In ${whereLabel(menu)}`, icon: MessageCircle, onSelect: () => goToMessage(menu) },
+          menu.messageId && { label: 'Go to message', hint: menu.places?.length > 1 ? `Latest in ${whereLabel(menu)} · also in ${menu.places.slice(1).join(', ')}` : `In ${whereLabel(menu)}`, icon: MessageCircle, onSelect: () => goToMessage(menu) },
           marks.starred.includes(menu.id)
             ? { label: 'Remove star', icon: StarOff, onSelect: () => mark('starred', menu) }
             : { label: 'Star', icon: Star, onSelect: () => mark('starred', menu) },

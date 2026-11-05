@@ -18,6 +18,12 @@ import {
 import { CUTOUT_DOWNLOAD_MB, keptBox, keptShare, maskCanvas } from '../../../../platform/media/cutout.js';
 import { groupByPack, uploadSticker, useStickers } from './stickers.js';
 import { getCutter } from './cutoutEngine.js';
+import { prefs } from '../../native/storage.js';
+
+// After someone has used Cut out once, new stickers start cut out (the subject picked for them).
+const AUTO_CUTOUT_KEY = 'stickers.autoCutout';
+// Where to look for the subject without a tap: the middle, a little high (faces sit there).
+const AUTO_TAP = { x: 0.5, y: 0.44, mode: 'add' };
 
 const DEFAULT_PACK = 'My stickers';
 const SHAPES = [
@@ -196,7 +202,8 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
     } else drawSticker(canvas.current, cropped, { shape, caption, outline });
   }, [showSticker, cropped, mode, shape, caption, outline, mask, background]);
 
-  // Cut-out: load the engine the first time, then give it this photo once.
+  // Cut-out: load the engine the first time, give it this photo once, then pick the subject
+  // automatically and show the finished sticker (Edit cut-out to change what is kept).
   const startCutout = async () => {
     setMode('cutout');
     setEditingCut(true);
@@ -207,12 +214,17 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
       c.setImage(cropped);
       cutter.current = c;
       setEngine('ready');
+      prefs.set(AUTO_CUTOUT_KEY, true);
+      recut([AUTO_TAP], { finish: true });
     } catch (err) {
       setEngine('error');
       setError(err?.message || "The cut-out tool couldn't start.");
     }
   };
-  const recut = (next) => {
+  useEffect(() => {
+    if (step === 'style' && cropped && prefs.get(AUTO_CUTOUT_KEY, false) === true && !cutter.current) startCutout();
+  }, [step, cropped]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recut = (next, { finish: done = false } = {}) => {
     setTaps(next);
     if (!next.length) {
       setMask(null);
@@ -222,8 +234,12 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
     // Let the spinner paint before the (blocking) model runs.
     setTimeout(() => {
       try {
-        setMask(cutter.current.cut(next));
+        const m = cutter.current.cut(next);
+        setMask(m);
         setError(null);
+        // Found something sensible on its own: straight to the sticker.
+        const share = keptShare(m);
+        if (done && share > 0.02 && share < 0.97) setEditingCut(false);
       } catch (err) {
         setError(err?.message || 'The cut-out failed. Try tapping again.');
       } finally {
@@ -424,7 +440,7 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
             </Button>
             {canSend && (
               <Button block loading={busy} disabled={!ready || Boolean(stickerFileProblem(file))} onClick={() => finish(true)} data-testid="sticker-save-send">
-                Add & send
+                Send as sticker
               </Button>
             )}
           </div>

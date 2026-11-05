@@ -34,9 +34,9 @@ describe('listColumnWidth', () => {
   it('is fluid within bounds', () => {
     expect(listColumnWidth(768, 'split')).toBe(307);
     expect(listColumnWidth(1000, 'split')).toBe(380);
-    expect(listColumnWidth(1024, 'wide')).toBe(320);
-    expect(listColumnWidth(1366, 'wide')).toBe(410);
-    expect(listColumnWidth(2560, 'wide')).toBe(420);
+    expect(listColumnWidth(1024, 'wide')).toBe(348);
+    expect(listColumnWidth(1366, 'wide')).toBe(460);
+    expect(listColumnWidth(2560, 'wide')).toBe(460);
     expect(listColumnWidth(390, 'phone')).toBe(390);
   });
 });

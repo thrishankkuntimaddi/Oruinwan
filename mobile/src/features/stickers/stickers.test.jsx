@@ -70,7 +70,7 @@ describe('sticker sheet', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Send sticker a.webp/ }));
     expect(onSend).toHaveBeenCalledWith(expect.objectContaining({ variant: 'sticker' }));
     expect(onClose).toHaveBeenCalled();
-    expect(screen.getByRole('tab', { name: 'GIFs' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'GIF' })).toBeTruthy();
   });
 
   it('shows the empty state and hides GIPHY when the server has no key', async () => {

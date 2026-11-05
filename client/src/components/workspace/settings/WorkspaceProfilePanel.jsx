@@ -106,7 +106,7 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
             <div className="wsp-body">
                 <div className="wsp-logo-row">
                     <span className="wsg-tile wsg-tile--lg wsp-logo" style={{ backgroundColor: color }}>
-                        <WorkspaceIcon icon={workspace?.icon} logo={profile.logoUrl} size={28} />
+                        <WorkspaceIcon icon={workspace?.icon} logo={profile.logoUrl} size={34} />
                     </span>
                     {isAdmin && (
                         <span className="wsp-logo-actions">
@@ -150,8 +150,8 @@ export default function WorkspaceProfilePanel({ workspace, isAdmin, onChanged })
                                 {profile.location && <span><MapPin size={13} /> {profile.location}</span>}
                             </p>
                         )}
-                        {!profile.tagline && !workspace?.description && !profile.website && !profile.location && (
-                            <p className="cd-hint">{isAdmin ? 'Add a logo, cover, tagline and a few words about this workspace.' : 'No profile yet.'}</p>
+                        {isAdmin && !profile.tagline && !workspace?.description && !profile.website && !profile.location && (
+                            <p className="cd-hint">Add a tagline and a few words about this workspace.</p>
                         )}
                     </div>
                 )}

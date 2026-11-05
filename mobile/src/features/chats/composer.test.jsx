@@ -151,7 +151,7 @@ describe('Composer formatting and emoji', () => {
     const box = screen.getByPlaceholderText('Message');
     fireEvent.change(box, { target: { value: 'great job' } });
     box.setSelectionRange(5, 5);
-    fireEvent.click(screen.getByRole('button', { name: 'Emoji' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Emoji, GIFs and stickers' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Insert 🎉' }));
     expect(box.value).toBe('great🎉 job');
   });

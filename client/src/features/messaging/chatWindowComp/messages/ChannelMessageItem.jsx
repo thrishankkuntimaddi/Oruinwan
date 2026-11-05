@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import ReplyQuote from './ReplyQuote';
 import StandingTag from '../../../../components/ui/StandingTag';
 import { useContacts } from '../../../../contexts/ContactsContext';
 import api from '@services/api';
@@ -232,20 +233,7 @@ function ChannelMessageItem({
                 </span>
 
                 {}
-                {msg.repliedTo && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px', padding: '0 4px' }}>
-                        <div style={{ width: '2px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0, alignSelf: 'stretch', opacity: 0.6 }}></div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                                <MessageSquare size={10} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>{msg.repliedTo.senderName}</span>
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
-                                {msg.repliedTo.payload?.text || '🔒 Encrypted message'}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {msg.repliedTo && <ReplyQuote repliedTo={msg.repliedTo} />}
 
                 {}
                 {!msg.isDeleted && msg.attachment && (

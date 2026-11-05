@@ -20,6 +20,7 @@ import {
 } from './stickers.js';
 import { PackPicker, StickerMakerSheet } from './StickerMaker.jsx';
 import { AiPictureSheet } from './AiPictureSheet.jsx';
+import { EMOJI_CATEGORIES, noteEmojiUsed, recentEmojis } from './emojiData.js';
 
 export { StickerMakerSheet };
 
@@ -401,17 +402,70 @@ function GiphyTab({ kind, onSend }) {
   );
 }
 
-/** onSend(attachment) sends a sticker or GIF right away. */
-export function StickerSheet({ open, onClose, onSend }) {
+/** Emoji by category with the recent ones first; tapping one adds it to the message (the sheet stays open). */
+function EmojiTab({ onPick }) {
+  const [recent, setRecent] = useState(recentEmojis);
+  const box = useRef(null);
+  const sections = [...(recent.length ? [{ id: 'recent', label: 'Recent', icon: '🕘', emojis: recent }] : []), ...EMOJI_CATEGORIES];
+  const jump = (id) => box.current?.querySelector(`[data-emoji-section="${id}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  return (
+    <div data-testid="emoji-tab">
+      <div className="no-scrollbar mx-3 mb-1 flex gap-1 overflow-x-auto" role="tablist" aria-label="Emoji categories">
+        {sections.map((c) => (
+          <button key={c.id} type="button" aria-label={c.label} title={c.label} onClick={() => jump(c.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[20px] active:bg-surface-2">
+            {c.icon}
+          </button>
+        ))}
+      </div>
+      <div ref={box} className="px-3 pb-3">
+        {sections.map((c) => (
+          <section key={c.id} data-emoji-section={c.id} aria-label={c.label} className="scroll-mt-2">
+            <h4 className="px-1 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-text-3 uppercase">{c.label}</h4>
+            <div className="grid grid-cols-8 gap-0.5">
+              {c.emojis.map((e, i) => (
+                <button
+                  key={`${c.id}-${i}`}
+                  type="button"
+                  aria-label={`Insert ${e}`}
+                  onPointerDown={(ev) => ev.preventDefault()}
+                  onClick={() => {
+                    noteEmojiUsed(e);
+                    onPick(e);
+                    if (c.id !== 'recent') setRecent(recentEmojis());
+                  }}
+                  className="pressable grid aspect-square place-items-center rounded-xl text-[24px] active:bg-surface-2"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One picker for the composer, like a phone keyboard: Emoji, GIFs and Stickers. onSend(attachment)
+ * sends a sticker or GIF right away; onEmoji(e) adds an emoji to the message (left open for more).
+ */
+export function StickerSheet({ open, onClose, onSend, onEmoji, initialTab }) {
   const { giphy, aiImages } = useStickers();
   const [aiOpen, setAiOpen] = useState(false);
-  const [tab, setTab] = useState('mine');
+  const [tab, setTab] = useState(initialTab || (onEmoji ? 'emoji' : 'mine'));
+  useEffect(() => {
+    if (open) setTab(initialTab || (onEmoji ? 'emoji' : 'mine'));
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const [makerFile, setMakerFile] = useState(null);
   const input = useRef(null);
+  // Emoji | GIF | Stickers (| GIPHY stickers), like a phone keyboard. Without onSend (editing a
+  // message) only emoji can be added.
   const tabs = [
-    { value: 'mine', label: 'My stickers' },
-    giphy && { value: 'gifs', label: 'GIFs' },
-    giphy && { value: 'stickers', label: 'GIPHY' },
+    onEmoji && { value: 'emoji', label: 'Emoji' },
+    onSend && giphy && { value: 'gifs', label: 'GIF' },
+    onSend && { value: 'mine', label: 'Stickers' },
+    onSend && giphy && { value: 'stickers', label: 'GIPHY' },
   ].filter(Boolean);
   const [importing, setImporting] = useState(null); // { done, total }
   const importInput = useRef(null);
@@ -445,10 +499,11 @@ export function StickerSheet({ open, onClose, onSend }) {
         open={open && !makerFile && !aiOpen}
         onClose={onClose}
         full
-        title="Stickers"
+        title={tab === 'emoji' ? 'Emoji' : tab === 'gifs' ? 'GIFs' : 'Stickers'}
       >
         <div data-testid="sticker-sheet">
-          {tabs.length > 1 && <Segmented options={tabs} value={tab} onChange={setTab} label="Sticker source" className="mx-4 mb-2" size="sm" />}
+          {tabs.length > 1 && <Segmented options={tabs} value={tab} onChange={setTab} label="Emoji, GIFs and stickers" className="mx-4 mb-2" size="sm" />}
+          {tab === 'mine' && (
           <div className="mx-4 mb-3 grid auto-cols-fr grid-flow-col gap-2">
             {aiImages && (
               <Button size="sm" variant="secondary" icon={Sparkles} onClick={() => setAiOpen(true)} aria-label="AI fun picture">
@@ -462,7 +517,14 @@ export function StickerSheet({ open, onClose, onSend }) {
               Create
             </Button>
           </div>
-          {tab === 'mine' ? <MyStickers onSend={send} onCreate={create} /> : <GiphyTab key={tab} kind={tab} onSend={send} />}
+          )}
+          {tab === 'emoji' ? (
+            <EmojiTab onPick={(e) => onEmoji?.(e)} />
+          ) : tab === 'mine' ? (
+            <MyStickers onSend={send} onCreate={create} />
+          ) : (
+            <GiphyTab key={tab} kind={tab} onSend={send} />
+          )}
         </div>
       </Sheet>
       <input

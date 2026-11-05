@@ -5,6 +5,7 @@
 // Wide windows have all of these in the sidebar, so there the header is the title and actions.
 // `onBack` (the AI screen, which isn't on the tab bar) swaps the switcher for a back button and
 // leaves out the buttons.
+import { HeaderAiButton } from './HeaderAi.jsx';
 import { selfPresence } from '../lib/presence.js';
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -94,6 +95,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
         <div className="flex h-16 items-center gap-2 pl-5 pr-2">
           <h1 className="min-w-0 flex-1 truncate text-[20px] font-bold tracking-tight">{title}</h1>
           {actions}
+          <HeaderAiButton />
         </div>
         {children}
       </header>
@@ -107,6 +109,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
           <IconButton icon={ArrowLeft} label="Back" onClick={onBack} />
           <h1 className="min-w-0 flex-1 truncate pl-1 text-[20px] font-bold tracking-tight">{title}</h1>
           {actions}
+          <HeaderAiButton />
         </div>
         {children}
       </header>
@@ -168,6 +171,7 @@ export function TabHeader({ title, actions, children, className, onBack, context
           </button>
           {actions}
           <IconButton icon={Search} label="Search" data-tour="search" onClick={() => setSearching(true)} />
+          <HeaderAiButton />
           <button
             type="button"
             aria-label="Profile and settings"
