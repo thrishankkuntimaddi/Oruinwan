@@ -6,12 +6,14 @@ import {
   User, KeyRound, Laptop, Smartphone, Monitor, Bell, Pencil, Palette, Lock, Sparkles, Plug, Building2, Download, Server, Database, Info, LogOut,
   ExternalLink, Compass, ShieldCheck, Gauge, ScanQrCode, Moon, Sun, SunMoon, CircleCheck, RefreshCw, FlaskConical, Trash2, ScrollText, Bug, Globe, Eraser, Fingerprint, MessageSquareText, BellRing, BellOff, CloudUpload,
   LifeBuoy, BookOpen, Gift, ChevronRight,
+  Move,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
 import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useSessions } from '../../data/hooks.js';
 import { clearQueries, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { useAppearance, TEXT_SIZES } from '../../app/theme.js';
+import { setAiMovable, useAiCorner } from '../../app/aiCorner.js';
 import { useUpdate, checkForUpdate, revertToBuiltInUi } from '../../update/updater.js';
 import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
@@ -872,6 +874,7 @@ export function PrivacySettings() {
 
 export function AiSettings() {
   const ws = useSession((s) => s.workspaceId);
+  const movable = useAiCorner((s) => s.movable);
   const web = useWebLink();
   const [confirm, setConfirm] = useState(false);
   const [count, setCount] = useState(null);
@@ -889,6 +892,16 @@ export function AiSettings() {
             Summarise conversations, find what's on your plate, draft messages, and create or update tasks and notes when you ask. It only acts on your
             behalf when you ask it to.
           </div>
+        </Section>
+        <Section title="AI button">
+          <RowGroup footer={movable ? 'Drag the AI button to any corner of the screen; it snaps into place. A chat’s AI button moves to the same side.' : 'The AI button stays in the bottom-right corner.'}>
+            <Row
+              icon={Move}
+              title="Move the AI button"
+              subtitle="Choose its corner by dragging it"
+              trailing={<Toggle checked={movable} onChange={setAiMovable} label="Move the AI button" />}
+            />
+          </RowGroup>
         </Section>
         <Section title="Your conversations">
           <RowGroup footer="Past AI conversations are saved to your account, so they're on all your devices. Only you can see them.">

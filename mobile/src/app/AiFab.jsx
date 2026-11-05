@@ -11,7 +11,7 @@ import { AiEyes } from './AiEyes.jsx';
 import { useQuickAi } from './QuickAi.jsx';
 import { bindAiMood, pokeAi, setMood } from './aiMood.js';
 import { fly, leaveSpot, takeSpot } from './aiFlight.js';
-import { nearestCorner, onLeft, onTop, setAiCorner, useAiCorner } from './aiCorner.js';
+import { nearestCorner, onLeft, onTop, setAiCorner, useAiCorner, useEffectiveCorner } from './aiCorner.js';
 
 /** Tabs whose main screen has its own button (ui/Button.jsx Fab) bottom right. */
 export const TABS_WITH_FAB = new Set(['chats', 'tasks', 'notes']);
@@ -58,7 +58,8 @@ export function AiFab({ tab, hidden = false }) {
   }, [hidden]);
   // Drag it to any corner: it follows the finger, then snaps to the nearest corner (aiCorner.js)
   // and glides there from where it was let go.
-  const corner = useAiCorner((s) => s.corner);
+  const corner = useEffectiveCorner();
+  const movable = useAiCorner((s) => s.movable);
   const [drag, setDrag] = useState(null); // { x, y } offset while dragging
   const press = useRef(null);
   const dragged = useRef(false);
@@ -92,7 +93,7 @@ export function AiFab({ tab, hidden = false }) {
   };
   const movePress = (e) => {
     const p = press.current;
-    if (!p) return;
+    if (!p || !movable) return;
     const dx = e.clientX - p.x;
     const dy = e.clientY - p.y;
     if (!dragged.current && Math.hypot(dx, dy) < 10) return;
@@ -168,7 +169,7 @@ export function AiFab({ tab, hidden = false }) {
         endPress(e);
       }}
       onPointerLeave={() => !dragged.current && clearTimeout(holdTimer.current)}
-      data-no-swipe
+      data-no-swipe={movable || undefined}
       data-corner={corner}
       tabIndex={off ? -1 : 0}
       aria-hidden={off || undefined}
@@ -180,7 +181,7 @@ export function AiFab({ tab, hidden = false }) {
       style={{
         width: size,
         height: size,
-        touchAction: 'none',
+        touchAction: movable ? 'none' : undefined,
         ...(left ? { left: 16 } : { right: 16 }),
         // Top corners sit below the screen's header; bottom ones above the tab bar.
         ...(top

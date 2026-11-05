@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useAiLanding } from '../../app/aiFlight.js';
 import { AiEyes } from '../../app/AiEyes.jsx';
 import { pokeAi, setMood } from '../../app/aiMood.js';
-import { onLeft, useAiCorner } from '../../app/aiCorner.js';
+import { onLeft, useEffectiveCorner } from '../../app/aiCorner.js';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -28,7 +28,7 @@ export function AiIsland({ transcript, title }) {
   const input = useRef(null);
   const [landingRef, landingStyle] = useAiLanding();
   // Same side as the floating AI button (aiCorner.js).
-  const left = onLeft(useAiCorner((st) => st.corner));
+  const left = onLeft(useEffectiveCorner());
     // Always the small button in the top-right corner: the full pill covered the messages.
   const compact = true;
 

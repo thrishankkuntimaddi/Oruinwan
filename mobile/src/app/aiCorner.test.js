@@ -18,3 +18,17 @@ describe('AI button corner', () => {
     setAiCorner('bottom-right');
   });
 });
+
+describe('moving the AI button is a setting', () => {
+  it('stays bottom right until switched on, and goes back when switched off', async () => {
+    const { effectiveCorner, setAiMovable, setAiCorner, useAiCorner } = await import('./aiCorner.js');
+    setAiMovable(false);
+    setAiCorner('top-left');
+    expect(effectiveCorner(useAiCorner.getState())).toBe('bottom-right');
+    setAiMovable(true);
+    expect(effectiveCorner(useAiCorner.getState())).toBe('top-left');
+    setAiMovable(false);
+    expect(useAiCorner.getState().corner).toBe('bottom-right');
+    expect(effectiveCorner(useAiCorner.getState())).toBe('bottom-right');
+  });
+});

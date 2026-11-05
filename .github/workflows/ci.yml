@@ -52,9 +52,15 @@ jobs:
           retention-days: 7
 
   e2e:
-    name: E2E (Playwright, core flows)
+    # Two halves side by side (each with its own databases): the flows, and the long smoke crawl
+    # of every page. One after the other they took ~45 minutes, the whole time limit.
+    name: E2E (Playwright, ${{ matrix.part }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [core flows, smoke crawl]
     services:
       mongo:
         image: mongo:7
@@ -102,11 +108,17 @@ jobs:
         working-directory: mobile
       - run: yarn playwright install --with-deps chromium
         working-directory: e2e
-      - run: yarn workspace e2e test
+      - name: Run the tests
+        run: |
+          if [ "${{ matrix.part }}" = "smoke crawl" ]; then
+            yarn workspace e2e test tests/99-smoke-crawl.spec.js
+          else
+            yarn workspace e2e test --grep-invert "smoke crawl"
+          fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ strategy.job-index }}
           path: |
             e2e/playwright-report
             e2e/test-results

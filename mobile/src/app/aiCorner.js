@@ -1,13 +1,30 @@
-// Which corner the AI button lives in: drag it and it snaps to the nearest one (bottom right by
-// default). Remembered on this device; a chat's AI button sits on the same side.
+// Which corner the AI button lives in. Off by default: it stays bottom right. With Settings →
+// Oruinwan AI → "Move the AI button" on, drag it and it snaps to the nearest corner. Remembered
+// on this device; a chat's AI button sits on the same side.
 import { create } from 'zustand';
 import { prefs } from '../native/storage.js';
 
 export const AI_CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 const KEY = 'ai.corner';
+const MOVABLE_KEY = 'ai.movable';
+export const DEFAULT_CORNER = 'bottom-right';
 const valid = (c) => (AI_CORNERS.includes(c) ? c : null);
 
-export const useAiCorner = create(() => ({ corner: valid(prefs.get(KEY)) || 'bottom-right' }));
+export const useAiCorner = create(() => ({
+  movable: prefs.get(MOVABLE_KEY, false) === true,
+  corner: valid(prefs.get(KEY)) || DEFAULT_CORNER,
+}));
+
+/** Where the button is now: its chosen corner when moving is on, else bottom right. */
+export const effectiveCorner = (s) => (s.movable ? s.corner : DEFAULT_CORNER);
+export const useEffectiveCorner = () => useAiCorner(effectiveCorner);
+
+/** Settings switch. Off puts the button back bottom right. */
+export function setAiMovable(on) {
+  prefs.set(MOVABLE_KEY, Boolean(on));
+  if (!on) prefs.set(KEY, DEFAULT_CORNER);
+  useAiCorner.setState({ movable: Boolean(on), ...(on ? {} : { corner: DEFAULT_CORNER }) });
+}
 
 export function setAiCorner(corner) {
   const c = valid(corner);
