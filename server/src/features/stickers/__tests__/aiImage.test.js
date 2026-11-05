@@ -1,14 +1,17 @@
 const aiImage = require('../aiImage');
 const counters = require('../../../shared/plans/planCounters');
 
-const ENV = { GEMINI_API_KEY: 'k' };
+const ENV = { GEMINI_API_KEY: 'k', AI_IMAGES_ENABLED: '1' };
 const photo = { buffer: Buffer.from('jpegbytes'), mimeType: 'image/jpeg' };
 
 describe('AI pictures', () => {
     beforeEach(() => counters._resetMemory?.());
 
-    test('off without a Gemini key', async () => {
+    test('off unless switched on, and off without a Gemini key', async () => {
         expect(aiImage.enabled({})).toBe(false);
+        expect(aiImage.enabled({ GEMINI_API_KEY: 'k' })).toBe(false);
+        expect(aiImage.enabled({ AI_IMAGES_ENABLED: '1' })).toBe(false);
+        expect(aiImage.enabled(ENV)).toBe(true);
         await expect(aiImage.makePicture({ ...photo, style: 'cat' }, { env: {} })).rejects.toMatchObject({ status: 503, code: 'AI_IMAGES_OFF' });
     });
 

@@ -5,8 +5,9 @@
  * image model, which sends back an edited picture; the app then cuts it out and styles it like
  * any sticker. Nothing is stored here: the picture only becomes a sticker if the person saves it.
  *
- * Settings (server/.env):
- *   GEMINI_API_KEY             the same key as Gemini chat (ai/config.js); off without it
+ * Settings (server/.env). Off by default: image models need billing on the Google project.
+ *   AI_IMAGES_ENABLED=1        switch it on (the AI button in the sticker sheet appears)
+ *   GEMINI_API_KEY             the same key as Gemini chat (ai/config.js); needed too
  *   GEMINI_IMAGE_MODEL         default gemini-3.1-flash-image (about $0.03–0.07 a picture)
  *   AI_IMAGES_FREE_DAILY       pictures per person per day on Free (default 3)
  *   AI_IMAGES_PRO_DAILY        on Pro (default 20); Enterprise and company accounts: no cap
@@ -35,7 +36,8 @@ const STYLES = {
 const clean = (v) => (typeof v === 'string' ? v.trim() : '');
 
 function enabled(env = process.env) {
-    return Boolean(clean(env.GEMINI_API_KEY) || clean(env.GOOGLE_AI_KEY));
+    const on = ['1', 'true', 'yes'].includes(clean(env.AI_IMAGES_ENABLED).toLowerCase());
+    return on && Boolean(clean(env.GEMINI_API_KEY) || clean(env.GOOGLE_AI_KEY));
 }
 
 function dailyLimit(plan, env = process.env) {
