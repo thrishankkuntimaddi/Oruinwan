@@ -17,7 +17,9 @@ export function Screen({ children, className }) {
 
 /** `ai` (default on): Oruinwan AI's button after the actions; `onAi` replaces what it opens. */
 export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack, ai = true, onAi }) {
-  const Ai = ai ? headerAiSlot() : null;
+  const tabRootHere = useContext(TabRootContext);
+  // Opened screens only (threads, a task, a note, calendar…): main screens have the floating button.
+  const Ai = ai && !tabRootHere ? headerAiSlot() : null;
   const pop = useNav((s) => s.pop);
   // The first screen in a wide window's detail pane sits beside its list: nothing to go back to.
   const { split, depth } = usePane();

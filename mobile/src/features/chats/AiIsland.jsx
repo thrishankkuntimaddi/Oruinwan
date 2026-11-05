@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAiLanding } from '../../app/aiFlight.js';
 import { AiEyes } from '../../app/AiEyes.jsx';
 import { pokeAi, setMood } from '../../app/aiMood.js';
-import { onLeft, useAiCorner, useEffectiveCorner } from '../../app/aiCorner.js';
+import { onLeft, useEffectiveCorner } from '../../app/aiCorner.js';
 import { create } from 'zustand';
 
 // The chat header's AI button opens the question box here (openChatAi).
@@ -34,7 +34,6 @@ export function AiIsland({ transcript, title }) {
   const [landingRef, landingStyle] = useAiLanding();
   // Same side as the floating AI button (aiCorner.js).
   const left = onLeft(useEffectiveCorner());
-  const floating = useAiCorner((st) => st.floating);
   const asked = useChatAi((st) => st.asked);
   const firstAsk = useRef(asked);
   useEffect(() => {
@@ -74,9 +73,6 @@ export function AiIsland({ transcript, title }) {
   };
 
   if (!api().askAboutConversation) return null;
-
-  // Without the floating button the chat's AI button is in the header (openChatAi).
-  if (!open && !floating) return null;
 
   if (!open && compact) {
     return (

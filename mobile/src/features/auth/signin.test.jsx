@@ -11,7 +11,7 @@ vi.mock('../../data/session.js', () => {
   return { api: () => live, useSession: mockSession.store };
 });
 vi.mock('../../native/index.js', () => ({
-  hideKeyboard: vi.fn(), tap: vi.fn(), deviceNoun: 'phone', platformLabel: 'Android', isAndroid: false, isNative: false, clientPlatform: 'android',
+  hideKeyboard: vi.fn(), tap: vi.fn(), deviceNoun: 'phone', platformLabel: 'Android', isAndroid: false, isNative: false, clientPlatform: 'android', isTablet: false, isDesktop: false,
   onAppState: vi.fn(async () => () => {}),
 }));
 vi.mock('../../native/scanner.js', () => ({

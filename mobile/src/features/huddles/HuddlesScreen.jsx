@@ -172,7 +172,7 @@ export function HuddlesScreen() {
           <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
         </TabHeader>
       ) : (
-        <Header title="Huddles" subtitle="Calls and meetings, live, upcoming and past">
+        <Header title="Huddles" subtitle="Calls and meetings, live, upcoming and past" ai={false}>
           <SearchField value={search} onChange={setSearch} placeholder="Search meetings and huddles" className="mx-4 mb-2" />
           <Chips options={HUDDLE_LISTS} value={list} onChange={pick} className="pb-3" />
         </Header>

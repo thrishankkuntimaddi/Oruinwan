@@ -326,6 +326,7 @@ export function KnowledgeScreen() {
   return (
     <Screen>
       <Header
+        ai={false}
         title="Knowledge"
         actions={
           <>

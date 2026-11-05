@@ -340,7 +340,7 @@ export function FilesScreen() {
 
   return (
     <Screen>
-      <Header title="Files" subtitle={data ? `${data.total} shared with you` : ''}>
+      <Header title="Files" subtitle={data ? `${data.total} shared with you` : ''} ai={false}>
         <div className="px-4 pb-2">
           <SearchField value={query} onChange={setQuery} placeholder="Find a file by name" />
         </div>

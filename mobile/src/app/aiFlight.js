@@ -243,10 +243,11 @@ export function useAiHeaderSpot() {
       stop();
       const i = headerSpots.indexOf(entry);
       if (i >= 0) headerSpots.splice(i, 1);
-      // Closing: fly back to the header underneath (or leave the spot for whoever appears next).
+      // Closing: fly back to the header of the screen underneath when there is one on show;
+      // otherwise (back on a main screen) leave the spot, and the floating button flies down to it.
       const now = el.getBoundingClientRect();
       const from = { rect: now.width && now.right > 0 && now.left < window.innerWidth ? now : rest || now, look: el.cloneNode(true) };
-      const back = topVisible(el) || [...headerSpots].reverse()[0];
+      const back = topVisible(el);
       if (back && from.rect.width) back.land(from);
       else leaveSpot(el, rest);
     };

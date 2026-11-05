@@ -13,7 +13,7 @@ import { api, useSession, useWorkspace } from '../../data/session.js';
 import { useSessions } from '../../data/hooks.js';
 import { clearQueries, invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { useAppearance, TEXT_SIZES } from '../../app/theme.js';
-import { setAiFloating, setAiMovable, useAiCorner } from '../../app/aiCorner.js';
+import { setAiMovable, useAiCorner } from '../../app/aiCorner.js';
 import { useUpdate, checkForUpdate, revertToBuiltInUi } from '../../update/updater.js';
 import { useFlags, FLAG_LABELS } from '../../config/flags.js';
 import { setAnalyticsEnabled } from '../../config/remote.js';
@@ -875,7 +875,6 @@ export function PrivacySettings() {
 export function AiSettings() {
   const ws = useSession((s) => s.workspaceId);
   const movable = useAiCorner((s) => s.movable);
-  const floating = useAiCorner((s) => s.floating);
   const web = useWebLink();
   const [confirm, setConfirm] = useState(false);
   const [count, setCount] = useState(null);
@@ -895,29 +894,13 @@ export function AiSettings() {
           </div>
         </Section>
         <Section title="AI button">
-          <RowGroup
-            footer={
-              !floating
-                ? 'The AI button is in the header of every screen, next to search.'
-                : movable
-                  ? 'Drag the AI button to any corner of the screen; it snaps into place. A chat’s AI button moves to the same side.'
-                  : 'The AI button floats in the bottom-right corner of every screen.'
-            }
-          >
+          <RowGroup footer={movable ? 'Drag the AI button to any corner of the screen; it snaps into place. A chat’s AI button moves to the same side.' : 'The AI button stays in the bottom-right corner.'}>
             <Row
-              icon={Sparkles}
-              title="Floating AI button"
-              subtitle="Over the screens instead of in the header"
-              trailing={<Toggle checked={floating} onChange={setAiFloating} label="Floating AI button" />}
+              icon={Move}
+              title="Move the AI button"
+              subtitle="Choose its corner by dragging it"
+              trailing={<Toggle checked={movable} onChange={setAiMovable} label="Move the AI button" />}
             />
-            {floating && (
-              <Row
-                icon={Move}
-                title="Move the AI button"
-                subtitle="Choose its corner by dragging it"
-                trailing={<Toggle checked={movable} onChange={setAiMovable} label="Move the AI button" />}
-              />
-            )}
           </RowGroup>
         </Section>
         <Section title="Your conversations">

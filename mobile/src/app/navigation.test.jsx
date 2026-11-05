@@ -144,12 +144,11 @@ describe('tablet tab bar', () => {
 });
 
 describe('tab header', () => {
-  it('has Search, Oruinwan AI and Profile on the right (AI is in the header unless it floats)', async () => {
-    const { setAiFloating } = await import('./aiCorner.js');
-    setAiFloating(false);
+  it('has Search and Profile on the right; AI is the floating button, not in the header', () => {
     render(<TabHeader title="Chats" />);
     const buttons = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'));
-    expect(buttons.slice(-3)).toEqual(['Search', 'Oruinwan AI', 'Profile and settings']);
+    expect(buttons.slice(-2)).toEqual(['Search', 'Profile and settings']);
+    expect(screen.queryByRole('button', { name: 'Oruinwan AI' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Notifications/ })).toBeNull();
   });
 
@@ -179,8 +178,6 @@ describe('tab header', () => {
   it('the AI button is small above the tab button on Chats, Tasks and Notes and full size on Home and Activity; it opens the quick AI window', async () => {
     const { AiFab } = await import('./AiFab.jsx');
     const { useQuickAi } = await import('./QuickAi.jsx');
-    const { setAiFloating } = await import('./aiCorner.js');
-    setAiFloating(true); // the floating button is a setting
     const { rerender } = render(<AiFab tab="chats" />);
     expect(screen.getByRole('button', { name: 'Oruinwan AI' }).dataset.size).toBe('small');
     rerender(<AiFab tab="home" />);

@@ -71,3 +71,14 @@ describe('shortcutFor', () => {
     expect(shortcutFor(key('k', { altKey: true }), tabs)).toBeNull();
   });
 });
+
+describe('tablets', () => {
+  it('split in portrait and landscape, never the sidebar', () => {
+    expect(layoutFor(800, 1280, true)).toBe('split');
+    expect(layoutFor(1280, 800, true)).toBe('split');
+    expect(layoutFor(600, 960, true)).toBe('split');
+    expect(layoutFor(560, 900, true)).toBe('phone');
+    expect(layoutFor(1280, 800, false)).toBe('wide');
+    expect(listColumnWidth(1280, 'split')).toBe(435);
+  });
+});

@@ -7,8 +7,6 @@ const { useNav } = await import('./nav.js');
 
 describe('AI button hop', () => {
   it('hops (legs out) when the page changes, not on first show', async () => {
-    const { setAiFloating } = await import('./aiCorner.js');
-    setAiFloating(true); // the floating button is a setting
     render(<AiFab tab="home" />);
     const body = () => screen.getByRole('button', { name: 'Oruinwan AI' }).querySelector('.ai-fab-body');
     expect(body().classList.contains('is-hopping')).toBe(false);

@@ -1,14 +1,15 @@
 // Oruinwan AI's button in a screen's header, next to search: the same face as ever (eyes that
 // follow your touch, moods). Tapping it opens the quick AI window, or what the screen asks for
 // (a chat: "Ask AI about this chat"). It travels between headers as screens open and close
-// (aiFlight.js). Hidden when the floating AI button is chosen in Settings.
+// (aiFlight.js): the floating button flies up into it when such a screen opens, and back down
+// when it closes. Main screens (Home, Chats, Tasks, Notes, Files, Knowledge, Huddles) keep the
+// floating button; a chat keeps its own AI button (AiIsland).
 import { useFlag } from '../config/flags.js';
 import { useQuickAi } from './QuickAi.jsx';
 import { nav } from './nav.js';
 import { AiEyes } from './AiEyes.jsx';
 import { pokeAi } from './aiMood.js';
 import { useAiHeaderSpot } from './aiFlight.js';
-import { useAiCorner } from './aiCorner.js';
 
 export function openQuickAi() {
   const show = useQuickAi.getState().show;
@@ -18,8 +19,7 @@ export function openQuickAi() {
 
 export function HeaderAiButton({ onPress, label = 'Oruinwan AI' }) {
   const aiOn = useFlag('ai');
-  const floating = useAiCorner((s) => s.floating);
-  if (!aiOn || floating) return null;
+  if (!aiOn) return null;
   return <HeaderAiFace onPress={onPress} label={label} />;
 }
 

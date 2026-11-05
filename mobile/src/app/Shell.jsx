@@ -205,15 +205,21 @@ function SplitTab({ tab, stack }) {
       </div>
     );
   }
+  // List and open item side by side; the bottom bar runs under both (not inside the list), and
+  // the panes end above it so it never covers the open item's composer.
   return (
-    <div className="flex h-full">
-      <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
-        <Root tab={tab} />
-        <AiFab tab={tab} />
-        <QuickAi />
+    <div className="flex h-full flex-col">
+      <div className="flex min-h-0 flex-1">
+        <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
+          <Root tab={tab} />
+          <AiFab tab={tab} />
+          <QuickAi />
+        </section>
+        <DetailPane tab={tab} stack={stack} />
+      </div>
+      <div className="relative shrink-0" style={{ height: 'calc(60px + var(--sab))' }}>
         <TabBar />
-      </section>
-      <DetailPane tab={tab} stack={stack} />
+      </div>
     </div>
   );
 }

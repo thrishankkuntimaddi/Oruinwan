@@ -13,7 +13,7 @@ vi.mock('../../data/session.js', () => {
   }));
   return { api: () => live, useSession: mockSession.store };
 });
-vi.mock('../../native/index.js', () => ({ tap: vi.fn(), hideKeyboard: vi.fn() }));
+vi.mock('../../native/index.js', () => ({ tap: vi.fn(), hideKeyboard: vi.fn(), isTablet: false, isDesktop: false }));
 
 const { PhoneTour } = await import('./PhoneTour.jsx');
 const { TOUR_STEPS, moveStep, placeCard, shouldAutoStart, startTour, useTour } = await import('./tourState.js');

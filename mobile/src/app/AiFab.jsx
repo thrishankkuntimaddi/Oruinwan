@@ -60,8 +60,6 @@ export function AiFab({ tab, hidden = false }) {
   // and glides there from where it was let go.
   const corner = useEffectiveCorner();
   const movable = useAiCorner((s) => s.movable);
-  // Only when chosen in Settings: otherwise the AI button lives in each screen's header.
-  const floating = useAiCorner((s) => s.floating);
   const [drag, setDrag] = useState(null); // { x, y } offset while dragging
   const press = useRef(null);
   const dragged = useRef(false);
@@ -82,7 +80,7 @@ export function AiFab({ tab, hidden = false }) {
       }, 340);
     });
   }, [corner]);
-  if (!aiOn || tab === 'ai' || !floating) return null;
+  if (!aiOn || tab === 'ai') return null;
   const left = onLeft(corner);
   const top = onTop(corner);
   // Small above the tab's own button only where that button is (bottom right).

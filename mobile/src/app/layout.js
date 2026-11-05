@@ -10,16 +10,23 @@
 // multi-window); the navigation store is untouched, so nothing open is lost.
 import { createContext, useContext } from 'react';
 import { create } from 'zustand';
-import { isDesktop } from '../native/index.js';
+import { isDesktop, isTablet } from '../native/index.js';
 
 export const SPLIT_MIN_WIDTH = 768;
 export const WIDE_MIN_WIDTH = 1024;
 /** Shorter than this is a phone on its side: too little height for two panes and a tab bar. */
 export const MIN_PANE_HEIGHT = 500;
 
-/** 'phone' | 'split' | 'wide' for a window of this size (CSS pixels). */
-export function layoutFor(width, height) {
+/** Tablets (the Android/iOS app on a tablet) split from this width, in portrait too. */
+export const TABLET_SPLIT_MIN_WIDTH = 600;
+
+/**
+ * 'phone' | 'split' | 'wide' for a window of this size (CSS pixels). Tablets are always 'split'
+ * (list + open item, the bottom bar under both, in portrait and landscape: no sidebar).
+ */
+export function layoutFor(width, height, tablet = isTablet) {
   if (!(width > 0)) return 'phone';
+  if (tablet) return width >= TABLET_SPLIT_MIN_WIDTH && !(height > 0 && height < MIN_PANE_HEIGHT) ? 'split' : 'phone';
   if (width < SPLIT_MIN_WIDTH) return 'phone';
   if (height > 0 && height < MIN_PANE_HEIGHT) return 'phone';
   return width >= WIDE_MIN_WIDTH ? 'wide' : 'split';
@@ -31,8 +38,8 @@ export function layoutFor(width, height) {
  */
 export function listColumnWidth(width, kind = layoutFor(width, MIN_PANE_HEIGHT)) {
   if (kind === 'phone') return width;
-  // Landscape tablets (wide) get a roomier list: names and previews were cut short.
-  const [min, max, share] = kind === 'wide' ? [340, 460, 0.34] : [300, 380, 0.4];
+  // Wide windows and landscape tablets get a roomier list: names and previews were cut short.
+  const [min, max, share] = kind === 'wide' || width >= WIDE_MIN_WIDTH ? [340, 460, 0.34] : [300, 380, 0.4];
   return Math.round(Math.min(max, Math.max(min, width * share)));
 }
 
