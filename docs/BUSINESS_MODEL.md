@@ -201,6 +201,12 @@ activity metrics** and no message analytics: privacy is part of the product.
 
 ## 7. Operating the plans (runbook)
 
+**Online (Razorpay, from 2026-11-05).** Once Razorpay is set up ([billing API](api/billing.md#setting-it-up)),
+a workspace owner pays on *Plans and pricing* (web, desktop, GitHub APK) and the webhook switches the
+workspace and its owner to Pro and back. Billing is Slack-style: price × members, and the quantity
+follows the member count from the next charge. The Play Store and iPhone builds sell nothing.
+The manual steps below still work for email sales, Enterprise and fixes.
+
 Plans are columns in PostgreSQL: `users.plan` and `workspaces.plan` (`free`, `pro`, `enterprise`).
 Run these on the server's database (`docker compose exec postgres psql -U oruinwan oruinwan`), and
 always find the ids first.
@@ -234,12 +240,12 @@ For Enterprise on the customer's own server, set `ORUINWAN_UNLIMITED=1` (or comp
 
 | Item | Why | Status |
 |---|---|---|
-| Rotate the credentials in the old prototype `.env` (MongoDB URI, JWT secret, Cloudinary keys) that are still in public git history | Anyone can read them | **Owner to do**; the file is no longer in the code, only in history |
-| GIPHY production key instead of the beta key (100 calls an hour) | GIF search stops working under load | **Owner to do** (apply at developers.giphy.com, then `GIPHY_API_KEY` in `server/.env`) |
+| Rotate the credentials in the old prototype `.env` (MongoDB URI, JWT secret, Cloudinary keys) that are still in public git history | Anyone can read them | Done (owner, 2026-11-05) |
+| GIPHY production key instead of the beta key (100 calls an hour) | GIF search stops working under load | Done (owner, 2026-11-05) |
 | Play Store declarations (full-screen intent, foreground service, Data safety) and AAB upload | Android distribution | **Owner to do** |
 | Bigger server, monitoring and alerts (§5) | Paying teams expect uptime | To do before 10 paying teams |
-| Terms of service and refund policy pages that mention Pro and Enterprise | Needed for payment providers | To do with the payment provider |
-| Online checkout (Stripe / Razorpay) + the `billing` flag | Removes the manual step | When manual sales take > 1 hour a week |
+| Terms of service and refund policy pages that mention Pro and Enterprise | Razorpay checks them before activating the account | **Owner to do** |
+| Online checkout | Removes the manual step | Code done (Razorpay, [billing API](api/billing.md)); owner adds keys, plans and the webhook |
 | Encryption wording: "encrypted, with a sealed server copy of each key", never "zero-knowledge" | Honesty; Enterprise buyers check | Done (README, PRD, landing, in-app docs) |
 
 ---

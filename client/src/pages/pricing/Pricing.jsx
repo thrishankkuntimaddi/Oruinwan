@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, Github, Mail, Tag } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import PublicPageShell from '../../components/layout/PublicPageShell';
 import { PageHero, Block } from '../../components/public/PublicKit';
 import { usePlan } from '../../features/plan/usePlan';
 import PlanCards from './PlanCards';
+import ProBilling from '../../features/billing/ProBilling';
 import { FREE_LIMITS, PRO_LIMITS, SALES_EMAIL, REPO_URL, enterpriseHref } from './plans';
 import './pricing.css';
 
@@ -74,7 +75,8 @@ export const EnterpriseBlock = ({ site = false }) => (
 
 const Footnote = () => (
     <p className="prc-note">
-        Pro is switched on by our team once payment is received, usually the same business day. Prices are in US dollars, plus tax where it applies.
+        Signed in as a workspace owner, you can pay for Pro on this page (cards, UPI and net banking through Razorpay); otherwise email us and our team switches it on.
+        {' '}Prices are in US dollars (or rupees in India), plus tax where it applies. Cancel any time: see <a href="/refunds">cancellation and refunds</a>.
         {' '}Running your own server? Every limit is configurable, see the <a href={`${REPO_URL}#configurable-limits`} target="_blank" rel="noopener noreferrer">README</a>.
         {' '}Questions: <a href={`mailto:${SALES_EMAIL}`}>{SALES_EMAIL}</a>
     </p>
@@ -95,6 +97,7 @@ const AppPricing = () => {
     const { user } = useAuth();
     const { plan: info } = usePlan(user ? null : false);
     const current = currentPlanOf(info);
+    const [payOnline, setPayOnline] = useState(false);
     const back = () => (window.history.length > 1 ? navigate(-1) : navigate('/workspaces'));
     return (
         <div className="prc-app">
@@ -111,7 +114,8 @@ const AppPricing = () => {
                 </div>
             </header>
             <div className="prc-app__body prc-root">
-                <PlanCards currentPlan={current} />
+                <PlanCards currentPlan={current} proHref={payOnline ? '#prc-billing' : null} />
+                <ProBilling onEnabled={setPayOnline} />
                 <FreeLimits />
                 <ProLimits />
                 <EnterpriseBlock />

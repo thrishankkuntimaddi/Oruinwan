@@ -6,6 +6,9 @@
 //                                  huddle limits, AI today, blocked (the next addition is refused)
 //   GET /api/plan/ai?workspaceId=  { userUsed, userMax, userRemaining, workspaceUsed, workspaceMax,
 //                                    workspaceRemaining, resetsAt, exempt }
+//   GET  /api/billing/workspaces/:id           Pro paid online: { plan, seats, subscription, payments,
+//                                               billing: { enabled, offers } } (owner and admins)
+//   POST /api/billing/workspaces/:id/checkout  { cycle, currency } → { shortUrl, amount, ... } (owner)
 // A server without plans (older, or self-hosted without limits) answers 404: that reads as
 // "no limits" (null), so nothing in the app is blocked.
 import { api } from './http.js';
@@ -60,7 +63,48 @@ export function mapPlan(d) {
   };
 }
 
+/** Billing of a workspace in the app's shape, or null (no billing on this server, or not an admin). */
+export function mapBilling(d) {
+  if (!d || typeof d !== 'object') return null;
+  const sub = d.subscription || null;
+  return {
+    plan: d.plan || 'free',
+    seats: num(d.seats),
+    subscription: sub
+      ? {
+          status: sub.status,
+          active: Boolean(sub.active),
+          cycle: sub.cycle,
+          currency: sub.currency,
+          quantity: num(sub.quantity) ?? 1,
+          amount: num(sub.amount),
+          currentEnd: sub.currentEnd || null,
+          cancelAtPeriodEnd: Boolean(sub.cancelAtPeriodEnd),
+          shortUrl: sub.shortUrl || null,
+        }
+      : null,
+    payments: Array.isArray(d.payments) ? d.payments.map((p) => ({ id: p.id, amount: num(p.amount), currency: p.currency, status: p.status, paidAt: p.paidAt })) : [],
+    enabled: Boolean(d.billing?.enabled),
+    offers: Array.isArray(d.billing?.offers) ? d.billing.offers.map((o) => ({ cycle: o.cycle, currency: o.currency, unitAmount: num(o.unitAmount) })) : [],
+  };
+}
+
+const noBilling = (err) => {
+  if (err?.status === 404 || err?.status === 403) return null;
+  throw err;
+};
+
 export const planAdapter = {
+  /** Pro billing for a workspace (owner and admins). Null when unavailable. */
+  async getBilling(workspaceId) {
+    if (!workspaceId) return null;
+    const data = await api.get(`/billing/workspaces/${encodeURIComponent(workspaceId)}`).catch(noBilling);
+    return mapBilling(data);
+  },
+  /** Start paying for Pro: { shortUrl, amount, currency, quantity, ... } (the hosted payment page). */
+  startProCheckout(workspaceId, { cycle, currency }) {
+    return api.post(`/billing/workspaces/${encodeURIComponent(workspaceId)}/checkout`, { cycle, currency });
+  },
   /** Plan, usage and limits for me (and the workspace, when given). Null when the server has no plans. */
   async getPlan(workspaceId) {
     const data = await api.get('/plan', { workspaceId }).catch(noPlan);

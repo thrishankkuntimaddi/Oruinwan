@@ -47,6 +47,7 @@ const LandingFooter = () => {
             title: 'Legal', links: [
                 { label: 'Privacy policy', to: '/privacy' },
                 { label: 'Terms of service', to: '/terms' },
+                { label: 'Cancellation & refunds', to: '/refunds' },
                 { label: 'Cookie settings', to: '/cookies' },
             ],
         },

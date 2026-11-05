@@ -4,11 +4,19 @@ import { create } from 'zustand';
 import { api, useSession } from '../../data/session.js';
 import { invalidate, setQueryData, useQuery } from '../../data/query.js';
 import { on, toast } from '../../lib/bus.js';
-import { openExternal } from '../../native/index.js';
+import { isIOS, isPlayStore, openExternal } from '../../native/index.js';
 import { isBlocked, pricingUrl } from './planText.js';
 import { webUrlFor } from '../../data/live/webUrl.js';
 
 export const planKey = (ws) => `plan:${ws || 'me'}`;
+export const billingKey = (ws) => `billing:${ws || 'none'}`;
+
+/**
+ * Store builds sell nothing: Google Play and the App Store require their own billing for
+ * subscriptions bought in the app, so the Play and iPhone builds show no prices, buy buttons or
+ * links to the website's checkout. Web, desktop and the GitHub APK pay with Razorpay.
+ */
+export const sellsInApp = !isPlayStore && !isIOS;
 export const aiKey = (ws) => `planai:${ws || 'me'}`;
 
 const live = (s) => s.mode === 'live' && s.status === 'signed-in';
@@ -23,6 +31,24 @@ export function usePlan(ws) {
 export function usePlanBlock(ws, key) {
   const { data } = usePlan(ws);
   return { plan: data || null, blocked: isBlocked(data, key) };
+}
+
+/** Pro billing of the workspace (owner and admins; null otherwise or in store builds). */
+export function useBilling(ws) {
+  const on_ = useSession(live);
+  return useQuery(on_ && ws && sellsInApp ? billingKey(ws) : null, () => api().getBilling?.(ws) ?? null, { staleMs: 30_000 });
+}
+
+/**
+ * Pay for Pro: the server starts a Razorpay subscription for the workspace's member count and
+ * the hosted payment page opens in the browser. The webhook moves the workspace to Pro.
+ */
+export async function startProCheckout(ws, offer) {
+  const out = await api().startProCheckout(ws, offer);
+  if (!out?.shortUrl) throw new Error("The payment page isn't available. Try again in a moment.");
+  await openExternal(out.shortUrl);
+  invalidate(billingKey(ws));
+  return out;
 }
 
 /** Today's AI requests (GET /api/plan/ai); kept current by plan:ai_usage. */

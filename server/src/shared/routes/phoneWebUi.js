@@ -16,7 +16,7 @@ const path = require('path');
 const PHONE_UA = /Android.+Mobile|iPhone|iPod|Windows Phone|Opera Mini|IEMobile/i;
 const WEB_ONLY = [
   '/verify-email', '/reset-password', '/forgot-password', '/accept-invite', '/set-password', '/oauth-success',
-  '/sso', '/register-company', '/pending-verification', '/reactivate', '/docs', '/pricing', '/privacy', '/terms', '/status',
+  '/sso', '/register-company', '/pending-verification', '/reactivate', '/docs', '/pricing', '/privacy', '/terms', '/refunds', '/status',
   '/employee', '/owner', '/admin', '/company',
 ];
 const NEVER = /^\/(api|uploads|socket\.io|m|icons|assets|\.well-known)(\/|$)/;

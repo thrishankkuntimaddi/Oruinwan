@@ -299,6 +299,8 @@ app.use("/api/upload", require("./src/shared/upload/upload.routes"));
 app.use("/api/updates", require("./src/features/updates/updates.routes"));
 // Plan, limits and usage (free / pro / enterprise): see docs/api/plans.md.
 app.use("/api/plan", require("./src/shared/plans/plan.routes"));
+// Pro paid online with Razorpay (checkout, webhook, seat sync): see docs/api/billing.md.
+app.use("/api/billing", require("./src/features/billing/billing.routes"));
 app.use("/api/dashboard", require("./src/features/dashboard/dashboard.routes"));
 app.use("/api/users", require("./src/features/users/user.routes"));
 app.use("/api/search", require("./src/features/search/search.routes"));
@@ -464,6 +466,7 @@ connectDatabase()
       require('./src/features/security/retention.cron').startRetentionCron();
       require('./src/features/automations/automation.cron').startAutomationCron(io);
       require('./src/features/drive-backup/driveBackup.cron').startDriveBackupCron();
+      require('./src/features/billing/billing.cron').startBillingSeatSyncCron();
       require('./src/features/scheduled-messages/scheduledMessages.cron').startScheduledMessagesCron(io);
       scheduleJob({
         name: 'audit-digest',

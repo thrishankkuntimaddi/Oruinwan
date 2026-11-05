@@ -12,6 +12,8 @@
 const helmet = require('helmet');
 
 const GOOGLE = 'https://accounts.google.com';
+// Razorpay Checkout (Pro payments, features/billing): its script; its window is an https: frame.
+const RAZORPAY = 'https://checkout.razorpay.com';
 
 function contentSecurityPolicy() {
   return {
@@ -19,7 +21,7 @@ function contentSecurityPolicy() {
     directives: {
       defaultSrc: ["'self'"],
       // 'wasm-unsafe-eval': WebAssembly only (the QR scanner in the phone interface, /m/); no eval.
-      scriptSrc: ["'self'", "'wasm-unsafe-eval'", GOOGLE],
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'", GOOGLE, RAZORPAY],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', GOOGLE],
       fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],

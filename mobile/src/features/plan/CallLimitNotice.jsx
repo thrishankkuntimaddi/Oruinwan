@@ -6,8 +6,8 @@ import { dismissEndedNotice, dismissTimeWarning, useHuddle } from '../huddles/hu
 import { Sheet } from '../../ui/Overlay.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { COMING_SOON, timeWarningText } from './planText.js';
-import { openPricing } from './plan.js';
+import { COMING_SOON, PLAY_LIMIT_TEXT, timeWarningText } from './planText.js';
+import { openPricing, sellsInApp } from './plan.js';
 
 export function CallTimeBanner() {
   const call = useHuddle((s) => s.call);
@@ -52,7 +52,7 @@ export function CallEndedNotice() {
             >
               Open notes
             </Button>
-          ) : (
+          ) : !sellsInApp ? null : (
             <Button
               variant="secondary"
               block
@@ -72,7 +72,7 @@ export function CallEndedNotice() {
     >
       <div className="px-5 pb-4" data-testid="call-time-ended">
         <p className="text-[15px] leading-snug">{notice?.message}</p>
-        <p className="mt-2 text-[13px] text-text-2">{COMING_SOON}</p>
+        <p className="mt-2 text-[13px] text-text-2">{sellsInApp ? COMING_SOON : PLAY_LIMIT_TEXT}</p>
       </div>
     </Sheet>
   );

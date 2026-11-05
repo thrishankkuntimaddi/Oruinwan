@@ -3,6 +3,8 @@
 
 export const LIMIT_TITLE = 'Plan limit reached';
 export const COMING_SOON = 'Upgrade to Pro for more room, or talk to us about Enterprise.';
+/** The Play Store build sells nothing (Play's payments policy): limits are raised by the workspace owner elsewhere. */
+export const PLAY_LIMIT_TEXT = 'Your workspace owner can raise these limits.';
 export const EXEMPT_TEXT = 'Your company plan has no free-plan limits.';
 // The call numbers come from the server (huddle:error max, huddle:roster timeLimit, GET /api/plan);
 // these are only the fallbacks when an answer leaves them out.
@@ -136,6 +138,27 @@ export const PLAN_CARDS = [
     features: ['We install and configure it on your servers or cloud, or host it for you', 'Single sign-on, your domain and the company console', 'No plan limits, unlimited devices', 'Onboarding and priority support', 'Everything in Pro'],
   },
 ];
+
+/** "$60", "₹4,788" from cents/paise. */
+export function money(minor, currency) {
+  if (minor === null || minor === undefined) return '';
+  const major = Number(minor) / 100;
+  try {
+    return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency, maximumFractionDigits: Number.isInteger(major) ? 0 : 2 }).format(major);
+  } catch {
+    return `${currency} ${major}`;
+  }
+}
+
+/** "Yearly · ₹4,788 per member" for an offer chip. */
+export const offerText = (o) => `${o.cycle === 'yearly' ? 'Yearly' : 'Monthly'} · ${money(o.unitAmount, o.currency)}`;
+
+/** Yearly in the phone's currency (rupees in India) when offered. */
+export function defaultOffer(offers, locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US') {
+  if (!offers?.length) return null;
+  const cur = /-IN$/i.test(String(locale || '')) ? 'INR' : 'USD';
+  return offers.find((o) => o.cycle === 'yearly' && o.currency === cur) || offers.find((o) => o.currency === cur) || offers.find((o) => o.cycle === 'yearly') || offers[0];
+}
 
 /** The upgrade request email (the team switches the workspace to Pro once it is paid). */
 export const upgradeEmail = (workspaceName) => ({

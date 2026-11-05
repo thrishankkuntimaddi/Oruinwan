@@ -6,8 +6,8 @@ import { useSession } from '../../data/session.js';
 import { Sheet } from '../../ui/Overlay.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Icon } from '../../ui/Icon.jsx';
-import { bindPlan, closeUpgrade, openPricing, useUpgrade } from './plan.js';
-import { COMING_SOON, LIMIT_TITLE } from './planText.js';
+import { bindPlan, closeUpgrade, openPricing, sellsInApp, useUpgrade } from './plan.js';
+import { COMING_SOON, LIMIT_TITLE, PLAY_LIMIT_TEXT } from './planText.js';
 
 export function UpgradeSheet() {
   const info = useUpgrade((s) => s.info);
@@ -22,15 +22,17 @@ export function UpgradeSheet() {
           <Button variant="secondary" block onClick={closeUpgrade}>
             Close
           </Button>
-          <Button
-            block
-            onClick={() => {
-              openPricing(info?.upgradeUrl);
-              closeUpgrade();
-            }}
-          >
-            See plans
-          </Button>
+          {sellsInApp && (
+            <Button
+              block
+              onClick={() => {
+                openPricing(info?.upgradeUrl);
+                closeUpgrade();
+              }}
+            >
+              See plans
+            </Button>
+          )}
         </div>
       }
     >
@@ -45,7 +47,7 @@ export function UpgradeSheet() {
               {info.used} of {info.max} used
             </p>
           )}
-          <p className="mt-2 text-[13px] text-text-2">{COMING_SOON}</p>
+          <p className="mt-2 text-[13px] text-text-2">{sellsInApp ? COMING_SOON : PLAY_LIMIT_TEXT}</p>
         </div>
       </div>
     </Sheet>

@@ -10,8 +10,9 @@ const ICONS = { free: Leaf, pro: Sparkles, enterprise: Building2 };
 /**
  * The three plan cards. `site` renders them for the public pages (orw buttons, links open the
  * app); otherwise for the signed-in app (gl buttons, the Free card is the current plan).
+ * `proHref` replaces the Pro email link (the pricing page's online checkout, when it is on).
  */
-const PlanCards = ({ site = false, currentPlan = null }) => {
+const PlanCards = ({ site = false, currentPlan = null, proHref = null }) => {
     const btn = (primary) => (site
         ? `orw-btn orw-btn--lg orw-btn--block ${primary ? 'orw-btn--primary' : 'orw-btn--ghost'}`
         : `gl-btn gl-btn--lg gl-btn--block${primary ? ' gl-btn--primary' : ''}`);
@@ -54,7 +55,7 @@ const PlanCards = ({ site = false, currentPlan = null }) => {
                                     : <Link to="/workspaces" className={btn(true)}>Open your workspaces <ArrowRight size={15} aria-hidden="true" /></Link>
                             )}
                             {plan.status === 'request' && !current && (
-                                <a href={upgradeHref()} className={btn(true)}>
+                                <a href={proHref || upgradeHref()} className={btn(true)}>
                                     {plan.cta.label} <ArrowRight size={15} aria-hidden="true" />
                                 </a>
                             )}

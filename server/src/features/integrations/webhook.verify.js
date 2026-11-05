@@ -16,10 +16,13 @@ const crypto = require('crypto');
 const { readSecret, safeEqual } = require('./integration.config');
 
 const WEBHOOK_PATH = '/api/v2/integrations/webhook/';
+/** Other signed webhooks that need the exact bytes too (Razorpay: features/billing). */
+const RAW_BODY_PATHS = [WEBHOOK_PATH, '/api/billing/webhook/'];
 
 /** `verify` callback for express.json / express.urlencoded: keep the raw bytes of webhook requests. */
 function captureRawBody(req, _res, buf) {
-  if ((req.originalUrl || req.url || '').startsWith(WEBHOOK_PATH)) req.rawBody = Buffer.from(buf);
+  const url = req.originalUrl || req.url || '';
+  if (RAW_BODY_PATHS.some((p) => url.startsWith(p))) req.rawBody = Buffer.from(buf);
 }
 
 function githubSignature(secret, rawBody) {

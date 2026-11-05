@@ -80,3 +80,20 @@ describe('free-plan limits', () => {
     expect(mockApi.post.mock.lastCall[1]).not.toHaveProperty('templateId');
   });
 });
+
+describe('Pro billing', () => {
+  it('maps the workspace billing answer', async () => {
+    const { mapBilling } = await import('./adapter.plan.js');
+    expect(mapBilling(null)).toBeNull();
+    const b = mapBilling({
+      plan: 'pro',
+      seats: 5,
+      subscription: { status: 'active', active: true, cycle: 'yearly', currency: 'INR', quantity: 4, amount: 1915200, currentEnd: '2027-11-05T00:00:00Z' },
+      payments: [{ id: 'pay_1', amount: 19152, currency: 'INR', status: 'captured', paidAt: '2026-11-05T00:00:00Z' }],
+      billing: { enabled: true, offers: [{ cycle: 'yearly', currency: 'INR', unitAmount: 478800 }] },
+    });
+    expect(b).toMatchObject({ plan: 'pro', seats: 5, enabled: true, subscription: { quantity: 4, active: true, cancelAtPeriodEnd: false } });
+    expect(b.payments[0].amount).toBe(19152);
+    expect(b.offers).toEqual([{ cycle: 'yearly', currency: 'INR', unitAmount: 478800 }]);
+  });
+});

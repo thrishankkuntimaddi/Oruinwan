@@ -97,6 +97,7 @@ import Status from "./pages/resources/Status";
 
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
+import Refunds from "./pages/legal/Refunds";
 import DeleteAccount from "./pages/legal/DeleteAccount";
 import CookieSettings from "./pages/legal/CookieSettings";
 
@@ -846,6 +847,7 @@ function App() {
 
                           <Route path="/privacy" element={<Privacy />} />
                           <Route path="/terms" element={<Terms />} />
+                          <Route path="/refunds" element={<Refunds />} />
                           <Route path="/delete-account" element={<DeleteAccount />} />
                           <Route path="/cookies" element={<CookieSettings />} />
 

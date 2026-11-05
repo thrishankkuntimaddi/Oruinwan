@@ -1,19 +1,25 @@
 // Settings → Plan & usage: which plan this is, what the free plan allows and how much of it is
 // used (from GET /api/plan). Company accounts and workspaces have no free-plan limits.
-import { Building2, Check, Gauge, History, LifeBuoy, Mail, Phone, Rocket, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Building2, Check, CreditCard, Gauge, History, LifeBuoy, Mail, Phone, Rocket, Sparkles } from 'lucide-react';
 import { nav } from '../../app/nav.js';
-import { openExternal } from '../../native/index.js';
+import { onAppState, openExternal } from '../../native/index.js';
+import { toast } from '../../lib/bus.js';
 import { useSession, useWorkspace } from '../../data/session.js';
 import { invalidate } from '../../data/query.js';
 import { Body, Header, Screen } from '../../ui/Screen.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { Row, RowGroup, Section } from '../../ui/List.jsx';
+import { Chips } from '../../ui/Controls.jsx';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
 import { TEMPLATES } from '../notes/templates.js';
-import { openPricing, usePlan } from './plan.js';
-import { COMING_SOON, EXEMPT_TEXT, PLAN_CARDS, SALES_EMAIL, enterpriseEmail, planName, resetText, templateKey, templateUsage, upgradeEmail } from './planText.js';
+import { openPricing, sellsInApp, startProCheckout, useBilling, usePlan } from './plan.js';
+import {
+  COMING_SOON, EXEMPT_TEXT, PLAN_CARDS, PLAY_LIMIT_TEXT, SALES_EMAIL, defaultOffer, enterpriseEmail, money, offerText, planName, resetText,
+  templateKey, templateUsage, upgradeEmail,
+} from './planText.js';
 
 function UsageBar({ used, max, atLimit }) {
   const pct = max ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -49,8 +55,52 @@ export function UsageRow({ item }) {
 
 const mail = (subject, body = '') => openExternal(`mailto:${SALES_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
 
-/** Free, Pro and Enterprise side by side (swipe), the current one marked. */
-function PlanCards({ current, workspaceName }) {
+const offerId = (o) => `${o.cycle}:${o.currency}`;
+
+/** Pro's button: Razorpay's payment page when the server takes payments, else the email. */
+function ProBuy({ ws, workspaceName, billing }) {
+  const offers = billing?.enabled ? billing.offers : [];
+  const [chosen, setChosen] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const offer = offers.find((o) => offerId(o) === chosen) || defaultOffer(offers);
+  if (!offers.length) {
+    return (
+      <Button className="mt-3" size="sm" icon={Rocket} onClick={() => { const e = upgradeEmail(workspaceName); mail(e.subject, e.body); }}>
+        Upgrade to Pro
+      </Button>
+    );
+  }
+  const seats = Math.max(1, billing.seats || 1);
+  const pay = async () => {
+    setBusy(true);
+    try {
+      await startProCheckout(ws, offer);
+      toast('Finish paying in your browser. The workspace moves to Pro a minute after the payment goes through.');
+    } catch (err) {
+      toast(err?.message || "Couldn't start the payment.", 'danger');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-3 -mx-4" data-testid="pro-buy">
+      <Chips options={offers.map((o) => ({ value: offerId(o), label: offerText(o) }))} value={offer ? offerId(offer) : ''} onChange={setChosen} />
+      {offer && (
+        <p className="mx-4 mt-2 text-[12px] text-text-2 tabular-nums">
+          {seats} member{seats === 1 ? '' : 's'} · {money(offer.unitAmount * seats, offer.currency)} {offer.cycle === 'yearly' ? 'a year' : 'a month'}
+        </p>
+      )}
+      <div className="mx-4 mt-2">
+        <Button size="sm" icon={CreditCard} loading={busy} onClick={pay}>
+          Upgrade to Pro
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Free, Pro and Enterprise side by side (swipe), the current one marked. Store builds show no prices for Pro. */
+function PlanCards({ current, workspaceName, ws, billing }) {
   return (
     <Section title="Plans">
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" data-testid="plan-cards">
@@ -65,8 +115,12 @@ function PlanCards({ current, workspaceName }) {
                 <p className="text-[17px] font-semibold">{p.name}</p>
                 {on && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-on-accent">Current</span>}
               </div>
-              <p className="mt-1 text-[20px] font-bold tracking-tight">{p.price}</p>
-              <p className="text-[12px] text-text-2">{p.note}</p>
+              {(sellsInApp || p.id !== 'pro') && (
+                <>
+                  <p className="mt-1 text-[20px] font-bold tracking-tight">{p.price}</p>
+                  <p className="text-[12px] text-text-2">{p.note}</p>
+                </>
+              )}
               <ul className="mt-3 flex-1 space-y-1.5">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2 text-[13px] leading-snug">
@@ -75,11 +129,7 @@ function PlanCards({ current, workspaceName }) {
                   </li>
                 ))}
               </ul>
-              {!on && p.id === 'pro' && (
-                <Button className="mt-3" size="sm" icon={Rocket} onClick={() => { const e = upgradeEmail(workspaceName); mail(e.subject, e.body); }}>
-                  Upgrade to Pro
-                </Button>
-              )}
+              {!on && p.id === 'pro' && sellsInApp && <ProBuy ws={ws} workspaceName={workspaceName} billing={billing} />}
               {!on && p.id === 'enterprise' && (
                 <Button className="mt-3" size="sm" variant="secondary" icon={Mail} onClick={() => { const e = enterpriseEmail(workspaceName); mail(e.subject, e.body); }}>
                   Talk to us
@@ -93,8 +143,12 @@ function PlanCards({ current, workspaceName }) {
   );
 }
 
+const dateText = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
 /** Help with the plan, and its history. */
-function PlanFooter({ plan, workspace }) {
+function PlanFooter({ plan, workspace, billing }) {
+  const sub = billing?.subscription;
+  const payments = billing?.payments || [];
   const since = workspace?.createdAt ? new Date(workspace.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
   return (
     <>
@@ -102,12 +156,32 @@ function PlanFooter({ plan, workspace }) {
         <RowGroup>
           <Row icon={LifeBuoy} tile="accent" title="Contact support" subtitle="Problems, billing questions, limits" onClick={() => nav.push('settings.support')} />
           <Row icon={Building2} title="Talk to us about Enterprise" subtitle={SALES_EMAIL} onClick={() => mail('Oruinwan Enterprise')} />
-          <Row icon={Gauge} title="Compare plans on the website" onClick={() => openPricing(plan?.upgradeUrl)} />
+          {sellsInApp && <Row icon={Gauge} title="Compare plans on the website" onClick={() => openPricing(plan?.upgradeUrl)} />}
         </RowGroup>
       </Section>
       <Section title="Plan history">
-        <RowGroup footer="Paid plans aren't available yet, so there are no invoices.">
-          <Row icon={History} title={planName(plan)} subtitle={since ? `Since ${since}` : 'Current plan'} value="Current" chevron={false} />
+        <RowGroup footer={payments.length ? 'Razorpay emails a receipt for every payment.' : 'No payments yet.'}>
+          <Row
+            icon={History}
+            title={planName(plan)}
+            subtitle={
+              sub?.active && sub.currentEnd
+                ? `${sub.cancelAtPeriodEnd ? 'Ends' : 'Renews'} ${dateText(sub.currentEnd)} · ${sub.quantity} member${sub.quantity === 1 ? '' : 's'}`
+                : since ? `Since ${since}` : 'Current plan'
+            }
+            value="Current"
+            chevron={false}
+          />
+          {payments.map((pay) => (
+            <Row
+              key={pay.id}
+              icon={CreditCard}
+              title={money(Math.round((pay.amount || 0) * 100), pay.currency)}
+              subtitle={dateText(pay.paidAt)}
+              value={pay.status === 'captured' ? 'Paid' : pay.status}
+              chevron={false}
+            />
+          ))}
         </RowGroup>
       </Section>
     </>
@@ -118,6 +192,16 @@ export function PlanScreen() {
   const ws = useSession((s) => s.workspaceId);
   const workspace = useWorkspace();
   const { data: plan, loading, error } = usePlan(ws);
+  const { data: billing } = useBilling(ws);
+
+  // Back from paying in the browser: read the plan and billing again.
+  useEffect(() => {
+    let off;
+    onAppState((active) => {
+      if (active) { invalidate('plan:'); invalidate('billing:'); }
+    }).then((f) => { off = f; });
+    return () => off?.();
+  }, []);
 
   // AI requests have their own section (with the reset time).
   const items = (plan?.items || []).filter((i) => !String(i.key).startsWith('ai.'));
@@ -138,8 +222,8 @@ export function PlanScreen() {
               title={error ? "Couldn't load your plan" : 'No plan limits'}
               body={error ? error.message || 'Pull down to try again.' : "This server doesn't limit what you can create."}
             />
-            <PlanCards current={error ? null : 'free'} workspaceName={workspace?.name} />
-            <PlanFooter plan={plan} workspace={workspace} />
+            <PlanCards current={error ? null : 'free'} workspaceName={workspace?.name} ws={ws} billing={billing} />
+            <PlanFooter plan={plan} workspace={workspace} billing={billing} />
           </>
         ) : (
           <>
@@ -161,7 +245,7 @@ export function PlanScreen() {
                 <p className="mt-3 text-sm text-text-2">{EXEMPT_TEXT}</p>
               ) : (
                 <>
-                  {(plan.plan || 'free') === 'free' && <p className="mt-3 text-sm text-text-2">{COMING_SOON}</p>}
+                  {(plan.plan || 'free') === 'free' && <p className="mt-3 text-sm text-text-2">{sellsInApp ? COMING_SOON : PLAY_LIMIT_TEXT}</p>}
                   {plan.plans.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       {plan.plans.map((p) => (
@@ -178,9 +262,11 @@ export function PlanScreen() {
                       ))}
                     </div>
                   )}
-                  <Button className="mt-3.5" variant="secondary" size="sm" onClick={() => openPricing(plan.upgradeUrl)}>
-                    See plans
-                  </Button>
+                  {sellsInApp && (
+                    <Button className="mt-3.5" variant="secondary" size="sm" onClick={() => openPricing(plan.upgradeUrl)}>
+                      See plans
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -270,8 +356,8 @@ export function PlanScreen() {
                 )}
               </>
             )}
-            {!plan.exempt && <PlanCards current={plan.plan || 'free'} workspaceName={workspace?.name} />}
-            <PlanFooter plan={plan} workspace={workspace} />
+            {!plan.exempt && <PlanCards current={plan.plan || 'free'} workspaceName={workspace?.name} ws={ws} billing={billing} />}
+            <PlanFooter plan={plan} workspace={workspace} billing={billing} />
           </>
         )}
       </Body>

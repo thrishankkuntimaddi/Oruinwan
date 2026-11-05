@@ -2,8 +2,8 @@
 import { Gauge } from 'lucide-react';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
-import { openPricing } from './plan.js';
-import { COMING_SOON } from './planText.js';
+import { openPricing, sellsInApp } from './plan.js';
+import { COMING_SOON, PLAY_LIMIT_TEXT } from './planText.js';
 
 export function PlanLimitNote({ children, className, plans = true }) {
   return (
@@ -12,8 +12,8 @@ export function PlanLimitNote({ children, className, plans = true }) {
       <span className="min-w-0 flex-1">
         <span className="block text-text">{children}</span>
         <span className="mt-0.5 block text-text-2">
-          {COMING_SOON}
-          {plans && (
+          {sellsInApp ? COMING_SOON : PLAY_LIMIT_TEXT}
+          {plans && sellsInApp && (
             <>
               {' '}
               <button type="button" onClick={() => openPricing()} className="font-medium text-accent-ink underline-offset-2 active:underline">
