@@ -744,8 +744,19 @@ exports.getWorkspaceMembers = async (req, res) => {
     // ?includeFormer=1 adds people who left or were removed, so their names stay on what they
     // wrote; `standing` tells the apps how to tag them (pickers show only 'active').
     const includeFormer = ['1', 'true'].includes(String(req.query?.includeFormer || ''));
-    const members = workspace.members
-      .filter(m => m.user && (includeFormer || m.status !== 'removed'))
+    const listed = workspace.members.filter(m => m.user && (includeFormer || m.status !== 'removed'));
+    // Live presence (sockets, shared through Redis) rather than the stored is_online flag, which
+    // can be left on when a connection drops without saying goodbye (a server restart, a phone
+    // losing signal). 'idle' = the app is open in the background.
+    let live = null;
+    try {
+      live = await require('../presence/presence.service').getBulkPresenceAsync(listed.map(m => String(m.user._id)));
+    } catch { live = null; }
+    const presenceOf = (u) => {
+      const st = live ? live[String(u._id)]?.status || 'offline' : (u.isOnline ? 'online' : 'offline');
+      return st === 'idle' ? 'idle' : st === 'offline' ? 'offline' : 'online';
+    };
+    const members = listed
       .map(m => ({
         _id: m.user._id,
         username: m.user.username,
@@ -754,8 +765,8 @@ exports.getWorkspaceMembers = async (req, res) => {
         profilePicture: m.user.profilePicture,
         userStatus: m.user.userStatus,
         profile: m.user.profile,
-        isOnline: !!m.user.isOnline,
-        status: m.user.isOnline ? 'online' : 'offline',
+        isOnline: presenceOf(m.user) !== 'offline',
+        status: presenceOf(m.user),
         lastSeen: m.user.lastLoginAt,
         role: m.role,
         membershipStatus: m.status || 'active',

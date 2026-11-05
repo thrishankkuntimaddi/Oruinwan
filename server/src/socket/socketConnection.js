@@ -34,16 +34,26 @@ function registerSocketConnection(io) {
     socket.join(`user:${socketUserId}`);
     socket.join(`user-support:${socketUserId}`);
 
+    // Everyone who shares a DM (and the company) hears every change, not only "active":
+    // without the offline/away broadcast their apps kept showing a green dot.
+    let announced = 'active'; // what this socket last told others (skip repeats)
+    const announce = (status) => {
+      if (announced === status) return undefined;
+      announced = status;
+      return emitStatusChanged(io, socketUserId, userCompanyId, { userId: socketUserId, status });
+    };
     socket.on('user:idle', () => {
-      presenceService.setIdle(io, socketUserId, userCompanyId).catch(() => {});
+      presenceService.setIdle(io, socketUserId, userCompanyId).then(() => announce('away')).catch(() => {});
     });
 
     socket.on('user:active', () => {
-      presenceService.setOnline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
+      presenceService.setOnline(io, socketUserId, socket.id, userCompanyId).then(() => announce('active')).catch(() => {});
     });
 
     socket.on('disconnect', () => {
-      presenceService.setOffline(io, socketUserId, socket.id, userCompanyId).catch(() => {});
+      presenceService.setOffline(io, socketUserId, socket.id, userCompanyId)
+        .then((offline) => offline && emitStatusChanged(io, socketUserId, userCompanyId, { userId: socketUserId, status: 'offline' }))
+        .catch(() => {});
       logger.debug({ userId: socketUserId }, 'Socket disconnected');
     });
 

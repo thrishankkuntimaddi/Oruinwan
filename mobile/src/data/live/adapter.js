@@ -39,6 +39,8 @@ const dmCache = new Map(); // dmId → mapped DM (for participants when creating
 
 function presenceOf(u) {
   if (u.isOnline === false || u.status === 'offline') return 'offline';
+  // The app is open in the background on their side (live presence 'idle'): away, unless they chose Do not disturb.
+  if (u.status === 'idle' && !['dnd', 'busy'].includes(u.userStatus)) return 'away';
   const s = u.userStatus || u.status;
   if (s === 'away' || s === 'idle') return 'away';
   if (s === 'dnd' || s === 'busy') return 'dnd';

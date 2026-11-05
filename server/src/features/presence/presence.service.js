@@ -92,14 +92,15 @@ async function setIdle(io, userId, companyId) {
   }
 }
 
+/** Resolves true when this was the user's last socket anywhere (they are now offline). */
 async function setOffline(io, userId, socketId, companyId) {
   const entry = presenceMap.get(userId);
-  if (!entry) return;
+  if (!entry) return false;
 
   entry.socketIds.delete(socketId);
 
   // Sockets still open on this instance: nothing to announce.
-  if (entry.socketIds.size > 0) return;
+  if (entry.socketIds.size > 0) return false;
 
   // No sockets left here: drop the entry so the map does not grow with every user ever seen.
   presenceMap.delete(userId);
@@ -109,7 +110,7 @@ async function setOffline(io, userId, socketId, companyId) {
     await r.srem(socketsKey(userId), socketMember(socketId));
     return r.scard(socketsKey(userId));
   });
-  if (remaining > 0) return;
+  if (remaining > 0) return false;
 
   const lastSeen = new Date();
   await mirror((r) => r.multi().del(socketsKey(userId)).del(userKey(userId)).exec());
@@ -123,6 +124,21 @@ async function setOffline(io, userId, socketId, companyId) {
       lastSeen,
     });
   }
+  return true;
+}
+
+/**
+ * Stored is_online flags with no live socket behind them (a server restart or a dropped
+ * connection skips the disconnect): switch them off. Returns the user ids it cleared.
+ */
+async function sweepStaleOnline({ limit = 2000 } = {}) {
+  const { query } = require('../../shared/postgres');
+  const { rows } = await query('SELECT id FROM users WHERE is_online = true LIMIT $1', [limit]);
+  if (!rows.length) return [];
+  const live = await getBulkPresenceAsync(rows.map((r) => r.id));
+  const stale = rows.map((r) => r.id).filter((id) => !live[id] || live[id].status === 'offline');
+  if (stale.length) await query('UPDATE users SET is_online = false WHERE id = ANY($1) AND is_online = true', [stale]);
+  return stale;
 }
 
 /** Presence as known to *this* instance (synchronous). Prefer `getPresenceAsync` across instances. */
@@ -217,6 +233,6 @@ function _setRedisForTests(fake) {
 module.exports = {
   setOnline, setIdle, setOffline,
   getPresence, getBulkPresence, getPresenceAsync, getBulkPresenceAsync,
-  heartbeat, startPresenceHeartbeat, releaseAllPresence,
+  heartbeat, startPresenceHeartbeat, releaseAllPresence, sweepStaleOnline,
   _setRedisForTests,
 };
