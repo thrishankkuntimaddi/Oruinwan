@@ -43,10 +43,29 @@ describe('AI button flight', () => {
       return <button ref={(el) => { ref.current = el && at(el, rect(320, 20, 36)); }} style={style} data-testid="island">AI</button>;
     }
     const { getByTestId, unmount } = render(<Island />);
-    expect(getByTestId('island').style.opacity).toBe('0');
+    expect(getByTestId('island').style.visibility).toBe('hidden');
     await act(async () => {});
     expect(document.querySelector('[data-testid="ai-flight"]')).toBeTruthy();
     unmount();
     expect(takeSpot()?.rect.left).toBe(320);
+  });
+});
+
+describe('flight paths', () => {
+  it('never takes the same path twice in a row, and every path starts and ends on the line', async () => {
+    const { PATHS, pickPath } = await import('./aiFlight.js');
+    let prev = pickPath();
+    for (let i = 0; i < 30; i++) {
+      const next = pickPath();
+      expect(next).not.toBe(prev);
+      prev = next;
+    }
+    for (const [name, path] of Object.entries(PATHS)) {
+      for (const t of [0, 1]) {
+        const o = path(t, 600);
+        expect(Math.abs(o.x), `${name} x at ${t}`).toBeLessThan(0.5);
+        expect(Math.abs(o.y), `${name} y at ${t}`).toBeLessThan(0.5);
+      }
+    }
   });
 });

@@ -35,6 +35,39 @@ export function _clearSpot() {
   spot = null;
 }
 
+/**
+ * Flight paths, picked at random (never the same twice in a row): extra sideways / up offsets,
+ * spin and size for progress t (0..1) over a distance `d` (px). The straight line is added on top.
+ */
+export const PATHS = {
+  arcLeft: (t, d) => ({ x: -Math.sin(Math.PI * t) * Math.min(90, d * 0.25), y: 0, spin: -Math.sin(Math.PI * t) * 14, scale: 1 + Math.sin(Math.PI * t) * 0.12 }),
+  arcRight: (t, d) => ({ x: Math.sin(Math.PI * t) * Math.min(70, d * 0.2), y: 0, spin: Math.sin(Math.PI * t) * 16, scale: 1 + Math.sin(Math.PI * t) * 0.12 }),
+  loop: (t, d) => {
+    const r = Math.min(46, d * 0.12);
+    const a = Math.PI * 2 * Math.min(1, Math.max(0, (t - 0.25) / 0.5));
+    return { x: -Math.sin(a) * r, y: -(1 - Math.cos(a)) * r, spin: (a / (Math.PI * 2)) * 360, scale: 1 + Math.sin(Math.PI * t) * 0.1 };
+  },
+  hops: (t, d) => {
+    const h = Math.min(60, d * 0.12);
+    const hop = Math.abs(Math.sin(Math.PI * 3 * t)) * h * (1 - t * 0.6);
+    return { x: 0, y: -hop, spin: 0, scale: 1 - Math.abs(Math.cos(Math.PI * 3 * t)) * 0.08 };
+  },
+  zigzag: (t, d) => ({ x: Math.sin(Math.PI * 4 * t) * Math.min(36, d * 0.08) * (1 - t), y: 0, spin: Math.sin(Math.PI * 4 * t) * 10, scale: 1 }),
+  spiral: (t, d) => {
+    const r = Math.min(40, d * 0.1) * Math.sin(Math.PI * t);
+    const a = Math.PI * 4 * t;
+    return { x: Math.cos(a) * r - r, y: Math.sin(a) * r, spin: t * 360, scale: 1 + Math.sin(Math.PI * t) * 0.15 };
+  },
+};
+const PATH_NAMES = Object.keys(PATHS);
+let lastPath = null;
+/** A different path from last time. */
+export function pickPath(random = Math.random) {
+  const choices = PATH_NAMES.filter((n) => n !== lastPath);
+  lastPath = choices[Math.floor(random() * choices.length) % choices.length];
+  return lastPath;
+}
+
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 function lookLayer(node, opacity) {
@@ -71,6 +104,8 @@ export function fly(from, to, onLand) {
   ghost.append(a, b);
   document.body.appendChild(ghost);
   const r0 = from.rect;
+  const path = PATHS[pickPath()];
+  ghost.dataset.path = lastPath;
   const start = performance.now();
   let frame = 0;
   const step = (now) => {
@@ -82,13 +117,11 @@ export function fly(from, to, onLand) {
     const cx = r0.left + r0.width / 2 + (r1.left + r1.width / 2 - (r0.left + r0.width / 2)) * k;
     const cy0 = r0.top + r0.height / 2;
     const cy1 = r1.top + r1.height / 2;
-    // A gentle arc out to the side and a little spin, like a short hop through the air.
-    const lift = Math.sin(Math.PI * t) * Math.min(90, Math.abs(cy1 - cy0) * 0.25);
     const cy = cy0 + (cy1 - cy0) * k;
-    const spin = Math.sin(Math.PI * t) * (cy1 < cy0 ? -14 : 14);
+    const o = path(t, Math.hypot(r1.left - r0.left, cy1 - cy0));
     ghost.style.width = `${w}px`;
     ghost.style.height = `${h}px`;
-    ghost.style.transform = `translate(${cx - w / 2 - lift}px, ${cy - h / 2}px) rotate(${spin}deg) scale(${1 + Math.sin(Math.PI * t) * 0.12})`;
+    ghost.style.transform = `translate(${cx - w / 2 + o.x}px, ${cy - h / 2 + o.y}px) rotate(${o.spin}deg) scale(${o.scale})`;
     a.style.opacity = String(1 - Math.min(1, Math.max(0, (t - 0.35) / 0.4)));
     b.style.opacity = String(Math.min(1, Math.max(0, (t - 0.35) / 0.4)));
     if (t < 1) frame = requestAnimationFrame(step);
@@ -137,5 +170,6 @@ export function useAiLanding() {
       leaveSpot(el, rest);
     };
   }, []);
-  return [ref, landing ? { opacity: 0 } : undefined];
+  // visibility, not opacity: a fade-in animation on the button would override opacity.
+  return [ref, landing ? { visibility: 'hidden' } : undefined];
 }

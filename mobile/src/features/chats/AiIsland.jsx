@@ -3,6 +3,8 @@
 // The question goes with the messages decrypted on this device (nothing else is uploaded).
 import { useRef, useState } from 'react';
 import { useAiLanding } from '../../app/aiFlight.js';
+import { AiEyes } from '../../app/AiEyes.jsx';
+import { pokeAi, setMood } from '../../app/aiMood.js';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -38,14 +40,17 @@ export function AiIsland({ transcript, title }) {
     if (!text || busy) return;
     setBusy(true);
     setAnswer(null);
+    setMood('surprised', 0);
     try {
       const messages = transcript();
       if (!messages.length) throw new Error('There are no messages here to ask about yet.');
       const reply = await api().askAboutConversation(ws, messages, text, { title });
       setAnswer({ q: text, text: reply || 'No answer came back.' });
       setQ('');
+      setMood('happy', 2200);
     } catch (err) {
       setAnswer({ q: text, error: err.message || 'Oruinwan AI could not answer.' });
+      setMood('sad', 2200);
     } finally {
       setBusy(false);
     }
@@ -62,13 +67,17 @@ export function AiIsland({ transcript, title }) {
           type="button"
           aria-label="Ask AI about this chat"
           onClick={() => {
-            setOpen(true);
-            setTimeout(() => input.current?.focus(), 60);
+            // The same face as the floating AI button: a happy look, then the question box.
+            pokeAi();
+            setTimeout(() => {
+              setOpen(true);
+              setTimeout(() => input.current?.focus(), 60);
+            }, 180);
           }}
-          className="glass pointer-events-auto pressable grid h-9 w-9 place-items-center rounded-full border text-accent-ink shadow-md animate-fade-in"
+          className="glass pointer-events-auto pressable grid h-11 w-11 place-items-center rounded-2xl border border-[var(--glass-border)] text-accent-ink shadow-lg animate-fade-in"
           data-testid="ai-island"
         >
-          <Icon as={Sparkles} size={16} />
+          <AiEyes size={24} />
         </button>
       </div>
     );
@@ -111,7 +120,7 @@ export function AiIsland({ transcript, title }) {
       <div {...touch} className="glass-strong animate-drop-in overflow-hidden rounded-3xl border shadow-xl" data-testid="ai-island-open">
         <div className="flex items-center gap-2 px-3 pt-2.5">
           <span className="grid h-6 w-6 place-items-center rounded-full bg-accent/15 text-accent-ink">
-            <Icon as={Sparkles} size={13} />
+            <AiEyes size={18} />
           </span>
           <span className="flex-1 text-[13px] font-semibold">Ask about {title}</span>
           <button type="button" aria-label="Close" onClick={close} className="grid h-7 w-7 place-items-center rounded-full text-text-2">

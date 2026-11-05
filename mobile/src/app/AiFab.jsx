@@ -89,6 +89,7 @@ export function AiFab({ tab, hidden = false }) {
       className={cx(
         'pressable glass absolute z-[15] grid place-items-center rounded-2xl border border-[var(--glass-border)] text-accent-ink shadow-lg',
         (off || flying) && 'pointer-events-none opacity-0',
+        flying && 'invisible',
       )}
       style={{
         width: size,
