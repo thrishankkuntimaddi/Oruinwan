@@ -376,7 +376,14 @@ jobs:
         run: |
           VERSION=$(node -p "require('../mobile/package.json').version")
           npm run bundle
-          npx electron-builder ${{ matrix.args }} --publish never -c.extraMetadata.version="$VERSION"
+          # electron-builder downloads its tools (NSIS, icons) from GitHub; a 504 there failed a
+          # release once. Try up to three times before giving up.
+          for attempt in 1 2 3; do
+            if npx electron-builder ${{ matrix.args }} --publish never -c.extraMetadata.version="$VERSION"; then break; fi
+            if [ "$attempt" = 3 ]; then echo "::error::electron-builder failed three times"; exit 1; fi
+            echo "::warning::electron-builder failed (attempt $attempt), retrying in 20 s"
+            sleep 20
+          done
           mkdir -p out
           case "${{ matrix.key }}" in
             linux)     mv dist/Oruinwan-Linux.AppImage dist/Oruinwan-Linux.deb out/ ;;
