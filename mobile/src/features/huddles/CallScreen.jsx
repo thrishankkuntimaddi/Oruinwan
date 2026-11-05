@@ -29,7 +29,7 @@ import {
 import { useWide } from '../../app/layout.js';
 import { AddPeopleSheet } from './AddPeopleSheet.jsx';
 import { hasCallSession, keepScreenOn } from '../../native/callSession.js';
-import { useOverlay } from '../../ui/Overlay.jsx';
+import { useOverlay, inNoSwipe } from '../../ui/Overlay.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { cx } from '../../ui/cx.js';
@@ -289,7 +289,7 @@ function FullCall({ title, pip = false }) {
       onTouchStart={(e) => {
         // Swipe the call down to keep using the app (it shrinks to the floating window).
         const t = e.touches[0];
-        swipe.current = t.clientY < window.innerHeight * 0.4 ? { y: t.clientY, x: t.clientX } : null;
+        swipe.current = t.clientY < window.innerHeight * 0.4 && !inNoSwipe(e.target) ? { y: t.clientY, x: t.clientX } : null;
       }}
       onTouchMove={(e) => {
         if (!swipe.current) return;

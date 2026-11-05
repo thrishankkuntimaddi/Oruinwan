@@ -840,6 +840,11 @@ export const workAdapter = {
     const data = await api.post(`/v2/collaboration/brainstorm/${meetingId}`, { text, ...(color ? { color } : {}), position: { x: x ?? 0, y: y ?? 0 } });
     return mapSticky(data.item);
   },
+  /** Move a note on the board (everyone sees it move: brainstorm:update). */
+  async moveSticky(meetingId, itemId, { x, y }) {
+    const data = await api.patch(`/v2/collaboration/brainstorm/${meetingId}/${itemId}`, { position: { x: Math.round(x), y: Math.round(y) } });
+    return data?.item ? mapSticky(data.item) : null;
+  },
   async deleteSticky(meetingId, itemId) {
     await api.del(`/v2/collaboration/brainstorm/${meetingId}/${itemId}`);
   },

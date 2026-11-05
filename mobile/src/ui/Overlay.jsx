@@ -11,6 +11,9 @@ import { Button } from './Button.jsx';
 import { Icon } from './Icon.jsx';
 import { hideKeyboard } from '../native/index.js';
 
+/** True inside an element marked data-no-swipe (canvases, draggable notes): sheet and call swipes ignore it. */
+export const inNoSwipe = (el) => Boolean(el?.closest?.('[data-no-swipe]'));
+
 export function useOverlay(open, onClose) {
   const id = useId();
   const closeRef = useRef(onClose);
@@ -54,6 +57,8 @@ function useSheetDrag(onClose) {
   const drag = useRef(null);
   const start = (e, fromContent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // Drawing on a whiteboard or dragging a note is not a swipe.
+    if (inNoSwipe(e.target)) return;
     const scroller = fromContent ? e.currentTarget : null;
     if (scroller && scroller.scrollTop > 0) return;
     drag.current = { y: e.clientY, fromContent, active: !fromContent, id: e.pointerId, el: e.currentTarget };

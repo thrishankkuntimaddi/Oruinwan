@@ -3,7 +3,7 @@
 // tabs, names and order as the web. Used by the meeting screen and by the in-call Meeting panel.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, CalendarClock, ChevronLeft, ChevronRight, Captions, Check, Disc, Eraser, ExternalLink, FileText, ListTodo, Lock, Pen, Pencil,
+  ArrowDown, ArrowUp, CalendarClock, ChevronLeft, ChevronRight, Captions, Check, Disc, Eraser, ExternalLink, FileText, LayoutGrid, ListTodo, Lock, Maximize2, Pen, Pencil,
   Phone, PhoneOff, Plus, Radio, Sparkles, StickyNote, Trash2, Users, Wand2, X,
 } from 'lucide-react';
 import { nav } from '../../app/nav.js';
@@ -14,7 +14,8 @@ import { on, toast } from '../../lib/bus.js';
 import { openExternal } from '../../native/index.js';
 import { Button, IconButton } from '../../ui/Button.jsx';
 import { Field, Segmented } from '../../ui/Controls.jsx';
-import { Dialog, Sheet } from '../../ui/Overlay.jsx';
+import { Dialog, Sheet, useOverlay } from '../../ui/Overlay.jsx';
+import { createPortal } from 'react-dom';
 import { EmptyState, SkeletonRows } from '../../ui/Feedback.jsx';
 import { Section } from '../../ui/List.jsx';
 import { Avatar } from '../../ui/Avatar.jsx';
@@ -33,7 +34,7 @@ import { mergeSegments, transcriptText } from '../huddles/callMedia.js';
 import { toggleCallCaptions, useCallExtras } from '../huddles/callExtras.js';
 import { AskMeetingSheet, TranscriptList, useActiveRecorder } from '../huddles/CallExtras.jsx';
 import {
-  BOARD_H, BOARD_W, visibleTabs, STATUS_LABEL, STICKY_COLORS, applyBrainstormEvent, conversationLabel, durationLabel, isAccessError,
+  BOARD_BG, BOARD_H, BOARD_INK, BOARD_W, strokeColor, visibleTabs, STATUS_LABEL, STICKY_COLORS, applyBrainstormEvent, conversationLabel, durationLabel, isAccessError,
   meetingWhen, newStrokeId, normalizePriority, priorityLabel, roundPoint, strokeHit, summaryText, timeRange,
 } from './meetingsUi.js';
 
@@ -251,6 +252,7 @@ function OverviewTab({ meeting, inCall }) {
           <MeetingCallActions meeting={meeting} />
         </div>
       </div>
+      {meeting.hasRecording && !recordingNow && <RecordingCard meetingId={meeting.id} className="mt-3" />}
       <Section title={joined ? `People · ${joined} joined` : 'People'} inset={false}>
         {people.length ? (
           <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
@@ -453,7 +455,7 @@ function MeetingNoteEditor({ noteId }) {
         onCompositionEnd={() => binding.current?.compositionEnd()}
         data-placeholder="Take notes together: decisions, questions, next steps…"
         data-testid="meeting-notes-editor"
-        className="prose-oru editor-empty selectable min-h-[40vh] rounded-card border border-line-soft bg-surface p-4 outline-none"
+        className="prose-oru editor-empty selectable min-h-[calc(100dvh-15rem)] rounded-card border border-line-soft bg-surface p-4 outline-none"
       />
     </div>
   );
@@ -461,7 +463,8 @@ function MeetingNoteEditor({ noteId }) {
 
 // ---------------------------------------------------------------- transcript
 
-function RecordingCard({ meetingId }) {
+/** The call's recording: play it here, or open the file (download or share) in the browser. */
+function RecordingCard({ meetingId, className = 'mx-4 mb-3' }) {
   const key = `meetingrec:${meetingId}`;
   const target = useMemo(() => ({ kind: 'meeting', id: meetingId }), [meetingId]);
   const { data: rec, loading } = useQuery(key, () => api().callRecording(target), { staleMs: 60_000 });
@@ -474,13 +477,17 @@ function RecordingCard({ meetingId }) {
     [key, meetingId],
   );
   if (loading || !rec?.url) return null;
+  const size = rec.size ? `${Math.max(0.1, Math.round(rec.size / 104857.6) / 10)} MB` : null;
   const mins = rec.durationSec ? `${Math.max(1, Math.round(rec.durationSec / 60))} min` : null;
   return (
-    <div className="mx-4 mb-3 rounded-card border border-line-soft bg-surface p-3.5" style={{ backgroundImage: 'var(--glass)' }}>
+    <div className={cx('rounded-card border border-line-soft bg-surface p-3.5', className)} style={{ backgroundImage: 'var(--glass)' }} data-testid="meeting-recording">
       <div className="mb-2 flex items-center gap-2">
         <Icon as={Disc} size="sm" className="text-danger" />
         <p className="flex-1 text-[14px] font-semibold">Recording</p>
-        {mins && <span className="text-[12px] text-text-3">{mins}</span>}
+        {(mins || size) && <span className="text-[12px] text-text-3">{[mins, size].filter(Boolean).join(' · ')}</span>}
+        <Button size="sm" variant="ghost" icon={ExternalLink} onClick={() => openExternal(rec.url)}>
+          Open file
+        </Button>
       </div>
       {/* The signed link lasts 10 minutes; reopening the tab fetches a fresh one. */}
       <audio controls preload="none" src={rec.url} className="w-full" aria-label="Meeting recording">
@@ -865,9 +872,8 @@ function SummaryActionsTab({ meeting }) {
 
 // ---------------------------------------------------------------- whiteboard
 
-// The board keeps one dark surface in both themes (strokes are drawn for it, as on the web).
-const BOARD_BG = '#1b1b1d';
-const PEN_COLORS = ['#FFFFFF', '#f5c46b', '#f39a6b', '#F87171', '#8fd1ad', '#9cc4fe', '#000000'];
+// A white board in both themes; the first pen is ink (meetingsUi.js strokeColor).
+const PEN_COLORS = [BOARD_INK, '#b8892f', '#e0663a', '#d93f3f', '#2f9e66', '#3b7dd8', '#8a5cd1'];
 
 function drawStrokes(canvas, strokes) {
   const ctx = canvas?.getContext?.('2d');
@@ -876,7 +882,7 @@ function drawStrokes(canvas, strokes) {
   for (const s of strokes) {
     if (!s?.points?.length) continue;
     ctx.beginPath();
-    ctx.strokeStyle = s.tool === 'eraser' ? BOARD_BG : s.color || '#FFFFFF';
+    ctx.strokeStyle = strokeColor(s);
     ctx.lineWidth = s.tool === 'eraser' ? (s.lineWidth || 3) * 4 : s.lineWidth || 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -977,6 +983,19 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const current = useRef(null);
   const unsynced = useRef([]); // strokes drawn before the live board was ready
+  // Full screen: the board fills the phone. Held upright, it is turned sideways (the board is
+  // landscape, the same shape as on the web, so everyone's strokes line up).
+  const [full, setFull] = useState(false);
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useOverlay(full, () => setFull(false));
+  useEffect(() => {
+    if (!full) return undefined;
+    const size = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    size();
+    window.addEventListener('resize', size);
+    return () => window.removeEventListener('resize', size);
+  }, [full]);
+  const rotated = full && vp.h > vp.w;
 
   // Live editing that hasn't started after a few seconds: offer saving over REST too.
   useEffect(() => {
@@ -1018,11 +1037,13 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
     return () => y.unobserve(pull);
   }, [synced, doc]);
 
-  useEffect(() => drawStrokes(canvasRef.current, strokes), [strokes]);
+  useEffect(() => drawStrokes(canvasRef.current, strokes), [strokes, full]);
 
   const pos = (e) => {
     const c = canvasRef.current;
     const r = c.getBoundingClientRect();
+    // Turned a quarter clockwise: the board's x runs down the screen, its y from right to left.
+    if (rotated) return roundPoint({ x: ((e.clientY - r.top) * BOARD_W) / (r.height || BOARD_W), y: ((r.right - e.clientX) * BOARD_H) / (r.width || BOARD_H) });
     return roundPoint({ x: ((e.clientX - r.left) * BOARD_W) / (r.width || BOARD_W), y: ((e.clientY - r.top) * BOARD_H) / (r.height || BOARD_H) });
   };
   const canDraw = !readOnly;
@@ -1061,7 +1082,7 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
     const ctx = canvasRef.current?.getContext?.('2d');
     if (ctx) {
       ctx.beginPath();
-      ctx.strokeStyle = s.color;
+      ctx.strokeStyle = strokeColor(s);
       ctx.lineWidth = s.lineWidth;
       ctx.lineCap = 'round';
       ctx.moveTo(last.x, last.y);
@@ -1116,13 +1137,13 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
         : `Not live: others see your drawing after you save.${dirty ? ' You have unsaved changes.' : ''}`;
   const offerSave = !synced && (!live || stuck);
 
-  return (
-    <div className="px-4">
-      <div className="mb-2 flex items-center gap-2">
-        <p className="flex-1 text-[13px] text-text-2" data-testid="whiteboard-mode">{modeText}</p>
-        <PresenceAvatars peers={peers} />
-      </div>
-      {!readOnly && (
+  // In full screen the board is as big as fits under the tool row (in the turned frame).
+  const frameW = rotated ? vp.h : vp.w;
+  const frameH = rotated ? vp.w : vp.h;
+  const fullWidth = Math.max(200, Math.min(frameW - 24, ((frameH - 72) * BOARD_W) / BOARD_H));
+  const tools = (
+    <>
+      {(!readOnly || full) && (
         <div className="no-scrollbar mb-2 flex items-center gap-2 overflow-x-auto">
           <Button size="sm" variant={tool === 'pen' ? 'primary' : 'secondary'} icon={Pen} aria-pressed={tool === 'pen'} onClick={() => setTool('pen')}>
             Pen
@@ -1145,6 +1166,11 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
             />
           ))}
           <span className="flex-1" />
+          {full ? (
+            <IconButton icon={X} size="sm" label="Close full screen" onClick={() => setFull(false)} data-testid="whiteboard-exit-full" />
+          ) : (
+            <IconButton icon={Maximize2} size="sm" label="Full screen" onClick={() => setFull(true)} data-testid="whiteboard-full" />
+          )}
           <IconButton icon={Trash2} size="sm" label="Clear the board" disabled={!strokes.length} onClick={() => setConfirmClear(true)} />
           {offerSave && (
             <Button size="sm" loading={saving} disabled={!dirty} onClick={save}>
@@ -1153,6 +1179,10 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
           )}
         </div>
       )}
+    </>
+  );
+  const board = (
+    <>
       <canvas
         ref={canvasRef}
         width={BOARD_W}
@@ -1160,13 +1190,46 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
         role="img"
         aria-label="Meeting whiteboard"
         data-testid="whiteboard-canvas"
+        data-no-swipe
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
         onPointerCancel={up}
-        className="block w-full rounded-card border border-line-soft"
-        style={{ background: BOARD_BG, aspectRatio: `${BOARD_W} / ${BOARD_H}`, touchAction: 'none' }}
+        className={cx('block rounded-card border border-line shadow-sm', !full && 'w-full')}
+        style={{ background: BOARD_BG, aspectRatio: `${BOARD_W} / ${BOARD_H}`, touchAction: 'none', ...(full ? { width: fullWidth } : {}) }}
       />
+    </>
+  );
+
+  if (full) {
+    return createPortal(
+      <div className="fixed inset-0 z-[70] bg-bg" data-testid="whiteboard-fullscreen" data-no-swipe>
+        <div
+          className="absolute flex flex-col items-center p-3 pt-[max(12px,env(safe-area-inset-top))]"
+          style={
+            rotated
+              ? { width: vp.h, height: vp.w, top: 0, left: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' }
+              : { inset: 0 }
+          }
+        >
+          <div className="w-full" style={{ maxWidth: fullWidth }}>
+            {tools}
+          </div>
+          {board}
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
+  return (
+    <div className="px-4">
+      <div className="mb-2 flex items-center gap-2">
+        <p className="flex-1 text-[13px] text-text-2" data-testid="whiteboard-mode">{modeText}</p>
+        <PresenceAvatars peers={peers} />
+      </div>
+      {tools}
+      {board}
       <CollabBanner text={view.banner} tone={collab.mode === 'closed' ? 'locked' : 'offline'} />
       <Dialog open={confirmClear} onClose={() => setConfirmClear(false)} title="Clear the whiteboard?" body="Everyone's strokes are removed." confirmLabel="Clear" danger onConfirm={clear} />
     </div>
@@ -1175,6 +1238,18 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
 
 // ---------------------------------------------------------------- brainstorm
 
+// Notes sit where people put them (board pixels, shared with the web). The board scrolls; a note
+// is dragged with a finger and its new place is saved for everyone when it is let go.
+const NOTE_W = 150;
+const NOTE_H = 112;
+const NOTE_GAP = 12;
+
+/** Grid slot `n` for a board `width` px wide: where new notes go, and "Tidy up". */
+export function stickySlot(n, width) {
+  const cols = Math.max(1, Math.floor((Math.max(width, NOTE_W + NOTE_GAP * 2) - NOTE_GAP) / (NOTE_W + NOTE_GAP)));
+  return { x: NOTE_GAP + (n % cols) * (NOTE_W + NOTE_GAP), y: NOTE_GAP + Math.floor(n / cols) * (NOTE_H + NOTE_GAP) };
+}
+
 function BrainstormTab({ meeting }) {
   const me = useSession((s) => s.user?.id);
   const key = `brainstorm:${meeting.id}`;
@@ -1182,24 +1257,29 @@ function BrainstormTab({ meeting }) {
   const [text, setText] = useState('');
   const [color, setColor] = useState(STICKY_COLORS[0]);
   const [busy, setBusy] = useState(false);
+  const [drag, setDrag] = useState(null); // { id, x, y } while a note is moving
+  const boardRef = useRef(null);
+  const start = useRef(null);
+  const list = data || [];
 
   useEffect(
     () =>
       on('meeting', ({ event, payload }) => {
         if (event !== 'brainstorm:update' || String(payload?.meetingId) !== String(meeting.id)) return;
-        setQueryData(key, (list) => applyBrainstormEvent(list || [], payload, api().mapSticky));
+        setQueryData(key, (l) => applyBrainstormEvent(l || [], payload, api().mapSticky));
       }),
     [key, meeting.id],
   );
 
+  const width = () => boardRef.current?.clientWidth || 360;
   const add = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     setBusy(true);
     try {
-      const n = (data || []).length;
-      const item = await api().addSticky(meeting.id, { text: text.trim(), color, x: 40 + (n % 4) * 180, y: 40 + Math.floor(n / 4) * 140 });
-      setQueryData(key, (list) => applyBrainstormEvent(list || [], { action: 'add', item }, (x) => x));
+      const { x, y } = stickySlot(list.length, width());
+      const item = await api().addSticky(meeting.id, { text: text.trim(), color, x, y });
+      setQueryData(key, (l) => applyBrainstormEvent(l || [], { action: 'add', item }, (x2) => x2));
       setText('');
     } catch (err) {
       toast(err.message || "Couldn't add the note", 'danger');
@@ -1208,7 +1288,7 @@ function BrainstormTab({ meeting }) {
     }
   };
   const remove = async (item) => {
-    setQueryData(key, (list) => (list || []).filter((x) => x.id !== item.id));
+    setQueryData(key, (l) => (l || []).filter((x) => x.id !== item.id));
     try {
       await api().deleteSticky(meeting.id, item.id);
     } catch (err) {
@@ -1216,6 +1296,45 @@ function BrainstormTab({ meeting }) {
       invalidate(key);
     }
   };
+  const place = async (item, x, y) => {
+    setQueryData(key, (l) => (l || []).map((n) => (n.id === item.id ? { ...n, x, y } : n)));
+    try {
+      await api().moveSticky(meeting.id, item.id, { x, y });
+    } catch (err) {
+      toast(err.message || "Couldn't move the note", 'danger');
+      invalidate(key);
+    }
+  };
+  const tidy = async () => {
+    const w = width();
+    const moves = list.map((n, i) => ({ n, ...stickySlot(i, w) })).filter(({ n, x, y }) => n.x !== x || n.y !== y);
+    await Promise.all(moves.map(({ n, x, y }) => place(n, x, y)));
+  };
+
+  const down = (e, n) => {
+    if (e.button > 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    start.current = { id: n.id, px: e.clientX, py: e.clientY, x: n.x, y: n.y, moved: false };
+  };
+  const move = (e) => {
+    const s = start.current;
+    if (!s) return;
+    const dx = e.clientX - s.px;
+    const dy = e.clientY - s.py;
+    if (!s.moved && Math.hypot(dx, dy) < 6) return;
+    s.moved = true;
+    setDrag({ id: s.id, x: Math.max(0, s.x + dx), y: Math.max(0, s.y + dy) });
+  };
+  const up = (n) => {
+    const s = start.current;
+    start.current = null;
+    if (s?.moved && drag && drag.id === n.id) place(n, Math.round(drag.x), Math.round(drag.y));
+    setDrag(null);
+  };
+
+  const at = (n) => (drag && drag.id === n.id ? drag : n);
+  const innerW = Math.max(...list.map((n) => at(n).x + NOTE_W + NOTE_GAP), 0);
+  const innerH = Math.max(...list.map((n) => at(n).y + NOTE_H + NOTE_GAP), 0);
 
   return (
     <div className="px-4">
@@ -1233,21 +1352,58 @@ function BrainstormTab({ meeting }) {
       </form>
       {loading ? (
         <SkeletonRows count={2} avatar={false} />
-      ) : (data || []).length ? (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {data.map((n) => (
-            <div key={n.id} className="relative min-h-28 rounded-xl p-3 pr-8 text-[14px] leading-snug text-[#1d1a14] shadow-sm" style={{ background: n.color }}>
-              <p className="selectable whitespace-pre-wrap break-words">{n.text}</p>
-              {(n.by === me || !n.by) && (
-                <button type="button" aria-label="Remove note" onClick={() => remove(n)} className="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full text-[#1d1a14]/70 active:bg-black/10">
-                  <Icon as={Trash2} size={14} />
-                </button>
-              )}
+      ) : list.length ? (
+        <>
+          <div className="mt-3 mb-2 flex items-center gap-2">
+            <p className="flex-1 text-[13px] text-text-2">Drag notes to group them. Everyone sees them move.</p>
+            {list.length > 1 && (
+              <Button size="sm" variant="ghost" icon={LayoutGrid} onClick={tidy} data-testid="brainstorm-tidy">
+                Tidy up
+              </Button>
+            )}
+          </div>
+          <div
+            ref={boardRef}
+            data-testid="brainstorm-board"
+            data-no-swipe
+            className="relative h-[calc(100dvh-20rem)] min-h-[320px] overflow-auto rounded-card border border-line-soft bg-surface-2"
+          >
+            <div className="relative" style={{ width: innerW || '100%', height: innerH || '100%', minWidth: '100%', minHeight: '100%' }}>
+              {list.map((n) => {
+                const p = at(n);
+                const moving = drag?.id === n.id;
+                return (
+                  <div
+                    key={n.id}
+                    data-testid="brainstorm-note"
+                    data-no-swipe
+                    onPointerDown={(e) => down(e, n)}
+                    onPointerMove={move}
+                    onPointerUp={() => up(n)}
+                    onPointerCancel={() => { start.current = null; setDrag(null); }}
+                    className={cx('absolute rounded-xl p-3 pr-8 text-[14px] leading-snug text-[#1d1a14] select-none', moving ? 'z-10 scale-105 shadow-lg' : 'shadow-sm')}
+                    style={{ left: p.x, top: p.y, width: NOTE_W, minHeight: NOTE_H - NOTE_GAP, background: n.color, touchAction: 'none' }}
+                  >
+                    <p className="whitespace-pre-wrap break-words">{n.text}</p>
+                    {(n.by === me || !n.by) && (
+                      <button
+                        type="button"
+                        aria-label="Remove note"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => remove(n)}
+                        className="absolute top-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full text-[#1d1a14]/70 active:bg-black/10"
+                      >
+                        <Icon as={Trash2} size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        </>
       ) : (
-        <EmptyState icon={StickyNote} title="An empty board" body="Ideas everyone adds appear here live." className="py-8" />
+        <EmptyState icon={StickyNote} title="An empty board" body="Ideas everyone adds appear here live. Drag them around to group them." className="py-8" />
       )}
     </div>
   );

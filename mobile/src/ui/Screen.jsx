@@ -68,7 +68,8 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, fl
   const touch = onRefresh
     ? {
         onTouchStart: (e) => {
-          start.current = ref.current.scrollTop <= 0 ? e.touches[0].clientY : null;
+          // Not from a whiteboard or a dragged note (data-no-swipe): that's drawing, not pulling.
+          start.current = ref.current.scrollTop <= 0 && !e.target?.closest?.('[data-no-swipe]') ? e.touches[0].clientY : null;
         },
         onTouchMove: (e) => {
           if (start.current == null || refreshing) return;

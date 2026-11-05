@@ -111,6 +111,38 @@ export function mergePage(list, page) {
 // ---------------------------------------------------------------- whiteboard strokes
 
 /** The board's coordinate space (the web's canvas): strokes are stored in it. */
+/* Whiteboard colours. The phone board is white (it's a whiteboard). Strokes store a plain colour
+   string shared with the web, where the board follows the theme: near-white and near-black strokes
+   are "ink" and drawn in the ink colour, so every board stays readable (older dark boards too). */
+export const BOARD_BG = '#FFFFFF';
+export const BOARD_INK = '#1d1a14';
+
+function luminance(c) {
+  const s = String(c || '').trim();
+  let m = s.match(/^#([0-9a-f]{3})$/i);
+  let rgb = m ? m[1].split('').map((h) => parseInt(h + h, 16)) : null;
+  m = !rgb && s.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
+  if (m) rgb = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  if (!rgb) return null;
+  const [r, g, b] = rgb.map((v) => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Near-white, near-black or unreadable: drawn as ink. */
+export function isInk(c) {
+  const l = luminance(c);
+  return l === null || l >= 0.7 || l <= 0.03;
+}
+
+/** The colour a stored stroke is drawn with on the white board. */
+export function strokeColor(stroke) {
+  if (stroke?.tool === 'eraser') return BOARD_BG;
+  return !stroke?.color || isInk(stroke.color) ? BOARD_INK : stroke.color;
+}
+
 export const BOARD_W = 1200;
 export const BOARD_H = 700;
 
@@ -199,7 +231,8 @@ export function visibleTabs(meeting) {
   return MEETING_TABS.filter((t) => {
     if (t.value === 'notes') return !blank(meeting.notes) || agendaNotes || Boolean(meeting.noteId);
     if (t.value === 'agenda') return (meeting.agenda || []).length > 0;
-    if (t.value === 'transcript') return Boolean(meeting.hasTranscript || meeting.transcript);
+    // The recording is shown on Transcript (and Overview), so keep the tab when there is one.
+    if (t.value === 'transcript') return Boolean(meeting.hasTranscript || meeting.transcript || meeting.hasRecording);
     return true;
   });
 }

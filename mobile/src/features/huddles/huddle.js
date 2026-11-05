@@ -28,6 +28,24 @@ const uuid = () =>
 export const scopeKey = (s) => (s?.channelId ? String(s.channelId) : s?.dmId ? String(s.dmId) : 'workspace');
 
 const helpers = () => api()?.huddles || null;
+
+const JOIN_WAIT_MS = 10_000;
+/** Resolves true once the live connection is up (checked every 250 ms), false after `ms`. */
+export function waitForConnection(h, ms = JOIN_WAIT_MS) {
+  if (h?.connected?.()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const t = setInterval(() => {
+      if (h?.connected?.()) {
+        clearInterval(t);
+        resolve(true);
+      } else if (Date.now() - started >= ms) {
+        clearInterval(t);
+        resolve(false);
+      }
+    }, 250);
+  });
+}
 const myId = () => String(useSession.getState().user?.id || '');
 const mySocketId = () => helpers()?.socketId?.() || null;
 
@@ -593,7 +611,13 @@ async function enter({ huddleId, scope, title, start, meetingId = null, video = 
     }
     leave();
   }
-  if (!h.connected()) throw new Error("Can't reach your server right now.");
+  // The live connection drops for a moment on weak mobile data: wait for it before giving up.
+  if (!h.connected()) {
+    set({ connecting: true });
+    const ok = await waitForConnection(h, JOIN_WAIT_MS);
+    set({ connecting: false });
+    if (!ok) throw new Error("Can't reach your server right now. Check your mobile data or Wi-Fi and try again.");
+  }
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('This device does not support calls.');
   if (!(await ensureAllowed('microphone'))) throw new Error('Allow the microphone to join the huddle.');
   const wantCamera = videoEnabled ?? video;

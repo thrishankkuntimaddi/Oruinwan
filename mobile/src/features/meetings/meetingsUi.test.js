@@ -73,3 +73,14 @@ describe('meeting list and page helpers', () => {
     expect(strokeHit(s, { x: 50, y: 40 })).toBe(false);
   });
 });
+
+describe('whiteboard colours', () => {
+  it('draws white, black and unknown strokes as ink on the white board', async () => {
+    const { strokeColor, BOARD_INK, BOARD_BG } = await import('./meetingsUi.js');
+    expect(strokeColor({ color: '#FFFFFF' })).toBe(BOARD_INK);
+    expect(strokeColor({ color: '#000000' })).toBe(BOARD_INK);
+    expect(strokeColor({})).toBe(BOARD_INK);
+    expect(strokeColor({ color: '#d93f3f' })).toBe('#d93f3f');
+    expect(strokeColor({ tool: 'eraser', color: '#123456' })).toBe(BOARD_BG);
+  });
+});
