@@ -29,15 +29,11 @@ function Failed({ file }) {
   );
 }
 
-function ImageView({ file, url, onError }) {
-  const [zoom, setZoom] = useState(false);
+/** A photo; `zoom` (double tap in the viewer) shows it at twice the size to pan around. */
+function ImageView({ file, url, onError, zoom = false }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div
-      className={cx('flex h-full w-full', zoom ? 'overflow-auto' : 'items-center justify-center overflow-hidden')}
-      onClick={() => setZoom((z) => !z)}
-      role="presentation"
-    >
+    <div className={cx('flex h-full w-full', zoom ? 'overflow-auto' : 'items-center justify-center overflow-hidden')} role="presentation">
       {!loaded && (
         <span className="absolute inset-0 grid place-items-center text-text-2">
           <Spinner />
@@ -84,14 +80,14 @@ function PdfView({ file, url }) {
   return <iframe title={file.name || 'PDF'} src={state.src} className="h-full w-full border-0 bg-surface" />;
 }
 
-function MediaItem({ file }) {
+function MediaItem({ file, zoom }) {
   const { url, error, retry, retried } = useMediaUrl(file);
   const kind = previewKind(file);
   const onError = () => (retried ? null : retry());
   if (!VIEWABLE.has(kind) || (kind === 'pdf' && !pdfInApp)) return <FileCard file={file} />;
   if (error || (!url && !file.url && !file.gcsPath && !file.localUrl)) return <Failed file={file} />;
   if (!url) return <Spinner className="text-text-2" />;
-  if (kind === 'image') return <ImageView key={url} file={file} url={url} onError={onError} />;
+  if (kind === 'image') return <ImageView key={url} file={file} url={url} onError={onError} zoom={zoom} />;
   if (kind === 'video') {
     return <video key={url} src={url} controls autoPlay playsInline onError={onError} className="max-h-full max-w-full" />;
   }
@@ -130,26 +126,39 @@ function FileCard({ file }) {
 
 function ViewerAction({ icon, label, onClick }) {
   return (
-    <button type="button" onClick={onClick} className="flex min-w-16 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[11px] font-medium text-text active:bg-surface-2">
+    <button type="button" onClick={onClick} className="flex min-w-16 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[11px] font-medium text-white active:bg-white/10">
       <Icon as={icon} size={20} />
       {label}
     </button>
   );
 }
 
+// Taps on these are theirs (video controls, buttons, a PDF), not "show / hide the bars".
+const OWN_TAPS = 'button, a, video, audio, iframe, input, select, textarea';
+
 function Viewer({ media, onClose }) {
   const open = Boolean(media);
   useOverlay(open, onClose);
   const { mounted, closing } = usePresence(open, 160);
   const [index, setIndex] = useState(media?.index || 0);
+  const [chrome, setChrome] = useState(true); // header and toolbar shown
+  const [zoom, setZoom] = useState(false);
+  const [drag, setDrag] = useState({ x: 0, y: 0 }); // the photo follows the finger
   const last = useRef(media);
   if (media) last.current = media;
   const shown = media || last.current;
   useEffect(() => {
-    if (media) setIndex(media.index || 0);
+    if (media) {
+      setIndex(media.index || 0);
+      setChrome(true);
+    }
   }, [media]);
-  const swipe = useRef(null);
+  useEffect(() => setZoom(false), [index]);
+  const touch = useRef(null);
+  const tapTimer = useRef(null);
+  const lastTap = useRef(0);
   const dir = useRef(0);
+  useEffect(() => () => clearTimeout(tapTimer.current), []);
   if (!mounted || !shown) return null;
   const items = shown.items;
   const file = items[Math.min(index, items.length - 1)];
@@ -160,19 +169,70 @@ function Viewer({ media, onClose }) {
     setIndex((i) => (i + d + items.length) % items.length);
   };
 
+  // One tap: hide or show the bars. Two quick taps on a photo: zoom in or out.
+  const tap = (target) => {
+    if (target.closest?.(OWN_TAPS)) return;
+    const now = Date.now();
+    if (now - lastTap.current < 280 && previewKind(file) === 'image') {
+      clearTimeout(tapTimer.current);
+      lastTap.current = 0;
+      setZoom((z) => !z);
+      return;
+    }
+    lastTap.current = now;
+    clearTimeout(tapTimer.current);
+    tapTimer.current = setTimeout(() => setChrome((c) => !c), 280);
+  };
+
+  // Touch events, not pointer events: Android cancels the pointer as soon as a sideways drag
+  // starts. Sideways moves to the next / previous file, down closes; a zoomed photo pans instead.
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touch.current = e.touches.length === 1 && !zoom && !e.target.closest?.('.overflow-auto, video, iframe') ? { x: t.clientX, y: t.clientY, at: Date.now(), axis: null } : null;
+    if (e.touches.length === 1 && !touch.current) touch.current = { x: t.clientX, y: t.clientY, at: Date.now(), axis: 'none' };
+  };
+  const onTouchMove = (e) => {
+    const s = touch.current;
+    const t = e.touches[0];
+    if (!s || !t || s.axis === 'none') return;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (!s.axis && Math.hypot(dx, dy) > 10) s.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : dy > 0 ? 'y' : 'none';
+    if (s.axis === 'x' && many) setDrag({ x: dx, y: 0 });
+    if (s.axis === 'y') setDrag({ x: 0, y: Math.max(0, dy) });
+  };
+  const onTouchEnd = (e) => {
+    const s = touch.current;
+    touch.current = null;
+    const t = e.changedTouches[0];
+    setDrag({ x: 0, y: 0 });
+    if (!s || !t) return;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    const fast = Date.now() - s.at < 250;
+    if (!s.axis || (s.axis === 'none' && Math.hypot(dx, dy) < 10)) return tap(e.target);
+    if (s.axis === 'x' && many && (Math.abs(dx) > window.innerWidth * 0.22 || (fast && Math.abs(dx) > 40))) return go(dx < 0 ? 1 : -1);
+    if (s.axis === 'y' && (dy > 140 || (fast && dy > 60))) return onClose();
+    return undefined;
+  };
+
+  const pull = Math.min(1, drag.y / 300);
+  const barClass = cx('transition-opacity duration-200', chrome ? 'opacity-100' : 'pointer-events-none opacity-0');
+
   return createPortal(
     <div
       data-theme="dark"
       role="dialog"
       aria-modal="true"
       aria-label={file.name || 'Preview'}
-      className={cx('fixed inset-0 z-[60] flex flex-col bg-bg text-text', closing ? 'opacity-0 transition-opacity duration-150' : 'animate-fade-in')}
+      className={cx('fixed inset-0 z-[60] flex flex-col text-text', closing ? 'opacity-0 transition-opacity duration-150' : 'animate-fade-in')}
+      style={{ background: `rgb(var(--c-bg) / ${1 - pull * 0.7})` }}
       onKeyDown={(e) => {
         if (many && e.key === 'ArrowRight') go(1);
         if (many && e.key === 'ArrowLeft') go(-1);
       }}
     >
-      <header className="flex shrink-0 items-center gap-1 px-2 pt-safe">
+      <header className={cx('absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/70 to-transparent px-2 pt-safe', barClass)}>
         <div className="flex h-14 w-full items-center gap-1">
           <IconButton icon={X} label="Close" onClick={onClose} />
           <div className="min-w-0 flex-1 pl-1">
@@ -181,49 +241,54 @@ function Viewer({ media, onClose }) {
               {[formatBytes(file.size), many && `${index + 1} of ${items.length}`].filter(Boolean).join(' · ')}
             </p>
           </div>
-
         </div>
       </header>
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
-        // Touch events, not pointer events: Android cancels the pointer as soon as a sideways
-        // drag starts, so a swipe never reached pointerup.
-        onTouchStart={(e) => {
-          const t = e.touches[0];
-          // A zoomed photo pans instead.
-          swipe.current = e.touches.length === 1 && !e.target.closest?.('.overflow-auto') ? { x: t.clientX, y: t.clientY } : null;
-        }}
-        onTouchEnd={(e) => {
-          const s = swipe.current;
-          swipe.current = null;
-          const t = e.changedTouches[0];
-          if (!many || !s || !t) return;
-          const dx = t.clientX - s.x;
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(t.clientY - s.y) * 1.5) go(dx < 0 ? 1 : -1);
-        }}
+        data-testid="media-stage"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={(e) => finePointer() && tap(e.target)}
       >
         <div
           key={`${index}:${file.url || file.localUrl || file.name}`}
           className="flex h-full w-full items-center justify-center"
-          style={{ animation: dir.current ? `media-in-${dir.current > 0 ? 'next' : 'prev'} 200ms var(--ease-out-soft) both` : undefined }}
+          style={{
+            transform: drag.x || drag.y ? `translate(${drag.x}px, ${drag.y}px) scale(${1 - pull * 0.15})` : undefined,
+            transition: drag.x || drag.y ? 'none' : 'transform 180ms ease-out',
+            animation: dir.current ? `media-in-${dir.current > 0 ? 'next' : 'prev'} 200ms var(--ease-out-soft) both` : undefined,
+          }}
         >
-          <MediaItem file={file} />
+          <MediaItem file={file} zoom={zoom} />
         </div>
+        {/* Arrows at the screen edges, for a mouse or keyboard; on a phone, swipe. */}
         {many && (
           <>
-            <IconButton icon={ChevronLeft} label="Previous" onClick={() => go(-1)} className={cx('absolute left-2 bg-surface-2/80 backdrop-blur', !finePointer() && 'h-9 w-9 opacity-80')} />
-            <IconButton icon={ChevronRight} label="Next" onClick={() => go(1)} className={cx('absolute right-2 bg-surface-2/80 backdrop-blur', !finePointer() && 'h-9 w-9 opacity-80')} />
+            <div className={cx('absolute inset-y-0 left-1 flex items-center', finePointer() ? barClass : 'sr-only')}>
+              <IconButton icon={ChevronLeft} label="Previous" onClick={() => go(-1)} className="bg-black/50 backdrop-blur" />
+            </div>
+            <div className={cx('absolute inset-y-0 right-1 flex items-center', finePointer() ? barClass : 'sr-only')}>
+              <IconButton icon={ChevronRight} label="Next" onClick={() => go(1)} className="bg-black/50 backdrop-blur" />
+            </div>
           </>
         )}
       </div>
       {/* What you can do with it: share, save, go back to its message; who sent it and when. */}
-      <footer className="shrink-0 border-t border-line-soft px-2 pt-1.5 pb-safe" data-testid="media-actions">
+      <footer className={cx('absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 to-transparent px-2 pt-6 pb-safe', barClass)} data-testid="media-actions">
+        {many && items.length <= 12 && (
+          <div className="mb-2 flex justify-center gap-1.5" aria-hidden>
+            {items.map((it, i) => (
+              <span key={i} className={cx('h-1.5 rounded-full transition-all', i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/40')} />
+            ))}
+          </div>
+        )}
         {meta && (
-          <p className="truncate px-2 pb-1 text-center text-[12px] text-text-2">
+          <p className="truncate px-2 pb-1 text-center text-[12px] text-white/75">
             {[meta.authorName, meta.at && `${dayLabel(meta.at)} ${clock(meta.at)}`].filter(Boolean).join(' · ')}
           </p>
         )}
-        <div className="flex justify-around pb-1">
+        <div className="mx-auto flex max-w-md justify-around pb-1">
           {canShareFiles() && <ViewerAction icon={Share2} label="Share" onClick={() => shareFile(file)} />}
           <ViewerAction icon={isNative ? ExternalLink : Download} label={isNative ? 'Open / save' : 'Save'} onClick={() => (isNative ? openWithSystem(file) : downloadFile(file))} />
           {meta?.messageId && (

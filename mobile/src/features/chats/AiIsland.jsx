@@ -2,6 +2,7 @@
 // this conversation, and the answer appears right there. Swipe it up (or tap ×) to close.
 // The question goes with the messages decrypted on this device (nothing else is uploaded).
 import { useRef, useState } from 'react';
+import { useAiLanding } from '../../app/aiFlight.js';
 import { ArrowUp, Sparkles, X } from 'lucide-react';
 import { api, useSession } from '../../data/session.js';
 import { Icon } from '../../ui/Icon.jsx';
@@ -22,6 +23,7 @@ export function AiIsland({ transcript, title }) {
   const [dy, setDy] = useState(0);
   const drag = useRef(null);
   const input = useRef(null);
+  const [landingRef, landingStyle] = useAiLanding();
     // Always the small button in the top-right corner: the full pill covered the messages.
   const compact = true;
 
@@ -55,6 +57,8 @@ export function AiIsland({ transcript, title }) {
     return (
       <div className="pointer-events-none absolute right-3 top-2 z-[5]">
         <button
+          ref={landingRef}
+          style={landingStyle}
           type="button"
           aria-label="Ask AI about this chat"
           onClick={() => {

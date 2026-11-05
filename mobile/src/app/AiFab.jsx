@@ -2,7 +2,7 @@
 // touch (AiEyes). The same look on every tab; on Chats, Tasks and Notes it is smaller and sits just
 // above the tab's own button ("New task"…); on Home and Activity it takes that spot. Tapping it
 // opens the quick AI window (QuickAi.jsx) right there.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { nav, useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
 import { useKeyboard } from '../native/keyboard.js';
@@ -10,6 +10,7 @@ import { cx } from '../ui/cx.js';
 import { AiEyes } from './AiEyes.jsx';
 import { useQuickAi } from './QuickAi.jsx';
 import { bindAiMood, pokeAi, setMood } from './aiMood.js';
+import { fly, leaveSpot, takeSpot } from './aiFlight.js';
 
 /** Tabs whose main screen has its own button (ui/Button.jsx Fab) bottom right. */
 export const TABS_WITH_FAB = new Set(['chats', 'tasks', 'notes']);
@@ -37,12 +38,30 @@ export function AiFab({ tab, hidden = false }) {
   useEffect(() => (aiOn ? bindAiMood() : undefined), [aiOn]);
   const holdTimer = useRef(null);
   const openTimer = useRef(null);
+  // A screen opens over the tab (a chat): the button flies up to that screen's AI button. It
+  // closes: the button flies back down here (aiFlight.js).
+  const btn = useRef(null);
+  const wasHidden = useRef(hidden);
+  const [flying, setFlying] = useState(false);
+  useLayoutEffect(() => {
+    if (hidden === wasHidden.current) return undefined;
+    wasHidden.current = hidden;
+    if (hidden) {
+      leaveSpot(btn.current);
+      return undefined;
+    }
+    const from = takeSpot();
+    if (!from || !btn.current) return undefined;
+    setFlying(true);
+    return fly(from, btn.current, () => setFlying(false));
+  }, [hidden]);
   if (!aiOn || tab === 'ai') return null;
   const small = TABS_WITH_FAB.has(tab);
   const size = small ? SMALL : BIG;
   const off = hidden || keyboardOpen || quickOpen;
   return (
     <button
+      ref={btn}
       type="button"
       aria-label="Oruinwan AI"
       title="Oruinwan AI"
@@ -69,7 +88,7 @@ export function AiFab({ tab, hidden = false }) {
       aria-hidden={off || undefined}
       className={cx(
         'pressable glass absolute z-[15] grid place-items-center rounded-2xl border border-[var(--glass-border)] text-accent-ink shadow-lg',
-        off && 'pointer-events-none opacity-0',
+        (off || flying) && 'pointer-events-none opacity-0',
       )}
       style={{
         width: size,
