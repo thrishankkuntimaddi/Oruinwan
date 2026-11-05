@@ -77,7 +77,12 @@ function report(problems) {
   throw new Error(`Smoke crawl found ${problems.length} problem(s):\n${lines.join('\n')}`);
 }
 
+// Minutes of page visits: video and traces of them filled the CI runner's disk. The crawl
+// reports every problem it finds itself (report(problems)), so they add nothing here.
+test.use({ video: 'off', trace: 'off' });
+
 test.describe('smoke crawl', () => {
+
   test.describe.configure({ timeout: 900_000 });
   let ids;
 

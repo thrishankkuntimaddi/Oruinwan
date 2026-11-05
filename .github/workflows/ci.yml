@@ -83,6 +83,13 @@ jobs:
       # The E2E stack drops, recreates and migrates this database on every run.
       E2E_DATABASE_URL: postgres://oruinwan:oruinwan-dev@127.0.0.1:5432/oruinwan_e2e
     steps:
+      # The runner's disk filled up (ENOSPC) during the long smoke crawl: drop preinstalled
+      # toolchains this job never uses (~20 GB) before anything else.
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h / | tail -1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
