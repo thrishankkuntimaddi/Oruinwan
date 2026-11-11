@@ -1,5 +1,5 @@
 // Sharing a message or a whole thread outside Oruinwan (copy, system share sheet), and opening
-// the links it makes. Messages are end-to-end encrypted: this works on text already decrypted on
+// the links it makes. Messages are encrypted on the device: this works on text already decrypted on
 // this device and never sends it to the server. Links are the web app's
 //   https://<web>/workspace/<ws>/<channel|dm>/<id>?message=<id>[&thread=<parent>]
 //   https://<web>/workspace/<ws>/<channel|dm>/<id>?thread=<parent>

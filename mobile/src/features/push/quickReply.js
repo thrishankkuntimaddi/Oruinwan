@@ -13,7 +13,7 @@ import { clipPreview, isGenericPreview } from '../../lib/preview.js';
 
 /**
  * The message's own words for its notification. The server only knows "New message" (messages
- * are end-to-end encrypted), so fetch the conversation's newest messages and decrypt them here.
+ * are encrypted on the device), so fetch the conversation's newest messages and decrypt them here.
  * Gives up after a few seconds and keeps the server's text.
  */
 export async function decryptedBody(conv, { timeoutMs = 4000 } = {}) {

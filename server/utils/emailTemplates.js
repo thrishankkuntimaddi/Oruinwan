@@ -588,7 +588,7 @@ function offlineActivityTemplate(name, items, appUrl) {
   )).join('');
   const body = `
     ${_p(greeting)}
-    ${_p('Here is what happened on Oruinwan while you were away. Messages are end-to-end encrypted, so open the app to read them.')}
+    ${_p('Here is what happened on Oruinwan while you were away. Messages are encrypted on the device, so open the app to read them.')}
     ${_card(rows)}
     ${_btn('Open Oruinwan', url)}
   `;

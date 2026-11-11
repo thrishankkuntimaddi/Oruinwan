@@ -4,7 +4,7 @@ import { X, ListChecks } from 'lucide-react';
 const FONT = 'Inter, system-ui, sans-serif';
 const MAX_ITEMS = 50;
 
-/** Title + one item per line. The whole checklist is sent end-to-end encrypted. */
+/** Title + one item per line. The whole checklist is sent encrypted on the device. */
 export default function CreateChecklistModal({ onCreate, onClose }) {
     const [title, setTitle] = useState('');
     const [itemsText, setItemsText] = useState('');

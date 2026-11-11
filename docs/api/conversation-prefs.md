@@ -26,7 +26,7 @@ Public channels are always listed for workspace members; private ones only for m
 
 ## Scheduled messages and Sent
 
-The text is end-to-end encrypted on the sender's device before it is scheduled.
+The text is encrypted on the sender's device before it is scheduled.
 
 ```
 GET    /api/v2/scheduled-messages?workspaceId=   → { scheduled: [...], max: 50 }

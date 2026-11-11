@@ -12,7 +12,7 @@ available to the steps after it, so "PR merged → post in #engineering → crea
 |---|---|---|
 | `task.created` | tasks service (create, subtask, public API), both task stores | `taskId, title, status, priority, type, tags[], channelId, assigneeId, assigneeIds[], assigneeUsernames[], createdBy, userId (actor), dueDate, storyPoints, issueKey, parentTaskId` |
 | `task.completed` | a task moving to `done` (UI, API, or an integration such as a merged PR) | same as above + `completedAt` |
-| `message.sent` | channel messages in **public** channels (REST and socket sends). DMs and private channels never trigger automations. Messages posted by an automation never re-trigger. | `messageId, channelId, channelName, senderId, senderUsername, type, isThreadReply, parentId, hasAttachments, attachmentCount, attachmentTypes[], createdAt` — **no text**: messages are end-to-end encrypted |
+| `message.sent` | channel messages in **public** channels (REST and socket sends). DMs and private channels never trigger automations. Messages posted by an automation never re-trigger. | `messageId, channelId, channelName, senderId, senderUsername, type, isThreadReply, parentId, hasAttachments, attachmentCount, attachmentTypes[], createdAt` — **no text**: messages are encrypted on the device |
 | `file.uploaded` | workspace file library uploads (`POST /api/v2/files`). Chat attachments are not included. | `fileId, fileName, extension, mimeType, size, sizeMB, folderId, tags[], userId, uploadedBy` |
 | `meeting.completed` | huddles and scheduled meetings ending (see meetings.md) | `meetingId, title, kind ('huddle'\|'scheduled'), durationMinutes, participantCount, actionItemCount` |
 | `github.pr_merged` | GitHub integration webhook | `repo, title, actor, event` (raw payload) |

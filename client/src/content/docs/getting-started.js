@@ -14,7 +14,7 @@ export default {
                 'Oruinwan is a collaboration app for teams. Instead of switching between a chat tool, a task tracker, a wiki and a video app, you do all of it in one place, and each piece knows about the others: a message can become a task, a pull request can move a task to **Done**, and a huddle can post its own notes back to the channel.',
                 { h: 'What you can do' },
                 { table: { caption: 'Oruinwan features', head: ['Area', 'What it is for'], rows: [
-                    ['Channels and DMs', 'Real-time conversations, with threads, mentions, reactions, polls, voice and video notes, and split view on desktops and tablets. Message text is end-to-end encrypted.'],
+                    ['Channels and DMs', 'Real-time conversations, with threads, mentions, reactions, polls, voice and video notes, and split view on desktops and tablets. Message text is encrypted on the device.'],
                     ['Oruinwan AI and agents', 'Mention `@Oruinwan` in any chat, or open the private AI panel. It runs on Oruinwan’s own engine. Admins can add Claude, ChatGPT, Gemini or Grok for the workspace, and members can connect their own.'],
                     ['Tasks', 'List, board, sprint, timeline and workload views, task keys like `ENG-41`, and links to pull requests.'],
                     ['Notes and knowledge', 'Block-based notes, a linked knowledge base, and every shared file in one place.'],
@@ -53,7 +53,7 @@ export default {
                 ] },
                 { callout: 'note', text: 'You can sign in once your email is verified. Didn’t get the link, or it expired? Choose **Resend verification email**: it appears after you create the account and when you try to sign in before verifying.' },
                 { h: 'Continue with Google' },
-                'On the web and in the phone apps, choose **Continue with Google** on either tab. If you already have an account, you are signed straight in. If not, Oruinwan tells you **you’re creating a new account** and asks for a username and your date of birth; nothing is created until you confirm. Google has already verified your email, so there is no link to open. The first time, Oruinwan may ask you to set a password so that your end-to-end encryption keys can be protected.',
+                'On the web and in the phone apps, choose **Continue with Google** on either tab. If you already have an account, you are signed straight in. If not, Oruinwan tells you **you’re creating a new account** and asks for a username and your date of birth; nothing is created until you confirm. Google has already verified your email, so there is no link to open. The first time, Oruinwan may ask you to set a password so that your encryption keys can be protected.',
                 { h: 'Signing in' },
                 { steps: [
                     'Enter your email and password, then **Sign in**.',

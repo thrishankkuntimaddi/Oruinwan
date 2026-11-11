@@ -180,7 +180,7 @@ export default function Backups() {
                     <p className="cd-muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
                         An AES-256 encrypted snapshot of your company: people, workspaces, departments, teams, audit logs, and workspace
                         channels, tasks, notes, knowledge and file records. <strong>Chat messages are never included</strong> — they are
-                        end-to-end encrypted, and backups never decrypt them. Keep the downloaded file somewhere safe.
+                        encrypted on the device, and backups never decrypt them. Keep the downloaded file somewhere safe.
                     </p>
                     <Btn variant="primary" icon={Download} loading={creating} onClick={create} style={{ alignSelf: 'flex-start' }}>Create backup</Btn>
                     {lastMeta && (

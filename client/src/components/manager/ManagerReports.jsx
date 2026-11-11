@@ -8,7 +8,7 @@ import { useDepartment, DepartmentGate, pct } from './managerScope';
 
 const PRIORITIES = ['highest', 'high', 'medium', 'low', 'lowest'];
 const VISIBLE = ['Your department and its members', 'Tasks created by or assigned to the team', 'Workspaces you are a member of', 'Team task counts'];
-const HIDDEN = ["Anyone's messages (end-to-end encrypted)", 'Other departments', 'Billing and plan', 'Company security settings', 'Audit and compliance logs'];
+const HIDDEN = ["Anyone's messages (encrypted on the device)", 'Other departments', 'Billing and plan', 'Company security settings', 'Audit and compliance logs'];
 
 function toCsv(rows) {
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;

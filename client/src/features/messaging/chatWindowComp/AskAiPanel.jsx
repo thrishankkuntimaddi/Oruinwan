@@ -6,7 +6,7 @@ const SUGGESTIONS = ['What did I miss?', 'Any decisions?', 'What is open for me?
 
 /**
  * The messages on screen as the AI reads them: [{ sender, text }], oldest first. Only what this
- * browser decrypted is sent (the conversation stays end-to-end encrypted on the server).
+ * browser decrypted is sent (the conversation stays encrypted on the device on the server).
  */
 export function chatTranscript(events = [], limit = 200) {
     return events

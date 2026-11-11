@@ -5,7 +5,7 @@
  *
  * The client sends structured mentions ({ id, name }) and, for its own direct
  * messages with that person, the recent messages it decrypted itself
- * (`transcript`). Messages stay end-to-end encrypted: the server never opens
+ * (`transcript`). Messages stay encrypted on the device: the server never opens
  * them; it only checks who the people are.
  *
  * Here every mention is resolved against the workspace: only active members,

@@ -11,7 +11,7 @@ export const INCLUDED = [
   ['Tasks', 'Tasks you created or are assigned to'],
   ['Knowledge', 'Pages you wrote'],
   ['Meetings', 'Meetings you organised or were invited to: details, summary, action items'],
-  ['Messages', 'Messages you sent, still end-to-end encrypted'],
+  ['Messages', 'Messages you sent, still encrypted on the device'],
   ['Files', 'The list of files you uploaded (names, sizes), not the files themselves'],
 ];
 

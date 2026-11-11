@@ -4,7 +4,7 @@
  * File storage connectors: Google Drive, OneDrive (Microsoft Graph) and
  * Dropbox. Each offers `search` (browse when q is empty) and `item` (one file's
  * metadata, used to attach a link to a task). Messages get links from the
- * client, which puts the URL into the (end-to-end encrypted) message itself.
+ * client, which puts the URL into the (encrypted on the device) message itself.
  *
  * Item: { id, title, url, kind: 'file'|'folder', mimeType, modifiedAt, owner, path }
  */

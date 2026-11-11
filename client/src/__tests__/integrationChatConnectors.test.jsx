@@ -70,10 +70,10 @@ describe('outgoing bridge (client relay)', () => {
         expect(apiMock.post).not.toHaveBeenCalled();
     });
 
-    it('warns in a bridged channel that copies are not end-to-end encrypted', async () => {
+    it('warns in a bridged channel that copies are not encrypted on the device', async () => {
         apiMock.get.mockResolvedValue({ data: { channels: [{ channelId: 'c1', outgoing: true, providers: [{ type: 'teams', label: 'Microsoft Teams', direction: 'out' }] }] } });
         render(<BridgeNotice workspaceId="ws1" channelId="c1" />);
-        expect(await screen.findByTestId('bridge-notice')).toHaveTextContent(/copied to Microsoft Teams.*not end-to-end encrypted/);
+        expect(await screen.findByTestId('bridge-notice')).toHaveTextContent(/copied to Microsoft Teams.*not encrypted on the device/);
     });
 });
 
@@ -105,10 +105,10 @@ describe('cloud picker', () => {
 });
 
 describe('bridged messages', () => {
-    it('shows the remote author and says it is not end-to-end encrypted', () => {
+    it('shows the remote author and says it is not encrypted on the device', () => {
         render(<BridgedMessage integration={{ provider: 'slack', kind: 'message', author: 'Bea', extra: { notE2EE: true } }} summary="hello from Slack" />);
         expect(screen.getByText('Bea')).toBeInTheDocument();
         expect(screen.getByText('hello from Slack')).toBeInTheDocument();
-        expect(screen.getByText(/Via Slack · not end-to-end encrypted/)).toBeInTheDocument();
+        expect(screen.getByText(/Via Slack · not encrypted on the device/)).toBeInTheDocument();
     });
 });

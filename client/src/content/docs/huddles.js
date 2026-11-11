@@ -57,7 +57,7 @@ export default {
                     'Check the message. It includes the huddle title, duration, participants, the summary, the **Action items** checklist, the **Tasks** and a link to the notes. Edit it freely, or rebuild it from the notes and tasks.',
                     'Pick the channel (or DM) and post it.',
                 ] },
-                'The wrap-up is posted like any message (end-to-end encrypted), and the people who were in the call are notified.',
+                'The wrap-up is posted like any message (encrypted on the device), and the people who were in the call are notified.',
             ],
         },
         {

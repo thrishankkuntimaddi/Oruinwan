@@ -124,7 +124,7 @@ function DownloadSection() {
                     <li>Notification settings</li>
                     <li>Recent account activity</li>
                 </ul>
-                <div className="stg-row-desc">Messages are end-to-end encrypted, so they aren’t in this file.</div>
+                <div className="stg-row-desc">Messages are encrypted on the device, so they aren’t in this file.</div>
             </div>
         </Section>
     );

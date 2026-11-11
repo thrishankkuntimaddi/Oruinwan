@@ -1,4 +1,4 @@
-// Search across the workspace. Messages are end-to-end encrypted, so they're searched on the
+// Search across the workspace. Messages are encrypted on the device, so they're searched on the
 // phone (lib/searchQuery.js matchMessage over the messages decrypted here); pages and files
 // come from the server's /api/search with the date filters it supports; channels, people,
 // tasks and notes are filtered from the lists already loaded.

@@ -262,7 +262,7 @@ async function searchMessages(workspaceId, userId, searchRegex, { dateFilter, ch
             deletedFor: { $ne: userId },
             $or: parentScope,
         };
-        // Message bodies are end-to-end encrypted: free text only ever matches
+        // Message bodies are encrypted on the device: free text only ever matches
         // plaintext (system/bot) messages; operators match metadata.
         if (searchRegex) query.text = searchRegex;
         if (dateFilter) query.createdAt = dateFilter;

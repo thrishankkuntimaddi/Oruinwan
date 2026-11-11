@@ -83,7 +83,7 @@ describe('Settings → Backup', () => {
         renderTab();
         expect(await screen.findByText('ada@gmail.com')).toBeInTheDocument();
         expect(screen.getByText(/47 KB/)).toBeInTheDocument();
-        expect(screen.getByText(/Messages you sent, still end-to-end encrypted/)).toBeInTheDocument();
+        expect(screen.getByText(/Messages you sent, still encrypted on the device/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Back up now/ }));
         await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v2/backup/run'));
         expect(showToast).toHaveBeenCalledWith('Backed up to Google Drive', 'success');

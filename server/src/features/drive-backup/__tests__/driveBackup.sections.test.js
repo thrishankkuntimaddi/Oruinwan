@@ -91,7 +91,7 @@ test('collect: what is in a backup for one person', async () => {
     expect(bundle.knowledge.map((p) => p.title)).toEqual(['Handbook']);
     expect(bundle.meetings.map((m) => m.title).sort()).toEqual(['My 1:1', 'Standup']);
     expect(bundle.messages.map((m) => m._id).sort()).toEqual([oid(600), oid(601)]); // only messages you sent
-    expect(bundle.messages[0].payload.isEncrypted).toBe(true); // still end-to-end encrypted
+    expect(bundle.messages[0].payload.isEncrypted).toBe(true); // still encrypted on the device
     expect(bundle.files).toEqual([expect.objectContaining({ name: 'spec.pdf' })]);
     expect(bundle.files[0].url).toBeUndefined();
     expect(bundle.keys.cryptoState.encryptedIdentityPrivateKey).toBe('WRAPPED');

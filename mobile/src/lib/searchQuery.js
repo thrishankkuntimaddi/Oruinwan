@@ -1,7 +1,7 @@
 // Search query syntax, the same words people type on the web:
 //   from:@username   in:#channel   before:2026-01-31   after:2026-01-01   on:2026-01-15
 //   has:file|link|image   is:pinned|thread   type:task|note|file|page|message   "exact phrase"
-// Message bodies are end-to-end encrypted, so messages are matched here on the phone
+// Message bodies are encrypted on the device, so messages are matched here on the phone
 // (matchMessage); the other kinds go to the server's /api/search with the filters it
 // understands (serverParams).
 

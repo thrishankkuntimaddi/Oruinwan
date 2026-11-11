@@ -306,7 +306,7 @@ export function MessagesLanding({ onNewMessage }) {
                 eyebrow={activeWorkspace?.name || 'Workspace'}
                 title="Direct messages"
                 icon={MessageSquare}
-                lead="Private conversations with teammates and AI agents. End-to-end encrypted."
+                lead="Private conversations with teammates and AI agents. Encrypted on your device."
                 actions={<Btn variant="primary" icon={MessageSquarePlus} onClick={onNewMessage}>New message</Btn>}
             />
         )}>

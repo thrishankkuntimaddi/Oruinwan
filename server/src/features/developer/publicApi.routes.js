@@ -90,7 +90,7 @@ router.get('/messages', requireScope('messages:read'), async (req, res) => {
       .lean()
       .then((rows) => hydrate(rows, { sender: userSelect('username') }));
 
-    // Messages are end-to-end encrypted: only ids and metadata leave the server.
+    // Messages are encrypted on the device: only ids and metadata leave the server.
     const out = messages.map(m => ({
       id: String(m._id),
       channelId: m.channel ? String(m.channel) : null,

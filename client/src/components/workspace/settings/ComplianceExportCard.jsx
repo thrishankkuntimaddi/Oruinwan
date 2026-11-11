@@ -54,7 +54,7 @@ export default function ComplianceExportCard({ workspaceId, workspaceName }) {
                     <h3 className="tk-card-title">Compliance export</h3>
                     <p className="tk-card-text" style={{ marginTop: 3 }}>
                         Everything an audit or legal request needs from this workspace: members and their roles, channels,
-                        tasks and workspace notes, as one JSON file. Messages are end-to-end encrypted, so they are not included.
+                        tasks and workspace notes, as one JSON file. Messages are encrypted on the device, so they are not included.
                     </p>
                 </div>
             </div>

@@ -20,7 +20,7 @@
  *   knowledge      knowledge pages you wrote                           those pages
  *   meetings       meetings you organised or were invited to          meetings you organised
  *                  (summary, action items, notes link — no transcript)
- *   messages       messages you sent, still end-to-end encrypted      yours, in conversations you are still in
+ *   messages       messages you sent, still encrypted on the device      yours, in conversations you are still in
  *   files          metadata of files you uploaded (no file contents)  never (the backup holds no file bodies)
  */
 

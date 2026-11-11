@@ -2,7 +2,7 @@
 // links as the web client (client/src/utils/uploadFile.js, utils/mediaUrl.js,
 // hooks/useMessageActions.js).
 //
-// Files are not end-to-end encrypted, on the web or here: the web uploads the file as-is and
+// Files are not encrypted on the device, on the web or here: the web uploads the file as-is and
 // sends the attachment's metadata in the message's `attachments`, and the server only lets
 // people who can read the conversation fetch it (server/src/modules/uploads/upload.access.js).
 // Phone and web must agree, or one could not open the other's files, so this does the same.

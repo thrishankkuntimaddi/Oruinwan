@@ -5,7 +5,7 @@ Company-wide insights for owners, admins and co-owners of the caller's company
 from people's sign-in activity, workspaces, channels and **tasks** only.
 
 Privacy rule: no message counts or content, and nothing about who talks to whom.
-Messages are end-to-end encrypted and are never read or counted here.
+Messages are encrypted on the device and are never read or counted here.
 
 ## Removed
 

@@ -38,7 +38,7 @@ const TYPES = [
 
 const LOOK_FOR = [
     'Respect user privacy and data ownership',
-    'Align with end-to-end encryption principles',
+    'Align with message encryption principles',
     'Follow strong security practices',
     'Build responsibly and transparently',
     'Value long-term collaboration over short-term growth',

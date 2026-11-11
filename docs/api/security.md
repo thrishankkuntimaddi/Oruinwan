@@ -130,7 +130,7 @@ platform staff may pick a company.
 secrets, workspaces, members, departments, teams), audit logs, and workspace metadata:
 `channels, tasks, notes, knowledgePages, knowledgeCategories, files` (file metadata,
 not the bytes). Each collection carries a SHA-256 checksum. **Chat messages are never
-included** — they are end-to-end encrypted and the server never decrypts them.
+included** — they are encrypted on the device and the server never decrypts them.
 
 `POST /api/security/backup` `{ companyId? }` → 201
 ```json
@@ -157,7 +157,7 @@ Response:
 ```json
 { "dryRun": true,
   "backup": { "format": "oruinwan-backup-v2", "backedUpAt": "…", "companyId": "…", "workspaces": 3 },
-  "notRestored": ["identity tables (…)", "audit logs", "messages (never backed up: end-to-end encrypted)"],
+  "notRestored": ["identity tables (…)", "audit logs", "messages (never backed up: encrypted on the device)"],
   "collections": { "channels": { "inBackup": 12, "existing": 10, "toRestore": 2, "restored": 0,
                                   "skipped": { "workspaceMissing": 0, "foreignWorkspace": 0 } } } }
 ```

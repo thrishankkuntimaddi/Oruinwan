@@ -5,7 +5,7 @@
  * workspace — DMs and channels with unread top-level messages, with the
  * newest unread message of each as a preview.
  *
- * End-to-end encryption: previews are returned as ciphertext + IV only (the
+ * Message encryption: previews are returned as ciphertext + IV only (the
  * client decrypts them with its own conversation key). Attachments come back
  * as a kind label ("📷 Photo"); plaintext message text is never returned.
  *

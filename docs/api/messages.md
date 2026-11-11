@@ -41,7 +41,7 @@ accept `clientMessageId` in the body next to `ciphertext`, `messageIv`, `clientT
 
 # Thread replies: @mentions
 
-Thread replies are end-to-end encrypted like other messages, so the client sends the plaintext
+Thread replies are encrypted on the device like other messages, so the client sends the plaintext
 mention part separately as **`mentionText`** (same as channel sends):
 
 - REST `POST /api/threads/:messageId` body: `{ ciphertext, messageIv, attachments?, clientTempId?, clientMessageId?, mentionText? }`

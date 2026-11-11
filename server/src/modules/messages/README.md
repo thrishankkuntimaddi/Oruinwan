@@ -18,7 +18,7 @@ messages/
 
 - ✅ **Direct Messages (DMs)**: Person-to-person communication
 - ✅ **Channel Messages**: Group communication
-- ✅ **End-to-End Encryption**: Full E2EE support
+- ✅ **Message encryption**: Messages encrypted on the device (per-conversation keys, server-escrowed copy)
 - ✅ **Real-time Updates**: Socket.io integration
 - ✅ **Pagination**: Efficient message loading
 - ✅ **Thread Support**: Reply functionality

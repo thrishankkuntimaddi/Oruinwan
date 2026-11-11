@@ -1,7 +1,7 @@
 // @mentions and #channel links in the composer. People are mentioned by username (the server
 // resolves @handles: server/src/utils/mentionParser.js); @channel notifies everyone in the
 // channel and @here the people online, unless the channel limits them to its admins.
-// The message itself is end-to-end encrypted, so the handles go to the server separately as
+// The message itself is encrypted on the device, so the handles go to the server separately as
 // `mentionText`, as on the web. Usernames can have spaces ("@Pakanati Shiva Kumar Goud"): the
 // longest known name wins (platform/people/mentions.js).
 

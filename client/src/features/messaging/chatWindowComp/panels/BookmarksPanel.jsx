@@ -25,7 +25,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
         try {
             const res = await api.get("/api/v2/messages/bookmarks");
             const list = res.data.messages || [];
-            // Bookmarked messages are end-to-end encrypted like any other: decrypt here.
+            // Bookmarked messages are encrypted on the device like any other: decrypt here.
             const { decryptTextOrNull } = await import("../../../../services/messageEncryptionService");
             const decrypted = await Promise.all(list.map(async (m) => {
                 if (m.text || !m.payload?.ciphertext) return m;

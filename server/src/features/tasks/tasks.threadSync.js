@@ -9,7 +9,7 @@
  *                           server-written replies). The reply points back (Message.taskComment)
  *                           and the comment records it (TaskComment.sync).
  *   Thread reply → task     The reply shows in each linked task's discussion as a comment from
- *                           its author (TaskComment.mirror). Its text stays end-to-end encrypted:
+ *                           its author (TaskComment.mirror). Its text stays encrypted on the device:
  *                           the entry carries the reply's ciphertext and the apps decrypt it.
  *
  * Each side keeps its own rules (independent authorization):

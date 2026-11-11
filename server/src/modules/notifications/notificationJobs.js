@@ -10,7 +10,7 @@
  *
  * Everything that must happen once is guarded by a NotificationClaim key, so
  * several instances, retries or overlapping runs never double-send. Messages are
- * end-to-end encrypted: no job ever reads or sends message content.
+ * encrypted on the device: no job ever reads or sends message content.
  */
 
 const logger = require('../../../utils/logger');

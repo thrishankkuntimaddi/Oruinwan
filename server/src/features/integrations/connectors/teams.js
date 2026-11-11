@@ -69,7 +69,7 @@ module.exports = {
   type: 'teams',
   label: LABEL,
   category: 'communication',
-  description: 'Bridge Teams channels and Oruinwan channels. Bridged messages are not end-to-end encrypted.',
+  description: 'Bridge Teams channels and Oruinwan channels. Bridged messages are not encrypted on the device.',
   setup: [
     'Outgoing (Oruinwan → Teams): in the Teams channel add the "Incoming Webhook" connector, or a Workflows flow "Post to a channel when a webhook request is received", and paste its URL below.',
     'Incoming (Teams → Oruinwan): in Teams → Apps → Manage your apps → Create an outgoing webhook, use the webhook URL shown here as the callback URL and paste the security token Teams shows below. People then @mention it in Teams to post into Oruinwan.',

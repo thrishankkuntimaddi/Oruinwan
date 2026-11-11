@@ -60,7 +60,7 @@ function BarList({ rows, tone }) {
 
 /**
  * Productivity insights for owners and admins: people, tasks, engagement, workload.
- * Messages are end-to-end encrypted, so nothing here counts or shows them.
+ * Messages are encrypted on the device, so nothing here counts or shows them.
  */
 const InsightsDashboard = () => {
     const { pathname } = useLocation();
@@ -206,7 +206,7 @@ const InsightsDashboard = () => {
 
                     <div className="cd-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                         <Lock size={13} aria-hidden="true" />
-                        Messages are end-to-end encrypted and never shown to admins, and they are not counted here.
+                        Messages are encrypted on the device and never shown to admins, and they are not counted here.
                     </div>
                 </>
             )}

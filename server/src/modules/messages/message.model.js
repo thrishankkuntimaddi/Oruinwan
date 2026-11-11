@@ -28,10 +28,10 @@ const AttachmentSchema = new mongoose.Schema({
 }, { _id: false });
 
 // Plaintext metadata of an integration card (GitHub / Jira). The human summary
-// line is still stored end-to-end encrypted in `payload` like any text message.
+// line is still stored encrypted on the device in `payload` like any text message.
 const IntegrationCardSchema = new mongoose.Schema({
   provider:     { type: String, enum: ['github', 'gitlab', 'jira', 'bitbucket', 'linear', 'cicd', 'slack', 'teams', 'zapier', 'make', 'n8n', 'webhook'], required: true },
-  // 'message': text bridged from Slack / Teams or posted by an incoming webhook or automation tool (not end-to-end encrypted at the source).
+  // 'message': text bridged from Slack / Teams or posted by an incoming webhook or automation tool (not encrypted on the device at the source).
   kind:         { type: String, enum: ['pull_request', 'pr_review', 'issue', 'push', 'checks', 'jira_issue', 'message'], required: true },
   action:       { type: String, default: null },
   repo:         { type: String, default: null },   // owner/name (GitHub) or project key (Jira)

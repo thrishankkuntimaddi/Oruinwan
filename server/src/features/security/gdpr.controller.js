@@ -165,7 +165,7 @@ exports.deleteUser = eraseAndRespond;
 /**
  * GET /api/compliance/export?workspaceId=<id> -> JSON download
  *   { exportedAt, workspace{id,name,members[{userId,username,role}]}, channels, tasks, notes }
- * Notes: public workspace notes and the caller's own. Messages are end-to-end encrypted and
+ * Notes: public workspace notes and the caller's own. Messages are encrypted on the device and
  * are not included.
  */
 exports.exportWorkspace = async (req, res) => {

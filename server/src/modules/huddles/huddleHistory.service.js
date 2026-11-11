@@ -542,7 +542,7 @@ async function recordWrapUp({ userId, username, huddleId, messageId, summaryText
     });
 
     // A meeting's huddle: the wrap-up is the meeting's summary. The client sends the text it
-    // posted (the chat message itself is end-to-end encrypted); without it the meeting keeps
+    // posted (the chat message itself is encrypted on the device); without it the meeting keeps
     // its current summary text and only learns where the wrap-up was posted.
     const meetingId = meetingIdOf(session);
     if (meetingId) {

@@ -5,7 +5,7 @@
  *
  * Each provider posts as its own system account (username "GitHub" / "Jira",
  * role 'integration_bot', no password, cannot sign in). Messages are stored
- * end-to-end encrypted with the channel key the server holds wrapped under
+ * encrypted on the device with the channel key the server holds wrapped under
  * SERVER_KEK, exactly like Oruinwan AI's messages; the card metadata lives in
  * the plaintext `integration` subdocument (type 'integration').
  *

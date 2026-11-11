@@ -204,7 +204,7 @@ const DECLARATIONS = [
   },
   {
     name: 'search_workspace',
-    description: 'Search the current workspace\'s knowledge pages, notes and tasks by keywords (messages are end-to-end encrypted and not searchable here; for messages with a person the user @mentioned, use search_messages_with_person).',
+    description: 'Search the current workspace\'s knowledge pages, notes and tasks by keywords (messages are encrypted on the device and not searchable here; for messages with a person the user @mentioned, use search_messages_with_person).',
     parameters: {
       type: 'object',
       properties: { query: { type: 'string', description: 'Keywords' } },

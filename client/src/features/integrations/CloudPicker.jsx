@@ -10,7 +10,7 @@ import './integrations.css';
  * Browse / search a connected file or wiki app (Google Drive, OneDrive,
  * Dropbox, Notion, Confluence) and pick an item:
  *   mode 'message' → resolves with the item; the caller posts its link in the
- *                    (end-to-end encrypted) message. Notion/Confluence pages
+ *                    (encrypted on the device) message. Notion/Confluence pages
  *                    can also be imported into Knowledge from here.
  *   mode 'task'    → attaches the item to `taskId` on the server.
  */

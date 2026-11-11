@@ -287,7 +287,7 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
 
 /**
  * Workspace health for admins. Deliberately says nothing about messaging: no message counts,
- * no "who posted", nothing per person. Conversations are private (end-to-end encrypted), and
+ * no "who posted", nothing per person. Conversations are private (encrypted on the device), and
  * admins see how the workspace is set up and how work moves, not how much people talk.
  */
 exports.getWorkspaceAnalytics = async function ({ workspaceId, range = 30 }) {

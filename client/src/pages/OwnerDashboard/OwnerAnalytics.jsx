@@ -40,7 +40,7 @@ const OwnerAnalytics = () => {
                     eyebrow="Owner console"
                     icon={Activity}
                     title="Activity health"
-                    lead="Growth, sign-ins and where the work happens. Messages are end-to-end encrypted and never counted here."
+                    lead="Growth, sign-ins and where the work happens. Messages are encrypted on the device and never counted here."
                     actions={(
                         <>
                             <FilterTabs label="Time range" value={range} onChange={setRange} options={RANGES} />

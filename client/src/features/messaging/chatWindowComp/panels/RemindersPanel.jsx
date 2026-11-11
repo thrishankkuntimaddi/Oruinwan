@@ -16,7 +16,7 @@ export default function RemindersPanel({ onClose }) {
         try {
             const { data } = await api.get('/api/v2/messages/reminders');
             const list = data.reminders || [];
-            // The reminded message is end-to-end encrypted: decrypt its preview here.
+            // The reminded message is encrypted on the device: decrypt its preview here.
             const { decryptTextOrNull } = await import('../../../../services/messageEncryptionService');
             const withText = await Promise.all(list.map(async (r) => {
                 const m = r.messageId || {};

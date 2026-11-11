@@ -2,7 +2,7 @@
 
 /**
  * Workspace insights: how work is moving. Built from tasks only. Conversations are private
- * (end-to-end encrypted), so nothing here counts, ranks or compares people's messages.
+ * (encrypted on the device), so nothing here counts, ranks or compares people's messages.
  */
 const Tasks = require('../../tasks/tasks.query');
 

@@ -90,7 +90,7 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
         // Usage is measured with non-message aggregates only: who signed in (a sign-in security
-        // event), task activity and workspace structure. Messages are end-to-end encrypted and
+        // event), task activity and workspace structure. Messages are encrypted on the device and
         // the owner console never counts them, per person or in total.
         const live = { company: companyId, deleted: { $ne: true } };
         const [
@@ -391,7 +391,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
         const dayLabels = buildDateLabels(dayCount);
         const live = { company: companyId, deleted: { $ne: true } };
 
-        // No message counts anywhere on this page: messages are end-to-end encrypted and an
+        // No message counts anywhere on this page: messages are encrypted on the device and an
         // owner must not see how much anyone (or the company) talks. Engagement is the share
         // of people who signed in during the period.
         const [

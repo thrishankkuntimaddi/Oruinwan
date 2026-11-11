@@ -93,7 +93,7 @@ export default function MessageInfoModal({ info, msg, onClose, onRetry }) {
                 </p>
                 <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
                     <Lock size={10} style={{ color: 'var(--accent)' }} />
-                    {(m.isEncrypted ?? msg?.isEncrypted) ? 'End-to-end encrypted' : 'Encrypted in transit'}
+                    {(m.isEncrypted ?? msg?.isEncrypted) ? 'Encrypted on device' : 'Encrypted in transit'}
                 </div>
             </div>
 

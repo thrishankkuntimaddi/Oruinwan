@@ -2,7 +2,7 @@ const logger = require('../../../utils/logger');
 const org = require('../../identity/queries/org');
 const Tasks = require('../tasks/tasks.query');
 
-// Privacy: no message counts, senders or content. Messages are end-to-end encrypted and only
+// Privacy: no message counts, senders or content. Messages are encrypted on the device and only
 // their participants read them; company analytics use people, workspaces and tasks only.
 
 exports.getCompanyAnalytics = async (req, res) => {

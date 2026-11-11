@@ -6,7 +6,7 @@
  *   [{ id, name, username, hasDirectMessage, blocked: 'you'|'them'|null, transcript?: [{ from, isMe, text, at }] }]
  *
  * `transcript` is the user's own recent direct messages with that person,
- * decrypted on the user's device (messages are end-to-end encrypted, so the
+ * decrypted on the user's device (messages are encrypted on the device, so the
  * server cannot read them). search_messages_with_person searches it here, in the
  * AI process, so it works the same in-process and as a standalone AI service.
  */
@@ -66,7 +66,7 @@ function runSearch(mentions, args = {}) {
   if (!person) return { success: false, error: 'Only people the user @mentioned in this request can be searched.' };
   if (!person.hasDirectMessage) return { success: true, person: person.name, messages: [], note: `The user has no direct messages with ${person.name} yet.` };
   if (!Array.isArray(person.transcript) || !person.transcript.length) {
-    return { success: false, error: `Messages with ${person.name} are end-to-end encrypted and were not shared from the user's device for this request. Ask the user to open the conversation, or to ask from their private assistant chat.` };
+    return { success: false, error: `Messages with ${person.name} are encrypted on the device and were not shared from the user's device for this request. Ask the user to open the conversation, or to ask from their private assistant chat.` };
   }
   const found = searchTranscript(person.transcript, args.query, { limit: args.limit, exclude: [person.username, ...(String(person.name || '').split(/\s+/))] });
   return {

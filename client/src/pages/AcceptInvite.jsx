@@ -9,7 +9,7 @@ import { AuthMark, AuthHead, AuthStatus, AuthProgress } from '../components/publ
 const ASIDE = (
     <>
         <h1 className="orw-auth__title">Your team is<br /><span className="orw-gloss-text">waiting for you.</span></h1>
-        <p className="orw-auth__lead">Set up your account once and you’ll land in your company’s workspace, with everything end-to-end encrypted.</p>
+        <p className="orw-auth__lead">Set up your account once and you’ll land in your company’s workspace, with your messages encrypted on your device.</p>
     </>
 );
 

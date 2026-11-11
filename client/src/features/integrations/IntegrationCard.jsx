@@ -42,7 +42,7 @@ function useReview(key) {
 
 /**
  * Text that came from outside Oruinwan (Slack / Teams bridge, an incoming
- * webhook, Zapier / Make / n8n). It was not end-to-end encrypted at its
+ * webhook, Zapier / Make / n8n). It was not encrypted on the device at its
  * source, so the card says so.
  */
 export function BridgedMessage({ integration, summary }) {
@@ -60,9 +60,9 @@ export function BridgedMessage({ integration, summary }) {
                 </div>
             )}
             <p className="oi-bridged-text">{summary}</p>
-            <div className="oi-bridged-meta" title="This message was written outside Oruinwan, so it was not end-to-end encrypted.">
+            <div className="oi-bridged-meta" title="This message was written outside Oruinwan, so it was not encrypted on the device.">
                 <ShieldOff size={11} aria-hidden="true" />
-                <span>Via {via} · not end-to-end encrypted</span>
+                <span>Via {via} · not encrypted on the device</span>
             </div>
         </div>
     );

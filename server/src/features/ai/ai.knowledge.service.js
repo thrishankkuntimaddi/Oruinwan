@@ -3,7 +3,7 @@
 /**
  * Workspace knowledge for Oruinwan AI: meaning-based search over the notes,
  * tasks and knowledge pages of a workspace, using embeddings from the
- * Oruinwan engine (config.models.embed). Messages are end-to-end encrypted and
+ * Oruinwan engine (config.models.embed). Messages are encrypted on the device and
  * are never indexed.
  *
  * The index lives in PostgreSQL (ai_embeddings, pgvector, see

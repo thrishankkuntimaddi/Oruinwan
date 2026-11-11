@@ -7,7 +7,7 @@
  * thread, their client calls POST /api/ai/reply with the question and the
  * recent messages it has already decrypted. The answer is streamed live to
  * everyone in the conversation over the socket room, then stored like any
- * other message: end-to-end encrypted with the conversation key and sent by
+ * other message: encrypted on the device with the conversation key and sent by
  * the dedicated "Oruinwan AI" account.
  *
  * Socket event (room `channel:<id>` or `dm:<id>`), name `ai:reply`:

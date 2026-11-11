@@ -1,4 +1,4 @@
-// End-to-end encryption status for the signed-in user, shown in Chats and Settings.
+// Message encryption status for the signed-in user, shown in Chats and Settings.
 //   none                signed out
 //   ready               keys unlocked on this phone
 //   password_required   keys exist but this phone needs the password once

@@ -209,7 +209,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
     };
 
     try {
-      // Mentioned people go as { id, name } plus our DM with them, decrypted here (E2EE: the server can't read it).
+      // Mentioned people go as { id, name } plus our DM with them, decrypted here (E2EE: the server stores only the encrypted text).
       const mentions = people.length ? await withTranscripts(people, { workspaceId, dms, me: meId }) : undefined;
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
       const data = await aiService.chatStream({
@@ -473,7 +473,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
               <div>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Privacy</p>
                 <ul style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '5px', paddingLeft: 0, listStyle: 'none', margin: 0 }}>
-                  {['Messages are end-to-end encrypted; only what your device can read is sent to the model', 'May make mistakes — verify important information'].map(c => (
+                  {['Messages are encrypted on the device; only what your device can read is sent to the model', 'May make mistakes — verify important information'].map(c => (
                     <li key={c} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border-accent)', flexShrink: 0, display: 'inline-block' }} />{c}</li>
                   ))}
                 </ul>

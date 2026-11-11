@@ -1,5 +1,5 @@
 // Android: conversation keys for message notifications while the app is closed. The server can't
-// read messages (end-to-end encrypted), so a push carries the message still encrypted and the
+// read messages (encrypted on the device), so a push carries the message still encrypted and the
 // app's Firebase handler (android/.../CallMessagingService.java) decrypts it on the phone with
 // the key kept here — sealed by the Android Keystore (NotifyKeys.java). Cleared on sign-out.
 import { Capacitor, registerPlugin } from '@capacitor/core';

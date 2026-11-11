@@ -56,7 +56,7 @@ The settings UI renders every connector from this.
   `webhookSecret` once when Oruinwan generated a secret (for `tokenInUrl`
   connectors the `webhookUrl` then contains the token; later it is masked).
   Turning on `out`/`both` for a bridge needs `acknowledgeOutgoing: true` (the
-  messages leave end-to-end encryption); `outEnabledAt`/`outEnabledBy` are stored.
+  messages leave Oruinwan's message encryption); `outEnabledAt`/`outEnabledBy` are stored.
 - `POST /:type/test` (admin) body `{ workspaceId, …unsaved fields }` →
   `{ ok: true, account }` or `{ ok: false, message, code }`. Does not save.
 - `POST /:type/rotate-secret` (admin) → GET shape + new `webhookSecret` (once).
@@ -96,7 +96,7 @@ like GitHub/Jira.
   item again by id and adds it to the task's `externalLinks`
   (`provider: <type>, kind: 'file'|'page'`). → `{ item, task: { id, issueKey } }`.
   To attach to a **message**, the client puts `item.url` (for Dropbox, from the
-  `item` action) into the message text so it stays end-to-end encrypted.
+  `item` action) into the message text so it stays encrypted on the device.
 - `POST /:type/import` (member; notion, confluence) `{ workspaceId, id, parentId?, categoryId? }`
   — `id` may be a Notion page URL. Creates a Knowledge page (Markdown, with a
   "Imported from …" footer, tag = type) as the caller. → 201 `{ page: { id, title }, source: Item }`.

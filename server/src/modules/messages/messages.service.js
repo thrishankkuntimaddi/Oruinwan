@@ -1163,7 +1163,7 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     message.deletedByName = deleter?.username || null;
     await message.save();
 
-    // Ids only on the bus (content is end-to-end encrypted); a bus failure never fails the delete.
+    // Ids only on the bus (content is encrypted on the device); a bus failure never fails the delete.
     require('../../shared/events/bus').publish('message.deleted', {
         messageId: String(message._id),
         channelId: message.channel ? String(message.channel) : null,
@@ -1246,7 +1246,7 @@ async function setPinned(messageId, userId, pin, io) {
         });
     }
 
-    // Timeline line. Message content is end-to-end encrypted, so no snippet except for
+    // Timeline line. Message content is encrypted on the device, so no snippet except for
     // legacy plaintext messages.
     try {
         const snippet = message.payload?.ciphertext ? '' : (message.text || '');

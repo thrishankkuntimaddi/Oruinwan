@@ -22,14 +22,14 @@ The desktop apps (`../desktop`) run the web client (`../client` in app mode).
 | | |
 |---|---|
 | **Screens** | Home, Chats (channels, DMs, threads), Oruinwan AI, Tasks (list and board), Notes, Search, Notifications, Knowledge, Files, Integrations, Workspace, Settings |
-| **Encryption** | Same end-to-end scheme as the web client: RSA-2048 identity keys, AES-256-GCM messages. Keys are created on first sign-in or unlocked with the password, then kept on the phone as non-extractable keys. |
+| **Encryption** | Same encryption scheme as the web client: RSA-2048 identity keys, AES-256-GCM messages. Keys are created on first sign-in or unlocked with the password, then kept on the phone as non-extractable keys. |
 | **Updates** | Android (phones and tablets): the app checks for new releases, downloads the APK, verifies its checksum and signing key, then hands it to Android's installer. iPhone and iPad: TestFlight / the App Store. Data is kept. |
 | **Feature flags** | Firebase Remote Config can switch features on or off, or roll them out to a percentage of installs, without a new build. |
 | **Themes** | Light, dark and system, in the web client's "Monolith Gloss" palette. |
 
 | **Workspaces** | Create one in three steps (name, project, teammates: share a team invite link or invite by email). After sign-in, a "Welcome back" list of your workspaces. |
 | **Oruinwan AI in chats** | Mention `@ai` in a channel, DM or thread; typing `@a` suggests it. The answer streams in live for everyone in the conversation. |
-| **Search** | Messages are searched on the phone (they're end-to-end encrypted): what's been decrypted, plus the latest messages of conversations not opened yet. Kept in memory only. |
+| **Search** | Messages are searched on the phone (they're encrypted on the device): what's been decrypted, plus the latest messages of conversations not opened yet. Kept in memory only. |
 | **Push notifications** | Android through Firebase, iPhone and iPad through Apple (APNs). The server needs `FIREBASE_SERVICE_ACCOUNT` / `APNS_*` (see `server/.env.example`). Message notifications have **Reply** (opens the conversation with your text in the composer: replies are encrypted in the app) and **Mark as read**; see `docs/api/mobile-work.md` for platform limits. |
 | **Offline** | The last data is saved on the device (encrypted with a device-only key) and shown when there is no connection. Messages sent offline are encrypted, queued as "Queued", and sent in order when the connection is back. |
 

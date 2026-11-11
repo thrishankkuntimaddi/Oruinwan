@@ -1,5 +1,5 @@
 // Chats, threads, AI and search calls of the live adapter (merged into liveAdapter in
-// adapter.js). Message text is end-to-end encrypted: everything sent to AI here is text the
+// adapter.js). Message text is encrypted on the device: everything sent to AI here is text the
 // phone decrypted, and checklists are encrypted like any message (the server keeps only ticks).
 import { absolute, api } from './http.js';
 import { conversationKey, decryptPayload, encryptText, withCurrentKey } from './crypto.js';
@@ -420,7 +420,7 @@ export function chatsAdapter({ mapMessage, me, ws, dm }) {
       await api.del(`/v2/dm/${id}`);
     },
 
-    // ---- Server search (pages, files, tasks, notes: not end-to-end encrypted)
+    // ---- Server search (pages, files, tasks, notes: not encrypted on the device)
     /** kind: 'knowledge' | 'file' | 'task' | 'note'; params from lib/searchQuery serverParams. */
     async searchServer(workspaceId, params) {
       if (!params.q) return SEARCH_EMPTY;

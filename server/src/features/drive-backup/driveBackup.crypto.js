@@ -19,7 +19,7 @@
  *
  *    Why not the UMEK: password accounts derive their UMEK on the device and the server
  *    never sees it, so a server-run (automatic) backup could not seal for it. Message
- *    bodies inside the bundle stay end-to-end encrypted regardless, and the identity
+ *    bodies inside the bundle stay encrypted on the device regardless, and the identity
  *    private key inside is still wrapped by the UMEK.
  */
 

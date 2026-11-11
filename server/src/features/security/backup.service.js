@@ -8,7 +8,7 @@
  *     members, departments, teams) and its audit logs
  *   - workspace metadata (format v2): channels, tasks, notes, knowledge pages and
  *     categories, and file metadata (not the file bytes)
- * Chat messages are never included: they are end-to-end encrypted and the server
+ * Chat messages are never included: they are encrypted on the device and the server
  * cannot and must not decrypt them.
  *
  * Restore only re-inserts workspace metadata documents that no longer exist (it
@@ -265,7 +265,7 @@ async function restoreBackup({ requesterId, encryptedPayload, checksum, scope, d
   return {
     dryRun: !!dryRun,
     backup: { format: payload.format, backedUpAt: payload.backedUpAt, companyId: payload.companyId || null, workspaces: backupWs.size },
-    notRestored: ['identity tables (users, workspaces, members, departments, teams)', 'audit logs', 'messages (never backed up: end-to-end encrypted)'],
+    notRestored: ['identity tables (users, workspaces, members, departments, teams)', 'audit logs', 'messages (never backed up: encrypted on the device)'],
     collections: report,
   };
 }

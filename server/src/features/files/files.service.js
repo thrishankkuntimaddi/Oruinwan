@@ -147,7 +147,7 @@ async function resolveFolderId(folderId, workspaceId, selfId = null) {
 
 /**
  * `file.uploaded` automation trigger for workspace library files (metadata only).
- * Chat attachments are not included: they belong to end-to-end encrypted
+ * Chat attachments are not included: they belong to encrypted on the device
  * conversations, and DM activity must never feed automations.
  */
 function emitFileUploaded(file, userId, io) {

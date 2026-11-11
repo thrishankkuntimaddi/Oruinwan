@@ -81,7 +81,7 @@ function SearchSheet({ open, onClose, items, directory, onJump }) {
     <Sheet open={open} onClose={onClose} title="Search in conversation" full>
       <div className="px-4 pb-3">
         <SearchField value={q} onChange={setQ} placeholder="Search messages" autoFocus />
-        <p className="mt-2 text-[12px] text-text-3">Messages are end-to-end encrypted, so this searches the ones loaded on this device.</p>
+        <p className="mt-2 text-[12px] text-text-3">Messages are encrypted on the device, so this searches the ones loaded on this device.</p>
       </div>
       {q.trim() && !results.length ? (
         <EmptyState icon={Search} title="No matches" body="Try another word." />

@@ -1,7 +1,7 @@
 // Short previews of message text for lists and notifications: one line, cut at a word near
 // `max` characters with "…", so a long message never changes a row's height.
 
-/** True for the server's stand-ins when it can't read an end-to-end encrypted message. */
+/** True for the server's stand-ins when it can't read an encrypted on the device message. */
 export const isGenericPreview = (text) =>
   !text || /^(new message|new messages|sent you a message|sent a message|message|🔒.*|encrypted message|\d+ new messages?)$/i.test(String(text).trim());
 

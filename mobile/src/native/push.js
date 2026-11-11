@@ -4,7 +4,7 @@
 //
 // Quick reply: message notifications carry two actions, "Reply" (with a text field) and "Mark as
 // read" (the 'oru.message' action type, registered through @capacitor/local-notifications).
-// Replies are end-to-end encrypted, which needs the keys inside the app, so "Reply" opens the
+// Replies are encrypted on the device, which needs the keys inside the app, so "Reply" opens the
 // app on the conversation with the typed text in the composer (see features/push/quickReply.js).
 //  - iPhone/iPad: the actions show on pushes whose aps.category is 'oru.message' (server side).
 //  - Android: Firebase shows background pushes itself, without actions; while the app is running

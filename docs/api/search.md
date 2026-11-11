@@ -3,7 +3,7 @@
 Universal search across a workspace with a small query language. The parser is a pure module,
 `server/src/features/search/queryParser.js` (tests: `__tests__/queryParser.test.js`), so web and
 mobile clients can mirror it exactly — in particular for **message search, which runs on the client**
-over decrypted messages (message bodies are end-to-end encrypted; the server only filters message
+over decrypted messages (message bodies are encrypted on the device; the server only filters message
 metadata).
 
 ## Endpoints

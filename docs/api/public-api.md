@@ -43,7 +43,7 @@ Describes the calling key. App tokens (issued when a marketplace app is installe
 `app` is `null` for ordinary API keys.
 
 ### `GET /api/public/v1/messages` (scope `messages:read`)
-Messages in public, non-archived channels, newest first. Messages are end-to-end encrypted, so
+Messages in public, non-archived channels, newest first. Messages are encrypted on the device, so
 **only metadata is returned**, never content.
 
 Query: `channelId?` (must be a public channel: `400` if malformed, `404` if not public), `limit?`.

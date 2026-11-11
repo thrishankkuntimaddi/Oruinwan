@@ -50,7 +50,7 @@ export default {
                     'Pick a person. The conversation opens and you can start typing.',
                 ] },
                 'DMs support everything channels do: threads, reactions, attachments, voice and video notes, polls, reminders and @Oruinwan. In the conversation header you can **Mute notifications** or **View profile**.',
-                { callout: 'note', text: 'Direct messages are end-to-end encrypted like channels. You can block someone from their profile; manage blocked people in **Settings → Privacy**.' },
+                { callout: 'note', text: 'Direct messages are encrypted on the device like channels. You can block someone from their profile; manage blocked people in **Settings → Privacy**.' },
             ],
         },
         {
@@ -168,7 +168,7 @@ export default {
                     'PDFs and images get a preview right in the conversation; other files show their type and size with a download button.',
                     'An admin can turn off **File uploads** for the whole workspace (Workspace settings → Features).',
                 ] },
-                { callout: 'warning', text: 'Message **text** is end-to-end encrypted, but **attachments are not**: files are stored on Oruinwan’s servers, protected by access checks. Avoid attaching secrets you would not store in a normal file share.' },
+                { callout: 'warning', text: 'Message **text** is encrypted on the device, but **attachments are not**: files are stored on Oruinwan’s servers, protected by access checks. Avoid attaching secrets you would not store in a normal file share.' },
             ],
         },
         {
@@ -255,7 +255,7 @@ export default {
             blocks: [
                 '**More → Message info** shows:',
                 { list: [
-                    'The sender, the time it was sent, and whether it is **end-to-end encrypted**.',
+                    'The sender, the time it was sent, and whether it is **encrypted on the device**.',
                     '**Edited**: how many edits, the current version, when it was last edited, and if it was restored from an earlier version.',
                     '**Pinned**: who pinned it and when.',
                     '**Reactions**: each emoji and who used it.',
@@ -299,7 +299,7 @@ export default {
                     '`/status 🌴 On holiday until Monday`: your status. `/status` on its own clears it.',
                 ] },
                 'Times can be written as `in 10 minutes`, `in 2 hours`, `5pm`, `tomorrow`, `tomorrow 9am`, `friday 3pm`, `next week`, `nov 2` or `2026-11-02`. A day without a time means 9:00 (5:00 PM for a task’s due date).',
-                'Commands that create something for everyone (a task, a reminder for someone, a poll, a checklist) post a short line in the conversation so everyone sees what happened. What a command posts is end-to-end encrypted like any message.',
+                'Commands that create something for everyone (a task, a reminder for someone, a poll, a checklist) post a short line in the conversation so everyone sees what happened. What a command posts is encrypted on the device like any message.',
                 { callout: 'note', text: 'Only channel admins can use `/topic`. In a channel where only admins can post, commands that post are for admins too. On the web, `/meet` schedules a meeting, and `/github`, `/review`, `/jira`, `/zoom` and the other integration commands appear when integrations are connected for the workspace. See [Integrations](/docs/integrations/overview).' },
             ],
         },
@@ -310,7 +310,7 @@ export default {
             keywords: 'search find cmd k ctrl k messages files people tasks notes knowledge filter',
             blocks: [
                 'Press [[Mod+K]] anywhere in a workspace, or click the search bar. Results are grouped into **Channels**, **People**, **Messages**, **Tasks**, **Files**, **Notes** and **Knowledge**. Press [[Enter]] for the full results page, where you can filter by type.',
-                { callout: 'note', title: 'How message search works', text: 'Messages are end-to-end encrypted and Oruinwan does not index their text on the server. Instead, Oruinwan searches the messages of conversations you have opened in this session, right on your device (kept in memory only, never saved). Open a conversation first if an older message does not show up.' },
+                { callout: 'note', title: 'How message search works', text: 'Messages are encrypted on the device and Oruinwan does not index their text on the server. Instead, Oruinwan searches the messages of conversations you have opened in this session, right on your device (kept in memory only, never saved). Open a conversation first if an older message does not show up.' },
             ],
         },
         {

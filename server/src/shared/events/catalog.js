@@ -4,7 +4,7 @@
  * The event catalogue: every domain event the server publishes on the bus.
  *
  * An envelope is { id, name, at, companyId, workspaceId, actorId, payload }.
- * Payloads carry ids and metadata only. Messages are end-to-end encrypted, so
+ * Payloads carry ids and metadata only. Messages are encrypted on the device, so
  * no event ever carries text, ciphertext, attachments or poll/contact contents.
  *
  * Adding an event: add it here first (name, what it means, payload fields,

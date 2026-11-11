@@ -1,4 +1,4 @@
-// Message search on the phone. Message text is end-to-end encrypted, so the server can't search
+// Message search on the phone. Message text is encrypted on the device, so the server can't search
 // it. Messages are indexed here as they're decrypted (opened conversations, live updates) and,
 // when a search starts, the latest messages of conversations not opened yet are fetched too.
 // Memory only: nothing decrypted is written to the device, and signing out clears it.

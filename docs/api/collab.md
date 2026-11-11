@@ -16,11 +16,11 @@ Server code: `server/src/modules/collab/`.
 
 ## Encryption
 
-Note and knowledge-page content is **not** end-to-end encrypted: the REST APIs
+Note and knowledge-page content is **not** encrypted on the device: the REST APIs
 store it as readable text (`Note.content`, `KnowledgePage.content`) and search, AI
 summaries and version history read it on the server. So the server holds the
 Yjs document in the clear, merges it, and writes the plain content back on every
-save. Only messages are end-to-end encrypted, and they are not collaborative
+save. Only messages are encrypted on the device, and they are not collaborative
 documents.
 
 If notes ever become E2EE, the server must switch to relay-only for them: forward

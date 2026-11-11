@@ -89,7 +89,7 @@ function OpenLink({ href, children, style }) {
 
 /**
  * The thread a task came from: "From #channel thread" and its latest replies, decrypted here
- * (thread replies are end-to-end encrypted with the conversation's key).
+ * (thread replies are encrypted on the device with the conversation's key).
  */
 export function LinkedThreadCard({ linked, workspaceId }) {
     const [items, setItems] = useState(null);

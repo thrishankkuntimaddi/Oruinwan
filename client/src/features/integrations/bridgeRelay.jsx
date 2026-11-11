@@ -7,7 +7,7 @@ import './integrations.css';
 /**
  * Slack / Teams outgoing bridge, client side.
  *
- * Messages are end-to-end encrypted, so the server cannot forward them. For a
+ * Messages are encrypted on the device, so the server cannot forward them. For a
  * channel an admin bridged "out" (after an explicit warning), the sender's app
  * — which has the plaintext — posts it to /bridge/relay right after sending.
  * Nothing is relayed for any other channel. See docs/integrations.md.
@@ -67,7 +67,7 @@ export function BridgeNotice({ workspaceId, channelId }) {
     return (
         <div className="oi-bridge-notice" role="note" data-testid="bridge-notice">
             <ShieldOff size={12} aria-hidden="true" />
-            <span>Messages you send here are also copied to {names}. Those copies are not end-to-end encrypted.</span>
+            <span>Messages you send here are also copied to {names}. Those copies are not encrypted on the device.</span>
         </div>
     );
 }

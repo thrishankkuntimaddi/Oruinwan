@@ -38,7 +38,7 @@ const { suggestions } = await gateway.smartReplies({ messages }, { userId });
 const { text: summary } = await gateway.conversation({ messages, mode: 'bullets' }, { userId });
 ```
 
-Messages are end-to-end encrypted, so transcripts are **decrypted on the client** and sent as `[{ sender, text, isMe }]`; the server never reads message content from the database for AI.
+Messages are encrypted on the device, so transcripts are **decrypted on the client** and sent as `[{ sender, text, isMe }]`; the server never reads message content from the database for AI.
 
 ## Providers and models
 

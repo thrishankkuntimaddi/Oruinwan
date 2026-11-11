@@ -19,7 +19,7 @@ it.
 
 **Oruinwan puts the whole working day in one workspace.** Conversations, the work that comes out of
 them, the meetings about it and the knowledge it produces live together, link to each other and
-are searchable in one place — privately: messages are end-to-end encrypted.
+are searchable in one place — privately: messages are encrypted on the device.
 
 ### Goals
 
@@ -99,7 +99,7 @@ conversations are in [CONVERSATIONS.md](CONVERSATIONS.md).
   exactly those people, or offer to start it.
 - Lists are **newest activity first** everywhere; unread counts clear when a chat is read on any
   device.
-- R-CHAT-1: Message content is end-to-end encrypted; the server stores only ciphertext.
+- R-CHAT-1: Message content is encrypted on the device; the server stores only ciphertext.
 - R-CHAT-2: People added to a group see messages from when they joined unless the person adding
   them shares earlier history.
 - R-CHAT-3: Mentioning someone outside a channel offers to add them; in a 1:1 chat it offers a
@@ -181,7 +181,7 @@ addition and says how to upgrade; nothing existing is deleted or hidden. Publish
 
 | Area | Requirement |
 |---|---|
-| Privacy | Messages end-to-end encrypted (per-conversation keys, rotated when people leave). No selling of data, no ads. Analytics anonymous and optional on phones. |
+| Privacy | Messages encrypted on the device (per-conversation keys, rotated when people leave). No selling of data, no ads. Analytics anonymous and optional on phones. |
 | Security | HTTPS only in production; refresh-token rotation; 2FA; rate limits; access checked on every API call and socket event against one rule set. |
 | Reliability | Health check at `/api/health`; automatic rollback when a deploy fails its health check; daily disk snapshots and pre-deploy database backups. |
 | Performance | Chat lists and conversations open within a second on a mid-range phone; messages arrive live over Socket.IO. |

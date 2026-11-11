@@ -714,7 +714,7 @@ const { task } = await client.tasks.create({ title: 'New task' });`}</code></pre
             <thead><tr><th>Permission</th><th>Access</th></tr></thead>
             <tbody>
               {[
-                ['messages:read', 'Read message metadata (content is end-to-end encrypted)'],
+                ['messages:read', 'Read message metadata (content is encrypted on the device)'],
                 ['tasks:read', 'Read tasks'],
                 ['tasks:write', 'Create tasks'],
                 ['files:read', 'Read files'],

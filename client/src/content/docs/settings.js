@@ -144,7 +144,7 @@ export default {
             keywords: 'export download data gdpr json retention delete old messages deactivate delete account erase',
             blocks: [
                 { h: 'Download your data' },
-                'Choose **Download your data**. A JSON file downloads right away with your profile and preferences, workspace memberships, tasks and notes, AI memories, notification settings and recent activity. Messages are not included: they are end-to-end encrypted. The same tab shows your **Account activity**.',
+                'Choose **Download your data**. A JSON file downloads right away with your profile and preferences, workspace memberships, tasks and notes, AI memories, notification settings and recent activity. Messages are not included: they are encrypted on the device. The same tab shows your **Account activity**.',
                 { h: 'Message retention' },
                 'Under **Message retention**, choose Never, 30, 90 or 180 days, 1 year, or a custom number of days. Messages you sent that are older than that are deleted nightly. Only your own messages are affected, and retention pauses while an account is under legal hold.',
                 { h: 'Deactivate or delete' },

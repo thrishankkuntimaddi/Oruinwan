@@ -262,7 +262,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>
-            End-to-end encrypted.
+            Encrypted on your device.
             {base && (
               <>
                 {' '}
@@ -624,7 +624,7 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
         </p>
         <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
-          <span>End-to-end encrypted.</span>
+          <span>Encrypted on your device.</span>
         </div>
       </form>
     </div>

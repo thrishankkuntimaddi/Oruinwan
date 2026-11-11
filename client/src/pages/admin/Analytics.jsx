@@ -74,7 +74,7 @@ const Analytics = () => {
                 <PageHead
                     eyebrow="Overview"
                     title="Analytics"
-                    lead="How the company is growing and working. Messages are end-to-end encrypted, so they are never counted or shown here."
+                    lead="How the company is growing and working. Messages are encrypted on the device, so they are never counted or shown here."
                     actions={(
                         <>
                             <FilterTabs value={range} onChange={setRange} options={RANGES} label="Time range" />

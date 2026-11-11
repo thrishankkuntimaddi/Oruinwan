@@ -124,12 +124,12 @@ describe('Settings → Integrations connectors', () => {
 
         const dialog = await screen.findByRole('dialog');
         expect(dialog).toHaveTextContent('Messages posted in #general will be copied to Slack');
-        expect(dialog).toHaveTextContent('leave Oruinwan’s end-to-end encryption and are stored by Slack');
+        expect(dialog).toHaveTextContent('leave Oruinwan’s message encryption and are stored by Slack');
         expect(within(bridges).getByLabelText('Direction')).toHaveValue('in'); // not changed until confirmed
         fireEvent.click(within(dialog).getByRole('button', { name: 'Copy to Slack' }));
 
         expect(within(bridges).getByLabelText('Direction')).toHaveValue('out');
-        expect(within(bridges).getByText(/Those copies leave Oruinwan’s end-to-end encryption/)).toBeInTheDocument();
+        expect(within(bridges).getByText(/Those copies leave Oruinwan’s message encryption/)).toBeInTheDocument();
         fireEvent.click(within(bridges).getByRole('button', { name: 'Save bridges' }));
         await waitFor(() => expect(api.put).toHaveBeenCalledWith(`${BASE}/slack/config`, {
             workspaceId: WS,
@@ -157,7 +157,7 @@ describe('Settings → Integrations → Incoming webhooks', () => {
         api.post.mockResolvedValue({ data: { webhook: { id: 'h1', name: 'Deploy bot', channelId: CH, isActive: true, lastUsedAt: null, useCount: 0, url } } });
         render(<IncomingWebhooks workspaceId={WS} />);
         expect(await screen.findByText('No incoming webhooks yet.')).toBeInTheDocument();
-        expect(screen.getByText(/not end-to-end encrypted/)).toBeInTheDocument();
+        expect(screen.getByText(/not encrypted on the device/)).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Add incoming webhook' }));
         fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Deploy bot' } });

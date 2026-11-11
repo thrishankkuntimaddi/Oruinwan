@@ -526,14 +526,14 @@ export const ARTICLES = [
         id: 'encryption',
         topic: 'security',
         title: 'How your messages are encrypted',
-        summary: 'End-to-end encrypted between devices, with a server-escrowed copy of each conversation key.',
-        keywords: 'encryption e2ee end-to-end encrypted aes security keys unlock password escrow recovery reset agents tls at rest',
+        summary: 'Encrypted on the sender’s device, with a server-escrowed copy of each conversation key.',
+        keywords: 'encryption e2ee end-to-end encrypted on the device aes security keys unlock password escrow recovery reset agents tls at rest',
         body: [
             'Messages are encrypted on your device with AES-256-GCM before they leave it, using a key for each conversation. They travel over encrypted connections (TLS) and are stored encrypted at rest. Message content is never shown to admins.',
             'Messages are encrypted in transit and at rest. Oruinwan’s server keeps a sealed copy of your key so your devices unlock automatically: signing in on a new browser, phone or the desktop app opens your messages without asking for your password.',
             'Accounts set up before automatic unlock may be asked once, on one device, for the password (or to approve from another signed-in device). After that it never asks again.',
             'Your Oruinwan server also keeps an escrowed copy of each conversation key, protected by a server master key. It lets AI agents answer in encrypted conversations, lets you get your conversations back after a password reset, and lets new members read a conversation they join.',
-            { note: 'Because of the escrowed and sealed keys, this is not zero-knowledge messaging. Attachments are stored on the server and are not end-to-end encrypted.' },
+            { note: 'Because of the escrowed and sealed keys, this is not zero-knowledge messaging. Attachments are stored on the server and are not encrypted on the device.' },
         ],
     },
     {
@@ -661,7 +661,7 @@ export const ARTICLES = [
         appLabel: 'Open Your data',
         body: [
             'In **Settings → Your data** choose **Download your data**. A JSON file downloads right away with your profile and preferences, workspace memberships, tasks and notes, AI memories, notification settings and recent activity.',
-            'Messages are not included: they are end-to-end encrypted. The same tab shows your **Account activity**.',
+            'Messages are not included: they are encrypted on the device. The same tab shows your **Account activity**.',
         ],
     },
     {

@@ -39,7 +39,7 @@ export declare class OruinwanError extends Error {
   request?: { method: string; url: string };
 }
 
-/** Message metadata only: messages are end-to-end encrypted, so content is never returned. */
+/** Message metadata only: messages are encrypted on the device, so content is never returned. */
 export interface PublicMessage { id: string; channelId: string | null; sender: { id: string; username: string } | null; type: string; parentId: string | null; replyCount: number; attachmentCount: number; isEncrypted: boolean; createdAt: string; editedAt: string | null }
 /** GET /api/public/v1/me */
 export interface KeyInfo { workspaceId: string; keyPrefix: string; name: string | null; scopes: string[]; app: { id: string; name: string | null } | null }

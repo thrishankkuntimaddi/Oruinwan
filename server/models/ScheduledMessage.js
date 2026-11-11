@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 /**
  * A message someone wrote now to be sent later. The body is exactly what the send endpoint
- * takes (POST /api/v2/messages/channel or /direct): text is already end-to-end encrypted by the
+ * takes (POST /api/v2/messages/channel or /direct): text is already encrypted on the device by the
  * sender's app, so the server never sees it. At `sendAt` the scheduled-messages job sends it
  * through the normal send path (same access checks, notifications and realtime events).
  */

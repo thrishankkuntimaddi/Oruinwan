@@ -8,7 +8,7 @@ import { runConnectorAction } from './connectorsApi';
 /**
  * Slack / Teams bridges: rows of { remote, channelId, direction }.
  * Turning on the outgoing direction asks for confirmation (the copies leave
- * end-to-end encryption) and sends acknowledgeOutgoing: true for that row.
+ * message encryption) and sends acknowledgeOutgoing: true for that row.
  */
 
 const isOut = (dir) => dir === 'out' || dir === 'both';
@@ -100,7 +100,7 @@ export default function BridgesBlock({ c, cfg, channels, workspaceId }) {
             <h3 className="oi-setup-h">Bridged channels</h3>
             {anyOut && (
                 <Notice tone="warning">
-                    Some channels are copied to {provider}. Those copies leave Oruinwan’s end-to-end encryption and are stored by {provider}. People in those channels see a notice.
+                    Some channels are copied to {provider}. Those copies leave Oruinwan’s message encryption and are stored by {provider}. People in those channels see a notice.
                 </Notice>
             )}
             {suggestions.length > 0 && (
@@ -157,7 +157,7 @@ export default function BridgesBlock({ c, cfg, channels, workspaceId }) {
                 onConfirm={confirmOut}
                 onCancel={() => setPending(null)}
             >
-                Messages posted in {channelName} will be copied to {provider}. Copies leave Oruinwan’s end-to-end encryption and are stored by {provider}. Only messages sent from Oruinwan apps after this is turned on are copied, by the sender’s app.
+                Messages posted in {channelName} will be copied to {provider}. Copies leave Oruinwan’s message encryption and are stored by {provider}. Only messages sent from Oruinwan apps after this is turned on are copied, by the sender’s app.
             </ConfirmDialog>
         </div>
     );

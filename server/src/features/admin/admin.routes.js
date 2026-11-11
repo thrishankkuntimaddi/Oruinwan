@@ -664,7 +664,7 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
 
     
     // Identity counts in one PostgreSQL query; content counts from MongoDB. Messages are
-    // deliberately not counted: they are end-to-end encrypted and not the platform's business.
+    // deliberately not counted: they are encrypted on the device and not the platform's business.
     const [
       platform,
       totalChannels,

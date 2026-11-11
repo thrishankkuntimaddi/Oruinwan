@@ -166,7 +166,7 @@ export function PostSummary({ meeting, workspaceId }) {
             <Btn icon={Send} onClick={post} loading={posting} disabled={!target?.id || (!text && !items.length)} data-testid="meeting-post-summary-btn">
                 {already ? 'Post again' : `Post summary to ${label}`}
             </Btn>
-            <p className="mt-muted" style={{ fontSize: 11 }}>Posted as you, end-to-end encrypted like any message, with the action items and a link to this page. Everyone who was in the huddle is notified.</p>
+            <p className="mt-muted" style={{ fontSize: 11 }}>Posted as you, encrypted on the device like any message, with the action items and a link to this page. Everyone who was in the huddle is notified.</p>
         </div>
     );
 }

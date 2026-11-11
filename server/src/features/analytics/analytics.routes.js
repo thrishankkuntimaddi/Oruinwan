@@ -68,7 +68,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 router.get('/insights/team', requireAuth, requireAdmin, (req, res) => res.status(410).json({ message: 'Per-person activity is not available to admins.' }));
 
 // No /insights/communication: when and where people message is not shown to admins
-// (messages are end-to-end encrypted and private to their participants).
+// (messages are encrypted on the device and private to their participants).
 
 router.get('/insights/productivity', requireAuth, requireAdmin, async (req, res) => {
     try {

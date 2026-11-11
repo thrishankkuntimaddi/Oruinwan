@@ -11,7 +11,7 @@ import { clipPreview, isGenericPreview } from '../../lib/preview.js';
 const MESSAGE_KINDS = new Set(['dm', 'mention', 'thread']);
 
 /**
- * The server can't read end-to-end encrypted messages, so its preview is "New message". Show
+ * The server can't read encrypted on the device messages, so its preview is "New message". Show
  * what this phone has decrypted instead: the sender's newest message in that conversation, or
  * the chat list's last message. Shortened to one line.
  */

@@ -15,7 +15,7 @@ const FEATURES = [
     { icon: CheckSquare, label: 'Tasks, sprints and milestones' },
     { icon: Layers, label: 'Notes, files and a knowledge base' },
     { icon: Users, label: 'Departments, teams and an org chart' },
-    { icon: Shield, label: 'End-to-end encrypted messaging' },
+    { icon: Shield, label: 'Messages encrypted on your device' },
 ];
 
 const TERMS = [

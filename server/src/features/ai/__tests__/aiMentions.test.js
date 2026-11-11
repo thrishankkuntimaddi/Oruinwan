@@ -277,7 +277,7 @@ describe('search_messages_with_person', () => {
 
   test('no DM yet / nothing shared from the device', () => {
     expect(mentionTools.runSearch([{ ...person, hasDirectMessage: false, transcript: undefined }], { userId: MUZAMIL }).note).toMatch(/no direct messages/);
-    expect(mentionTools.runSearch([{ ...person, transcript: undefined }], { userId: MUZAMIL }).error).toMatch(/end-to-end encrypted/);
+    expect(mentionTools.runSearch([{ ...person, transcript: undefined }], { userId: MUZAMIL }).error).toMatch(/encrypted on the device/);
   });
 
   test('runs inside the chat agent without any server action', async () => {

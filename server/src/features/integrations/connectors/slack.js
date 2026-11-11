@@ -7,9 +7,9 @@
  * the app's signing secret (X-Slack-Signature: v0=HMAC-SHA256("v0:ts:body"),
  * X-Slack-Request-Timestamp within 5 minutes). `message` events in a bridged
  * Slack channel are posted into the mapped Oruinwan channel by the "Slack"
- * bot, marked as bridged (they were not end-to-end encrypted in Slack).
+ * bot, marked as bridged (they were not encrypted on the device in Slack).
  *
- * Outgoing: Oruinwan messages are end-to-end encrypted, so the server cannot
+ * Outgoing: Oruinwan messages are encrypted on the device, so the server cannot
  * read them. Only for bridges an admin explicitly switched to "out"/"both"
  * (with a warning), the sender's client sends the plaintext it already has to
  * POST /bridge/relay, which forwards it via chat.postMessage (bot token) or
@@ -100,7 +100,7 @@ module.exports = {
   type: 'slack',
   label: LABEL,
   category: 'communication',
-  description: 'Bridge Slack channels and Oruinwan channels. Bridged messages are not end-to-end encrypted.',
+  description: 'Bridge Slack channels and Oruinwan channels. Bridged messages are not encrypted on the device.',
   setup: [
     'Create a Slack app (api.slack.com/apps) in your Slack workspace. Under OAuth & Permissions add the bot scopes channels:history, groups:history, users:read and chat:write (plus chat:write.customize to show the sender’s name), install it and copy the Bot User OAuth Token (xoxb-…).',
     'From Basic Information copy the Signing Secret.',

@@ -116,7 +116,7 @@ function MessageBody({ m, onCancelUpload, me, directory }) {
   if (m.state !== 'deleted' && m.type === 'checklist' && (m.state === 'ok' || m.checklist?.length)) return <ChecklistCard m={m} />;
   const files = m.state !== 'deleted' ? m.attachments || [] : [];
   if (files.length) {
-    // Files aren't end-to-end encrypted (as on the web), so they show even before the keys
+    // Files aren't encrypted on the device (as on the web), so they show even before the keys
     // unlock. A thread reply's caption is the file's name, which the card already shows.
     const caption = m.state === 'ok' && m.text && m.text !== files[0]?.name ? m.text : '';
     return (

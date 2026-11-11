@@ -123,7 +123,7 @@ export default function ChatTab({ conversation, workspaceId, conversationHref, o
     return (
         <>
             <div className="hw-row" style={{ padding: '8px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <span className="hw-muted hw-grow">Messages here go to the {convType === 'dm' ? 'conversation' : 'channel'} (end-to-end encrypted).</span>
+                <span className="hw-muted hw-grow">Messages here go to the {convType === 'dm' ? 'conversation' : 'channel'} (encrypted on the device).</span>
                 {conversationHref && (
                     <a className="gl-btn gl-btn--sm gl-btn--ghost" href={conversationHref} onClick={onOpen}><ExternalLink size={12} /> Open</a>
                 )}

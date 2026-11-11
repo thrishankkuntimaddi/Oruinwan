@@ -19,7 +19,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Conversation keys for showing message notifications while the app is closed. Messages are
- * end-to-end encrypted, so the server can only say "New message"; the app hands each
+ * encrypted on the device, so the server can only say "New message"; the app hands each
  * conversation key it opens to this class (src/native/notifyKeys.js), which keeps it sealed with
  * a key that never leaves the Android Keystore. A message push carries the message still
  * encrypted (ct, iv, kv); decrypt() opens it here, on the phone. Signing out clears them all.

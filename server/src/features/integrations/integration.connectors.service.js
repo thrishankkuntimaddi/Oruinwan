@@ -80,7 +80,7 @@ function normalizeRoutes(c, routes) {
 /**
  * Bridges: { remote, channelId, direction: 'in'|'out'|'both' }. Turning on the
  * outgoing direction for a channel needs `acknowledgeOutgoing: true` (the UI
- * shows the "messages leave end-to-end encryption" warning); who and when is
+ * shows the "messages leave Oruinwan's message encryption" warning); who and when is
  * recorded.
  */
 function normalizeBridges(c, bridges, stored = [], userId) {
@@ -104,7 +104,7 @@ function normalizeBridges(c, bridges, stored = [], userId) {
       const prev = stored.find(s => String(s.channelId) === channelId && s.remote === out.remote && s.direction !== 'in' && s.outEnabledAt);
       if (prev) Object.assign(out, { outEnabledAt: prev.outEnabledAt, outEnabledBy: prev.outEnabledBy });
       else if (b.acknowledgeOutgoing === true) Object.assign(out, { outEnabledAt: new Date(), outEnabledBy: userId ? String(userId) : null });
-      else throw badRequest('Sending messages out of Oruinwan takes them out of end-to-end encryption. Confirm this for the channel (acknowledgeOutgoing: true).', 'BRIDGE_ACK_REQUIRED');
+      else throw badRequest('Sending messages out of Oruinwan takes them out of Oruinwan\'s message encryption. Confirm this for the channel (acknowledgeOutgoing: true).', 'BRIDGE_ACK_REQUIRED');
     }
     return out;
   });

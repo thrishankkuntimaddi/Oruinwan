@@ -33,7 +33,7 @@ exports.getDashboardMetrics = async (req, res) => {
         const workspaces = await org.workspaces.find({ company: companyId });
 
         // Privacy: workspace health comes from members and tasks, never from messages
-        // (end-to-end encrypted; admins do not see who talks or how much).
+        // (encrypted on the device; admins do not see who talks or how much).
         const live = { deleted: { $ne: true } };
         const [totalUsers, activeUsers, openTasks, tasksCompletedToday, workspaceHealthData] = await Promise.all([
             org.users.count({ companyId }),

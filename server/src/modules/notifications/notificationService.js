@@ -240,7 +240,7 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
                 ...(meta.channelId && { channelId: String(meta.channelId) }),
                 ...(meta.dmSessionId && { dmSessionId: String(meta.dmSessionId) }),
                 ...(meta.parentMessageId && { parentMessageId: String(meta.parentMessageId) }),
-                // The message itself, still end-to-end encrypted: the Android app decrypts it on
+                // The message itself, still encrypted on the device: the Android app decrypts it on
                 // the phone (with the conversation key it keeps there) to show the real text.
                 ...encryptedPreview(meta.preview),
                 ...(meta.senderUsername && { sender: String(meta.senderUsername) }),

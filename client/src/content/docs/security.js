@@ -12,8 +12,8 @@ export default {
             keywords: 'security model overview trust protect data encryption secrets tls at rest',
             blocks: [
                 { table: { caption: 'What is protected, and how', head: ['Data', 'Protection'], rows: [
-                    ['Message text (channels, DMs, threads, AI and agent answers)', 'End-to-end encrypted between devices with AES-256-GCM, a key per conversation. The server also keeps an escrowed copy of each conversation key, protected by a server master key. See [How messages are encrypted](/docs/security/encryption).'],
-                    ['Attachments (files, photos, voice, video)', 'Stored on your Oruinwan server behind access checks, encrypted in transit. **Not** end-to-end encrypted.'],
+                    ['Message text (channels, DMs, threads, AI and agent answers)', 'Encrypted on the sender’s device with AES-256-GCM, a key per conversation. The server also keeps an escrowed copy of each conversation key, protected by a server master key. See [How messages are encrypted](/docs/security/encryption).'],
+                    ['Attachments (files, photos, voice, video)', 'Stored on your Oruinwan server behind access checks, encrypted in transit. **Not** encrypted on the device.'],
                     ['Tasks, notes, knowledge pages', 'Stored on the server so they can be shared, searched and used by the AI.'],
                     ['Passwords', 'Stored as salted hashes (bcrypt), never in plain text.'],
                     ['2FA secrets, integration tokens, webhook and AI provider keys', 'Encrypted on the server with a server key and never shown again.'],
@@ -38,8 +38,8 @@ export default {
         {
             id: 'encryption',
             title: 'How messages are encrypted',
-            summary: 'End-to-end encrypted between devices with a key per conversation, plus a server-escrowed copy of each key for agents and account recovery.',
-            keywords: 'encryption e2ee end-to-end encrypted aes gcm keys unlock automatic sealed password conversation key new members wrapped escrow escrowed server master key recovery reset agents tls at rest',
+            summary: 'Encrypted on the sender’s device with a key per conversation, plus a server-escrowed copy of each key for agents and account recovery.',
+            keywords: 'encryption e2ee end-to-end encrypted on the device aes gcm keys unlock automatic sealed password conversation key new members wrapped escrow escrowed server master key recovery reset agents tls at rest',
             blocks: [
                 { figure: 'e2ee', caption: 'Text is encrypted on your device; the server stores it encrypted, along with protected copies of the conversation key.' },
                 { h: 'End-to-end between devices' },
@@ -57,7 +57,7 @@ export default {
                     '**Recovery after a password reset**: if you reset your password, the server can give you access to your conversations again.',
                 ] },
                 'The same escrowed copy lets new members read a conversation they join, and lets integration cards (GitHub, Jira) be posted encrypted.',
-                { callout: 'note', title: 'What this means', text: 'Because the server holds an escrowed copy of every conversation key and a sealed copy of your key, Oruinwan is not “zero-knowledge” messaging: whoever operates the server and holds its master key could in principle decrypt messages. Attachments are not end-to-end encrypted. Message Info shows whether a message is end-to-end encrypted.' },
+                { callout: 'note', title: 'What this means', text: 'Because the server holds an escrowed copy of every conversation key and a sealed copy of your key, Oruinwan is not “zero-knowledge” messaging: whoever operates the server and holds its master key could in principle decrypt messages. Attachments are not encrypted on the device. Message Info shows whether a message is encrypted on the device.' },
             ],
         },
         {

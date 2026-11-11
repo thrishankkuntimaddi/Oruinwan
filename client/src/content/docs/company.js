@@ -162,11 +162,11 @@ export default {
         {
             id: 'trust',
             title: 'Why companies can trust Oruinwan',
-            summary: 'End-to-end encrypted messages, no message access for admins, Oruinwan’s own AI engine, 2FA, audit logs and admin controls.',
+            summary: 'Messages encrypted on the device, no message access for admins, Oruinwan’s own AI engine, 2FA, audit logs and admin controls.',
             keywords: 'trust security enterprise privacy encryption escrow compliance why safe admins monitoring',
             blocks: [
                 { list: [
-                    '**Message text is end-to-end encrypted** between devices (AES-256-GCM, a key per conversation), travels over TLS and is stored encrypted at rest. It is never indexed for search or AI on the server. See [Encryption](/docs/security/encryption).',
+                    '**Message text is encrypted on the sender’s device** (AES-256-GCM, a key per conversation), travels over TLS and is stored encrypted at rest. It is never indexed for search or AI on the server. See [Encryption](/docs/security/encryption).',
                     '**Admins never see messages**: not their content, not message counts, and there are no per-person activity metrics. See [What admins can see](/docs/security/privacy).',
                     '**No third-party AI by default.** Oruinwan AI runs on Oruinwan’s own engine. An administrator can choose to use an outside provider, and the app says so. See [How the AI runs](/docs/ai/how-it-runs).',
                     '**Verified email, passkeys and two-factor sign-in** with an authenticator app, and a list of signed-in devices you can sign out of.',
@@ -174,7 +174,7 @@ export default {
                     '**Integration secrets** (GitHub tokens, webhook secrets, AI provider keys) are stored encrypted on the server and never shown again.',
                     '**The public API** only sees what a key’s scopes allow, never message text. See [API keys and scopes](/docs/developers/api-keys).',
                 ] },
-                { callout: 'note', title: 'Be precise about what is encrypted', text: 'Message **text** is end-to-end encrypted. **Attachments** (files, photos, voice and video) are stored on the server and are not end-to-end encrypted. The server also keeps an escrowed copy of each conversation key, protected by a server master key, so that AI agents can answer in encrypted conversations and access can be recovered after a password reset. It is not zero-knowledge messaging.' },
+                { callout: 'note', title: 'Be precise about what is encrypted', text: 'Message **text** is encrypted on the device. **Attachments** (files, photos, voice and video) are stored on the server and are not encrypted on the device. The server also keeps an escrowed copy of each conversation key, protected by a server master key, so that AI agents can answer in encrypted conversations and access can be recovered after a password reset. It is not zero-knowledge messaging.' },
                 { cards: [
                     { to: '/docs/security/overview', title: 'Security model', text: 'The full picture.' },
                     { to: '/docs/company/audit', title: 'Audit and compliance', text: 'Logs, legal hold, retention.' },

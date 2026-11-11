@@ -1,4 +1,4 @@
-// Messages are end-to-end encrypted, so the server cannot search their text. This
+// Messages are encrypted on the device, so the server cannot search their text. This
 // keeps the decrypted messages of conversations opened in this session (in memory
 // only, never persisted) and answers message searches in the browser.
 // Queries use the operator syntax in ./searchQuery (from:, in:, before:, has:, …).

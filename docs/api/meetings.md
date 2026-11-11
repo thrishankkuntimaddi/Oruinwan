@@ -18,7 +18,7 @@ Access: scheduled meeting routes require an active member of the meeting's works
 (`requireMeetingAccess`). Huddle routes require being able to see the huddle (participant, channel/DM
 member, or workspace member for workspace huddles); writes require having been in the call.
 
-> Transcripts are stored server-side (unlike chat messages, they are **not** end-to-end encrypted). The
+> Transcripts are stored server-side (unlike chat messages, they are **not** encrypted on the device). The
 > clients produce them with on-device speech-to-text and send segments while the call runs.
 
 ---

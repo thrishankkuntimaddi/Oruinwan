@@ -77,7 +77,7 @@ AWS EC2 (ap-south-1), Ubuntu, Docker Compose:
 4. The device unlocks its **identity key** (below) with the password, or with a server-sealed key
    for Google accounts.
 
-### 4.2 End-to-end encryption
+### 4.2 Message encryption
 - Each person has an **identity key pair** (X25519; older accounts RSA-OAEP). The private key is
   encrypted on the device with a **UMEK** derived from the password (PBKDF2). Google-only accounts
   have the UMEK sealed by the server's key-encryption key.
@@ -153,7 +153,7 @@ Details in [SCALING.md](SCALING.md).
 | Decision | Why |
 |---|---|
 | Two databases (PostgreSQL + MongoDB) | Relational identity, keys and tasks need constraints and transactions; chat data is document-shaped and grows fast. |
-| End-to-end encryption by default | Teams' conversations stay private even from the operator; trade-off: server-side search and push previews are limited. |
+| Message encryption by default | Teams' conversations are encrypted on the device; the operator holds escrowed keys, so this protects against database leaks, not against the operator; trade-off: server-side search and push previews are limited. |
 | One React codebase per surface (web/desktop share; phone separate) | Phone UX needs its own navigation and components; shared logic lives in `platform/`. |
 | Capacitor for phones | One web codebase for Android, iPhone and the phone website, with native plugins where needed. |
 | Quick UI updates outside the stores | Fixes reach people in minutes; stores still deliver native changes. |

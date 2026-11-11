@@ -1,4 +1,4 @@
-// End-to-end encryption, compatible with the web client
+// Message encryption, compatible with the web client
 // (client/src/services/identityKeyService.js, conversationKeyService.js, utils/crypto*.js).
 //
 //  - Identity key: RSA-2048 (RSA-OAEP, SHA-256). Its private JWK is stored on the server

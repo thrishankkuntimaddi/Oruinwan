@@ -59,7 +59,7 @@ export function MessageInfoSheet({ message, conv, onClose }) {
           <div className="mx-5 mb-3 rounded-xl border border-line-soft bg-surface-2 px-3.5 py-3">
             <p className="text-[14px] leading-snug break-words text-text">{text || message.attachments?.[0]?.name || 'Message'}</p>
             <p className="mt-2 flex items-center gap-1 text-[11px] text-text-3">
-              <Icon as={Lock} size={11} className="text-accent-ink" /> End-to-end encrypted · sent {when(data?.sentAt || message.at)}
+              <Icon as={Lock} size={11} className="text-accent-ink" /> Encrypted on device · sent {when(data?.sentAt || message.at)}
             </p>
           </div>
           {error && !data ? (

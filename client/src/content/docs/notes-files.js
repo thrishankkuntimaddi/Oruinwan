@@ -47,7 +47,7 @@ export default {
                 { list: [
                     'Files come from conversations (attachments) and from uploads.',
                     'Each file can be up to **100 MB**; programs and installers are refused.',
-                    'Files are stored on Oruinwan’s servers and are not end-to-end encrypted.',
+                    'Files are stored on Oruinwan’s servers and are not encrypted on the device.',
                 ] },
             ],
         },

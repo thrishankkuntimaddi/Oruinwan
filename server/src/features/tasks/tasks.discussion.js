@@ -13,7 +13,7 @@
  *                  discussion resolved; moving it out of Done reopens it. Resolved is derived
  *                  from the task's status, so it can never drift.
  *   Linked thread  a task created from a message keeps it (task.linkedMessage): the discussion
- *                  shows that thread's latest replies (end-to-end encrypted payloads the client
+ *                  shows that thread's latest replies (encrypted on the device payloads the client
  *                  decrypts) and the thread gets a "Task created: …" reply pointing back. From
  *                  then on comments and thread replies are shared both ways
  *                  (tasks.threadSync.js), each side keeping its own access rules.

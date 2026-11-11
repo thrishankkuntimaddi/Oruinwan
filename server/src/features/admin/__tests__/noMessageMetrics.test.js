@@ -2,7 +2,7 @@
 
 /**
  * Privacy: company, owner, admin and manager consoles never read, count or return
- * messages. Messages are end-to-end encrypted and only their participants read them.
+ * messages. Messages are encrypted on the device and only their participants read them.
  *
  * Every console endpoint that used to count messages is called here with the message
  * model replaced by a tripwire: any use of it fails the test, and no response may carry a

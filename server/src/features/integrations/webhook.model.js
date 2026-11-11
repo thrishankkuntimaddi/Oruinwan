@@ -12,7 +12,7 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   { event: 'task.created', description: 'A task was created' },
   { event: 'task.updated', description: 'A task was updated' },
   { event: 'task.completed', description: 'A task was marked done' },
-  { event: 'message.sent', description: 'A message was posted in a public channel (ids and metadata only; content is end-to-end encrypted)' },
+  { event: 'message.sent', description: 'A message was posted in a public channel (ids and metadata only; content is encrypted on the device)' },
   { event: 'integration.connected', description: 'An integration was connected' },
   { event: 'integration.disconnected', description: 'An integration was disconnected' },
 ];

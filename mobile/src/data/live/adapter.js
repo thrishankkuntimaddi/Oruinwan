@@ -798,7 +798,7 @@ export const liveAdapter = {
     const data = await api.get(`/workspaces/${ws}/channels`);
     const raw = data.channels || [];
     const list = raw.map(mapChannel);
-    // The newest message's text, for the chat list (end-to-end encrypted: decrypted on the phone).
+    // The newest message's text, for the chat list (encrypted on the device: decrypted on the phone).
     if (useE2ee.getState().status === 'ready') {
       await Promise.all(
         raw.map(async (c, i) => {
@@ -1493,7 +1493,7 @@ export const liveAdapter = {
   },
 
   /**
-   * Message search. Bodies are end-to-end encrypted, so this searches on the phone: the
+   * Message search. Bodies are encrypted on the device, so this searches on the phone: the
    * messages already decrypted here, plus the latest messages of conversations not fetched
    * lately (a few at a time, at most 30 conversations per search).
    */

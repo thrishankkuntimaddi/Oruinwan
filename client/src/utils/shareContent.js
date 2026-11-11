@@ -1,7 +1,7 @@
 /**
  * Sharing a message or a whole thread outside Oruinwan (copy, system share sheet).
  *
- * Messages are end-to-end encrypted: everything here works on text already decrypted on this
+ * Messages are encrypted on the device: everything here works on text already decrypted on this
  * device and never sends it to the server. Links point at the web app and open the message
  * (?message=<id>, plus &thread=<parent> for a reply) or the thread (?thread=<parent>), the
  * format ChatWindowV2 and Files → "Go to message" already use. Pure helpers; the

@@ -11,7 +11,7 @@ function since(range) {
     }
 }
 
-// Privacy: nothing here counts or reads messages. Messages are end-to-end encrypted and the
+// Privacy: nothing here counts or reads messages. Messages are encrypted on the device and the
 // product promise is that only the participants read them, so the company console works
 // from non-message aggregates only: people, sign-ins, workspaces, departments, tasks, updates.
 

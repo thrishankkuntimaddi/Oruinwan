@@ -5,7 +5,7 @@
  * (desktop/electron/main.js). The main process validates the reply and hands it to this page
  * as { workspaceId, channelId | dmSessionId, text } via window.electronAPI.onQuickReply.
  *
- * Messages are end-to-end encrypted, so the reply goes through the same path as the composer
+ * Messages are encrypted on the device, so the reply goes through the same path as the composer
  * (src/hooks/useMessageActions.js → sendMessage): the conversation key from
  * conversationKeyService, encryptMessageForSending (AES-GCM), then POST to
  * /api/v2/messages/{channel|direct} with only ciphertext + IV. Plaintext never leaves the page.

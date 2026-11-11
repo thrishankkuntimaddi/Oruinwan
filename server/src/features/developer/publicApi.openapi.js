@@ -39,7 +39,7 @@ function buildOpenApiSpec({ serverUrl = '/api/public/v1' } = {}) {
       title: 'Oruinwan Public API',
       version: '1.0.0',
       description: 'REST API for workspace integrations. Authenticate with a workspace API key or an app token '
-        + '(header X-Api-Key). Messages are end-to-end encrypted, so only message metadata is ever returned. '
+        + '(header X-Api-Key). Messages are encrypted on the device, so only message metadata is ever returned. '
         + 'The unversioned /api/public/* path is a deprecated alias of v1.',
     },
     servers: [{ url: serverUrl }],
@@ -59,7 +59,7 @@ function buildOpenApiSpec({ serverUrl = '/api/public/v1' } = {}) {
       '/messages': {
         get: {
           tags: ['Messages'], operationId: 'listMessages', summary: 'List message metadata', 'x-scope': 'messages:read',
-          description: 'Newest first, public non-archived channels only. Content is end-to-end encrypted and never returned.',
+          description: 'Newest first, public non-archived channels only. Content is encrypted on the device and never returned.',
           parameters: [
             { name: 'channelId', in: 'query', required: false, description: 'A public channel id', schema: { type: 'string' } },
             limitParam,

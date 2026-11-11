@@ -91,7 +91,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             .map((w) => ({ ...w, members: w.members.filter((m) => m.status !== 'removed') }));
         await hydrate(workspaces, { 'members.user': USER_EMAIL, department: DEPT_NAME });
 
-        // No per-workspace message activity: messages are end-to-end encrypted and admins see
+        // No per-workspace message activity: messages are encrypted on the device and admins see
         // structure (members, roles), never how much anyone talks.
         for (const workspace of workspaces) {
             workspace.memberCount = workspace.members.length;

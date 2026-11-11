@@ -114,7 +114,7 @@ export default function IncomingWebhooks({ workspaceId }) {
         >
             <div className="oi-setup-body">
                 <Notice tone="warning">
-                    Messages posted through these URLs come from outside Oruinwan and are not end-to-end encrypted. They appear from the Incoming webhook bot.
+                    Messages posted through these URLs come from outside Oruinwan and are not encrypted on the device. They appear from the Incoming webhook bot.
                     {' '}The channel needs at least one message first (otherwise the URL answers <code>channel_not_ready</code>).
                 </Notice>
 

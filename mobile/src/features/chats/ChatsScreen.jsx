@@ -470,7 +470,7 @@ function SelectionBar({ rows, prefs, onDone, onAll }) {
       >
         <div className="px-5 pb-4">
           <Field multiline rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write once, sent to each chat separately" autoFocus />
-          <p className="mt-2 text-[12px] text-text-2">Each chat gets its own copy, end-to-end encrypted for that conversation.</p>
+          <p className="mt-2 text-[12px] text-text-2">Each chat gets its own copy, encrypted for that conversation.</p>
         </div>
       </Sheet>
     </>

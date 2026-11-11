@@ -34,7 +34,7 @@ async function getCompanyAnalytics(companyId) {
     };
 
     // Department activity is measured by structure (members, channels), never by messages:
-    // messages are end-to-end encrypted and an admin console must not count who says what.
+    // messages are encrypted on the device and an admin console must not count who says what.
     const departmentList = await org.departments.find({ company: companyId }, { members: false });
     const sizes = new Map((await org.departmentSizes(companyId)).map((d) => [String(d._id), d.members]));
     const departmentStats = await Promise.all(departmentList.map(async (dept) => ({

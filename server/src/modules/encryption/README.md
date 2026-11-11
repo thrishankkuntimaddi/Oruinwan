@@ -1,6 +1,6 @@
 # Encryption Module
 
-First-class E2EE module handling all encryption key management for workspace-level end-to-end encryption.
+First-class E2EE module handling all encryption key management for workspace-level message encryption.
 
 ## Structure
 

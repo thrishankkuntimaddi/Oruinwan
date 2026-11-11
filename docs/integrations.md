@@ -244,24 +244,24 @@ Subscriptions** use the request URL shown (Slack's `url_verification` is answere
 signature checks out) and subscribe to `message.channels` / `message.groups`. Invite the app to
 the Slack channels you bridge. Add bridges: Slack channel ID (or `*`) → Oruinwan channel →
 direction. Messages arrive from the **Slack** bot with the Slack author's name and the label
-"Via Slack · not end-to-end encrypted". Bot messages and Slack retries are ignored (no loops, no
+"Via Slack · not encrypted on the device". Bot messages and Slack retries are ignored (no loops, no
 duplicates).
 
-**Outgoing (Oruinwan → Slack).** Oruinwan messages are end-to-end encrypted; the server cannot
+**Outgoing (Oruinwan → Slack).** Oruinwan messages are encrypted on the device; the server cannot
 read them and therefore cannot forward them by itself. The design:
 
 1. An admin must explicitly switch a bridge to **Out** or **Both**. The UI shows a warning that
-   copies leave end-to-end encryption and are stored by Slack, and the API refuses the change
+   copies leave Oruinwan's message encryption and are stored by Slack, and the API refuses the change
    without `acknowledgeOutgoing: true`. Who enabled it and when is recorded.
 2. Every member's app shows a notice above the composer in that channel: "Messages you send here
-   are also copied to Slack. Those copies are not end-to-end encrypted."
+   are also copied to Slack. Those copies are not encrypted on the device."
 3. When someone sends a message there, **their own app** — which has the plaintext — calls
    `POST /bridge/relay` with the text right after sending. The server checks the caller sent that
    message (in the last 10 minutes, once) in a channel they belong to, then posts it with
    `chat.postMessage` as "<name> (Oruinwan)" (bot token + channel ID) or to the Slack incoming
    webhook URL.
 4. Nothing else is ever copied: other channels, edits, attachments and messages sent before the
-   bridge was enabled stay end-to-end encrypted. (The server cannot prove the relayed text equals
+   bridge was enabled stay encrypted on the device. (The server cannot prove the relayed text equals
    the encrypted message; only the sender can relay, so this is the sender choosing to share
    their own words.)
 
@@ -319,7 +319,7 @@ Save to get an inbound URL (token included). In the tool, POST JSON to it:
 ```
 
 - `text` is posted by the tool's bot in the route named by `channel` (routes map names to
-  channels) or the default channel, marked as not end-to-end encrypted.
+  channels) or the default channel, marked as not encrypted on the device.
 - `task` creates a channel task in that channel.
 - The whole payload goes to automations (`webhook.received`, `webhookType` = `zapier`/`make`/`n8n`).
 

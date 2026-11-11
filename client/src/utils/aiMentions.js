@@ -5,7 +5,7 @@
 // (it can message them, or search our own conversation with them). The text keeps
 // "@username" so the question still reads naturally.
 //
-// Messages are end-to-end encrypted: for "search our conversation" the app sends
+// Messages are encrypted on the device: for "search our conversation" the app sends
 // the recent messages of our DM with that person, decrypted here (transcriptFor).
 
 import { messageService } from '../services/messageService';

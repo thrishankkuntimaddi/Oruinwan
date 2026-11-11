@@ -23,7 +23,7 @@ phone and tablet. Code: `server/src/features/drive-backup/`.
   plaintext; only this Oruinwan server, for this account, can open the file.
   *Why not the UMEK:* for password accounts the UMEK is derived on the device and never reaches the
   server, so a scheduled server-side backup couldn't seal for it. Message bodies inside the backup
-  are still end-to-end ciphertext, and the identity private key inside is still wrapped by the UMEK.
+  are still ciphertext encrypted on the device, and the identity private key inside is still wrapped by the UMEK.
 - **Google token.** The Google refresh token is stored only sealed under the active KEK
   (AES-256-GCM, `v1:<kekVersion>:<base64>`), in the `DriveBackup` collection (one row per user).
   Disconnecting revokes it at Google.
@@ -55,7 +55,7 @@ other people's content (they restore their own from their backups).
 | Tasks | tasks you created or are assigned to | tasks you created |
 | Knowledge | pages you wrote | those pages |
 | Meetings | meetings you organised or were invited to: details, summary, action items, notes link (no transcript segments) | meetings you organised |
-| Messages | messages **you sent** in channels and DMs you're in, still end-to-end encrypted (newest 50 000; `DRIVE_BACKUP_MAX_MESSAGES`) | yours, in conversations you're still in |
+| Messages | messages **you sent** in channels and DMs you're in, still encrypted on the device (newest 50 000; `DRIVE_BACKUP_MAX_MESSAGES`) | yours, in conversations you're still in |
 | Files | metadata of files you uploaded (name, size, type, folder, tags) — **no file contents** | never (without the contents a file can't come back) |
 
 Not included: file contents, other people's messages, call recordings, transcripts, workspace or

@@ -108,7 +108,7 @@ const SECTIONS = [
             <>
                 <p>These companies process data on our behalf, only to run the parts of Oruinwan listed next to them:</p>
                 <ul>
-                    <li><strong>Amazon Web Services</strong> (hosting): our servers, databases and stored files run on AWS. Messages are end-to-end encrypted before they reach it.</li>
+                    <li><strong>Amazon Web Services</strong> (hosting): our servers, databases and stored files run on AWS. Messages are encrypted on the device before they reach it.</li>
                     <li><strong>Google Firebase</strong> (phone apps): delivers push notifications, and collects anonymous usage analytics (app opens, screens viewed, sign-ins; never message content). You can turn analytics off in the phone app under Settings → Privacy.</li>
                     <li><strong>Brevo</strong> (email): sends account emails such as verification, invitations and password resets.</li>
                     <li><strong>AI model providers</strong> (Oruinwan AI, when you use it): the question you ask and the content you choose to include are sent to the workspace's AI provider (for example Anthropic) to produce an answer. They are not used to train models.</li>

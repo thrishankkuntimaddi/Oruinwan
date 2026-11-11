@@ -106,7 +106,7 @@ before key versions can't send in a conversation whose key changed until they ar
     thread isn't locked, and everyone who can read the thread may also see the task. Otherwise it
     stays in the task and says why ("Only here: …").
   - A **thread reply** shows in each linked task's discussion as a comment from its author when
-    its author may see and comment on the task. Its text stays end-to-end encrypted (the apps
+    its author may see and comment on the task. Its text stays encrypted on the device (the apps
     decrypt it), and it is shown only to people who can read the thread in chat: on every read,
     live event and notification.
   - The original owns its copy: deleting a comment deletes its reply; deleting a reply for
@@ -154,7 +154,7 @@ exists already, the offer says so and opens it.
 ## Notes to self
 
 Pick yourself in the To: bar ("Name (you)") for a chat only you are in (`DMSession.isSelf`, pair key
-`<workspace>:<me>:<me>`). It is end-to-end encrypted like any DM and never notifies anyone.
+`<workspace>:<me>:<me>`). It is encrypted on the device like any DM and never notifies anyone.
 
 ## Mentions
 

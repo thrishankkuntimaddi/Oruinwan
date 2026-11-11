@@ -8,7 +8,7 @@
  *
  * Messages are posted by the "Incoming webhook" bot as integration cards of
  * kind 'message', flagged notE2EE: the sender wrote them outside Oruinwan's
- * end-to-end encryption, and the UI says so.
+ * message encryption, and the UI says so.
  */
 
 const crypto = require('crypto');

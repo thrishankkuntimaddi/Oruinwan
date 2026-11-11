@@ -152,7 +152,7 @@ const firstResolved = (...vals) => vals.find((v) => resolved(v));
 
 const ACTION_HANDLERS = {
 
-    /** Post a message to a channel as the "Automations" bot (end-to-end encrypted with the channel key). */
+    /** Post a message to a channel as the "Automations" bot (encrypted on the device with the channel key). */
     async send_message(config, ctx, io) {
         const { text } = config;
         if (!resolved(text)) return { skipped: true, reason: 'Missing text' };

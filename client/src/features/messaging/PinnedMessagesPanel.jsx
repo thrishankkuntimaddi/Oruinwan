@@ -17,7 +17,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
         params: channelId ? { channelId } : { dmId: dmSessionId },
       });
       const pinned = res.data?.messages || [];
-      // Pins are end-to-end encrypted like any message; decrypt them here.
+      // Pins are encrypted on the device like any message; decrypt them here.
       const { batchDecryptMessages } = await import('../../services/messageEncryptionService');
       const decrypted = await batchDecryptMessages(pinned, channelId || dmSessionId, channelId ? 'channel' : 'dm');
       setMessages(decrypted);

@@ -125,7 +125,7 @@ export function SlashBar({ notice, onClose, onSendAsText, onEdit }) {
 
 /**
  * The phone's actions for slash commands in a conversation or a thread. Everything a command
- * posts goes through `convo.send`, the normal end-to-end encrypted path.
+ * posts goes through `convo.send`, the normal encrypted on the device path.
  */
 export function phoneCommands({
   conv, ws, me, meta, label, isGroup = false, threadOf = null, canPost = true, canManage = false,
