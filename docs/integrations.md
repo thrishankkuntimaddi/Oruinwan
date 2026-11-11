@@ -360,3 +360,42 @@ cd client && npx vitest run src/__tests__/integrationConnectors.test.jsx src/__t
 The suites mock every provider API (axios), Mongo and the identity store: connectors
 (`connectors.test.js`), routes / applying results / bridge / incoming webhooks
 (`connectorRoutes.test.js`), and the GitHub, Jira and Zoom suites.
+
+### Checking against the real providers
+
+The unit suites prove what Oruinwan sends, not that the provider accepts it. Two live checks
+call the real APIs. Both are read-only: nothing is posted, created or changed.
+
+```bash
+cd server && yarn integrations:check --probe   # no accounts needed
+cd server && yarn integrations:check           # with real credentials in the environment
+cd server && yarn integrations:check slack jira
+```
+
+- **`--probe`** sends fake but well-formed credentials. Every provider must answer "bad
+  credentials" (or "forbidden"), which proves the endpoint URL and auth header format are what
+  the real API expects. A 404, a network error, or a fake credential being accepted fails the run.
+  Teams has no remote check (its test validates the webhook URL shape locally). First run,
+  2026-11-11: all 14 remote checks passed.
+- **With credentials**, each connector's own `test()` runs against your account (who am I / list
+  one item), exactly as *Save* does in Settings → Integrations. Connectors without their
+  variables are skipped, not failed.
+
+| Connector | Variables |
+|---|---|
+| GitHub | `GITHUB_TOKEN` (a public-API check always runs without one; `GITHUB_PUBLIC_REPO` picks the repo) |
+| Jira, Confluence | `ATLASSIAN_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN` |
+| Zoom | `ZOOM_ACCOUNT_ID`, `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` |
+| GitLab | `GITLAB_TOKEN`, optional `GITLAB_URL` |
+| Bitbucket | `BITBUCKET_TOKEN`, optional `BITBUCKET_USERNAME` |
+| Linear | `LINEAR_API_KEY` |
+| Slack | `SLACK_BOT_TOKEN` or `SLACK_WEBHOOK_URL` |
+| Teams | `TEAMS_WEBHOOK_URL` |
+| Google Drive | `GOOGLE_ACCESS_TOKEN`, `GOOGLE_SERVICE_ACCOUNT` or `GOOGLE_SERVICE_ACCOUNT_FILE` |
+| Google Meet | `GOOGLE_ACCESS_TOKEN` |
+| OneDrive | `MS_GRAPH_TOKEN` |
+| Dropbox | `DROPBOX_TOKEN` |
+| Notion | `NOTION_TOKEN` |
+
+The probe found one real issue on its first run: Atlassian returns a Java exception class name in
+its error text, which was shown to people as is. `cleanDetail` in `connectors/http.js` strips it.

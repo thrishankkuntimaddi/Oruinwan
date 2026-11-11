@@ -15,7 +15,7 @@ const axios = require('axios');
 const { sealSecret } = require('../../../modules/conversations/cryptoUtils');
 const { readSecret } = require('../integration.config');
 const { CONNECTORS, describe: describeConnector } = require('../connectors/registry');
-const { mapError } = require('../connectors/http');
+const { mapError, cleanDetail } = require('../connectors/http');
 const { buildStatus } = require('../connectors/common');
 const google = require('../connectors/google');
 
@@ -47,6 +47,10 @@ describe('registry', () => {
     expect(mapError({ response: { status: 404 } }, 'X', 'X').statusCode).toBe(404);
     expect(mapError({ response: { status: 422, data: { message: 'bad title' } } }, 'X', 'X').message).toMatch(/bad title/);
     expect(mapError({ message: 'ECONNRESET' }, 'X', 'X').statusCode).toBe(502);
+    // Atlassian answers with a Java exception class in the text (seen live, 2026-11-11).
+    const atl = { response: { status: 403, data: { message: 'com.atlassian.confluence.mvc.rest.common.exception.StacklessResponseStatusException: 403 FORBIDDEN "Request rejected because caller cannot access Confluence"' } } };
+    expect(mapError(atl, 'Confluence', 'CONFLUENCE').message).toBe('Confluence denied access: Request rejected because caller cannot access Confluence');
+    expect(cleanDetail('plain text stays')).toBe('plain text stays');
   });
 
   it('normalises build statuses', () => {

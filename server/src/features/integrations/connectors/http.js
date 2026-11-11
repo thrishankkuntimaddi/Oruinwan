@@ -31,10 +31,21 @@ function detailOf(err) {
     || d.message || d.error_summary || d.errorMessage || err.message;
 }
 
+/**
+ * Drops Java exception class names and status prefixes that some providers (Atlassian)
+ * put in error text, e.g. `com.atlassian…StacklessResponseStatusException: 403 FORBIDDEN "Request rejected"`.
+ */
+function cleanDetail(text) {
+  return String(text || '')
+    .replace(/^(?:[A-Za-z_$][\w$]*\.)+[\w$]*(?:Exception|Error):\s*/, '')
+    .replace(/^\d{3} [A-Z_ ]+?\s+"([^"]*)"$/, '$1')
+    .trim();
+}
+
 function mapError(err, label, code) {
   if (err.statusCode) return err;
   const status = err.response?.status;
-  const detail = String(detailOf(err) || '').slice(0, 300);
+  const detail = cleanDetail(detailOf(err)).slice(0, 300);
   if (status === 401) return httpError(502, `${label} rejected the token (401). Paste a new one in Settings → Integrations.`, `${code}_BAD_TOKEN`);
   if (status === 403) return httpError(403, `${label} denied access: ${detail || 'forbidden'}`, `${code}_FORBIDDEN`);
   if (status === 404) return httpError(404, `Not found in ${label} (or the token cannot see it)`, `${code}_NOT_FOUND`);
@@ -87,4 +98,4 @@ const header = (req, name) => {
 /** Trim and cap free text coming from a provider. */
 const clip = (s, n = 500) => (s === undefined || s === null ? '' : String(s)).trim().slice(0, n);
 
-module.exports = { request, mapError, httpError, normalizeHttpsUrl, hmacHex, safeEqual, header, clip, TIMEOUT_MS };
+module.exports = { request, mapError, cleanDetail, httpError, normalizeHttpsUrl, hmacHex, safeEqual, header, clip, TIMEOUT_MS };
