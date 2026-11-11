@@ -40,6 +40,8 @@ async function main() {
     TASKS_STORE: 'pg',
     PROCESS_ROLE: 'all',
     FRONTEND_URL: E2E.webUrl,
+    // The phone app's origin, so E2E_PHONE_PORT works when 5174 (a dev origin) is taken.
+    CORS_EXTRA_ORIGINS: E2E.phoneUrl,
     BACKEND_URL: E2E.apiUrl,
     ACCESS_TOKEN_SECRET: E2E.accessTokenSecret,
     REFRESH_TOKEN_SECRET: E2E.refreshTokenSecret,
