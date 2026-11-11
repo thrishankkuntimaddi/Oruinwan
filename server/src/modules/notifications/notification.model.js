@@ -15,6 +15,7 @@ const NOTIFICATION_TYPES = [
     'design_review',     // features/design-review: requests, decisions, comments
     'member_joined',     
     'channel_pinned',    
+    'channel_added',     // someone added you to a channel
     'huddle_started',    
     'missed_call',       // a DM / group-DM call rang and nobody answered on any device
     'schedule_created',  

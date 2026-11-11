@@ -34,6 +34,24 @@ describe('notificationService.create', () => {
         });
     });
 
+    it('channelAdded stores a channel notification and pushes with the channel to open', async () => {
+        const io = fakeIo();
+        const notif = await notificationService.channelAdded(io, {
+            recipientId: 'u2', workspaceId: WS, channelId: 'c1', channelName: 'design', addedBy: 'nani',
+        });
+        expect(notif.type).toBe('channel_added');
+        expect(notif.title).toBe('nani added you to #design');
+        expect(notif.link).toBe('/channel/c1');
+        expect(pushService.sendToUser).toHaveBeenCalledWith('u2', 'nani added you to #design', expect.any(String), expect.objectContaining({ type: 'channel_added', channelId: 'c1' }));
+    });
+
+    it('channelAdded follows the messages preference', async () => {
+        prefService.getUserPreferences.mockResolvedValue({ message: false, push: true });
+        const notif = await notificationService.channelAdded(fakeIo(), { recipientId: 'u2', workspaceId: WS, channelId: 'c1', channelName: 'design', addedBy: 'nani' });
+        expect(notif).toBeNull();
+        expect(pushService.sendToUser).not.toHaveBeenCalled();
+    });
+
     it('stores, emits to the recipient room and pushes', async () => {
         const io = fakeIo();
         const notif = await notificationService.dmReceived(io, {

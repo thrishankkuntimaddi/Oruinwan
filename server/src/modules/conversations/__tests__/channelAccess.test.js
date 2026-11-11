@@ -20,6 +20,7 @@ jest.mock('../../../identity', () => ({
 }));
 jest.mock('../../../identity/hydrate', () => ({ hydrate: jest.fn(async (d) => d) }));
 jest.mock('../../../../utils/mongooseRetry', () => ({ saveWithRetry: jest.fn(async (doc) => doc) }));
+jest.mock('../../notifications/notificationService', () => ({ channelAdded: jest.fn().mockResolvedValue(null) }));
 jest.mock('../conversationKeys.service', () => ({
     hasConversationKeys: jest.fn().mockResolvedValue(true),
     distributeKeyToNewMember: jest.fn().mockResolvedValue(true),
@@ -29,6 +30,7 @@ jest.mock('../conversationKeys.service', () => ({
 const Channel = require('../../../features/channels/channel.model.js');
 const identity = require('../../../identity');
 const keys = require('../conversationKeys.service');
+const notifications = require('../../notifications/notificationService');
 const { saveWithRetry } = require('../../../../utils/mongooseRetry');
 const ctrl = require('../../../features/channels/channel.controller');
 
@@ -43,7 +45,7 @@ function fakeIo() {
     const left = [];
     const io = {
         left,
-        to: () => ({ emit: () => {} }),
+        to() { const room = { emit: () => {}, to: () => room }; return room; },
         in: (room) => ({ socketsLeave: (rooms) => left.push([room, rooms]), socketsJoin: () => {} }),
     };
     return io;
@@ -91,4 +93,24 @@ test('removing someone takes their devices out of the channel room and removes t
     expect(res.statusCode).toBe(200);
     expect(io.left).toEqual(expect.arrayContaining([[`user:${BEN}`, [`channel:${CH}`]]]));
     expect(keys.removeParticipant).toHaveBeenCalledWith(CH, 'channel', BEN);
+});
+
+test('the person added to a channel gets a notification (bell and phone push), naming who added them', async () => {
+    const doc = channel({ members: [{ user: ANA }] });
+    Channel.findById.mockResolvedValue(doc);
+    const res = makeRes();
+    await ctrl.inviteToChannel({ user: { sub: ANA }, params: { id: CH }, body: { userId: BEN }, app: { get: () => fakeIo() } }, res);
+    expect(res.statusCode).toBe(200);
+    expect(notifications.channelAdded).toHaveBeenCalledTimes(1);
+    expect(notifications.channelAdded).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        recipientId: BEN, channelId: CH, channelName: 'launch', addedBy: 'ana', workspaceId: WS,
+    }));
+});
+
+test('a refused add notifies no one', async () => {
+    Channel.findById.mockResolvedValue(channel());
+    const res = makeRes();
+    await ctrl.inviteToChannel({ user: { sub: ANA }, params: { id: CH }, body: { userId: BEN }, app: { get: () => fakeIo() } }, res);
+    expect(res.statusCode).toBe(400); // already a member
+    expect(notifications.channelAdded).not.toHaveBeenCalled();
 });

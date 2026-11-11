@@ -27,6 +27,7 @@ export const NOTIFICATION_TYPE_META = {
     design_review:     { label: 'Review',      Icon: PenTool,        color: 'var(--accent)',          tab: 'all' },
     member_joined:     { label: 'Team',        Icon: UserPlus,       color: 'var(--state-success)',   tab: 'team' },
     channel_pinned:    { label: 'Channel',     Icon: Pin,            color: 'var(--accent)',          tab: 'all' },
+    channel_added:     { label: 'Channel',     Icon: UserPlus,       color: 'var(--accent)',          tab: 'messages' },
     huddle_started:    { label: 'Huddle',      Icon: Headphones,     color: 'var(--state-danger)',    tab: 'all' },
     missed_call:       { label: 'Missed call', Icon: PhoneMissed,    color: 'var(--state-danger)',    tab: 'messages' },
     schedule_created:  { label: 'Meeting',     Icon: Calendar,       color: 'var(--accent)',          tab: 'all' },

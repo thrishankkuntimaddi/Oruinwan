@@ -1,4 +1,4 @@
-import { AtSign, Bell, CalendarClock, FileText, GitBranch, MessageCircle, PenTool, Smile, Sparkles, SquareCheckBig } from 'lucide-react';
+import { AtSign, Bell, CalendarClock, FileText, GitBranch, Hash, MessageCircle, PenTool, Smile, Sparkles, SquareCheckBig } from 'lucide-react';
 import { Avatar } from '../../ui/Avatar.jsx';
 import { Icon } from '../../ui/Icon.jsx';
 import { shortAgo } from '../../lib/time.js';
@@ -29,7 +29,7 @@ export function messagePreview(item, ws) {
 
 export const NOTIF_ICON = {
   mention: AtSign, dm: MessageCircle, task: SquareCheckBig, thread: GitBranch, meeting: CalendarClock, reaction: Smile, note: FileText,
-  design: PenTool, ai: Sparkles,
+  design: PenTool, ai: Sparkles, channel: Hash,
 };
 
 export function ActivityRow({ item, directory }) {

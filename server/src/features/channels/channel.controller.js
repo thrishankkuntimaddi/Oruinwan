@@ -12,6 +12,7 @@ const { isMember, normalizeMemberFormat } = require('../../../utils/memberHelper
 const {} = require('../../../utils/socketHelpers');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
+const notificationService = require('../../modules/notifications/notificationService');
 
 async function isWorkspaceOwner(userId, workspaceId) {
   if (!workspaceId) return false;
@@ -149,6 +150,14 @@ exports.createChannel = async (req, res) => {
         io.to(`channel:${channel._id}`).emit('new-message', systemMsg);
       }
       logger.debug({ channelName: channel.name }, '[SYSTEM] channel_created event emitted');
+      // Everyone the creator put in the channel hears about it (bell + phone push), even offline.
+      for (const mId of distinctMemberIds) {
+        if (mId === String(userId)) continue;
+        notificationService.channelAdded(io, {
+          recipientId: mId, workspaceId, channelId: channel._id, channelName: channel.name,
+          addedBy: creator?.username, isPrivate: !!channel.isPrivate,
+        }).catch(() => {});
+      }
     } catch (sysErr) {
       logger.error({ err: sysErr }, '[SYSTEM MSG] Failed to create channel_created system message');
     }
@@ -406,6 +415,13 @@ exports.inviteToChannel = async (req, res) => {
       });
 
       if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
+      // The live event above only reaches open apps: also a stored notification and a phone push.
+      if (String(inviteeId) !== String(userId)) {
+        notificationService.channelAdded(io, {
+          recipientId: inviteeId, workspaceId: channel.workspace, channelId, channelName: channel.name,
+          addedBy: inviter?.username, isPrivate: !!channel.isPrivate,
+        }).catch(() => {});
+      }
     } catch (sysErr) {
       logger.error({ err: sysErr }, '[SYSTEM MSG] member_invited failed');
     }

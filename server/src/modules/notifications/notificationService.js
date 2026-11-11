@@ -71,6 +71,7 @@ const PREF_KEY_BY_TYPE = {
     dm: 'message',
     reaction: 'message',
     channel_pinned: 'message',
+    channel_added: 'message',
     huddle_started: 'message',
     missed_call: 'message',
     thread_reply: 'threadReply',
@@ -531,6 +532,19 @@ async function channelPinned(io, { recipientIds, workspaceId, channelName, chann
     });
 }
 
+/** "Ben added you to #design": the person added to a channel (they weren't in its room yet). */
+async function channelAdded(io, { recipientId, workspaceId, channelId, channelName, addedBy, isPrivate = false }) {
+    return create(io, {
+        recipient: recipientId,
+        workspaceId,
+        type: 'channel_added',
+        title: `${addedBy || 'Someone'} added you to #${channelName || 'a channel'}`,
+        body: isPrivate ? 'Private channel' : 'Tap to open the channel',
+        link: channelId ? `/channel/${channelId}` : null,
+        meta: { channelId: channelId ? String(channelId) : undefined, channelName, addedBy, kind: 'channel_added' },
+    });
+}
+
 async function huddleStarted(io, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy }) {
     return createMany(io, recipientIds, {
         workspaceId,
@@ -643,6 +657,7 @@ module.exports = {
     aiSuggestion,
     memberJoined,
     channelPinned,
+    channelAdded,
     huddleStarted,
     missedCall,
     mergeLegacyChatNotifications,

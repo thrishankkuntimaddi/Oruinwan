@@ -128,7 +128,7 @@ test.describe('smoke crawl', () => {
     ids = {
       workspaceId,
       channelId: idOf(channel, 'channel', '_id', 'id'),
-      taskId: idOf(task, 'task', 'data', '_id', 'id'),
+      taskId: idOf(task, 'task', 'tasks.0', 'data', '_id', 'id'),
       noteId: idOf(note, 'note', 'data', '_id', 'id'),
       pageId: idOf(page_, 'page', 'data', '_id', 'id'),
       fileId: idOf(file, 'file', 'data', '_id', 'id'),
