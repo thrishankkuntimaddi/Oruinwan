@@ -108,17 +108,13 @@ jobs:
         working-directory: mobile
       # --with-deps also apt-installs fonts from Ubuntu's mirrors, which sometimes cannot be
       # reached from the runner (2026-11-11: "Temporary failure resolving azure.archive.ubuntu.com"
-      # four runs in a row). Retry once; if apt is still down, install only the browser (it comes
-      # from Playwright's own CDN, not apt): GitHub's Ubuntu image already ships Chrome's system
-      # libraries, so the tests run without the extra fonts.
+      # four runs in a row). One attempt, capped at 4 minutes; if apt is down, install only the
+      # browser (it comes from Playwright's own CDN, not apt): GitHub's Ubuntu image already ships
+      # Chrome's system libraries, so the tests run without the extra fonts (verified 2026-11-11).
       - name: Install Chromium
         working-directory: e2e
         run: |
-          for attempt in 1 2; do
-            if timeout 600 yarn playwright install --with-deps chromium; then exit 0; fi
-            echo "::warning::playwright install --with-deps failed (attempt $attempt)"
-            sudo apt-get update -o Acquire::Retries=3 || true
-          done
+          if timeout 240 yarn playwright install --with-deps chromium; then exit 0; fi
           echo "::warning::apt mirror unreachable: installing Chromium without extra system packages"
           yarn playwright install chromium
       - name: Run the tests
