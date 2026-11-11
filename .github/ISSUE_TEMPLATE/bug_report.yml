@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Oruinwan does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Security vulnerability? Don't file it here. See SECURITY.md to report it privately."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open a channel\n2. Start a huddle\n3. …"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Web
+        - Desktop (macOS)
+        - Desktop (Windows)
+        - Desktop (Linux)
+        - Android app
+        - Phone browser (iPhone)
+        - Phone browser (Android)
+        - Tablet
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About (or the release you installed)
+      placeholder: "3.8.5"
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      options:
+        - Hosted (oruinwan.poelys.com)
+        - Self-hosted
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+      description: Remove anything private (message text, tokens, e-mail addresses) first.

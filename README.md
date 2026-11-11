@@ -395,7 +395,7 @@ Found a vulnerability? Please report it privately through [GitHub security advis
 
 ## Contributing
 
-Issues and pull requests are welcome.
+Issues and pull requests are welcome. The full guide, including the rules every change follows, is in [CONTRIBUTING.md](CONTRIBUTING.md); report security issues privately as described in [SECURITY.md](SECURITY.md).
 
 1. Fork the repository and create a branch, for example `feat/recurring-tasks`.
 2. Make your change, with tests, and run `yarn lint && yarn test` (plus `npm test` in `mobile/` or `desktop/` if you touched them).
