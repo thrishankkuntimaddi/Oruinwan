@@ -118,7 +118,7 @@ const SECTIONS = [
             <>
                 <p>We take every security report seriously. If you discover a vulnerability in {BRAND.name}, please disclose it responsibly and give us reasonable time to fix it before sharing it publicly.</p>
                 <div className="orw-contact-card">
-                    <strong>Security email:</strong> <a href="mailto:security@oruinwan.com">security@oruinwan.com</a><br />
+                    <strong>Security email:</strong> <a href="mailto:admin@poelys.com">admin@poelys.com</a><br />
                     <strong>What to include:</strong> affected URL or feature, steps to reproduce, and the impact you observed<br />
                     <strong>Response:</strong> we aim to acknowledge critical issues within 24 hours
                 </div>
@@ -143,7 +143,7 @@ export default function Security() {
                 </>}
                 actions={
                     <>
-                        <a href="mailto:security@oruinwan.com" className="orw-btn orw-btn--primary orw-btn--lg">
+                        <a href="mailto:admin@poelys.com" className="orw-btn orw-btn--primary orw-btn--lg">
                             <Mail size={16} aria-hidden="true" /> Report a vulnerability
                         </a>
                         <Link to="/status" className="orw-btn orw-btn--ghost orw-btn--lg">

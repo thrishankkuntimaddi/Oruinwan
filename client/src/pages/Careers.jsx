@@ -89,7 +89,7 @@ export default function Careers() {
                                 </h3>
                                 <div id={panelId} hidden={!isOpen} style={{ padding: '0 4px 24px' }}>
                                     <p style={{ marginTop: 0, maxWidth: 720 }}>{role.desc}</p>
-                                    <a href={`mailto:careers@oruinwan.com?subject=${encodeURIComponent(`Application: ${role.title}`)}`}
+                                    <a href={`mailto:admin@poelys.com?subject=${encodeURIComponent(`Application: ${role.title}`)}`}
                                         className="orw-btn orw-btn--primary" style={{ marginTop: 18 }}>
                                         Apply via email <ArrowRight size={14} aria-hidden="true" />
                                     </a>
@@ -101,7 +101,7 @@ export default function Careers() {
                 </ul>
 
                 <p className="orw-lead" style={{ fontSize: 14, maxWidth: 'none' }}>
-                    Don’t see your role? Email <a href="mailto:careers@oruinwan.com" className="orw-link" style={{ fontSize: 'inherit' }}>careers@oruinwan.com</a>. We always read speculative applications.
+                    Don’t see your role? Email <a href="mailto:admin@poelys.com" className="orw-link" style={{ fontSize: 'inherit' }}>admin@poelys.com</a>. We always read speculative applications.
                 </p>
             </Block>
         </PublicPageShell>

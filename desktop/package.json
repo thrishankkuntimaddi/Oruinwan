@@ -94,7 +94,7 @@
       "icon": "assets/icon.png",
       "category": "Network",
       "executableName": "oruinwan",
-      "maintainer": "Oruinwan Inc. <support@oruinwan.com>",
+      "maintainer": "Oruinwan Inc. <admin@poelys.com>",
       "target": [
         "AppImage",
         "deb"

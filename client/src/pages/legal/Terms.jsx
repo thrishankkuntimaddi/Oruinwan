@@ -18,7 +18,7 @@ const SECTIONS = [
                     <li>One account per person — do not share credentials</li>
                     <li>Keep your account password secure and confidential</li>
                     <li>You are responsible for all activity under your account</li>
-                    <li>Notify us immediately at <a href="mailto:security@oruinwan.com">security@oruinwan.com</a> of any unauthorized access</li>
+                    <li>Notify us immediately at <a href="mailto:admin@poelys.com">admin@poelys.com</a> of any unauthorized access</li>
                 </ul>
             </>
         ),
@@ -91,7 +91,7 @@ const SECTIONS = [
             <>
                 <p>For legal inquiries, disputes, or Terms-related questions:</p>
                 <div className="orw-contact-card">
-                    <strong>Email:</strong> <a href="mailto:legal@oruinwan.com">legal@oruinwan.com</a><br />
+                    <strong>Email:</strong> <a href="mailto:admin@poelys.com">admin@poelys.com</a><br />
                     <strong>Response time:</strong> Within 5 business days<br />
                     <strong>Governing law:</strong> Laws of Delaware, USA
                 </div>
@@ -108,7 +108,7 @@ export default function Terms() {
                 eyebrow="Terms of Service"
                 icon={Scale}
                 title={<>Clear, fair <span className="orw-gloss-text">terms.</span></>}
-                lead={<>These Terms govern your use of Oruinwan. We’ve written them to be readable, not a legal maze. If you have questions, email us at <a className="orw-link" style={{ fontSize: 'inherit' }} href="mailto:legal@oruinwan.com">legal@oruinwan.com</a>.</>}
+                lead={<>These Terms govern your use of Oruinwan. We’ve written them to be readable, not a legal maze. If you have questions, email us at <a className="orw-link" style={{ fontSize: 'inherit' }} href="mailto:admin@poelys.com">admin@poelys.com</a>.</>}
                 meta={<span><CalendarDays size={14} aria-hidden="true" /> Last updated: January 1, 2026</span>}
             />
             <DocLayout numbered sections={SECTIONS} tocLabel="Contents" />

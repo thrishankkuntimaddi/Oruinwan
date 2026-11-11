@@ -140,7 +140,7 @@ export default function Brand() {
                     ))}
                 </div>
                 <p className="orw-lead" style={{ fontSize: 14 }}>
-                    For press inquiries, email <a href="mailto:press@oruinwan.com" style={{ color: 'var(--o-accent-hi)' }}>press@oruinwan.com</a>.
+                    For press inquiries, email <a href="mailto:admin@poelys.com" style={{ color: 'var(--o-accent-hi)' }}>admin@poelys.com</a>.
                 </p>
             </Block>
         </PublicPageShell>

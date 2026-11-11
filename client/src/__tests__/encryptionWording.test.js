@@ -47,4 +47,16 @@ describe('encryption wording', () => {
         }
         expect(offenders).toEqual([]);
     });
+
+    // oruinwan.com has no mail server (no MX record, checked 2026-11-11): mail to it bounces,
+    // so a security report or a sales enquiry would be lost. Contact addresses use poelys.com.
+    it('never shows a contact address on a domain that cannot receive mail', () => {
+        const offenders = [];
+        for (const file of ['client/src', 'mobile/src'].flatMap(files)) {
+            fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+                if (/[a-z.-]+@oruinwan\.com/i.test(line) && !isComment(line)) offenders.push(`${path.relative(REPO, file)}:${i + 1}`);
+            });
+        }
+        expect(offenders).toEqual([]);
+    });
 });

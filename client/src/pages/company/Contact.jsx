@@ -5,19 +5,19 @@ import { PageHero, Block, Callout } from '../../components/public/PublicKit';
 import BRAND from '../../shared/brand';
 
 const TOPICS = [
-    { id: 'general', label: 'General inquiry', email: 'hello@oruinwan.com' },
-    { id: 'sales', label: 'Sales & pricing', email: 'sales@oruinwan.com' },
-    { id: 'support', label: 'Technical support', email: 'support@oruinwan.com' },
-    { id: 'security', label: 'Security / bug report', email: 'security@oruinwan.com' },
-    { id: 'press', label: 'Press & media', email: 'press@oruinwan.com' },
-    { id: 'other', label: 'Other', email: 'hello@oruinwan.com' },
+    { id: 'general', label: 'General inquiry', email: 'admin@poelys.com' },
+    { id: 'sales', label: 'Sales & pricing', email: 'admin@poelys.com' },
+    { id: 'support', label: 'Technical support', email: 'admin@poelys.com' },
+    { id: 'security', label: 'Security / bug report', email: 'admin@poelys.com' },
+    { id: 'press', label: 'Press & media', email: 'admin@poelys.com' },
+    { id: 'other', label: 'Other', email: 'admin@poelys.com' },
 ];
 
 const CONTACTS = [
-    { icon: Mail, color: '#8ea6ff', title: 'General', email: 'hello@oruinwan.com', desc: 'Questions, partnerships, or just a hello.' },
-    { icon: MessageSquare, color: '#c8a274', title: 'Support', email: 'support@oruinwan.com', desc: 'Technical issues and account help.' },
-    { icon: Shield, color: '#5cc995', title: 'Security', email: 'security@oruinwan.com', desc: 'Vulnerability reports and security concerns.' },
-    { icon: Building2, color: '#b59cff', title: 'Sales', email: 'sales@oruinwan.com', desc: 'Plans and custom pricing.' },
+    { icon: Mail, color: '#8ea6ff', title: 'General', email: 'admin@poelys.com', desc: 'Questions, partnerships, or just a hello.' },
+    { icon: MessageSquare, color: '#c8a274', title: 'Support', email: 'admin@poelys.com', desc: 'Technical issues and account help.' },
+    { icon: Shield, color: '#5cc995', title: 'Security', email: 'admin@poelys.com', desc: 'Vulnerability reports and security concerns.' },
+    { icon: Building2, color: '#b59cff', title: 'Sales', email: 'admin@poelys.com', desc: 'Plans and custom pricing.' },
 ];
 
 const EMPTY = { name: '', email: '', topic: 'general', message: '' };
