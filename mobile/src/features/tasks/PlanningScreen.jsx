@@ -24,6 +24,7 @@ import { PriorityPicker, fromDateInput, toDateInput } from './TaskEditorSheet.js
 import {
   REPORT_RANGES, formatDuration, milestoneProgress, openSprints, reportRange, reportRows, sprintBoard, timelineRows, workloadBars,
 } from './planning.js';
+import { useServerFlag } from '../../config/serverFlags.js';
 import { useBlockerGuard } from './BlockersSheet.jsx';
 
 // Design reviews load with their own code (pdf.js and all) only when the view is opened.
@@ -38,7 +39,14 @@ export const PLANNING_VIEWS = [
   { value: 'reviews', label: 'Design reviews' },
   { value: 'templates', label: 'Templates' },
 ];
-const VIEWS = PLANNING_VIEWS;
+/** Planning views the server has switched on: sprints/milestones need `planning`, reviews `designReviews`. */
+export function visiblePlanningViews({ planning = false, designReviews = false } = {}) {
+  return PLANNING_VIEWS.filter((v) => {
+    if (v.value === 'sprints' || v.value === 'milestones') return planning;
+    if (v.value === 'reviews') return designReviews;
+    return true;
+  });
+}
 
 /** One line under the tabs saying what each planning view is for. */
 export const PLANNING_HELP = {
@@ -817,10 +825,11 @@ function TemplatesView() {
 // ---------------------------------------------------------------- screen
 
 export function PlanningScreen({ initial }) {
-  const [view, setView] = useState(() => {
-    const v = initial || prefs.get('tasks.planning', 'sprints');
-    return VIEWS.some((x) => x.value === v) ? v : 'sprints';
-  });
+  const planningOn = useServerFlag('planning');
+  const reviewsOn = useServerFlag('designReviews');
+  const views = visiblePlanningViews({ planning: planningOn, designReviews: reviewsOn });
+  const [chosen, setView] = useState(() => initial || prefs.get('tasks.planning', 'sprints'));
+  const view = views.some((x) => x.value === chosen) ? chosen : views[0].value;
   const { data: tasks } = usePlanningTasks();
   const pick = (v) => {
     prefs.set('tasks.planning', v);
@@ -828,8 +837,8 @@ export function PlanningScreen({ initial }) {
   };
   return (
     <Screen>
-      <Header title="Planning" subtitle="Sprints, milestones, time and design reviews">
-        <Chips options={VIEWS} value={view} onChange={pick} className="pb-2" />
+      <Header title="Planning" subtitle={planningOn ? 'Sprints, milestones, timeline and time' : 'Timeline, workload, time and templates'}>
+        <Chips options={views} value={view} onChange={pick} className="pb-2" />
         <p className="px-4 pb-3 text-[12px] leading-snug text-text-2" data-testid="planning-help">
           {PLANNING_HELP[view]}
         </p>

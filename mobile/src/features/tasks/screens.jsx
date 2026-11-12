@@ -366,7 +366,7 @@ export function TasksScreen() {
             <span className="flex-1" />
             <div className="flex shrink-0 items-center">
               <IconButton icon={ArrowUpDown} label={`Sort: ${SORTS[sort].label}`} size="sm" onClick={() => setSortSheet(true)} />
-              <IconButton icon={CalendarRange} label="Planning: sprints, milestones, time report, design reviews" size="sm" onClick={() => nav.push('planning')} />
+              <IconButton icon={CalendarRange} label="Planning: timeline, workload, time report, templates" size="sm" onClick={() => nav.push('planning')} />
               <IconButton
                 icon={layout === 'list' ? LayoutGrid : List}
                 label={layout === 'list' ? 'Show board' : 'Show list'}

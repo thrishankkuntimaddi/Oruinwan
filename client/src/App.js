@@ -166,6 +166,9 @@ import ScrollToTop from "./components/ScrollToTop";
 import MessagesLockedBanner from "./components/security/MessagesLockedBanner";
 import ApprovalPrompt from "./components/security/ApprovalPrompt";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
+// Where a hidden area sends people (focus flags, server/src/shared/featureFlags).
+const toNotes = ({ workspaceId }) => `/workspace/${workspaceId}/notes`;
+const toTasks = ({ workspaceId }) => `/workspace/${workspaceId}/tasks`;
 
 // Shown for a moment while the docs chunk loads (same dark backdrop as the docs).
 // The app-wide error screen clears itself when the person goes to another page.
@@ -454,9 +457,11 @@ function App() {
                               <RequireAuth>
                                 <WorkspaceScope>
                                   <RequireWorkspace>
+                                    <FeatureRoute flag="planning" redirectTo={toNotes}>
                                     <MainLayout sidePanel={<NotesPanel />}>
                                       <RoadmapPage />
                                     </MainLayout>
+                                    </FeatureRoute>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
                               </RequireAuth>
@@ -468,11 +473,13 @@ function App() {
                               <RequireAuth>
                                 <WorkspaceScope>
                                   <RequireWorkspace>
+                                    <FeatureRoute flag="designReviews" redirectTo={toTasks}>
                                     <MainLayout>
                                       <MyTasks section="reviews">
                                         <DesignReviewsPage />
                                       </MyTasks>
                                     </MainLayout>
+                                    </FeatureRoute>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
                               </RequireAuth>
@@ -484,11 +491,13 @@ function App() {
                               <RequireAuth>
                                 <WorkspaceScope>
                                   <RequireWorkspace>
+                                    <FeatureRoute flag="designReviews" redirectTo={toTasks}>
                                     <MainLayout>
                                       <MyTasks section="reviews">
                                         <DesignReviewPage />
                                       </MyTasks>
                                     </MainLayout>
+                                    </FeatureRoute>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
                               </RequireAuth>
@@ -874,7 +883,7 @@ function App() {
                           {/* On the product website these open the visitor's own server. */}
                           <Route path="/login" element={IS_SITE ? <OpenWebApp /> : <LoginPage />} />
                           <Route path="/oauth-success" element={<SsoCallback />} />
-                          <Route path="/register-company" element={IS_SITE ? <OpenWebApp /> : <RegisterCompany />} />
+                          <Route path="/register-company" element={IS_SITE ? <OpenWebApp /> : <FeatureRoute flag="companySignup" redirectTo="/login"><RegisterCompany /></FeatureRoute>} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
                           <Route path="/join-workspace" element={<JoinWorkspace />} />
                           {/* Email buttons: the app when installed, else the page here (pages/OpenInApp). */}

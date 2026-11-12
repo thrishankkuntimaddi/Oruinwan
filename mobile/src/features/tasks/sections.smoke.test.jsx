@@ -48,8 +48,11 @@ const { openTarget } = await import('../home/openTarget.js');
 const { NOTE_TYPES, NOTE_TYPE_OPTIONS } = await import('../../data/constants.js');
 const { clearQueries } = await import('../../data/query.js');
 const { prefs } = await import('../../native/storage.js');
+const { useServerFlags, refreshServerFlags } = await import('../../config/serverFlags.js');
+const { visiblePlanningViews } = await import('./PlanningScreen.jsx');
 
 beforeEach(() => {
+  useServerFlags.getState().setFlags({ planning: true, designReviews: true });
   cleanup();
   clearQueries();
   vi.clearAllMocks();
@@ -97,6 +100,30 @@ describe('Tasks tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Design reviews' }));
     fireEvent.click(await screen.findByText('Home screen'));
     expect(useNav.getState().stacks.tasks.at(-1)).toMatchObject({ name: 'designReview', params: { id: 'd1' } });
+  });
+
+  it('with planning and design reviews off on the server, they are hidden', async () => {
+    useServerFlags.getState().setFlags({});
+    expect(visiblePlanningViews({}).map((v) => v.label)).toEqual(['Timeline', 'Workload', 'Time report', 'Templates']);
+    render(<PlanningScreen />);
+    expect(screen.queryByRole('button', { name: 'Sprints' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Design reviews' })).toBeNull();
+    // A remembered "sprints" view falls back to the first view that is on.
+    expect(screen.getByTestId('planning-help').textContent).toMatch(/calendar line/);
+    cleanup();
+    prefs.set('notes.section', 'roadmap');
+    render(<NotesScreen />);
+    expect(screen.queryByRole('button', { name: 'Roadmap' })).toBeNull();
+    expect(fake.roadmap).not.toHaveBeenCalled();
+  });
+
+  it('server flags come from GET /api/flags and survive a failed request', async () => {
+    const ok = vi.fn(async () => ({ ok: true, json: async () => ({ flags: { planning: true, designReviews: false, junk: 'x' } }) }));
+    await refreshServerFlags('https://api.example', ok);
+    expect(ok).toHaveBeenCalledWith('https://api.example/api/flags', expect.anything());
+    expect(useServerFlags.getState().flags).toEqual({ planning: true, designReviews: false });
+    await refreshServerFlags('https://api.example', vi.fn(async () => { throw new Error('offline'); }));
+    expect(useServerFlags.getState().flags).toEqual({ planning: true, designReviews: false });
   });
 
   it('a design review notification opens in the Tasks tab', () => {

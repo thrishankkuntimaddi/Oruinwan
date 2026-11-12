@@ -19,6 +19,11 @@ const FLAGS = Object.freeze({
   sso: 'Domain & SSO settings and the /api/auth/sso login flow',
   integrations: 'Third-party integrations (Apps → Integrations, settings and channel integration tabs)',
   community: 'Public community page (content is still placeholder)',
+  // Focus (2026-11-12): the core loop is conversation → task → recap. These areas
+  // stay in the code and keep their data; they are hidden until switched back on.
+  planning: 'Sprints, milestones and the roadmap (Tasks → Planning, Notes → Roadmap)',
+  designReviews: 'Design reviews (Tasks → Planning → Design reviews)',
+  companySignup: 'Self-serve company registration (/register-company); companies set up before keep their console',
 });
 
 const FLAG_NAMES = Object.freeze(Object.keys(FLAGS));
@@ -34,7 +39,9 @@ function parseEnabled(raw) {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
   if (list.includes('all')) return new Set(FLAG_NAMES);
-  return new Set(list.filter((name) => FLAG_NAMES.includes(name)));
+  // Names are matched without case (designreviews → designReviews).
+  const byLower = new Map(FLAG_NAMES.map((name) => [name.toLowerCase(), name]));
+  return new Set(list.map((name) => byLower.get(name)).filter(Boolean));
 }
 
 /** Resolve every flag to a boolean. Reads the env on each call so tests and restarts see changes. */

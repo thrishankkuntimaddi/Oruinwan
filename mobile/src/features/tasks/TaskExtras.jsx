@@ -19,6 +19,7 @@ import { cx } from '../../ui/cx.js';
 import { toast } from '../../lib/bus.js';
 import { StatusIcon } from './TaskRow.jsx';
 import { useBlockerGuard } from './BlockersSheet.jsx';
+import { useServerFlag } from '../../config/serverFlags.js';
 import { formatClock, formatDuration, minutesFrom, myOpenSession, openSprints, recurrenceLabel } from './planning.js';
 import { REPEAT_FREQUENCIES, WEEKDAYS, describeRule, fromRecurring, normalizeRule, toRecurringPayload } from './recurrence.js';
 
@@ -577,6 +578,7 @@ function Recurrence({ task }) {
 /** Everything below Details on a task's page. Subtasks open as tasks of their own. */
 export function TaskExtras({ id }) {
   const { data: task } = usePlanningTask(id);
+  const planningOn = useServerFlag('planning');
   if (!task) return null;
   return (
     <>
@@ -588,7 +590,7 @@ export function TaskExtras({ id }) {
           </RowGroup>
         </Section>
       )}
-      <PlanningPlace task={task} />
+      {planningOn && <PlanningPlace task={task} />}
       <Dependencies task={task} />
       <TimeTracking task={task} />
       <Recurrence task={task} />

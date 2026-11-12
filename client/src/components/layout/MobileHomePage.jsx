@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useWorkspaceFeatures } from '../../hooks/useWorkspaceFeatures';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import ActivitySection from '../../features/activity/ActivitySection';
 import GettingStarted from '../../pages/SidebarComp/states/GettingStarted';
@@ -32,6 +33,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
     const { user, logout } = useAuth();
     const { workspaces, activeWorkspace, setActiveWorkspace } = useWorkspace();
     const features = useWorkspaceFeatures(workspaceId);
+    const planningOn = useFlag('planning');
     const [showWs, setShowWs] = useState(false);
 
     const go = (path) => navigate(`/workspace/${workspaceId}${path}`);
@@ -47,7 +49,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
         { Icon: Settings2, label: 'Workspace admin',  path: '/admin',                  show: ['owner', 'admin'].includes(activeWorkspace?.role) || !!activeWorkspace?.isOwner },
         // Same sections as the desktop rail: the roadmap is a tab of Notes and design reviews
         // sit under Tasks → Planning (Tasks is in the bottom bar).
-        { Icon: FileText,  label: features.tasks !== false ? 'Notes & roadmap' : 'Notes', path: '/notes', show: features.notes !== false },
+        { Icon: FileText,  label: features.tasks !== false && planningOn ? 'Notes & roadmap' : 'Notes', path: '/notes', show: features.notes !== false },
         { Icon: Shield,    label: 'Owner Console',    abs: '/owner/dashboard',         show: isCompanyOwner(user) },
         { Icon: Shield,    label: 'Admin Console',    abs: '/admin/dashboard',         show: !isCompanyOwner(user) && user?.companyRole === 'admin' },
         { Icon: Briefcase, label: 'Manager Portal',   abs: '/manager/dashboard/overview', show: user?.companyRole === 'manager' || (user?.managedDepartments?.length > 0) },

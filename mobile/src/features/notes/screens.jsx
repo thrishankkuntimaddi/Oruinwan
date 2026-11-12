@@ -38,6 +38,7 @@ import { useLongPress } from '../chats/messages.jsx';
 import { useLiveDocument } from '../../lib/collab/useCollab.js';
 import { useNoteBinding } from '../../lib/collab/useEditorBinding.js';
 import { collabView } from '../../lib/collab/state.js';
+import { useServerFlag } from '../../config/serverFlags.js';
 import { CollabBanner, PresenceAvatars } from '../../lib/collab/CollabUi.jsx';
 
 // Same words as the web's Notes panel (All · Starred chips, the Archived section).
@@ -57,7 +58,10 @@ export const NOTES_SECTIONS = [
 
 /** Notes tab root: a Notes · Roadmap control on top; roadmap items open in this tab's stack. */
 export function NotesScreen() {
-  const [section, setSection] = useState(() => (prefs.get('notes.section', 'notes') === 'roadmap' ? 'roadmap' : 'notes'));
+  const planningOn = useServerFlag('planning');
+  const [chosen, setSection] = useState(() => (prefs.get('notes.section', 'notes') === 'roadmap' ? 'roadmap' : 'notes'));
+  // The roadmap is part of planning; with it switched off on the server, Notes is notes only.
+  const section = planningOn ? chosen : 'notes';
   const pick = (v) => {
     prefs.set('notes.section', v);
     setSection(v);
@@ -67,6 +71,7 @@ export function NotesScreen() {
       <Segmented size="sm" options={NOTES_SECTIONS} value={section} onChange={pick} />
     </div>
   );
+  if (!planningOn) return <NotesList />;
   return section === 'roadmap' ? <RoadmapScreen section={control} /> : <NotesList section={control} />;
 }
 

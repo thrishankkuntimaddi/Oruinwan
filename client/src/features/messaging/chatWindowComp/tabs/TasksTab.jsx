@@ -14,6 +14,7 @@ import { KanbanColumn } from './channelTasks/ChannelTaskBoard';
 import ChannelTaskDetail from './channelTasks/ChannelTaskDetail';
 import ChannelTaskCreateModal from './channelTasks/ChannelTaskCreateModal';
 import { useMilestones } from '../../../../components/tasksComp/useTaskPlanning';
+import { useFlag } from '../../../../contexts/FeatureFlagsContext';
 import { MilestoneProgressStrip } from '../../../../components/tasksComp/MilestonesView';
 import { useBlockedPrompt } from '../../../../components/tasksComp/BlockedTaskDialog';
 import { blockedFromError } from '../../../../utils/taskTime';
@@ -69,7 +70,8 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const permsFor = useCallback((t) => taskPerms(t, me, isManager), [me, isManager]);
     const fail = useCallback((err, fallback) => showToast(taskErrorMessage(err, fallback), 'error'), [showToast]);
     const { ask: askBlocked, dialog: blockedDialog } = useBlockedPrompt();
-    const { milestones } = useMilestones(workspaceId, (m) => showToast(m, 'error'));
+    const planningOn = useFlag('planning');
+    const { milestones } = useMilestones(planningOn ? workspaceId : null, (m) => showToast(m, 'error'));
     const patchTask = useCallback((id, patch) => setTasks((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x))), []);
 
     const loadTasks = useCallback(async () => {

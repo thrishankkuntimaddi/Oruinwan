@@ -11,6 +11,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { downloadLibraryFile } from '../../hooks/useFiles';
 import FileShareDialog, { FILE_SHARE_CSS } from './FileShareDialog';
 import StartReviewDialog from '../designReview/StartReviewDialog';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import designReviewService from '../../services/designReviewService';
 import { reviewKind, REVIEW_STATUS } from '../designReview/reviewGeometry';
 
@@ -75,6 +76,7 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
     const canEdit = canEditFile(file, userId);
     const { showToast } = useToast();
     const inRouter = useInRouterContext();
+    const reviewsOn = useFlag('designReviews');
 
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
@@ -241,7 +243,7 @@ export default function FilePreviewPanel({ file, workspaceId, api, allTags = [],
                             )}
                         </div>
 
-                        {inRouter && reviewKind(file.mimeType) && <FileReviews file={file} workspaceId={workspaceId} />}
+                        {inRouter && reviewsOn && reviewKind(file.mimeType) && <FileReviews file={file} workspaceId={workspaceId} />}
 
                         <div style={{ display: 'flex', gap: 8 }}>
                             <Btn variant="primary" icon={Download} onClick={() => download()} style={{ flex: 1, justifyContent: 'center' }}>Download</Btn>

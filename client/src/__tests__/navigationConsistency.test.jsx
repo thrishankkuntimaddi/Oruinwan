@@ -90,6 +90,10 @@ describe('task layouts in the URL', () => {
         expect(viewModeFromSearch('?view=milestones')).toBe('milestones');
         expect(viewModeFromSearch('?view=time')).toBe('time');
         expect(viewModeFromSearch('?view=nope')).toBe('list');
+        // With the planning flag off, sprints and milestones fall back to the list.
+        expect(viewModeFromSearch('?view=sprint', { planning: false })).toBe('list');
+        expect(viewModeFromSearch('?view=milestones', { planning: false })).toBe('list');
+        expect(viewModeFromSearch('?view=timeline', { planning: false })).toBe('timeline');
         expect(viewModeFromSearch('')).toBe('list');
     });
 });

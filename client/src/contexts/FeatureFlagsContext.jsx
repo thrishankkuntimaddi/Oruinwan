@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import logger from '../utils/logger';
 import { IS_SITE } from '../appMode/env';
@@ -52,8 +52,10 @@ export function useFlag(name) {
  */
 export function FeatureRoute({ flag, redirectTo = '/', children }) {
     const { flags, loaded } = useContext(FeatureFlagsContext);
+    const params = useParams();
     if (!loaded) return null;
-    if (flags[flag] !== true) return <Navigate to={redirectTo} replace />;
+    // redirectTo may be a function of the route params, e.g. ({ workspaceId }) => `/workspace/${workspaceId}/tasks`.
+    if (flags[flag] !== true) return <Navigate to={typeof redirectTo === 'function' ? redirectTo(params) : redirectTo} replace />;
     return children;
 }
 

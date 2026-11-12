@@ -7,10 +7,12 @@ import SignupForm from '../../components/loginpage/SignupForm';
 import GoogleSignupStep from '../../components/loginpage/GoogleSignupStep';
 import { finishGoogleSession } from '../../components/loginpage/googleContinue';
 import { ssoErrorMessage } from '../../components/loginpage/SsoSignIn';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import AuthShell from '../../components/public/AuthShell';
 import BrandMark from '../../shared/components/ui/BrandMark';
 
 const LoginPage = () => {
+    const companySignupOn = useFlag('companySignup');
     const [searchParams, setSearchParams] = useSearchParams();
     const mode = searchParams.get('mode');
     const [isSignup, setIsSignup] = useState(mode === 'signup');
@@ -113,7 +115,9 @@ const LoginPage = () => {
             </>)}
 
             <p className="orw-auth__note">
-                Setting up for an organisation? <Link className="orw-link" to="/register-company">Register your company</Link>
+                {companySignupOn
+                    ? <>Setting up for an organisation? <Link className="orw-link" to="/register-company">Register your company</Link></>
+                    : <>Setting up for a whole company? <a className="orw-link" href="mailto:admin@poelys.com?subject=Oruinwan%20Enterprise">Talk to us about Enterprise</a></>}
             </p>
         </AuthShell>
     );

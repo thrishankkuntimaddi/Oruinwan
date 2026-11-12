@@ -32,6 +32,7 @@ import WorkspacePanel, { PanelSection } from '../../components/layout/WorkspaceP
 import { EmptyState } from '../../components/ui/page';
 import '../../styles/gloss-x-panels.css';
 import { usePlan } from '../../features/plan/usePlan';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import { planBlock, blockedButtonProps, guardAction } from '../../features/plan/planLimit';
 import '../../features/plan/plan.css';
 
@@ -90,8 +91,10 @@ const VIEW_MODES = [
 const PLANNING_MODES = ['milestones', 'time'];
 
 /** ?view= → the layout or planning view to show (unknown or missing → list). Exported for tests. */
-export function viewModeFromSearch(search) {
+export function viewModeFromSearch(search, { planning = true } = {}) {
   const v = new URLSearchParams(search || '').get('view');
+  // Sprints and milestones belong to the planning flag; with it off they fall back to the list.
+  if (!planning && (v === 'sprint' || v === 'milestones')) return 'list';
   return VIEW_MODES.some((m) => m.key === v) || PLANNING_MODES.includes(v) ? v : 'list';
 }
 
@@ -175,12 +178,15 @@ function ListRow({ task, view, selected, can, milestoneName, onOpen, onDelete, o
 export default function MyTasks({ section, children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const reviewsMode = section === 'reviews';
+  const planningOn = useFlag('planning');
+  const reviewsOn = useFlag('designReviews');
+  const reviewsMode = section === 'reviews' && reviewsOn;
+  const viewModes = planningOn ? VIEW_MODES : VIEW_MODES.filter((m) => m.key !== 'sprint');
   const requestedView = new URLSearchParams(location.search).get('tab');
   // All tasks unless another view is asked for (like the phone app).
   const activeView = VIEW_BY_KEY[requestedView] ? requestedView : 'all-tasks';
   // The layout lives in the URL (?view=) so back and refresh keep it.
-  const viewMode = reviewsMode ? null : viewModeFromSearch(location.search);
+  const viewMode = reviewsMode ? null : viewModeFromSearch(location.search, { planning: planningOn });
 
   const {
     tasks, loading, refreshing, workspaceId, createTask, updateTask, patchTaskLocal, deleteTask, restoreTask,
@@ -215,7 +221,7 @@ export default function MyTasks({ section, children }) {
   const [transferTask, setTransferTask] = useState(null);
   const [prefill, setPrefill] = useState(null); // template draft for the create dialog
   const [templatesOpen, setTemplatesOpen] = useState(null); // null | 'manage' | 'use'
-  const planning = useMilestones(workspaceId, (m) => showToast(m, 'error'));
+  const planning = useMilestones(planningOn ? workspaceId : null, (m) => showToast(m, 'error'));
   const milestoneNames = useMemo(() => new Map(planning.milestones.map((m) => [m.id, m.name])), [planning.milestones]);
 
   useEffect(() => { setChannelFilter('all'); }, [activeView]);
@@ -405,19 +411,23 @@ export default function MyTasks({ section, children }) {
           </PanelSection>
 
           <PanelSection label="Planning">
+            {planningOn && (
             <button type="button" className={`gl-item${viewMode === 'milestones' ? ' is-active' : ''}`} aria-current={viewMode === 'milestones' ? 'page' : undefined} onClick={() => setViewMode('milestones')}>
               <Flag size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Milestones</span>
               <span className="gl-count">{planning.milestones.length}</span>
             </button>
+            )}
             <button type="button" className={`gl-item${viewMode === 'time' ? ' is-active' : ''}`} aria-current={viewMode === 'time' ? 'page' : undefined} onClick={() => setViewMode('time')}>
               <Clock size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Time report</span>
             </button>
+            {reviewsOn && (
             <button type="button" className={`gl-item${reviewsMode ? ' is-active' : ''}`} aria-current={reviewsMode ? 'page' : undefined} onClick={openReviews}>
               <PenTool size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Design reviews</span>
             </button>
+            )}
             <button type="button" className="gl-item" onClick={() => setTemplatesOpen('manage')}>
               <LayoutTemplate size={14} className="gl-x-item-icon" />
               <span className="gl-x-item-title">Templates</span>
@@ -494,7 +504,7 @@ export default function MyTasks({ section, children }) {
                 {PRIORITIES.map((p) => <option key={p} value={p}>{priorityLabel(p)}</option>)}
               </select>
               <div className="gl-tabs gl-x-tabs-fit gl-x-vs" role="group" aria-label="Layout">
-                {VIEW_MODES.map(({ key, Icon, label }) => (
+                {viewModes.map(({ key, Icon, label }) => (
                   <button key={key} type="button" className={`gl-tab${viewMode === key ? ' is-active' : ''}`} onClick={() => setViewMode(key)} aria-pressed={viewMode === key} title={label}>
                     <Icon size={14} /><span className="tk-vs-label">{label}</span>
                   </button>

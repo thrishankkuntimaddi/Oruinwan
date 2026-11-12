@@ -63,7 +63,8 @@ async function main() {
     SMTP_FALLBACK_HOST: '',
     REDIS_URL: '',
     GEMINI_API_KEY: '',
-    FEATURES_ENABLED: '',
+    // Areas hidden by default (focus) stay covered by the e2e suite.
+    FEATURES_ENABLED: 'planning,designReviews,companySignup',
     STORAGE_DRIVER: 'local',
     LOCAL_UPLOAD_DIR: path.join(__dirname, '..', '.auth', 'uploads'),
     // "Continue with Google" without Google: tokens reading "e2e-google:<email>" (test only).

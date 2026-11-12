@@ -47,6 +47,7 @@ vi.mock('../../data/session.js', () => ({ api: () => fake, useSession: mockSessi
 const { useLayout } = await import('../../app/layout.js');
 const { TaskScreen } = await import('./screens.jsx');
 const { clearQueries } = await import('../../data/query.js');
+const { useServerFlags } = await import('../../config/serverFlags.js');
 
 const LAYOUTS = { phone: { wide: false, split: false }, split: { wide: false, split: true }, wide: { wide: true, split: true } };
 
@@ -54,6 +55,8 @@ beforeEach(() => {
   cleanup();
   clearQueries();
   vi.clearAllMocks();
+  // Sprints and milestones show only when the server has planning on.
+  useServerFlags.getState().setFlags({ planning: true });
 });
 
 describe.each(Object.keys(LAYOUTS))('task page (%s layout)', (layout) => {

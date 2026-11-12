@@ -18,6 +18,7 @@ import { getUserPreferences } from '../../../hooks/useUserPreferences';
 import { useWorkspaceFeatures } from '../../../hooks/useWorkspaceFeatures';
 import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
 import RoadmapPanelList from './RoadmapPanelList';
+import { useFlag } from '../../../contexts/FeatureFlagsContext';
 import MakeTaskModal from '../../tasksComp/MakeTaskModal';
 import { noteTaskDraft, openTaskInApp, sourceTaskMenuLabel } from '../../../utils/sourceTask';
 import '../../../styles/gloss-x-panels.css';
@@ -139,7 +140,8 @@ const NotesPanel = ({ title }) => {
     // The roadmap lives in Notes: /workspace/:id/roadmap shows it with this panel beside it.
     // It rolls up milestones and tasks, so it follows the Tasks switch like it always has.
     const features = useWorkspaceFeatures(workspaceId);
-    const roadmapOn = features.tasks !== false;
+    const planningOn = useFlag('planning');
+    const roadmapOn = features.tasks !== false && planningOn;
     const onRoadmap = /\/roadmap(\/|$)/.test(location.pathname);
     const activeTab = onRoadmap ? 'roadmap' : noteTab;
     const selectTab = (id) => {

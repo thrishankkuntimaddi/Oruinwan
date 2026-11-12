@@ -48,6 +48,20 @@ describe('feature flags', () => {
     expect(flags).not.toHaveProperty('nope');
   });
 
+  test('focus areas (planning, design reviews, company sign-up) are off by default', () => {
+    const flags = getFlags({});
+    expect(flags.planning).toBe(false);
+    expect(flags.designReviews).toBe(false);
+    expect(flags.companySignup).toBe(false);
+  });
+
+  test('camelCase flags can be listed in any case', () => {
+    const flags = getFlags({ FEATURES_ENABLED: 'designreviews,CompanySignup,planning' });
+    expect(flags.designReviews).toBe(true);
+    expect(flags.companySignup).toBe(true);
+    expect(flags.planning).toBe(true);
+  });
+
   test('"all" enables every flag', () => {
     expect(Object.values(getFlags({ FEATURES_ENABLED: 'all' })).every(Boolean)).toBe(true);
   });

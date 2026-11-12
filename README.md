@@ -73,7 +73,7 @@ Oruinwan is MIT-licensed. The **Free** plan has every feature; **Pro** ($5 per m
 ### Tasks and planning
 - Tasks from a message, a note or a file (or `/task`), with owners, due dates, boards, linked tickets and a discussion for each task
 - A calendar with meetings, huddles, tasks due, reminders and scheduled messages
-- Planning views and design reviews with comments on the work itself
+- Timeline, workload and time reports; sprints, milestones, the roadmap and design reviews are switched off by default to keep the product focused (turn them on with `FEATURES_ENABLED=planning,designReviews`)
 
 ### Notes and knowledge
 - Notes with live co-editing, pages, templates, *Remind me* and a roadmap
@@ -123,7 +123,7 @@ Every plan has every feature. Plans differ in room, support and who runs it ([bu
 
 **Upgrade to Pro:** press *Upgrade to Pro* on the [pricing page](https://oruinwan.poelys.com/pricing) (or in Settings → Plan & usage) and send the email it opens; we reply with an invoice and switch your workspace on once it's paid, usually the same business day. **Enterprise:** press *Talk to us*, or write to [admin@poelys.com](mailto:admin@poelys.com?subject=Oruinwan%20Enterprise%20enquiry) with your company, team size and where it should run.
 
-Everyone inside a Pro workspace gets Pro limits in it. Downgrading never deletes anything; only new additions over a limit are refused. Company accounts (registered and approved through *Register company*) are on Enterprise terms. On your own server you can change or remove every limit ([Configurable limits](#configurable-limits)).
+Everyone inside a Pro workspace gets Pro limits in it. Downgrading never deletes anything; only new additions over a limit are refused. Company accounts are on Enterprise terms; self-serve *Register company* is off by default (`FEATURES_ENABLED=companySignup`), and we set companies up with them. On your own server you can change or remove every limit ([Configurable limits](#configurable-limits)).
 
 ---
 

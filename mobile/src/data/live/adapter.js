@@ -11,6 +11,7 @@ import {
 import { challengeError, signinAdapter } from './adapter.signin.js';
 import { connectRealtime, disconnectRealtime, joinWorkspace, realtimeConnected, realtimeSocket, resumeRealtime, socketEmit, socketRequest } from './realtime.js';
 import { prefs } from '../../native/storage.js';
+import { refreshServerFlags } from '../../config/serverFlags.js';
 import { useE2ee } from '../e2ee.js';
 import { normalizeServerUrl } from './server.js';
 import { clientPlatform } from '../../native/index.js';
@@ -475,6 +476,8 @@ async function afterSignIn(user) {
   me = user;
   prefs.set('live.user', user);
   connectRealtime(serverUrl());
+  // Which areas this server has switched on (planning, design reviews…); cached for next start.
+  void refreshServerFlags(serverUrl());
 }
 
 /**

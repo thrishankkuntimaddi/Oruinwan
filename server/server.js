@@ -276,6 +276,9 @@ app.use("/api/otp", require("./src/shared/routes/otp.routes"));
 app.use("/api/companies", require("./src/features/company/company.routes"));
 app.use("/api/companies", require("./src/features/company/settings.routes"));
 app.use("/api/companies", require("./src/features/company/metrics.routes"));
+// Self-serve sign-up of a new company is behind a flag (Enterprise is set up for customers);
+// verify/setup of companies that already exist keep working.
+app.post("/api/companies/register", requireFlag("companySignup"));
 app.use("/api/companies", require("./src/features/company-registration/registration.routes"));
 app.use("/api/companies", require("./src/features/employees/employee.routes"));
 app.use("/api/companies", require("./src/features/domain-verification/domain.routes"));
@@ -332,9 +335,9 @@ app.use("/api/ai", requireAuth, require("./src/features/ai/insights/ai-insights.
 
 app.use("/api/activity", require("./src/features/activity/activity.routes"));
 
-app.use("/api/sprints", require("./src/features/sprints/sprints.routes"));
-app.use("/api/milestones", require("./src/features/milestones/milestones.routes"));
-app.use("/api/v2/roadmap", require("./src/features/roadmap/roadmap.routes"));
+app.use("/api/sprints", requireFlag("planning"), require("./src/features/sprints/sprints.routes"));
+app.use("/api/milestones", requireFlag("planning"), require("./src/features/milestones/milestones.routes"));
+app.use("/api/v2/roadmap", requireFlag("planning"), require("./src/features/roadmap/roadmap.routes"));
 app.use("/api/task-templates", require("./src/features/task-templates/task-templates.routes"));
 
 // Domains that have moved to src/modules/<name> mount themselves (see src/modules/index.js).
@@ -392,7 +395,7 @@ app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
 app.use("/api/v2/stickers", require("./src/features/stickers/stickers.routes"));
 
 app.use("/api/v2/files", require("./src/features/files/files.routes"));
-app.use("/api/v2/design-reviews", require("./src/features/design-review/designReview.routes"));
+app.use("/api/v2/design-reviews", requireFlag("designReviews"), require("./src/features/design-review/designReview.routes"));
 app.use("/api/v2/knowledge", require("./src/features/knowledge/knowledge.routes"));
 
 app.use("/api/v2/meetings", require("./src/features/meetings/meetings.routes"));
