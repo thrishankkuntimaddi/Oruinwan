@@ -235,9 +235,13 @@ jobs:
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           IN=app/build/outputs/apk/github/release/app-github-release-unsigned.apk
+          # A throwaway key just for the emulator (the runner has no debug keystore).
+          KS="$RUNNER_TEMP/emulator-check.keystore"
+          keytool -genkeypair -keystore "$KS" -storepass android -keypass android -alias check \
+            -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Oruinwan emulator check" -noprompt
           "$BT/zipalign" -f -p 4 "$IN" shrunk-aligned.apk
-          "$BT/apksigner" sign --ks ~/.android/debug.keystore --ks-pass pass:android --key-pass pass:android \
-            --ks-key-alias androiddebugkey --out shrunk-release.apk shrunk-aligned.apk
+          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android \
+            --ks-key-alias check --out shrunk-release.apk shrunk-aligned.apk
       - name: Shrunk release artifact
         if: env.SIGNED_ANDROID != 'true'
         uses: actions/upload-artifact@v4
