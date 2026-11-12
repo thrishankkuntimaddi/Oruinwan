@@ -27,6 +27,7 @@ import ProfileTrigger from '../../profileCard/ProfileTrigger';
 import { setOpenThread, clearOpenThread } from '../../notifications/attention';
 import { indexConversation } from '../../../utils/localMessageIndex';
 import { useAuth } from '../../../contexts/AuthContext';
+import { mentionTextFor } from '@platform/people/mentions.js';
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', conversationName = '', onClose, socket, currentUserId, showHeader = true, canOpenBeside = true, className = "", style = {}, members: membersProp = null, broadcastMentionsAllowed = true, agentId = null, slashContext = null }) {
     const { showToast } = useToast();
@@ -524,7 +525,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     attachments: [],
                     clientTempId: tempId,
                     // Plain mention handles only (@name, @here, @channel), so mentions notify.
-                    mentionText: ((mentionText || replyText).match(/@[\w.-]+/g) || []).join(' '),
+                    // Known usernames may have spaces ("@Ana Silva"): platform/people/mentions.js.
+                    mentionText: mentionTextFor(mentionText || replyText),
                 });
             });
 

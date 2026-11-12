@@ -97,6 +97,24 @@ export function findKnownMentions(text) {
   return findMentions(text, null, { prepared });
 }
 
+/**
+ * The handles to send the server as `mentionText` (messages are encrypted, so the server can't
+ * read them): known usernames (spaces included, longest name wins) plus @channel/@here/@everyone
+ * when allowed. `usernames` defaults to the names set by setMentionNames. Web and phone use this.
+ */
+export function mentionTextFor(text, usernames = null, { allowBroadcast = true } = {}) {
+  const out = new Set();
+  const found = usernames ? findMentions(text, [...usernames]) : findKnownMentions(text);
+  for (const m of found) {
+    const handle = m.key;
+    if (!m.known && (handle === 'channel' || handle === 'here' || handle === 'everyone')) {
+      // @everyone is the same as @channel on the server.
+      if (allowBroadcast) out.add(`@${handle}`);
+    } else if (m.known) out.add(`@${handle}`);
+  }
+  return [...out].join(' ');
+}
+
 export function subscribeMentionNames(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);

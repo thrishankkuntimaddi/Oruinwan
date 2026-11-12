@@ -5,13 +5,6 @@ import logger from '../../../../utils/logger';
 export default function useHeaderActions({ chat, showToast, onClose, onDeleteChat, onChatCleared }) {
 
     
-    const handleShowThreadsView = useCallback(() => {
-        showToast('Threads view coming soon!', 'info');
-    }, [showToast]);
-
-    const handleShowMemberList = useCallback(() => true, []);
-
-    
     const handleExitChannel = useCallback(async () => {
         if (!window.confirm('Are you sure you want to exit this channel?')) return;
         try {
@@ -103,8 +96,6 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
     }, [chat, showToast]);
 
     return {
-        handleShowThreadsView,
-        handleShowMemberList,
         handleExitChannel,
         handleDeleteChannel,
         handleClearChat,

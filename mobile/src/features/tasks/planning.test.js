@@ -59,7 +59,9 @@ describe('boards', () => {
   ];
   it('groups a sprint by status', () => {
     const board = sprintBoard(tasks, 's');
-    expect(board.find((c) => c.status === 'todo').items.map((t) => t.id)).toEqual(['a']);
+    // Backlog is its own column, like the web board.
+    expect(board.find((c) => c.status === 'backlog').items.map((t) => t.id)).toEqual(['a']);
+    expect(board.find((c) => c.status === 'todo').items).toEqual([]);
     expect(board.find((c) => c.status === 'done').items.map((t) => t.id)).toEqual(['b']);
     expect(board.flatMap((c) => c.items)).toHaveLength(2);
   });

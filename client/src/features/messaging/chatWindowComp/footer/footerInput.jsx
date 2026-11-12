@@ -25,6 +25,7 @@ import VideoNoteRecorder from "./VideoNoteRecorder";
 import UploadTray from "./UploadTray";
 import useUploadQueue from "./useUploadQueue";
 import { COMPOSER_MENTION_EVENT } from "../../../profileCard/composerBridge";
+import { mentionTextFor } from '@platform/people/mentions.js';
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -368,7 +369,7 @@ export default function FooterInput({
   // The actions every composer has; the conversation adds the rest through `slashContext`.
   const skipCommandRef = useRef(false);
   const sendForCommand = async (text, extra = {}) => {
-    const handles = (String(text).match(/@[\w.-]+/g) || []).join(' ');
+    const handles = mentionTextFor(String(text));
     const r = await onSend(text, { mentionText: handles, ...extra });
     const id = r?.message?._id || r?.message?.id || r?.id || null;
     return id ? { id: String(id) } : null;

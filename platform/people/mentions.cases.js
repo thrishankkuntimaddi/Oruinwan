@@ -1,5 +1,5 @@
 // Shared cases for platform/people/mentions.js, run by the web and phone test suites.
-import { findMentions, mentionedPeople } from './mentions.js';
+import { findMentions, mentionedPeople, mentionTextFor, setMentionNames } from './mentions.js';
 
 const NAMES = ['Pakanati Shiva Kumar Goud', 'Muzamil K', 'Thrishank Kuntimaddi', 'varshitha gajjala k', 'varshitha', 'Manogna'];
 
@@ -20,6 +20,12 @@ export function defineMentionTests({ describe, it, expect }) {
     it('keeps one-word handles, skips emails and URLs', () => {
       expect(findMentions('hi @here and @gemini', NAMES).map((x) => [x.key, x.known])).toEqual([['here', false], ['gemini', false]]);
       expect(findMentions('mail me@x.io or http://a/@b', NAMES)).toEqual([]);
+    });
+    it('sends whole usernames to the server as mentionText (not just the first word)', () => {
+      expect(mentionTextFor('ping @Pakanati Shiva Kumar Goud and @here', NAMES)).toBe('@pakanati shiva kumar goud @here');
+      expect(mentionTextFor('@channel @nobody', NAMES, { allowBroadcast: false })).toBe('');
+      setMentionNames(NAMES);
+      expect(mentionTextFor('hi @Muzamil K')).toBe('@muzamil k'); // names from setMentionNames
     });
     it('finds people by their usernames', () => {
       const people = NAMES.map((username, i) => ({ id: String(i), username }));

@@ -1,5 +1,6 @@
 // Planning helpers, free of React: time totals, sprint boards, milestones and the timeline.
 import { describeRecurring } from './recurrence.js';
+import { BOARD_STATUSES } from '../../../../platform/tasks/taskRules.js';
 
 const DAY = 86_400_000;
 
@@ -48,7 +49,8 @@ export function openSprints(sprints) {
   return (sprints || []).filter((s) => s.status in order).sort((a, b) => order[a.status] - order[b.status] || String(a.start).localeCompare(String(b.start)));
 }
 
-export const BOARD_STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'];
+// Same columns as the web board (platform/tasks/taskRules.js), Backlog included.
+export { BOARD_STATUSES };
 
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 
@@ -57,7 +59,7 @@ export function sprintBoard(tasks, sprintId) {
   const inSprint = (tasks || []).filter((t) => sameId(t.sprintId, sprintId) && t.status !== 'cancelled');
   return BOARD_STATUSES.map((status) => ({
     status,
-    items: inSprint.filter((t) => (status === 'todo' ? t.status === 'todo' || t.status === 'backlog' : t.status === status)),
+    items: inSprint.filter((t) => t.status === status),
   }));
 }
 

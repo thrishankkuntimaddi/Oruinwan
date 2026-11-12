@@ -1,26 +1,18 @@
-// Shared domain constants. Task statuses and transitions mirror server/utils/workflowValidator.js.
+// Shared domain constants. Task statuses, the workflow and labels come from platform/tasks/taskRules.js
+// (the same file the web app uses; the server's workflow is checked against it in taskRules.test.js).
+import { STATUS_LABELS, TASK_STATUSES, TASK_TRANSITIONS } from '../../../platform/tasks/taskRules.js';
 
-export const TASK_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
+export { TASK_STATUSES, TASK_TRANSITIONS };
 
 // Colours match client/src/utils/taskMeta.js.
 export const STATUS_META = {
-  backlog: { label: 'Backlog', color: '#8c8c8c' },
-  todo: { label: 'To do', color: '#a8a8a8' },
-  in_progress: { label: 'In progress', color: '#6ea8fe' },
-  review: { label: 'In review', color: '#b59cff' },
-  blocked: { label: 'Blocked', color: '#e05252' },
-  done: { label: 'Done', color: '#5aba8a' },
-  cancelled: { label: 'Cancelled', color: '#626262' },
-};
-
-export const TASK_TRANSITIONS = {
-  backlog: ['todo', 'in_progress', 'review', 'cancelled'],
-  todo: ['in_progress', 'review', 'backlog', 'cancelled'],
-  in_progress: ['review', 'blocked', 'todo', 'backlog', 'done', 'cancelled'],
-  review: ['done', 'in_progress', 'blocked', 'todo'],
-  blocked: ['in_progress', 'todo', 'review', 'done'],
-  done: ['todo', 'in_progress'],
-  cancelled: ['backlog', 'todo'],
+  backlog: { label: STATUS_LABELS.backlog, color: '#8c8c8c' },
+  todo: { label: STATUS_LABELS.todo, color: '#a8a8a8' },
+  in_progress: { label: STATUS_LABELS.in_progress, color: '#6ea8fe' },
+  review: { label: STATUS_LABELS.review, color: '#b59cff' },
+  blocked: { label: STATUS_LABELS.blocked, color: '#e05252' },
+  done: { label: STATUS_LABELS.done, color: '#5aba8a' },
+  cancelled: { label: STATUS_LABELS.cancelled, color: '#626262' },
 };
 
 export const TASK_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];

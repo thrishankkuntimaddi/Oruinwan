@@ -4,41 +4,35 @@
  * The server's values are used as-is everywhere (no "Completed"/"Emergency"
  * aliases); only labels are for display.
  *
- * Keep TRANSITIONS in sync with server/utils/workflowValidator.js.
+ * Statuses, the workflow and labels come from platform/tasks/taskRules.js (shared with the phone
+ * app and checked against server/utils/workflowValidator.js).
  */
+import {
+    TASK_STATUSES, BOARD_STATUSES as SHARED_BOARD, OPEN_STATUSES as SHARED_OPEN, CLOSED_STATUSES as SHARED_CLOSED,
+    TASK_TRANSITIONS, canTransition as sharedCanTransition, statusLabel as sharedStatusLabel,
+    isClosedStatus, STATUS_LABELS, priorityLabel as sharedPriorityLabel,
+} from '@platform/tasks/taskRules.js';
 
-export const STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
+export const STATUSES = TASK_STATUSES;
 
 export const STATUS_META = {
-    backlog:     { label: 'Backlog',     color: 'var(--text-muted)' },
-    todo:        { label: 'To do',       color: 'var(--text-secondary)' },
-    in_progress: { label: 'In progress', color: '#6ea8fe' },
-    review:      { label: 'In review',   color: '#b59cff' },
-    blocked:     { label: 'Blocked',     color: 'var(--state-danger, #e05252)' },
-    done:        { label: 'Done',        color: 'var(--state-success, #5aba8a)' },
-    cancelled:   { label: 'Cancelled',   color: 'var(--text-muted)' },
+    backlog:     { label: STATUS_LABELS.backlog,     color: 'var(--text-muted)' },
+    todo:        { label: STATUS_LABELS.todo,       color: 'var(--text-secondary)' },
+    in_progress: { label: STATUS_LABELS.in_progress, color: '#6ea8fe' },
+    review:      { label: STATUS_LABELS.review,   color: '#b59cff' },
+    blocked:     { label: STATUS_LABELS.blocked,     color: 'var(--state-danger, #e05252)' },
+    done:        { label: STATUS_LABELS.done,        color: 'var(--state-success, #5aba8a)' },
+    cancelled:   { label: STATUS_LABELS.cancelled,   color: 'var(--text-muted)' },
 };
 
 /** Board columns, left to right. */
-export const BOARD_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done'];
-
-export const OPEN_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'blocked'];
-export const CLOSED_STATUSES = ['done', 'cancelled'];
-
-const others = (s) => OPEN_STATUSES.filter((x) => x !== s);
-export const TRANSITIONS = {
-    backlog:     [...others('backlog'), 'done', 'cancelled'],
-    todo:        [...others('todo'), 'done', 'cancelled'],
-    in_progress: [...others('in_progress'), 'done', 'cancelled'],
-    review:      [...others('review'), 'done', 'cancelled'],
-    blocked:     [...others('blocked'), 'done', 'cancelled'],
-    done:        ['todo', 'in_progress', 'review'],
-    cancelled:   ['backlog', 'todo'],
-};
-
-export const canTransition = (from, to) => from === to || (TRANSITIONS[from] || []).includes(to);
-export const statusLabel = (s) => STATUS_META[s]?.label || String(s || '').replace(/_/g, ' ');
-export const isClosed = (s) => CLOSED_STATUSES.includes(s);
+export const BOARD_STATUSES = SHARED_BOARD;
+export const OPEN_STATUSES = SHARED_OPEN;
+export const CLOSED_STATUSES = SHARED_CLOSED;
+export const TRANSITIONS = TASK_TRANSITIONS;
+export const canTransition = sharedCanTransition;
+export const statusLabel = sharedStatusLabel;
+export const isClosed = isClosedStatus;
 
 export const PRIORITIES = ['highest', 'high', 'medium', 'low', 'lowest'];
 export const PRIORITY_META = {
@@ -48,7 +42,7 @@ export const PRIORITY_META = {
     low:     { label: 'Low',     color: '#6ea8fe' },
     lowest:  { label: 'Lowest',  color: 'var(--text-muted)' },
 };
-export const priorityLabel = (p) => PRIORITY_META[p]?.label || 'Medium';
+export const priorityLabel = sharedPriorityLabel;
 
 /** Normalise legacy/UI values ("Completed", "In Progress", "Emergency", …) to server values. */
 export function toStatus(value) {

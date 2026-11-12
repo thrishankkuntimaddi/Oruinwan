@@ -5,7 +5,7 @@
 // `mentionText`, as on the web. Usernames can have spaces ("@Pakanati Shiva Kumar Goud"): the
 // longest known name wins (platform/people/mentions.js).
 
-import { findMentions } from '../../../platform/people/mentions.js';
+import { mentionTextFor as sharedMentionTextFor } from '../../../platform/people/mentions.js';
 
 /** While typing: { trigger: '@' | '#', query, start, end } for the word before the caret, or null. */
 export function mentionAt(text, caret = text.length, people = null) {
@@ -79,14 +79,7 @@ export function applyMention(text, at, suggestion) {
  * The handles in a message for the server: known usernames, plus @channel / @here when
  * allowed. '' when there are none. `usernames` is a Set of lower-case usernames.
  */
-export function mentionTextFor(text, usernames, { allowBroadcast = true } = {}) {
-  const out = new Set();
-  for (const m of findMentions(text, usernames ? [...usernames] : [])) {
-    const handle = m.key;
-    if (!m.known && (handle === 'channel' || handle === 'here' || handle === 'everyone')) {
-      // @everyone is the same as @channel on the server.
-      if (allowBroadcast) out.add(`@${handle}`);
-    } else if (m.known) out.add(`@${handle}`);
-  }
-  return [...out].join(' ');
+export function mentionTextFor(text, usernames, opts) {
+  // Shared with the web app (platform/people/mentions.js); an empty list means "no known names".
+  return sharedMentionTextFor(text, usernames || [], opts);
 }

@@ -2,9 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { aiErrorMessage } from '../services/aiService';
 
-/** A message addressed to an assistant: @ai, @oruinwan, @claude, @chatgpt, @gpt, @gemini, @grok (mirrors the server). */
-export const AI_MENTION_RE = /(^|[\s(])@(oruinwan(?:[-_ ]?ai)?|ai|claude|chatgpt|gpt|gemini|grok|local)\b/i;
-export const mentionsAI = (text) => AI_MENTION_RE.test(String(text || ''));
+/** A message addressed to an assistant: @ai, @oruinwan, @claude… (one copy for web and phone, mirrors the server). */
+export { AI_MENTION_RE, mentionsAI } from '@platform/people/aiMention.js';
 
 /** Whether the message @mentions a person (anything other than the assistant). */
 export const mentionsPerson = (mentionText) => String(mentionText || '')
