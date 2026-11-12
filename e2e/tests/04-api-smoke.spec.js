@@ -20,7 +20,11 @@ test('module endpoints respond for a signed-in user', async ({ page }) => {
   expect(iceBody.turn).toBe(false); // no TURN configured in the test stack
 
   const flags = await (await get('/api/flags')).json();
-  expect(flags.flags).toEqual({ billing: false, sso: true, integrations: true, community: false });
+  // The e2e stack turns the areas hidden by default back on (scripts/start-stack.js) so they stay tested.
+  expect(flags.flags).toEqual({
+    billing: false, sso: true, integrations: true, community: false,
+    planning: true, designReviews: true, companySignup: true, privateChats: true,
+  });
 
   // No company in the test stack has configured SSO, so discovery says it's off.
   const sso = await get('/api/auth/sso/discover?email=someone%40example.com');
