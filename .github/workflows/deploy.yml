@@ -1,0 +1,149 @@
+name: Deploy server
+
+# Ships main to the live server after CI passes, with backup, health check and automatic
+# rollback (scripts/deploy/update-from-image.sh). Setup once: docs/DEPLOY.md.
+#
+# Automatic deploys are off until the repository variable AUTO_DEPLOY is "true". "Run workflow"
+# deploys any commit of main by hand at any time (first try, redeploy, or go back to an older commit).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit of main to deploy (empty = latest main)
+        required: false
+        default: ''
+
+# One deploy at a time; a newer one waits for the running one and replaces any queued one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # AWS sign-in with GitHub's OIDC token: no AWS keys stored in GitHub
+
+jobs:
+  deploy:
+    name: Build image and deploy
+    # By hand: always. Automatically: only with AUTO_DEPLOY=true and a green CI run of a push.
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+        vars.AUTO_DEPLOY == 'true' &&
+        github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://oruinwan.poelys.com
+    env:
+      AWS_REGION: ${{ vars.DEPLOY_AWS_REGION || 'ap-south-1' }}
+      HOST: ${{ vars.DEPLOY_HOST }}
+      INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+      SECURITY_GROUP: ${{ vars.DEPLOY_SECURITY_GROUP }}
+      SERVER_URL: ${{ vars.ORUINWAN_SERVER_URL || 'https://api.oruinwan.poelys.com' }}
+      WEB_URL: ${{ vars.DEPLOY_WEB_URL || 'https://oruinwan.poelys.com' }}
+    steps:
+      - name: Pick the commit
+        id: pick
+        env:
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          sha="${RUN_SHA:-$INPUT_SHA}"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pick.outputs.sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Only commits on main
+        id: sha
+        run: |
+          sha=$(git rev-parse HEAD)
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$sha is not on main"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Deploying $(git log --oneline -1)"
+
+      - name: Check the setup
+        run: |
+          missing=""
+          for v in HOST INSTANCE_ID SECURITY_GROUP; do [ -n "${!v}" ] || missing="$missing DEPLOY_$v"; done
+          [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ] || missing="$missing AWS_DEPLOY_ROLE_ARN(secret)"
+          if [ -n "$missing" ]; then echo "::error::Missing repository settings:$missing (docs/DEPLOY.md)"; exit 1; fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Same image as `docker compose build app` on the server, built here instead.
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: oruinwan:${{ steps.sha.outputs.sha }}
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+            VITE_BACKEND_URL=${{ env.SERVER_URL }}
+            VITE_API_URL=${{ env.SERVER_URL }}/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test the image
+        run: |
+          img=oruinwan:${{ steps.sha.outputs.sha }}
+          docker run --rm --entrypoint sh "$img" -c 'test -f /app/dist/index.html && test -f /app/dist/m/index.html && node -e "require(\"/app/server/package.json\")"'
+          docker save "$img" | gzip -1 > oruinwan-image.tar.gz
+          ls -lh oruinwan-image.tar.gz
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # SSH is closed to the internet; open it to this runner only, and close it again below.
+      - name: Open SSH to this runner
+        id: ingress
+        run: |
+          ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "ip=$ip" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress --group-id "$SECURITY_GROUP" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$ip/32,Description=github-actions-deploy}]"
+
+      - name: Copy and install
+        env:
+          SHA: ${{ steps.sha.outputs.sha }}
+        run: |
+          ssh-keygen -t ed25519 -N "" -C gha-deploy -f key -q
+          push_key() {
+            aws ec2-instance-connect send-ssh-public-key --instance-id "$INSTANCE_ID" \
+              --instance-os-user ubuntu --ssh-public-key file://key.pub >/dev/null
+          }
+          OPTS=(-i key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=30)
+          # Instance Connect keys work for 60 s: push one right before each connection.
+          push_key
+          scp "${OPTS[@]}" oruinwan-image.tar.gz scripts/deploy/update-from-image.sh "ubuntu@$HOST:~/"
+          push_key
+          ssh "${OPTS[@]}" "ubuntu@$HOST" "bash ~/update-from-image.sh $SHA ~/oruinwan-image.tar.gz"
+
+      - name: Close SSH again
+        if: always() && steps.ingress.outputs.ip != ''
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id "$SECURITY_GROUP" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${{ steps.ingress.outputs.ip }}/32}]"
+
+      - name: Check from outside
+        run: |
+          for _ in $(seq 1 12); do
+            if curl -fsS "$SERVER_URL/api/health"; then echo; break; fi
+            sleep 5
+          done
+          curl -fsS "$SERVER_URL/api/health" >/dev/null
+          curl -fsS "$WEB_URL/" -o /dev/null
+          echo "Live: ${{ steps.sha.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
