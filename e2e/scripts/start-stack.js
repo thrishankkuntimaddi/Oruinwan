@@ -64,7 +64,7 @@ async function main() {
     REDIS_URL: '',
     GEMINI_API_KEY: '',
     // Areas hidden by default (focus) stay covered by the e2e suite.
-    FEATURES_ENABLED: 'planning,designReviews,companySignup',
+    FEATURES_ENABLED: 'planning,designReviews,companySignup,privateChats',
     STORAGE_DRIVER: 'local',
     LOCAL_UPLOAD_DIR: path.join(__dirname, '..', '.auth', 'uploads'),
     // "Continue with Google" without Google: tokens reading "e2e-google:<email>" (test only).

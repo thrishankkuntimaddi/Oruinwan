@@ -395,6 +395,8 @@ app.use("/api/v2/uploads", require("./src/modules/uploads/upload.routes"));
 app.use("/api/v2/stickers", require("./src/features/stickers/stickers.routes"));
 
 app.use("/api/v2/files", require("./src/features/files/files.routes"));
+// Private chats: end-to-end encrypted between devices; the server holds no key (docs/PRIVATE_CHATS.md).
+app.use("/api/private", requireFlag("privateChats"), require("./src/features/private-chats/privateChat.routes"));
 app.use("/api/v2/design-reviews", requireFlag("designReviews"), require("./src/features/design-review/designReview.routes"));
 app.use("/api/v2/knowledge", require("./src/features/knowledge/knowledge.routes"));
 

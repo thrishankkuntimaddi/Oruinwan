@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import BumpCount from '../../motion/BumpCount';
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Plus, Trash2, Check, Megaphone, Settings2, X, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Check, Megaphone, Settings2, X, MessageSquare, Lock } from "lucide-react";
+import { useFlag } from "../../../contexts/FeatureFlagsContext";
 import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
 import "../shell.css";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
@@ -391,6 +392,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         );
     };
 
+    const privateChatsOn = useFlag('privateChats');
     return (
         <WorkspacePanel
             icon={MessageSquare}
@@ -398,6 +400,13 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             subtitle={activeWorkspace?.name || title || 'Direct messages'}
             actions={(
                 <>
+                    {privateChatsOn && (
+                        <button type="button" className="gl-icon-btn"
+                            onClick={() => navigate(`/workspace/${workspaceId}/private`)}
+                            title="Private chats (end-to-end encrypted)"
+                            aria-label="Private chats"
+                        ><Lock size={15} /></button>
+                    )}
                     <button type="button" className="gl-icon-btn"
                         onClick={() => { setIsSelectionMode(!isSelectionMode); if (isSelectionMode) setSelectedItems(new Set()); }}
                         aria-pressed={isSelectionMode}

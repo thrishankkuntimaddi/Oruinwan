@@ -24,6 +24,7 @@ const FLAGS = Object.freeze({
   planning: 'Sprints, milestones and the roadmap (Tasks → Planning, Notes → Roadmap)',
   designReviews: 'Design reviews (Tasks → Planning → Design reviews)',
   companySignup: 'Self-serve company registration (/register-company); companies set up before keep their console',
+  privateChats: 'Private chats: 1:1 messages end-to-end encrypted between devices, with no server key copy (docs/PRIVATE_CHATS.md)',
 });
 
 const FLAG_NAMES = Object.freeze(Object.keys(FLAGS));

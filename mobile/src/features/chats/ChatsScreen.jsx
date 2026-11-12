@@ -25,6 +25,7 @@ import { chatListTime } from '../../lib/time.js';
 import { plainPreview } from '../../ui/Markdown.jsx';
 import { useChatsUi, openConversation } from './chatsUi.js';
 import { E2eeBanner } from './E2eeBanner.jsx';
+import { useServerFlag } from '../../config/serverFlags.js';
 import { GroupTile } from './groupScreens.jsx';
 import { useLongPress } from './messages.jsx';
 import { useConversationStatus } from './ConversationMenu.jsx';
@@ -278,6 +279,7 @@ function AgentStarter({ agent }) {
 }
 
 export function ChatsScreen() {
+  const privateOn = useServerFlag('privateChats');
   const segment = useChatsUi((s) => s.segment);
   const setSegment = useChatsUi((s) => s.setSegment);
   const { data: channels, loading: cLoading } = useChannels();
@@ -328,6 +330,22 @@ export function ChatsScreen() {
       </TabHeader>
       <Body tab="chats" onRefresh={() => invalidate('channels', 'dms', 'convPrefs')}>
         <E2eeBanner className="mt-1 mb-1" />
+        {privateOn && (segment === 'all' || segment === 'dms') && (
+          <button
+            type="button"
+            onClick={() => nav.push('privateChats')}
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2"
+            data-testid="private-chats"
+          >
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-surface-2 text-accent-ink">
+              <Icon as={Lock} size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold">Private chats</span>
+              <span className="block truncate text-[13px] text-text-2">Private chat: end-to-end encrypted, only on your devices</span>
+            </span>
+          </button>
+        )}
         {loading ? (
           <SkeletonRows count={8} />
         ) : (

@@ -41,6 +41,9 @@ export const ROUTES = {
   unread: pick(chats, 'UnreadScreen'),
   archivedChats: pick(chats, 'ArchivedChatsScreen'),
   outgoing: pick(chats, 'OutgoingScreen'),
+  // End-to-end encrypted 1:1 chats (server flag privateChats).
+  privateChats: pick(() => import('../features/private/screens.jsx'), 'PrivateChatsScreen'),
+  privateChat: pick(() => import('../features/private/screens.jsx'), 'PrivateChatScreen'),
   task: pick(tasks, 'TaskScreen'),
   taskDiscussion: pick(tasks, 'TaskDiscussionScreen'),
   planning: pick(tasks, 'PlanningScreen'),

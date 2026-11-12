@@ -53,6 +53,7 @@ describe('feature flags', () => {
     expect(flags.planning).toBe(false);
     expect(flags.designReviews).toBe(false);
     expect(flags.companySignup).toBe(false);
+    expect(flags.privateChats).toBe(false);
   });
 
   test('camelCase flags can be listed in any case', () => {

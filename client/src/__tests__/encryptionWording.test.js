@@ -19,6 +19,9 @@ const CODE = /\.(js|jsx|ts|tsx)$/;
 const CLAIM = /end[- ]to[- ]end encrypt|zero[- ]knowledge|server (can'?t|cannot) read/i;
 // Saying what Oruinwan is NOT is the honest wording, so negations are allowed.
 const NEGATED = /not (strict )?(“|")?(end[- ]to[- ]end|zero[- ]knowledge)|isn'?t (end[- ]to[- ]end|zero[- ]knowledge)/i;
+// Private chats ARE end-to-end encrypted (device keys only, no server copy: platform/crypto/
+// privateBox.js), so their own screens may say so. Nowhere else may.
+const PRIVATE_CHATS = /[\\/]features[\\/]private[\\/]/;
 
 function files(p) {
     const abs = path.join(REPO, p);
@@ -38,8 +41,11 @@ describe('encryption wording', () => {
     it('never claims end-to-end or zero-knowledge encryption in product copy', () => {
         const offenders = [];
         for (const file of ROOTS.flatMap(files)) {
+            if (PRIVATE_CHATS.test(file)) continue;
             fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
                 if (isComment(line) || isLog(line) || !CLAIM.test(line) || NEGATED.test(line)) return;
+                // Entry points that name Private chats may describe them.
+                if (/private chat/i.test(line)) return;
                 // Search keywords may include the term so people who type it find the article.
                 if (/keywords:/.test(line)) return;
                 offenders.push(`${path.relative(REPO, file)}:${i + 1}: ${line.trim().slice(0, 120)}`);

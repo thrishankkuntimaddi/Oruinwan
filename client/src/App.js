@@ -38,6 +38,8 @@ import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
 import RoadmapPage from "./pages/roadmap/RoadmapPage";
+import PrivateChatsPanel from "./features/private/PrivateChatsPanel";
+import PrivateChatPage from "./features/private/PrivateChatPage";
 import DesignReviewsPage from "./pages/designReview/DesignReviewsPage";
 import DesignReviewPage from "./pages/designReview/DesignReviewPage";
 import Notes from "./pages/SidebarComp/Notes";
@@ -169,6 +171,7 @@ import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 // Where a hidden area sends people (focus flags, server/src/shared/featureFlags).
 const toNotes = ({ workspaceId }) => `/workspace/${workspaceId}/notes`;
 const toTasks = ({ workspaceId }) => `/workspace/${workspaceId}/tasks`;
+const toMessages = ({ workspaceId }) => `/workspace/${workspaceId}/messages`;
 
 // Shown for a moment while the docs chunk loads (same dark backdrop as the docs).
 // The app-wide error screen clears itself when the person goes to another page.
@@ -444,6 +447,40 @@ function App() {
                                     <MainLayout>
                                       <MyTasks />
                                     </MainLayout>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+
+                          {/* Private chats: end-to-end encrypted 1:1 (features/private). */}
+                          <Route
+                            path="/workspace/:workspaceId/private"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <FeatureRoute flag="privateChats" redirectTo={toMessages}>
+                                    <MainLayout sidePanel={<PrivateChatsPanel />}>
+                                      <PrivateChatPage />
+                                    </MainLayout>
+                                    </FeatureRoute>
+                                  </RequireWorkspace>
+                                </WorkspaceScope>
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/workspace/:workspaceId/private/:chatId"
+                            element={
+                              <RequireAuth>
+                                <WorkspaceScope>
+                                  <RequireWorkspace>
+                                    <FeatureRoute flag="privateChats" redirectTo={toMessages}>
+                                    <MainLayout sidePanel={<PrivateChatsPanel />}>
+                                      <PrivateChatPage />
+                                    </MainLayout>
+                                    </FeatureRoute>
                                   </RequireWorkspace>
                                 </WorkspaceScope>
                               </RequireAuth>

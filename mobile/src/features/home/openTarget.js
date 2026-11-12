@@ -19,6 +19,11 @@ export function openPush(data = {}) {
     session.switchWorkspace(data.workspaceId);
   }
   if (session.pickingWorkspace) useSession.setState({ pickingWorkspace: false });
+  // A private message: the push carries no content, only which chat to open.
+  if (data.type === 'private_message' && data.chatId) {
+    nav.open('chats', 'privateChat', { id: data.chatId });
+    return;
+  }
   const conv = data.channelId ? { kind: 'channel', id: data.channelId } : data.dmSessionId ? { kind: 'dm', id: data.dmSessionId } : null;
   if (conv) {
     nav.open('chats', 'conversation', conv);
