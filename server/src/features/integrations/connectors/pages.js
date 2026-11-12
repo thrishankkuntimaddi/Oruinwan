@@ -135,7 +135,8 @@ const notionConnector = {
     search: {
       method: 'GET',
       async run(ctx, { q }) {
-        const r = await notion(ctx, 'post', '/search', { query: clip(q, 100), page_size: 25, sort: { direction: 'descending', timestamp: 'last_edited_time' } });
+        // Pages only: databases need /databases/{id}, and attaching or importing one would fail.
+        const r = await notion(ctx, 'post', '/search', { query: clip(q, 100), page_size: 25, filter: { property: 'object', value: 'page' }, sort: { direction: 'descending', timestamp: 'last_edited_time' } });
         return { items: (r.results || []).map(notionItem) };
       },
     },

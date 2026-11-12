@@ -102,7 +102,7 @@ module.exports = {
   category: 'communication',
   description: 'Bridge Slack channels and Oruinwan channels. Bridged messages are not encrypted on the device.',
   setup: [
-    'Create a Slack app (api.slack.com/apps) in your Slack workspace. Under OAuth & Permissions add the bot scopes channels:history, groups:history, users:read and chat:write (plus chat:write.customize to show the sender’s name), install it and copy the Bot User OAuth Token (xoxb-…).',
+    'Create a Slack app (api.slack.com/apps) in your Slack workspace. Under OAuth & Permissions add the bot scopes channels:read, groups:read, channels:history, groups:history, users:read and chat:write (plus chat:write.customize to show the sender’s name), install it and copy the Bot User OAuth Token (xoxb-…).',
     'From Basic Information copy the Signing Secret.',
     'Or, for outgoing only, create an Incoming Webhook and paste its URL instead of a bot token.',
     'Save, then under Event Subscriptions enable events, paste the request URL shown here and subscribe to the bot events message.channels and message.groups. Invite the app to each Slack channel you bridge (/invite @YourApp).',

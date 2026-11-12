@@ -44,8 +44,10 @@ module.exports = {
   webhook: null,
 
   async test(ctx) {
-    const c = await cal(ctx, 'get', '/calendars/primary', {});
-    return { account: { name: c.summary || null, email: c.id || null } };
+    // calendars.get needs a calendar(.readonly) scope; listing one event works with calendar.events,
+    // the only scope the setup asks for. The list's summary is the calendar's name (usually the email).
+    const r = await cal(ctx, 'get', '/calendars/primary/events', { params: { maxResults: 1 } });
+    return { account: { name: r.summary || null, email: r.summary && r.summary.includes('@') ? r.summary : null } };
   },
 
   actions: {

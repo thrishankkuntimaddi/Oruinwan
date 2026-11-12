@@ -28,6 +28,25 @@ function api(ctx, method, path, { params, data } = {}) {
   });
 }
 
+const WORKSPACE_RE = /^[A-Za-z0-9_.{}-]{1,100}$/;
+
+/**
+ * Workspaces to list repositories from. Bitbucket removed the cross-workspace
+ * GET /2.0/repositories (CHANGE-2770, 2026), so lists go through
+ * /2.0/repositories/{workspace}: the configured workspace, else (user tokens)
+ * the workspaces the user belongs to.
+ */
+async function workspacesOf(ctx) {
+  const set = String(ctx.config.workspace || '').trim();
+  if (set) {
+    if (!WORKSPACE_RE.test(set)) throw httpError(400, 'workspace must be the workspace ID from its URL (bitbucket.org/<workspace>)');
+    return [set];
+  }
+  if (!ctx.config.username) throw httpError(400, 'Enter the workspace ID for an access token');
+  const r = await api(ctx, 'get', '/user/workspaces', { params: { pagelen: 25 } });
+  return (r?.values || []).map((v) => v.workspace?.slug || v.slug).filter(Boolean).slice(0, 10);
+}
+
 const repoPath = (repo) => {
   if (!REPO_RE.test(String(repo || ''))) throw httpError(400, 'repo must be workspace/repository');
   return `/repositories/${repo.split('/').map(encodeURIComponent).join('/')}`;
@@ -125,12 +144,13 @@ module.exports = {
   ],
   form: [
     { key: 'username', label: 'Username or e-mail', kind: 'text', placeholder: 'leave empty for an access token', hint: 'Needed for app passwords and API tokens; leave empty for repository/workspace access tokens.' },
+    { key: 'workspace', label: 'Workspace ID', kind: 'text', placeholder: 'from bitbucket.org/<workspace>', hint: 'Required for repository/workspace access tokens; optional otherwise (all your workspaces are listed).' },
     { key: 'apiToken', label: 'API token, app password or access token', kind: 'secret', required: true },
   ],
   secrets: ['apiToken', 'webhookSecret'],
   generated: ['webhookSecret'],
-  fields: { username: (v) => clip(v, 320) },
-  defaults: () => ({ username: '', routes: [], linkTasks: true, createTasks: false, statusSync: true }),
+  fields: { username: (v) => clip(v, 320), workspace: (v) => clip(String(v || '').trim(), 100) },
+  defaults: () => ({ username: '', workspace: '', routes: [], linkTasks: true, createTasks: false, statusSync: true }),
   memberHidden: ['username'],
   toggles: [
     { key: 'linkTasks', label: 'Link pull requests to tasks', description: 'Task keys like ABC-12 in a PR title, branch or description link it to that task.' },
@@ -149,9 +169,10 @@ module.exports = {
       const me = await api(ctx, 'get', '/user');
       return { account: { login: me.username || me.nickname || null, name: me.display_name || null, avatar: me.links?.avatar?.href || null } };
     }
-    // Access tokens are not tied to a user: list what they can see.
-    const r = await api(ctx, 'get', '/repositories', { params: { role: 'member', pagelen: 1 } });
-    return { account: { name: 'Access token', repositories: r?.size ?? null } };
+    // Access tokens are not tied to a user: list what they can see in their workspace.
+    const [workspace] = await workspacesOf(ctx);
+    const r = await api(ctx, 'get', `/repositories/${encodeURIComponent(workspace)}`, { params: { pagelen: 1 } });
+    return { account: { name: `Access token (${workspace})`, repositories: r?.size ?? null } };
   },
 
   verifyWebhook(req, ctx) {
@@ -166,9 +187,16 @@ module.exports = {
     repos: {
       method: 'GET',
       async run(ctx, { q }) {
-        const params = { role: 'member', pagelen: 50, sort: '-updated_on', ...(q && { q: `name ~ "${clip(q, 80).replace(/"/g, '')}"` }) };
-        const r = await api(ctx, 'get', '/repositories', { params });
-        return { repos: (r?.values || []).map(x => ({ id: x.uuid, path: x.full_name, name: x.name, url: x.links?.html?.href || null, hasIssues: !!x.has_issues })) };
+        const params = {
+          pagelen: 50, sort: '-updated_on',
+          ...(ctx.config.username && { role: 'member' }),
+          ...(q && { q: `name ~ "${clip(q, 80).replace(/"/g, '')}"` }),
+        };
+        const pages = await Promise.all((await workspacesOf(ctx)).map((ws) => api(ctx, 'get', `/repositories/${encodeURIComponent(ws)}`, { params })));
+        const values = pages.flatMap((r) => r?.values || [])
+          .sort((a, b) => String(b.updated_on || '').localeCompare(String(a.updated_on || '')))
+          .slice(0, 50);
+        return { repos: values.map(x => ({ id: x.uuid, path: x.full_name, name: x.name, url: x.links?.html?.href || null, hasIssues: !!x.has_issues })) };
       },
     },
     issues: {

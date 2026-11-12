@@ -81,7 +81,7 @@ const CHECKS = [
     },
   },
   connector('gitlab', ['GITLAB_TOKEN'], () => ({ baseUrl: env('GITLAB_URL') || 'https://gitlab.com', token: env('GITLAB_TOKEN') })),
-  connector('bitbucket', ['BITBUCKET_TOKEN'], () => ({ username: env('BITBUCKET_USERNAME'), apiToken: env('BITBUCKET_TOKEN') })),
+  connector('bitbucket', ['BITBUCKET_TOKEN'], () => ({ username: env('BITBUCKET_USERNAME'), workspace: env('BITBUCKET_WORKSPACE') || 'atlassian', apiToken: env('BITBUCKET_TOKEN') })),
   connector('linear', ['LINEAR_API_KEY'], () => ({ apiKey: env('LINEAR_API_KEY') })),
   connector('slack', ['SLACK_BOT_TOKEN|SLACK_WEBHOOK_URL'], () => ({ botToken: env('SLACK_BOT_TOKEN'), webhookUrl: env('SLACK_WEBHOOK_URL') })),
   connector('teams', ['TEAMS_WEBHOOK_URL'], () => ({ webhookUrl: env('TEAMS_WEBHOOK_URL') })),

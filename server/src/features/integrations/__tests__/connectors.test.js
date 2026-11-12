@@ -114,8 +114,31 @@ describe('Bitbucket', () => {
     await bb.test(ctx(config));
     expect(lastCall()).toMatchObject({ url: 'https://api.bitbucket.org/2.0/user', auth: { username: 'ann', password: 'app-pw' } });
     axios.mockResolvedValue({ data: { size: 3, values: [] } });
-    await bb.test(ctx({ ...config, username: '' }));
+    const r = await bb.test(ctx({ ...config, username: '', workspace: 'acme' }));
     expect(lastCall().headers.Authorization).toBe('Bearer app-pw');
+    // The cross-workspace GET /2.0/repositories is gone (CHANGE-2770): one workspace at a time.
+    expect(lastCall().url).toBe('https://api.bitbucket.org/2.0/repositories/acme');
+    expect(r.account.repositories).toBe(3);
+    await expect(bb.test(ctx({ ...config, username: '' }))).rejects.toThrow(/workspace ID/);
+  });
+
+  it('lists repositories per workspace, never through the removed cross-workspace endpoint', async () => {
+    axios
+      .mockResolvedValueOnce({ data: { values: [{ workspace: { slug: 'acme' } }, { workspace: { slug: 'side' } }] } })
+      .mockResolvedValueOnce({ data: { values: [{ uuid: '1', full_name: 'acme/web', name: 'web', updated_on: '2026-01-01' }] } })
+      .mockResolvedValueOnce({ data: { values: [{ uuid: '2', full_name: 'side/app', name: 'app', updated_on: '2026-02-01' }] } });
+    const { repos } = await bb.actions.repos.run(ctx(config), {});
+    const urls = axios.mock.calls.map(([c]) => c.url);
+    expect(urls).toEqual([
+      'https://api.bitbucket.org/2.0/user/workspaces',
+      'https://api.bitbucket.org/2.0/repositories/acme',
+      'https://api.bitbucket.org/2.0/repositories/side',
+    ]);
+    expect(repos.map((x) => x.path)).toEqual(['side/app', 'acme/web']);
+    axios.mockReset();
+    axios.mockResolvedValue({ data: { values: [] } });
+    await bb.actions.repos.run(ctx({ ...config, workspace: 'acme' }), {});
+    expect(axios.mock.calls.map(([c]) => c.url)).toEqual(['https://api.bitbucket.org/2.0/repositories/acme']);
   });
 
   it('creates an issue in a repository', async () => {
