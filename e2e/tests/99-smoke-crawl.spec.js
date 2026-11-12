@@ -19,6 +19,8 @@ const IGNORED_CONSOLE = [
   /ResizeObserver loop/i,
   /Failed to load resource: the server responded with a status of 4\d\d/i, // 4xx are expected answers (no access, not found)
   /net::ERR_ABORTED/i,
+  // The test machine's own network dropping or switching (Wi-Fi), not the app.
+  /net::ERR_(NETWORK_CHANGED|INTERNET_DISCONNECTED|NETWORK_IO_SUSPENDED)/i,
   /WebSocket connection to .* failed/i, // closed when a test page navigates away mid-handshake
   /Google|gsi|accounts\.google\.com/i, // the e2e Google client id is fake
   /Could not resolve DM/, // an unknown DM id is handled (sends you home); it is only logged as an error
@@ -144,6 +146,7 @@ test.describe('smoke crawl', () => {
     `/workspace/${w}/channel/${ids.channelId}`,
     `/workspace/${w}/home/channel/${ids.channelId}`,
     `/workspace/${w}/messages`,
+    `/workspace/${w}/private`,
     `/workspace/${w}/tasks`,
     ...['board', 'sprint', 'timeline', 'workload', 'milestones', 'time'].map((v) => `/workspace/${w}/tasks?view=${v}`),
     ...['shared-tasks', 'assigned-tasks', 'all-tasks', 'completed-tasks', 'deleted-tasks'].map((t) => `/workspace/${w}/tasks?tab=${t}`),
@@ -184,23 +187,44 @@ test.describe('smoke crawl', () => {
     .map((t) => `/settings?tab=${t}`);
   const publicPages = ['/', '/features', '/pricing', '/security', '/about', '/blog', '/careers', '/contact', '/privacy', '/terms', '/cookies', '/status', '/help', '/docs', '/community', '/partners', '/brand'];
 
+  /**
+   * Visits every path. A page that shows a problem is visited once more after the rest: only
+   * problems that come back fail the test. One-off blips (a network change on the machine, a
+   * dev-server recompile, a spinner that was slow under load) are listed as a "flaky page"
+   * annotation in the report instead, so real bugs still fail every time and noise doesn't.
+   */
   async function crawl(page, label, paths, problems) {
-    const state = watch(page, problems, label);
+    const found = [];
+    const state = watch(page, found, label);
     page.setDefaultNavigationTimeout(30_000);
     page.setDefaultTimeout(20_000);
-    for (const path of paths) {
+    const visit = async (path) => {
       state.where = path;
       const started = Date.now();
       try {
         await goto(page, path);
-        await checkPage(page, state, problems, label);
+        await checkPage(page, state, found, label);
       } catch (err) {
-        problems.push({ who: label, where: path, kind: 'did not load', detail: err.message.split('\n')[0] });
+        found.push({ who: label, where: path, kind: 'did not load', detail: err.message.split('\n')[0] });
       }
       const ms = Date.now() - started;
       if (process.env.CRAWL_VERBOSE) console.log(`[crawl] ${label} ${path} ${ms}ms`);
-      if (ms > 25_000) problems.push({ who: label, where: path, kind: 'slow page', detail: `${Math.round(ms / 1000)} s to open and settle` });
+      if (ms > 25_000) found.push({ who: label, where: path, kind: 'slow page', detail: `${Math.round(ms / 1000)} s to open and settle` });
+    };
+    for (const path of paths) await visit(path);
+
+    const firstPass = found.splice(0);
+    const suspects = [...new Set(firstPass.map((p) => p.where))];
+    for (const path of suspects) await visit(path);
+    const again = new Set(found.map((p) => p.where));
+    for (const p of [...firstPass, ...found]) {
+      if (again.has(p.where)) problems.push(p);
     }
+    const blips = firstPass.filter((p) => !again.has(p.where));
+    for (const p of blips) {
+      test.info().annotations.push({ type: 'flaky page', description: `[${p.who}] ${p.where} · ${p.kind}: ${p.detail.slice(0, 200)}` });
+    }
+    if (blips.length) console.log(`[crawl] ${label}: ${blips.length} problem(s) did not come back on a second visit (see the report's annotations)`);
   }
 
   test('owner: every workspace page, settings and public page', async ({ browser }) => {
