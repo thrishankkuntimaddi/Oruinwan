@@ -141,5 +141,20 @@ router.get('/ai', async (req, res) => {
     }
 });
 
+// The whole server's estimated AI spend today (aiBudget.js): Oruinwan admins only.
+router.get('/ai-budget', async (req, res) => {
+    try {
+        const identity = require('../../identity');
+        const user = await identity.users.findById(String(req.user.sub));
+        if (!user || !Array.isArray(user.roles) || !user.roles.includes('oruinwan_admin')) {
+            return res.status(403).json({ message: 'Oruinwan admins only' });
+        }
+        return res.json(await require('./aiBudget').status({ day: aiQuota.dayOf() }));
+    } catch (err) {
+        logger.error({ err }, '[plans] GET /api/plan/ai-budget failed');
+        return res.status(500).json({ message: 'Could not load the AI budget' });
+    }
+});
+
 module.exports = router;
 module.exports.buildPlan = buildPlan;

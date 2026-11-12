@@ -15,6 +15,9 @@
 const plans = require('./plans');
 const counters = require('./planCounters');
 const planService = require('./planService');
+const budget = require('./aiBudget');
+
+const logger = () => require('../../../utils/logger');
 
 const SYSTEM_IDS = new Set(['system', 'anonymous', '']);
 
@@ -102,6 +105,9 @@ async function consume({ userId, workspaceId, now = new Date() } = {}) {
             }
             out.workspaceUsed = n; out.workspaceMax = scopes.workspace.max;
         }
+        // Whole-server spend guard (aiBudget.js): free requests pause when today's budget is spent.
+        const paid = [scopes.user?.plan, scopes.workspace?.plan].some((p) => p && p !== 'free');
+        out.budget = await budget.charge({ day, ttl, paid, log: (level, msg) => logger()[level]?.(msg) });
     } catch (err) {
         await Promise.all(taken.map((k) => counters.incr(k, -1, ttl).catch(() => {})));
         throw err;
