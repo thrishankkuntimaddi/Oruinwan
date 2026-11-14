@@ -17,7 +17,7 @@ import { Sheet, useOverlay } from '../ui/Overlay.jsx';
 import { Button } from '../ui/Button.jsx';
 import { dueLabel } from '../lib/time.js';
 import { useKeyboard } from '../native/keyboard.js';
-import { isTablet, tap } from '../native/index.js';
+import { tap } from '../native/index.js';
 import { useLayout } from './layout.js';
 import { BAR_CHOICES, MAX_BAR, MIN_BAR, TAB_META, setBarItems, useTabBar } from './tabBarPrefs.js';
 
@@ -154,7 +154,9 @@ export function TabBar() {
   // Tablets: the same floating dock, centred under both panes, with a More button in place of
   // the drag handle (its drawer holds every other place).
   const splitLayout = useLayout((st) => st.split);
-  const tablet = isTablet || splitLayout;
+  // The centred dock with More is the split layout's (tablets in landscape); a tablet held
+  // upright uses the phone layout and the phone's dock.
+  const tablet = splitLayout;
   // Five across, like the five tabs on the dock (the ten places fill two rows).
   const cols = 5;
   const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / cols) * ROW_H + 24;
@@ -206,7 +208,7 @@ export function TabBar() {
       <nav
         aria-label="Main"
         data-testid={tablet ? 'tabbar-tablet' : undefined}
-        className={cx('glass-bar absolute z-20 rounded-[32px]', tablet ? 'left-1/2 w-[min(600px,calc(100%-32px))] -translate-x-1/2' : 'inset-x-3')}
+        className={cx('glass-bar absolute z-20 rounded-[32px]', tablet ? 'left-1/2 w-[min(600px,calc(100%-32px))] -translate-x-1/2' : 'inset-x-3 mx-auto max-w-[600px]')}
         style={{ bottom: 'calc(var(--sab) + 10px)' }}
       >
         {!tablet && (

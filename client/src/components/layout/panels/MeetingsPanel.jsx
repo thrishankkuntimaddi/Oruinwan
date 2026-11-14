@@ -126,7 +126,7 @@ const MeetingCards = ({ status, workspaceId, onJoin, canManage, onCancel, onSche
  * The Huddles side list: Live now · Upcoming · Past — the same tabs and data as
  * the Huddles page. Every card opens the call's meeting page.
  */
-const MeetingsPanel = ({ title }) => {
+const MeetingsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { workspaceId } = useParams();
@@ -147,6 +147,9 @@ const MeetingsPanel = ({ title }) => {
     const joinLive = useJoinLive();
     const joinScheduled = useJoinScheduled();
     const onHuddlesPage = location.pathname.endsWith('/huddles');
+    // On the Huddles page (beside it, not on a phone) the page shows the lists: the panel is
+    // just the switcher, so nothing appears twice.
+    const navOnly = onHuddlesPage && !isMobile;
 
     const myId = String(user?.sub || user?._id || user?.id || '');
     const isWorkspaceAdmin = ['owner', 'admin'].includes(activeWorkspace?.role);
@@ -209,7 +212,7 @@ const MeetingsPanel = ({ title }) => {
                     </button>
                 </>
             )}
-            tools={(
+            tools={navOnly ? null : (
                 <div className="gl-tabs" role="tablist" aria-label="Huddles">
                     {HUDDLE_LIST_TABS.map(tab => (
                         <button key={tab.value} type="button" role="tab" aria-selected={activeTab === tab.value} className="gl-tab" onClick={() => setTab(tab.value)}>
@@ -260,7 +263,23 @@ const MeetingsPanel = ({ title }) => {
                 </div>
             )}
 
-            {activeTab === "live" && (
+            {navOnly && (
+                <nav aria-label="Huddles" style={{ paddingTop: 4 }}>
+                    {HUDDLE_LIST_TABS.map(tab => {
+                        const TabIcon = tab.value === 'live' ? Radio : tab.value === 'upcoming' ? Calendar : History;
+                        return (
+                            <button key={tab.value} type="button" className={`gl-item gl-shell-row${activeTab === tab.value ? ' is-active' : ''}`}
+                                aria-current={activeTab === tab.value ? 'page' : undefined} onClick={() => setTab(tab.value)}>
+                                <TabIcon size={15} />
+                                <span className="gl-shell-row-label">{tab.label}</span>
+                                {tab.value === 'live' && liveCount > 0 && <span className="gl-count" style={{ marginLeft: 'auto' }}>{liveCount}</span>}
+                            </button>
+                        );
+                    })}
+                </nav>
+            )}
+
+            {!navOnly && activeTab === "live" && (
                 liveCount === 0 ? (
                     <PanelEmpty icon={Radio} title={active ? 'No other live huddles' : 'No live huddles'}
                         text={active ? 'Nobody else is in a huddle right now.' : 'Start a huddle and your teammates can join from here.'}
@@ -288,12 +307,12 @@ const MeetingsPanel = ({ title }) => {
                 )
             )}
 
-            {activeTab === "upcoming" && (
+            {!navOnly && activeTab === "upcoming" && (
                 <MeetingCards status="upcoming" workspaceId={workspaceId} onJoin={joinScheduled} canManage={canManage}
                     onCancel={setCancelling} onSchedule={() => setShowScheduleModal(true)} />
             )}
 
-            {activeTab === "past" && <MeetingCards status="past" workspaceId={workspaceId} canManage={canManage} />}
+            {!navOnly && activeTab === "past" && <MeetingCards status="past" workspaceId={workspaceId} canManage={canManage} />}
 
             <Confirm open={!!cancelling} title={`Cancel "${cancelling ? meetingTitle(cancelling) : ''}"?`} confirmLabel="Cancel meeting" tone="danger"
                 onConfirm={doCancel} onClose={() => setCancelling(null)}>

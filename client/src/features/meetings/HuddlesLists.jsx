@@ -237,7 +237,8 @@ export function HuddlesHome({ onStart, onStartVideo, onSchedule, starting }) {
         )}>
             <div data-testid="huddles-home">
                 <Toolbar>
-                    <FilterTabs value={tab} onChange={setTab} options={options} label="Huddles" />
+                    {/* In the main view the side panel is the switcher (styles hide this there); split view keeps it. */}
+                    <span className="hh-tabs"><FilterTabs value={tab} onChange={setTab} options={options} label="Huddles" /></span>
                     {tab !== 'live' && <SearchBox value={q} onChange={setQ} placeholder={tab === 'past' ? 'Search past huddles…' : 'Search upcoming…'} label="Search meetings" />}
                 </Toolbar>
                 <Section>

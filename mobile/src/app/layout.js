@@ -21,12 +21,17 @@ export const MIN_PANE_HEIGHT = 500;
 export const TABLET_SPLIT_MIN_WIDTH = 600;
 
 /**
- * 'phone' | 'split' | 'wide' for a window of this size (CSS pixels). Tablets are always 'split'
- * (list + open item, the bottom bar under both, in portrait and landscape: no sidebar).
+ * 'phone' | 'split' | 'wide' for a window of this size (CSS pixels). Tablets are 'split' in
+ * landscape (list + open item, the floating dock under both, no sidebar) and 'phone' in portrait.
  */
 export function layoutFor(width, height, tablet = isTablet) {
   if (!(width > 0)) return 'phone';
-  if (tablet) return width >= TABLET_SPLIT_MIN_WIDTH && !(height > 0 && height < MIN_PANE_HEIGHT) ? 'split' : 'phone';
+  // Tablets: list + open item side by side in landscape; in portrait the phone layout (one
+  // screen at a time, the phone's dock), which is easier to use held upright.
+  if (tablet) {
+    if (height > 0 && height > width) return 'phone';
+    return width >= TABLET_SPLIT_MIN_WIDTH && !(height > 0 && height < MIN_PANE_HEIGHT) ? 'split' : 'phone';
+  }
   if (width < SPLIT_MIN_WIDTH) return 'phone';
   if (height > 0 && height < MIN_PANE_HEIGHT) return 'phone';
   return width >= WIDE_MIN_WIDTH ? 'wide' : 'split';

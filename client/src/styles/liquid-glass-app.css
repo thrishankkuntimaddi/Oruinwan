@@ -791,3 +791,7 @@ html.lg .date-divider > span {
     font-weight: 600;
 }
 html.lg .date-divider > span:hover { background-color: var(--lg-hover) !important; }
+
+/* Huddles page: in the main view the side panel switches Live now · Upcoming · Past, so the
+   page doesn't show the same tabs again (split view, which has no panel, keeps them). */
+.gl-shell main > div:first-child [data-testid='huddles-home'] .hh-tabs { display: none; }
