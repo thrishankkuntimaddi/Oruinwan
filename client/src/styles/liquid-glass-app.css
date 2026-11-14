@@ -748,12 +748,12 @@ html.lg button[style*="border: 1px solid"]:not([role='switch']):not([role='check
 /* Bordered boxes drawn inline with square corners (cards, notices, list frames): soft corners. */
 html.lg :is(div, li, section, ul, label)[style*="border: 1px solid"]:not([style*="border-radius"]) { border-radius: 14px; }
 /* Inline text fields and search boxes: the soft glass field. */
-html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range']):not(.sib-input)[style*="border"] {
+html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range']):not(.sib-input)[style*="border: 1px solid"] {
     border-radius: 14px !important;
     border-color: var(--lg-hairline) !important;
     background-color: var(--bg-input) !important;
 }
-html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range'])[style*="border"]:focus { border-color: var(--border-accent) !important; box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16) !important; outline: none; }
+html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range'])[style*="border: 1px solid"]:focus { border-color: var(--border-accent) !important; box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16) !important; outline: none; }
 
 /* ══ Calls and huddles: the call screen covers the page, so it paints the full wallpaper
    (never see-through: the page under it showed between the tiles); its panels are dense
@@ -795,3 +795,77 @@ html.lg .date-divider > span:hover { background-color: var(--lg-hover) !importan
 /* Huddles page: in the main view the side panel switches Live now · Upcoming · Past, so the
    page doesn't show the same tabs again (split view, which has no panel, keeps them). */
 .gl-shell main > div:first-child [data-testid='huddles-home'] .hh-tabs { display: none; }
+
+/* ══ Round 4 ══════════════════════════════════════════════════════════════ */
+/* Cards used as pop-ups (Ask AI about this chat, quick panels): dense frosted glass. */
+html.lg .gl-card:is([role='dialog'], [style*="position: absolute"], [style*="position: fixed"]) {
+    background: var(--lg-dense) !important;
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+    border-radius: 22px;
+    box-shadow: var(--lg-bevel), var(--lg-shadow) !important;
+}
+/* Modals whose panel sits beside the dimmed backdrop rather than inside it (contact card…). */
+html.lg [style*="var(--bg-overlay)"] ~ [style*="var(--bg-"] {
+    background-color: var(--lg-dense) !important;
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+    border-color: transparent !important;
+    border-radius: 28px !important;
+    box-shadow: var(--lg-bevel), 0 30px 70px -20px rgba(0, 0, 0, 0.35) !important;
+}
+/* The dimmed backdrop: a soft grey veil, not a blurred grey slab. */
+html.lg [style*="var(--bg-overlay)"][style*="blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* The top bar's search only rises above the page while it is in use (its results list needs
+   it); otherwise dialogs opened inside the page cover it. */
+html.lg [data-tour='search']:not(:focus-within) { z-index: auto !important; }
+
+/* Settings: capsule buttons and soft fields, primary in white glass, a clear top bar. */
+html.lg .stg-topbar { background: transparent; border-bottom-color: var(--lg-hairline); box-shadow: none; }
+html.lg .stg-btn { border-radius: 999px; border-color: transparent; background: var(--lg-ctl); box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18); }
+html.lg .stg-btn:hover:not(:disabled) { background: var(--lg-hover); border-color: transparent; }
+html.lg .stg-btn[data-variant='primary'],
+html.lg .stg-btn[data-variant='primary']:hover:not(:disabled) { color: #0a0a0c; background: var(--lg-select-fill); filter: none; border-color: transparent; box-shadow: var(--lg-select-rim); }
+html.lg .stg-btn[data-variant='ghost'] { background: transparent; box-shadow: none; }
+html.lg .stg-btn[data-variant='danger-soft'] { color: var(--lg-red); background: rgba(255, 59, 48, 0.1); box-shadow: none; }
+html.lg .stg-icon-btn { border-radius: 50%; }
+html.lg :is(.stg-input, .stg-select, .stg-textarea) {
+    border-radius: 14px;
+    border-color: var(--lg-hairline);
+    background-color: var(--bg-input);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+html.lg .stg-search .stg-input { border-radius: 999px; }
+html.lg :is(.stg-input, .stg-select, .stg-textarea):focus { border-color: var(--border-accent); box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16); }
+
+/* One soft focus ring on inline fields (no double ring from the field and its outline). */
+html.lg :is(input, textarea, select):focus { outline: none; }
+/* Option buttons drawn with a dark outline when chosen (Create task: Me / Members / Full
+   channel…): the chosen one is white glass instead. */
+html.lg button[style*="border: 1px solid var(--text-primary)"],
+html.lg button[style*="border: 1.5px solid var(--text-primary)"],
+html.lg button[style*="border: 2px solid var(--text-primary)"] {
+    border-color: transparent !important;
+    background: var(--lg-select-fill) !important;
+    box-shadow: var(--lg-select-rim) !important;
+}
+html.lg button[aria-pressed='true'][style*="border: 1px solid var(--accent)"],
+html.lg button[aria-checked='true'][style*="border: 1px solid var(--accent)"]:not([role='switch']) {
+    color: #0a0a0c !important;
+    border-color: transparent !important;
+    background: var(--lg-select-fill) !important;
+    box-shadow: var(--lg-select-rim) !important;
+}
+html.lg button[aria-pressed='false'][style*="border: 1px solid var(--border-default)"] { background: var(--lg-ctl); border-color: transparent !important; box-shadow: var(--lg-bevel-sm); }
+
+/* ══ Dialogs read as clean light glass, never a grey see-through slab: on the web the dense
+   material (dialogs, sheets, menus, popovers) is 88 % white over a lighter dim. ══ */
+html.lg:not(.dark) { --lg-dense: rgba(250, 250, 252, 0.88); --bg-overlay: rgba(0, 0, 0, 0.18); --lg-scrim: rgba(0, 0, 0, 0.18); }
+html.lg.dark { --lg-dense: rgba(36, 36, 40, 0.88); --bg-overlay: rgba(0, 0, 0, 0.45); --lg-scrim: rgba(0, 0, 0, 0.45); }
+/* Focus: a soft rounded ring, never a square box (tabs, buttons, links). */
+html.lg :is(button, [role='tab'], a):focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2.5px rgba(120, 120, 128, 0.45) !important;
+    border-radius: 10px;
+}
+html.lg :is(button, [role='tab'], a):focus:not(:focus-visible) { outline: none; }

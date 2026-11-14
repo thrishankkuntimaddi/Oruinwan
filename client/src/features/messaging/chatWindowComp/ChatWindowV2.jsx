@@ -1999,7 +1999,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 <Suspense fallback={null}>
                     <AskAiPanel
                         events={conversation.events}
-                        title={chat?.type === 'channel' ? `#${chat?.name || 'channel'}` : (chat?.name || chat?.username || 'this chat')}
+                        title={chat?.type === 'channel' ? `#${String(chat?.name || 'channel').replace(/^#+/, '')}` : (chat?.name || chat?.username || 'this chat')}
                         workspaceId={workspaceId || chat?.workspaceId}
                         initialQuestion={askAiQuestion}
                         onClose={() => { setShowAskAi(false); setAskAiQuestion(null); }}
