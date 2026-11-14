@@ -155,7 +155,8 @@ export function TabBar() {
   // the drag handle (its drawer holds every other place).
   const splitLayout = useLayout((st) => st.split);
   const tablet = isTablet || splitLayout;
-  const cols = tablet ? 5 : 4;
+  // Five across, like the five tabs on the dock (the ten places fill two rows).
+  const cols = 5;
   const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / cols) * ROW_H + 24;
 
   if (keyboardOpen) return null;
@@ -249,13 +250,13 @@ export function TabBar() {
           aria-hidden={!open}
           data-testid="tabbar-drawer"
         >
-          <div className={cx('mx-auto grid max-w-[560px] gap-1 px-3 pt-3', tablet ? 'grid-cols-5' : 'grid-cols-4')}>
+          <div className="mx-auto grid max-w-[560px] grid-cols-5 gap-x-0.5 gap-y-1 px-2 pt-3">
             {drawerTabs.map((t) => (
               <button key={t} type="button" onClick={() => go(() => setTab(t))} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
                 <span className="glass-ctl grid h-11 w-11 place-items-center rounded-[14px] text-text">
                   <Icon as={TAB_META[t].icon} size={20} />
                 </span>
-                <span className="text-[11px] font-medium">{TAB_META[t].label}</span>
+                <span className="max-w-full truncate px-0.5 text-[10.5px] font-medium">{TAB_META[t].label}</span>
               </button>
             ))}
             {MORE.map((m) => (
@@ -263,14 +264,14 @@ export function TabBar() {
                 <span className="glass-ctl grid h-11 w-11 place-items-center rounded-[14px] text-text">
                   <Icon as={m.icon} size={20} />
                 </span>
-                <span className="text-[11px] font-medium">{m.label}</span>
+                <span className="max-w-full truncate px-0.5 text-[10.5px] font-medium">{m.label}</span>
               </button>
             ))}
             <button type="button" onClick={() => go(() => setEditing(true), { remember: false })} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1} data-testid="tabbar-edit">
               <span className="grid h-11 w-11 place-items-center rounded-[14px] border border-dashed border-line-strong text-text">
                 <Icon as={Pencil} size={18} />
               </span>
-              <span className="text-[11px] font-medium">Edit bar</span>
+              <span className="max-w-full truncate px-0.5 text-[10.5px] font-medium">Edit bar</span>
             </button>
           </div>
         </div>

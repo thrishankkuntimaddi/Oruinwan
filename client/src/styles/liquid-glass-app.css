@@ -777,3 +777,17 @@ html.lg .cs-tile {
 }
 html.lg .cs-status,
 html.lg .cs-screen [style*="var(--bg-base)"] { background-color: var(--lg-dense) !important; }
+
+/* Day dividers in conversations: a floating glass date, no rule through it (the pill is glass
+   now, so the line behind it showed through). */
+html.lg .date-divider > div[style*="height: 1px"] { display: none; }
+html.lg .date-divider > span {
+    background-color: var(--lg-ctl) !important;
+    border-color: transparent !important;
+    border-radius: 999px !important;
+    box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18);
+    -webkit-backdrop-filter: var(--lg-frost);
+    backdrop-filter: var(--lg-frost);
+    font-weight: 600;
+}
+html.lg .date-divider > span:hover { background-color: var(--lg-hover) !important; }
