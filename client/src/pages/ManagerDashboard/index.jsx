@@ -94,7 +94,7 @@ const ManagerDashboard = () => {
                             background: 'var(--bg-active)',
                             color: 'var(--text-primary)',
                             border: '1px solid var(--border-default)',
-                            borderRadius: '2px',
+                            borderRadius: 'var(--r-sm)',
                             fontSize: '14px', fontWeight: 500,
                             cursor: 'pointer',
                             transition: 'background 150ms ease'
@@ -191,7 +191,7 @@ const HeaderBtn = ({ icon: Icon, label, onClick, disabled, spinning }) => {
                 border: '1px solid var(--border-default)',
                 color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '13px', fontWeight: 500,
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: '6px',
                 opacity: disabled ? 0.5 : 1,

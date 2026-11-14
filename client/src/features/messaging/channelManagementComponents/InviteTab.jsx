@@ -17,7 +17,7 @@ export default function InviteTab({
     );
 
     const avatarColor = (name = '') => {
-        const colors = ['#b8956a', '#9c7fd4', '#63b3ed', '#48bb78', '#fc8181', '#f6ad55'];
+        const colors = ['var(--accent)', '#9c7fd4', '#63b3ed', '#48bb78', '#fc8181', '#f6ad55'];
         return colors[name.charCodeAt(0) % colors.length];
     };
 
@@ -34,7 +34,7 @@ export default function InviteTab({
                     style={{
                         width: '100%', padding: '8px 32px 8px 32px',
                         backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)',
-                        borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+                        borderRadius: 'var(--r-sm)', fontSize: '13px', color: 'var(--text-primary)',
                         outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease',
                     }}
                     onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
@@ -54,7 +54,7 @@ export default function InviteTab({
 
             {}
             {showDebugInfo && (
-                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '2px', fontSize: '11px' }}>
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(120, 120, 128,0.08)', border: '1px solid rgba(120, 120, 128,0.2)', borderRadius: 'var(--r-sm)', fontSize: '11px' }}>
                     <div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>Debug Info</div>
                     <div style={{ color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div>• Total workspace users: {allUsers.length}</div>
@@ -68,7 +68,7 @@ export default function InviteTab({
 
             {filteredNonMembers.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', opacity: 0.6 }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                         <Users size={20} style={{ color: 'var(--text-muted)' }} />
                     </div>
                     <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
@@ -105,7 +105,7 @@ function UserRow({ user, loading, onInvite, avatarColor }) {
             onMouseLeave={() => setHovered(false)}
             style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 12px', borderRadius: '2px', transition: '150ms ease',
+                padding: '10px 12px', borderRadius: 'var(--r-sm)', transition: '150ms ease',
                 backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
                 border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
             }}
@@ -129,7 +129,7 @@ function UserRow({ user, loading, onInvite, avatarColor }) {
                 disabled={loading}
                 style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: '1px solid var(--border-accent)', cursor: loading ? 'not-allowed' : 'pointer',
                     color: 'var(--accent)', transition: '150ms ease', opacity: loading ? 0.5 : 1,
                 }}

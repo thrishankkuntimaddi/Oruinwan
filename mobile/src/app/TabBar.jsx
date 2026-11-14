@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBump } from '../lib/motion.js';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Bookmark, Bot, CalendarDays, Check, ChevronDown, ChevronUp, Pencil, Plug, Settings, Workflow } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bookmark, Bot, CalendarDays, Check, ChevronDown, ChevronUp, Ellipsis, Pencil, Plug, Settings, Workflow } from 'lucide-react';
 import { prefs } from '../native/storage.js';
 import { nav, useNav } from './nav.js';
 import { useFlag } from '../config/flags.js';
@@ -151,50 +151,14 @@ export function TabBar() {
   const items = bar.filter((t) => t !== 'notes' || notesOn).map((id) => ({ id, ...TAB_META[id], badge: badges[id] || 0 }));
   const drawerTabs = BAR_CHOICES.filter((t) => !bar.includes(t) && (t !== 'notes' || notesOn));
 
-  const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / 4) * ROW_H + 24;
-  // Tablets: every place in the bar itself (no drawer and no handle), stretched across and
-  // scrolling sideways when they don't all fit.
+  // Tablets: the same floating dock, centred under both panes, with a More button in place of
+  // the drag handle (its drawer holds every other place).
   const splitLayout = useLayout((st) => st.split);
   const tablet = isTablet || splitLayout;
+  const cols = tablet ? 5 : 4;
+  const DRAWER_H = Math.ceil((drawerTabs.length + MORE.length + 1) / cols) * ROW_H + 24;
 
   if (keyboardOpen) return null;
-  if (tablet) {
-    const places = [
-      ...items.map((it) => ({ ...it, kind: 'tab' })),
-      ...drawerTabs.map((id) => ({ id, ...TAB_META[id], badge: badges[id] || 0, kind: 'tab' })),
-      ...MORE.map((m) => ({ ...m, badge: 0, kind: 'screen' })),
-    ];
-    return (
-      <nav aria-label="Main" className="glass-bar absolute inset-x-0 bottom-0 z-20 border-t border-[var(--glass-border)] pb-safe" data-testid="tabbar-tablet">
-        <div className="no-scrollbar flex h-[60px] items-stretch overflow-x-auto">
-          {places.map((it) => {
-            const active = it.kind === 'tab' && tab === it.id;
-            return (
-              <button
-                key={`${it.kind}:${it.id}`}
-                type="button"
-                aria-label={`${it.label}${it.badge ? `, ${it.badge} new` : ''}`}
-                aria-current={active ? 'page' : undefined}
-                data-tour={it.kind === 'tab' ? it.id : undefined}
-                onClick={() => (it.kind === 'tab' ? setTab(it.id) : it.open())}
-                className={cx(
-                  'relative flex min-w-[76px] flex-1 shrink-0 flex-col items-center justify-center gap-1 transition-colors duration-150',
-                  active ? 'text-accent-ink' : 'text-text-2',
-                )}
-              >
-                {active && <span aria-hidden className="absolute top-0 h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)]" />}
-                <span className="relative">
-                  <Icon as={it.icon} size={22} />
-                  {it.badge > 0 && <TabBadge count={it.badge} />}
-                </span>
-                <span className="text-[11px] font-medium whitespace-nowrap">{it.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-    );
-  }
 
   const height = drag.current ? pull : open ? DRAWER_H : 0;
   const onHandleDown = (e) => {
@@ -225,7 +189,10 @@ export function TabBar() {
     if (remember) useNav.getState().openedFromDrawer(from);
   };
 
-  const activeIndex = items.findIndex((it) => it.id === tab);
+  // The glass pill sits under the active tab (or under More while the drawer is open).
+  const slots = items.length + (tablet ? 1 : 0);
+  const tabIndex = items.findIndex((it) => it.id === tab);
+  const activeIndex = tablet && open ? items.length : tabIndex;
 
   return (
     <>
@@ -234,78 +201,78 @@ export function TabBar() {
           <button type="button" aria-label="Close" tabIndex={-1} className="scrim fixed inset-0 z-[19] animate-fade-in" onClick={() => setOpen(false)} />,
           document.body,
         )}
-      <nav aria-label="Main" className="glass-bar absolute inset-x-0 bottom-0 z-20 border-t border-[var(--glass-border)] pb-safe">
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label={open ? 'Close more places' : 'More places: drag up or tap'}
-          aria-expanded={open}
-          data-testid="tabbar-handle"
-          onPointerDown={onHandleDown}
-          onPointerMove={onHandleMove}
-          onPointerUp={onHandleUp}
-          onPointerCancel={onHandleUp}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((v) => !v))}
-          className="absolute inset-x-0 -top-3 z-10 flex h-6 touch-none cursor-grab items-center justify-center"
-        >
-          {/* The handle: the bar's top line rises in a soft bump in the middle, holding an arrow
-              (up while closed, down while open); it nudges until the drawer has been opened once. */}
-          <svg aria-hidden width="76" height="14" viewBox="0 0 76 14" className="pointer-events-none absolute left-1/2 top-[-2px] -translate-x-1/2 overflow-visible">
-            <path d="M0 14 C 18 14, 22 1, 38 1 C 54 1, 58 14, 76 14" style={{ fill: 'rgb(var(--c-chrome))' }} />
-            <path d="M0 14 C 18 14, 22 1, 38 1 C 54 1, 58 14, 76 14" fill="none" strokeWidth="1" style={{ stroke: open ? 'var(--color-accent, currentColor)' : 'var(--glass-border)' }} />
-          </svg>
-          <span
-            aria-hidden
-            data-testid="tabbar-handle-arrow"
-            className={cx(
-              'relative -top-[6px] grid h-4 w-6 place-items-center text-text-2',
-              open && 'text-accent-ink',
-              !open && !seenDrawer && 'animate-nudge-up',
-            )}
+      {/* The dock: a floating glass capsule over the content (which scrolls under it). */}
+      <nav
+        aria-label="Main"
+        data-testid={tablet ? 'tabbar-tablet' : undefined}
+        className={cx('glass-bar absolute z-20 rounded-[32px]', tablet ? 'left-1/2 w-[min(600px,calc(100%-32px))] -translate-x-1/2' : 'inset-x-3')}
+        style={{ bottom: 'calc(var(--sab) + 10px)' }}
+      >
+        {!tablet && (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={open ? 'Close more places' : 'More places: drag up or tap'}
+            aria-expanded={open}
+            data-testid="tabbar-handle"
+            onPointerDown={onHandleDown}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((v) => !v))}
+            className="absolute inset-x-0 -top-3.5 z-10 flex h-7 touch-none cursor-grab items-start justify-center"
           >
-            <Icon as={open ? ChevronDown : ChevronUp} size={14} />
-          </span>
-        </div>
+            {/* The handle: a small glass tab on the dock's top edge with an arrow (up while
+                closed, down while open); it nudges until the drawer has been opened once. */}
+            <span
+              aria-hidden
+              data-testid="tabbar-handle-arrow"
+              className={cx('glass-ctl grid h-5 w-10 place-items-center rounded-full text-text-2', open && 'text-text', !open && !seenDrawer && 'animate-nudge-up')}
+            >
+              <Icon as={open ? ChevronDown : ChevronUp} size={14} />
+            </span>
+          </div>
+        )}
         <div
           className="overflow-hidden"
-          style={{ height, transition: drag.current ? 'none' : 'height 260ms var(--ease-spring)' }}
+          style={{ height, transition: drag.current ? 'none' : 'height 320ms var(--lg-spring)' }}
           aria-hidden={!open}
           data-testid="tabbar-drawer"
         >
-          <div className="mx-auto grid max-w-[520px] grid-cols-4 gap-1 px-3 pt-4">
+          <div className={cx('mx-auto grid max-w-[560px] gap-1 px-3 pt-4', tablet ? 'grid-cols-5' : 'grid-cols-4')}>
             {drawerTabs.map((t) => (
-              <button key={t} type="button" onClick={() => go(() => setTab(t))} className="pressable flex flex-col items-center gap-1.5 rounded-xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
-                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-line-soft bg-surface">
+              <button key={t} type="button" onClick={() => go(() => setTab(t))} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
+                <span className="glass-ctl grid h-11 w-11 place-items-center rounded-[14px] text-text">
                   <Icon as={TAB_META[t].icon} size={20} />
                 </span>
                 <span className="text-[11px] font-medium">{TAB_META[t].label}</span>
               </button>
             ))}
             {MORE.map((m) => (
-              <button key={m.id} type="button" onClick={() => go(m.open)} className="pressable flex flex-col items-center gap-1.5 rounded-xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
-                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-line-soft bg-surface">
+              <button key={m.id} type="button" onClick={() => go(m.open)} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
+                <span className="glass-ctl grid h-11 w-11 place-items-center rounded-[14px] text-text">
                   <Icon as={m.icon} size={20} />
                 </span>
                 <span className="text-[11px] font-medium">{m.label}</span>
               </button>
             ))}
-            <button type="button" onClick={() => go(() => setEditing(true), { remember: false })} className="pressable flex flex-col items-center gap-1.5 rounded-xl py-2.5 text-accent-ink" tabIndex={open ? 0 : -1} data-testid="tabbar-edit">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl border border-dashed border-accent/60">
+            <button type="button" onClick={() => go(() => setEditing(true), { remember: false })} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1} data-testid="tabbar-edit">
+              <span className="grid h-11 w-11 place-items-center rounded-[14px] border border-dashed border-line-strong text-text">
                 <Icon as={Pencil} size={18} />
               </span>
               <span className="text-[11px] font-medium">Edit bar</span>
             </button>
           </div>
         </div>
-        <div className="relative mx-auto flex h-[60px] max-w-[520px] items-stretch">
-          {/* The active tab's line: one bar that slides to the tab you pick. */}
+        <div className="relative mx-auto flex h-16 max-w-[560px] items-stretch p-1.5">
+          {/* The active tab's lens: one glass pill that slides to the tab you pick. */}
           <span
             aria-hidden
             data-testid="tabbar-indicator"
-            className="pointer-events-none absolute top-0 left-0 flex justify-center transition-[transform,opacity] duration-[250ms] ease-[var(--ease-spring)]"
-            style={{ width: `${100 / Math.max(items.length, 1)}%`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }}
+            className="pointer-events-none absolute inset-y-1.5 left-1.5 transition-[transform,opacity] duration-[450ms] ease-[cubic-bezier(.3,1.3,.5,1)]"
+            style={{ width: `calc((100% - 12px) / ${Math.max(slots, 1)})`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }}
           >
-            <span className="h-0.5 w-6 rounded-full bg-accent shadow-[0_0_10px_rgb(var(--c-accent)/0.7)]" />
+            <span className="dock-pill block h-full w-full rounded-full" />
           </span>
           {items.map((it) => {
             const active = tab === it.id;
@@ -320,16 +287,32 @@ export function TabBar() {
                   setOpen(false);
                   setTab(it.id);
                 }}
-                className={cx('relative flex flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150', active ? 'text-accent-ink' : 'text-text-2')}
+                className={cx('relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full transition-colors duration-150', active ? 'font-semibold text-text' : 'font-medium text-text-2')}
               >
-                <span className="relative">
-                  <Icon as={it.icon} size={22} />
+                <span className={cx('relative transition-transform duration-300', active && '-translate-y-px scale-[1.08]')}>
+                  <Icon as={it.icon} size={21} />
                   {it.badge > 0 && <TabBadge count={it.badge} />}
                 </span>
-                <span className="text-[11px] font-medium">{it.label}</span>
+                <span className="text-[10.5px]">{it.label}</span>
               </button>
             );
           })}
+          {tablet && (
+            <button
+              type="button"
+              aria-label={open ? 'Close more places' : 'More places'}
+              aria-expanded={open}
+              data-testid="tabbar-more"
+              onClick={() => {
+                tap('select');
+                setOpen((v) => !v);
+              }}
+              className={cx('relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full transition-colors duration-150', open ? 'font-semibold text-text' : 'font-medium text-text-2')}
+            >
+              <Icon as={open ? ChevronDown : Ellipsis} size={21} />
+              <span className="text-[10.5px]">More</span>
+            </button>
+          )}
         </div>
       </nav>
       <EditBarSheet open={editing} onClose={() => setEditing(false)} />
@@ -344,7 +327,7 @@ export function TabBadge({ count }) {
     <span
       key={bump.key}
       data-testid="tab-badge"
-      className={cx('absolute -top-1.5 left-3.5 min-w-[18px] h-[18px] rounded-full bg-gold px-1 text-center text-[10px] font-bold leading-[18px] text-on-accent ring-2 ring-bg', bump.className)}
+      className={cx('absolute -top-1.5 left-3.5 min-w-[18px] h-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white', bump.className)}
     >
       {count > 99 ? '99+' : count}
     </span>

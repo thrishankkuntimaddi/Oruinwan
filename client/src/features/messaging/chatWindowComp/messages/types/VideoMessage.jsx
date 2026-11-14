@@ -50,7 +50,7 @@ function VideoNote({ src, duration, onError }) {
                 </span>
             </button>
             <button type="button" onClick={() => enterFullscreen(ref.current)} title="Full screen" aria-label="Full screen"
-                style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 2, padding: 5, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}>
+                style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: 5, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}>
                 <Maximize2 size={13} />
             </button>
         </div>
@@ -84,7 +84,7 @@ export default function VideoMessage({ msg }) {
     return (
         <div data-testid="video-attachment" style={{
             marginTop: '6px', width: 'min(360px, 100%)',
-            borderRadius: '2px', overflow: 'hidden',
+            borderRadius: 'var(--r-sm)', overflow: 'hidden',
             border: '1px solid var(--border-default)',
         }}>
             {failed ? (

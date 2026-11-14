@@ -116,9 +116,9 @@ export default function ScreenRecorder({ onRecorded, disabled = false }) {
 
     if (state === "preview") {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'rgba(120, 120, 128,0.06)', border: '1px solid rgba(120, 120, 128,0.15)' }}>
                 <video src={videoUrl} style={{ height: '36px', width: '64px', objectFit: 'cover', border: '1px solid var(--border-default)' }} muted />
-                <span style={{ fontSize: '11px', color: '#b8956a', fontFamily: 'monospace' }}>{fmt(duration)}</span>
+                <span style={{ fontSize: '11px', color: 'var(--accent)', fontFamily: 'monospace' }}>{fmt(duration)}</span>
                 <button onClick={discard} title="Discard"
                     style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
@@ -127,7 +127,7 @@ export default function ScreenRecorder({ onRecorded, disabled = false }) {
                     <Trash2 size={14} />
                 </button>
                 <button onClick={send} title="Send screen recording" aria-label="Send screen recording"
-                    style={{ padding: '5px 10px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
+                    style={{ padding: '5px 10px', background: 'var(--accent)', border: 'none', color: 'var(--text-on-accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                 >
                     <Send size={13} />
                 </button>
@@ -144,7 +144,7 @@ export default function ScreenRecorder({ onRecorded, disabled = false }) {
                 : "Record screen"}
             style={{
                 padding: '5px',
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 background: state === "recording" ? 'rgba(239,68,68,0.15)' : 'none',
                 border: 'none',
                 cursor: disabled ? 'not-allowed' : 'pointer',

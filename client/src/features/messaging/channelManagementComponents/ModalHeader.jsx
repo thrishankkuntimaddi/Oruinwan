@@ -58,7 +58,7 @@ export default function ModalHeader({
                         onClick={onToggleDebugInfo}
                         style={{
                             padding: '6px', background: 'none', border: 'none',
-                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px',
+                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)',
                             display: 'flex', alignItems: 'center', transition: 'color 150ms ease',
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
@@ -72,7 +72,7 @@ export default function ModalHeader({
                     onClick={onClose}
                     style={{
                         padding: '6px', background: 'none', border: 'none',
-                        cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px',
+                        cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)',
                         display: 'flex', alignItems: 'center', transition: 'color 150ms ease',
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}

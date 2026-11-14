@@ -6,7 +6,7 @@ import { formatBytes, downloadAttachment } from "../../../../../utils/uploadFile
 import CodeBlock from "../../../../../shared/components/messages/CodeBlock";
 
 const PDF = { Icon: FileText, bg: 'rgba(224,82,82,0.10)', color: '#e05252' };
-const DOC = { Icon: FileText, bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' };
+const DOC = { Icon: FileText, bg: 'rgba(120, 120, 128,0.12)', color: 'var(--accent)' };
 const SHEET = { Icon: Sheet, bg: 'rgba(90,186,138,0.10)', color: '#5aba8a' };
 const SLIDES = { Icon: Presentation, bg: 'rgba(230,140,60,0.12)', color: '#e68c3c' };
 const ARCHIVE = { Icon: Archive, bg: 'rgba(201,168,124,0.12)', color: 'var(--accent-hover)' };
@@ -44,7 +44,7 @@ function getFileInfo(name = '', mime = '') {
 
 const iconBtn = {
     flexShrink: 0, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', padding: 4, borderRadius: 2,
+    display: 'flex', alignItems: 'center', padding: 4, borderRadius: 'var(--r-sm)',
 };
 
 export default function FileMessage({ msg, unavailableNote = null }) {
@@ -111,7 +111,7 @@ export default function FileMessage({ msg, unavailableNote = null }) {
                     padding: '8px 10px 8px 12px',
                     backgroundColor: 'var(--bg-active)',
                     border: '1px solid var(--border-default)',
-                    borderRadius: '2px',
+                    borderRadius: 'var(--r-sm)',
                     width: 'min(320px, 100%)',
                     cursor: canPreview ? 'pointer' : 'default',
                     transition: 'border-color 100ms ease, background-color 100ms ease',
@@ -119,7 +119,7 @@ export default function FileMessage({ msg, unavailableNote = null }) {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; }}
             >
-                <div style={{ flexShrink: 0, width: '36px', height: '36px', borderRadius: '2px', backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ flexShrink: 0, width: '36px', height: '36px', borderRadius: 'var(--r-sm)', backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={18} style={{ color }} />
                 </div>
 
@@ -154,7 +154,7 @@ export default function FileMessage({ msg, unavailableNote = null }) {
             {preview?.error && <div style={{ fontSize: 11, color: 'var(--state-danger)', marginTop: 4 }}>Couldn’t load the preview.</div>}
             {preview?.url && (
                 <iframe data-testid="pdf-preview" title={name || 'PDF preview'} src={preview.url}
-                    style={{ display: 'block', marginTop: 6, width: 'min(640px, 100%)', height: 480, border: '1px solid var(--border-default)', borderRadius: 2, background: '#fff' }} />
+                    style={{ display: 'block', marginTop: 6, width: 'min(640px, 100%)', height: 480, border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: '#fff' }} />
             )}
             {typeof preview?.text === 'string' && (
                 <div data-testid="text-preview" style={{ width: 'min(640px, 100%)' }}>

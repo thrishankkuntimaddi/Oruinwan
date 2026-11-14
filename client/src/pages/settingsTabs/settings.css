@@ -10,8 +10,8 @@
     --stg-danger-line: rgba(224, 82, 82, 0.32);
     --stg-success-soft: rgba(90, 186, 138, 0.08);
     --stg-success-line: rgba(90, 186, 138, 0.32);
-    --stg-accent-soft: rgba(184, 149, 106, 0.08);
-    --stg-accent-line: rgba(184, 149, 106, 0.34);
+    --stg-accent-soft: rgba(120, 120, 128, 0.08);
+    --stg-accent-line: rgba(120, 120, 128, 0.34);
     font-family: var(--font);
     color: var(--text-primary);
 }
@@ -60,7 +60,7 @@
     border-bottom: 1px solid var(--border-default);
     flex-shrink: 0;
 }
-.stg-brand img { width: 22px; height: 22px; border-radius: 4px; }
+.stg-brand img { width: 22px; height: 22px; border-radius: var(--r-sm); }
 .stg-brand-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
 .stg-brand-tag {
     margin-left: auto;
@@ -354,7 +354,7 @@
 
 .stg-btn[data-variant='primary'] { background: var(--gl-gloss), var(--gl-accent-grad); border-color: rgba(255, 230, 190, 0.35); color: var(--gl-on-accent); box-shadow: var(--gl-spec-strong), var(--gl-accent-glow); }
 .stg-btn[data-variant='primary']:hover:not(:disabled) { background: var(--gl-gloss), var(--gl-accent-grad); filter: brightness(1.05); border-color: rgba(255, 236, 205, 0.6); }
-html.light .stg-btn[data-variant='primary'] { border-color: rgba(140, 100, 50, 0.35); }
+html.light .stg-btn[data-variant='primary'] { border-color: rgba(120, 120, 128, 0.35); }
 
 .stg-btn[data-variant='ghost'] { background: transparent; border-color: transparent; color: var(--text-secondary); }
 .stg-btn[data-variant='ghost']:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); border-color: transparent; }
@@ -466,7 +466,7 @@ html.light .stg-btn[data-variant='primary'] { border-color: rgba(140, 100, 50, 0
 
 .stg-skeleton {
     height: 14px;
-    border-radius: 3px;
+    border-radius: var(--r-sm);
     background: linear-gradient(90deg, var(--bg-active) 25%, var(--bg-hover) 50%, var(--bg-active) 75%);
     background-size: 200% 100%;
     animation: stg-shimmer 1.2s ease infinite;
@@ -499,7 +499,7 @@ html.light .stg-btn[data-variant='primary'] { border-color: rgba(140, 100, 50, 0
     color: var(--text-secondary);
     background: none;
     border: none;
-    border-radius: 3px;
+    border-radius: var(--r-sm);
     cursor: pointer;
 }
 .stg-segmented button[aria-pressed='true'] { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }

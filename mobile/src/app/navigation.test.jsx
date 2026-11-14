@@ -130,15 +130,19 @@ describe('tabs', () => {
 });
 
 describe('tablet tab bar', () => {
-  it('shows every place in one stretched, scrolling bar, without the drawer handle', () => {
+  it('is a floating dock with the bar places and More (no drag handle); More opens every other place', () => {
     useLayout.setState({ kind: 'split', wide: false, split: true });
     render(<TabBar />);
     expect(screen.getByTestId('tabbar-tablet')).toBeTruthy();
     expect(screen.queryByTestId('tabbar-handle')).toBeNull();
-    for (const name of ['Home', 'Chats', 'Calendar', 'Automations', 'Saved', 'Settings']) {
-      expect(screen.getByRole('button', { name: new RegExp(`^${name}`) })).toBeTruthy();
-    }
-    fireEvent.click(screen.getByRole('button', { name: /^Calendar/ }));
+    for (const name of ['Home', 'Chats', 'Tasks']) expect(screen.getByRole('button', { name: new RegExp(`^${name}`) })).toBeTruthy();
+    const more = screen.getByTestId('tabbar-more');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(more);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    const drawer = screen.getByTestId('tabbar-drawer');
+    for (const name of ['Calendar', 'Automations', 'Saved', 'Settings']) expect(within(drawer).getByText(name)).toBeTruthy();
+    fireEvent.click(within(drawer).getByText('Calendar'));
     expect(useNav.getState().stacks[useNav.getState().tab].at(-1)).toMatchObject({ name: 'calendar' });
   });
 });

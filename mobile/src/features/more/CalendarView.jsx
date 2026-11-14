@@ -384,7 +384,7 @@ function HourGrid({ days, events, onPickDay }) {
             <div
               key={d.toISOString()}
               className="relative border-l border-line-soft"
-              style={{ backgroundImage: 'linear-gradient(to bottom, rgb(var(--c-line) / 0.8) 1px, transparent 1px)', backgroundSize: `100% ${HOUR_PX}px` }}
+              style={{ backgroundImage: 'linear-gradient(to bottom, var(--color-line) 1px, transparent 1px)', backgroundSize: `100% ${HOUR_PX}px` }}
             >
               {layoutDay(events, d).map(({ event, top, height, column, columns }) => (
                 <button

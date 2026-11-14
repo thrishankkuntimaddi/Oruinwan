@@ -129,7 +129,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
         }
     };
 
-    const fmtBtn = { padding: '5px', background: 'transparent', border: 'none', borderRadius: '2px', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 100ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+    const fmtBtn = { padding: '5px', background: 'transparent', border: 'none', borderRadius: 'var(--r-sm)', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 100ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
     const fmtBtnHover = (e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; };
     const fmtBtnLeave = (e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; };
     const sep = { width: '1px', height: '14px', background: 'var(--border-default)', margin: '0 3px', flexShrink: 0 };
@@ -137,7 +137,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
     return (
         <div className="group relative mb-1">
             <div className="hidden group-focus-within:flex items-center gap-0.5 mb-2 w-fit"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '3px 6px', boxShadow: 'var(--card-shadow)' }}>
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '3px 6px', boxShadow: 'var(--card-shadow)' }}>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('bold'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Bold"><Bold size={12} /></button>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('italic'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Italic"><Italic size={12} /></button>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('strikeThrough'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Strikethrough"><Strikethrough size={12} /></button>
@@ -178,7 +178,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
                     <div aria-hidden="true"
                         style={{ position: 'absolute', top: 0, left: 0, color: 'var(--text-muted)', fontSize: '15px', fontFamily: 'var(--font)', fontWeight: 400, lineHeight: 1.75, pointerEvents: 'none', userSelect: 'none' }}
                     >
-                        Type <span style={{ fontSize: '11px', padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>/</span> for commands, or start typing…
+                        Type <span style={{ fontSize: '11px', padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>/</span> for commands, or start typing…
                     </div>
                 )}
             </div>

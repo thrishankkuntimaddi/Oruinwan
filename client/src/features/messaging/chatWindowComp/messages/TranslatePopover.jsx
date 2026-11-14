@@ -48,7 +48,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
                 </span>
                 <button
                     onClick={onClose}
-                    style={{ padding: '2px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', borderRadius: '2px', transition: '100ms ease' }}
+                    style={{ padding: '2px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', borderRadius: 'var(--r-sm)', transition: '100ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     aria-label="Close"
@@ -87,7 +87,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
                             onClick={() => onSelect(lang.code)}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '6px 8px', borderRadius: '2px',
+                                padding: '6px 8px', borderRadius: 'var(--r-sm)',
                                 fontSize: '12px', fontWeight: 500,
                                 color: 'var(--text-secondary)',
                                 background: 'none', border: 'none', outline: 'none', cursor: 'pointer',

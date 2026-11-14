@@ -115,7 +115,7 @@ const AudioBlock = ({
             <div style={{ ...mediaStyles.frame, padding: block.content ? '14px 16px' : 0 }}>
                 {block.content ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: readOnly ? '40px' : '112px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Mic size={18} />
                         </div>
                         {error ? (

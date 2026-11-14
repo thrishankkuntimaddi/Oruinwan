@@ -22,7 +22,7 @@ const STATUS_MAP = {
 };
 
 const QUICK = [
-    { id: 'channels', Icon: Hash,         label: 'Channels',  bg: 'rgba(184,149,106,0.12)', path: '/channels'  },
+    { id: 'channels', Icon: Hash,         label: 'Channels',  bg: 'rgba(120, 120, 128,0.12)', path: '/channels'  },
     { id: 'messages', Icon: MessageSquare,label: 'Messages',  bg: 'rgba(52,211,153,0.10)',  path: '/messages'  },
     { id: 'files',    Icon: FolderOpen,   label: 'Files',     bg: 'rgba(167,139,250,0.12)', path: '/files'     },
     { id: 'knowledge',Icon: BookOpen,     label: 'Knowledge', bg: 'rgba(251,191,36,0.10)',  path: '/knowledge' },
@@ -114,8 +114,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     onClick={onProfileClick}
                     style={{
                         flexShrink: 0, padding: '6px 10px', fontSize: '11px', fontWeight: 600,
-                        color: 'var(--accent)', background: 'rgba(184,149,106,0.1)',
-                        border: '1px solid rgba(184,149,106,0.25)', cursor: 'pointer',
+                        color: 'var(--accent)', background: 'rgba(120, 120, 128,0.1)',
+                        border: '1px solid rgba(120, 120, 128,0.25)', cursor: 'pointer',
                         fontFamily: 'var(--font)',
                     }}
                 >
@@ -134,7 +134,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     }}
                 >
                     <div style={{
-                        width: '24px', height: '24px', borderRadius: '2px', flexShrink: 0,
+                        width: '24px', height: '24px', borderRadius: 'var(--r-sm)', flexShrink: 0,
                         background: activeWorkspace?.color || 'var(--accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
@@ -160,7 +160,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                                     border: 'none', cursor: 'pointer', fontFamily: 'var(--font)',
                                 }}
                             >
-                                <div style={{ width: '20px', height: '20px', borderRadius: '2px', background: ws.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <div style={{ width: '20px', height: '20px', borderRadius: 'var(--r-sm)', background: ws.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <Globe size={11} style={{ color: '#fff' }} />
                                 </div>
                                 <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', flex: 1, textAlign: 'left' }}>{ws.name}</span>
@@ -198,7 +198,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                             onTouchStart={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                             onTouchEnd={e => { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
                         >
-                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--r-sm)', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Icon size={18} style={{ color: 'var(--accent)' }} />
                             </div>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>

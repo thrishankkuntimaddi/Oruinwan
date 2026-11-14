@@ -36,7 +36,7 @@ const PermissionsTab = ({ isAdmin, permissions, savingPermissions, handlePermiss
         </div>
 
         {!isAdmin && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', marginTop: '16px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', marginTop: '16px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                 <Info size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
                     <strong style={{ color: 'var(--text-primary)' }}>Note:</strong> Only workspace administrators can change permissions.

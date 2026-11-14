@@ -24,7 +24,7 @@ export default function LinkPreviewMessage({ preview }) {
         >
             <div
                 style={{
-                    borderRadius: '2px',
+                    borderRadius: 'var(--r-sm)',
                     border: '1px solid var(--border-accent)',
                     backgroundColor: 'var(--bg-active)',
                     overflow: 'hidden',

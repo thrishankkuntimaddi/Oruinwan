@@ -81,7 +81,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             <div style={{
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 width: '100%', maxWidth: '440px',
                 maxHeight: '80vh', overflow: 'hidden',
                 display: 'flex', flexDirection: 'column',
@@ -103,7 +103,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                         onClick={onClose}
                         style={{
                             background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
-                            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px',
+                            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: 'var(--r-sm)',
                             transition: '100ms ease',
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
@@ -139,7 +139,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                                         key={channel._id}
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '10px 12px', borderRadius: '2px',
+                                            padding: '10px 12px', borderRadius: 'var(--r-sm)',
                                             backgroundColor: 'var(--bg-active)',
                                             border: '1px solid var(--border-default)',
                                             transition: '150ms ease',
@@ -175,7 +175,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                                                 padding: '5px 14px',
                                                 backgroundColor: joiningId === channel._id ? 'var(--bg-active)' : 'var(--accent)',
                                                 color: joiningId === channel._id ? 'var(--text-muted)' : 'var(--bg-base)',
-                                                border: 'none', borderRadius: '2px', outline: 'none',
+                                                border: 'none', borderRadius: 'var(--r-sm)', outline: 'none',
                                                 fontSize: '12px', fontWeight: 600, cursor: joiningId !== null ? 'not-allowed' : 'pointer',
                                                 fontFamily: FONT, transition: '150ms ease',
                                                 display: 'flex', alignItems: 'center', gap: '6px',
@@ -206,7 +206,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                         style={{
                             padding: '7px 16px', fontSize: '13px', fontWeight: 500,
                             color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)',
-                            border: '1px solid var(--border-default)', borderRadius: '2px',
+                            border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                             outline: 'none', cursor: 'pointer', fontFamily: FONT, transition: '150ms ease',
                         }}
                         onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}

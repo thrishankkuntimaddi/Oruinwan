@@ -28,7 +28,7 @@
     --prc-text-3: var(--o-text-3);
     --prc-accent: var(--o-accent);
     --prc-accent-soft: var(--o-accent-dim);
-    --prc-accent-line: rgba(200, 162, 116, 0.45);
+    --prc-accent-line: rgba(120, 120, 128, 0.45);
     --prc-spec: var(--o-spec);
     --prc-good: #8fe0b8;
 }
@@ -51,7 +51,7 @@
 .prc-card--featured {
     border-color: var(--prc-accent-line);
     background-image: linear-gradient(180deg, var(--prc-accent-soft), transparent 45%), var(--prc-glass);
-    box-shadow: var(--prc-spec), 0 30px 80px -40px rgba(200, 162, 116, 0.4);
+    box-shadow: var(--prc-spec), 0 30px 80px -40px rgba(120, 120, 128, 0.4);
 }
 .prc-card__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .prc-card__icon {

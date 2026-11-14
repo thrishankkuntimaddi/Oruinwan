@@ -94,7 +94,7 @@ const ManageBtn = ({ onClick }) => {
                 border: '1px solid var(--border-default)',
                 color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '13px', fontWeight: 500,
-                borderRadius: '2px', cursor: 'pointer',
+                borderRadius: 'var(--r-sm)', cursor: 'pointer',
                 transition: 'color 150ms ease, background 150ms ease'
             }}
         >

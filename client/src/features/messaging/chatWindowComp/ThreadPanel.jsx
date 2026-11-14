@@ -752,7 +752,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                             style={{
                                 marginTop: '12px', padding: '6px 16px',
                                 backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)',
-                                border: '1px solid var(--border-default)', borderRadius: '2px',
+                                border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                                 cursor: 'pointer', fontSize: '12px', fontFamily: FONT, outline: 'none',
                             }}
                         >
@@ -779,7 +779,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 <button
                                     onClick={() => setShowSummary(true)}
                                     title="Summarize thread"
-                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+                                    style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
                                 >
                                     <Sparkles size={14} />
                                 </button>
@@ -795,7 +795,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     aria-label="Share thread"
                                     aria-haspopup="menu"
                                     aria-expanded={!!shareAnchor}
-                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', color: shareAnchor ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+                                    style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', color: shareAnchor ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
                                 >
                                     <Share2 size={14} />
                                 </button>
@@ -814,7 +814,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     onClick={toggleResolved}
                                     disabled={resolving}
                                     title={threadMeta.resolved ? 'Reopen thread' : 'Mark thread resolved'}
-                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', cursor: resolving ? 'not-allowed' : 'pointer', display: 'flex', color: threadMeta.resolved ? 'var(--state-success)' : 'var(--text-muted)' }}
+                                    style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', cursor: resolving ? 'not-allowed' : 'pointer', display: 'flex', color: threadMeta.resolved ? 'var(--state-success)' : 'var(--text-muted)' }}
                                 >
                                     {threadMeta.resolved ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
                                 </button>
@@ -826,7 +826,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                         disabled={locking}
                                         title={lock.locked ? 'Unlock thread (allow new replies)' : 'Lock thread (no new replies)'}
                                         aria-label={lock.locked ? 'Unlock thread' : 'Lock thread'}
-                                        style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', cursor: locking ? 'not-allowed' : 'pointer', display: 'flex', color: lock.locked ? 'var(--accent)' : 'var(--text-muted)' }}
+                                        style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', cursor: locking ? 'not-allowed' : 'pointer', display: 'flex', color: lock.locked ? 'var(--accent)' : 'var(--text-muted)' }}
                                     >
                                         {lock.locked ? <LockOpen size={14} /> : <Lock size={14} />}
                                     </button>
@@ -837,7 +837,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     onClick={() => setShowPeople(true)}
                                     title="People in this thread: add or remove followers"
                                     aria-label="People in this thread"
-                                    style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
+                                    style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
                                 >
                                     <UserPlus size={14} />
                                 </button>
@@ -847,10 +847,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     title={following ? `Unfollow thread (${followerCount} follower${followerCount !== 1 ? 's' : ''})` : 'Follow thread to get reply notifications'}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '5px',
-                                        padding: '4px 10px', borderRadius: '2px', outline: 'none',
+                                        padding: '4px 10px', borderRadius: 'var(--r-sm)', outline: 'none',
                                         fontSize: '11px', fontWeight: 500, cursor: followLoading ? 'not-allowed' : 'pointer',
                                         transition: '100ms ease', fontFamily: FONT,
-                                        backgroundColor: following ? 'rgba(184,149,106,0.12)' : 'transparent',
+                                        backgroundColor: following ? 'rgba(120, 120, 128,0.12)' : 'transparent',
                                         color: following ? 'var(--accent)' : 'var(--text-muted)',
                                         border: following ? '1px solid var(--border-accent)' : '1px solid transparent',
                                         opacity: followLoading ? 0.5 : 1,
@@ -870,7 +870,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                         }}
                                         title="Open in split view"
                                         aria-label="Open in split view"
-                                        style={{ padding: '5px', borderRadius: '2px', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+                                        style={{ padding: '5px', borderRadius: 'var(--r-sm)', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
                                     >
                                         <Columns2 size={14} />
                                     </button>
@@ -878,7 +878,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 <button
                                     onClick={onClose}
                                     style={{
-                                        padding: '5px', borderRadius: '2px', outline: 'none', border: 'none',
+                                        padding: '5px', borderRadius: 'var(--r-sm)', outline: 'none', border: 'none',
                                         background: 'none', color: 'var(--text-muted)', cursor: 'pointer',
                                         display: 'flex', transition: '100ms ease',
                                     }}
@@ -910,7 +910,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         </div>
                     )}
                     {lock.locked && (
-                        <div data-testid="thread-locked" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '11px', color: 'var(--accent)', backgroundColor: 'rgba(184,149,106,0.08)', borderBottom: '1px solid var(--border-subtle)', fontFamily: FONT }}>
+                        <div data-testid="thread-locked" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '11px', color: 'var(--accent)', backgroundColor: 'rgba(120, 120, 128,0.08)', borderBottom: '1px solid var(--border-subtle)', fontFamily: FONT }}>
                             <Lock size={12} /> Locked{lock.lockedBy?.username ? ` by ${String(lock.lockedBy._id) === String(currentUserId) ? 'you' : lock.lockedBy.username}` : ''}. New replies are turned off.
                         </div>
                     )}
@@ -922,11 +922,11 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '75%' }}>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
-                                            <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.n * 4}px` }} />
-                                            <div style={{ height: '8px', width: '32px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
+                                            <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${b.n * 4}px` }} />
+                                            <div style={{ height: '8px', width: '32px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', opacity: 0.6 }} />
                                         </div>
-                                        <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.l1}%` }} />
-                                        {b.l2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.l2}%`, opacity: 0.7 }} />}
+                                        <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${b.l1}%` }} />
+                                        {b.l2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${b.l2}%`, opacity: 0.7 }} />}
                                     </div>
                                 </div>
                             ))}
@@ -941,7 +941,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     <div style={{
                                         padding: '12px 16px',
                                         borderBottom: '1px solid var(--border-default)',
-                                        backgroundColor: 'rgba(184,149,106,0.05)',
+                                        backgroundColor: 'rgba(120, 120, 128,0.05)',
                                         borderLeft: '3px solid var(--accent)',
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -961,7 +961,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                         e.target.parentNode.style.display = 'flex';
                                                         e.target.parentNode.style.alignItems = 'center';
                                                         e.target.parentNode.style.justifyContent = 'center';
-                                                        e.target.parentNode.innerHTML = `<span style="color:var(--bg-base);font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
+                                                        e.target.parentNode.innerHTML = `<span style="color:var(--text-on-accent);font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
                                                     }}
                                                 />
                                             </div>
@@ -1015,7 +1015,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     {replies.length === 0 ? (
                                         <div style={{ textAlign: 'center', padding: '40px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                                             <div style={{
-                                                width: '48px', height: '48px', borderRadius: '2px',
+                                                width: '48px', height: '48px', borderRadius: 'var(--r-sm)',
                                                 backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             }}>
@@ -1043,7 +1043,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             onError={(e) => {
                                                                 e.target.style.display = 'none';
                                                                 e.target.parentNode.style.backgroundColor = 'var(--accent)';
-                                                                e.target.parentNode.innerHTML = `<span style="color:var(--bg-base);font-weight:700;font-size:12px">${initials}</span>`;
+                                                                e.target.parentNode.innerHTML = `<span style="color:var(--text-on-accent);font-weight:700;font-size:12px">${initials}</span>`;
                                                             }}
                                                         />
                                                     </div>

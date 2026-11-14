@@ -13,7 +13,7 @@ function InlineAdd({ onSubmit, onCancel }) {
     useEffect(() => { ref.current?.focus(); }, []);
     const submit = (e) => { e?.preventDefault(); if (title.trim()) onSubmit(title.trim()); };
     return (
-        <div style={{ borderRadius: '2px', border: '1px solid var(--accent)', backgroundColor: 'var(--bg-active)', marginBottom: 6 }}>
+        <div style={{ borderRadius: 'var(--r-sm)', border: '1px solid var(--accent)', backgroundColor: 'var(--bg-active)', marginBottom: 6 }}>
             <input
                 ref={ref}
                 value={title}
@@ -65,7 +65,7 @@ export function TaskCard({ task, perms, selected, onOpen, onDelete, onDragStart,
             onMouseLeave={() => setHover(false)}
             style={{
                 backgroundColor: hover || selected ? 'var(--bg-hover)' : 'var(--bg-active)',
-                borderRadius: '2px', cursor: perms.status ? 'grab' : 'pointer', marginBottom: 6, position: 'relative',
+                borderRadius: 'var(--r-sm)', cursor: perms.status ? 'grab' : 'pointer', marginBottom: 6, position: 'relative',
                 borderTop: edge, borderRight: edge, borderBottom: edge,
                 borderLeft: `3px solid ${priorityColor}`,
                 opacity: dragging ? 0.45 : 1, outline: 'none',
@@ -157,7 +157,7 @@ export function KanbanColumn({
                 flex: `1 0 ${COLUMN_MIN_WIDTH}px`, minWidth: COLUMN_MIN_WIDTH, display: 'flex', flexDirection: 'column', minHeight: 0,
                 backgroundColor: over ? 'var(--bg-hover)' : 'var(--bg-surface)',
                 outline: over ? '1px dashed var(--accent)' : accepts ? '1px dashed var(--border-accent)' : 'none',
-                outlineOffset: -1, opacity: dimmed ? 0.5 : 1, borderRadius: '2px',
+                outlineOffset: -1, opacity: dimmed ? 0.5 : 1, borderRadius: 'var(--r-sm)',
                 transition: 'background-color 120ms ease, opacity 120ms ease',
             }}
         >
@@ -170,7 +170,7 @@ export function KanbanColumn({
                     color, whiteSpace: 'nowrap', fontFamily: FONT,
                 }}>{statusLabel(status)}</span>
                 <span style={{
-                    fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, padding: '0 4px', boxSizing: 'border-box', borderRadius: '2px',
+                    fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, padding: '0 4px', boxSizing: 'border-box', borderRadius: 'var(--r-sm)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontFamily: FONT,
                 }}>{tasks.length}</span>

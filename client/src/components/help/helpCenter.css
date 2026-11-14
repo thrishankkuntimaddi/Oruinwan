@@ -13,7 +13,7 @@
 .orw .hc-body li::marker { color: var(--o-accent); font-weight: 700; }
 .orw .hc-body strong { color: var(--o-text); font-weight: 650; }
 .orw .hc-body code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; padding: 1px 6px; border: 1px solid var(--o-line-2); background: rgba(255, 255, 255, 0.04); }
-.orw .hc-note { padding: 10px 14px !important; border-left: 2px solid var(--o-accent); background: linear-gradient(90deg, rgba(200, 162, 116, 0.08), transparent 80%); }
+.orw .hc-note { padding: 10px 14px !important; border-left: 2px solid var(--o-accent); background: linear-gradient(90deg, rgba(120, 120, 128, 0.08), transparent 80%); }
 .orw .hc-open { margin-top: 4px; height: 38px; padding: 0 16px; font-size: 13px; }
 .orw .hc-topic { padding: 64px 0; scroll-margin-top: 72px; }
 .orw .hc-topic__grid { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 56px; align-items: start; }

@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Liquid Glass kit, shared with the web client: tokens (--lg-*), materials and motion. */
+@import '../../../platform/theme/liquid-glass.css';
 
 /* Inter (SIL OFL 1.1, see assets/fonts/Inter-OFL.txt). Latin subset only to keep the app small;
    other scripts fall back to the system font. */
@@ -13,121 +15,119 @@
 }
 
 /*
- * Oruinwan mobile design tokens. These mirror the web client's "Monolith Gloss"
- * palette (client/src/index.css + styles/gloss.css) so every platform looks alike.
- * Each token is an RGB triplet, so Tailwind opacity modifiers work: bg-accent/15.
- *   accent      gold fill (buttons, badges, toggles); always paired with on-accent text
- *   accent-ink  gold used as text/icon colour; darker in light mode for contrast
+ * Oruinwan phone & tablet design tokens: Liquid Glass (platform/theme/liquid-glass.css, the
+ * same kit the web client loads). Each colour token is an RGB triplet plus an alpha, so
+ * Tailwind opacity modifiers still work (bg-surface/80).
+ *   bg          the wallpaper: a soft colour field the glass picks colour up from
+ *   surface     clear glass tiles (cards, list groups): nearly transparent, no live blur
+ *   surface-2/3 recessed wells (tracks, chips, hover) — neutral grey, never tinted
+ *   chrome      floating bars (headers, tab dock, composer): frosted glass over moving content
+ *   accent      the "selected / primary" fill: white glass with a dark label, with only the
+ *               faintest warmth of the old gold (never a coloured slab)
+ *   accent-ink  accent as text/icon colour: warm graphite (light), warm white (dark)
+ * Colour only means something: danger red, success green, warning orange, info blue.
  * The theme is chosen per device (<html data-theme>), never synced. Light by default.
- *
- * 60:30:10 colour balance (same as the web client's styles/palette.css):
- *   60  bg / surface   the screen canvas and its cards
- *   30  chrome         the frame: screen headers, tab bar, composer bar, tablet sidebar
- *   10  accent         gold: primary buttons, the active tab, badges, toggles
  */
 :root,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --c-bg: 12 12 12;
-  --c-chrome: 22 20 18;
-  --c-surface: 17 17 17;
-  --c-surface-2: 22 22 22;
-  --c-surface-3: 28 28 28;
-  --c-input: 20 20 20;
-  --c-line: 34 34 34;
-  --c-line-soft: 25 25 25;
-  --c-line-strong: 56 56 56;
-  --c-text: 228 228 228;
-  --c-text-2: 140 140 140;
-  --c-text-3: 112 112 112;
-  --c-accent: 184 149 106;
-  --c-accent-strong: 201 168 124;
-  --c-accent-ink: 201 168 124;
-  --c-on-accent: 18 14 8;
-  --c-danger: 224 82 82;
-  --c-success: 90 186 138;
-  --c-warning: 229 158 12;
-  --c-info: 110 168 254;
+[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: 238 240 246;
+  --c-chrome: 255 255 255;        --a-chrome: 0.16;
+  --c-surface: 255 255 255;       --a-surface: 0.24;
+  --c-surface-2: 120 120 128;     --a-surface-2: 0.12;
+  --c-surface-3: 120 120 128;     --a-surface-3: 0.2;
+  --c-input: 255 255 255;         --a-input: 0.55;
+  --c-line: 60 60 67;             --a-line: 0.14;
+  --c-line-soft: 60 60 67;        --a-line-soft: 0.08;
+  --c-line-strong: 60 60 67;      --a-line-strong: 0.26;
+  --c-text: 10 10 12;
+  --c-text-2: 84 84 90;
+  --c-text-3: 110 111 118;
+  --c-accent: 255 253 248;
+  --c-accent-strong: 255 255 255;
+  --c-accent-ink: 70 62 48;
+  --c-on-accent: 10 10 12;
+  --c-danger: 255 59 48;
+  --c-success: 30 158 74;
+  --c-warning: 217 122 0;
+  --c-info: 0 122 255;
   --c-overlay: 0 0 0;
-  --accent-grad: linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%);
-  --accent-glow: 0 8px 24px -10px rgb(200 162 116 / 0.55);
-  /* Gloss: the specular highlight laid over gold fills (bg-gold) and active states. */
-  --accent-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0.1) 38%, rgb(255 255 255 / 0) 62%);
-  --accent-rim: inset 0 1px 0 rgb(255 255 255 / 0.4), inset 0 -1px 0 rgb(60 40 10 / 0.25);
-  --glass: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.012));
-  --spec: inset 0 1px 0 rgb(255 255 255 / 0.07);
-  --shadow-sheet: 0 -8px 32px rgb(0 0 0 / 0.5);
-  --shadow-pop: 0 24px 60px -24px rgb(0 0 0 / 0.75);
-  /* Liquid glass, for floating surfaces only (tab bar, sheets, dialogs, toasts, popovers).
-     Screens, list rows and cards stay solid (Monolith). See the glass utilities below. */
-  --glass-tint: rgb(24 24 24 / 0.6);
-  --glass-tint-strong: rgb(22 22 22 / 0.8);
-  --glass-tint-bar: rgb(var(--c-chrome) / 0.86);
-  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.075) 0%, rgb(255 255 255 / 0.02) 38%, rgb(255 255 255 / 0) 70%);
-  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.025);
-  --glass-border: rgb(255 255 255 / 0.085);
-  --glass-shadow: 0 2px 6px rgb(0 0 0 / 0.3), 0 18px 44px -14px rgb(0 0 0 / 0.7);
-  --glass-shadow-up: 0 -10px 30px -12px rgb(0 0 0 / 0.55);
-  --glass-solid: rgb(20 20 20);
-  --glass-solid-bar: rgb(var(--c-chrome));
-  --glass-blur: blur(20px) saturate(170%);
-  --scrim: rgb(0 0 0 / 0.6);
+  /* Primary / selected fill (bg-gold): white glass, a top sheen and a lit rim. */
+  --accent-grad: linear-gradient(180deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0) 60%), linear-gradient(rgb(255 253 247 / 0.92), rgb(255 253 247 / 0.92));
+  --accent-glow: 0 6px 16px -8px rgb(0 0 0 / 0.3);
+  --accent-sheen: linear-gradient(transparent, transparent);
+  --accent-rim: inset 0 1px 0 #fff, inset -1px -1px 0 -0.25px rgb(255 255 255 / 0.6), 0 0 0 0.5px rgb(0 0 0 / 0.07);
+  --glass: linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0));
+  --spec: var(--lg-bevel-sm);
+  --shadow-sheet: 0 -12px 40px -16px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 30px 70px -20px rgb(0 0 0 / 0.35);
+  /* Floating glass (glass / glass-strong / glass-bar / glass-header utilities below). */
+  --glass-tint: rgb(255 255 255 / 0.52);
+  --glass-tint-strong: var(--lg-dense);
+  --glass-tint-bar: var(--lg-bar);
+  --glass-sheen: none;
+  --glass-edge: var(--lg-bevel);
+  --glass-border: rgb(255 255 255 / 0.35);
+  --glass-shadow: var(--lg-drop);
+  --glass-shadow-up: var(--lg-drop);
+  --glass-solid: rgb(246 246 250);
+  --glass-solid-bar: rgb(246 246 250);
+  --glass-blur: var(--lg-frost);
+  --scrim: rgb(0 0 0 / 0.28);
+  /* The wallpaper (the kit's colour field), painted by every full screen (.bg-bg). */
+  --lg-paint:
+    radial-gradient(55vmax 42vmax at 8% 0%, var(--lg-wall-1), transparent 64%),
+    radial-gradient(50vmax 40vmax at 100% 18%, var(--lg-wall-2), transparent 64%),
+    radial-gradient(60vmax 48vmax at 70% 108%, var(--lg-wall-3), transparent 66%),
+    radial-gradient(48vmax 42vmax at -6% 82%, var(--lg-wall-4), transparent 66%),
+    var(--lg-wall);
+  /* The faintest trace of the old gold: selected glass is a warm white, not a pure one. */
+  --lg-selected: rgb(255 253 247 / 0.92);
 }
 
-[data-theme='light'] {
-  /* Warm off-white base, matching the web client's light theme (client/src/index.css). */
-  color-scheme: light;
-  --c-bg: 248 245 240;
-  --c-chrome: 239 230 215; /* sand */
-  --c-surface: 255 255 255;
-  --c-surface-2: 239 235 228;
-  --c-surface-3: 232 226 216;
-  --c-input: 251 249 246;
-  --c-line: 221 214 203;
-  --c-line-soft: 233 228 220;
-  --c-line-strong: 198 189 175;
-  --c-text: 26 25 22;
-  --c-text-2: 87 82 75;
-  --c-text-3: 115 109 100; /* #736d64: AA on the base and on white */
-  --c-accent: 184 149 106;
-  --c-accent-strong: 160 122 82;
-  --c-accent-ink: 135 100 52; /* #876434: gold as text, 4.8:1 on the base */
-  --c-on-accent: 18 14 8;
-  --c-danger: 201 64 64;
-  --c-success: 58 143 106;
-  --c-warning: 150 96 6;
-  --c-info: 58 110 200;
-  --c-overlay: 48 38 24;
-  --accent-glow: 0 8px 20px -10px rgb(150 108 56 / 0.5);
-  --accent-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.38) 0%, rgb(255 255 255 / 0.12) 38%, rgb(255 255 255 / 0) 62%);
-  --accent-rim: inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -1px 0 rgb(90 60 20 / 0.22);
-  --glass: linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.2));
-  --spec: inset 0 1px 0 rgb(255 255 255 / 0.6);
-  --shadow-sheet: 0 -1px 2px rgb(60 44 20 / 0.04), 0 -12px 36px -8px rgb(60 44 20 / 0.16);
-  --shadow-pop: 0 1px 2px rgb(60 44 20 / 0.06), 0 16px 40px -12px rgb(60 44 20 / 0.24);
-  --glass-tint: rgb(255 253 250 / 0.66);
-  --glass-tint-strong: rgb(255 253 250 / 0.84);
-  --glass-tint-bar: rgb(var(--c-chrome) / 0.9);
-  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.8) 0%, rgb(255 255 255 / 0.25) 40%, rgb(255 255 255 / 0) 75%);
-  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.4);
-  --glass-border: rgb(120 92 54 / 0.14);
-  --glass-shadow: 0 1px 3px rgb(60 44 20 / 0.06), 0 18px 44px -14px rgb(60 44 20 / 0.24);
-  --glass-shadow-up: 0 -8px 28px -14px rgb(60 44 20 / 0.2);
-  --glass-solid: rgb(252 250 247);
-  --glass-solid-bar: rgb(var(--c-chrome));
-  --scrim: rgb(48 38 24 / 0.32);
+[data-theme='dark'] {
+  color-scheme: dark;
+  --c-bg: 6 7 11;
+  --c-chrome: 28 28 32;           --a-chrome: 0.22;
+  --c-surface: 255 255 255;       --a-surface: 0.055;
+  --c-surface-2: 118 118 128;     --a-surface-2: 0.24;
+  --c-surface-3: 118 118 128;     --a-surface-3: 0.34;
+  --c-input: 118 118 128;         --a-input: 0.18;
+  --c-line: 255 255 255;          --a-line: 0.12;
+  --c-line-soft: 255 255 255;     --a-line-soft: 0.07;
+  --c-line-strong: 255 255 255;   --a-line-strong: 0.22;
+  --c-text: 245 245 247;
+  --c-text-2: 170 170 176;
+  --c-text-3: 138 138 145;
+  --c-accent: 255 253 248;
+  --c-accent-strong: 255 255 255;
+  --c-accent-ink: 238 230 214;
+  --c-on-accent: 10 10 12;
+  --c-danger: 255 69 58;
+  --c-success: 48 209 88;
+  --c-warning: 255 159 10;
+  --c-info: 10 132 255;
+  --c-overlay: 0 0 0;
+  --glass: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0));
+  --shadow-sheet: 0 -12px 40px -16px rgb(0 0 0 / 0.7);
+  --shadow-pop: 0 30px 70px -20px rgb(0 0 0 / 0.8);
+  --glass-tint: rgb(40 40 46 / 0.5);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-solid: rgb(28 28 30);
+  --glass-solid-bar: rgb(28 28 30);
+  --scrim: rgb(0 0 0 / 0.5);
 }
 
 @theme inline {
   --color-bg: rgb(var(--c-bg));
-  --color-chrome: rgb(var(--c-chrome));
-  --color-surface: rgb(var(--c-surface));
-  --color-surface-2: rgb(var(--c-surface-2));
-  --color-surface-3: rgb(var(--c-surface-3));
-  --color-input: rgb(var(--c-input));
-  --color-line: rgb(var(--c-line));
-  --color-line-soft: rgb(var(--c-line-soft));
-  --color-line-strong: rgb(var(--c-line-strong));
+  --color-chrome: rgb(var(--c-chrome) / var(--a-chrome));
+  --color-surface: rgb(var(--c-surface) / var(--a-surface));
+  --color-surface-2: rgb(var(--c-surface-2) / var(--a-surface-2));
+  --color-surface-3: rgb(var(--c-surface-3) / var(--a-surface-3));
+  --color-input: rgb(var(--c-input) / var(--a-input));
+  --color-line: rgb(var(--c-line) / var(--a-line));
+  --color-line-soft: rgb(var(--c-line-soft) / var(--a-line-soft));
+  --color-line-strong: rgb(var(--c-line-strong) / var(--a-line-strong));
   --color-text: rgb(var(--c-text));
   --color-text-2: rgb(var(--c-text-2));
   --color-text-3: rgb(var(--c-text-3));
@@ -140,14 +140,16 @@
   --color-warning: rgb(var(--c-warning));
   --color-info: rgb(var(--c-info));
   --color-overlay: rgb(var(--c-overlay));
+  --color-switch: #34c759;
 }
 
 @theme {
-  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Apple's system font where there is one (SF), Inter (bundled) everywhere else. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter Variable', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
-  --radius-card: 0.75rem;
+  --radius-card: 1.375rem;
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   /* A soft spring: a touch of overshoot (the drawer, the tab indicator). */
   --ease-spring: cubic-bezier(0.32, 1.28, 0.56, 1);
@@ -175,7 +177,9 @@
   }
   body {
     margin: 0;
-    background: rgb(var(--c-bg));
+    background: var(--lg-paint);
+    background-attachment: fixed;
+    letter-spacing: -0.01em;
     color: rgb(var(--c-text));
     font-family: var(--font-sans);
     font-size: 15px;
@@ -198,12 +202,16 @@
     -webkit-touch-callout: none;
   }
   :focus-visible {
-    outline: 2px solid rgb(var(--c-accent));
+    outline: 2.5px solid rgb(120 120 128 / 0.55);
     outline-offset: 2px;
   }
   ::selection {
-    background: rgb(var(--c-accent) / 0.35);
+    background: rgb(120 120 128 / 0.28);
   }
+  h1, h2 { letter-spacing: -0.03em; }
+  /* No scrollbars drawn anywhere (everything still scrolls). */
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 }
 
 /* Capacitor's SystemBars plugin injects --safe-area-inset-* on Android; browsers use env(). */
@@ -225,17 +233,39 @@
     display: none;
   }
 }
+/* Tap feedback: sinks while pressed, springs back with a slight overshoot (the kit's spring). */
 @utility pressable {
-  transition: transform 160ms var(--ease-out-soft), background-color 160ms, opacity 160ms, box-shadow 200ms, filter 160ms;
+  transition: transform 500ms var(--lg-spring), background-color 250ms, opacity 160ms, box-shadow 300ms, filter 160ms;
   &:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
+    transition-duration: 140ms;
   }
 }
 
-/* Gold fill with gloss: the gradient, a specular highlight across the top half, a lit rim. */
+/* The primary / selected fill (historically gold): white glass with a dark label, a top sheen
+   and a lit rim — like the active circles in Control Center. Never a coloured slab. */
 @utility bg-gold {
-  background: var(--accent-sheen), var(--accent-grad);
-  box-shadow: var(--accent-glow), var(--accent-rim);
+  background: var(--accent-grad);
+  box-shadow: var(--accent-rim), var(--accent-glow);
+}
+
+/* Liquid Glass building blocks (tokens from platform/theme/liquid-glass.css). */
+@utility glass-tile {
+  background-color: var(--lg-tile);
+  box-shadow: var(--lg-bevel), var(--lg-drop);
+}
+@utility glass-ctl {
+  background-color: var(--lg-ctl);
+  box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgb(0 0 0 / 0.18);
+}
+@utility glass-selected {
+  background: var(--accent-grad);
+  color: #0a0a0c;
+  box-shadow: inset 0 1px 0 #fff, 0 3px 10px -4px rgb(0 0 0 / 0.22);
+}
+@utility glass-well {
+  background-color: var(--lg-well);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.06);
 }
 
 /*
@@ -250,38 +280,56 @@
  */
 @utility glass {
   background-color: var(--glass-tint);
-  background-image: var(--glass-sheen);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--lg-frost);
+  backdrop-filter: var(--lg-frost);
   border-color: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
+  box-shadow: var(--lg-bevel), var(--lg-drop);
+  transform: translateZ(0);
 }
 @utility glass-strong {
-  background-color: var(--glass-tint-strong);
-  background-image: var(--glass-sheen);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  background-color: var(--lg-dense);
+  -webkit-backdrop-filter: var(--lg-frost-dense);
+  backdrop-filter: var(--lg-frost-dense);
   border-color: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
+  box-shadow: var(--lg-bevel), 0 30px 70px -20px rgb(0 0 0 / 0.45);
 }
 @utility glass-bar {
-  background-color: var(--glass-tint-bar);
-  background-image: var(--glass-sheen);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--glass-edge), var(--glass-shadow-up);
+  background-color: var(--lg-bar);
+  -webkit-backdrop-filter: var(--lg-frost);
+  backdrop-filter: var(--lg-frost);
+  box-shadow: var(--lg-bevel), var(--lg-drop);
+  transform: translateZ(0);
 }
 @utility glass-header {
-  background-color: rgb(var(--c-chrome) / 0.9);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  background-color: var(--lg-bar);
+  -webkit-backdrop-filter: var(--lg-frost);
+  backdrop-filter: var(--lg-frost);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass { background-color: var(--glass-solid); }
   .glass-strong { background-color: var(--glass-solid); }
   .glass-bar { background-color: var(--glass-solid-bar); }
-  .glass-header { background-color: rgb(var(--c-chrome)); }
+  .glass-header { background-color: var(--glass-solid-bar); }
 }
+
+/* Every full screen paints the wallpaper, so a pushed screen still covers the one under it. */
+.bg-bg { background: var(--lg-paint); }
+
+/* Edge refraction (Chromium / Android WebView) on the floating bars, like the kit's .lg-bar. */
+html.lg-refract .glass-bar,
+html.lg-refract .glass-header.lg-header { backdrop-filter: var(--lg-frost) url(#lg-refract); }
+
+/* Screen headers float over their scrolling body (the kit's floatHeaders adds lg-float-root /
+   lg-under): a frosted capsule below the status bar; the content scrolls under it. */
+.lg-float-root > .lg-header {
+  margin: calc(var(--sat) + 6px) 10px 0;
+  padding-top: 0;
+  border-radius: 26px;
+  box-shadow: var(--lg-bevel), var(--lg-drop);
+  transform: translateZ(0);
+}
+.lg-float-root > .lg-header { border-bottom-width: 0; }
+.lg-float-root > .lg-under { padding-top: calc(var(--lg-hdr-h, 76px) + 10px); }
 
 /* Dims what is under a sheet or dialog; lighter and warmer in light mode. */
 @utility scrim {
@@ -400,7 +448,7 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, rgb(var(--c-surface-2)) 0, rgb(var(--c-surface-3)) 50%, rgb(var(--c-surface-2)) 100%);
+  background: linear-gradient(90deg, var(--color-surface-2) 0, var(--color-surface-3) 50%, var(--color-surface-2) 100%);
   background-size: 400px 100%;
   animation: shimmer 1.2s linear infinite;
 }
@@ -409,20 +457,13 @@
    and slim scrollbars in the theme's colours. Touch screens never match this query. */
 @media (hover: hover) and (pointer: fine) {
   .active\:bg-surface-2:not(:disabled):hover {
-    background-color: rgb(var(--c-surface-2) / 0.7);
+    background-color: var(--lg-hover);
   }
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--c-line-strong)) transparent;
-  }
+  .pressable:not(:disabled):hover { transform: translate3d(0, -1px, 0) scale(1.02); }
 }
 /* The desktop app (desktop/, Electron) always counts as mouse-driven. */
 [data-desktop] .active\:bg-surface-2:not(:disabled):hover {
-  background-color: rgb(var(--c-surface-2) / 0.7);
-}
-[data-desktop] * {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(var(--c-line-strong)) transparent;
+  background-color: var(--lg-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -458,9 +499,9 @@
 .prose-oru li::marker { color: rgb(var(--c-text-3)); }
 .prose-oru a { color: rgb(var(--c-accent-ink)); text-decoration: underline; text-underline-offset: 2px; }
 .prose-oru strong { font-weight: 650; }
-.prose-oru blockquote { border-left: 2px solid rgb(var(--c-accent)); padding-left: 0.8em; color: rgb(var(--c-text-2)); }
-.prose-oru code { font-family: var(--font-mono); font-size: 0.86em; background: rgb(var(--c-surface-3)); border: 1px solid rgb(var(--c-line)); padding: 0.1em 0.35em; border-radius: 4px; }
-.prose-oru pre { background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); border-radius: 8px; padding: 0.7em 0.85em; overflow-x: auto; font-size: 0.82em; line-height: 1.5; user-select: text; }
+.prose-oru blockquote { border-left: 2px solid rgb(var(--c-line-strong) / var(--a-line-strong)); padding-left: 0.8em; color: rgb(var(--c-text-2)); }
+.prose-oru code { font-family: var(--font-mono); font-size: 0.86em; background: var(--color-surface-2); border: 1px solid var(--color-line); padding: 0.1em 0.35em; border-radius: 4px; }
+.prose-oru pre { background: var(--color-surface-2); border: 1px solid var(--color-line); border-radius: 8px; padding: 0.7em 0.85em; overflow-x: auto; font-size: 0.82em; line-height: 1.5; user-select: text; }
 .prose-oru pre code { background: none; border: 0; padding: 0; font-size: 1em; }
 /* Syntax colours (ui/highlight.js), from the theme's own tokens so both themes stay in palette. */
 .hl .hl-keyword, .hl .hl-selector-tag, .hl .hl-built_in, .hl .hl-meta .hl-keyword { color: rgb(var(--c-accent-ink)); font-weight: 600; }
@@ -472,27 +513,60 @@
 .hl .hl-deletion { color: rgb(var(--c-danger)); }
 .hl .hl-emphasis { font-style: italic; }
 .hl .hl-strong { font-weight: 650; }
-.prose-oru hr { border: 0; border-top: 1px solid rgb(var(--c-line)); }
+.prose-oru hr { border: 0; border-top: 1px solid var(--color-line); }
 .prose-oru ul[data-type='checklist'] { list-style: none; padding-left: 0; }
 .prose-oru ul[data-type='checklist'] > li { position: relative; padding-left: 1.7em; }
 .prose-oru ul[data-type='checklist'] > li::before {
   content: ''; position: absolute; left: 0; top: 0.3em; width: 1.05em; height: 1.05em;
-  border: 1.5px solid rgb(var(--c-line-strong)); border-radius: 4px;
+  border: 1.5px solid var(--color-line-strong); border-radius: 5px;
 }
 .prose-oru ul[data-type='checklist'] > li[data-checked='true'] { color: rgb(var(--c-text-2)); text-decoration: line-through; }
 .prose-oru ul[data-type='checklist'] > li[data-checked='true']::before {
-  background: rgb(var(--c-accent)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23120e08' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 75% no-repeat;
-  border-color: rgb(var(--c-accent));
+  background: #34c759 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 75% no-repeat;
+  border-color: #34c759;
 }
 .prose-oru [contenteditable]:focus { outline: none; }
 .editor-empty:empty::before { content: attr(data-placeholder); color: rgb(var(--c-text-3)); pointer-events: none; }
 
 /* The tab bar's drawer hint (app/TabBar.jsx): a gentle upward nudge, now and then. */
 @keyframes nudge-up {
-  0%, 70%, 100% { transform: translateY(-50%); }
-  80% { transform: translateY(calc(-50% - 4px)); }
-  90% { transform: translateY(-50%); }
+  0%, 70%, 100% { transform: none; }
+  80% { transform: translateY(-4px); }
+  90% { transform: none; }
 }
+
+/* Tablet panes (app/Shell.jsx SplitTab): the list and the open item are rounded glass panes
+   inset from the window. Inside a pane the screens paint a white wash over the wallpaper (a
+   frosted pane) instead of the bare wallpaper; the lit bevel is drawn over the content. The
+   pane already sits clear of the system bars, so the safe-area insets are zero inside it. */
+:root { --lg-pane-wash: rgb(255 255 255 / 0.5); }
+[data-theme='dark'] { --lg-pane-wash: rgb(255 255 255 / 0.045); }
+.lg-pane {
+  --sat: 0px;
+  --sab: 0px;
+  border-radius: 28px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(var(--lg-pane-wash), var(--lg-pane-wash)), var(--lg-paint);
+  box-shadow: var(--lg-drop);
+}
+.lg-pane::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: var(--lg-bevel);
+}
+.lg-pane .bg-bg { background: linear-gradient(var(--lg-pane-wash), var(--lg-pane-wash)), var(--lg-paint); }
+
+/* The dock's active-tab lens (app/TabBar.jsx), like the kit's .lg-dock-pill. */
+.dock-pill {
+  background: rgb(255 255 255 / 0.55);
+  box-shadow: var(--lg-bevel-sm), 0 4px 12px -6px rgb(0 0 0 / 0.25);
+}
+[data-theme='dark'] .dock-pill { background: rgb(255 255 255 / 0.14); }
 .animate-nudge-up { animation: nudge-up 2.6s ease-in-out 1.5s infinite; }
 @media (prefers-reduced-motion: reduce) {
   .animate-nudge-up { animation: none; }

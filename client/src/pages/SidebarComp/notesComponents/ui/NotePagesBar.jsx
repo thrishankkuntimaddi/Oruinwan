@@ -46,7 +46,7 @@ export default function NotePagesBar({ noteId, workspaceId, canEdit, title }) {
                 return (
                     <button key={p.id} type="button" role="tab" aria-selected={on}
                         onClick={() => !on && navigate(`/workspace/${workspaceId}/notes/${p.id}`)}
-                        style={{ height: 28, maxWidth: 200, padding: '0 12px', borderRadius: 999, border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, background: on ? 'var(--gl-accent-soft, rgba(184,149,106,0.14))' : 'var(--bg-surface)', color: on ? 'var(--accent)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: on ? 'default' : 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        style={{ height: 28, maxWidth: 200, padding: '0 12px', borderRadius: 999, border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, background: on ? 'var(--gl-accent-soft, rgba(120, 120, 128,0.14))' : 'var(--bg-surface)', color: on ? 'var(--accent)' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: on ? 'default' : 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {i + 1} · {p.title || (i === 0 ? 'Untitled' : `Page ${i + 1}`)}
                     </button>
                 );

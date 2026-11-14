@@ -19,7 +19,7 @@ const row = { display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 
 
 function Bar({ pct, over }) {
   return (
-    <div aria-hidden style={{ height: '4px', background: 'var(--bg-active)', overflow: 'hidden', borderRadius: '2px' }}>
+    <div aria-hidden style={{ height: '4px', background: 'var(--bg-active)', overflow: 'hidden', borderRadius: 'var(--r-sm)' }}>
       <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, background: over ? 'var(--state-danger)' : 'var(--accent)' }} />
     </div>
   );

@@ -21,10 +21,10 @@ export default function MembersTab({
                     padding: '14px 16px',
                     backgroundColor: 'var(--bg-active)',
                     border: '1px solid var(--border-default)',
-                    borderRadius: '2px',
+                    borderRadius: 'var(--r-sm)',
                 }}>
                     <div style={{
-                        width: 36, height: 36, borderRadius: '2px',
+                        width: 36, height: 36, borderRadius: 'var(--r-sm)',
                         backgroundColor: 'var(--bg-hover)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: 'var(--text-muted)',
@@ -95,7 +95,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
             onMouseLeave={() => setHovered(false)}
             style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 12px', borderRadius: '2px',
+                padding: '10px 12px', borderRadius: 'var(--r-sm)',
                 backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
                 transition: 'background-color 150ms ease',
             }}
@@ -103,7 +103,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
             {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
-                    width: 36, height: 36, borderRadius: '2px',
+                    width: 36, height: 36, borderRadius: 'var(--r-sm)',
                     backgroundColor: 'var(--bg-active)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)',
@@ -121,9 +121,9 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
                         {member?.username || 'Unknown'}
                         {isOwner && (
                             <span style={{
-                                padding: '1px 6px', backgroundColor: 'rgba(184,149,106,0.15)',
+                                padding: '1px 6px', backgroundColor: 'rgba(120, 120, 128,0.15)',
                                 color: 'var(--accent)', fontSize: '9px', fontWeight: 700,
-                                borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '0.1em',
+                                borderRadius: 'var(--r-sm)', textTransform: 'uppercase', letterSpacing: '0.1em',
                                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                             }}>Owner</span>
                         )}
@@ -131,7 +131,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
                             <span style={{
                                 padding: '1px 6px', backgroundColor: 'var(--bg-active)',
                                 color: 'var(--text-secondary)', fontSize: '9px', fontWeight: 700,
-                                borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '0.1em',
+                                borderRadius: 'var(--r-sm)', textTransform: 'uppercase', letterSpacing: '0.1em',
                                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                             }}>Admin</span>
                         )}
@@ -181,7 +181,7 @@ function InlineBtn({ label, onClick, disabled, danger = false, accent = false })
             style={{
                 fontSize: '12px', fontWeight: 400, padding: '4px 10px',
                 backgroundColor: h ? 'var(--bg-active)' : 'transparent',
-                color, border: '1px solid var(--border-default)', borderRadius: '2px',
+                color, border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                 cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
                 transition: 'background-color 150ms ease',
                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',

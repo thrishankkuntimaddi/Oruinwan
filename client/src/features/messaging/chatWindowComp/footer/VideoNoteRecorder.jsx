@@ -151,7 +151,7 @@ export default function VideoNoteRecorder({ onRecorded, onCancel }) {
     const btn = (title, Icon, onClick, { color = 'var(--text-secondary)', testId, primary } = {}) => (
         <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testId}
             style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 2, cursor: 'pointer', fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontSize: 12,
                 border: primary ? 'none' : '1px solid var(--border-default)',
                 background: primary ? 'var(--accent)' : 'none', color: primary ? 'var(--bg-base)' : color,
             }}>
@@ -162,7 +162,7 @@ export default function VideoNoteRecorder({ onRecorded, onCancel }) {
     return (
         <div data-testid="video-note-recorder" style={{
             display: 'flex', alignItems: 'center', gap: 14, padding: 10, marginBottom: 6,
-            background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2,
+            background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
         }}>
             <div style={circle}>
                 {phase === 'preview' && blobUrl ? (

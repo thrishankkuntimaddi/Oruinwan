@@ -28,13 +28,13 @@ export default function CreateChecklistModal({ onCreate, onClose }) {
         }
     };
 
-    const input = { width: '100%', padding: '8px 10px', fontSize: 13, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 2, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' };
+    const input = { width: '100%', padding: '8px 10px', fontSize: 13, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontFamily: FONT, outline: 'none', boxSizing: 'border-box' };
 
     return (
         <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
             style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <form data-testid="checklist-modal" onSubmit={submit}
-                style={{ width: 380, background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 2, padding: 18, fontFamily: FONT, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                style={{ width: 380, background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', padding: 18, fontFamily: FONT, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}><ListChecks size={16} /> New checklist</span>
                     <button type="button" aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
@@ -46,7 +46,7 @@ export default function CreateChecklistModal({ onCreate, onClose }) {
                     {error || `${items.length} item${items.length === 1 ? '' : 's'}`}
                 </div>
                 <button type="submit" disabled={saving}
-                    style={{ padding: '9px 0', fontSize: 13, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-base)', border: 'none', borderRadius: 2, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+                    style={{ padding: '9px 0', fontSize: 13, fontWeight: 600, background: 'var(--accent)', color: 'var(--text-on-accent)', border: 'none', borderRadius: 'var(--r-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
                     {saving ? 'Sending…' : 'Send checklist'}
                 </button>
             </form>

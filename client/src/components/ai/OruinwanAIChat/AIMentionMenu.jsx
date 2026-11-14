@@ -7,7 +7,7 @@ export function AIMentionMenu({ items, activeIndex = 0, onPick, onHover }) {
     if (!items?.length) return null;
     return (
         <div role="listbox" aria-label="Mention a person" data-testid="ai-mention-menu"
-            style={{ marginBottom: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+            style={{ marginBottom: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
             {items.map((p, i) => (
                 <button key={p.id} type="button" role="option" aria-selected={i === activeIndex} data-testid="ai-mention-option"
                     onMouseDown={(e) => e.preventDefault()}
@@ -29,7 +29,7 @@ export function AIMentionMenu({ items, activeIndex = 0, onPick, onHover }) {
     );
 }
 
-const chipStyle = { display: 'inline-flex', alignItems: 'center', padding: '0 5px', borderRadius: '2px', fontWeight: 600, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', cursor: 'pointer' };
+const chipStyle = { display: 'inline-flex', alignItems: 'center', padding: '0 5px', borderRadius: 'var(--r-sm)', fontWeight: 600, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', cursor: 'pointer' };
 
 /** A mentioned person as a chip; opens their profile card (with Message, Mention…). */
 export function PersonChip({ person, children }) {

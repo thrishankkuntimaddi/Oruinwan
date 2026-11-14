@@ -136,14 +136,14 @@ export function Tile({ p, speaking = false, visible = true, mirror = false, comp
       className={cx(
         'relative grid min-h-0 place-items-center overflow-hidden rounded-2xl border select-none',
         hasVideo && visible ? 'bg-black' : 'bg-surface-2',
-        speaking ? 'border-accent shadow-[0_0_0_2px_rgb(var(--c-accent))]' : 'border-line',
+        speaking ? 'border-success shadow-[0_0_0_2px_rgb(var(--c-success))]' : 'border-line',
         className,
       )}
     >
       {hasVideo && visible ? (
         <VideoEl stream={stream} fit={fit || (large ? 'contain' : 'cover')} mirror={mirror} />
       ) : (
-        <span className={cx('rounded-full transition-shadow', speaking && 'shadow-[0_0_0_4px_rgb(var(--c-accent)/0.5)]')}>
+        <span className={cx('rounded-full transition-shadow', speaking && 'shadow-[0_0_0_4px_rgb(var(--c-success)/0.5)]')}>
           <Avatar name={p.username || 'You'} size={compact ? 'md' : large ? 'xl' : 'lg'} />
         </span>
       )}

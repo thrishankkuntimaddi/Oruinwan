@@ -177,7 +177,7 @@ export default function ChannelTabs({
                     onClick={handleAddClick}
                     disabled={tabs.length >= 5}
                     style={{
-                        padding: '6px', borderRadius: '2px',
+                        padding: '6px', borderRadius: 'var(--r-sm)',
                         background: 'none', border: 'none', cursor: tabs.length >= 5 ? 'not-allowed' : 'pointer',
                         color: tabs.length >= 5 ? 'var(--text-muted)' : 'var(--text-muted)',
                         display: 'flex', alignItems: 'center',

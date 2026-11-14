@@ -37,7 +37,7 @@ const HelpBugView = ({ onBack }) => (
                 onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
             />
             <button
-                style={{ width: '100%', padding: '8px 16px', fontSize: '13px', fontWeight: 700, background: 'var(--state-danger)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease' }}
+                style={{ width: '100%', padding: '8px 16px', fontSize: '13px', fontWeight: 700, background: 'var(--state-danger)', color: 'var(--text-on-accent)', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >

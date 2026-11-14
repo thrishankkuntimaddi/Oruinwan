@@ -76,7 +76,7 @@
     width: 28px;
     height: 28px;
     object-fit: contain;
-    filter: drop-shadow(0 4px 10px rgba(200, 162, 116, 0.35));
+    filter: drop-shadow(0 4px 10px rgba(120, 120, 128, 0.35));
 }
 .gl-wsp-brand__name { font-size: 15px; font-weight: 750; letter-spacing: -0.02em; color: var(--text-primary); white-space: nowrap; }
 .gl-wsp-bar__right { margin-left: auto; display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -523,7 +523,7 @@ html.light .gl-wsp-card::after { background-image: linear-gradient(115deg, trans
 .gl-wsp-skel { pointer-events: none; cursor: default; }
 .gl-wsp-skel__bar {
     display: block;
-    border-radius: 2px;
+    border-radius: var(--r-sm);
     background: linear-gradient(90deg, color-mix(in srgb, var(--text-secondary) 10%, transparent) 25%, color-mix(in srgb, var(--text-secondary) 22%, transparent) 50%, color-mix(in srgb, var(--text-secondary) 10%, transparent) 75%);
     background-size: 400% 100%;
     animation: glWspShimmer 1.4s ease infinite;
@@ -757,7 +757,7 @@ html.light .gl-wsp-card::after { background-image: linear-gradient(115deg, trans
     color: #120e08;
     background: var(--bg-input);
     border: 1px solid var(--border-accent);
-    border-radius: 3px;
+    border-radius: var(--r-sm);
     transition: background 150ms ease, border-color 150ms ease;
 }
 .gl-wsp-check.is-on { background: var(--gl-accent-grad); border-color: transparent; }

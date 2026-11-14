@@ -1,0 +1,698 @@
+/*
+ * Liquid Glass for the web client (signed-in app, desktop app and website).
+ *
+ * The material comes from the shared kit (platform/theme/liquid-glass.css, also used by the
+ * phone app). This file maps the web client's own design tokens (index.css, styles/gloss.css,
+ * styles/palette.css) and its gl-* components onto that material, so every screen changes
+ * look without anything moving:
+ *   • the window is the kit's wallpaper (a soft colour field); pages are transparent over it
+ *   • the icon rail, the side panel and the main area are clear glass panes inset from the window
+ *   • cards are clear tiles (no live blur); popovers, menus, dialogs and toasts are frosted glass
+ *   • buttons are capsules; the primary one is white glass with a dark label (once gold)
+ *   • colour only where it means something (danger, success, unread, presence)
+ *   • the gold survives only as the faintest warmth in the selected glass and the ink colour
+ *
+ * Scoped under html.lg (index.html) so it outranks the page stylesheets that load later.
+ * Light by default; html.dark / [data-theme='dark'] for the smoked-glass dark theme.
+ */
+
+/* ── Tokens: light ──────────────────────────────────────────────────────── */
+html.lg {
+    /* the wallpaper painted by the shell and the public pages */
+    --lg-paint:
+        radial-gradient(55vmax 42vmax at 8% 0%, var(--lg-wall-1), transparent 64%),
+        radial-gradient(50vmax 40vmax at 100% 18%, var(--lg-wall-2), transparent 64%),
+        radial-gradient(60vmax 48vmax at 70% 108%, var(--lg-wall-3), transparent 66%),
+        radial-gradient(48vmax 42vmax at -6% 82%, var(--lg-wall-4), transparent 66%),
+        var(--lg-wall);
+    /* the faintest trace of the old gold: selected glass is a warm white, not a pure one */
+    --lg-selected: rgba(255, 253, 247, 0.92);
+    --lg-select-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%), linear-gradient(var(--lg-selected), var(--lg-selected));
+    --lg-select-rim: inset 0 1px 0 #fff, inset -1px -1px 0 -0.25px rgba(255, 255, 255, 0.6), 0 0 0 0.5px rgba(0, 0, 0, 0.07), 0 6px 16px -8px rgba(0, 0, 0, 0.3);
+    --lg-pane-r: 22px;
+    /* Small corners (rows, chips, inputs drawn inline): softly rounded, like Liquid Glass shapes. */
+    --r-sm: 8px;
+}
+html.lg.light,
+html.lg:not(.dark) {
+    --bg-base: transparent;
+    --bg-primary: transparent;
+    --bg-surface: rgba(255, 255, 255, 0.34);
+    --bg-secondary: rgba(255, 255, 255, 0.34);
+    --bg-hover: rgba(120, 120, 128, 0.1);
+    --bg-active: rgba(120, 120, 128, 0.14);
+    --bg-tertiary: rgba(120, 120, 128, 0.14);
+    --bg-input: rgba(255, 255, 255, 0.55);
+    --border-subtle: rgba(60, 60, 67, 0.08);
+    --border-default: rgba(60, 60, 67, 0.13);
+    --border-accent: rgba(60, 60, 67, 0.24);
+    --border-color: rgba(60, 60, 67, 0.13);
+    --border-hover: rgba(60, 60, 67, 0.24);
+    --text-primary: #0a0a0c;
+    --text-secondary: #54545a;
+    --text-muted: #6e6f76;
+    /* accent: ink (links, icons, small fills) — a warm graphite, not a colour */
+    --accent: #4a4234;
+    --accent-dim: rgba(120, 120, 128, 0.12);
+    --accent-hover: #2e2a22;
+    --text-on-accent: #ffffff;
+    --state-danger: #ff3b30;
+    --state-success: #1e9e4a;
+    --color-primary: #4a4234;
+    --color-primary-hover: #2e2a22;
+    --color-primary-light: rgba(120, 120, 128, 0.12);
+    --color-success: #1e9e4a;
+    --color-warning: #d97a00;
+    --color-danger: #ff3b30;
+    --input-bg: rgba(255, 255, 255, 0.55);
+    --input-border: rgba(60, 60, 67, 0.13);
+    --input-text: #0a0a0c;
+    --input-placeholder: #8a8a90;
+    --input-ring: rgba(120, 120, 128, 0.16);
+    --card-bg: rgba(255, 255, 255, 0.34);
+    --card-border: rgba(255, 255, 255, 0.4);
+    --card-shadow: var(--lg-drop);
+    --highlight-bg-strong: rgba(214, 178, 128, 0.14);
+    --highlight-bg-weak: rgba(214, 178, 128, 0.07);
+    --bg-overlay: rgba(0, 0, 0, 0.28);
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+
+    /* gloss.css */
+    --gl-radius: 12px;
+    --gl-radius-sm: 12px;
+    --gl-radius-md: 16px;
+    --gl-radius-lg: 28px;
+    --gl-line: rgba(60, 60, 67, 0.08);
+    --gl-line-2: rgba(60, 60, 67, 0.14);
+    --gl-glass: linear-gradient(transparent, transparent);
+    --gl-glass-strong: linear-gradient(transparent, transparent);
+    --gl-spec: var(--lg-bevel-sm);
+    --gl-spec-strong: var(--lg-bevel);
+    --gl-drop: var(--lg-drop-lift);
+    --gl-accent-grad: var(--lg-select-fill);
+    --gl-accent-glow: 0 6px 16px -8px rgba(0, 0, 0, 0.3);
+    --gl-accent-soft: rgba(255, 255, 255, 0.55);
+    --gl-accent-line: rgba(255, 255, 255, 0.75);
+    --gl-grid: transparent;
+    --gl-aurora: transparent;
+    --gl-aurora-cool: transparent;
+    --gl-focus: rgba(120, 120, 128, 0.55);
+    --gl-focus-ring: 0 0 0 3px rgba(120, 120, 128, 0.16);
+    --gl-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%);
+    --gl-on-accent: #0a0a0c;
+    --gl-ease: var(--lg-ease);
+    --gl-shell-bg: var(--lg-paint);
+    /* the web client's floating-layer tokens → the kit's frosted glass */
+    --lg-filter: var(--lg-frost-dense);
+    --lg-tint: rgba(255, 255, 255, 0.62);
+    --lg-tint-strong: var(--lg-dense);
+    --lg-solid: #f6f6fa;
+    --lg-chrome: var(--lg-tile);
+    --lg-sheen: linear-gradient(transparent, transparent);
+    --lg-border: rgba(255, 255, 255, 0.45);
+    --lg-edge: var(--lg-bevel);
+    --lg-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.35);
+    --lg-shadow-sm: var(--lg-drop);
+    --lg-scrim: rgba(0, 0, 0, 0.28);
+    --lg-scrim-filter: none;
+
+    /* palette.css chrome (the old sand) → clear glass */
+    --bg-chrome: transparent;
+    --bg-chrome-deep: transparent;
+    --bg-chrome-raised: rgba(255, 255, 255, 0.34);
+    --bg-chrome-hover: rgba(120, 120, 128, 0.1);
+    --bg-chrome-active: rgba(120, 120, 128, 0.14);
+    --bg-chrome-input: rgba(255, 255, 255, 0.55);
+    --border-chrome: rgba(60, 60, 67, 0.08);
+    --text-chrome-muted: #6e6f76;
+}
+
+/* ── Tokens: dark (smoked glass) ────────────────────────────────────────── */
+html.lg.dark {
+    --bg-base: transparent;
+    --bg-primary: transparent;
+    --bg-surface: rgba(255, 255, 255, 0.06);
+    --bg-secondary: rgba(255, 255, 255, 0.06);
+    --bg-hover: rgba(255, 255, 255, 0.07);
+    --bg-active: rgba(255, 255, 255, 0.11);
+    --bg-tertiary: rgba(255, 255, 255, 0.11);
+    --bg-input: rgba(118, 118, 128, 0.18);
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-default: rgba(255, 255, 255, 0.12);
+    --border-accent: rgba(255, 255, 255, 0.22);
+    --border-color: rgba(255, 255, 255, 0.12);
+    --border-hover: rgba(255, 255, 255, 0.22);
+    --text-primary: #f5f5f7;
+    --text-secondary: #aaaab0;
+    --text-muted: #8a8a91;
+    --accent: #ede3d0;
+    --accent-dim: rgba(255, 255, 255, 0.1);
+    --accent-hover: #ffffff;
+    --text-on-accent: #0a0a0c;
+    --state-danger: #ff453a;
+    --state-success: #30d158;
+    --color-primary: #ede3d0;
+    --color-primary-hover: #ffffff;
+    --color-primary-light: rgba(255, 255, 255, 0.1);
+    --color-success: #30d158;
+    --color-warning: #ff9f0a;
+    --color-danger: #ff453a;
+    --input-bg: rgba(118, 118, 128, 0.18);
+    --input-border: rgba(255, 255, 255, 0.12);
+    --input-text: #f5f5f7;
+    --input-placeholder: #7c7c84;
+    --input-ring: rgba(255, 255, 255, 0.14);
+    --card-bg: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: var(--lg-drop);
+    --highlight-bg-strong: rgba(214, 178, 128, 0.14);
+    --highlight-bg-weak: rgba(214, 178, 128, 0.07);
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+
+    --gl-radius: 12px;
+    --gl-radius-sm: 12px;
+    --gl-radius-md: 16px;
+    --gl-radius-lg: 28px;
+    --gl-line: rgba(255, 255, 255, 0.07);
+    --gl-line-2: rgba(255, 255, 255, 0.12);
+    --gl-glass: linear-gradient(transparent, transparent);
+    --gl-glass-strong: linear-gradient(transparent, transparent);
+    --gl-spec: var(--lg-bevel-sm);
+    --gl-spec-strong: var(--lg-bevel);
+    --gl-drop: var(--lg-drop-lift);
+    --gl-accent-grad: var(--lg-select-fill);
+    --gl-accent-glow: 0 6px 16px -8px rgba(0, 0, 0, 0.6);
+    --gl-accent-soft: rgba(255, 255, 255, 0.12);
+    --gl-accent-line: rgba(255, 255, 255, 0.22);
+    --gl-grid: transparent;
+    --gl-aurora: transparent;
+    --gl-aurora-cool: transparent;
+    --gl-focus: rgba(200, 200, 210, 0.55);
+    --gl-focus-ring: 0 0 0 3px rgba(255, 255, 255, 0.12);
+    --gl-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%);
+    --gl-on-accent: #0a0a0c;
+    --gl-ease: var(--lg-ease);
+    --gl-shell-bg: var(--lg-paint);
+    --lg-filter: var(--lg-frost-dense);
+    --lg-tint: rgba(40, 40, 46, 0.62);
+    --lg-tint-strong: var(--lg-dense);
+    --lg-solid: #1c1c1e;
+    --lg-chrome: var(--lg-tile);
+    --lg-sheen: linear-gradient(transparent, transparent);
+    --lg-border: rgba(255, 255, 255, 0.1);
+    --lg-edge: var(--lg-bevel);
+    --lg-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.8);
+    --lg-shadow-sm: var(--lg-drop);
+    --lg-scrim: rgba(0, 0, 0, 0.5);
+    --lg-scrim-filter: none;
+    --bg-chrome: transparent;
+    --bg-chrome-deep: transparent;
+    --bg-chrome-raised: rgba(255, 255, 255, 0.06);
+    --bg-chrome-hover: rgba(255, 255, 255, 0.07);
+    --bg-chrome-active: rgba(255, 255, 255, 0.11);
+    --bg-chrome-input: rgba(118, 118, 128, 0.18);
+    --border-chrome: rgba(255, 255, 255, 0.07);
+    --text-chrome-muted: #8a8a91;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+html.lg,
+html.lg body { background: var(--lg-wall); }
+html.lg body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
+html.lg #root { background: var(--lg-paint); background-attachment: fixed; }
+/* No scrollbars drawn anywhere (everything still scrolls). */
+html.lg,
+html.lg * { scrollbar-width: none; }
+html.lg ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+html.lg ::selection { background: rgba(120, 120, 128, 0.28); }
+
+/* ── Shell: the window is the wallpaper; rail, panel and main are glass panes ── */
+html.lg .gl-shell { background: var(--lg-paint) !important; }
+html.lg .gl-shell-topbar,
+html.lg .gl-shell-topbar.gl-glass-bar,
+html.lg.light .gl-shell-topbar.gl-glass-bar,
+html.lg.dark .gl-shell-topbar.gl-glass-bar {
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+}
+html.lg .gl-shell-rail {
+    margin: 0 0 10px 10px;
+    height: calc(100% - 10px);
+    border: 0;
+    border-radius: var(--lg-pane-r);
+    background: var(--lg-tile);
+    background-image: none;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+}
+html.lg .gl-shell-panel-col {
+    margin: 0 0 10px 10px;
+    height: calc(100% - 10px);
+    border: 0;
+    border-radius: var(--lg-pane-r);
+    background: var(--lg-tile);
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+    overflow: hidden;
+}
+html.lg .gl-shell-resizer { width: 10px; margin-right: -10px; z-index: 5; }
+html.lg .gl-shell-resizer:hover,
+html.lg .gl-shell-resizer.is-dragging { background: transparent; box-shadow: inset 2px 0 0 rgba(120, 120, 128, 0.35); }
+html.lg .gl-shell > div > main {
+    margin: 0 10px 10px;
+    border-radius: var(--lg-pane-r);
+    background: var(--lg-tile) !important;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+    overflow: hidden;
+}
+/* Phone-width web: no inset panes, the page is the pane. */
+@media (max-width: 767px) {
+    html.lg .gl-shell > div > main { margin: 0; border-radius: 0; box-shadow: none; }
+}
+html.lg .gl-shell-rail-btn { border-radius: 12px; }
+html.lg .gl-shell-rail-btn.is-active,
+html.lg.light .gl-shell-rail .gl-shell-rail-btn.is-active,
+html.lg .gl-shell-rail .gl-shell-rail-btn.is-active {
+    color: #0a0a0c;
+    background: var(--lg-select-fill);
+    background-image: var(--lg-select-fill);
+    border-color: transparent;
+    box-shadow: var(--lg-select-rim);
+}
+html.lg .gl-shell-rail-btn.is-active::before { display: none; }
+html.lg .gl-shell-rail-sep { background: var(--lg-hairline); }
+
+/* Badges and unread counts: Apple's red (meaning), never gold. */
+html.lg .gl-shell-badge,
+html.lg .gl-shell-unread { color: #fff; background: var(--lg-red); }
+html.lg .gl-shell-dot { background: var(--lg-red); }
+
+/* ── Floating layers: popovers, menus, tooltips, dialogs, toasts ────────── */
+html.lg .gl-liquid,
+html.lg .gl-card.gl-shell-popover,
+html.lg .gl-shell-popover,
+html.lg .gl-shell-tip,
+html.lg .gl-dialog,
+html.lg .gl-toast {
+    background-color: var(--lg-dense);
+    background-image: none;
+    border-color: var(--lg-border);
+    box-shadow: var(--lg-bevel), var(--lg-shadow);
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+}
+html.lg .gl-dialog { border-radius: 28px; }
+html.lg .gl-dialog-head { border-bottom-color: var(--lg-hairline); }
+html.lg .gl-dialog-foot { border-top-color: var(--lg-hairline); background: transparent; }
+html.lg .gl-shell-popover,
+html.lg .gl-card.gl-shell-popover { border-radius: 20px; }
+html.lg .gl-toast { border-radius: 20px; }
+html.lg .gl-scrim { background: var(--lg-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.lg .gl-shell-menu-item { border-radius: 10px; }
+html.lg .gl-shell-menu-item.is-active { background: var(--lg-hover); border-color: transparent; }
+/* Generic menus and pickers that paint a plain surface: give them the frosted material too. */
+html.lg [role='menu'],
+html.lg [role='listbox'],
+html.lg [role='tooltip'] {
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+}
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+html.lg .gl-card,
+html.lg :where(html.light) .gl-card {
+    background: var(--lg-tile);
+    background-image: none;
+    border: 0;
+    border-radius: 22px;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+}
+html.lg .gl-card--interactive { transition: transform 0.5s var(--lg-spring), box-shadow 0.35s ease, background-color 0.3s ease; }
+html.lg .gl-card--interactive:hover { background: var(--lg-hover); transform: translate3d(0, -2px, 0) scale(1.01); box-shadow: var(--lg-bevel), var(--lg-drop-lift); }
+html.lg .gl-card--interactive:active { transform: scale(0.98); transition-duration: 0.14s; }
+html.lg .gl-panel { background: transparent; }
+html.lg .gl-panel-head { background-image: none; box-shadow: none; border-bottom-color: var(--lg-hairline); }
+html.lg .gl-panel-tools,
+html.lg .gl-panel-foot { border-color: var(--lg-hairline); }
+html.lg .gl-panel-mark { color: var(--text-primary); background: var(--lg-ctl); border: 0; box-shadow: var(--lg-bevel-sm); border-radius: 9px; }
+html.lg .gl-page-head { border-bottom-color: var(--lg-hairline); }
+html.lg .gl-empty-mark { color: var(--text-primary); background: var(--lg-ctl); background-image: none; border: 0; border-radius: 14px; box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18); }
+html.lg .gl-eyebrow { color: var(--text-muted); }
+html.lg .gl-sheen,
+html.lg.light .gl-sheen { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-primary); }
+
+/* ── Rows ───────────────────────────────────────────────────────────────── */
+html.lg .gl-item { border-radius: 10px; border: 0; }
+html.lg .gl-item.is-active,
+html.lg .gl-item[aria-current='page'],
+html.lg .gl-item.is-selected {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.55);
+    background-image: none;
+    box-shadow: var(--lg-bevel-sm);
+}
+html.lg.dark .gl-item.is-active,
+html.lg.dark .gl-item[aria-current='page'],
+html.lg.dark .gl-item.is-selected { background: rgba(255, 255, 255, 0.12); }
+html.lg .gl-item.is-active::before,
+html.lg .gl-item[aria-current='page']::before { display: none; }
+html.lg .gl-item.is-active > svg,
+html.lg .gl-item[aria-current='page'] > svg { color: var(--text-primary); }
+html.lg .gl-shell-glyph { border-radius: 8px; border-color: transparent; background: var(--lg-well); }
+html.lg .gl-item.is-active .gl-shell-glyph { color: var(--text-primary); background: var(--lg-ctl); border-color: transparent; box-shadow: var(--lg-bevel-sm); }
+html.lg .gl-item.is-active .gl-shell-avatar-round { color: var(--text-primary); border-color: transparent; }
+html.lg .gl-shell-star:hover,
+html.lg .gl-shell-section .gl-icon-btn:hover:not(:disabled) { color: var(--text-primary); background: var(--lg-hover); }
+html.lg .gl-shell-join { background: var(--lg-ctl); border-radius: 999px; box-shadow: var(--lg-bevel-sm); }
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+html.lg .gl-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 0 14px;
+    color: var(--text-primary);
+    background: var(--lg-ctl);
+    background-image: none;
+    box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18);
+    transition: transform 0.45s var(--lg-spring), background-color 0.25s ease, box-shadow 0.3s ease;
+}
+html.lg .gl-btn--sm { padding: 0 12px; }
+html.lg .gl-btn--lg { padding: 0 20px; }
+html.lg .gl-btn:hover:not(:disabled) { background-color: var(--lg-hover); transform: translate3d(0, -1px, 0) scale(1.025); }
+html.lg .gl-btn:active:not(:disabled) { transform: scale(0.96); transition-duration: 0.14s; }
+html.lg .gl-btn--primary,
+html.lg.light .gl-btn--primary {
+    color: #0a0a0c;
+    font-weight: 700;
+    background: var(--lg-select-fill);
+    border-color: transparent;
+    text-shadow: none;
+    box-shadow: var(--lg-select-rim);
+}
+html.lg .gl-btn--primary:hover:not(:disabled) { filter: none; background: var(--lg-select-fill); box-shadow: var(--lg-select-rim), 0 10px 22px -10px rgba(0, 0, 0, 0.35); }
+html.lg .gl-btn--ghost { background: transparent; box-shadow: none; color: var(--text-secondary); }
+html.lg .gl-btn--ghost:hover:not(:disabled) { background: var(--lg-hover); color: var(--text-primary); }
+html.lg .gl-icon-btn { border-radius: 50%; border: 0; transition: transform 0.45s var(--lg-spring), background-color 0.25s ease, color 0.2s ease; }
+html.lg .gl-icon-btn:hover:not(:disabled) { background: var(--lg-ctl); box-shadow: var(--lg-bevel-sm); }
+html.lg .gl-icon-btn[aria-pressed='true'],
+html.lg .gl-icon-btn[aria-expanded='true'],
+html.lg .gl-icon-btn.is-active { color: #0a0a0c; background: var(--lg-select-fill); border-color: transparent; box-shadow: var(--lg-select-rim); }
+html.lg .gl-shell-topbar .gl-icon-btn { width: 34px; height: 34px; background: var(--lg-ctl); box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18); }
+html.lg .gl-input {
+    border-radius: 14px;
+    border-color: var(--lg-hairline);
+    background: var(--bg-input);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+html.lg .gl-input:hover:not(:focus):not(:disabled) { border-color: var(--border-accent); }
+html.lg .gl-input:focus { border-color: var(--border-accent); box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16); }
+html.lg .gl-tabs { border: 0; border-radius: 999px; padding: 3px; background: var(--lg-well); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06); }
+html.lg .gl-tab { border-radius: 999px; font-weight: 600; }
+html.lg .gl-tab[aria-selected='true'],
+html.lg .gl-tab.is-active,
+html.lg.light .gl-tab[aria-selected='true'],
+html.lg.light .gl-tab.is-active { color: #0a0a0c; background: var(--lg-select-fill); box-shadow: inset 0 1px 0 #fff, 0 3px 10px -4px rgba(0, 0, 0, 0.22); }
+html.lg .gl-count { background: var(--lg-well); }
+html.lg :focus-visible { outline-color: var(--gl-focus); }
+
+/* ── Reduced transparency / contrast ────────────────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+    html.lg .gl-shell,
+    html.lg #root { background: var(--lg-wall) !important; }
+    html.lg .gl-liquid, html.lg .gl-dialog, html.lg .gl-toast, html.lg .gl-shell-popover, html.lg .gl-shell-tip { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ══ Website (landing, pricing, docs, sign-in…: the .orw scope in pages/landing/landing.css) ══ */
+html.lg .orw,
+html.lg.light .orw,
+html.lg.light .orw.orw--auth,
+html.lg:not(.dark) .orw.orw--auth {
+    --o-bg: transparent;
+    --o-bg-2: transparent;
+    --o-slab: rgba(255, 255, 255, 0.34);
+    --o-slab-2: rgba(255, 255, 255, 0.24);
+    --o-sand: rgba(255, 255, 255, 0.28);
+    --o-line: rgba(60, 60, 67, 0.08);
+    --o-line-2: rgba(60, 60, 67, 0.13);
+    --o-line-3: rgba(60, 60, 67, 0.24);
+    --o-text: #0a0a0c;
+    --o-text-2: #54545a;
+    --o-text-3: #6e6f76;
+    --o-accent: #4a4234;
+    --o-accent-hi: #2e2a22;
+    --o-accent-lo: #6b5f4b;
+    --o-accent-dim: rgba(120, 120, 128, 0.12);
+    --o-cool: #007aff;
+    --o-good: #1e9e4a;
+    --o-glass: linear-gradient(transparent, transparent);
+    --o-spec: var(--lg-bevel-sm);
+    --o-drop: var(--lg-drop-lift);
+    --o-ink: 10, 10, 12;
+    --o-shade: 0, 0, 0;
+    --o-panel: 255, 255, 255;
+    background: var(--lg-paint);
+    background-attachment: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+}
+html.lg.dark .orw,
+html.lg.dark .orw.orw--auth {
+    --o-bg: transparent;
+    --o-bg-2: transparent;
+    --o-slab: rgba(255, 255, 255, 0.06);
+    --o-slab-2: rgba(255, 255, 255, 0.045);
+    --o-sand: rgba(255, 255, 255, 0.05);
+    --o-line: rgba(255, 255, 255, 0.07);
+    --o-line-2: rgba(255, 255, 255, 0.12);
+    --o-line-3: rgba(255, 255, 255, 0.22);
+    --o-text: #f5f5f7;
+    --o-text-2: #aaaab0;
+    --o-text-3: #8a8a91;
+    --o-accent: #ede3d0;
+    --o-accent-hi: #ffffff;
+    --o-accent-lo: #b9ad97;
+    --o-accent-dim: rgba(255, 255, 255, 0.1);
+    --o-cool: #0a84ff;
+    --o-good: #30d158;
+    --o-glass: linear-gradient(transparent, transparent);
+    --o-spec: var(--lg-bevel-sm);
+    --o-drop: var(--lg-drop-lift);
+    --o-ink: 255, 255, 255;
+    --o-shade: 0, 0, 0;
+    --o-panel: 40, 40, 46;
+}
+html.lg .orw ::selection { background: rgba(120, 120, 128, 0.28); color: inherit; }
+html.lg .orw :focus-visible { outline: 2.5px solid rgba(120, 120, 128, 0.55); }
+/* The wallpaper replaces the grid and the gold aurora. */
+html.lg .orw-backdrop__grid,
+html.lg .orw-backdrop__aurora { display: none; }
+/* Headline: graphite with the faintest warmth, no gold sweep. */
+html.lg .orw-gloss-text,
+html.lg.light .orw-gloss-text { background-image: linear-gradient(100deg, var(--o-accent-hi) 0%, var(--o-accent) 45%, var(--o-accent-lo) 100%); animation: none; }
+/* Glass panels and the floating nav. */
+html.lg .orw-glass {
+    background: var(--lg-dense);
+    border: 0;
+    border-radius: 22px;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+}
+html.lg .orw-nav.is-scrolled,
+html.lg.light .orw-nav.is-scrolled {
+    background: var(--lg-bar);
+    border-bottom-color: transparent;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+    -webkit-backdrop-filter: var(--lg-frost);
+    backdrop-filter: var(--lg-frost);
+}
+html.lg .orw-nav__progress { background: rgba(120, 120, 128, 0.45); }
+html.lg .orw-nav__link::after { background: var(--o-text); }
+html.lg .orw-nav__burger { border: 0; border-radius: 50%; background: var(--lg-ctl); box-shadow: var(--lg-bevel-sm); }
+/* Buttons: capsules; primary = white glass with a dark label. */
+html.lg .orw-btn { border-radius: 999px; transition: transform 0.45s var(--lg-spring), background-color 0.25s ease, box-shadow 0.3s ease, color 0.2s ease; }
+html.lg .orw-btn:hover { transform: translate3d(0, -2px, 0) scale(1.025); }
+html.lg .orw-btn:active { transform: scale(0.96); transition-duration: 0.14s; }
+html.lg .orw-btn--primary,
+html.lg.light .orw-btn--primary {
+    color: #0a0a0c;
+    font-weight: 700;
+    background: var(--lg-select-fill);
+    border-color: transparent;
+    box-shadow: var(--lg-select-rim);
+}
+html.lg .orw-btn--primary::after { background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%); }
+html.lg .orw-btn--primary:hover { box-shadow: var(--lg-select-rim), 0 14px 30px -12px rgba(0, 0, 0, 0.35); }
+html.lg .orw-btn--ghost,
+html.lg .orw-btn--ghost:hover {
+    background: var(--lg-ctl);
+    border-color: transparent;
+    box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18);
+}
+html.lg .orw-btn--text { border-radius: 999px; padding-inline: 10px; }
+html.lg .orw-chip,
+html.lg .orw-tag,
+html.lg .orw-tag--accent {
+    border-radius: 999px;
+    border-color: transparent;
+    color: var(--o-text-2);
+    background: var(--lg-ctl);
+    box-shadow: var(--lg-bevel-sm);
+}
+html.lg .orw-tag--good { color: var(--o-good); background: rgba(52, 199, 89, 0.14); border-color: transparent; border-radius: 999px; }
+html.lg .orw-skip,
+html.lg.light .orw-skip { color: #0a0a0c; background: var(--lg-select-fill); border-radius: 999px; }
+/* The sand bands (marquee, footer, docs bar) become clear glass. */
+html.lg.light .orw-marquee,
+html.lg.light .orw-footer,
+html.lg .orw-marquee,
+html.lg .orw-footer { background: var(--lg-tile); box-shadow: var(--lg-bevel); }
+html.lg.light .docs-bar,
+html.lg .docs-bar { background: var(--lg-bar); -webkit-backdrop-filter: var(--lg-frost); backdrop-filter: var(--lg-frost); }
+html.lg .orw-footer__wordmark,
+html.lg.light .orw-footer__wordmark { background-image: linear-gradient(180deg, rgba(120, 120, 128, 0.18), rgba(120, 120, 128, 0)); }
+html.lg .orw-section--slab { background: transparent; border-color: var(--lg-hairline); }
+html.lg.light .orw-final::before,
+html.lg .orw-final::before { background: none; }
+/* The product preview on the landing page: a glass window. */
+html.lg.light .orw-mock,
+html.lg .orw-mock { background: var(--lg-dense); border: 0; border-radius: 22px; overflow: hidden; box-shadow: var(--lg-bevel), var(--lg-drop-lift); -webkit-backdrop-filter: var(--lg-frost-dense); backdrop-filter: var(--lg-frost-dense); }
+html.lg.light .orw-mock__bar,
+html.lg.light .orw-mock__side,
+html.lg .orw-mock__bar,
+html.lg .orw-mock__side { background: rgba(255, 255, 255, 0.28); }
+html.lg.dark .orw-mock__bar,
+html.lg.dark .orw-mock__side { background: rgba(255, 255, 255, 0.04); }
+html.lg.light .orw-mock__url,
+html.lg .orw-mock__url { background: var(--lg-well); border-radius: 999px; border: 0; }
+html.lg.light .orw-mock__lights i:first-child { background: #ff5f57; }
+html.lg.light .orw-mock__item .orw-mock__badge,
+html.lg.light .orw-task[aria-checked='true'] .orw-task__box { background: #34c759; border-color: #34c759; color: #fff; }
+
+/* Sign-in, sign-up and registration (components/public: AuthShell, authLight.css). */
+html.lg .orw--auth .orw-backdrop__grid,
+html.lg.light .orw--auth .orw-backdrop__grid { display: none; }
+html.lg.light .orw--auth .orw-auth__aside::before,
+html.lg .orw--auth .orw-auth__aside::before { background: none; }
+html.lg.light .orw--auth .orw-glass,
+html.lg .orw--auth .orw-glass {
+    background: var(--lg-dense);
+    border: 0;
+    border-radius: 32px;
+    box-shadow: var(--lg-bevel), 0 30px 70px -20px rgba(0, 0, 0, 0.3);
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+}
+html.lg.light .orw--auth .orw-gloss-text,
+html.lg .orw--auth .orw-gloss-text { background-image: linear-gradient(100deg, var(--o-accent-hi) 0%, var(--o-accent) 45%, var(--o-accent-lo) 100%); }
+html.lg.light .orw--auth .orw-auth__tabs,
+html.lg .orw-auth__tabs { border: 0; border-radius: 999px; padding: 3px; background: var(--lg-well); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06); }
+html.lg .orw-auth__tab { border-radius: 999px; }
+html.lg.light .orw--auth .orw-auth__tab[aria-selected='true'],
+html.lg .orw-auth__tab[aria-selected='true'] { color: #0a0a0c; background: var(--lg-select-fill); box-shadow: inset 0 1px 0 #fff, 0 3px 10px -4px rgba(0, 0, 0, 0.22); }
+html.lg.light .orw--auth .orw-auth__points li span,
+html.lg .orw-auth__points li span { background: var(--lg-ctl); border: 0; border-radius: 12px; box-shadow: var(--lg-bevel-sm); }
+html.lg .orw-input,
+html.lg .orw-select,
+html.lg .orw-textarea,
+html.lg.light .orw--auth .orw-input,
+html.lg.light .orw--auth .orw-select,
+html.lg.light .orw--auth .orw-textarea {
+    border-radius: 14px;
+    border-color: var(--lg-hairline);
+    background-color: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+html.lg.dark .orw-input,
+html.lg.dark .orw-select,
+html.lg.dark .orw-textarea { background-color: rgba(118, 118, 128, 0.18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35); }
+html.lg .orw-input:focus,
+html.lg .orw-select:focus,
+html.lg .orw-textarea:focus,
+html.lg.light .orw--auth .orw-input:focus,
+html.lg.light .orw--auth .orw-select:focus,
+html.lg.light .orw--auth .orw-textarea:focus { border-color: rgba(60, 60, 67, 0.3); box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16); }
+html.lg.light .orw--auth .orw-btn--primary,
+html.lg .orw--auth .orw-btn--primary { color: #0a0a0c; background: var(--lg-select-fill); border-color: transparent; box-shadow: var(--lg-select-rim); }
+html.lg.light .orw--auth .orw-btn--ghost,
+html.lg.light .orw--auth .orw-btn--ghost:hover,
+html.lg .orw--auth .orw-btn--ghost { background: var(--lg-ctl); border-color: transparent; box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18); }
+html.lg .orw-auth-mark { border-radius: 14px; border: 0; background: var(--lg-ctl); box-shadow: var(--lg-bevel-sm); }
+html.lg .orw-auth-choice { border-radius: 16px; }
+html.lg .orw-auth-choice[aria-checked='true'] { background: rgba(255, 255, 255, 0.55); border-color: transparent; box-shadow: var(--lg-bevel-sm); }
+html.lg .orw-auth-choice[aria-checked='true'] .orw-auth-choice__box { background: #34c759; border-color: #34c759; color: #fff; }
+html.lg .orw-reg-steps li.is-current b { color: #0a0a0c; background: var(--lg-select-fill); box-shadow: var(--lg-select-rim); }
+html.lg .orw-auth-next,
+html.lg .orw-review,
+html.lg .orw-drop,
+html.lg .orw-auth-facts { border-radius: 18px; overflow: hidden; }
+html.lg .orw-auth-progress { border-radius: 999px; }
+html.lg .orw-auth-progress span { background: rgba(60, 60, 67, 0.5); }
+
+/* ══ App details ══════════════════════════════════════════════════════════ */
+html.lg { --r-composer: 22px; }
+/* The message composer: a glass field with a soft inner shadow. */
+html.lg .oru-composer { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), var(--lg-bevel-sm); }
+/* The top bar's search: a glass capsule. */
+html.lg .sib-bar {
+    height: 34px;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--lg-ctl);
+    background-image: none;
+    box-shadow: var(--lg-bevel-sm), 0 2px 8px -4px rgba(0, 0, 0, 0.18);
+}
+/* Primary buttons drawn by page stylesheets: white glass, dark label. */
+html.lg .tasks-ui .tk-btn-primary,
+html.lg .dp-btn-primary,
+html.lg .srp-filter-apply {
+    color: #0a0a0c;
+    background: var(--lg-select-fill);
+    border-color: transparent;
+    border-radius: 999px;
+    box-shadow: var(--lg-select-rim);
+}
+html.lg .dp-btn { border-radius: 999px; }
+/* Switches and checks: Apple green. Today: Apple red (as in Calendar). */
+html.lg .wo-switch[aria-checked='true'],
+html.lg .dp-switch input:checked + .dp-switch-track { background: #34c759; border-color: #34c759; }
+html.lg .dp-switch input:checked + .dp-switch-track::after { background: #fff; }
+html.lg .mx-check-item input:checked + .mx-check-box,
+html.lg .wsg-tick { background: #34c759; border-color: #34c759; color: #fff; }
+html.lg .cal-mini-day.is-today,
+html.lg .cal-day-head.is-today .cal-dom,
+html.lg .cal-month-date.is-today,
+html.lg .cal-agenda-date.is-today .cal-dom { background: var(--lg-red); color: #fff; }
+/* Call controls that are on (pinned, muted…): white glass. */
+html.lg .cs-pin.is-on,
+html.lg .cs-btn.is-active { color: #0a0a0c; background: var(--lg-select-fill); border-color: transparent; box-shadow: var(--lg-select-rim); }
+
+/* Settings and company consoles: a glass sidebar pane and glass sections. */
+@media (min-width: 900px) {
+    html.lg .stg-sidebar {
+        margin: 10px 0 10px 10px;
+        height: calc(100% - 20px);
+        border: 0;
+        border-radius: var(--lg-pane-r);
+        background: var(--lg-tile);
+        box-shadow: var(--lg-bevel), var(--lg-drop);
+        overflow: hidden;
+    }
+}
+html.lg .stg-shell { background: transparent; }
+html.lg .stg-section {
+    border: 0;
+    border-radius: 22px;
+    background: var(--lg-tile);
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+}
+html.lg .stg-section[data-tone='danger'] { box-shadow: var(--lg-bevel), var(--lg-drop), inset 0 0 0 1px rgba(255, 59, 48, 0.35); }
+html.lg .stg-nav-item { border-radius: 10px; }
+html.lg .cd-side { background: var(--lg-tile); }
+html.lg .stg-nav-item[aria-current='page'] { color: var(--text-primary); background: rgba(255, 255, 255, 0.55); border-color: transparent; box-shadow: var(--lg-bevel-sm); }
+html.lg.dark .stg-nav-item[aria-current='page'] { background: rgba(255, 255, 255, 0.12); }
+html.lg .stg-nav-item[aria-current='page'] svg { color: var(--text-primary); }
+/* Phone-width settings: the sidebar slides in as a frosted sheet. */
+@media (max-width: 899px) {
+    html.lg .stg-sidebar { background: var(--lg-dense); -webkit-backdrop-filter: var(--lg-frost-dense); backdrop-filter: var(--lg-frost-dense); border-right: 0; }
+}

@@ -390,7 +390,7 @@ html.light .gl-btn--primary { border-color: rgba(140, 100, 50, 0.35); }
     color: var(--text-secondary);
     background: none;
     border: none;
-    border-radius: 2px;
+    border-radius: var(--r-sm);
     cursor: pointer;
     transition: background var(--gl-dur-1) ease, color var(--gl-dur-1) ease, box-shadow var(--gl-dur-2) ease;
 }
@@ -564,7 +564,7 @@ button.gl-panel-title:focus-visible { outline: 2px solid var(--accent); outline-
     top: 7px;
     bottom: 7px;
     width: 2px;
-    border-radius: 2px;
+    border-radius: var(--r-sm);
     background: var(--accent);
     box-shadow: 0 0 8px var(--gl-accent-line);
 }

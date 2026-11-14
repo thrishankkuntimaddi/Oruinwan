@@ -39,7 +39,7 @@ const AdminSettings = () => {
         weeklyDigest: true,
         defaultRole: 'member',
         autoApproveJoin: false,
-        primaryColor: '#b8956a',
+        primaryColor: 'var(--accent)',
         accentColor: '#5aba8a',
     });
 
@@ -129,7 +129,7 @@ const CompanyTab = ({ settings, setSettings }) => (
                     <div style={{ width: '52px', height: '52px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Building size={20} style={{ color: 'var(--text-muted)' }} />
                     </div>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px' }}>
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: 'var(--r-sm)' }}>
                         <Upload size={13} /> Upload Logo
                     </button>
                 </div>
@@ -214,7 +214,7 @@ const BillingTab = () => (
                 <span style={{ fontSize: '36px', fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.02em' }}>$49</span>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>/month</span>
             </div>
-            <button style={{ width: '100%', padding: '10px', background: 'none', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}
+            <button style={{ width: '100%', padding: '10px', background: 'none', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: 'var(--r-sm)', transition: 'all 150ms ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--bg-base)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent)'; }}>
                 Upgrade to Enterprise
@@ -324,13 +324,13 @@ const DataTab = () => (
                 <Hint text="How long to retain deleted messages and files" />
             </div>
         </Card>
-        <div style={{ padding: '20px', border: '1px solid var(--state-danger)', background: 'var(--bg-surface)', borderRadius: '2px' }}>
+        <div style={{ padding: '20px', border: '1px solid var(--state-danger)', background: 'var(--bg-surface)', borderRadius: 'var(--r-sm)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                 <AlertCircle size={14} style={{ color: 'var(--state-danger)' }} />
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--state-danger)' }}>Danger Zone</span>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>Permanent actions that cannot be undone</p>
-            <button style={{ padding: '8px 16px', background: 'var(--state-danger)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px' }}>
+            <button style={{ padding: '8px 16px', background: 'var(--state-danger)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: 'var(--r-sm)' }}>
                 Delete Company Account
             </button>
         </div>
@@ -458,7 +458,7 @@ const SaveHeaderBtn = ({ isSaving, onClick }) => {
     const [hov, setHov] = React.useState(false);
     return (
         <button onClick={onClick} disabled={isSaving} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: isSaving ? 'not-allowed' : 'pointer', borderRadius: '2px', opacity: isSaving ? 0.7 : 1, transition: 'background 150ms ease' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--text-on-accent)', fontSize: '12px', fontWeight: 700, cursor: isSaving ? 'not-allowed' : 'pointer', borderRadius: 'var(--r-sm)', opacity: isSaving ? 0.7 : 1, transition: 'background 150ms ease' }}>
             {isSaving ? <><Loader size={12} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving...</> : <><Check size={13} /> Save Changes</>}
         </button>
     );

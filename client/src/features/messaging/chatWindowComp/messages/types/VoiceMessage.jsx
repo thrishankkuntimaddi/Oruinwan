@@ -136,7 +136,7 @@ export default function VoiceMessage({ msg }) {
             padding: '8px 12px',
             backgroundColor: 'var(--bg-active)',
             border: '1px solid var(--border-default)',
-            borderRadius: '2px',
+            borderRadius: 'var(--r-sm)',
             width: 'min(320px, 100%)',
         }}>
             <audio ref={audioRef} src={proxyUrl || undefined} preload="metadata" />
@@ -155,10 +155,10 @@ export default function VoiceMessage({ msg }) {
                 }}
             >
                 {loading && !playing
-                    ? <Loader2 size={14} style={{ color: 'var(--bg-base)', animation: 'spin 1s linear infinite' }} />
+                    ? <Loader2 size={14} style={{ color: 'var(--text-on-accent)', animation: 'spin 1s linear infinite' }} />
                     : playing
-                        ? <Pause size={14} style={{ color: 'var(--bg-base)' }} />
-                        : <Play size={14} style={{ color: 'var(--bg-base)', marginLeft: '2px' }} />}
+                        ? <Pause size={14} style={{ color: 'var(--text-on-accent)' }} />
+                        : <Play size={14} style={{ color: 'var(--text-on-accent)', marginLeft: '2px' }} />}
             </button>
 
             <div style={{ flex: 1, minWidth: 0 }}>

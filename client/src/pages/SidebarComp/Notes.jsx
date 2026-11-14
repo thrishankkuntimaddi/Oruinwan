@@ -480,23 +480,23 @@ const Notes = () => {
   h1.title { font-size: 36px; font-weight: 800; margin-bottom: 6px; }
   .meta { color: #888; font-size: 12px; margin-bottom: 16px; }
   .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
-  .tag { background: #f3ede5; color: #7a5c36; padding: 2px 8px; border-radius: 2px; font-size: 12px; font-weight: 500; }
+  .tag { background: #f3ede5; color: #7a5c36; padding: 2px 8px; border-radius: var(--r-sm); font-size: 12px; font-weight: 500; }
   .block-text { margin-bottom: 12px; white-space: pre-wrap; }
   .block-heading { margin: 20px 0 8px; font-weight: 700; }
   h1.block-heading { font-size: 28px; } h2.block-heading { font-size: 22px; } h3.block-heading { font-size: 18px; }
-  .block-code { background: #f8f8f7; border: 1px solid #e5e2dd; border-left: 3px solid #b8956a; padding: 14px 16px; font-family: Menlo, monospace; font-size: 13px; white-space: pre-wrap; margin-bottom: 14px; border-radius: 2px; }
-  .block-callout { background: #faf6f0; border-left: 3px solid #b8956a; padding: 12px 16px; border-radius: 2px; margin-bottom: 14px; white-space: pre-wrap; }
+  .block-code { background: #f8f8f7; border: 1px solid #e5e2dd; border-left: 3px solid var(--accent); padding: 14px 16px; font-family: Menlo, monospace; font-size: 13px; white-space: pre-wrap; margin-bottom: 14px; border-radius: var(--r-sm); }
+  .block-callout { background: #faf6f0; border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: var(--r-sm); margin-bottom: 14px; white-space: pre-wrap; }
   .block-divider { border: none; border-top: 1px solid #e5e2dd; margin: 20px 0; }
   .divider-label { text-align: center; color: #9c9790; font-size: 12px; }
   .block-checklist { list-style: none; margin-bottom: 14px; }
   .block-checklist li { padding: 3px 0; display: flex; align-items: flex-start; gap: 8px; }
   .block-checklist li.done { color: #9c9790; text-decoration: line-through; }
-  .block-toggle { border: 1px solid #e5e2dd; border-radius: 2px; padding: 10px 14px; margin-bottom: 14px; }
+  .block-toggle { border: 1px solid #e5e2dd; border-radius: var(--r-sm); padding: 10px 14px; margin-bottom: 14px; }
   .block-toggle summary { font-weight: 600; margin-bottom: 6px; }
   .block-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 14px; }
   .block-table th { background: #f8f8f7; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e5e2dd; }
   .block-table td { padding: 8px 12px; border: 1px solid #e5e2dd; }
-  .block-image { max-width: 100%; border-radius: 2px; margin-bottom: 14px; }
+  .block-image { max-width: 100%; border-radius: var(--r-sm); margin-bottom: 14px; }
   .block-file { color: #5c5852; font-size: 13px; margin-bottom: 12px; }
   @media print { body { margin: 0; } }
 </style></head><body>
@@ -750,7 +750,7 @@ ${blockHtml}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     <div className="nt-body">
                         {!canEdit && (
-                            <div data-testid="note-readonly-banner" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', marginBottom: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            <div data-testid="note-readonly-banner" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', marginBottom: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 <Eye size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                 View only — {ownerName} {note.isPublic ? 'shared this note with the workspace' : 'shared this note with you'}.
                             </div>
@@ -793,7 +793,7 @@ ${blockHtml}
                                     onKeyDown={e => { if (e.key === 'Enter') addTag(); if (e.key === 'Escape') { setShowTagInput(false); setTagInput(''); } }}
                                     onBlur={addTag}
                                     placeholder="tag name…"
-                                    style={{ padding: '2px 8px', border: '1px solid var(--border-accent)', borderRadius: '2px', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '11px', fontFamily: 'var(--font)', outline: 'none', width: '110px' }}
+                                    style={{ padding: '2px 8px', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '11px', fontFamily: 'var(--font)', outline: 'none', width: '110px' }}
                                 />
                             ) : (
                                 <button type="button" className="nt-ghost-link" onClick={() => setShowTagInput(true)}>

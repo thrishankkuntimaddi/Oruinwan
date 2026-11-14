@@ -65,8 +65,8 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
           </h2>
           {!loading && (
             <span style={{
-              backgroundColor: 'rgba(184,149,106,0.15)',
-              border: '1px solid rgba(184,149,106,0.2)',
+              backgroundColor: 'rgba(120, 120, 128,0.15)',
+              border: '1px solid rgba(120, 120, 128,0.2)',
               color: 'var(--accent)',
               borderRadius: '99px',
               fontSize: '10px', fontWeight: 700,
@@ -82,7 +82,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
           onClick={onClose}
           style={{
             background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px',
+            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: 'var(--r-sm)',
             transition: '100ms ease',
           }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
@@ -116,7 +116,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
             padding: '48px 16px', gap: '10px',
           }}>
             <div style={{
-              width: '40px', height: '40px', borderRadius: '2px',
+              width: '40px', height: '40px', borderRadius: 'var(--r-sm)',
               backgroundColor: 'var(--bg-active)',
               border: '1px solid var(--border-default)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -157,7 +157,7 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin, onJump }) {
   return (
     <div
       style={{
-        margin: '4px 12px', borderRadius: '2px', padding: '10px 12px',
+        margin: '4px 12px', borderRadius: 'var(--r-sm)', padding: '10px 12px',
         backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
         border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
         transition: '150ms ease',
@@ -194,7 +194,7 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin, onJump }) {
           style={{
             marginTop: '8px', background: 'none',
             border: '1px solid var(--border-default)',
-            color: 'var(--state-danger)', borderRadius: '2px',
+            color: 'var(--state-danger)', borderRadius: 'var(--r-sm)',
             padding: '3px 10px', fontSize: '11px',
             cursor: 'pointer', fontWeight: 600,
             fontFamily: FONT, transition: '150ms ease',

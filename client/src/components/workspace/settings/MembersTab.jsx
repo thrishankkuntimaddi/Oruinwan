@@ -16,7 +16,7 @@ const roleBadge = (role) => {
         member: { color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-subtle)' },
     }[role] || { color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-subtle)' };
     return (
-        <span style={{ ...styles, fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '2px', textTransform: 'capitalize' }}>
+        <span style={{ ...styles, fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--r-sm)', textTransform: 'capitalize' }}>
             {role}
         </span>
     );
@@ -90,7 +90,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.name}</span>
                         {member.isCurrentUser && (
-                            <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--accent)', borderRadius: '2px', flexShrink: 0 }}>You</span>
+                            <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--accent)', borderRadius: 'var(--r-sm)', flexShrink: 0 }}>You</span>
                         )}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
@@ -100,7 +100,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
             {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {member.memberStatus === 'suspended' && (
-                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: WARNING, background: 'var(--accent-dim)', border: `1px solid ${WARNING}`, borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: WARNING, background: 'var(--accent-dim)', border: `1px solid ${WARNING}`, borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Pause size={9} /> Suspended
                     </span>
                 )}
@@ -111,7 +111,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
                             onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
                             aria-label={`Actions for ${member.name}`}
                             disabled={!!memberActionLoading[member.id]}
-                            style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
+                            style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
@@ -120,7 +120,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
                         {openMemberDropdown === member.id && (
                             <>
                                 <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setOpenMemberDropdown(null)} />
-                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 50, overflow: 'hidden', minWidth: '160px', animation: 'wsFadeIn 0.12s ease' }}>
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', zIndex: 50, overflow: 'hidden', minWidth: '160px', animation: 'wsFadeIn 0.12s ease' }}>
                                     {member.memberStatus === 'suspended' ? (
                                         <button style={{ ...menuBtn, color: 'var(--state-success)' }}
                                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -171,7 +171,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
             <div style={{ position: 'relative', marginBottom: '16px' }}>
                 <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input type="text" placeholder="Search members…" value={filter} onChange={e => setFilter(e.target.value)} aria-label="Search members"
-                    style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
                     onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                     onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                 />
@@ -183,7 +183,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
                     <span style={{ fontSize: '12px' }}>Loading members…</span>
                 </div>
             ) : visible.length > 0 ? (
-                <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
                     {ROLE_GROUPS.map(({ role, label, Icon }) => {
                         const group = visible.filter(m => (ROLE_GROUPS.some(g => g.role === m.role) ? m.role : 'member') === role);
                         if (!group.length) return null;
@@ -201,7 +201,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, isOwner = false, members, loadin
                     })}
                 </div>
             ) : (
-                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed var(--border-default)', borderRadius: '2px' }}>
+                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>{q ? `No members match “${filter}”` : 'No members found'}</p>
                 </div>
             )}

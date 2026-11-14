@@ -190,16 +190,16 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 }}>
                     <h2 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>New message</h2>
                     <button type="button" aria-label="Close" title="Close" onClick={close}
-                        style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 2 }}>
+                        style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)' }}>
                         <X size={16} />
                     </button>
                 </div>
                 <div onClick={() => { setMenuOpen(true); inputRef.current?.focus(); }}
-                    style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 2, background: 'var(--bg-input)', cursor: 'text' }}>
+                    style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-input)', cursor: 'text' }}>
                     <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>To:</span>
                     {picked.map((p) => (
                         <span key={p._id} data-testid="to-chip"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', fontSize: 12, fontWeight: 600, background: 'var(--bg-active)', color: 'var(--accent)', border: '1px solid var(--border-accent)', borderRadius: 2 }}>
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 8px', fontSize: 12, fontWeight: 600, background: 'var(--bg-active)', color: 'var(--accent)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)' }}>
                             {p.name}
                             <button type="button" aria-label={`Remove ${p.name}`} onClick={(e) => { e.stopPropagation(); remove(p._id); }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex' }}>
@@ -229,7 +229,7 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
                         {results.map((p, i) => (
                             <div key={p._id} role="option" aria-selected={i === active} data-testid="to-option"
                                 onMouseDown={(e) => { e.preventDefault(); add(p); }} onMouseEnter={() => setActive(i)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', cursor: 'pointer', borderRadius: 2, background: i === active ? 'var(--bg-hover)' : 'none' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', cursor: 'pointer', borderRadius: 'var(--r-sm)', background: i === active ? 'var(--bg-hover)' : 'none' }}>
                                 <img src={getAvatarUrl({ ...p, username: p.username || p.name })} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{p.name}</div>
@@ -273,7 +273,7 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
                                         value={groupName}
                                         maxLength={80}
                                         onChange={(e) => setGroupName(e.target.value)}
-                                        style={{ width: 220, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 2, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 12, fontFamily: 'var(--font)', outline: 'none' }}
+                                        style={{ width: 220, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 12, fontFamily: 'var(--font)', outline: 'none' }}
                                     />
                                     <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" data-testid="start-group" disabled={busy} onClick={() => start('')}>
                                         {busy ? 'Starting…' : 'Start group'}
@@ -290,7 +290,7 @@ export default function NewMessageView({ workspaceId, currentUserId, currentUser
                                 onChange={(e) => setDraft(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (draft.trim()) start(draft); } }}
                                 placeholder={pickedMe ? 'Write a note to yourself' : `Message ${target}`}
-                                style={{ flex: 1, resize: 'none', padding: '8px 10px', border: '1px solid var(--border-default)', borderRadius: 2, background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'var(--font)', outline: 'none' }}
+                                style={{ flex: 1, resize: 'none', padding: '8px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'var(--font)', outline: 'none' }}
                             />
                             <button type="submit" className="gl-btn gl-btn--primary" aria-label="Send" disabled={busy || !draft.trim()}><Send size={14} /></button>
                         </form>

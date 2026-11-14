@@ -37,7 +37,7 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
       {}
       <button
         onClick={onCancel}
-        style={{ flexShrink: 0, padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '100ms ease' }}
+        style={{ flexShrink: 0, padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '100ms ease' }}
         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
         title="Cancel reply"

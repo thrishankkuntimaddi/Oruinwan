@@ -74,7 +74,7 @@
 /* Jump Highlight Animation */
 @keyframes jumpHighlight {
     0% {
-        background-color: var(--highlight-bg-strong, rgba(184, 149, 106, 0.25));
+        background-color: var(--highlight-bg-strong, rgba(120, 120, 128, 0.25));
     }
     100% {
         background-color: transparent;

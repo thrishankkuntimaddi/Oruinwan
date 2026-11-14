@@ -16,9 +16,9 @@
 .aimd a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .aimd blockquote { margin: 0 0 8px; padding: 2px 10px; border-left: 2px solid var(--accent); color: var(--text-secondary); }
 .aimd hr { border: 0; border-top: 1px solid var(--border-default); margin: 10px 0; }
-.aimd :not(pre) > code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; padding: 1px 5px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: 2px; }
+.aimd :not(pre) > code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; padding: 1px 5px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--r-sm); }
 
-.aimd-code { margin: 6px 0 10px; border: 1px solid var(--border-default); background: var(--bg-base); border-radius: 2px; overflow: hidden; }
+.aimd-code { margin: 6px 0 10px; border: 1px solid var(--border-default); background: var(--bg-base); border-radius: var(--r-sm); overflow: hidden; }
 .aimd-code__bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; font-size: 10.5px; color: var(--text-secondary); background: var(--bg-active); border-bottom: 1px solid var(--border-default); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .aimd-code__bar button { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font: inherit; }
 .aimd-code__bar button:hover { color: var(--text-primary); }
@@ -44,11 +44,11 @@
 
 /* Live in-conversation AI reply (shown while the assistant is typing). */
 .ai-live-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 16px 8px; }
-.ai-live { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border: 1px solid var(--border-default); border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-dim), transparent 70%); border-radius: 2px; animation: aiLiveIn 260ms ease both; }
-.ai-live__avatar { width: 32px; height: 32px; border-radius: 2px; object-fit: contain; background: var(--bg-active); }
+.ai-live { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 10px; border: 1px solid var(--border-default); border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-dim), transparent 70%); border-radius: var(--r-sm); animation: aiLiveIn 260ms ease both; }
+.ai-live__avatar { width: 32px; height: 32px; border-radius: var(--r-sm); object-fit: contain; background: var(--bg-active); }
 .ai-live__body { min-width: 0; }
 .ai-live__meta { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 13px; color: var(--text-primary); }
-.ai-live__badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border: 1px solid var(--accent); color: var(--accent); border-radius: 2px; }
+.ai-live__badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--r-sm); }
 .ai-live__state { font-size: 11px; color: var(--text-secondary); }
 .ai-live__status { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
 .ai-live__error { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font-size: 12.5px; color: var(--state-danger); }

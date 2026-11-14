@@ -12,7 +12,7 @@ function iconFor(type = '') {
 const btn = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
     background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
-    color: 'var(--text-muted)', fontSize: 11, borderRadius: 2,
+    color: 'var(--text-muted)', fontSize: 11, borderRadius: 'var(--r-sm)',
 };
 
 /** Uploads in progress above the composer: name, size, progress bar, cancel / retry. */
@@ -29,7 +29,7 @@ export default function UploadTray({ items, onCancel, onRetry, onDismiss }) {
                         style={{
                             display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
                             border: `1px solid ${failed ? 'var(--state-danger)' : 'var(--border-default)'}`,
-                            background: 'var(--bg-active)', borderRadius: 2, minWidth: 0,
+                            background: 'var(--bg-active)', borderRadius: 'var(--r-sm)', minWidth: 0,
                         }}>
                         <Icon size={15} style={{ flexShrink: 0, color: failed ? 'var(--state-danger)' : 'var(--text-secondary)' }} />
                         <div style={{ flex: 1, minWidth: 0 }}>

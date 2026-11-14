@@ -14,9 +14,9 @@ const SHAPES = [
 ];
 
 const overlay = { position: 'fixed', inset: 0, zIndex: 400, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' };
-const card = { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 2, width: 'min(380px, calc(100vw - 32px))', padding: 16 };
+const card = { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: 'min(380px, calc(100vw - 32px))', padding: 16 };
 const label = { display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', margin: '12px 0 4px' };
-const input = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', fontSize: 13, background: 'var(--bg-input, var(--bg-active))', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 2, fontFamily: 'var(--font)' };
+const input = { width: '100%', boxSizing: 'border-box', padding: '7px 10px', fontSize: 13, background: 'var(--bg-input, var(--bg-active))', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontFamily: 'var(--font)' };
 // A checkerboard behind the preview, so the transparent parts show.
 const checker = { backgroundColor: 'var(--bg-active)', backgroundImage: 'linear-gradient(45deg, var(--bg-hover) 25%, transparent 25%, transparent 75%, var(--bg-hover) 75%), linear-gradient(45deg, var(--bg-hover) 25%, transparent 25%, transparent 75%, var(--bg-hover) 75%)', backgroundSize: '16px 16px', backgroundPosition: '0 0, 8px 8px' };
 
@@ -106,7 +106,7 @@ export default function StickerMakerDialog({ file, onCancel, onDone, canSend = f
                     <button type="button" aria-label="Close" onClick={onCancel} disabled={busy} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={16} /></button>
                 </div>
 
-                <div style={{ ...checker, width: 200, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 2 }}>
+                <div style={{ ...checker, width: 200, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-sm)' }}>
                     {step === 'style'
                         ? <canvas ref={canvasRef} aria-label="Sticker preview" style={{ width: 200, height: 200 }} />
                         : asIsUrl && <img src={asIsUrl} alt="" style={{ maxWidth: 200, maxHeight: 200, objectFit: 'contain' }} />}

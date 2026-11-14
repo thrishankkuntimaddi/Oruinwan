@@ -113,7 +113,7 @@ export default function MessageDiffViewer({ msg, conversationId, conversationTyp
                         {' · '}<span style={{ color: 'var(--accent)' }}>added</span> / <span style={{ textDecoration: 'line-through' }}>removed</span> compared with the previous version
                     </div>
                     {state.versions.map(v => (
-                        <div key={`${v.version ?? v.position}-${v.index ?? 'c'}`} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: v.isCurrent ? 'rgba(184,149,106,0.05)' : 'transparent' }}>
+                        <div key={`${v.version ?? v.position}-${v.index ?? 'c'}`} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: v.isCurrent ? 'rgba(120, 120, 128,0.05)' : 'transparent' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px' }}>
                                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Version {v.version ?? v.position}</span>
                                 {v.isCurrent && <Tag accent>Current</Tag>}
@@ -128,7 +128,7 @@ export default function MessageDiffViewer({ msg, conversationId, conversationTyp
                                     v.diff.map((seg, i) => (
                                         seg.type === 'same' ? <span key={i}>{seg.text}</span>
                                             : seg.type === 'added'
-                                                ? <span key={i} style={{ color: 'var(--accent)', backgroundColor: 'rgba(184,149,106,0.15)', borderRadius: '2px' }}>{seg.text}</span>
+                                                ? <span key={i} style={{ color: 'var(--accent)', backgroundColor: 'rgba(120, 120, 128,0.15)', borderRadius: 'var(--r-sm)' }}>{seg.text}</span>
                                                 : <span key={i} style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{seg.text}</span>
                                     ))
                                 ) : v.plaintext}
@@ -152,7 +152,7 @@ export default function MessageDiffViewer({ msg, conversationId, conversationTyp
 function Tag({ children, accent }) {
     return (
         <span style={{
-            fontSize: '10px', fontWeight: 600, padding: '1px 6px', borderRadius: '2px',
+            fontSize: '10px', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--r-sm)',
             border: `1px solid ${accent ? 'var(--accent)' : 'var(--border-default)'}`,
             color: accent ? 'var(--accent)' : 'var(--text-muted)',
             textTransform: 'uppercase', letterSpacing: '0.05em',

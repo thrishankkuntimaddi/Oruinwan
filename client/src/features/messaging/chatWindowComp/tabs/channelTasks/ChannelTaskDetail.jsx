@@ -22,7 +22,7 @@ const PANEL_WIDTH = 300;
 const inputStyle = (scheme) => ({
     width: '100%', boxSizing: 'border-box', padding: '6px 8px', fontSize: 12, fontFamily: FONT,
     background: 'var(--bg-input)', color: 'var(--text-primary)', colorScheme: scheme,
-    border: '1px solid var(--border-default)', borderRadius: '2px', outline: 'none',
+    border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', outline: 'none',
 });
 
 function Chip({ active, color = 'var(--text-secondary)', disabled, onClick, title, children }) {
@@ -32,7 +32,7 @@ function Chip({ active, color = 'var(--text-secondary)', disabled, onClick, titl
             onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
-                padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: FONT, borderRadius: '2px',
+                padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: FONT, borderRadius: 'var(--r-sm)',
                 color: readable(color), cursor: disabled ? 'default' : 'pointer',
                 background: active ? tint(color, 18) : hover && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)',
                 border: `1px solid ${active ? color : 'var(--border-default)'}`,
@@ -142,7 +142,7 @@ export default function ChannelTaskDetail({
     };
 
     const clickable = (enabled) => ({
-        cursor: enabled ? 'text' : 'default', borderRadius: '2px', margin: '0 -4px', padding: '2px 4px',
+        cursor: enabled ? 'text' : 'default', borderRadius: 'var(--r-sm)', margin: '0 -4px', padding: '2px 4px',
     });
 
     return (
@@ -215,7 +215,7 @@ export default function ChannelTaskDetail({
 
                         {task.status === 'blocked' && (
                             <div style={{
-                                display: 'flex', gap: 8, padding: '8px 10px', borderRadius: '2px',
+                                display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 'var(--r-sm)',
                                 background: tint('var(--state-danger)', 10), border: `1px solid ${tint('var(--state-danger)', 45)}`,
                             }}>
                                 <AlertTriangle size={13} style={{ color: 'var(--state-danger)', flexShrink: 0, marginTop: 1 }} />
@@ -298,7 +298,7 @@ export default function ChannelTaskDetail({
                                 ))}
                             </div>
                             {pickAssignee && perms.assignees && (
-                                <div style={{ marginTop: 6, border: '1px solid var(--border-default)', borderRadius: '2px', maxHeight: 160, overflowY: 'auto', background: 'var(--bg-active)' }}>
+                                <div style={{ marginTop: 6, border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', maxHeight: 160, overflowY: 'auto', background: 'var(--bg-active)' }}>
                                     {assignable.length === 0 && <p style={{ margin: 0, padding: 8, fontSize: 12, color: 'var(--text-secondary)' }}>Everyone in the channel is assigned.</p>}
                                     {assignable.map((m) => (
                                         <button key={m.id} type="button" onClick={() => save({ assignedTo: [...task.assigneeIds, m.id] })}
@@ -350,7 +350,7 @@ export default function ChannelTaskDetail({
                                                 title={can ? (done ? 'Mark as to do' : 'Mark as done') : 'Only its assignees or workspace admins can change this'}
                                                 onClick={() => can && onToggleSubtask(task, s)}
                                                 style={{
-                                                    width: 14, height: 14, padding: 0, borderRadius: '2px', flexShrink: 0,
+                                                    width: 14, height: 14, padding: 0, borderRadius: 'var(--r-sm)', flexShrink: 0,
                                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                                     border: `1px solid ${done ? 'var(--state-success)' : 'var(--border-accent)'}`,
                                                     background: done ? 'var(--state-success)' : 'transparent',
@@ -385,7 +385,7 @@ export default function ChannelTaskDetail({
                                 <p style={sectionLabel}>Labels</p>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                     {task.labels.map((l) => (
-                                        <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', fontSize: 11, borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                                        <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', fontSize: 11, borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
                                             <Tag size={9} /> {l}
                                         </span>
                                     ))}
@@ -407,7 +407,7 @@ export default function ChannelTaskDetail({
                             <div style={{ paddingTop: 12, borderTop: '1px solid var(--border-default)' }}>
                                 <button type="button" onClick={() => onDelete(task)} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', fontSize: 12, fontWeight: 500, fontFamily: FONT,
-                                    color: 'var(--state-danger)', background: 'transparent', border: `1px solid ${tint('var(--state-danger)', 45)}`, borderRadius: '2px', cursor: 'pointer',
+                                    color: 'var(--state-danger)', background: 'transparent', border: `1px solid ${tint('var(--state-danger)', 45)}`, borderRadius: 'var(--r-sm)', cursor: 'pointer',
                                 }}><Trash2 size={12} /> Delete issue</button>
                             </div>
                         )}

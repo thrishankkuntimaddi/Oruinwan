@@ -283,17 +283,17 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         return (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
                 <div style={{ padding: '10px 16px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', opacity: 0.6 }}>
-                    <div style={{ height: 14, width: 180, backgroundColor: 'var(--bg-active)', borderRadius: '2px' }} />
-                    <div style={{ height: 28, width: 72, backgroundColor: 'var(--bg-active)', borderRadius: '2px' }} />
+                    <div style={{ height: 14, width: 180, backgroundColor: 'var(--bg-active)', borderRadius: 'var(--r-sm)' }} />
+                    <div style={{ height: 28, width: 72, backgroundColor: 'var(--bg-active)', borderRadius: 'var(--r-sm)' }} />
                 </div>
                 <div style={{ flex: 1, display: 'flex', gap: 8, padding: 12, minHeight: 0, overflow: 'hidden' }}>
                     {BOARD_STATUSES.map((s) => (
-                        <div key={s} style={{ flex: '1 0 168px', borderRadius: '2px', backgroundColor: 'var(--bg-surface)', borderTop: `2px solid ${STATUS_META[s].color}`, padding: 10 }}>
-                            <div style={{ height: 10, width: 72, backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: 10 }} />
+                        <div key={s} style={{ flex: '1 0 168px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-surface)', borderTop: `2px solid ${STATUS_META[s].color}`, padding: 10 }}>
+                            <div style={{ height: 10, width: 72, backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', marginBottom: 10 }} />
                             {[1, 2].map((i) => (
-                                <div key={i} style={{ backgroundColor: 'var(--bg-active)', borderRadius: '2px', marginBottom: 6, padding: 10 }}>
-                                    <div style={{ height: 10, width: '80%', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: 6 }} />
-                                    <div style={{ height: 8, width: '50%', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
+                                <div key={i} style={{ backgroundColor: 'var(--bg-active)', borderRadius: 'var(--r-sm)', marginBottom: 6, padding: 10 }}>
+                                    <div style={{ height: 10, width: '80%', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', marginBottom: 6 }} />
+                                    <div style={{ height: 8, width: '50%', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)' }} />
                                 </div>
                             ))}
                         </div>
@@ -304,7 +304,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     }
 
     const filterBtn = (active) => ({
-        fontSize: 12, padding: '3px 10px', borderRadius: '2px', whiteSpace: 'nowrap', fontFamily: FONT,
+        fontSize: 12, padding: '3px 10px', borderRadius: 'var(--r-sm)', whiteSpace: 'nowrap', fontFamily: FONT,
         backgroundColor: active ? 'var(--accent-dim)' : 'transparent',
         color: active ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: active ? 600 : 400,
         border: '1px solid transparent', cursor: 'pointer',
@@ -349,7 +349,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
             {fetchError && (
                 <div role="alert" style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                    margin: '12px 16px 0', padding: '10px 14px', borderRadius: '2px', fontSize: 13,
+                    margin: '12px 16px 0', padding: '10px 14px', borderRadius: 'var(--r-sm)', fontSize: 13,
                     backgroundColor: tint('var(--state-danger)', 8), border: `1px solid ${tint('var(--state-danger)', 40)}`,
                     borderLeft: '3px solid var(--state-danger)', color: 'var(--text-primary)',
                 }}>
@@ -358,7 +358,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                     </span>
                     <button type="button" onClick={() => { setLoading(true); loadTasks(); }} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, fontFamily: FONT, flexShrink: 0,
-                        color: 'var(--text-primary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer',
+                        color: 'var(--text-primary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer',
                     }}><RotateCcw size={12} /> Retry</button>
                 </div>
             )}

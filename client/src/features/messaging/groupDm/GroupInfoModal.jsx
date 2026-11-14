@@ -89,7 +89,7 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
         <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div role="dialog" aria-modal="true" aria-label="Group info" data-testid="group-info"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: 'min(440px, calc(100vw - 32px))', maxHeight: 'min(600px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: 'min(440px, calc(100vw - 32px))', maxHeight: 'min(600px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle, var(--border-default))', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -113,7 +113,7 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                                         <input value={name} maxLength={80} autoFocus onChange={(e) => setName(e.target.value)} aria-label="Group name"
                                             onKeyDown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditing(false); }}
                                             placeholder="Group name"
-                                            style={{ flex: 1, padding: '7px 10px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
+                                            style={{ flex: 1, padding: '7px 10px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
                                         <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" disabled={busy} onClick={saveName}>Save</button>
                                     </div>
                                 ) : (
@@ -134,9 +134,9 @@ export default function GroupInfoModal({ dmId, workspaceId, currentUserId, onClo
                             </div>
 
                             {adding && (
-                                <div style={{ border: '1px solid var(--border-default)', borderRadius: '2px', padding: '8px', marginBottom: '10px' }}>
+                                <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '8px', marginBottom: '10px' }}>
                                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people" aria-label="Search people to add" autoFocus
-                                        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', marginBottom: '6px' }} />
+                                        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', marginBottom: '6px' }} />
                                     <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
                                         {candidates.length === 0 && <div style={small}>{query.trim() ? 'No one matches.' : 'Everyone in this workspace is already here.'}</div>}
                                         {candidates.map((m) => {

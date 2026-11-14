@@ -65,7 +65,7 @@ function PolicySelect({ channel, field, endpoint, testId }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <select data-testid={testId} value={value} onChange={change}
-                style={{ padding: '6px 8px', fontSize: 12, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 2 }}>
+                style={{ padding: '6px 8px', fontSize: 12, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                 <option value="everyone">Everyone</option>
                 <option value="admins">Channel admins only</option>
             </select>
@@ -93,7 +93,7 @@ function ActionBtn({ label, onClick, disabled, variant = 'default', icon }) {
         },
         accent: {
             bg: hovered ? 'var(--accent-hover)' : 'var(--accent)',
-            color: 'var(--bg-base)',
+            color: 'var(--text-on-accent)',
             border: 'transparent',
         },
     };
@@ -108,7 +108,7 @@ function ActionBtn({ label, onClick, disabled, variant = 'default', icon }) {
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '5px 12px', fontSize: '12px', fontWeight: 500,
                 backgroundColor: c.bg, color: c.color,
-                border: `1px solid ${c.border}`, borderRadius: '2px',
+                border: `1px solid ${c.border}`, borderRadius: 'var(--r-sm)',
                 cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
                 transition: 'background-color 150ms ease, color 150ms ease',
                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
@@ -131,7 +131,7 @@ function StyledInput({ value, onChange, placeholder, disabled, width = 180 }) {
             disabled={disabled}
             style={{
                 fontSize: '13px', padding: '5px 10px', width,
-                border: '1px solid var(--border-default)', borderRadius: '2px',
+                border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                 backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
                 outline: 'none', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                 transition: 'border-color 150ms ease',
@@ -221,7 +221,7 @@ export default function SettingsTab({
                                         disabled={loading}
                                         style={{
                                             fontSize: '13px', padding: '6px 10px', width: '240px',
-                                            border: '1px solid var(--border-accent)', borderRadius: '2px',
+                                            border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)',
                                             backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
                                             outline: 'none', resize: 'none',
                                             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
@@ -320,8 +320,8 @@ export default function SettingsTab({
                                 <div style={{
                                     display: 'flex', alignItems: 'center', gap: '4px',
                                     fontSize: '11px', color: 'var(--accent)',
-                                    padding: '2px 8px', border: '1px solid rgba(184,149,106,0.2)',
-                                    borderRadius: '2px',
+                                    padding: '2px 8px', border: '1px solid rgba(120, 120, 128,0.2)',
+                                    borderRadius: 'var(--r-sm)',
                                     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                                 }}>
                                     <Link size={10} /> Publicly accessible
@@ -334,7 +334,7 @@ export default function SettingsTab({
                                     position: 'relative', width: '40px', height: '22px',
                                     backgroundColor: channel.isPublic ? 'var(--accent)' : 'var(--bg-active)',
                                     border: '1px solid var(--border-accent)',
-                                    borderRadius: '2px', cursor: loading ? 'not-allowed' : 'pointer',
+                                    borderRadius: 'var(--r-sm)', cursor: loading ? 'not-allowed' : 'pointer',
                                     outline: 'none', transition: 'background-color 150ms ease',
                                     opacity: loading ? 0.5 : 1,
                                 }}
@@ -370,7 +370,7 @@ export default function SettingsTab({
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '16px',
                             border: '1px solid rgba(224,82,82,0.2)',
-                            borderRadius: '2px',
+                            borderRadius: 'var(--r-sm)',
                             backgroundColor: 'rgba(224,82,82,0.04)',
                         }}>
                             <div>
@@ -396,7 +396,7 @@ export default function SettingsTab({
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '16px',
                             border: '1px solid rgba(224,82,82,0.2)',
-                            borderRadius: '2px',
+                            borderRadius: 'var(--r-sm)',
                             backgroundColor: 'rgba(224,82,82,0.04)',
                         }}>
                             <div>

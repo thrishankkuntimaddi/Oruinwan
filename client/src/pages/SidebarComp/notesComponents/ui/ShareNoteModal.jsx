@@ -183,7 +183,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
                       {member.email && <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</span>}
                     </span>
                     <span style={{ width: '16px', height: '16px', border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`, background: isSelected ? 'var(--accent)' : 'transparent', borderRadius: 'var(--gl-radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {isSelected && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
+                      {isSelected && <Check size={10} style={{ color: 'var(--text-on-accent)' }} strokeWidth={3} />}
                     </span>
                   </button>
                 );

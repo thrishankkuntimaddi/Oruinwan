@@ -62,7 +62,7 @@ export default function SetupPassword() {
 
                     {}
                     <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '36px', height: '36px', background: 'rgba(184,149,106,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '36px', height: '36px', background: 'rgba(120, 120, 128,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Shield size={18} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div>
@@ -76,7 +76,7 @@ export default function SetupPassword() {
                         {}
                         {user?.username && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', marginBottom: '20px' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--accent)' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(120, 120, 128,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--accent)' }}>
                                     {user.username.charAt(0).toUpperCase()}
                                 </div>
                                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{user.username}</span>

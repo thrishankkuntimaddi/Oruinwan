@@ -157,7 +157,7 @@ export function CreateWorkspaceFlow() {
                     aria-label={`Colour ${c}`}
                     onClick={() => setColor(c)}
                     className="pressable grid aspect-square place-items-center rounded-xl"
-                    style={{ background: c, boxShadow: color === c ? '0 0 0 2px rgb(var(--c-bg)), 0 0 0 4px rgb(var(--c-accent))' : undefined }}
+                    style={{ background: c, boxShadow: color === c ? '0 0 0 2px rgb(var(--c-bg)), 0 0 0 4px rgb(var(--c-text))' : undefined }}
                   >
                     {color === c && <Check size={18} strokeWidth={3} color="#fff" />}
                   </button>

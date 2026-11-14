@@ -28,7 +28,7 @@ function MeetingEvent({ event, currentUserId }) {
             style={{
                 backgroundColor: 'var(--bg-active)',
                 border: '1px solid var(--border-accent)',
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 padding: '14px 16px',
                 margin: '6px 0',
                 maxWidth: '480px',
@@ -38,8 +38,8 @@ function MeetingEvent({ event, currentUserId }) {
             {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{
-                    width: '28px', height: '28px', borderRadius: '2px',
-                    backgroundColor: 'rgba(184,149,106,0.12)',
+                    width: '28px', height: '28px', borderRadius: 'var(--r-sm)',
+                    backgroundColor: 'rgba(120, 120, 128,0.12)',
                     border: '1px solid var(--border-accent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
@@ -80,7 +80,7 @@ function MeetingEvent({ event, currentUserId }) {
                     backgroundColor: joinUrl ? 'var(--accent)' : 'var(--bg-hover)',
                     color: joinUrl ? 'var(--bg-base)' : 'var(--text-muted)',
                     border: 'none', outline: 'none',
-                    borderRadius: '2px',
+                    borderRadius: 'var(--r-sm)',
                     padding: '6px 14px',
                     fontSize: '12px', fontWeight: 600,
                     cursor: joinUrl ? 'pointer' : 'not-allowed',

@@ -134,7 +134,7 @@ export default function NotificationPreferences({ workspaceId }) {
                         background: saved ? T.accentBg : 'var(--accent)',
                         border: `1px solid ${saved ? T.accentBorder : 'var(--accent)'}`,
                         color: saved ? T.accent : 'var(--bg-base)',
-                        borderRadius: '2px',
+                        borderRadius: 'var(--r-sm)',
                         transition: 'all 150ms ease',
                         opacity: saving ? 0.7 : 1,
                     }}

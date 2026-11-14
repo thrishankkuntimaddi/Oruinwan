@@ -443,8 +443,8 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
     setEditingId(null);
   };
 
-  const iconBtn = { padding: '6px', color: 'var(--text-muted)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', transition: '150ms ease' };
-  const smallBtn = { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font)' };
+  const iconBtn = { padding: '6px', color: 'var(--text-muted)', background: 'none', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', transition: '150ms ease' };
+  const smallBtn = { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 600, background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font)' };
 
   const panel = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font)', transition: 'opacity 300ms ease, transform 300ms ease', opacity: visible ? 1 : 0, transform: isSidebar ? (visible ? 'translateX(0)' : 'translateX(32px)') : (visible ? 'scale(1)' : 'scale(0.95)') }}
@@ -452,10 +452,10 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
 
       {showInfoModal && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-overlay)' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '85%', maxWidth: '320px', padding: '20px', position: 'relative' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: '85%', maxWidth: '320px', padding: '20px', position: 'relative' }}>
             <button onClick={() => setShowInfoModal(false)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px', textAlign: 'center' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
                 <Sparkles size={18} style={{ color: 'var(--accent)' }} />
               </div>
               <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 4px' }}>About Oruinwan Intelligence</h3>
@@ -479,7 +479,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                 </ul>
               </div>
             </div>
-            <button onClick={() => setShowInfoModal(false)} style={{ width: '100%', marginTop: '16px', padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Got it</button>
+            <button onClick={() => setShowInfoModal(false)} style={{ width: '100%', marginTop: '16px', padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>Got it</button>
           </div>
         </div>
       )}
@@ -508,7 +508,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
               ) : historyItems.length === 0 ? (
                 <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No history yet. Conversations are saved to your account.</div>
               ) : historyItems.map(chat => (
-                <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 2, background: chat.id === chatId ? 'var(--bg-active)' : 'none' }}>
+                <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 'var(--r-sm)', background: chat.id === chatId ? 'var(--bg-active)' : 'none' }}>
                   {renamingId === chat.id ? (
                     <input
                       autoFocus
@@ -518,11 +518,11 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                       onChange={(e) => setRenameText(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveRename(chat.id); if (e.key === 'Escape') setRenamingId(null); }}
                       onBlur={() => saveRename(chat.id)}
-                      style={{ flex: 1, minWidth: 0, margin: '4px 6px', padding: '4px 6px', fontSize: 12, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-base)', border: '1px solid var(--border-accent)', borderRadius: 2 }}
+                      style={{ flex: 1, minWidth: 0, margin: '4px 6px', padding: '4px 6px', fontSize: 12, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-base)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)' }}
                     />
                   ) : (
                     <button onClick={() => loadChat(chat)}
-                      style={{ flex: 1, minWidth: 0, textAlign: 'left', padding: '8px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font)' }}>
+                      style={{ flex: 1, minWidth: 0, textAlign: 'left', padding: '8px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font)' }}>
                       <MessageSquare size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{chat.title}</div>
@@ -550,7 +550,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: '48px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: 'var(--r-sm)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Sparkles size={14} style={{ color: 'var(--accent)' }} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -561,7 +561,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                 aria-label="Assistant"
                 title="Who answers: Oruinwan AI or a connected model"
                 data-testid="assistant-picker"
-                style={{ height: 24, maxWidth: 180, padding: '0 4px', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: 'pointer' }}
+                style={{ height: 24, maxWidth: 180, padding: '0 4px', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text-primary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
               >
                 {assistants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
@@ -593,7 +593,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="custom-scrollbar">
         {messages.length === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '32px 16px', userSelect: 'none' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: 'var(--r-sm)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
               <Sparkles size={22} style={{ color: 'var(--accent)' }} />
             </div>
             <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Oruinwan Intelligence</h4>
@@ -616,7 +616,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
               )}
 
               {editingId === msg.id ? (
-                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px', minWidth: '180px' }}>
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '10px', minWidth: '180px' }}>
                   <textarea style={{ width: '100%', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font)' }}
                     defaultValue={msg.text} autoFocus rows={Math.max(2, Math.ceil(msg.text.length / 35))}
                     onKeyDown={e => {
@@ -628,7 +628,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
                   </div>
                 </div>
               ) : (
-                <div style={{ padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, borderRadius: '2px', whiteSpace: msg.sender === 'ai' && !msg.isError ? 'normal' : 'pre-wrap', wordBreak: 'break-word',
+                <div style={{ padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, borderRadius: 'var(--r-sm)', whiteSpace: msg.sender === 'ai' && !msg.isError ? 'normal' : 'pre-wrap', wordBreak: 'break-word',
                   background: msg.sender === 'ai' ? 'var(--bg-surface)' : 'var(--bg-active)', color: 'var(--text-primary)',
                   border: `1px solid ${msg.isError ? 'var(--state-danger)' : msg.sender === 'ai' ? 'var(--border-default)' : 'var(--border-accent)'}` }}>
                   {msg.sender === 'ai' && !msg.isError
@@ -733,7 +733,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
 
         {isTyping && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
               {[0, 1, 2].map(k => (
                 <span key={k} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', opacity: 0.7, animation: 'bounce 1s infinite', animationDelay: `${k * 120}ms`, display: 'inline-block' }} />
               ))}
@@ -748,7 +748,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
         <div style={{ padding: '0 10px 8px', display: 'flex', gap: '6px', overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
           {quickActions.map(({ icon: Icon, label, run }) => (
             <button key={label} onClick={run}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font)', transition: '150ms ease' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font)', transition: '150ms ease' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
               <Icon size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -776,7 +776,7 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
             {mention.active.map((p) => <PersonChip key={p.id} person={p}>{p.name || `@${p.username}`}</PersonChip>)}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '8px 10px', transition: '150ms ease' }}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '8px 10px', transition: '150ms ease' }}
           onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
           onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
           <textarea ref={textRef} rows={1} value={input} onChange={mention.onChange} onSelect={mention.onSelect}
@@ -786,12 +786,12 @@ const OruinwanAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPr
             onKeyDown={e => { if (mention.onKeyDown(e)) return; if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!busy) handleSend(); } }} />
           {streamingId !== null || (isTyping && abortRef.current) ? (
             <button onClick={stopAnswer} aria-label="Stop generating" title="Stop generating"
-              style={{ padding: '5px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', cursor: 'pointer', display: 'flex' }}>
+              style={{ padding: '5px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 'var(--r-sm)', color: 'var(--accent)', cursor: 'pointer', display: 'flex' }}>
               <Square size={14} fill="currentColor" />
             </button>
           ) : (
             <button onClick={() => handleSend()} disabled={!input.trim() || aiOut} aria-label="Send" title={aiOut ? "No AI requests left today on the free plan" : undefined}
-              style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: '2px', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}>
+              style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: 'var(--r-sm)', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}>
               <Send size={14} />
             </button>
           )}

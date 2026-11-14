@@ -28,7 +28,7 @@ function KanbanCard({ task, draggable, onDragStart, onDragEnd, onClick, dragging
       tabIndex={0}
       title={draggable ? undefined : 'Only the creator, assignees or workspace admins can move this task'}
       style={{
-        background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px',
+        background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
         marginBottom: '6px', cursor: draggable ? 'grab' : 'pointer', userSelect: 'none',
         opacity: dragging ? 0.4 : 1, transition: 'border-color 120ms ease, opacity 120ms ease', fontFamily: FONT,
       }}
@@ -75,7 +75,7 @@ function KanbanColumn({ status, tasks, dragTask, blocked, onDrop, children }) {
   return (
     <div
       data-status={status}
-      style={{ flex: '1 1 0', minWidth: '168px', maxWidth: '320px', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '2px', opacity: dragTask && blocked ? 0.4 : 1, transition: 'opacity 120ms ease' }}
+      style={{ flex: '1 1 0', minWidth: '168px', maxWidth: '320px', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-sm)', opacity: dragTask && blocked ? 0.4 : 1, transition: 'opacity 120ms ease' }}
       onDragOver={(e) => { if (!allowed) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (!over) setOver(true); }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(false); }}
       onDrop={(e) => { e.preventDefault(); setOver(false); if (allowed) onDrop(status); }}
@@ -84,7 +84,7 @@ function KanbanColumn({ status, tasks, dragTask, blocked, onDrop, children }) {
         <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-primary)', fontFamily: FONT }}>
           {statusLabel(status)}
         </span>
-        <span style={{ fontSize: '11px', fontWeight: 700, minWidth: '20px', padding: '1px 6px', borderRadius: '2px', background: 'var(--bg-active)', color: 'var(--text-secondary)', textAlign: 'center' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, minWidth: '20px', padding: '1px 6px', borderRadius: 'var(--r-sm)', background: 'var(--bg-active)', color: 'var(--text-secondary)', textAlign: 'center' }}>
           {tasks.length}
         </span>
         {dragTask && blocked && <Lock size={11} style={{ marginLeft: 'auto', color: 'var(--text-secondary)' }} aria-label="Not allowed" />}

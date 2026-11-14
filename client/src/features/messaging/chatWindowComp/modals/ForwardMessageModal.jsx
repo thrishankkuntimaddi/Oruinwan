@@ -77,7 +77,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                 width: '380px', maxHeight: '80vh',
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
-                borderRadius: '4px',
+                borderRadius: 'var(--r-sm)',
                 boxShadow: 'var(--lg-shadow-sm)',
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
@@ -114,7 +114,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                 width: '100%', padding: '7px 10px 7px 32px',
                                 backgroundColor: 'var(--bg-active)',
                                 border: '1px solid var(--border-default)',
-                                borderRadius: '2px', outline: 'none',
+                                borderRadius: 'var(--r-sm)', outline: 'none',
                                 color: 'var(--text-primary)', fontSize: '13px',
                                 fontFamily: FONT, boxSizing: 'border-box',
                                 transition: 'border-color 100ms ease',
@@ -139,7 +139,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                         isSelected={isSelected}
                                         onClick={() => toggleSelection(channel)}
                                         avatar={
-                                            <div style={{ width: '30px', height: '30px', borderRadius: '2px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                                            <div style={{ width: '30px', height: '30px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
                                                 <Hash size={13} />
                                             </div>
                                         }
@@ -165,7 +165,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                                                 {member.profilePicture ? (
                                                     <img src={member.profilePicture} alt={member.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
-                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--bg-base)' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-on-accent)' }}>
                                                         {(member.username || 'U')[0].toUpperCase()}
                                                     </span>
                                                 )}
@@ -204,7 +204,7 @@ function CloseBtn({ onClick }) {
     return (
         <button onClick={onClick}
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '5px', border: 'none', outline: 'none', background: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms', color: hov ? 'var(--state-danger)' : 'var(--text-muted)' }}>
+            style={{ padding: '5px', border: 'none', outline: 'none', background: 'none', cursor: 'pointer', borderRadius: 'var(--r-sm)', display: 'flex', transition: '100ms', color: hov ? 'var(--state-danger)' : 'var(--text-muted)' }}>
             <X size={16} />
         </button>
     );
@@ -237,20 +237,20 @@ function ListItem({ isSelected, onClick, avatar, primary, secondary }) {
             style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '7px 8px', border: 'none', outline: 'none', cursor: 'pointer',
-                borderRadius: '2px', textAlign: 'left',
-                backgroundColor: isSelected ? 'rgba(184,149,106,0.10)' : (hov ? 'var(--bg-hover)' : 'transparent'),
+                borderRadius: 'var(--r-sm)', textAlign: 'left',
+                backgroundColor: isSelected ? 'rgba(120, 120, 128,0.10)' : (hov ? 'var(--bg-hover)' : 'transparent'),
                 borderLeft: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
                 transition: '80ms ease',
             }}>
             {}
             <div style={{
-                width: '14px', height: '14px', borderRadius: '2px', flexShrink: 0,
+                width: '14px', height: '14px', borderRadius: 'var(--r-sm)', flexShrink: 0,
                 border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border-default)'}`,
                 backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: '100ms',
             }}>
-                {isSelected && <span style={{ color: 'var(--bg-base)', fontSize: '9px', fontWeight: 700 }}>✓</span>}
+                {isSelected && <span style={{ color: 'var(--text-on-accent)', fontSize: '9px', fontWeight: 700 }}>✓</span>}
             </div>
             {avatar}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -278,7 +278,7 @@ function CancelBtn({ onClick, children }) {
                 padding: '7px 16px', fontSize: '12px', fontWeight: 500,
                 color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
                 backgroundColor: hov ? 'var(--bg-hover)' : 'transparent',
-                border: '1px solid var(--border-default)', borderRadius: '2px',
+                border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                 cursor: 'pointer', outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
             }}>
             {children}
@@ -296,7 +296,7 @@ function ForwardBtn({ onClick, disabled, children }) {
                 color: disabled ? 'var(--text-muted)' : 'var(--bg-base)',
                 backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
                 border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
-                borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',
+                borderRadius: 'var(--r-sm)', cursor: disabled ? 'not-allowed' : 'pointer',
                 outline: 'none', transition: '100ms', opacity: disabled ? 0.5 : 1,
                 fontFamily: 'Inter, system-ui, sans-serif',
             }}>

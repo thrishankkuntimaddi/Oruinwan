@@ -115,7 +115,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick, onLi
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
             onClick={() => setOpen(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '5px 10px', background: 'var(--bg-input)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '5px 10px', background: 'var(--bg-input)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
           >

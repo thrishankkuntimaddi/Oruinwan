@@ -32,7 +32,7 @@ function MenuItem({ label, icon, onClick, accent = false, danger = false }) {
             type="button"
             role="menuitem"
             onClick={onClick}
-            style={{ width: '100%', textAlign: 'left', padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', borderRadius: '4px', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease', whiteSpace: 'nowrap' }}
+            style={{ width: '100%', textAlign: 'left', padding: '7px 10px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', borderRadius: 'var(--r-sm)', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = hoverBg; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
@@ -134,14 +134,14 @@ function LinkedTaskChip({ taskId, style }) {
 /** Small status chips: the thread was marked resolved, a task was made from the message. */
 export function MessageBadges({ msg }) {
     if (!msg?.resolvedThreadAt && !msg?.linkedTaskId) return null;
-    const chip = { display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, padding: '0 6px', fontSize: 10, fontWeight: 600, borderRadius: 2, lineHeight: '16px' };
+    const chip = { display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, padding: '0 6px', fontSize: 10, fontWeight: 600, borderRadius: 'var(--r-sm)', lineHeight: '16px' };
     return (
         <>
             {msg.resolvedThreadAt && (
                 <span data-testid="resolved-badge" title="Thread marked resolved" style={{ ...chip, color: 'var(--state-success)', background: 'rgba(90,186,138,0.1)' }}>✓ Resolved</span>
             )}
             {msg.linkedTaskId && (
-                <LinkedTaskChip taskId={msg.linkedTaskId} style={{ ...chip, color: 'var(--accent)', background: 'rgba(184,149,106,0.12)' }} />
+                <LinkedTaskChip taskId={msg.linkedTaskId} style={{ ...chip, color: 'var(--accent)', background: 'rgba(120, 120, 128,0.12)' }} />
             )}
         </>
     );
@@ -192,7 +192,7 @@ export function TranslationBlock({ state, onClear, onRetry }) {
     if (isSameLanguage(state.detectedLang, state.language)) return null;
     return (
         <div style={{ marginTop: '6px', maxWidth: 'var(--msg-max, 60%)' }}>
-            <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <div style={{ padding: '8px 12px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {state.translatedText}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
@@ -224,7 +224,7 @@ export function InlineMessageEditor({ initialText, onSave, onCancel }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '480px' }}>
             <textarea
-                style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '2px', padding: '8px 12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '60px', fontFamily: 'var(--font)', boxSizing: 'border-box', lineHeight: 1.6 }}
+                style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', padding: '8px 12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '60px', fontFamily: 'var(--font)', boxSizing: 'border-box', lineHeight: 1.6 }}
                 value={text}
                 disabled={saving}
                 onChange={(e) => setText(e.target.value)}
@@ -237,10 +237,10 @@ export function InlineMessageEditor({ initialText, onSave, onCancel }) {
                 rows={Math.min(6, (text.match(/\n/g) || []).length + 2)}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button type="button" onClick={save} disabled={saving || !text.trim()} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: saving ? 'wait' : 'pointer', fontFamily: 'var(--font)', outline: 'none', opacity: saving || !text.trim() ? 0.6 : 1 }}>
+                <button type="button" onClick={save} disabled={saving || !text.trim()} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: 'var(--text-on-accent)', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: 'var(--r-sm)', cursor: saving ? 'wait' : 'pointer', fontFamily: 'var(--font)', outline: 'none', opacity: saving || !text.trim() ? 0.6 : 1 }}>
                     {saving ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={11} />} Save
                 </button>
-                <button type="button" onClick={onCancel} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
+                <button type="button" onClick={onCancel} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
                     <X size={11} /> Cancel
                 </button>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Enter to save · Esc to cancel</span>

@@ -120,7 +120,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 style={{
                     backgroundColor: 'var(--bg-surface)',
                     border: '1px solid var(--border-accent)',
-                    borderRadius: '2px',
+                    borderRadius: 'var(--r-sm)',
                     width: '100%', maxWidth: '700px',
                     boxShadow: 'var(--lg-shadow-sm)',
                     display: 'flex', flexDirection: 'column',
@@ -139,8 +139,8 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                         <div style={{
-                            width: '36px', height: '36px', borderRadius: '2px',
-                            backgroundColor: 'rgba(184,149,106,0.15)',
+                            width: '36px', height: '36px', borderRadius: 'var(--r-sm)',
+                            backgroundColor: 'rgba(120, 120, 128,0.15)',
                             border: '1px solid var(--border-accent)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
@@ -169,7 +169,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                         style={{
                             width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
-                            color: 'var(--text-muted)', borderRadius: '2px', transition: '100ms ease',
+                            color: 'var(--text-muted)', borderRadius: 'var(--r-sm)', transition: '100ms ease',
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -222,7 +222,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                 width: '100%', padding: '10px 12px 10px 32px',
                                                 backgroundColor: 'var(--bg-input)',
                                                 border: '1px solid var(--border-default)',
-                                                borderRadius: '2px',
+                                                borderRadius: 'var(--r-sm)',
                                                 fontSize: '14px', fontWeight: 600,
                                                 color: 'var(--text-primary)',
                                                 outline: 'none', boxSizing: 'border-box',
@@ -261,7 +261,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                             width: '100%', padding: '10px 12px',
                                             backgroundColor: 'var(--bg-input)',
                                             border: '1px solid var(--border-default)',
-                                            borderRadius: '2px',
+                                            borderRadius: 'var(--r-sm)',
                                             fontSize: '13px', color: 'var(--text-primary)',
                                             outline: 'none', resize: 'none', lineHeight: 1.65,
                                             boxSizing: 'border-box', fontFamily: FONT,
@@ -291,16 +291,16 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     onClick={() => setVisibility('public')}
                                     style={{
                                         padding: '14px 16px',
-                                        borderRadius: '2px', cursor: 'pointer',
+                                        borderRadius: 'var(--r-sm)', cursor: 'pointer',
                                         border: `1px solid ${visibility === 'public' ? 'var(--accent)' : 'var(--border-default)'}`,
-                                        backgroundColor: visibility === 'public' ? 'rgba(184,149,106,0.08)' : 'var(--bg-active)',
+                                        backgroundColor: visibility === 'public' ? 'rgba(120, 120, 128,0.08)' : 'var(--bg-active)',
                                         transition: 'border-color 150ms ease, background-color 150ms ease',
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{
-                                            width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
-                                            backgroundColor: visibility === 'public' ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)',
+                                            width: '32px', height: '32px', borderRadius: 'var(--r-sm)', flexShrink: 0,
+                                            backgroundColor: visibility === 'public' ? 'rgba(120, 120, 128,0.15)' : 'var(--bg-hover)',
                                             border: '1px solid var(--border-default)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
@@ -333,7 +333,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     onClick={() => setVisibility('private')}
                                     style={{
                                         padding: '14px 16px',
-                                        borderRadius: '2px', cursor: 'pointer',
+                                        borderRadius: 'var(--r-sm)', cursor: 'pointer',
                                         border: `1px solid ${visibility === 'private' ? 'var(--border-accent)' : 'var(--border-default)'}`,
                                         backgroundColor: visibility === 'private' ? 'var(--bg-hover)' : 'var(--bg-active)',
                                         transition: 'border-color 150ms ease, background-color 150ms ease',
@@ -341,7 +341,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 >
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                         <div style={{
-                                            width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
+                                            width: '32px', height: '32px', borderRadius: 'var(--r-sm)', flexShrink: 0,
                                             backgroundColor: visibility === 'private' ? 'var(--bg-active)' : 'var(--bg-hover)',
                                             border: '1px solid var(--border-default)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -406,7 +406,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                             width: '100%', padding: '9px 12px 9px 32px',
                                             backgroundColor: 'var(--bg-input)',
                                             border: '1px solid var(--border-default)',
-                                            borderRadius: '2px',
+                                            borderRadius: 'var(--r-sm)',
                                             fontSize: '13px', fontWeight: 500,
                                             color: 'var(--text-primary)',
                                             outline: 'none', boxSizing: 'border-box', fontFamily: FONT,
@@ -419,9 +419,9 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 </div>
                                 <div style={{
                                     padding: '6px 14px',
-                                    backgroundColor: 'rgba(184,149,106,0.10)',
-                                    border: '1px solid rgba(184,149,106,0.2)',
-                                    borderRadius: '2px',
+                                    backgroundColor: 'rgba(120, 120, 128,0.10)',
+                                    border: '1px solid rgba(120, 120, 128,0.2)',
+                                    borderRadius: 'var(--r-sm)',
                                     fontSize: '12px', fontWeight: 700, color: 'var(--accent)',
                                     whiteSpace: 'nowrap', fontFamily: FONT,
                                 }}>
@@ -454,7 +454,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                             alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: '10px',
                                         }}>
                                             <div style={{
-                                                width: '40px', height: '40px', borderRadius: '2px',
+                                                width: '40px', height: '40px', borderRadius: 'var(--r-sm)',
                                                 backgroundColor: 'var(--bg-active)',
                                                 border: '1px solid var(--border-default)',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -474,8 +474,8 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                     onClick={() => toggleMember(user.id)}
                                                     style={{
                                                         display: 'flex', alignItems: 'center', gap: '10px',
-                                                        padding: '10px 12px', borderRadius: '2px', cursor: 'pointer',
-                                                        backgroundColor: isSelected ? 'rgba(184,149,106,0.12)' : 'var(--bg-active)',
+                                                        padding: '10px 12px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                                                        backgroundColor: isSelected ? 'rgba(120, 120, 128,0.12)' : 'var(--bg-active)',
                                                         border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-default)'}`,
                                                         transition: 'border-color 150ms ease, background-color 150ms ease',
                                                     }}
@@ -484,8 +484,8 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                 >
                                                     {}
                                                     <div style={{
-                                                        width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
-                                                        backgroundColor: isSelected ? 'rgba(184,149,106,0.25)' : 'var(--bg-hover)',
+                                                        width: '32px', height: '32px', borderRadius: 'var(--r-sm)', flexShrink: 0,
+                                                        backgroundColor: isSelected ? 'rgba(120, 120, 128,0.25)' : 'var(--bg-hover)',
                                                         border: '1px solid var(--border-default)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: '13px', fontWeight: 600, fontFamily: FONT,
@@ -515,13 +515,13 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
 
                                                     {}
                                                     <div style={{
-                                                        width: '18px', height: '18px', borderRadius: '2px', flexShrink: 0,
+                                                        width: '18px', height: '18px', borderRadius: 'var(--r-sm)', flexShrink: 0,
                                                         border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`,
                                                         backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         transition: '150ms ease',
                                                     }}>
-                                                        {isSelected && <Check size={11} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
+                                                        {isSelected && <Check size={11} style={{ color: 'var(--text-on-accent)' }} strokeWidth={3} />}
                                                     </div>
                                                 </div>
                                             );
@@ -563,7 +563,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     color: 'var(--text-secondary)',
                                     backgroundColor: 'var(--bg-active)',
                                     border: '1px solid var(--border-default)',
-                                    borderRadius: '2px', cursor: 'pointer', fontFamily: FONT,
+                                    borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: FONT,
                                     transition: '150ms ease',
                                     outline: 'none',
                                 }}
@@ -583,7 +583,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     padding: '7px 20px', fontSize: '13px', fontWeight: 600,
                                     color: !name.trim() ? 'var(--text-muted)' : 'var(--bg-base)',
                                     backgroundColor: !name.trim() ? 'var(--bg-active)' : 'var(--accent)',
-                                    border: 'none', borderRadius: '2px', outline: 'none',
+                                    border: 'none', borderRadius: 'var(--r-sm)', outline: 'none',
                                     cursor: !name.trim() ? 'not-allowed' : 'pointer',
                                     fontFamily: FONT, transition: '150ms ease',
                                     opacity: !name.trim() ? 0.5 : 1,
@@ -603,7 +603,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     padding: '7px 20px', fontSize: '13px', fontWeight: 600,
                                     color: !canCreate ? 'var(--text-muted)' : 'var(--bg-base)',
                                     backgroundColor: !canCreate ? 'var(--bg-active)' : 'var(--accent)',
-                                    border: 'none', borderRadius: '2px', outline: 'none',
+                                    border: 'none', borderRadius: 'var(--r-sm)', outline: 'none',
                                     cursor: !canCreate ? 'not-allowed' : 'pointer',
                                     fontFamily: FONT, transition: '150ms ease',
                                     opacity: !canCreate ? 0.5 : 1,

@@ -430,7 +430,7 @@ export default function MessageList({ onSelectChat }) {
                         background: 'none', border: 'none', outline: 'none',
                         color: 'var(--text-muted)', cursor: 'pointer',
                         fontSize: '16px', lineHeight: 1, padding: '2px 4px',
-                        borderRadius: '2px', transition: 'color 100ms ease',
+                        borderRadius: 'var(--r-sm)', transition: 'color 100ms ease',
                       }}
                       onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                       onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -535,7 +535,7 @@ export default function MessageList({ onSelectChat }) {
           />
         ) : (
           <div style={{
-            width: '40px', height: '40px', borderRadius: '2px', flexShrink: 0,
+            width: '40px', height: '40px', borderRadius: 'var(--r-sm)', flexShrink: 0,
             backgroundColor: 'var(--bg-active)',
             border: '1px solid var(--border-default)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',

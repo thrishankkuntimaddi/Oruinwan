@@ -515,7 +515,7 @@ function createWindow() {
     title: 'Oruinwan',
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#f8f5f0', // the web client's (light) background
+    backgroundColor: '#EEF0F6', // the web client's (light) background
     icon: process.platform === 'linux' ? path.join(__dirname, '..', 'assets', 'icon.png') : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -598,7 +598,7 @@ function createWindow() {
           maximizable: false,
           fullscreenable: false,
           autoHideMenuBar: true,
-          backgroundColor: '#f8f5f0',
+          backgroundColor: '#EEF0F6',
         },
       };
     }

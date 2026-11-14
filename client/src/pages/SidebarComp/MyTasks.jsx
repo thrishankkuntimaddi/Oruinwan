@@ -128,10 +128,10 @@ function ListRow({ task, view, selected, can, milestoneName, onOpen, onDelete, o
           {task.subtasks?.length > 0 && <span>{task.subtasks.filter((s) => s.status === 'done').length}/{task.subtasks.length} subtasks</span>}
           {pendingTransfer && <span style={{ color: 'var(--accent)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Send size={10} /> Transfer pending</span>}
           {task.status === 'blocked' && task.blockedReason && <span style={{ color: 'var(--state-danger)', overflow: 'hidden', textOverflow: 'ellipsis' }}>Blocked: {task.blockedReason}</span>}
-          {task.labels?.slice(0, 3).map((l) => <span key={l} style={{ padding: '0 5px', borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--text-primary)' }}>{l}</span>)}
+          {task.labels?.slice(0, 3).map((l) => <span key={l} style={{ padding: '0 5px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', color: 'var(--text-primary)' }}>{l}</span>)}
         </div>
         {view === 'assigned-tasks' && pendingTransfer && can.handleTransfer && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', padding: '6px 8px', borderRadius: '2px', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 30)}`, fontSize: '11px', color: 'var(--text-primary)' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', padding: '6px 8px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 30)}`, fontSize: '11px', color: 'var(--text-primary)' }}
             onClick={(e) => e.stopPropagation()}>
             <Bell size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

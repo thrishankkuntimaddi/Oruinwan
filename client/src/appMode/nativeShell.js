@@ -23,6 +23,6 @@ export async function applyNativeBars(theme) {
     await plugins.SystemBars?.setStyle?.({ style: dark ? 'DARK' : 'LIGHT' });
     // Android only (mobile/android/…/AppWindowPlugin.java). setStyle resets the window
     // background, so paint ours afterwards.
-    if (cap.getPlatform?.() === 'android') await plugins.AppWindow?.setBackgroundColor?.({ color: dark ? '#0c0c0c' : '#f8f5f0' });
+    if (cap.getPlatform?.() === 'android') await plugins.AppWindow?.setBackgroundColor?.({ color: dark ? '#06070B' : '#EEF0F6' });
   } catch { /* older shells without these plugins */ }
 }

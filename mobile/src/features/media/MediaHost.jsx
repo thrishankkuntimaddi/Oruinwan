@@ -301,7 +301,7 @@ function Viewer({ media, onClose }) {
                 setTimeout(() => {
                   const el = document.querySelector(`[data-mid="${String(meta.messageId).replace(/"/g, '')}"]`);
                   el?.scrollIntoView?.({ block: 'center' });
-                  el?.animate?.([{ backgroundColor: 'rgb(var(--c-accent) / 0.25)' }, { backgroundColor: 'transparent' }], { duration: 1400 });
+                  el?.animate?.([{ backgroundColor: 'rgb(120 120 128 / 0.25)' }, { backgroundColor: 'transparent' }], { duration: 1400 });
                 }, 220);
               }}
             />

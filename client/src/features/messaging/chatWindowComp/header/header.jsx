@@ -134,17 +134,17 @@ export default function Header({
           {chat.type === 'channel' ? (
             chat.image ? (
               <img src={chat.image} alt={chat.name} style={{
-                width: 32, height: 32, borderRadius: '2px', objectFit: 'cover',
+                width: 32, height: 32, borderRadius: 'var(--r-sm)', objectFit: 'cover',
                 backgroundColor: 'var(--bg-active)',
               }} />
             ) : (
               <div style={{
-                width: 32, height: 32, borderRadius: '2px',
+                width: 32, height: 32, borderRadius: 'var(--r-sm)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backgroundColor: chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
-                  ? 'rgba(184,149,106,0.12)'
+                  ? 'rgba(120, 120, 128,0.12)'
                   : chat.isPrivate
-                    ? 'rgba(184,149,106,0.08)'
+                    ? 'rgba(120, 120, 128,0.08)'
                     : 'var(--bg-active)',
                 color: chat.name?.toLowerCase().replace(/^#/, '') === 'announcements'
                   ? 'var(--accent)'
@@ -187,7 +187,7 @@ export default function Header({
             data-testid="chat-header-details"
             title={openDetails ? (chat.type === 'channel' ? 'Channel details' : isGroup ? 'Group info' : 'View profile') : undefined}
             className={openDetails ? 'chat-header-details' : undefined}
-            style={{ minWidth: 0, cursor: openDetails ? 'pointer' : 'default', borderRadius: 2, padding: '2px 4px', margin: '-2px -4px' }}
+            style={{ minWidth: 0, cursor: openDetails ? 'pointer' : 'default', borderRadius: 'var(--r-sm)', padding: '2px 4px', margin: '-2px -4px' }}
           >
             <div style={{
               fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)',
@@ -203,7 +203,7 @@ export default function Header({
               {isGroup && onEditPeople && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); onEditPeople(); }} data-testid="group-edit-people"
                   title="Add or remove people (opens the To: bar)" aria-label="Add or remove people"
-                  style={{ marginLeft: 6, verticalAlign: 'middle', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2, cursor: 'pointer', color: 'var(--text-secondary)', padding: 0 }}>
+                  style={{ marginLeft: 6, verticalAlign: 'middle', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0 }}>
                   <Plus size={12} />
                 </button>
               )}
@@ -235,8 +235,8 @@ export default function Header({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{
                 fontSize: '13px', fontWeight: 500, color: 'var(--accent)',
-                backgroundColor: 'rgba(184,149,106,0.08)',
-                padding: '2px 10px', borderRadius: '2px',
+                backgroundColor: 'rgba(120, 120, 128,0.08)',
+                padding: '2px 10px', borderRadius: 'var(--r-sm)',
                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
               }}>
                 {selectedCount} selected
@@ -245,7 +245,7 @@ export default function Header({
                 onClick={() => setSelectMode(false)}
                 style={{
                   padding: '6px', color: 'var(--text-muted)', background: 'none',
-                  border: 'none', cursor: 'pointer', borderRadius: '2px',
+                  border: 'none', cursor: 'pointer', borderRadius: 'var(--r-sm)',
                   display: 'flex', alignItems: 'center', transition: 'color 150ms ease',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
@@ -270,7 +270,7 @@ export default function Header({
                       title={huddleActive ? 'In huddle' : 'Start huddle'}
                       onClick={onStartHuddle}
                       style={{
-                        padding: '6px', borderRadius: '2px', background: 'none',
+                        padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                         border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                         color: huddleActive ? 'var(--state-success)' : 'var(--text-muted)',
                         transition: 'color 150ms ease',
@@ -288,7 +288,7 @@ export default function Header({
                       title="Create Poll"
                       onClick={() => { onCreatePoll(); }}
                       style={{
-                        padding: '6px', borderRadius: '2px', background: 'none',
+                        padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                         border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                         color: 'var(--text-muted)', transition: 'color 150ms ease',
                       }}
@@ -309,7 +309,7 @@ export default function Header({
                     title={huddleActive ? "Leave Voice Call" : "Start Voice Call"}
                     onClick={() => onStartHuddle ? onStartHuddle() : showToast?.("Voice calls coming soon!", "info")}
                     style={{
-                      padding: '6px', borderRadius: '2px', background: 'none',
+                      padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       color: huddleActive ? 'var(--state-success)' : 'var(--text-muted)',
                       transition: 'color 150ms ease',
@@ -324,7 +324,7 @@ export default function Header({
                     title={huddleActive ? "Leave Call" : "Start Video Call"}
                     onClick={() => onStartVideoCall?.()}
                     style={{
-                      padding: '6px', borderRadius: '2px', background: 'none',
+                      padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       color: 'var(--text-muted)', transition: 'color 150ms ease',
                     }}
@@ -345,7 +345,7 @@ export default function Header({
                     setShowMenu(false);
                   }}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: showSearch ? 'var(--accent)' : 'var(--text-muted)',
                     transition: 'color 150ms ease',
@@ -361,7 +361,7 @@ export default function Header({
                   <div onClick={(e) => e.stopPropagation()} style={{
                     position: 'absolute', right: 0, top: 'calc(100% + 8px)',
                     width: '240px', backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-accent)', borderRadius: '2px',
+                    border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)',
                     padding: '8px', zIndex: 50,
                     animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
                   }}>
@@ -386,7 +386,7 @@ export default function Header({
                   title={isThreadsOnly ? "Show all messages" : "Show threads only"}
                   onClick={() => onShowThreadsView?.()}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: isThreadsOnly ? 'var(--accent)' : 'var(--text-muted)',
                     transition: 'color 150ms ease',
@@ -404,7 +404,7 @@ export default function Header({
                   title="Reminders"
                   onClick={onShowReminders}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: 'var(--text-muted)', transition: 'color 150ms ease',
                   }}
@@ -423,7 +423,7 @@ export default function Header({
                   data-testid="ask-ai-button"
                   onClick={onAskAi}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: 'var(--accent)', transition: 'color 150ms ease',
                   }}
@@ -438,7 +438,7 @@ export default function Header({
                   title="Pinned messages"
                   onClick={onShowPinned}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: 'var(--text-muted)', transition: 'color 150ms ease',
                   }}
@@ -456,7 +456,7 @@ export default function Header({
                   title="Saved / Bookmarked messages"
                   onClick={onShowBookmarks}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: 'var(--text-muted)', transition: 'color 150ms ease',
                   }}
@@ -475,7 +475,7 @@ export default function Header({
                     setShowMenu((s) => !s);
                   }}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: showMenu ? 'var(--accent)' : 'var(--text-muted)',
                     transition: 'color 150ms ease',
@@ -603,7 +603,7 @@ export default function Header({
                 <button
                   onClick={onClose}
                   style={{
-                    padding: '6px', borderRadius: '2px', background: 'none',
+                    padding: '6px', borderRadius: 'var(--r-sm)', background: 'none',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
                     color: 'var(--text-muted)', transition: 'color 150ms ease', marginLeft: '4px',
                   }}
@@ -658,7 +658,7 @@ function MenuButton({ icon, label, onClick, danger = false }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: '4px',
+        width: '100%', textAlign: 'left', padding: '7px 10px', borderRadius: 'var(--r-sm)',
         display: 'flex', alignItems: 'center', gap: '10px',
         backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
         color: danger ? 'var(--state-danger)' : (hovered ? 'var(--text-primary)' : 'var(--text-secondary)'),

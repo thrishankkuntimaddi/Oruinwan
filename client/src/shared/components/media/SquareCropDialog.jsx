@@ -66,7 +66,7 @@ export default function SquareCropDialog({ file, title = 'Crop picture', round =
         <div data-testid="square-crop" role="dialog" aria-modal="true" aria-label={title}
             style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
             onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}>
-            <div className="anim-pop-in" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 2, width: 'min(360px, calc(100vw - 32px))', padding: 16 }}>
+            <div className="anim-pop-in" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: 'min(360px, calc(100vw - 32px))', padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h3>
                     <button type="button" aria-label="Close" onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={16} /></button>

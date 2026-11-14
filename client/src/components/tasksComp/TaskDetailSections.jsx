@@ -46,7 +46,7 @@ export function DetailSection({ label, icon, action, children, testId }) {
     );
 }
 
-const rowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', fontSize: '12px' };
+const rowStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', fontSize: '12px' };
 const emptyText = { margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' };
 const linkBtn = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', fontFamily: FONT };
 
@@ -74,7 +74,7 @@ export function SubtasksSection({ task, canAdd = false, canToggle = () => false,
         <DetailSection testId="task-subtasks" label={`Child issues${subs.length ? ` (${done}/${subs.length} done)` : ''}`} icon={<ListChecks size={10} />}
             action={canAdd && !disabled && onAdd && <button type="button" style={linkBtn} onClick={() => setAdding((v) => !v)}>{adding ? 'Cancel' : '+ Add'}</button>}>
             {subs.length > 0 && (
-                <div aria-hidden style={{ height: '3px', background: 'var(--bg-active)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div aria-hidden style={{ height: '3px', background: 'var(--bg-active)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: '8px' }}>
                     <div style={{ width: `${pct}%`, height: '100%', background: 'var(--state-success)', transition: 'width 200ms ease' }} />
                 </div>
             )}
@@ -100,7 +100,7 @@ export function SubtasksSection({ task, canAdd = false, canToggle = () => false,
                                 title={can ? (isDone ? 'Mark as to do' : 'Mark as done') : 'Only its assignees or workspace admins can change this'}
                                 onClick={() => can && onToggle(s)}
                                 style={{
-                                    width: 14, height: 14, padding: 0, borderRadius: '2px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 14, height: 14, padding: 0, borderRadius: 'var(--r-sm)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                     border: `1px solid ${isDone ? 'var(--state-success)' : 'var(--border-accent)'}`, background: isDone ? 'var(--state-success)' : 'transparent',
                                     cursor: can ? 'pointer' : 'not-allowed', opacity: can ? 1 : 0.6,
                                 }}>
@@ -314,7 +314,7 @@ export function LinkedTicketsSection({ task, candidates = [], canEdit = false, d
                             onKeyDown={(e) => { if (e.key === 'Enter' && matches[0]) { e.preventDefault(); add(matches[0]); } }} data-testid="link-ticket-search" />
                     </div>
                     {query.trim() && (
-                        <div role="listbox" aria-label="Tickets" style={{ marginTop: 4, border: '1px solid var(--border-subtle)', borderRadius: 2, background: 'var(--bg-surface)', maxHeight: 220, overflowY: 'auto' }}>
+                        <div role="listbox" aria-label="Tickets" style={{ marginTop: 4, border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-sm)', background: 'var(--bg-surface)', maxHeight: 220, overflowY: 'auto' }}>
                             {matches.length ? matches.map((t) => (
                                 <button key={t.id} type="button" role="option" aria-selected={false} disabled={busy} onClick={() => add(t)}
                                     style={{ display: 'flex', width: '100%', gap: 8, alignItems: 'center', padding: '6px 8px', background: 'none', border: 0, cursor: 'pointer', textAlign: 'left', fontSize: 12, color: 'var(--text-primary)', fontFamily: FONT }}>
@@ -414,7 +414,7 @@ export function TimeTrackingSection({ task, disabled = false, onChange }) {
                 {openSession && <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontWeight: 700, color: 'var(--state-success)' }}>● you · {fmtSeconds(runningFor)}</span>}
             </div>
             {estimate > 0 && (
-                <div aria-hidden style={{ height: '3px', background: 'var(--bg-active)', borderRadius: '2px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div aria-hidden style={{ height: '3px', background: 'var(--bg-active)', borderRadius: 'var(--r-sm)', overflow: 'hidden', marginBottom: '8px' }}>
                     <div style={{ width: `${Math.min(100, Math.round(((totalTime + runningAll) / estimate) * 100))}%`, height: '100%', background: totalTime + runningAll > estimate ? 'var(--state-danger)' : 'var(--accent)' }} />
                 </div>
             )}

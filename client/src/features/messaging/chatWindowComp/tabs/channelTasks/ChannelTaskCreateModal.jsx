@@ -28,7 +28,7 @@ export default function ChannelTaskCreateModal({ channelName, members, defaultSt
     const field = {
         width: '100%', boxSizing: 'border-box', padding: '7px 10px', fontSize: 13, fontFamily: FONT,
         background: 'var(--bg-input)', color: 'var(--text-primary)', colorScheme: scheme,
-        border: '1px solid var(--border-default)', borderRadius: '2px', outline: 'none',
+        border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', outline: 'none',
     };
     const toggle = (id) => setAssigneeIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -52,7 +52,7 @@ export default function ChannelTaskCreateModal({ channelName, members, defaultSt
         }}>
             <form role="dialog" aria-label="Create issue" onSubmit={submit} style={{
                 width: 480, maxWidth: 'calc(100vw - 32px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px',
+                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)',
                 boxShadow: 'var(--lg-shadow-sm)', fontFamily: FONT, overflow: 'hidden',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--bg-active)' }}>
@@ -91,7 +91,7 @@ export default function ChannelTaskCreateModal({ channelName, members, defaultSt
                     </div>
                     <div>
                         <p style={sectionLabel}>Assignees</p>
-                        <div style={{ border: '1px solid var(--border-default)', borderRadius: '2px', maxHeight: 150, overflowY: 'auto', background: 'var(--bg-input)' }}>
+                        <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', maxHeight: 150, overflowY: 'auto', background: 'var(--bg-input)' }}>
                             {members.length === 0 && <p style={{ margin: 0, padding: 8, fontSize: 12, color: 'var(--text-secondary)' }}>No channel members loaded.</p>}
                             {members.map((m) => (
                                 <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)' }}>

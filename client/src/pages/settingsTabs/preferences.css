@@ -29,7 +29,7 @@
 .stg-pref-theme-name { font-size: 13px; font-weight: 600; }
 .stg-pref-theme-desc { font-size: 11px; color: var(--text-muted); }
 
-.stg-pref-mock { display: flex; height: 56px; overflow: hidden; border-radius: 2px; border: 1px solid; }
+.stg-pref-mock { display: flex; height: 56px; overflow: hidden; border-radius: var(--r-sm); border: 1px solid; }
 .stg-pref-mock-side { width: 33%; border-right: 1px solid; }
 .stg-pref-mock-body { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 8px; }
 .stg-pref-mock-line { height: 6px; border-radius: 1px; }

@@ -158,7 +158,7 @@ export default function VoiceRecorder({ onRecorded, onCancel }) {
 
   const iconBtn = (title, Icon, onClick, color = 'var(--text-secondary)', testId) => (
     <button type="button" onClick={onClick} title={title} aria-label={title} data-testid={testId}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 2, background: 'none', border: 'none', cursor: 'pointer', color, flexShrink: 0 }}>
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'none', border: 'none', cursor: 'pointer', color, flexShrink: 0 }}>
       <Icon size={15} />
     </button>
   );
@@ -166,7 +166,7 @@ export default function VoiceRecorder({ onRecorded, onCancel }) {
   return (
     <div data-testid="voice-recorder" style={{
       display: 'flex', alignItems: 'center', gap: 8,
-      backgroundColor: 'var(--bg-active)', borderRadius: 2,
+      backgroundColor: 'var(--bg-active)', borderRadius: 'var(--r-sm)',
       padding: '6px 10px', border: '1px solid var(--border-default)',
       fontFamily: 'var(--font)', minWidth: 0, width: '100%',
     }}>

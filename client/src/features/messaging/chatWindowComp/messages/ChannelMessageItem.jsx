@@ -76,7 +76,7 @@ function ChannelMessageItem({
 
     const toolbarBtn = (active = false) => ({
         padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
-        borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: active ? 'var(--accent)' : 'var(--text-muted)', transition: '100ms ease',
     });
 
@@ -121,18 +121,18 @@ function ChannelMessageItem({
 
         
         const eventConfig = {
-            channel_created:        { Icon: Hash,      tint: 'rgba(184,149,106,0.15)', text: () => `${name(sd.userId, sd.userName)} created this channel` },
+            channel_created:        { Icon: Hash,      tint: 'rgba(120, 120, 128,0.15)', text: () => `${name(sd.userId, sd.userName)} created this channel` },
             member_joined:          { Icon: UserCheck,  tint: 'rgba(90,186,138,0.12)',  text: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}` },
             member_left:            { Icon: LogOut,     tint: 'rgba(201,168,124,0.12)', text: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}` },
-            member_invited:         { Icon: UserPlus,   tint: 'rgba(184,149,106,0.15)', text: () => `${name(sd.inviterId, sd.inviterName)} added ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}` },
+            member_invited:         { Icon: UserPlus,   tint: 'rgba(120, 120, 128,0.15)', text: () => `${name(sd.inviterId, sd.inviterName)} added ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}` },
             member_removed:         { Icon: UserMinus,  tint: 'rgba(224,82,82,0.12)',   text: () => `${name(sd.removedById || sd.removedByUserId, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}` },
-            admin_assigned:         { Icon: Shield,     tint: 'rgba(184,149,106,0.15)', text: () => msg.text || `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin` },
+            admin_assigned:         { Icon: Shield,     tint: 'rgba(120, 120, 128,0.15)', text: () => msg.text || `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin` },
             admin_demoted:          { Icon: ShieldOff,  tint: 'rgba(100,100,100,0.12)', text: () => msg.text || `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || "someone"}'s`} admin role` },
-            channel_renamed:        { Icon: PenLine,    tint: 'rgba(184,149,106,0.12)', text: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}` },
+            channel_renamed:        { Icon: PenLine,    tint: 'rgba(120, 120, 128,0.12)', text: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}` },
             channel_desc_changed:   { Icon: FileText,   tint: 'rgba(90,186,138,0.10)',  text: () => `${name(sd.userId, sd.userName)} updated the channel description` },
             channel_privacy_changed:{ Icon: Lock,       tint: 'rgba(201,168,124,0.12)', text: () => `${name(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}` },
-            message_pinned:         { Icon: PinIcon,    tint: 'rgba(184,149,106,0.15)', text: () => `${name(sd.userId, sd.userName)} pinned a message${sd.messageSnippet ? `: "${sd.messageSnippet}"` : ''}` },
-            message_unpinned:       { Icon: PinIcon,    tint: 'rgba(184,149,106,0.10)', text: () => `${name(sd.userId, sd.userName)} unpinned a message` },
+            message_pinned:         { Icon: PinIcon,    tint: 'rgba(120, 120, 128,0.15)', text: () => `${name(sd.userId, sd.userName)} pinned a message${sd.messageSnippet ? `: "${sd.messageSnippet}"` : ''}` },
+            message_unpinned:       { Icon: PinIcon,    tint: 'rgba(120, 120, 128,0.10)', text: () => `${name(sd.userId, sd.userName)} unpinned a message` },
             messages_cleared:       { Icon: Eraser,     tint: 'rgba(224,82,82,0.10)',   text: () => `${name(sd.userId, sd.userName)} cleared the message history` },
         };
 
@@ -161,7 +161,7 @@ function ChannelMessageItem({
                 onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}
             >
                 <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
                     </div>
                 </div>
@@ -182,7 +182,7 @@ function ChannelMessageItem({
         <div
             style={{
                 display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '2px 16px', position: 'relative',
-                backgroundColor: isSelected ? 'rgba(184,149,106,0.06)' : msg.isPinned ? 'rgba(184,149,106,0.04)' : 'transparent',
+                backgroundColor: isSelected ? 'rgba(120, 120, 128,0.06)' : msg.isPinned ? 'rgba(120, 120, 128,0.04)' : 'transparent',
                 borderLeft: msg.isPinned ? '2px solid var(--accent)' : '2px solid transparent',
                 transition: 'background-color 80ms ease',
             }}
@@ -313,7 +313,7 @@ function ChannelMessageItem({
             <div style={{
                 position: 'absolute', top: '2px', right: '96px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
+                borderRadius: 'var(--r-sm)', padding: '2px', display: 'flex', alignItems: 'center',
                 zIndex: 10, boxShadow: 'var(--lg-shadow-sm)',
                 opacity: toolbarVisible ? 1 : 0,
                 pointerEvents: toolbarVisible ? 'auto' : 'none',

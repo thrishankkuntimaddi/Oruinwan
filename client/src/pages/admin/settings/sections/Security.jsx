@@ -131,7 +131,7 @@ const SaveBtn = ({ onClick }) => {
     const [hov, setHov] = React.useState(false);
     return (
         <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--text-on-accent)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: 'var(--r-sm)', transition: 'background 150ms ease' }}>
             <Save size={14} /> Save Changes
         </button>
     );

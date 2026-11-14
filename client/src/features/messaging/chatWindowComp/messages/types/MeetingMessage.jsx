@@ -32,13 +32,13 @@ export default function MeetingMessage({ meeting }) {
             marginTop: '6px', maxWidth: '280px',
             border: '1px solid var(--border-accent)',
             backgroundColor: 'var(--bg-active)',
-            borderRadius: '2px', overflow: 'hidden',
+            borderRadius: 'var(--r-sm)', overflow: 'hidden',
         }}>
             {}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '7px 12px',
-                backgroundColor: 'rgba(184,149,106,0.12)',
+                backgroundColor: 'rgba(120, 120, 128,0.12)',
                 borderBottom: '1px solid var(--border-accent)',
             }}>
                 <Video size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -148,7 +148,7 @@ export default function MeetingMessage({ meeting }) {
                             backgroundColor: isJoinable ? 'var(--accent)' : 'var(--bg-hover)',
                             color: isJoinable ? 'var(--bg-base)' : 'var(--text-muted)',
                             border: isJoinable ? 'none' : '1px solid var(--border-default)',
-                            borderRadius: '2px',
+                            borderRadius: 'var(--r-sm)',
                             fontSize: '12px', fontWeight: 600,
                             textDecoration: 'none',
                             cursor: isJoinable ? 'pointer' : 'not-allowed',

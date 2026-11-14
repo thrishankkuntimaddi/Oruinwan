@@ -54,7 +54,7 @@ export default function FeaturesTab({ workspaceId, isAdmin }) {
                 const on = toggles[f.key] !== false;
                 return (
                     <label key={f.key} data-testid={`feature-${f.key}`}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: 2, cursor: isAdmin ? 'pointer' : 'default' }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-sm)', cursor: isAdmin ? 'pointer' : 'default' }}>
                         <span>
                             <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{f.label}</span>
                             <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>{f.desc}</span>

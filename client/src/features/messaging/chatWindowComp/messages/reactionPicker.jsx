@@ -55,7 +55,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
 
             {}
             {showFull && (
-                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: '2px', overflow: 'hidden', boxShadow: 'var(--lg-shadow-sm)' }}>
+                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: 'var(--r-sm)', overflow: 'hidden', boxShadow: 'var(--lg-shadow-sm)' }}>
                     <EmojiPicker
                         onEmojiClick={data => { onSelect(data.emoji); onClose?.(); }}
                         height={360} width={300}

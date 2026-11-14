@@ -43,7 +43,7 @@ function MarkdownCode({ node, className, children, ...props }) {
     const match = /language-([\w+-]+)/.exec(className || '');
     const content = String(children).replace(/\n$/, '');
     if (!match && !content.includes('\n')) {
-        return <code {...props} style={{ background: 'var(--bg-active)', padding: '1px 4px', borderRadius: '2px', fontSize: '0.9em' }}>{children}</code>;
+        return <code {...props} style={{ background: 'var(--bg-active)', padding: '1px 4px', borderRadius: 'var(--r-sm)', fontSize: '0.9em' }}>{children}</code>;
     }
     return <CodeBlock language={match?.[1]} code={content} />;
 }

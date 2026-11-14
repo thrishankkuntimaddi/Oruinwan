@@ -161,7 +161,7 @@ const IconSidebar = ({ onProfileClick }) => {
                             <button type="button" role="menuitem" className="gl-shell-menu-item" {...blockedButtonProps(createBlock)}
                                 onClick={guardAction(createBlock, () => { setShowWorkspaceMenu(false); navigate('/workspaces', { state: { createWorkspace: true } }); })}
                             >
-                                <span style={{ width: '22px', height: '22px', borderRadius: '2px', border: '1px dashed var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={12} /></span>
+                                <span style={{ width: '22px', height: '22px', borderRadius: 'var(--r-sm)', border: '1px dashed var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={12} /></span>
                                 Create workspace
                             </button>
                         </div>

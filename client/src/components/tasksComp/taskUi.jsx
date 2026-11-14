@@ -32,7 +32,7 @@ export function StatusBadge({ status, compact = false }) {
     return (
         <span title={statusLabel(status)} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%',
-            padding: compact ? '2px 6px' : '3px 8px', borderRadius: '2px',
+            padding: compact ? '2px 6px' : '3px 8px', borderRadius: 'var(--r-sm)',
             fontSize: '11px', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap',
             color: 'var(--text-primary)', background: tint(meta.color, 14), border: `1px solid ${tint(meta.color, 38)}`,
         }}>
@@ -68,7 +68,7 @@ export function IssueTypeIcon({ type = 'task', size = 11 }) {
     const meta = ISSUE_TYPES[type] || ISSUE_TYPES.task;
     const { Icon } = meta;
     return (
-        <span title={meta.label} style={{ width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', background: tint(meta.color, 16), flexShrink: 0 }}>
+        <span title={meta.label} style={{ width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-sm)', background: tint(meta.color, 16), flexShrink: 0 }}>
             <Icon size={size} strokeWidth={2.5} style={{ color: meta.color }} />
         </span>
     );
@@ -120,10 +120,10 @@ export function TaskDialog({ title, subtitle, icon, onClose, children, footer, w
         <div className="tasks-ui" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
             style={{ position: 'fixed', inset: 0, zIndex, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', fontFamily: FONT }}
             onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-            <div style={{ width: '100%', maxWidth: width, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)' }}>
+            <div style={{ width: '100%', maxWidth: width, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', boxShadow: 'var(--lg-shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--border-default)' }}>
                     {icon && (
-                        <span style={{ width: '32px', height: '32px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: tint(accent, 15), border: `1px solid ${tint(accent, 35)}`, color: accent, flexShrink: 0 }}>{icon}</span>
+                        <span style={{ width: '32px', height: '32px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: tint(accent, 15), border: `1px solid ${tint(accent, 35)}`, color: accent, flexShrink: 0 }}>{icon}</span>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>{title}</h3>

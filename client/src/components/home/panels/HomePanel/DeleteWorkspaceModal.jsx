@@ -43,13 +43,13 @@ const DeleteWorkspaceModal = ({
             style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
             onClick={e => { if (e.target === e.currentTarget && !deleting) setShowDeleteConfirm(false); }}
         >
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '420px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: '420px', position: 'relative', overflow: 'hidden' }}>
                 {}
                 <div style={{ height: '2px', background: 'var(--state-danger)', width: '100%' }} />
 
                 {}
                 <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                    <div style={{ width: '38px', height: '38px', borderRadius: '2px', background: 'rgba(198,60,60,0.12)', border: '1px solid rgba(198,60,60,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--state-danger)' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: 'var(--r-sm)', background: 'rgba(198,60,60,0.12)', border: '1px solid rgba(198,60,60,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--state-danger)' }}>
                         <AlertTriangle size={18} />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -57,7 +57,7 @@ const DeleteWorkspaceModal = ({
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>This action is permanent and cannot be undone.</p>
                     </div>
                     <button onClick={() => { if (!deleting) setShowDeleteConfirm(false); }}
-                        style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', flexShrink: 0, transition: '150ms ease' }}
+                        style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)', flexShrink: 0, transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
@@ -68,13 +68,13 @@ const DeleteWorkspaceModal = ({
                 {}
                 <div style={{ padding: '16px 20px 20px' }}>
                     {}
-                    <div style={{ padding: '12px 14px', background: 'rgba(198,60,60,0.07)', border: '1px solid rgba(198,60,60,0.2)', borderRadius: '2px', marginBottom: '18px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    <div style={{ padding: '12px 14px', background: 'rgba(198,60,60,0.07)', border: '1px solid rgba(198,60,60,0.2)', borderRadius: 'var(--r-sm)', marginBottom: '18px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         You are about to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{workspaceName}</strong>. All channels, messages, and files will be <strong style={{ color: 'var(--state-danger)' }}>irretrievably lost</strong>.
                     </div>
 
                     {}
                     <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>
-                        Type <code style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-primary)', background: 'var(--bg-active)', padding: '1px 5px', borderRadius: '2px', border: '1px solid var(--border-default)' }}>{workspaceName}</code> to confirm:
+                        Type <code style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-primary)', background: 'var(--bg-active)', padding: '1px 5px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-default)' }}>{workspaceName}</code> to confirm:
                     </label>
                     <input
                         type="text"
@@ -85,7 +85,7 @@ const DeleteWorkspaceModal = ({
                         style={{
                             width: '100%', padding: '9px 12px', fontFamily: 'monospace',
                             background: 'var(--bg-input)', border: `1px solid ${confirmed ? 'var(--state-danger)' : 'var(--border-default)'}`,
-                            borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+                            borderRadius: 'var(--r-sm)', fontSize: '13px', color: 'var(--text-primary)',
                             outline: 'none', boxSizing: 'border-box', transition: '150ms ease',
                         }}
                         onFocus={e => e.currentTarget.style.borderColor = confirmed ? 'var(--state-danger)' : 'var(--border-accent)'}
@@ -97,7 +97,7 @@ const DeleteWorkspaceModal = ({
                         <button
                             onClick={() => { setShowDeleteConfirm(false); setDeleteVerification(''); }}
                             disabled={deleting}
-                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
@@ -111,7 +111,7 @@ const DeleteWorkspaceModal = ({
                                 color: confirmed && !deleting ? '#fff' : 'var(--text-muted)',
                                 background: confirmed && !deleting ? 'var(--state-danger)' : 'var(--bg-hover)',
                                 border: `1px solid ${confirmed && !deleting ? 'var(--state-danger)' : 'var(--border-default)'}`,
-                                borderRadius: '2px', cursor: confirmed && !deleting ? 'pointer' : 'not-allowed',
+                                borderRadius: 'var(--r-sm)', cursor: confirmed && !deleting ? 'pointer' : 'not-allowed',
                                 fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px',
                                 transition: '150ms ease', opacity: deleting ? 0.7 : 1,
                             }}

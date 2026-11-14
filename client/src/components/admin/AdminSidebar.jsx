@@ -120,10 +120,10 @@ export default function AdminSidebar({ onNavigate }) {
                     </div>
                 )}
                 <button onClick={() => setShowMenu(s => !s)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: showMenu ? 'var(--bg-active)' : 'none', border: showMenu ? '1px solid var(--border-default)' : '1px solid transparent', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: showMenu ? 'var(--bg-active)' : 'none', border: showMenu ? '1px solid var(--border-default)' : '1px solid transparent', cursor: 'pointer', borderRadius: 'var(--r-sm)', transition: 'all 150ms ease' }}
                     onMouseEnter={e => { if (!showMenu) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; } }}
                     onMouseLeave={e => { if (!showMenu) { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'transparent'; } }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>{initials}</div>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(120, 120, 128,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>{initials}</div>
                     <div style={{ flex: 1, overflow: 'hidden', textAlign: 'left' }}>
                         <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username}</p>
                         <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Admin Console</p>

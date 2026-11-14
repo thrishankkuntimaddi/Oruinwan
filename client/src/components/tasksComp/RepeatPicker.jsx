@@ -62,7 +62,7 @@ export default function RepeatPicker({ value, onChange, dueDate = null, disabled
                             <button key={d.id} type="button" aria-pressed={on} aria-label={d.label} title={d.label} disabled={disabled}
                                 onClick={() => toggleDay(d.id)}
                                 style={{
-                                    flex: 1, minWidth: 0, height: '26px', padding: 0, borderRadius: '2px', fontSize: '11px', fontWeight: 700, fontFamily: FONT,
+                                    flex: 1, minWidth: 0, height: '26px', padding: 0, borderRadius: 'var(--r-sm)', fontSize: '11px', fontWeight: 700, fontFamily: FONT,
                                     cursor: disabled ? 'default' : 'pointer',
                                     background: on ? 'var(--accent-dim)' : 'transparent',
                                     border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`,
@@ -100,7 +100,7 @@ export function RepeatBadge({ task, recurring, compact = false }) {
     return (
         <span data-testid="repeat-badge" title={text} aria-label={`Repeats: ${text}`}
             style={{
-                display: 'inline-flex', alignItems: 'center', gap: '3px', padding: compact ? '0 4px' : '1px 6px', borderRadius: '2px',
+                display: 'inline-flex', alignItems: 'center', gap: '3px', padding: compact ? '0 4px' : '1px 6px', borderRadius: 'var(--r-sm)',
                 fontSize: '10px', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
                 color: 'var(--text-primary)', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 30)}`,
             }}>

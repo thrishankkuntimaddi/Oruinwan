@@ -78,7 +78,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                         {messages.length > 0 && (
                             <span style={{
                                 fontSize: '10px', fontWeight: 600,
-                                backgroundColor: 'rgba(184,149,106,0.10)',
+                                backgroundColor: 'rgba(120, 120, 128,0.10)',
                                 color: 'var(--accent)',
                                 border: '1px solid var(--border-accent)',
                                 borderRadius: '99px', padding: '1px 7px',
@@ -90,7 +90,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                         onClick={onClose}
                         style={{
                             padding: '4px', background: 'none', border: 'none', outline: 'none',
-                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px',
+                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)',
                             display: 'flex', transition: '100ms ease',
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
@@ -157,7 +157,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                         {messages.length > 0 && (
                             <span style={{
                                 fontSize: '10px', fontWeight: 600,
-                                backgroundColor: 'rgba(184,149,106,0.10)',
+                                backgroundColor: 'rgba(120, 120, 128,0.10)',
                                 color: 'var(--accent)',
                                 border: '1px solid var(--border-accent)',
                                 borderRadius: '99px', padding: '1px 7px',
@@ -171,7 +171,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                         onClick={onClose}
                         style={{
                             padding: '5px', background: 'none', border: 'none', outline: 'none',
-                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px',
+                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)',
                             display: 'flex', transition: '100ms ease',
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
@@ -195,7 +195,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                     {!loading && !error && messages.length === 0 && (
                         <div style={{ padding: '40px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                             <div style={{
-                                width: '44px', height: '44px', borderRadius: '2px',
+                                width: '44px', height: '44px', borderRadius: 'var(--r-sm)',
                                 backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
@@ -248,7 +248,7 @@ function BookmarkCard({ msg, onJumpToMessage, onRemove }) {
                         backgroundColor: 'var(--accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--bg-base)' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-on-accent)' }}>
                             {(msg.sender?.username || "U")[0].toUpperCase()}
                         </span>
                     </div>
@@ -312,7 +312,7 @@ function ActionButton({ onClick, title, icon, danger }) {
             onMouseLeave={() => setHovered(false)}
             style={{
                 padding: '4px', border: 'none', outline: 'none', cursor: 'pointer',
-                borderRadius: '2px', display: 'flex', transition: '100ms ease', background: 'none',
+                borderRadius: 'var(--r-sm)', display: 'flex', transition: '100ms ease', background: 'none',
                 color: danger
                     ? (hovered ? 'var(--state-danger)' : 'var(--text-muted)')
                     : (hovered ? 'var(--text-primary)' : 'var(--text-muted)'),

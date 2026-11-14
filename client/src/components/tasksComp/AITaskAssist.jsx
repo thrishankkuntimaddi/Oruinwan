@@ -40,7 +40,7 @@ export default function AITaskAssist({ task, workspaceId, onApplyDescription }) 
   };
 
   const chip = (active) => ({
-    padding: '3px 9px', fontSize: '11px', fontWeight: 600, borderRadius: '2px', cursor: loading ? 'wait' : 'pointer',
+    padding: '3px 9px', fontSize: '11px', fontWeight: 600, borderRadius: 'var(--r-sm)', cursor: loading ? 'wait' : 'pointer',
     background: active ? 'var(--accent-dim)' : 'var(--bg-active)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
     color: active ? 'var(--accent)' : 'var(--text-secondary)', fontFamily: 'var(--font)', display: 'inline-flex', alignItems: 'center', gap: '4px',
   });
@@ -56,7 +56,7 @@ export default function AITaskAssist({ task, workspaceId, onApplyDescription }) 
         ))}
       </div>
       {result && (
-        <div style={{ marginTop: '8px', background: 'var(--bg-surface)', border: `1px solid ${result.error ? 'var(--state-danger)' : 'var(--border-default)'}`, padding: '10px', borderRadius: '2px' }}>
+        <div style={{ marginTop: '8px', background: 'var(--bg-surface)', border: `1px solid ${result.error ? 'var(--state-danger)' : 'var(--border-default)'}`, padding: '10px', borderRadius: 'var(--r-sm)' }}>
           <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: '12px', lineHeight: 1.6, color: result.error ? 'var(--state-danger)' : 'var(--text-secondary)', fontFamily: 'var(--font)' }}>{result.text}</pre>
           {!result.error && (
             <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>

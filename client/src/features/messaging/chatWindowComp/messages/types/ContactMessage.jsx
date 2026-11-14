@@ -12,7 +12,7 @@ export default function ContactMessage({ msg }) {
             marginTop: '4px',
             backgroundColor: 'var(--bg-active)',
             border: '1px solid var(--border-accent)',
-            borderRadius: '2px',
+            borderRadius: 'var(--r-sm)',
             padding: '12px',
             maxWidth: '280px',
         }}>
@@ -23,14 +23,14 @@ export default function ContactMessage({ msg }) {
                         src={avatar}
                         alt={name}
                         style={{
-                            width: '36px', height: '36px', borderRadius: '2px',
+                            width: '36px', height: '36px', borderRadius: 'var(--r-sm)',
                             objectFit: 'cover', flexShrink: 0,
                             border: '1px solid var(--border-default)',
                         }}
                     />
                 ) : (
                     <div style={{
-                        width: '36px', height: '36px', borderRadius: '2px',
+                        width: '36px', height: '36px', borderRadius: 'var(--r-sm)',
                         backgroundColor: 'var(--bg-hover)',
                         border: '1px solid var(--border-default)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',

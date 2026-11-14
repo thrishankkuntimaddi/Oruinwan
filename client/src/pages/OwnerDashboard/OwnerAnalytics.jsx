@@ -12,7 +12,7 @@ const RANGES = [{ value: '7d', label: '7 days' }, { value: '30d', label: '30 day
 // Token colours only, so charts follow the light/dark theme.
 const AXIS = { fontSize: 11, fill: 'var(--text-secondary)' };
 const tooltipProps = {
-    contentStyle: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, color: 'var(--text-primary)', fontSize: 12 },
+    contentStyle: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: 12 },
     labelStyle: { color: 'var(--text-secondary)' },
     cursor: { fill: 'var(--bg-hover)' },
 };

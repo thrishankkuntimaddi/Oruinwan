@@ -81,7 +81,7 @@ export default function CodeBlock({ language = '', code = '', filename = null, r
     const shown = long && !expanded ? code.split('\n').slice(0, COLLAPSE_AFTER_LINES).join('\n') : code;
 
     return (
-        <div data-testid="code-block" data-language={lang || 'text'} style={{ margin: '6px 0', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', maxWidth: '100%' }}>
+        <div data-testid="code-block" data-language={lang || 'text'} style={{ margin: '6px 0', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', overflow: 'hidden', maxWidth: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '3px 8px', background: 'var(--bg-active)', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {filename || lang || 'code'}{long && <span style={{ opacity: 0.7 }}> · {lineCount} lines</span>}

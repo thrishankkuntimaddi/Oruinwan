@@ -31,7 +31,7 @@ const H = 700;
 
 const toolBtn = (active) => ({
     display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: 600,
-    borderRadius: '2px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
+    borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
     background: active ? 'var(--accent)' : 'var(--bg-surface)', color: active ? 'var(--bg-base)' : 'var(--text-primary)',
     border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
 });
@@ -278,7 +278,7 @@ const Whiteboard = ({ meetingId, boardId = meetingId }) => {
                 </div>
             )}
 
-            <div style={{ position: 'relative', flex: 1, minHeight: '360px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: readOnly ? 'default' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
+            <div style={{ position: 'relative', flex: 1, minHeight: '360px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-surface)', cursor: readOnly ? 'default' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
                 <canvas
                     ref={canvasRef}
                     width={W}

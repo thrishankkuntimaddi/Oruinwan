@@ -44,7 +44,7 @@ const FileBlock = ({
                 {block.content ? (
                     <button type="button" onClick={handleDownload} title="Download"
                         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', paddingRight: readOnly ? '16px' : '96px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)' }}>
-                        <span style={{ width: '36px', height: '36px', borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ width: '36px', height: '36px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <FileText size={18} />
                         </span>
                         <span style={{ minWidth: 0, flex: 1 }}>

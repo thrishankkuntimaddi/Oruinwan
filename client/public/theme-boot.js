@@ -6,9 +6,11 @@
     var dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     var root = document.documentElement;
     root.classList.add(dark ? 'dark' : 'light');
+    // Liquid Glass (platform/theme/liquid-glass.css) reads data-theme.
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
     root.style.colorScheme = dark ? 'dark' : 'light';
-    root.style.background = dark ? '#0c0c0c' : '#f8f5f0';
+    root.style.background = dark ? '#06070B' : '#EEF0F6';
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta && dark) meta.content = '#0c0c0c';
+    if (meta && dark) meta.content = '#06070B';
   } catch (e) { /* storage blocked: stay light */ }
 })();

@@ -13,12 +13,12 @@ function LibraryTile({ sticker, onPick, onRemove, busy }) {
     return (
         <div className="sticker-tile" style={{ position: 'relative', width: TILE, height: TILE }}>
             <button type="button" onClick={() => onPick(sticker)} disabled={busy} title="Send sticker" aria-label={`Send sticker ${sticker.name || ''}`}
-                style={{ width: '100%', height: '100%', padding: 4, border: 'none', borderRadius: 2, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: '100%', height: '100%', padding: 4, border: 'none', borderRadius: 'var(--r-sm)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                 {url
                     ? <img src={url} alt="" loading="lazy" draggable={false} onError={() => attempt < 1 && refresh()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    : <span className="skeleton" style={{ width: '80%', height: '80%', borderRadius: 2, background: 'var(--bg-hover)' }} />}
+                    : <span className="skeleton" style={{ width: '80%', height: '80%', borderRadius: 'var(--r-sm)', background: 'var(--bg-hover)' }} />}
             </button>
             <button type="button" className="sticker-tile-remove" aria-label="Remove from my stickers" title="Remove from my stickers"
                 onClick={(e) => { e.stopPropagation(); onRemove(sticker); }}
@@ -119,7 +119,7 @@ function GiphyTab({ kind, onSend }) {
     return (
         <div>
             <div style={{ position: 'sticky', top: 0, padding: 8, background: 'var(--bg-surface)', zIndex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 2, background: 'var(--bg-active)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-active)' }}>
                     <Search size={13} style={{ color: 'var(--text-muted)' }} />
                     <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={isStickers ? 'Search GIPHY stickers' : 'Search GIFs'}
                         aria-label={isStickers ? 'Search GIPHY stickers' : 'Search GIFs'}
@@ -134,7 +134,7 @@ function GiphyTab({ kind, onSend }) {
                 {results.map((r) => (
                     <div key={r.id} className="sticker-tile" style={{ position: 'relative', height: isStickers ? TILE : 96 }}>
                         <button type="button" onClick={() => pick(r, false)} disabled={!!busyId} title={r.title || 'Send'} aria-label={`Send ${r.title || (isStickers ? 'sticker' : 'GIF')}`}
-                            style={{ width: '100%', height: '100%', padding: 0, border: 'none', borderRadius: 2, overflow: 'hidden', background: isStickers ? 'transparent' : 'var(--bg-active)', cursor: 'pointer', opacity: busyId && busyId !== r.id ? 0.5 : 1 }}>
+                            style={{ width: '100%', height: '100%', padding: 0, border: 'none', borderRadius: 'var(--r-sm)', overflow: 'hidden', background: isStickers ? 'transparent' : 'var(--bg-active)', cursor: 'pointer', opacity: busyId && busyId !== r.id ? 0.5 : 1 }}>
                             <img src={r.preview.url} alt="" loading="lazy" draggable={false} referrerPolicy="no-referrer"
                                 style={{ width: '100%', height: '100%', objectFit: isStickers ? 'contain' : 'cover', display: 'block' }} />
                             {busyId === r.id && (
@@ -186,7 +186,7 @@ export default function StickerPicker({ onSend, onClose }) {
             <div role="tablist" style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)' }}>
                 {tabs.map((t) => (
                     <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600, border: 'none', borderRadius: 2, cursor: 'pointer', fontFamily: 'var(--font)', background: tab === t.id ? 'var(--accent-subtle, var(--bg-hover))' : 'transparent', color: tab === t.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600, border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', background: tab === t.id ? 'var(--accent-subtle, var(--bg-hover))' : 'transparent', color: tab === t.id ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                         {t.label}
                     </button>
                 ))}

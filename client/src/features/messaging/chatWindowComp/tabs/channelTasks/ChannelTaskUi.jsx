@@ -40,7 +40,7 @@ export function StatusBadge({ status }) {
     return (
         <span data-testid="task-status-badge" style={{
             display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap',
-            padding: '2px 8px', borderRadius: '2px',
+            padding: '2px 8px', borderRadius: 'var(--r-sm)',
             fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
             backgroundColor: tint(color, 16), color: readable(color), border: `1px solid ${tint(color, 40)}`,
             fontFamily: FONT,
@@ -72,7 +72,7 @@ export function IssueTypeIcon({ type = 'task', size = 10 }) {
     return (
         <span title={meta.label} style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: '2px', flexShrink: 0, width: 16, height: 16, background: tint(color, 18),
+            borderRadius: 'var(--r-sm)', flexShrink: 0, width: 16, height: 16, background: tint(color, 18),
         }}>
             <Icon size={size} style={{ color }} strokeWidth={2.5} />
         </span>
@@ -85,7 +85,7 @@ export function IconButton({ title, onClick, children, danger = false, style, ..
         <button type="button" title={title} aria-label={title} onClick={onClick}
             onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
             style={{
-                padding: '3px', borderRadius: '2px', background: hover ? 'var(--bg-hover)' : 'none', border: 'none',
+                padding: '3px', borderRadius: 'var(--r-sm)', background: hover ? 'var(--bg-hover)' : 'none', border: 'none',
                 cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 color: hover ? (danger ? 'var(--state-danger)' : 'var(--text-primary)') : 'var(--text-secondary)',
                 transition: 'color 150ms ease, background-color 150ms ease', ...style,
@@ -114,7 +114,7 @@ export function BlockedReasonDialog({ taskTitle, onConfirm, onCancel }) {
         }}>
             <form role="dialog" aria-label="Block task" onSubmit={submit} style={{
                 width: 380, maxWidth: 'calc(100vw - 32px)', backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)', borderRadius: '2px', fontFamily: FONT,
+                border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', fontFamily: FONT,
                 boxShadow: 'var(--lg-shadow-sm)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
@@ -130,7 +130,7 @@ export function BlockedReasonDialog({ taskTitle, onConfirm, onCancel }) {
                         style={{
                             width: '100%', boxSizing: 'border-box', padding: '7px 10px', fontSize: 13, fontFamily: FONT,
                             background: 'var(--bg-input)', color: 'var(--text-primary)',
-                            border: '1px solid var(--border-default)', borderRadius: '2px', outline: 'none',
+                            border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', outline: 'none',
                         }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '0 16px 14px' }}>
@@ -148,12 +148,12 @@ export function BlockedReasonDialog({ taskTitle, onConfirm, onCancel }) {
 export const primaryBtn = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '6px 14px', fontSize: 12, fontWeight: 600, fontFamily: FONT,
-    color: 'var(--bg-base)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer',
+    color: 'var(--text-on-accent)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer',
 };
 
 export const secondaryBtn = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '6px 14px', fontSize: 12, fontWeight: 500, fontFamily: FONT,
     color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)',
-    border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer',
+    border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer',
 };

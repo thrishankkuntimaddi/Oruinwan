@@ -18,13 +18,13 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
         width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
         padding: '7px 10px', textAlign: 'left', border: 'none',
         backgroundColor: active ? 'var(--bg-hover)' : 'transparent',
-        borderRadius: '2px', cursor: 'pointer',
+        borderRadius: 'var(--r-sm)', cursor: 'pointer',
         transition: 'background-color 150ms ease',
       }}
     >
       {}
       <div style={{
-        width: 30, height: 30, borderRadius: '2px',
+        width: 30, height: 30, borderRadius: 'var(--r-sm)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '15px', flexShrink: 0,
         backgroundColor: active ? 'var(--bg-active)' : 'var(--bg-active)',

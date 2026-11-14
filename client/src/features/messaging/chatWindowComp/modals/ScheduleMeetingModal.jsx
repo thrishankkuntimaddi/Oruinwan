@@ -14,7 +14,7 @@ const inputStyle = {
     width: '100%', padding: '8px 10px', fontSize: '13px',
     backgroundColor: 'var(--bg-active)',
     border: '1px solid var(--border-default)',
-    borderRadius: '2px', outline: 'none',
+    borderRadius: 'var(--r-sm)', outline: 'none',
     color: 'var(--text-primary)',
     fontFamily: FONT,
     transition: 'border-color 100ms ease',
@@ -165,7 +165,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                 width: '100%', maxWidth: '420px', margin: '0 16px',
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-accent)',
-                borderRadius: '4px',
+                borderRadius: 'var(--r-sm)',
                 boxShadow: 'var(--lg-shadow-sm)',
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
@@ -175,11 +175,11 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '14px 16px',
                     borderBottom: '1px solid var(--border-accent)',
-                    backgroundColor: 'rgba(184,149,106,0.07)',
+                    backgroundColor: 'rgba(120, 120, 128,0.07)',
                 }}>
                     <div style={{
-                        width: '30px', height: '30px', borderRadius: '2px', flexShrink: 0,
-                        backgroundColor: 'rgba(184,149,106,0.15)',
+                        width: '30px', height: '30px', borderRadius: 'var(--r-sm)', flexShrink: 0,
+                        backgroundColor: 'rgba(120, 120, 128,0.15)',
                         border: '1px solid var(--border-accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: 'var(--accent)',
@@ -284,7 +284,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                                     return (
                                         <button key={m._id} type="button" onClick={() => toggleInvite(String(m._id))} aria-pressed={on}
                                             style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', fontSize: '12px', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT,
+                                                display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', fontSize: '12px', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: FONT,
                                                 background: on ? 'var(--accent)' : 'var(--bg-active)', color: on ? 'var(--bg-base)' : 'var(--text-secondary)',
                                                 border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`,
                                             }}>
@@ -325,7 +325,7 @@ function CloseBtn({ onClick }) {
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
             style={{
                 padding: '5px', border: 'none', outline: 'none', background: 'none',
-                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms',
+                cursor: 'pointer', borderRadius: 'var(--r-sm)', display: 'flex', transition: '100ms',
                 color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
             }}>
             <X size={16} />
@@ -355,7 +355,7 @@ function CancelBtn({ onClick, children }) {
                 flex: 1, padding: '9px 0', fontSize: '13px', fontWeight: 500,
                 color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
                 backgroundColor: hov ? 'var(--bg-hover)' : 'var(--bg-active)',
-                border: '1px solid var(--border-default)', borderRadius: '2px',
+                border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)',
                 cursor: 'pointer', outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
             }}>
             {children}
@@ -373,7 +373,7 @@ function SubmitBtn({ disabled, children }) {
                 backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
                 color: disabled ? 'var(--text-muted)' : 'var(--bg-base)',
                 border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
-                borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',
+                borderRadius: 'var(--r-sm)', cursor: disabled ? 'not-allowed' : 'pointer',
                 outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
                 opacity: disabled ? 0.6 : 1,
             }}>

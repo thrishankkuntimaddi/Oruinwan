@@ -68,7 +68,7 @@ export default function ReactionChips({ reactions, currentUserId, onToggle, name
                             onTouchMove={endPress}
                             style={{
                                 padding: '1px 7px', borderRadius: '99px', fontSize: '13px', fontFamily: 'var(--font)',
-                                backgroundColor: g.mine ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)',
+                                backgroundColor: g.mine ? 'rgba(120, 120, 128,0.15)' : 'var(--bg-active)',
                                 border: `1px solid ${g.mine ? 'var(--accent)' : 'var(--border-default)'}`,
                                 color: g.mine ? 'var(--accent)' : 'var(--text-secondary)',
                                 cursor: 'pointer', transition: '120ms ease', outline: 'none',

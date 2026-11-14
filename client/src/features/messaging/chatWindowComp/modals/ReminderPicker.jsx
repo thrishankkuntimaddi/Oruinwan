@@ -67,7 +67,7 @@ export default function ReminderPicker({ messageId, onClose, onSet }) {
                             style={{
                                 width: '100%', textAlign: 'left', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '8px',
                                 fontSize: '13px', color: 'var(--text-secondary)', background: 'transparent', border: 'none', outline: 'none',
-                                borderRadius: '2px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: FONT,
+                                borderRadius: 'var(--r-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: FONT,
                                 opacity: saving && saving !== p.key ? 0.5 : 1,
                             }}
                             onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}

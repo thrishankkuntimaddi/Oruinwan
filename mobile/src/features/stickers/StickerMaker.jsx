@@ -37,9 +37,9 @@ const MODES = [
 ];
 
 const CHECKER = {
-  backgroundColor: 'rgb(var(--c-surface-2))',
+  backgroundColor: 'rgb(232 232 236)',
   backgroundImage:
-    'linear-gradient(45deg, rgb(var(--c-surface-3)) 25%, transparent 25%, transparent 75%, rgb(var(--c-surface-3)) 75%), linear-gradient(45deg, rgb(var(--c-surface-3)) 25%, transparent 25%, transparent 75%, rgb(var(--c-surface-3)) 75%)',
+    'linear-gradient(45deg, rgb(214 214 220) 25%, transparent 25%, transparent 75%, rgb(214 214 220) 75%), linear-gradient(45deg, rgb(214 214 220) 25%, transparent 25%, transparent 75%, rgb(214 214 220) 75%)',
   backgroundSize: '16px 16px',
   backgroundPosition: '0 0, 8px 8px',
 };

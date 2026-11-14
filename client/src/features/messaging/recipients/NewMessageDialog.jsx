@@ -50,7 +50,7 @@ export default function NewMessageDialog({ open, onClose, workspaceId, currentUs
     };
 
     const roleBadge = (role) => (role && role !== 'member' ? (
-        <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--accent)', borderRadius: '2px', flexShrink: 0, textTransform: 'capitalize' }}>{role}</span>
+        <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--accent)', borderRadius: 'var(--r-sm)', flexShrink: 0, textTransform: 'capitalize' }}>{role}</span>
     ) : null);
 
     return (
@@ -59,14 +59,14 @@ export default function NewMessageDialog({ open, onClose, workspaceId, currentUs
             style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)' }}
             onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
         >
-            <div role="dialog" aria-modal="true" aria-label="New message" className="anim-pop-in" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: 'min(460px, calc(100vw - 32px))', maxHeight: 'min(580px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div role="dialog" aria-modal="true" aria-label="New message" className="anim-pop-in" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: 'min(460px, calc(100vw - 32px))', maxHeight: 'min(580px, calc(100dvh - 32px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>New message</h3>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Click a person to message them, or tick two or more for a group</p>
                     </div>
                     <button type="button" aria-label="Close" onClick={onClose}
-                        style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px' }}>
+                        style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)' }}>
                         <X size={15} />
                     </button>
                 </div>
@@ -84,7 +84,7 @@ export default function NewMessageDialog({ open, onClose, workspaceId, currentUs
                             onKeyDown={onInputKey}
                             autoFocus
                             autoComplete="off"
-                            style={{ width: '100%', padding: '8px 10px 8px 32px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '8px 10px 8px 32px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
                         />
                     </div>
                 </div>
@@ -116,7 +116,7 @@ export default function NewMessageDialog({ open, onClose, workspaceId, currentUs
                                         onClick={() => choose(person)}
                                         onMouseEnter={() => setActive(i)}
                                         className="group"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '2px', cursor: 'pointer', background: i === active ? 'var(--bg-hover)' : 'none' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer', background: i === active ? 'var(--bg-hover)' : 'none' }}
                                     >
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
                                             <img
@@ -144,7 +144,7 @@ export default function NewMessageDialog({ open, onClose, workspaceId, currentUs
                                                 onClick={(e) => { e.stopPropagation(); onStartDM?.(person); }}
                                                 aria-label={`Message ${person.name}`}
                                                 className="group-hover:opacity-100"
-                                                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', opacity: i === active ? 1 : 0 }}
+                                                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', opacity: i === active ? 1 : 0 }}
                                             >
                                                 <MessageSquare size={11} /> Message
                                             </button>

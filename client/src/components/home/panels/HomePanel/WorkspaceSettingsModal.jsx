@@ -216,7 +216,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 className={isPage ? 'ws-admin-shell' : undefined}
                 style={isPage
                     ? { flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }
-                    : { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '860px', height: 'min(640px, calc(100vh - 32px))', display: 'flex', overflow: 'hidden', position: 'relative' }}>
+                    : { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', width: '100%', maxWidth: '860px', height: 'min(640px, calc(100vh - 32px))', display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
                 {}
                 <div className={isPage ? 'ws-admin-nav' : undefined} style={{ width: isPage ? '220px' : '184px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -230,7 +230,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                                 onClick={() => setActiveSettingsTab(tab)}
                                 style={{
                                     width: '100%', textAlign: 'left', padding: '8px 10px', fontSize: '13px', fontWeight: 500,
-                                    borderRadius: '2px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)',
+                                    borderRadius: 'var(--r-sm)', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)',
                                     transition: '150ms ease',
                                     background: activeSettingsTab === tab ? 'var(--bg-hover)' : 'none',
                                     color: activeSettingsTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -336,7 +336,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 {!isPage && <button
                     onClick={() => setShowSettingsModal(false)}
                     aria-label="Close settings"
-                    style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
+                    style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: 'var(--r-sm)', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >

@@ -264,7 +264,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                 <button
                                     onClick={handleSend}
                                     disabled={!message.trim() || selectedItems.length === 0}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--bg-base)', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-on-accent)', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
                                 >
                                     <Send size={13} />
                                     Send Broadcast

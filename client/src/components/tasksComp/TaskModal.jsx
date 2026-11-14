@@ -153,10 +153,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
     <div className="tasks-ui" role="dialog" aria-modal="true" aria-label={isEditing ? 'Edit task' : 'Create task'}
       style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)', fontFamily: FONT }}
       onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
-      <div style={{ width: '100%', maxWidth: 820, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)' }}>
+      <div style={{ width: '100%', maxWidth: 820, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', boxShadow: 'var(--lg-shadow-sm)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
-          <span style={{ width: '34px', height: '34px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 35)}`, flexShrink: 0 }}>
+          <span style={{ width: '34px', height: '34px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 35)}`, flexShrink: 0 }}>
             <Briefcase size={16} style={{ color: 'var(--accent)' }} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -203,7 +203,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               {attachments.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
                   {attachments.map((att, i) => (
-                    <div key={`${att.url}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
+                    <div key={`${att.url}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
                       <LinkIcon size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                       <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name || att.url}</a>
                       <button type="button" className="tk-icon-btn danger" style={{ width: 20, height: 20 }} onClick={() => setAttachments(attachments.filter((_, j) => j !== i))} aria-label="Remove resource"><X size={12} /></button>
@@ -225,7 +225,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             {!isEditing && assignmentType === "individual" && (
               <div>
                 <label className="tk-label"><Users size={11} /> Assign members {channelId && channelMembers ? '(channel members)' : ''}</label>
-                <div style={{ border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
                   <div style={{ position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
                     <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     <input type="text" className="tk-field" placeholder="Search members…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} style={{ border: 'none', paddingLeft: '28px', background: 'transparent' }} />
@@ -242,8 +242,8 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', textAlign: 'left', background: sel ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', fontFamily: FONT }}>
                           <UserAvatar user={m} size={24} />
                           <span style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{m.username}{m.id === currentUserId ? ' (you)' : ''}</span>
-                          <span style={{ width: '15px', height: '15px', borderRadius: '2px', border: `1px solid ${sel ? 'var(--accent)' : 'var(--border-accent)'}`, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {sel && <Check size={10} style={{ color: 'var(--bg-base)' }} strokeWidth={3} />}
+                          <span style={{ width: '15px', height: '15px', borderRadius: 'var(--r-sm)', border: `1px solid ${sel ? 'var(--accent)' : 'var(--border-accent)'}`, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {sel && <Check size={10} style={{ color: 'var(--text-on-accent)' }} strokeWidth={3} />}
                           </span>
                         </button>
                       );
@@ -258,7 +258,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                         const on = taskMode === mode.id;
                         return (
                           <button key={mode.id} type="button" onClick={() => setTaskMode(mode.id)} aria-pressed={on}
-                            style={{ padding: '10px', borderRadius: '2px', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg-base)', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
+                            style={{ padding: '10px', borderRadius: 'var(--r-sm)', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg-base)', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
                             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{mode.label}</div>
                             <div style={{ fontSize: '11px', marginTop: '2px', color: 'var(--text-secondary)' }}>{mode.sub}</div>
                           </button>
@@ -282,7 +282,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     return (
                       <button key={id} type="button" title={hint} aria-pressed={on}
                         onClick={() => { setAssignmentType(id); if (id !== 'individual') setSelectedMembers([]); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '2px', fontSize: '12px', fontWeight: 600, background: on ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, color: on ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: 'var(--r-sm)', fontSize: '12px', fontWeight: 600, background: on ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`, color: on ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
                         <Icon size={13} style={{ color: on ? 'var(--accent)' : 'inherit' }} /> {label}
                       </button>
                     );
@@ -319,7 +319,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                   const on = priority === p;
                   return (
                     <button key={p} type="button" role="radio" aria-checked={on} onClick={() => setPriority(p)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '2px', fontSize: '12px', fontWeight: on ? 700 : 500, background: on ? tint(PRIORITY_META[p].color, 14) : 'transparent', border: `1px solid ${on ? tint(PRIORITY_META[p].color, 50) : 'transparent'}`, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: 'var(--r-sm)', fontSize: '12px', fontWeight: on ? 700 : 500, background: on ? tint(PRIORITY_META[p].color, 14) : 'transparent', border: `1px solid ${on ? tint(PRIORITY_META[p].color, 50) : 'transparent'}`, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
                       <PriorityIcon priority={p} size={13} /> {priorityLabel(p)}
                       {on && <Check size={11} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />}
                     </button>

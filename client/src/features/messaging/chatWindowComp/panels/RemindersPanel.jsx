@@ -68,7 +68,7 @@ export default function RemindersPanel({ onClose }) {
                     <p style={{ padding: 20, fontSize: 13, color: 'var(--text-muted)' }}>No upcoming reminders. Use “Remind me” on any message.</p>
                 )}
                 {reminders.map(r => (
-                    <div key={r._id} data-testid="reminder-item" style={{ margin: '4px 12px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2 }}>
+                    <div key={r._id} data-testid="reminder-item" style={{ margin: '4px 12px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
                             <span>{r.messageId?.sender?.username || 'Message'}</span>
                             <span>{new Date(r.remindAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -76,7 +76,7 @@ export default function RemindersPanel({ onClose }) {
                         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', wordBreak: 'break-word', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{r.text}</p>
                         {r.note && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Note: {r.note}</p>}
                         <button onClick={() => cancel(r._id)}
-                            style={{ marginTop: 8, background: 'none', border: '1px solid var(--border-default)', color: 'var(--state-danger)', borderRadius: 2, padding: '3px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                            style={{ marginTop: 8, background: 'none', border: '1px solid var(--border-default)', color: 'var(--state-danger)', borderRadius: 'var(--r-sm)', padding: '3px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                             Cancel reminder
                         </button>
                     </div>

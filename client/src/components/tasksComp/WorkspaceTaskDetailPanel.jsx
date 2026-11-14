@@ -107,7 +107,7 @@ function AssigneeEditor({ members, initial, onCancel, onSave }) {
     const list = members.filter((m) => (m.username || m.email || '').toLowerCase().includes(q.toLowerCase()));
     const toggle = (id) => setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
     return (
-        <div style={{ border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-base)' }}>
+        <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)' }}>
             <div style={{ position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
                 <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                 <input autoFocus className="tk-field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search members…" style={{ border: 'none', paddingLeft: '28px', background: 'transparent' }} />
@@ -121,8 +121,8 @@ function AssigneeEditor({ members, initial, onCancel, onSave }) {
                             style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: on ? 'var(--accent-dim)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
                             <UserAvatar user={{ id, username: m.username, profilePicture: m.profilePicture }} size={20} />
                             <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.username || m.email}</span>
-                            <span style={{ width: '14px', height: '14px', borderRadius: '2px', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-accent)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {on && <Check size={10} strokeWidth={3} style={{ color: 'var(--bg-base)' }} />}
+                            <span style={{ width: '14px', height: '14px', borderRadius: 'var(--r-sm)', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-accent)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {on && <Check size={10} strokeWidth={3} style={{ color: 'var(--text-on-accent)' }} />}
                             </span>
                         </button>
                     );
@@ -274,7 +274,7 @@ export default function WorkspaceTaskDetailPanel({
                         )}
 
                         {task.transferRequest?.status === 'pending' && (
-                            <div style={{ padding: '10px', borderRadius: '2px', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 35)}`, fontSize: '12px', color: 'var(--text-primary)' }}>
+                            <div style={{ padding: '10px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', border: `1px solid ${tint('var(--accent)', 35)}`, fontSize: '12px', color: 'var(--text-primary)' }}>
                                 <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                                     <Send size={12} style={{ color: 'var(--accent)' }} /> Transfer pending → {task.transferRequest.requestedTo?.username || 'another member'}
                                 </p>
@@ -289,7 +289,7 @@ export default function WorkspaceTaskDetailPanel({
                         )}
 
                         {task.status === 'blocked' && task.blockedReason && (
-                            <div style={{ padding: '10px', borderRadius: '2px', background: tint('var(--state-danger)', 8), border: `1px solid ${tint('var(--state-danger)', 30)}` }}>
+                            <div style={{ padding: '10px', borderRadius: 'var(--r-sm)', background: tint('var(--state-danger)', 8), border: `1px solid ${tint('var(--state-danger)', 30)}` }}>
                                 <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: '5px' }}><Ban size={11} /> Blocked</p>
                                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-primary)' }}>{task.blockedReason}</p>
                             </div>
@@ -391,7 +391,7 @@ export default function WorkspaceTaskDetailPanel({
                             <Section label="Labels" icon={<Tag size={10} />}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                     {task.labels.map((l) => (
-                                        <span key={l} style={{ padding: '2px 8px', fontSize: '11px', borderRadius: '2px', background: 'var(--accent-dim)', color: 'var(--text-primary)', border: `1px solid ${tint('var(--accent)', 30)}` }}>{l}</span>
+                                        <span key={l} style={{ padding: '2px 8px', fontSize: '11px', borderRadius: 'var(--r-sm)', background: 'var(--accent-dim)', color: 'var(--text-primary)', border: `1px solid ${tint('var(--accent)', 30)}` }}>{l}</span>
                                     ))}
                                 </div>
                             </Section>
@@ -403,7 +403,7 @@ export default function WorkspaceTaskDetailPanel({
                                 {task.attachments?.length > 0 && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: can.edit ? '8px' : 0 }}>
                                         {task.attachments.map((att, i) => (
-                                            <div key={`${att.url}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', borderRadius: '2px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
+                                            <div key={`${att.url}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
                                                 <Link2 size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                                                 {att.fileId ? (
                                                     // A file from Files opens there (its stored link needs sign-in).
@@ -483,7 +483,7 @@ export default function WorkspaceTaskDetailPanel({
                         )}
 
                         {task.completionNote && (
-                            <div style={{ padding: '10px', borderRadius: '2px', background: tint('var(--state-success)', 8), border: `1px solid ${tint('var(--state-success)', 30)}` }}>
+                            <div style={{ padding: '10px', borderRadius: 'var(--r-sm)', background: tint('var(--state-success)', 8), border: `1px solid ${tint('var(--state-success)', 30)}` }}>
                                 <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--state-success)', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={11} /> Completion note</p>
                                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-primary)' }}>{task.completionNote}</p>
                                 {task.completedAt && <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-secondary)' }}>{fmtDate(task.completedAt)}</p>}

@@ -79,7 +79,7 @@ export default function UpdatesTab() {
                             </ul>
                         )}
                         {s.status === 'downloading' && (
-                            <div style={{ height: 4, borderRadius: 4, background: 'var(--border-default)', margin: '0 0 12px', overflow: 'hidden' }}>
+                            <div style={{ height: 4, borderRadius: 'var(--r-sm)', background: 'var(--border-default)', margin: '0 0 12px', overflow: 'hidden' }}>
                                 <div style={{ width: `${Math.max(4, s.percent || 0)}%`, height: '100%', background: 'var(--accent)', transition: 'width 200ms' }} />
                             </div>
                         )}

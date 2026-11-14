@@ -2,8 +2,8 @@
 <resources>
     <!-- Matches the app palette ("Monolith Gloss"). The launch background follows the system
          theme (values-night holds the dark one) so the first frame matches the app. -->
-    <color name="splash_background">#F6F3EE</color>
+    <color name="splash_background">#EEF0F6</color>
     <color name="colorPrimary">#0C0C0C</color>
     <color name="colorPrimaryDark">#0C0C0C</color>
-    <color name="colorAccent">#B8956A</color>
+    <color name="colorAccent">#8E8E93</color>
 </resources>

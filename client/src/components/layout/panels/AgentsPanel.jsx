@@ -44,7 +44,7 @@ const AgentsPanel = ({ title }) => {
             <PanelSection label="Chat with an agent">
                 {installed.map((a) => (
                     <button key={a.id} type="button" className="gl-item" onClick={() => chat(a)} data-testid={`agent-chat-${a.id}`}>
-                        <img src={a.icon} alt="" width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                        <img src={a.icon} alt="" width={16} height={16} style={{ borderRadius: 'var(--r-sm)', flexShrink: 0 }} />
                         <span className="gl-x-item-title">{a.name}</span>
                     </button>
                 ))}

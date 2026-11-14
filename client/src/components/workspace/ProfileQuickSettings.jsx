@@ -14,7 +14,7 @@ import { getAvatarUrl } from '../../utils/avatarUtils';
 const inp = {
     width: '100%', padding: '8px 10px',
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
-    borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+    borderRadius: 'var(--r-sm)', fontSize: '13px', color: 'var(--text-primary)',
     outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
     transition: '150ms ease',
 };
@@ -26,7 +26,7 @@ const lbl = {
 const rowBtn = {
     width: '100%', display: 'flex', alignItems: 'center',
     justifyContent: 'space-between', padding: '10px 12px',
-    borderRadius: '2px', background: 'none', border: 'none',
+    borderRadius: 'var(--r-sm)', background: 'none', border: 'none',
     cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease',
 };
 const divider = { borderTop: '1px solid var(--border-subtle)', margin: '6px 0' };
@@ -90,7 +90,7 @@ const ProfileQuickSettings = ({ onClose }) => {
         const isOwner = role === 'owner';
         return (
             <span style={{
-                padding: '3px 10px', borderRadius: '2px', fontSize: '11px', fontWeight: 700,
+                padding: '3px 10px', borderRadius: 'var(--r-sm)', fontSize: '11px', fontWeight: 700,
                 letterSpacing: '0.06em', textTransform: 'uppercase',
                 background: isOwner ? 'var(--accent-dim)' : 'var(--bg-active)',
                 color: isOwner ? 'var(--accent)' : 'var(--text-secondary)',
@@ -127,7 +127,7 @@ const ProfileQuickSettings = ({ onClose }) => {
             {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {user?.phone && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                         <Phone size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
                             <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Phone</p>
@@ -137,7 +137,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                 )}
 
                 {formData.dob && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                         <Calendar size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
                             <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Birthday</p>
@@ -149,7 +149,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                 )}
 
                 {user?.createdAt && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                         <Calendar size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
                             <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Member Since</p>
@@ -243,7 +243,7 @@ const ProfileQuickSettings = ({ onClose }) => {
 
                 <div>
                     <label style={lbl}>Email</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)' }}>
                         <Mail size={13} style={{ color: 'var(--text-muted)' }} />
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{user?.email}</span>
                     </div>
@@ -301,12 +301,12 @@ const ProfileQuickSettings = ({ onClose }) => {
 
             <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
                 <button onClick={() => setView('main')}
-                    style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                    style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >Cancel</button>
                 <button onClick={handleSave} disabled={isSaving}
-                    style={{ flex: 1, padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: isSaving ? 0.6 : 1, transition: '150ms ease' }}
+                    style={{ flex: 1, padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: isSaving ? 0.6 : 1, transition: '150ms ease' }}
                 >
                     {isSaving ? <><div style={{ width: '14px', height: '14px', border: '2px solid var(--text-muted)', borderTopColor: 'var(--text-primary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving...</> : <><Save size={14} />Save Changes</>}
                 </button>
@@ -338,7 +338,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                         return (
                             <button key={value}
                                 onClick={() => { setTheme(value); showToast(`Theme changed to ${label}`, 'success'); }}
-                                style={{ padding: '12px 8px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: '2px', background: active ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', transition: '150ms ease', fontFamily: 'var(--font)' }}
+                                style={{ padding: '12px 8px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: 'var(--r-sm)', background: active ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', transition: '150ms ease', fontFamily: 'var(--font)' }}
                                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'var(--bg-surface)'; }}
                             >
@@ -355,12 +355,12 @@ const ProfileQuickSettings = ({ onClose }) => {
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', fontFamily: 'var(--font)' }}>
-            <div style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>My Profile</h3>
                     <button onClick={onClose}
-                        style={{ width: '28px', height: '28px', borderRadius: '2px', background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: '150ms ease' }}
+                        style={{ width: '28px', height: '28px', borderRadius: 'var(--r-sm)', background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: '150ms ease' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                     ><X size={16} /></button>

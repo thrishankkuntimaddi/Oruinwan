@@ -71,7 +71,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                     display: 'flex', flexDirection: 'column',
                     backgroundColor: 'var(--bg-surface)',
                     border: '1px solid var(--border-accent)',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--r-sm)',
                     boxShadow: 'var(--lg-shadow-sm)',
                     overflow: 'hidden',
                     animation: 'fadeIn 180ms ease',
@@ -100,7 +100,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                             style={{
                                 width: '100%', padding: '7px 10px 7px 32px',
                                 backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
-                                borderRadius: '2px', outline: 'none', color: 'var(--text-primary)',
+                                borderRadius: 'var(--r-sm)', outline: 'none', color: 'var(--text-primary)',
                                 fontSize: '13px', fontFamily: FONT, boxSizing: 'border-box', transition: 'border-color 100ms ease',
                             }}
                             onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
@@ -167,7 +167,7 @@ function MemberBtn({ name, email, avatar, onClick }) {
                     backgroundColor: 'var(--accent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--bg-base)' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-on-accent)' }}>
                         {name.charAt(0).toUpperCase()}
                     </span>
                 </div>
@@ -193,7 +193,7 @@ function CloseBtn({ onClick }) {
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
             style={{
                 padding: '5px', border: 'none', outline: 'none', background: 'none',
-                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms',
+                cursor: 'pointer', borderRadius: 'var(--r-sm)', display: 'flex', transition: '100ms',
                 color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
             }}>
             <X size={16} />

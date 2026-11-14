@@ -23,7 +23,7 @@ export default function DataTab({ workspaceId, workspaceName }) {
         }
     };
 
-    const box = { padding: 14, background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: 2 };
+    const box = { padding: 14, background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-sm)' };
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <WorkspaceExportImport workspaceId={workspaceId} workspaceName={workspaceName} />
@@ -33,12 +33,12 @@ export default function DataTab({ workspaceId, workspaceName }) {
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Clone workspace</div>
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 10px' }}>Copies the channels (not their messages) into a new workspace you own.</p>
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="New workspace name"
-                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 2, boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '7px 10px', fontSize: 13, background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', boxSizing: 'border-box' }} />
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', margin: '8px 0' }}>
                     <input type="checkbox" checked={includeMembers} onChange={e => setIncludeMembers(e.target.checked)} /> Include current members
                 </label>
                 <button onClick={clone} disabled={!name.trim() || status === 'cloning'}
-                    style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: 'var(--accent)', color: 'var(--bg-base)', border: 'none', borderRadius: 2, cursor: 'pointer' }}>
+                    style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: 'var(--accent)', color: 'var(--text-on-accent)', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}>
                     {status === 'cloning' ? 'Cloning…' : 'Clone workspace'}
                 </button>
                 {status?.ok && (

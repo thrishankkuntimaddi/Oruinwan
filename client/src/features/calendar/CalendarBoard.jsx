@@ -11,7 +11,7 @@ import {
 import './calendar.css';
 
 export const KINDS = {
-    meeting: { Icon: Video, label: 'Meetings', one: 'Meeting', color: '#b8956a' },
+    meeting: { Icon: Video, label: 'Meetings', one: 'Meeting', color: '#0e93ad' },
     huddle: { Icon: Headphones, label: 'Huddles', one: 'Huddle', color: '#5b8def' },
     task: { Icon: SquareCheckBig, label: 'Tasks due', one: 'Task due', color: '#d39b2a' },
     reminder: { Icon: Bell, label: 'Reminders', one: 'Reminder', color: '#3f9b6b' },

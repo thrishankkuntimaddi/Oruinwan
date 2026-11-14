@@ -48,7 +48,7 @@ const stripTags = (html) => {
 
 const toolbarBtnStyle = (active = false) => ({
   padding: '6px',
-  borderRadius: '2px',
+  borderRadius: 'var(--r-sm)',
   background: 'none',
   border: 'none',
   cursor: 'pointer',
@@ -588,12 +588,12 @@ export default function FooterInput({
       {aiFollowUp && !replyingTo && (
         <div role="status" data-testid="ai-follow-up"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 6px', padding: '6px 10px', borderLeft: '2px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '12px', color: 'var(--text-secondary)', borderRadius: '0 2px 2px 0' }}>
-          <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, borderRadius: 2 }} />
+          <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, borderRadius: 'var(--r-sm)' }} />
           <span style={{ flex: 1, minWidth: 0 }}>
             <strong style={{ color: 'var(--text-primary)' }}>Continuing with Oruinwan AI</strong> · your next message goes to the AI, no mention needed
           </span>
           <button type="button" onClick={aiFollowUp.onStop}
-            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '2px 8px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', padding: '2px 8px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             Stop
           </button>
         </div>
@@ -626,9 +626,9 @@ export default function FooterInput({
         />
       )}
 
-      <div style={{
+      <div className="oru-composer" style={{
         border: '1px solid var(--border-default)',
-        borderRadius: '2px',
+        borderRadius: 'var(--r-composer, var(--r-sm))',
         backgroundColor: 'var(--bg-input)',
         position: 'relative',
         transition: 'border-color 150ms ease',
@@ -642,7 +642,7 @@ export default function FooterInput({
             padding: '8px 12px',
             borderBottom: '1px solid var(--border-default)',
             display: 'flex', alignItems: 'flex-start', gap: '8px',
-            backgroundColor: 'rgba(184,149,106,0.04)',
+            backgroundColor: 'rgba(120, 120, 128,0.04)',
           }}>
             {linkPreviewLoading && !linkPreview && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -659,7 +659,7 @@ export default function FooterInput({
                   <img
                     src={linkPreview.image}
                     alt=""
-                    style={{ width: 36, height: 36, borderRadius: '2px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
+                    style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
                     onError={e => { e.target.style.display = 'none'; }}
                   />
                 )}
@@ -759,7 +759,7 @@ export default function FooterInput({
           <div style={{
             position: 'absolute', bottom: '48px', left: '80px', zIndex: 50,
             backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-            borderRadius: '2px', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px',
+            borderRadius: 'var(--r-sm)', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px',
             animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
           }}>
             <input
@@ -771,7 +771,7 @@ export default function FooterInput({
               style={{
                 fontSize: '13px', padding: '4px 8px',
                 border: '1px solid var(--border-default)',
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 backgroundColor: 'var(--bg-input)',
                 color: 'var(--text-primary)',
                 outline: 'none', width: '220px',
@@ -783,7 +783,7 @@ export default function FooterInput({
               onClick={applyLink}
               style={{
                 padding: '4px 8px', backgroundColor: 'var(--accent)',
-                color: 'var(--bg-base)', border: 'none', borderRadius: '2px',
+                color: 'var(--text-on-accent)', border: 'none', borderRadius: 'var(--r-sm)',
                 cursor: 'pointer', display: 'flex', alignItems: 'center',
                 transition: 'background-color 150ms ease',
               }}
@@ -815,7 +815,7 @@ export default function FooterInput({
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
-                  <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', borderRadius: 2 }} />
+                  <img src="/icons/oruinwan-128.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', borderRadius: 'var(--r-sm)' }} />
                 </button>
                 <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
               </>
@@ -919,7 +919,7 @@ export default function FooterInput({
               style={{
                 marginLeft: '6px',
                 width: '32px', height: '32px',
-                borderRadius: '2px',
+                borderRadius: 'var(--r-sm)',
                 backgroundColor: (!hasText || blocked || disabled) ? 'var(--bg-active)' : 'var(--accent)',
                 color: (!hasText || blocked || disabled) ? 'var(--text-muted)' : 'var(--bg-base)',
                 border: 'none', cursor: (!hasText || blocked || disabled) ? 'not-allowed' : 'pointer',
@@ -950,7 +950,7 @@ function ToolBtn({ icon, title, onClick, active = false }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        padding: '5px', borderRadius: '2px', background: 'none',
+        padding: '5px', borderRadius: 'var(--r-sm)', background: 'none',
         border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
         color: active ? 'var(--accent)' : (hovered ? 'var(--text-primary)' : 'var(--text-muted)'),
         transition: 'color 150ms ease',

@@ -489,7 +489,7 @@ function MiniCall({ title }) {
         {starVideo ? (
           <VideoEl stream={streamOf(star)} />
         ) : (
-          <span className={cx('rounded-full transition-shadow', star && speaking[star.userId] && 'shadow-[0_0_0_3px_rgb(var(--c-accent)/0.6)]')}>
+          <span className={cx('rounded-full transition-shadow', star && speaking[star.userId] && 'shadow-[0_0_0_3px_rgb(var(--c-success)/0.6)]')}>
             <Avatar name={star?.username || title} size="lg" />
           </span>
         )}

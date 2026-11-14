@@ -36,7 +36,7 @@ export default function EmojiPicker({ onPick }) {
             onClick={() => onPick(em)}
             style={{
               width: '30px', height: '30px', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: '16px', borderRadius: '2px',
+              justifyContent: 'center', fontSize: '16px', borderRadius: 'var(--r-sm)',
               background: 'none', border: 'none', cursor: 'pointer',
               transition: '150ms ease',
             }}

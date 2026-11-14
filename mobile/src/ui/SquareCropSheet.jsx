@@ -116,7 +116,7 @@ export function SquareCropSheet({ file, title = 'Crop picture', round = false, b
             step={0.01}
             value={crop?.zoom || 1}
             onChange={(e) => natural && crop && setCrop(zoomCrop(natural, FRAME, crop, Number(e.target.value)))}
-            className="flex-1 accent-[rgb(var(--c-accent))]"
+            className="flex-1 accent-[rgb(var(--c-text))]"
           />
           <Icon as={ZoomIn} size={16} />
         </div>

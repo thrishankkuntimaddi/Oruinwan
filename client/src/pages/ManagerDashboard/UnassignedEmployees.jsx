@@ -93,9 +93,9 @@ const AssignBtn = () => {
                 padding: '6px 12px',
                 background: hov ? 'var(--accent-hover)' : 'var(--accent)',
                 border: 'none',
-                color: 'var(--bg-base)',
+                color: 'var(--text-on-accent)',
                 fontSize: '12px', fontWeight: 700,
-                borderRadius: '2px', cursor: 'pointer',
+                borderRadius: 'var(--r-sm)', cursor: 'pointer',
                 transition: 'background 150ms ease'
             }}
         >

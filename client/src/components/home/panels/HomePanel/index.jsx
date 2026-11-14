@@ -445,7 +445,7 @@ const HomePanel = ({ title }) => {
                 <>
                     {installedAgents.map((a) => (
                         <button key={a.id} type="button" className="gl-item gl-shell-row" onClick={() => chatWithAgent(a)} data-testid={`sidebar-agent-${a.id}`}>
-                            <img src={a.icon} alt="" width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                            <img src={a.icon} alt="" width={18} height={18} style={{ borderRadius: 'var(--r-sm)', flexShrink: 0 }} />
                             <span className="gl-shell-row-text"><span className="gl-shell-row-label">{a.name}</span></span>
                         </button>
                     ))}

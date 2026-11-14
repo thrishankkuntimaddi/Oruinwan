@@ -53,12 +53,12 @@ const AppWindow = registerPlugin('AppWindow');
 /** Match the status/navigation bar icons to the current theme. */
 export async function applySystemBars(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'dark' ? '#0c0c0c' : '#f8f5f0';
+  if (meta) meta.content = theme === 'dark' ? '#06070B' : '#EEF0F6';
   if (!isNative) return false;
   try {
     await SystemBars.setStyle({ style: theme === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light });
     // setStyle resets the window background, so paint ours afterwards (see AppWindowPlugin.java).
-    await AppWindow.setBackgroundColor({ color: theme === 'dark' ? '#0c0c0c' : '#f8f5f0' });
+    await AppWindow.setBackgroundColor({ color: theme === 'dark' ? '#06070B' : '#EEF0F6' });
     return true;
   } catch {
     return false;

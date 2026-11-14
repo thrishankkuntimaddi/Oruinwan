@@ -40,7 +40,7 @@ export default function ThreadSummaryLink({ count, participants = [], lastReplyA
                             src={getAvatarUrl(p)}
                             alt={p.username || 'Replier'}
                             title={p.username}
-                            style={{ width: '18px', height: '18px', borderRadius: '2px', objectFit: 'cover', border: '1px solid var(--bg-surface)', marginLeft: i > 0 ? '-4px' : 0, position: 'relative', zIndex: people.length - i }}
+                            style={{ width: '18px', height: '18px', borderRadius: 'var(--r-sm)', objectFit: 'cover', border: '1px solid var(--bg-surface)', marginLeft: i > 0 ? '-4px' : 0, position: 'relative', zIndex: people.length - i }}
                         />
                     ))}
                 </span>

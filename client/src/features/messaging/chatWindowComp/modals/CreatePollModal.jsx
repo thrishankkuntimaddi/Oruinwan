@@ -4,7 +4,7 @@ import { X, Plus, Trash2, BarChart2 } from 'lucide-react';
 const inputStyle = {
     width: '100%', padding: '8px 12px', boxSizing: 'border-box',
     backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)',
-    borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+    borderRadius: 'var(--r-sm)', fontSize: '13px', color: 'var(--text-primary)',
     outline: 'none', fontFamily: 'var(--font)', transition: 'border-color 150ms ease',
 };
 
@@ -19,14 +19,14 @@ function Checkbox({ checked, onChange, label, sub }) {
             <div
                 onClick={() => onChange(!checked)}
                 style={{
-                    width: '16px', height: '16px', borderRadius: '2px', flexShrink: 0, marginTop: '1px',
+                    width: '16px', height: '16px', borderRadius: 'var(--r-sm)', flexShrink: 0, marginTop: '1px',
                     backgroundColor: checked ? 'var(--accent)' : 'var(--bg-input)',
                     border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', transition: '150ms ease',
                 }}
             >
-                {checked && <span style={{ color: 'var(--bg-base)', fontSize: '10px', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                {checked && <span style={{ color: 'var(--text-on-accent)', fontSize: '10px', fontWeight: 900, lineHeight: 1 }}>✓</span>}
             </div>
             <div>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</div>
@@ -76,13 +76,13 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
             onClick={handleClose}
         >
             <div
-                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--lg-shadow-sm)' }}
+                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: 'var(--lg-shadow-sm)' }}
                 onClick={e => e.stopPropagation()}
             >
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <BarChart2 size={16} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div>
@@ -90,7 +90,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>#{String(channelName || '').replace(/^#/, '')}</p>
                         </div>
                     </div>
-                    <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
+                    <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: 'var(--r-sm)', transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
@@ -130,7 +130,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                                         />
                                         {options.length > 2 && (
                                             <button type="button" onClick={() => removeOption(i)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: 'var(--r-sm)', transition: '150ms ease' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                             >
@@ -174,13 +174,13 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                     {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)', flexShrink: 0 }}>
                         <button type="button" onClick={handleClose}
-                            style={{ padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                         >Cancel</button>
                         <button type="submit"
                             disabled={!question.trim() || options.filter(o => o.trim()).length < 2}
-                            style={{ padding: '7px 20px', fontSize: '13px', fontWeight: 600, color: 'var(--bg-base)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (!question.trim() || options.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
+                            style={{ padding: '7px 20px', fontSize: '13px', fontWeight: 600, color: 'var(--text-on-accent)', backgroundColor: 'var(--accent)', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (!question.trim() || options.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
                             onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '0.85'; }}
                             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                         >Create Poll</button>

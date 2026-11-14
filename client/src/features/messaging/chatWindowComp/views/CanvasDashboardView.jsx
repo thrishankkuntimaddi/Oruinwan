@@ -8,7 +8,7 @@ const MAX_CANVASES = 5;
 
 // Stored on the canvas (user-chosen data). The first one is the theme's gold.
 const COVER_COLORS = [
-    { label: 'Gold', value: '#b8956a' }, { label: 'Violet', value: '#8B5CF6' }, { label: 'Pink', value: '#EC4899' },
+    { label: 'Gold', value: 'var(--accent)' }, { label: 'Violet', value: '#8B5CF6' }, { label: 'Pink', value: '#EC4899' },
     { label: 'Red', value: '#EF4444' }, { label: 'Amber', value: '#F59E0B' }, { label: 'Green', value: '#10B981' },
     { label: 'Cyan', value: '#06B6D4' }, { label: 'Blue', value: '#3B82F6' }, { label: 'Lime', value: '#84CC16' },
     { label: 'Orange', value: '#F97316' },

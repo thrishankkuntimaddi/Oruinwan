@@ -25,7 +25,7 @@
 }
 .cc-banner-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .cc-rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--state-danger); flex-shrink: 0; animation: cc-pulse 1.6s ease-in-out infinite; }
-.cc-cc-mark { display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; height: 15px; border: 1px solid currentColor; border-radius: 2px; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent); flex-shrink: 0; }
+.cc-cc-mark { display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; height: 15px; border: 1px solid currentColor; border-radius: var(--r-sm); font-size: 9px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent); flex-shrink: 0; }
 @keyframes cc-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .cc-rec-dot { animation: none; } }
 
@@ -74,7 +74,7 @@
 .cc-line--marker .cc-line-text { color: var(--text-secondary); font-style: italic; }
 .cc-line--interim .cc-line-text { color: var(--text-secondary); font-style: italic; }
 .cc-player { width: 100%; max-height: 260px; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--gl-radius, 2px); }
-.cc-progress { height: 4px; background: var(--bg-active); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.cc-progress { height: 4px; background: var(--bg-active); border-radius: var(--r-sm); overflow: hidden; margin-top: 6px; }
 .cc-progress > span { display: block; height: 100%; background: var(--accent); transition: width 200ms ease; }
 
 .cc-chat { display: flex; flex-direction: column; gap: 10px; }

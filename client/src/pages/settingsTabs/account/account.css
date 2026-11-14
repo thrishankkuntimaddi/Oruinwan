@@ -92,7 +92,7 @@
 /* ── Password ──────────────────────────────────────────────────────────── */
 
 .stg-acc-meter { display: flex; gap: 4px; margin-top: 2px; }
-.stg-acc-meter span { flex: 1; height: 4px; border-radius: 2px; background: var(--bg-active); }
+.stg-acc-meter span { flex: 1; height: 4px; border-radius: var(--r-sm); background: var(--bg-active); }
 .stg-acc-meter[data-score='1'] span:nth-child(-n + 1),
 .stg-acc-meter[data-score='2'] span:nth-child(-n + 2) { background: var(--state-danger); }
 .stg-acc-meter[data-score='3'] span:nth-child(-n + 3) { background: #c97c40; }
@@ -173,7 +173,7 @@
     cursor: pointer;
 }
 .stg-acc-chip:hover { border-color: var(--border-accent); color: var(--text-primary); }
-.stg-acc-chip[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); background: rgba(184, 149, 106, 0.1); }
+.stg-acc-chip[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); background: rgba(120, 120, 128, 0.1); }
 .stg-acc-grid {
     flex: 1;
     min-height: 0;
@@ -217,7 +217,7 @@
     background: #111;
     border-radius: var(--stg-radius, 4px);
 }
-.stg-acc-crop-stage canvas { max-width: 100%; height: auto; cursor: grab; touch-action: none; border-radius: 4px; }
+.stg-acc-crop-stage canvas { max-width: 100%; height: auto; cursor: grab; touch-action: none; border-radius: var(--r-sm); }
 .stg-acc-crop-stage canvas:active { cursor: grabbing; }
 .stg-acc-crop-tools { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .stg-acc-crop-tools input[type='range'] { flex: 1; accent-color: var(--accent); }

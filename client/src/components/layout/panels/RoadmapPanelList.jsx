@@ -67,7 +67,7 @@ export default function RoadmapPanelList({ workspaceId, query }) {
                 return (
                     <button key={it._id} type="button" className={`gl-item${active ? ' is-active' : ''}`} aria-current={active ? 'true' : undefined}
                         onClick={() => navigate(`/workspace/${workspaceId}/roadmap?item=${it._id}`)}>
-                        <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', minHeight: 16, borderRadius: 2, background: colorVar(it.color), flexShrink: 0 }} />
+                        <span aria-hidden="true" style={{ width: 3, alignSelf: 'stretch', minHeight: 16, borderRadius: 'var(--r-sm)', background: colorVar(it.color), flexShrink: 0 }} />
                         <span className="gl-x-item-title">{it.title}</span>
                         <span className="gl-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
                     </button>

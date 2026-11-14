@@ -36,13 +36,13 @@ function applyVote(poll, userId, indices, userName) {
 const S = {
     card: {
         marginTop: '4px', maxWidth: '420px', border: '1px solid var(--border-default)',
-        backgroundColor: 'var(--bg-surface)', borderRadius: '4px', overflow: 'hidden',
+        backgroundColor: 'var(--bg-surface)', borderRadius: 'var(--r-sm)', overflow: 'hidden',
     },
     head: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px 4px' },
     badge: {
         fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
-        color: 'var(--accent)', backgroundColor: 'var(--accent-dim, rgba(184,149,106,0.12))',
-        padding: '2px 6px', borderRadius: '2px',
+        color: 'var(--accent)', backgroundColor: 'var(--accent-dim, rgba(120, 120, 128,0.12))',
+        padding: '2px 6px', borderRadius: 'var(--r-sm)',
     },
     question: { fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4, padding: '4px 14px 0', margin: 0 },
     meta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', padding: '4px 14px 10px', fontSize: '11px', color: 'var(--text-muted)' },
@@ -180,7 +180,7 @@ export default function PollMessage({ msg, currentUserId }) {
                                 aria-pressed={mine}
                                 style={{
                                     position: 'relative', width: '100%', textAlign: 'left', overflow: 'hidden',
-                                    padding: '9px 12px', borderRadius: '3px', fontFamily: 'inherit',
+                                    padding: '9px 12px', borderRadius: 'var(--r-sm)', fontFamily: 'inherit',
                                     border: `1px solid ${mine ? 'var(--accent)' : 'var(--border-default)'}`,
                                     backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
                                     cursor: closed ? 'default' : 'pointer', transition: 'border-color 120ms ease',
@@ -193,7 +193,7 @@ export default function PollMessage({ msg, currentUserId }) {
                                         aria-hidden
                                         style={{
                                             position: 'absolute', inset: 0, width: `${row.pct}%`,
-                                            backgroundColor: mine ? 'rgba(184,149,106,0.18)' : 'var(--bg-active)',
+                                            backgroundColor: mine ? 'rgba(120, 120, 128,0.18)' : 'var(--bg-active)',
                                             transition: 'width 350ms cubic-bezier(0.16,1,0.3,1)',
                                         }}
                                     />
@@ -239,7 +239,7 @@ export default function PollMessage({ msg, currentUserId }) {
                             {open && row.voters.length > 0 && (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '6px 4px 2px' }}>
                                     {row.voters.map((name, i) => (
-                                        <span key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '1px 6px', borderRadius: '2px' }}>
+                                        <span key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '1px 6px', borderRadius: 'var(--r-sm)' }}>
                                             {name}
                                         </span>
                                     ))}
@@ -269,7 +269,7 @@ export default function PollMessage({ msg, currentUserId }) {
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 500,
                             color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)',
-                            borderRadius: '2px', padding: '3px 8px', cursor: closing ? 'default' : 'pointer', fontFamily: 'inherit',
+                            borderRadius: 'var(--r-sm)', padding: '3px 8px', cursor: closing ? 'default' : 'pointer', fontFamily: 'inherit',
                         }}
                     >
                         {closing ? <Loader2 size={11} className="animate-spin" /> : <StopCircle size={11} />}

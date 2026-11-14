@@ -451,10 +451,10 @@ function ConversationStream({
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
-                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
+                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)' }} />
+                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', opacity: 0.6 }} />
                                         </div>
-                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
+                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${w}%` }} />
                                     </div>
                                 </div>
                             ))}
@@ -462,7 +462,7 @@ function ConversationStream({
                     ) : (
                         <button
                             onClick={() => onLoadMore?.()}
-                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                         >
@@ -479,8 +479,8 @@ function ConversationStream({
                     <div style={{ padding: '2rem 1.5rem 1.25rem', borderBottom: '1px solid var(--border-subtle)' }}>
                         {}
                         <div style={{
-                            width: 48, height: 48, borderRadius: '2px',
-                            backgroundColor: isPrivate ? 'rgba(184,149,106,0.08)' : 'var(--bg-active)',
+                            width: 48, height: 48, borderRadius: 'var(--r-sm)',
+                            backgroundColor: isPrivate ? 'rgba(120, 120, 128,0.08)' : 'var(--bg-active)',
                             border: '1px solid var(--border-accent)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             marginBottom: '12px',
@@ -660,11 +660,11 @@ function ConversationStream({
                             <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
                             <div style={{ flex: 1, maxWidth: '70%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                    <div style={{ height: '10px', width: `${row.name * 4}px`, backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
-                                    <div style={{ height: '8px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
+                                    <div style={{ height: '10px', width: `${row.name * 4}px`, backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)' }} />
+                                    <div style={{ height: '8px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', opacity: 0.6 }} />
                                 </div>
-                                <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${row.line1}%` }} />
-                                {row.line2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${row.line2}%`, opacity: 0.7 }} />}
+                                <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${row.line1}%` }} />
+                                {row.line2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${row.line2}%`, opacity: 0.7 }} />}
                             </div>
                         </div>
                     ))}
@@ -675,7 +675,7 @@ function ConversationStream({
             {events.length === 0 && !loading && !channelCreatedAt && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', userSelect: 'none' }}>
                     <div style={{
-                        width: 52, height: 52, borderRadius: '2px',
+                        width: 52, height: 52, borderRadius: 'var(--r-sm)',
                         backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         marginBottom: '16px',
@@ -711,10 +711,10 @@ function ConversationStream({
                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
-                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
+                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)' }} />
+                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', opacity: 0.6 }} />
                                         </div>
-                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
+                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${w}%` }} />
                                     </div>
                                 </div>
                             ))}
@@ -722,7 +722,7 @@ function ConversationStream({
                     ) : (
                         <button
                             onClick={() => onLoadNewer?.()}
-                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                         >

@@ -119,8 +119,8 @@ export default function ThreadPeopleModal({ messageId, members = [], currentUser
                                 style={{ ...row, width: '100%', border: 'none', cursor: 'pointer', textAlign: 'left', background: on ? 'var(--accent-dim, var(--bg-active))' : 'transparent' }}>
                                 {avatar(m)}
                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)' }}>{m.username || m.name}</span>
-                                <span style={{ width: 14, height: 14, borderRadius: '2px', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-accent)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {on && <Check size={10} strokeWidth={3} style={{ color: 'var(--bg-base)' }} />}
+                                <span style={{ width: 14, height: 14, borderRadius: 'var(--r-sm)', border: `1px solid ${on ? 'var(--accent)' : 'var(--border-accent)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {on && <Check size={10} strokeWidth={3} style={{ color: 'var(--text-on-accent)' }} />}
                                 </span>
                             </button>
                         );

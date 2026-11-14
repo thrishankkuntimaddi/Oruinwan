@@ -13,12 +13,12 @@ const FONT = 'Inter, system-ui, sans-serif';
 
 const primaryButton = (disabled) => ({
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '11px 20px',
-    background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--bg-base)', fontWeight: 700, fontSize: '14px',
+    background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 'var(--r-sm)', color: 'var(--text-on-accent)', fontWeight: 700, fontSize: '14px',
     cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, fontFamily: FONT, whiteSpace: 'nowrap',
 });
 const secondaryButton = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 20px',
-    background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)',
+    background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)',
     fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap',
 };
 

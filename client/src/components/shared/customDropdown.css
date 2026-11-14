@@ -20,7 +20,7 @@
 .sdd-option {
     width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding: 8px 10px; text-align: left; font-size: 13px; font-family: inherit;
-    color: var(--text-primary); background: transparent; border: none; border-radius: 2px; cursor: pointer;
+    color: var(--text-primary); background: transparent; border: none; border-radius: var(--r-sm); cursor: pointer;
 }
 .sdd-option[data-active='true'] { background: var(--bg-hover); }
 .sdd-option[aria-selected='true'] { color: var(--accent); font-weight: 600; }

@@ -131,7 +131,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                         Active Threads
                         <span style={{
                             fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)',
-                            backgroundColor: 'var(--bg-active)', padding: '1px 8px', borderRadius: '2px',
+                            backgroundColor: 'var(--bg-active)', padding: '1px 8px', borderRadius: 'var(--r-sm)',
                             marginLeft: 'auto',
                             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                         }}>
@@ -144,7 +144,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                             <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} data-testid={`threads-filter-${f.key}`}
                                 onClick={() => setFilter(f.key)}
                                 style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '2px',
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: 'var(--r-sm)',
                                     fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                                     border: `1px solid ${filter === f.key ? 'var(--border-accent)' : 'var(--border-default)'}`,
                                     backgroundColor: filter === f.key ? 'var(--bg-active)' : 'transparent',
@@ -152,7 +152,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                 }}>
                                 {f.key === 'following' && <Bell size={10} />}{f.label}
                                 {f.key === 'following' && unreadFollowing > 0 && (
-                                    <span data-testid="threads-following-unread" style={{ minWidth: 16, padding: '0 4px', borderRadius: '8px', backgroundColor: 'var(--accent)', color: 'var(--bg-base)', fontSize: '10px', lineHeight: '16px', textAlign: 'center' }}>{unreadFollowing}</span>
+                                    <span data-testid="threads-following-unread" style={{ minWidth: 16, padding: '0 4px', borderRadius: '8px', backgroundColor: 'var(--accent)', color: 'var(--text-on-accent)', fontSize: '10px', lineHeight: '16px', textAlign: 'center' }}>{unreadFollowing}</span>
                                 )}
                             </button>
                         ))}
@@ -170,7 +170,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                 paddingTop: '7px', paddingBottom: '7px',
                                 backgroundColor: 'var(--bg-input)',
                                 border: '1px solid var(--border-default)',
-                                borderRadius: '2px',
+                                borderRadius: 'var(--r-sm)',
                                 color: 'var(--text-primary)', fontSize: '13px',
                                 outline: 'none', boxSizing: 'border-box',
                                 fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
@@ -190,14 +190,14 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                 <div key={i} style={{
                                     display: 'flex', alignItems: 'center', gap: '10px',
                                     padding: '10px 12px', marginBottom: '4px',
-                                    backgroundColor: 'var(--bg-active)', borderRadius: '2px',
+                                    backgroundColor: 'var(--bg-active)', borderRadius: 'var(--r-sm)',
                                 }}>
                                     <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: '6px', width: '60%' }} />
-                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
+                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', marginBottom: '6px', width: '60%' }} />
+                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', width: `${w}%` }} />
                                     </div>
-                                    <div style={{ width: 28, height: 18, backgroundColor: 'var(--bg-hover)', borderRadius: '2px', flexShrink: 0 }} />
+                                    <div style={{ width: 28, height: 18, backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--r-sm)', flexShrink: 0 }} />
                                 </div>
                             ))}
                         </div>
@@ -217,7 +217,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '10px',
                                         padding: '10px 12px', marginBottom: '2px',
-                                        borderRadius: '2px', cursor: 'pointer',
+                                        borderRadius: 'var(--r-sm)', cursor: 'pointer',
                                         border: `1px solid ${isSelected ? 'var(--border-accent)' : 'transparent'}`,
                                         backgroundColor: isSelected ? 'var(--bg-active)' : 'transparent',
                                         transition: 'background-color 150ms ease, border-color 150ms ease',
@@ -272,14 +272,14 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                     {thread.following && thread.unread > 0 && (
                                         <span data-testid="thread-unread" title={`${thread.unread} unread ${thread.unread === 1 ? 'reply' : 'replies'}`} style={{
                                             flexShrink: 0, minWidth: 18, padding: '0 5px', borderRadius: '9px',
-                                            backgroundColor: 'var(--accent)', color: 'var(--bg-base)',
+                                            backgroundColor: 'var(--accent)', color: 'var(--text-on-accent)',
                                             fontSize: '10px', fontWeight: 700, lineHeight: '18px', textAlign: 'center',
                                             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                                         }}>{thread.unread}</span>
                                     )}
                                     <span style={{
                                         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                        padding: '2px 6px', borderRadius: '2px',
+                                        padding: '2px 6px', borderRadius: 'var(--r-sm)',
                                         backgroundColor: 'var(--bg-active)',
                                         fontSize: '11px', fontWeight: 500, color: 'var(--accent)',
                                         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
@@ -335,7 +335,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                     }}>
                         <div style={{
                             width: '72px', height: '72px', backgroundColor: 'var(--bg-active)',
-                            borderRadius: '2px', display: 'flex', alignItems: 'center',
+                            borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center',
                             justifyContent: 'center', marginBottom: '20px',
                         }}>
                             <MessageSquare size={36} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />

@@ -40,15 +40,15 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
             key={integration.id}
             style={{
               display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '12px 14px', borderRadius: '2px',
-              border: `1px solid ${isActive ? 'rgba(184,149,106,0.3)' : 'var(--border-default)'}`,
-              backgroundColor: isActive ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)',
+              padding: '12px 14px', borderRadius: 'var(--r-sm)',
+              border: `1px solid ${isActive ? 'rgba(120, 120, 128,0.3)' : 'var(--border-default)'}`,
+              backgroundColor: isActive ? 'rgba(120, 120, 128,0.06)' : 'var(--bg-active)',
               transition: 'border-color 150ms ease, background-color 150ms ease',
             }}
           >
             {}
             <div style={{
-              width: '36px', height: '36px', borderRadius: '2px', flexShrink: 0,
+              width: '36px', height: '36px', borderRadius: 'var(--r-sm)', flexShrink: 0,
               backgroundColor: 'var(--bg-hover)',
               border: '1px solid var(--border-default)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -71,8 +71,8 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
                     display: 'inline-flex', alignItems: 'center', gap: '3px',
                     fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
                     color: 'var(--accent)',
-                    backgroundColor: 'rgba(184,149,106,0.12)',
-                    border: '1px solid rgba(184,149,106,0.2)',
+                    backgroundColor: 'rgba(120, 120, 128,0.12)',
+                    border: '1px solid rgba(120, 120, 128,0.2)',
                     borderRadius: '99px', padding: '1px 7px', fontFamily: FONT,
                   }}>
                     <CheckCircle2 size={9} /> Connected
@@ -128,7 +128,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
                 position: 'relative', width: '40px', height: '22px',
                 backgroundColor: isActive ? 'var(--accent)' : 'var(--bg-hover)',
                 border: `1px solid ${isActive ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                borderRadius: '2px', flexShrink: 0, outline: 'none',
+                borderRadius: 'var(--r-sm)', flexShrink: 0, outline: 'none',
                 cursor: !isGloballyConnected ? 'not-allowed' : 'pointer',
                 opacity: !isGloballyConnected ? 0.4 : 1,
                 transition: 'background-color 150ms ease',
@@ -151,7 +151,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
 
       {}
       <div style={{
-        marginTop: '4px', padding: '12px 14px', borderRadius: '2px',
+        marginTop: '4px', padding: '12px 14px', borderRadius: 'var(--r-sm)',
         backgroundColor: 'var(--bg-active)',
         border: '1px solid var(--border-subtle)',
         display: 'flex', alignItems: 'flex-start', gap: '10px',

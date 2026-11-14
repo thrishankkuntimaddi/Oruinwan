@@ -9,7 +9,7 @@ import Whiteboard from './Whiteboard';
 const chip = (on) => ({
     height: 28, padding: '0 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
     border: `1px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`,
-    background: on ? 'var(--gl-accent-soft, rgba(184,149,106,0.14))' : 'var(--bg-surface)',
+    background: on ? 'var(--gl-accent-soft, rgba(120, 120, 128,0.14))' : 'var(--bg-surface)',
     color: on ? 'var(--accent)' : 'var(--text-secondary)',
 });
 const iconBtn = { width: 28, height: 28, display: 'grid', placeItems: 'center', borderRadius: 8, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' };

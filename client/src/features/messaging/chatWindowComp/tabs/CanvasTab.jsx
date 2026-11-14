@@ -22,7 +22,7 @@ function timeAgo(date) {
 const EMOJIS = ['📄', '📝', '✍️', '📊', '🗒️', '💡', '🎨', '📐', '🔖', '⚡', '🚀', '🎯', '📌', '💬', '🔥', '✅', '📅', '🧩', '💎', '🌟', '📋', '🖊️', '🗂️', '🏷️', '💼', '🎪', '🌈', '⭐', '🔑', '🎁'];
 
 // Stored on the canvas (user-chosen data). The first one is the theme's gold, also the default.
-const DEFAULT_COVER = '#b8956a';
+const DEFAULT_COVER = 'var(--accent)';
 const COVER_COLORS = [
     { label: 'Gold', value: DEFAULT_COVER },
     { label: 'Violet', value: '#8B5CF6' },

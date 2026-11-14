@@ -4,17 +4,17 @@ import { Icon } from './Icon.jsx';
 import { useWide } from '../app/layout.js';
 
 const VARIANTS = {
-  primary: 'bg-gold text-on-accent active:brightness-95',
-  secondary: 'bg-surface-2 text-text border border-line shadow-[var(--spec)] active:bg-surface-3',
+  primary: 'bg-gold text-on-accent font-semibold active:brightness-95',
+  secondary: 'glass-ctl text-text active:bg-[var(--lg-press)]',
   ghost: 'text-text active:bg-surface-2',
   danger: 'bg-danger/12 text-danger border border-danger/25 active:bg-danger/20',
   'danger-solid': 'bg-danger text-white active:opacity-90',
 };
 
 const SIZES = {
-  sm: 'h-9 px-3.5 text-sm gap-1.5 rounded-[10px]',
-  md: 'h-11 px-4 text-[15px] gap-2 rounded-[10px]',
-  lg: 'h-12 px-5 text-base gap-2 rounded-xl',
+  sm: 'h-9 px-4 text-sm gap-1.5 rounded-full',
+  md: 'h-11 px-5 text-[15px] gap-2 rounded-full',
+  lg: 'h-12 px-6 text-base gap-2 rounded-full',
 };
 
 export function Button({
@@ -69,7 +69,7 @@ export function IconButton({ icon, label, onClick, className, badge, tone = 'def
     >
       <Icon as={icon} size={size === 'sm' ? 'sm' : 'md'} />
       {badge ? (
-        <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-accent text-on-accent text-[10px] font-semibold leading-4 text-center">
+        <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-danger text-white text-[10px] font-semibold leading-4 text-center">
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
@@ -95,8 +95,8 @@ export function Fab({ icon, label, onClick, side = 'right', className, compact =
       title={label}
       onClick={onClick}
       className={cx(
-        'pressable absolute z-10 flex h-14 items-center justify-center gap-2 rounded-[18px] bg-gold text-on-accent',
-        'ring-1 ring-inset ring-white/25 shadow-[0_10px_24px_-8px_rgb(var(--c-accent)/0.65),0_2px_6px_rgb(0_0_0/0.18)]',
+        'pressable absolute z-10 flex h-14 items-center justify-center gap-2 rounded-full bg-gold text-on-accent',
+        'shadow-[inset_0_1.5px_0_#fff,0_0_0_0.5px_rgb(0_0_0/0.08),0_10px_24px_-8px_rgb(0_0_0/0.35)]',
         compact ? 'w-14' : 'px-5',
         side === 'left' ? 'left-4' : 'right-4',
         className,

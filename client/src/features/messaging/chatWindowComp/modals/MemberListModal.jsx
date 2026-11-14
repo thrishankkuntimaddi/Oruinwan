@@ -4,8 +4,8 @@ import { X, Users, Search, Crown, Shield, User as UserIcon, MessageCircle } from
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 const ROLE_BADGES = {
-    owner: { Icon: Crown,  label: 'Owner', bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)',        border: 'var(--border-accent)' },
-    admin: { Icon: Shield, label: 'Admin', bg: 'rgba(184,149,106,0.07)', color: 'var(--text-secondary)', border: 'var(--border-default)' },
+    owner: { Icon: Crown,  label: 'Owner', bg: 'rgba(120, 120, 128,0.12)', color: 'var(--accent)',        border: 'var(--border-accent)' },
+    admin: { Icon: Shield, label: 'Admin', bg: 'rgba(120, 120, 128,0.07)', color: 'var(--text-secondary)', border: 'var(--border-default)' },
 };
 
 export default function MemberListModal({
@@ -79,7 +79,7 @@ export default function MemberListModal({
                         display: 'flex', flexDirection: 'column',
                         backgroundColor: 'var(--bg-surface)',
                         border: '1px solid var(--border-accent)',
-                        borderRadius: '4px',
+                        borderRadius: 'var(--r-sm)',
                         boxShadow: 'var(--lg-shadow-sm)',
                         overflow: 'hidden',
                         pointerEvents: 'auto',
@@ -92,8 +92,8 @@ export default function MemberListModal({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
-                                width: '36px', height: '36px', borderRadius: '2px', flexShrink: 0,
-                                backgroundColor: 'rgba(184,149,106,0.10)', border: '1px solid var(--border-accent)',
+                                width: '36px', height: '36px', borderRadius: 'var(--r-sm)', flexShrink: 0,
+                                backgroundColor: 'rgba(120, 120, 128,0.10)', border: '1px solid var(--border-accent)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
                             }}>
                                 <Users size={16} />
@@ -120,7 +120,7 @@ export default function MemberListModal({
                                 style={{
                                     width: '100%', padding: '7px 10px 7px 32px',
                                     backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
-                                    borderRadius: '2px', outline: 'none', color: 'var(--text-primary)',
+                                    borderRadius: 'var(--r-sm)', outline: 'none', color: 'var(--text-primary)',
                                     fontSize: '13px', fontFamily: FONT, boxSizing: 'border-box', transition: 'border-color 100ms ease',
                                 }}
                                 onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
@@ -134,7 +134,7 @@ export default function MemberListModal({
                         {filteredMembers.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', gap: '10px' }}>
                                 <div style={{
-                                    width: '44px', height: '44px', borderRadius: '2px',
+                                    width: '44px', height: '44px', borderRadius: 'var(--r-sm)',
                                     backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}>
@@ -201,13 +201,13 @@ function MemberRow({ user, userId, isCurrentUser, roleBadge, isOnline, joinedAt,
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                     {user.profilePicture ? (
                         <img src={user.profilePicture} alt={user.username}
-                            style={{ width: '40px', height: '40px', borderRadius: '2px', objectFit: 'cover' }} />
+                            style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', objectFit: 'cover' }} />
                     ) : (
                         <div style={{
-                            width: '40px', height: '40px', borderRadius: '2px',
+                            width: '40px', height: '40px', borderRadius: 'var(--r-sm)',
                             backgroundColor: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <span style={{ color: 'var(--bg-base)', fontWeight: 700, fontSize: '15px' }}>
+                            <span style={{ color: 'var(--text-on-accent)', fontWeight: 700, fontSize: '15px' }}>
                                 {(user.username || '?').charAt(0).toUpperCase()}
                             </span>
                         </div>
@@ -275,7 +275,7 @@ function IconBtn({ onClick, title, children, accent }) {
         <button onClick={onClick} title={title}
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
             style={{
-                padding: '5px', border: 'none', outline: 'none', borderRadius: '2px',
+                padding: '5px', border: 'none', outline: 'none', borderRadius: 'var(--r-sm)',
                 cursor: 'pointer', display: 'flex', transition: '100ms ease',
                 color: accent
                     ? (hov ? 'var(--accent)' : 'var(--text-secondary)')
@@ -294,7 +294,7 @@ function CloseBtn({ onClick }) {
             onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
             style={{
                 padding: '6px', border: 'none', outline: 'none', background: 'none',
-                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms',
+                cursor: 'pointer', borderRadius: 'var(--r-sm)', display: 'flex', transition: '100ms',
                 color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
             }}>
             <X size={18} />

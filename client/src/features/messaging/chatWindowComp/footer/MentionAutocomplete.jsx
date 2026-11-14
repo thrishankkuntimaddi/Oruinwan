@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { AtSign } from 'lucide-react';
 
 const avatarColor = (name = '') => {
-    const palette = ['#b8956a', '#9c7fd4', '#63b3ed', '#48bb78', '#fc8181'];
+    const palette = ['var(--accent)', '#9c7fd4', '#63b3ed', '#48bb78', '#fc8181'];
     return palette[name.charCodeAt(0) % palette.length];
 };
 

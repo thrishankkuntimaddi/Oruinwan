@@ -54,7 +54,7 @@
 .sib-clear {
   background: none; border: none; cursor: pointer; padding: 3px;
   color: var(--text-muted); display: flex; align-items: center;
-  border-radius: 2px; flex-shrink: 0; transition: color 0.1s, background 0.1s;
+  border-radius: var(--r-sm); flex-shrink: 0; transition: color 0.1s, background 0.1s;
 }
 .sib-clear:hover { background: var(--bg-hover); color: var(--text-primary); }
 
@@ -66,7 +66,7 @@
   font-size: 10px; padding: 1px 5px;
   background: var(--bg-active);
   border: 1px solid var(--border-default);
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   color: var(--text-secondary);
   font-family: var(--font);
   line-height: 1.4;
@@ -139,7 +139,7 @@
   display: flex; align-items: center; justify-content: center;
   background: var(--gl-accent-soft, var(--bg-active));
   border: 1px solid var(--gl-accent-line, var(--border-default));
-  border-radius: 2px;
+  border-radius: var(--r-sm);
 }
 
 .sib-result-body { flex: 1; min-width: 0; }
@@ -159,20 +159,20 @@
   color: var(--text-muted);
   background: var(--bg-active);
   border: 1px solid var(--border-subtle);
-  border-radius: 2px; padding: 1px 6px;
+  border-radius: var(--r-sm); padding: 1px 6px;
   text-transform: capitalize; font-family: var(--font);
 }
 
 /* Skeleton */
 .sib-skeleton-row { display: flex; gap: 10px; align-items: center; padding: 8px 14px; }
 .sib-skeleton-icon {
-  width: 26px; height: 26px; border-radius: 2px;
+  width: 26px; height: 26px; border-radius: var(--r-sm);
   background: var(--bg-hover); flex-shrink: 0;
   animation: sib-pulse 1.2s ease-in-out infinite;
 }
 .sib-skeleton-text { flex: 1; }
 .sib-skeleton-line {
-  height: 9px; border-radius: 2px;
+  height: 9px; border-radius: var(--r-sm);
   background: var(--bg-hover); margin-bottom: 5px;
   animation: sib-pulse 1.2s ease-in-out infinite;
 }
@@ -189,7 +189,7 @@
 .sib-footer-hint kbd {
   background: var(--bg-active);
   border: 1px solid var(--border-default);
-  border-radius: 2px; padding: 0 4px;
+  border-radius: var(--r-sm); padding: 0 4px;
   font-family: system-ui; color: var(--text-muted);
 }
 .sib-see-all {
@@ -206,9 +206,9 @@
 
 /* Highlight match */
 mark.sib-highlight {
-  background: var(--gl-accent-soft, rgba(184,149,106,0.2));
+  background: var(--gl-accent-soft, rgba(120, 120, 128,0.2));
   color: var(--accent);
-  border-radius: 2px; padding: 0 1px;
+  border-radius: var(--r-sm); padding: 0 1px;
 }
 
 .sib-error {

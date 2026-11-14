@@ -51,7 +51,7 @@ export default function GroupStartBar({ workspaceId, selected, onClear, onStarte
                         onKeyDown={(e) => { if (e.key === 'Enter') start(); }}
                         placeholder="Group name (optional)"
                         aria-label="Group name"
-                        style={{ flex: 1, minWidth: 0, padding: '7px 10px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
+                        style={{ flex: 1, minWidth: 0, padding: '7px 10px', background: 'var(--bg-input, var(--bg-hover))', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
                     />
                     <button
                         type="button"
@@ -87,7 +87,7 @@ export function GroupPickToggle({ on, name, onToggle }) {
             style={{
                 width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
                 border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-default)'}`,
-                background: on ? 'var(--accent)' : 'transparent', color: 'var(--bg-base)',
+                background: on ? 'var(--accent)' : 'transparent', color: 'var(--text-on-accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, padding: 0,
             }}
         >

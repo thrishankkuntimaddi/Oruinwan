@@ -140,7 +140,7 @@ const SupportTickets = () => {
                                 placeholder="Type a reply..."
                                 style={{ flex: 1, padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', height: '72px', fontFamily: 'inherit' }}
                             />
-                            <button onClick={handleReply} style={{ padding: '0 20px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}>
+                            <button onClick={handleReply} style={{ padding: '0 20px', background: 'var(--accent)', border: 'none', color: 'var(--text-on-accent)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: 'var(--r-sm)', transition: 'background 150ms ease' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}>
                                 Send
                             </button>
                         </div>
@@ -216,7 +216,7 @@ const StatusBtn = ({ label, active, onClick }) => {
                 border: active ? '1px solid var(--accent)' : '1px solid var(--border-default)',
                 color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '11px', fontWeight: 500,
-                borderRadius: '2px', cursor: 'pointer',
+                borderRadius: 'var(--r-sm)', cursor: 'pointer',
                 transition: 'all 150ms ease'
             }}
         >

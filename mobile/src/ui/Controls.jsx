@@ -17,14 +17,14 @@ export function Toggle({ checked, onChange, label, disabled }) {
         onChange(!checked);
       }}
       className={cx(
-        'relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-45',
-        checked ? 'bg-accent' : 'bg-surface-3 border border-line',
+        'relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-45',
+        checked ? 'bg-switch' : 'bg-[rgb(120_120_128/0.22)]',
       )}
     >
       <span
         className={cx(
-          'absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow transition-all duration-200',
-          checked ? 'left-6 bg-on-accent' : 'left-1 bg-text-2',
+          'absolute top-0.5 h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgb(0_0_0/0.15),0_3px_1px_rgb(0_0_0/0.06)] transition-[left] duration-300 ease-[var(--lg-ease)]',
+          checked ? 'left-[22px]' : 'left-0.5',
         )}
       />
     </button>
@@ -35,7 +35,7 @@ export function Toggle({ checked, onChange, label, disabled }) {
 /** A segmented control. `scroll`: many options in a row that scrolls sideways (phone widths). */
 export function Segmented({ options, value, onChange, className, size = 'md', scroll = false, label, disabled = false }) {
   return (
-    <div role="tablist" aria-label={label} aria-disabled={disabled || undefined} className={cx('flex rounded-xl bg-surface-2 p-1 border border-line-soft', scroll && 'no-scrollbar overflow-x-auto', disabled && 'opacity-60', className)}>
+    <div role="tablist" aria-label={label} aria-disabled={disabled || undefined} className={cx('flex gap-0.5 rounded-full glass-well p-[3px]', scroll && 'no-scrollbar overflow-x-auto', disabled && 'opacity-60', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -51,15 +51,15 @@ export function Segmented({ options, value, onChange, className, size = 'md', sc
             }}
             ref={scroll && active ? (el) => el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }) : undefined}
             className={cx(
-              'flex-1 rounded-lg font-medium transition-all inline-flex items-center justify-center gap-1.5',
+              'flex-1 rounded-full font-semibold transition-all inline-flex items-center justify-center gap-1.5',
               scroll && 'shrink-0 whitespace-nowrap px-3',
               size === 'sm' ? 'h-7 text-xs' : 'h-8 text-[13px]',
-              active ? 'bg-surface text-text shadow-sm' : 'text-text-2',
+              active ? 'glass-selected' : 'text-text-2',
             )}
           >
             {o.label}
             {o.count ? (
-              <span className={cx('rounded-full px-1.5 text-[10px] leading-4', active ? 'bg-accent text-on-accent' : 'bg-surface-3')}>
+              <span className={cx('rounded-full px-1.5 text-[10px] leading-4', active ? 'bg-[rgb(10_10_12/0.08)]' : 'bg-surface-3')}>
                 {o.count}
               </span>
             ) : null}
@@ -93,8 +93,8 @@ export function Chips({ options, value, onChange, className }) {
             onClick={() => onChange(o.value)}
             data-active={active ? 'true' : undefined}
             className={cx(
-              'pressable h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium',
-              active ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2',
+              'pressable h-8 shrink-0 rounded-full px-3.5 text-[13px] font-semibold',
+              active ? 'glass-selected' : 'glass-ctl text-text-2',
             )}
           >
             {o.label}
@@ -120,7 +120,7 @@ export const Field = forwardRef(function Field(
       )}
       <div
         className={cx(
-          'flex items-center gap-2.5 rounded-xl border bg-input px-3.5 transition-colors focus-within:border-accent',
+          'flex items-center gap-2.5 rounded-[14px] border bg-input px-3.5 shadow-[inset_0_1px_2px_rgb(0_0_0/0.06)] transition-[border-color,box-shadow] focus-within:border-line-strong focus-within:shadow-[0_0_0_3px_rgb(120_120_128/0.16)]',
           error ? 'border-danger/60' : 'border-line',
         )}
       >
@@ -150,7 +150,7 @@ export const Field = forwardRef(function Field(
 
 export function SearchField({ value, onChange, placeholder = 'Search', className, autoFocus }) {
   return (
-    <div className={cx('flex h-10 items-center gap-2 rounded-xl bg-surface-2 px-3 border border-line-soft', className)}>
+    <div className={cx('flex h-10 items-center gap-2 rounded-full glass-well px-3.5', className)}>
       <Icon as={Search} size="sm" className="shrink-0 text-text-3" />
       <input
         type="search"

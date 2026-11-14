@@ -70,7 +70,7 @@ export function RecapBanner() {
             // Swipe it up to dismiss.
             if (e.currentTarget.dataset.y - e.changedTouches[0].clientY > 30) dismissRecap(r.meetingId);
           }}
-          style={{ borderLeft: '3px solid rgb(var(--c-accent))' }}
+          style={{ borderLeft: '3px solid rgb(var(--c-success))' }}
         >
           <Icon as={ClipboardList} size={18} className="shrink-0 text-accent-ink" />
           <span className="min-w-0 flex-1">

@@ -24,7 +24,7 @@ function ContextMenu({ onRename, onShare, onDelete, onClose }) {
         <div ref={ref} style={{
             position: 'absolute', right: 0, top: 'calc(100% + 4px)',
             width: '168px', backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-accent)', borderRadius: '2px',
+            border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)',
             zIndex: 70, overflow: 'hidden', padding: '4px 0',
             boxShadow: 'var(--lg-shadow-sm)',
         }}>
@@ -75,7 +75,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
         setIsRenaming(false);
     };
 
-    const color = tab.coverColor || '#b8956a';
+    const color = tab.coverColor || '#8e8e93';
     const emoji = tab.emoji || '📄';
     const editorName = tab.lastEditedBy?.username || null;
     const wordCount = tab.wordCount || 0;
@@ -103,13 +103,13 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                     padding: '10px 14px',
                     backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
                     border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                    borderRadius: '2px', cursor: 'pointer', gap: '12px',
+                    borderRadius: 'var(--r-sm)', cursor: 'pointer', gap: '12px',
                     transition: 'background-color 150ms ease, border-color 150ms ease',
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                     <div style={{
-                        width: 34, height: 34, borderRadius: '2px', flexShrink: 0,
+                        width: 34, height: 34, borderRadius: 'var(--r-sm)', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
                         backgroundColor: `${color}18`, border: `1px solid ${color}30`,
                     }}>{emoji}</div>
@@ -141,7 +141,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                     <button
                         onClick={e => { e.stopPropagation(); setShowMenu(s => !s); }}
                         style={{
-                            padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
+                            padding: '5px', borderRadius: 'var(--r-sm)', background: 'none', border: 'none',
                             cursor: 'pointer', color: 'var(--text-muted)',
                             opacity: hovered ? 1 : 0,
                             transition: 'opacity 150ms ease, color 150ms ease',
@@ -165,7 +165,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                 position: 'relative', display: 'flex', flexDirection: 'column',
                 backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
                 border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                borderRadius: '2px', cursor: 'pointer', overflow: 'hidden',
+                borderRadius: 'var(--r-sm)', cursor: 'pointer', overflow: 'hidden',
                 transition: 'background-color 150ms ease, border-color 150ms ease, transform 150ms ease',
                 transform: hovered ? 'translateY(-1px)' : 'none',
             }}
@@ -177,7 +177,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                 {}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <div style={{
-                        width: 40, height: 40, borderRadius: '2px', flexShrink: 0,
+                        width: 40, height: 40, borderRadius: 'var(--r-sm)', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
                         backgroundColor: `${color}18`, border: `1px solid ${color}25`,
                     }}>{emoji}</div>
@@ -185,7 +185,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                         <button
                             onClick={e => { e.stopPropagation(); setShowMenu(s => !s); }}
                             style={{
-                                padding: '4px', borderRadius: '2px', background: 'none', border: 'none',
+                                padding: '4px', borderRadius: 'var(--r-sm)', background: 'none', border: 'none',
                                 cursor: 'pointer', color: 'var(--text-muted)',
                                 opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease',
                             }}

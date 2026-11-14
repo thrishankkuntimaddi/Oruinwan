@@ -80,7 +80,7 @@ export default function AddPeopleDialog({ huddleId, inCall = [], onClose, worksp
                         const on = picked.includes(id);
                         return (
                             <button key={id} type="button" role="listitem" aria-pressed={on} onClick={() => toggle(id)}
-                                style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 10, padding: '8px 6px', background: on ? 'var(--accent-soft, rgba(184,149,106,0.12))' : 'transparent', border: 0, borderRadius: 8, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }}>
+                                style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 10, padding: '8px 6px', background: on ? 'var(--accent-soft, rgba(120, 120, 128,0.12))' : 'transparent', border: 0, borderRadius: 8, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }}>
                                 <span style={{ flex: 1 }}>{nameOf(m)}</span>
                                 {on && <Check size={15} style={{ color: 'var(--accent)' }} />}
                             </button>

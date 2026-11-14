@@ -142,7 +142,7 @@ function DMMessageItem({
                 onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}
             >
                 <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: 'var(--r-sm)', backgroundColor: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
                     </div>
                 </div>
@@ -159,7 +159,7 @@ function DMMessageItem({
     
     const toolbarBtn = (active = false) => ({
         padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
-        borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: active ? 'var(--accent)' : 'var(--text-muted)', transition: '100ms ease',
     });
     const hasEdits = hasEditHistory(msg);
@@ -169,7 +169,7 @@ function DMMessageItem({
         <div
             style={{
                 display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '2px 16px', position: 'relative',
-                backgroundColor: isSelected ? 'rgba(184,149,106,0.06)' : msg.isPinned ? 'rgba(184,149,106,0.04)' : 'transparent',
+                backgroundColor: isSelected ? 'rgba(120, 120, 128,0.06)' : msg.isPinned ? 'rgba(120, 120, 128,0.04)' : 'transparent',
                 borderLeft: msg.isPinned ? '2px solid var(--accent)' : '2px solid transparent',
                 transition: 'background-color 80ms ease',
             }}
@@ -298,7 +298,7 @@ function DMMessageItem({
             <div style={{
                 position: 'absolute', top: '2px', right: '96px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
+                borderRadius: 'var(--r-sm)', padding: '2px', display: 'flex', alignItems: 'center',
                 zIndex: 10, boxShadow: 'var(--lg-shadow-sm)',
                 opacity: toolbarVisible ? 1 : 0,
                 pointerEvents: toolbarVisible ? 'auto' : 'none',

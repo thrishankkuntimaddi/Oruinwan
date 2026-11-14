@@ -24,7 +24,7 @@
 .aip-bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--lg-border); }
 .aip-mark {
     width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: 3px;
+    color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--r-sm);
 }
 .aip-input {
     flex: 1; min-width: 0; background: none; border: none; outline: none;
@@ -34,14 +34,14 @@
 .aip-kbd {
     display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; height: 20px; flex-shrink: 0;
     font-size: 11px; font-family: inherit; color: var(--text-secondary);
-    background: var(--bg-hover); border: 1px solid var(--border-default); border-radius: 2px;
+    background: var(--bg-hover); border: 1px solid var(--border-default); border-radius: var(--r-sm);
 }
 .aip-section { padding: 10px 8px 8px; }
 .aip-cap { display: block; padding: 0 8px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
 .aip-row {
     display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 8px; text-align: left;
     font-size: 13px; font-family: inherit; color: var(--text-primary);
-    background: transparent; border: none; border-radius: 2px; cursor: pointer;
+    background: transparent; border: none; border-radius: var(--r-sm); cursor: pointer;
     transition: background-color 120ms ease;
 }
 .aip-row:hover, .aip-row:focus-visible { background: var(--bg-hover); outline: none; }
@@ -59,7 +59,7 @@
 .aip-result { display: flex; align-items: flex-start; gap: 10px; }
 .aip-result-icon {
     width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    color: var(--text-secondary); background: var(--bg-active); border: 1px solid var(--border-subtle); border-radius: 3px;
+    color: var(--text-secondary); background: var(--bg-active); border: 1px solid var(--border-subtle); border-radius: var(--r-sm);
 }
 .aip-result-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
 .aip-result-snip { font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
@@ -67,12 +67,12 @@
 .aip-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px; }
 .aip-chip {
     padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer;
-    color: var(--text-secondary); background: var(--bg-active); border: 1px solid var(--border-default); border-radius: 2px;
+    color: var(--text-secondary); background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--r-sm);
     transition: color 120ms ease, border-color 120ms ease;
 }
 .aip-chip:hover { color: var(--accent); border-color: var(--gl-accent-line); }
 .aip-result-box { padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-primary); line-height: 1.6; }
-.aip-result-box .aip-note { padding: 8px 12px; border: 1px solid var(--border-subtle); background: var(--bg-active); border-radius: 3px; font-size: 12px; }
+.aip-result-box .aip-note { padding: 8px 12px; border: 1px solid var(--border-subtle); background: var(--bg-active); border-radius: var(--r-sm); font-size: 12px; }
 @media (max-width: 600px) {
     .aip-backdrop { padding-top: 10vh; }
     .aip-foot .aip-hide-sm { display: none; }

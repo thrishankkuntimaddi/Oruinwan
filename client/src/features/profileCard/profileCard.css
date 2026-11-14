@@ -2,7 +2,7 @@
    buttons from gloss.css (gl-btn / gl-icon-btn). */
 
 .pc-trigger { cursor: pointer; }
-.pc-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.pc-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 .pc-mention { cursor: pointer; }
 .pc-mention:hover { filter: brightness(1.08); text-decoration: underline; text-underline-offset: 2px; }
 
@@ -25,7 +25,7 @@
 .pc-pop:focus { outline: none; }
 @keyframes pc-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-.pc-banner { height: 44px; background: linear-gradient(120deg, var(--gl-accent-soft, rgba(200,162,116,.12)), transparent 70%), var(--bg-active); border-bottom: 1px solid var(--border-subtle, var(--border-default)); }
+.pc-banner { height: 44px; background: linear-gradient(120deg, var(--gl-accent-soft, rgba(120, 120, 128,.12)), transparent 70%), var(--bg-active); border-bottom: 1px solid var(--border-subtle, var(--border-default)); }
 .pc-body { padding: 0 16px 14px; }
 .pc-head { display: flex; align-items: flex-end; gap: 12px; margin-top: -26px; }
 .pc-avatar { position: relative; width: 60px; height: 60px; flex-shrink: 0; border-radius: 50%; border: 3px solid var(--bg-surface); background: var(--bg-active); overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: var(--text-secondary); }
@@ -48,7 +48,7 @@
 .pc-title span { color: var(--text-muted); }
 
 .pc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.pc-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-active); }
+.pc-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-sm); border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-active); }
 .pc-badge--accent { color: var(--accent); border-color: var(--gl-accent-line, var(--border-accent)); background: var(--gl-accent-soft, transparent); }
 
 .pc-rows { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border-subtle, var(--border-default)); padding-top: 10px; }
@@ -63,7 +63,7 @@
 .pc-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
 .pc-actions .gl-btn { min-width: 0; }
 
-.pc-skel { background: var(--bg-hover); border-radius: 2px; animation: pc-pulse 1.1s ease-in-out infinite; }
+.pc-skel { background: var(--bg-hover); border-radius: var(--r-sm); animation: pc-pulse 1.1s ease-in-out infinite; }
 @keyframes pc-pulse { 50% { opacity: 0.55; } }
 
 .pc-empty { padding: 18px 16px; text-align: center; }
@@ -83,7 +83,7 @@
         padding-bottom: env(safe-area-inset-bottom, 0);
         animation: pc-up 200ms var(--gl-ease, ease-out);
     }
-    .pc-sheet .pc-grip { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-default); margin: 8px auto 0; }
+    .pc-sheet .pc-grip { display: block; width: 36px; height: 4px; border-radius: var(--r-sm); background: var(--border-default); margin: 8px auto 0; }
     .pc-sheet .pc-actions .gl-btn { height: 40px; }
 }
 .pc-grip { display: none; }

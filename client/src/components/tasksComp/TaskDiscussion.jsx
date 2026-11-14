@@ -121,7 +121,7 @@ export function LinkedThreadCard({ linked, workspaceId }) {
     const text = (m) => (m.payload?.isDeleted ? 'This message was deleted.' : m.decryptedContent || m.text || (m.payload?.ciphertext ? 'Encrypted message' : '') || (m.attachments?.length ? '📎 Attachment' : ''));
     const [parent, ...replies] = items || [];
     return (
-        <div data-testid="task-linked-thread" style={{ border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-base)' }}>
+        <div data-testid="task-linked-thread" style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 <Hash size={11} />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>From {where} thread · {linked.replyCount} {linked.replyCount === 1 ? 'reply' : 'replies'}</span>
@@ -218,7 +218,7 @@ function AddPeople({ members, exclude, onCancel, onAdd }) {
     const [busy, setBusy] = useState(false);
     const list = members.filter((m) => !exclude.has(idOf(m)) && String(m.username || m.email || '').toLowerCase().includes(q.toLowerCase()));
     return (
-        <div data-testid="task-discussion-add-people" style={{ border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-base)' }}>
+        <div data-testid="task-discussion-add-people" style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', background: 'var(--bg-base)' }}>
             <div style={{ position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
                 <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                 <input autoFocus className="tk-field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add people from this workspace…" style={{ border: 'none', paddingLeft: '28px', background: 'transparent' }} />
@@ -356,7 +356,7 @@ export default function TaskDiscussion({ taskId, workspaceId, members = [], curr
         <div data-testid="task-discussion" className="tasks-ui" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {data.resolved ? (
-                    <div data-testid="task-discussion-resolved" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderRadius: '2px', fontSize: '12px', color: 'var(--state-success)', background: tint('var(--state-success)', 8), border: `1px solid ${tint('var(--state-success)', 30)}` }}>
+                    <div data-testid="task-discussion-resolved" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderRadius: 'var(--r-sm)', fontSize: '12px', color: 'var(--state-success)', background: tint('var(--state-success)', 8), border: `1px solid ${tint('var(--state-success)', 30)}` }}>
                         <CheckCircle2 size={12} /> Resolved — the task is done{data.resolvedAt ? ` (${fmtDate(data.resolvedAt)})` : ''}. It reopens if the task moves out of Done.
                     </div>
                 ) : null}
@@ -453,7 +453,7 @@ export default function TaskDiscussion({ taskId, workspaceId, members = [], curr
             {perms.canComment && (
                 <div style={{ borderTop: '1px solid var(--border-default)', padding: '10px 12px', position: 'relative', flexShrink: 0 }}>
                     {suggestions.length > 0 && (
-                        <div role="listbox" aria-label="Mention someone" style={{ position: 'absolute', left: 12, right: 12, bottom: '100%', marginBottom: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', boxShadow: 'var(--lg-shadow-sm)', zIndex: 2 }}>
+                        <div role="listbox" aria-label="Mention someone" style={{ position: 'absolute', left: 12, right: 12, bottom: '100%', marginBottom: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', boxShadow: 'var(--lg-shadow-sm)', zIndex: 2 }}>
                             {suggestions.map((m) => (
                                 <button key={idOf(m)} type="button" role="option" aria-selected="false"
                                     onClick={() => setText((t) => t.replace(/@([\w.-]*)$/, `@${m.username} `))}

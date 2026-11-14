@@ -8,6 +8,9 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import './styles/gloss.css';
 import './styles/palette.css';
+// Liquid Glass: the shared kit (also used by the phone app), then the web client's mapping onto it.
+import '@platform/theme/liquid-glass.css';
+import './styles/liquid-glass-app.css';
 import './desktop/bridge';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';

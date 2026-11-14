@@ -23,7 +23,7 @@ export default function ConflictWarning({ result, loading = false, nameOf, onPic
     }
     return (
         <div role="alert" data-testid="conflict-warning" style={{
-            display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', borderRadius: 2,
+            display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', borderRadius: 'var(--r-sm)',
             border: '1px solid color-mix(in srgb, var(--color-warning) 45%, transparent)', background: 'var(--bg-active)',
         }}>
             <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>

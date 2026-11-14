@@ -63,8 +63,8 @@ const LoginPage = () => {
             <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080a' }} aria-busy="true" aria-label="Loading">
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
                     <BrandMark size={36} title="" style={{ opacity: 0.6 }} />
-                    <div style={{ height: '2px', width: '80px', background: 'rgba(200,162,116,0.2)', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: '#c8a274', animation: 'slideBar 1.2s ease-in-out infinite' }} />
+                    <div style={{ height: '2px', width: '80px', background: 'rgba(120, 120, 128,0.2)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: 'var(--accent)', animation: 'slideBar 1.2s ease-in-out infinite' }} />
                     </div>
                 </div>
                 <style>{'@keyframes slideBar { from{left:-40px} to{left:100%} }'}</style>

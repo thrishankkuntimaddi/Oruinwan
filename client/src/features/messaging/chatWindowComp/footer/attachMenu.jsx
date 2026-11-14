@@ -7,11 +7,11 @@ import { useFlag } from "../../../../contexts/FeatureFlagsContext";
 const ITEM_COLORS = {
     Photo:    { bg: 'rgba(156,127,212,0.12)', color: '#9c7fd4' },
     Video:    { bg: 'rgba(99,179,237,0.12)',  color: '#63b3ed' },
-    Document: { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    Document: { bg: 'rgba(120, 120, 128,0.12)', color: 'var(--accent)' },
     'Voice Note': { bg: 'rgba(198,60,60,0.1)', color: 'var(--state-danger)' },
     'Video Note': { bg: 'rgba(99,179,237,0.12)', color: '#63b3ed' },
     Contact:  { bg: 'rgba(72,187,120,0.1)',   color: 'var(--state-success)' },
-    Poll:     { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    Poll:     { bg: 'rgba(120, 120, 128,0.12)', color: 'var(--accent)' },
     Meeting:  { bg: 'rgba(99,179,237,0.1)',   color: '#63b3ed' },
 };
 
@@ -25,13 +25,13 @@ function AttachItem({ label, icon, emoji, onClick }) {
             onMouseLeave={() => setHovered(false)}
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-                padding: '8px 4px', borderRadius: '2px', background: 'none', border: 'none',
+                padding: '8px 4px', borderRadius: 'var(--r-sm)', background: 'none', border: 'none',
                 cursor: 'pointer', transition: '150ms ease',
                 backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
             }}
         >
             <div style={{
-                width: '38px', height: '38px', borderRadius: '2px',
+                width: '38px', height: '38px', borderRadius: 'var(--r-sm)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 backgroundColor: c.bg, color: c.color, fontSize: '18px',
                 transition: '150ms ease', transform: hovered ? 'scale(1.08)' : 'scale(1)',

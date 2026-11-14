@@ -113,13 +113,13 @@
 
 /* Chips (month cells, all-day row) */
 .cal-chip {
-    display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; padding: 1px 4px; border: 0; border-radius: 4px;
+    display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; padding: 1px 4px; border: 0; border-radius: var(--r-sm);
     background: none; color: var(--text-primary); font: inherit; font-size: 11.5px; text-align: left; cursor: pointer;
 }
 .cal-chip:hover { background: var(--bg-hover); }
 .cal-chip-time { color: var(--text-secondary); flex-shrink: 0; }
 .cal-chip-title, .cal-chip-fill { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.cal-chip-fill { flex: 1; padding: 1px 6px; border-radius: 4px; color: #fff; font-weight: 600; }
+.cal-chip-fill { flex: 1; padding: 1px 6px; border-radius: var(--r-sm); color: #fff; font-weight: 600; }
 
 /* Month */
 .cal-month { flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, minmax(92px, 1fr)); overflow-y: auto; }
@@ -129,7 +129,7 @@
 .cal-month-date { align-self: center; min-width: 26px; height: 26px; padding: 0 6px; border: 0; border-radius: 13px; background: none; color: var(--text-primary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .cal-month-date:hover { background: var(--bg-hover); }
 .cal-month-date.is-today { background: var(--accent); color: var(--text-on-accent, #1a1408); }
-.cal-more { align-self: flex-start; padding: 1px 4px; border: 0; border-radius: 4px; background: none; color: var(--text-secondary); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.cal-more { align-self: flex-start; padding: 1px 4px; border: 0; border-radius: var(--r-sm); background: none; color: var(--text-secondary); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
 .cal-more:hover { background: var(--bg-hover); }
 
 /* Schedule */
@@ -156,5 +156,5 @@
 .cal-pop-close { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; }
 .cal-pop-close:hover { background: var(--bg-hover); }
 .cal-pop-title { display: flex; align-items: center; gap: 10px; padding-right: 26px; font-size: 16px; font-weight: 600; }
-.cal-pop-title .cal-dot { width: 12px; height: 12px; border-radius: 4px; }
+.cal-pop-title .cal-dot { width: 12px; height: 12px; border-radius: var(--r-sm); }
 .cal-pop-line { font-size: 13px; color: var(--text-secondary); padding-left: 22px; }

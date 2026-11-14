@@ -89,9 +89,11 @@ export const ThemeProvider = ({ children }) => {
         const root = document.documentElement;
         root.classList.remove('light', 'dark');
         root.classList.add(resolvedTheme);
+        // Liquid Glass (platform/theme/liquid-glass.css) reads data-theme.
+        root.setAttribute('data-theme', resolvedTheme);
         root.style.colorScheme = resolvedTheme;
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0c0c0c' : '#efe6d7');
+        if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#06070B' : '#EEF0F6');
         applyNativeBars(resolvedTheme);
         // Desktop app (2.3.5+): the dock / taskbar icon follows the theme.
         try { window.oruinwanDesktop?.setAppearance?.(resolvedTheme); } catch { /* older desktop app */ }

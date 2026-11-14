@@ -26,7 +26,7 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
   const tabRoot = useContext(TabRootContext);
   const showBack = back && !tabRoot && !(split && depth === 0 && !onBack);
   return (
-    <header className={cx('glass-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
+    <header className={cx('glass-header lg-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">
         {leading ||
           (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || (() => pop() || useNav.getState().back())} /> : <span className="w-2" />)}
@@ -111,7 +111,7 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, fl
     >
       {onRefresh && (pull > 0 || refreshing) && (
         // Pull to refresh: a spinner that follows the finger (transform and opacity only).
-        <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-center" data-testid="pull-refresh" role={refreshing ? 'status' : undefined} aria-label={refreshing ? 'Refreshing' : undefined}>
+        <div className="pointer-events-none sticky z-10 flex h-0 justify-center" style={{ top: 'var(--lg-hdr-h, 0px)' }} data-testid="pull-refresh" role={refreshing ? 'status' : undefined} aria-label={refreshing ? 'Refreshing' : undefined}>
           <span
             className="mt-1 grid h-9 w-9 place-items-center rounded-full border border-line bg-surface shadow-sm"
             style={{
@@ -121,7 +121,7 @@ export function Body({ children, className, tab, onRefresh, padBottom = true, fl
             }}
           >
             <span
-              className={cx('h-5 w-5 rounded-full border-2 border-accent border-t-transparent', refreshing && 'animate-spin')}
+              className={cx('h-5 w-5 rounded-full border-2 border-text-2 border-t-transparent', refreshing && 'animate-spin')}
               style={{ transform: refreshing ? undefined : `rotate(${pull * 4}deg)` }}
             />
           </span>

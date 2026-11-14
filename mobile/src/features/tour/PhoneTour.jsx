@@ -159,7 +159,7 @@ export function PhoneTour() {
           aria-hidden
           className="pointer-events-none fixed rounded-2xl transition-all duration-300"
           // An accent ring around the element, and the rest of the screen dimmed (theme tokens).
-          style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height, boxShadow: '0 0 0 2px rgb(var(--c-accent)), 0 0 0 200vmax var(--scrim)' }}
+          style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height, boxShadow: '0 0 0 2px #fff, 0 0 0 3.5px rgb(0 0 0 / 0.15), 0 0 0 200vmax var(--scrim)' }}
         />
       )}
       <div

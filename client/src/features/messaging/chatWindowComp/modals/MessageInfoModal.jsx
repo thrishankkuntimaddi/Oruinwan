@@ -174,7 +174,7 @@ function UserAvatar({ user, muted }) {
         <img
             src={src}
             alt=""
-            style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)', opacity: muted ? 0.6 : 1 }}
+            style={{ width: '24px', height: '24px', borderRadius: 'var(--r-sm)', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)', opacity: muted ? 0.6 : 1 }}
         />
     );
 }

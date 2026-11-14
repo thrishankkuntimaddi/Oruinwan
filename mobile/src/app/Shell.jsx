@@ -174,11 +174,11 @@ function WideTab({ tab, stack }) {
   );
 }
 
-/** The open item beside a list: its stack, or a hint while nothing is open. */
-function DetailPane({ tab, stack }) {
+/** The open item beside a list: its stack, or a hint while nothing is open. `pane`: a glass pane (tablets). */
+function DetailPane({ tab, stack, pane = false }) {
   const empty = PLACEHOLDER[tab];
   return (
-    <section aria-label="Details" className="relative h-full min-w-0 flex-1" {...paneEvents(tab, 'detail')}>
+    <section aria-label="Details" className={cx('relative h-full min-w-0 flex-1', pane && 'lg-pane')} {...paneEvents(tab, 'detail')}>
       {stack.length === 0 && (
         <div className="grid h-full place-items-center">
           <EmptyState icon={empty.icon} title={empty.title} body={empty.body} />
@@ -190,9 +190,10 @@ function DetailPane({ tab, stack }) {
 }
 
 /**
- * Split layout (768-1023 px): the list keeps the phone layout, tab bar included, in a column
- * on the left, and the open item fills the rest. The tab bar stays inside the list column so it
- * never covers the open item's composer. Tabs that aren't lists (AI) use the phone layout.
+ * Split layout (tablets, 768-1023 px windows): the list and the open item side by side, each a
+ * rounded glass pane inset from the window, ending above the floating dock (the Shell draws the
+ * dock, centred under both, so it never covers the open item's composer). Tabs that aren't
+ * lists (AI, Files…) use the phone layout.
  */
 function SplitTab({ tab, stack }) {
   const listWidth = useListWidth();
@@ -201,28 +202,23 @@ function SplitTab({ tab, stack }) {
       <div className="relative h-full">
         <Root tab={tab} />
         <Stack stack={stack} split={false} />
-        {stack.length === 0 && tab !== 'ai' && <TabBar />}
       </div>
     );
   }
-  // List and open item side by side; the bottom bar runs under both (not inside the list), and
-  // the panes end above it so it never covers the open item's composer.
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1">
-        <section aria-label="List" className="relative h-full shrink-0 border-r border-line-soft" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
-          <Root tab={tab} />
-          <AiFab tab={tab} />
-          <QuickAi />
-        </section>
-        <DetailPane tab={tab} stack={stack} />
-      </div>
-      <div className="relative shrink-0" style={{ height: 'calc(60px + var(--sab))' }}>
-        <TabBar />
-      </div>
+    <div className="flex h-full gap-2.5 px-2.5" style={{ paddingTop: 'calc(var(--sat) + 10px)', paddingBottom: `calc(var(--sab) + ${DOCK_SPACE}px)` }}>
+      <section aria-label="List" className="lg-pane relative h-full shrink-0" style={{ width: listWidth }} {...paneEvents(tab, 'list')}>
+        <Root tab={tab} />
+        <AiFab tab={tab} />
+        <QuickAi />
+      </section>
+      <DetailPane tab={tab} stack={stack} pane />
     </div>
   );
 }
+
+/** Room under the tablet panes for the floating dock (64 px, 10 px above the edge, a gap). */
+const DOCK_SPACE = 84;
 
 const goBack = () => useNav.getState().back();
 
@@ -302,6 +298,7 @@ export function Shell() {
             <SplitTab tab={t} stack={stacks[t]} />
           </div>
         ))}
+        {(SPLIT_TABS.has(tab) || (stack.length === 0 && tab !== 'ai')) && <TabBar />}
         <UnreadBadge />
         <HuddleLayer />
         <OfflinePill />

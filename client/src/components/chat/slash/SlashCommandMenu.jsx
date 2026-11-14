@@ -79,7 +79,7 @@ export default function SlashCommandMenu({ items = [], query = "/", onPick, onCl
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)' }}>
         {[['↑↓', 'choose'], ['Tab', 'fill'], ['↵', 'run'], ['Esc', 'close']].map(([k, label]) => (
           <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-            <kbd style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', borderRadius: 2, padding: '1px 4px', fontSize: 10, fontFamily: 'monospace' }}>{k}</kbd>
+            <kbd style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', borderRadius: 'var(--r-sm)', padding: '1px 4px', fontSize: 10, fontFamily: 'monospace' }}>{k}</kbd>
             {label}
           </span>
         ))}

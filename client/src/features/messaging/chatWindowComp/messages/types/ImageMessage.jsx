@@ -86,7 +86,7 @@ function PhotoMessage({ msg }) {
                 style={{
                     marginTop: '6px', display: 'block', padding: 0, textAlign: 'left',
                     width: box.width, maxWidth: '100%',
-                    borderRadius: '2px', overflow: 'hidden',
+                    borderRadius: 'var(--r-sm)', overflow: 'hidden',
                     border: '1px solid var(--border-default)', background: 'var(--bg-active)',
                     cursor: 'zoom-in', transition: 'border-color 100ms ease',
                 }}
@@ -106,7 +106,7 @@ function PhotoMessage({ msg }) {
                         />
                     )}
                     {isGif && (
-                        <span aria-hidden style={{ position: 'absolute', left: 6, bottom: 6, padding: '1px 5px', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', borderRadius: 2, background: 'rgba(0,0,0,0.55)', color: '#fff' }}>GIF</span>
+                        <span aria-hidden style={{ position: 'absolute', left: 6, bottom: 6, padding: '1px 5px', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', borderRadius: 'var(--r-sm)', background: 'rgba(0,0,0,0.55)', color: '#fff' }}>GIF</span>
                     )}
                 </div>
                 {!isGif && (name || sizeLabel) && (

@@ -45,7 +45,7 @@ export default function UpdateNotice() {
           <div style={{ fontWeight: 600, fontSize: 14 }}>{updateTitle(s)}</div>
           <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>{updateSubtitle(s)}</div>
           {s.status === 'downloading' && (
-            <div style={{ height: 4, borderRadius: 4, background: 'var(--border-default)', marginTop: 8, overflow: 'hidden' }}>
+            <div style={{ height: 4, borderRadius: 'var(--r-sm)', background: 'var(--border-default)', marginTop: 8, overflow: 'hidden' }}>
               <div style={{ width: `${Math.max(4, s.percent || 0)}%`, height: '100%', background: 'var(--accent)', transition: 'width 200ms' }} />
             </div>
           )}

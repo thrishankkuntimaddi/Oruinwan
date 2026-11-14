@@ -9,7 +9,7 @@ const modalOverlay = {
 };
 const modalBox = {
     background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-    borderRadius: '2px', width: '380px', padding: '24px', position: 'relative',
+    borderRadius: 'var(--r-sm)', width: '380px', padding: '24px', position: 'relative',
 };
 const labelStyle = {
     display: 'block', fontSize: '10px', fontWeight: 700,
@@ -17,7 +17,7 @@ const labelStyle = {
 };
 const inputStyle = {
     width: '100%', padding: '9px 12px', background: 'var(--bg-input)',
-    border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px',
+    border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', fontSize: '13px',
     color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
 };
 
@@ -32,7 +32,7 @@ const WorkspaceModals = ({
                 <div style={modalBox}>
                     {}
                     <button onClick={() => setShowRenameModal(false)}
-                        style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '3px', borderRadius: '2px', transition: '150ms ease' }}
+                        style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '3px', borderRadius: 'var(--r-sm)', transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
@@ -58,14 +58,14 @@ const WorkspaceModals = ({
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button onClick={() => setShowRenameModal(false)}
-                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                             Cancel
                         </button>
                         <button onClick={handleRename}
-                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
                             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                         >

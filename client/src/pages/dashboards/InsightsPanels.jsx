@@ -11,7 +11,7 @@ import { Panel, FilterTabs, Chip, DataTable } from '../../components/company-das
 
 const AXIS = { fontSize: 11, fill: 'var(--text-secondary)' };
 const tooltipProps = {
-    contentStyle: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, color: 'var(--text-primary)', fontSize: 12 },
+    contentStyle: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--r-sm)', color: 'var(--text-primary)', fontSize: 12 },
     labelStyle: { color: 'var(--text-secondary)' },
     cursor: { fill: 'var(--bg-hover)' },
 };
