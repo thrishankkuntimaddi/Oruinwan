@@ -30,6 +30,14 @@ import { browserStartLink } from '../lib/openLink.js';
 import { BackupRestoreOffer } from '../features/settings/backup.jsx';
 import { PlanLayer } from '../features/plan/UpgradeSheet.jsx';
 import { ApprovalHost } from '../features/auth/ApprovalHost.jsx';
+import { WidgetSync } from '../features/widgets/WidgetSync.jsx';
+import { openWidgetLink, setWidgetHuddleStarter } from '../features/widgets/widgetLinks.js';
+import { watchSignOutForWidgets } from '../features/widgets/widgetBridge.js';
+import { startWorkspaceHuddle } from '../features/huddles/huddle.js';
+
+// Home-screen widgets (Android): their "start a huddle" button, and emptying them on sign-out.
+setWidgetHuddleStarter(() => Promise.resolve().then(() => startWorkspaceHuddle()).catch(() => {}));
+watchSignOutForWidgets();
 
 // Every screen header gets Oruinwan AI's button (ui/Screen.jsx Header).
 setHeaderAiSlot(HeaderAiButton);
@@ -117,7 +125,7 @@ export function App() {
     // oruinwan://sso?code=… finishes a company SSO sign-in; other links are invitations.
     // oruinwan://backup?result=… is Google Drive backup coming back (Settings → Backup).
     // https://<web>/workspace/…/channel|dm/<id>?message=…|thread=… opens that message or thread.
-    onAppUrl((url) => finishBackupLink(url) || useSession.getState().finishSso(url) || openPageLink(url) || useSession.getState().openInvite(url) || openConversationLink(url)).then((f) => (off = f));
+    onAppUrl((url) => openWidgetLink(url) || finishBackupLink(url) || useSession.getState().finishSso(url) || openPageLink(url) || useSession.getState().openInvite(url) || openConversationLink(url)).then((f) => (off = f));
     return () => off();
   }, []);
 
@@ -171,7 +179,7 @@ export function App() {
 
   return (
     <>
-      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace && !browsing ? <WorkspacePicker /> : <Shell />) : <AuthFlow />}
+      {status === 'booting' ? <Splash /> : status === 'signed-in' ? (needsPassword ? <ProtectAccount /> : joinToken ? <JoinWorkspaceFlow /> : creatingWorkspace ? <CreateWorkspaceFlow /> : pickingWorkspace && !browsing ? <WorkspacePicker /> : <><Shell /><WidgetSync /></>) : <AuthFlow />}
       {status === 'signed-in' && browsing && !creatingWorkspace && !joinToken && (
         <div className="animate-fade-in fixed inset-0 z-[60] bg-bg">
           <WorkspacePicker />

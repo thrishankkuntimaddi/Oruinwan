@@ -96,6 +96,50 @@
             android:name=".CallActionReceiver"
             android:exported="false" />
 
+        <!-- Home-screen widget: Chats (widgets/WidgetRenderer.java). -->
+        <receiver
+            android:name=".widgets.ChatsWidget"
+            android:label="@string/widget_chats_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_chats_info" />
+        </receiver>
+
+        <!-- Home-screen widget: Tasks (widgets/WidgetRenderer.java). -->
+        <receiver
+            android:name=".widgets.TasksWidget"
+            android:label="@string/widget_tasks_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_tasks_info" />
+        </receiver>
+
+        <!-- Home-screen widget: Huddles (widgets/WidgetRenderer.java). -->
+        <receiver
+            android:name=".widgets.HuddlesWidget"
+            android:label="@string/widget_huddles_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_huddles_info" />
+        </receiver>
+
+        <!-- Home-screen widget: Quick (widgets/WidgetRenderer.java). -->
+        <receiver
+            android:name=".widgets.QuickWidget"
+            android:label="@string/widget_quick_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quick_info" />
+        </receiver>
+
         <!-- Sign-in QR codes are scanned with Google's code scanner (@capacitor-mlkit/barcode-scanning). -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
     </application>

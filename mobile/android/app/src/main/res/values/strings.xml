@@ -4,4 +4,13 @@
     <string name="title_activity_main">Oruinwan</string>
     <string name="package_name">com.oruinwan.app</string>
     <string name="custom_url_scheme">com.oruinwan.app</string>
+    <!-- Home-screen widgets -->
+    <string name="widget_chats_description">Unread and recent chats with message previews</string>
+    <string name="widget_tasks_description">Your tasks that are due soon or overdue</string>
+    <string name="widget_huddles_description">Live huddles and your next meeting</string>
+    <string name="widget_quick_description">Your people and quick actions: message, task, note, huddle</string>
+    <string name="widget_chats_label">Oruinwan Chats</string>
+    <string name="widget_tasks_label">Oruinwan Tasks</string>
+    <string name="widget_huddles_label">Oruinwan Huddles</string>
+    <string name="widget_quick_label">Oruinwan Quick actions</string>
 </resources>

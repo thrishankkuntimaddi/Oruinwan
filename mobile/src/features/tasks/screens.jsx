@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { takeWidgetIntent, useWidgetIntent } from '../widgets/widgetLinks.js';
 import {
   ChevronDown, Link2, LayoutGrid, List, Plus, Search, SquareCheckBig, ArrowUpDown, Trash2, CalendarDays, Flag, UserRound, FolderKanban, Hash, Clock, Sparkles, Pencil, CalendarRange, LayoutTemplate,
 } from 'lucide-react';
@@ -330,6 +331,12 @@ export function TasksScreen() {
   const [sortSheet, setSortSheet] = useState(false);
   const [create, setCreate] = useState(false);
   const [newMenu, setNewMenu] = useState(false);
+  // "New task" on the home-screen widget opens the same menu as the + button.
+  useEffect(() => {
+    const check = () => takeWidgetIntent('new-task') && setNewMenu(true);
+    check();
+    return useWidgetIntent.subscribe(check);
+  }, []);
   const [fromTemplate, setFromTemplate] = useState(false);
   const [viewSheet, setViewSheet] = useState(false);
   // Searching is the header's search (it lists tasks first on this tab).

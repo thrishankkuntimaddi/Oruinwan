@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { takeWidgetIntent, useWidgetIntent } from '../widgets/widgetLinks.js';
 import {
   FileText, Plus, Star, Users, EllipsisVertical, SquareCheckBig, Archive, ArchiveRestore, BellRing, Copy, Link2, ListTodo, MessageSquareText, SpellCheck, Trash2, Heading2, Bold, Italic, List, ListOrdered, ListChecks, Code, Check, Lock, Globe, Sparkles, Undo2,
 } from 'lucide-react';
@@ -120,6 +121,12 @@ function NotesList({ section }) {
   const query = '';
   const [filter, setFilter] = useState('all');
   const [templates, setTemplates] = useState(false);
+  // "New note" on the home-screen widget opens the same template picker as the + button.
+  useEffect(() => {
+    const check = () => takeWidgetIntent('new-note') && setTemplates(true);
+    check();
+    return useWidgetIntent.subscribe(check);
+  }, []);
   // Long-press a note for its tools; "Select" picks several for one action.
   const [menu, setMenu] = useState(null);
   const [picked, setPicked] = useState(null);

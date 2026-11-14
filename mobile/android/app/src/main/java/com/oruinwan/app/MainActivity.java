@@ -41,6 +41,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CallSessionPlugin.class);
         // Stickers to WhatsApp (sticker packs) and to any app (share).
         registerPlugin(StickerExportPlugin.class);
+        // Home-screen widgets: the app hands them what to show.
+        registerPlugin(com.oruinwan.app.widgets.WidgetsPlugin.class);
         super.onCreate(savedInstanceState);
         handleCallIntent(getIntent());
     }
