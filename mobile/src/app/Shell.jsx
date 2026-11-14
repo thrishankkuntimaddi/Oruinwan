@@ -99,7 +99,7 @@ function Stack({ stack, split }) {
     return (
       <div
         key={route.key}
-        className={cx('absolute inset-0 bg-bg', split && i === 0 ? 'animate-fade-in' : 'animate-screen-in')}
+        className={cx('absolute inset-0 bg-bg', split && i === 0 ? 'animate-fade-in' : 'animate-screen-in', i < stack.length - 1 && 'is-covered')}
         style={{ zIndex: 30 + i }}
         aria-hidden={i < stack.length - 1 ? true : undefined}
       >
@@ -314,7 +314,10 @@ export function Shell() {
       {TABS.filter((t) => visited.has(t)).map((t) => (
         // Switching tabs fades the tab in (shown again, the animation replays).
         <div key={t} className="animate-tab-in absolute inset-0" hidden={t !== tab}>
-          <Root tab={t} />
+          {/* The tab's main screen stops rendering while a pushed screen covers it. */}
+          <div className={cx('absolute inset-0', stacks[t].length > 0 && 'is-covered')}>
+            <Root tab={t} />
+          </div>
           <Stack stack={stacks[t]} split={false} />
         </div>
       ))}

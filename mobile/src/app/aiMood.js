@@ -48,24 +48,41 @@ export function bindAiMood() {
   });
   let last = null;
   let glanceTimer = null;
-  const onScroll = (e) => {
-    const el = e.target;
-    if (!el || typeof el.scrollTop !== 'number') return;
+  // At most once per frame, and only when the face actually changes: a scroll fires many
+  // events per frame, and each state change re-renders the AI button mid-scroll.
+  let pending = null;
+  let frame = 0;
+  const react = () => {
+    frame = 0;
+    const el = pending;
+    pending = null;
+    if (!el) return;
     const now = performance.now();
     const top = el.scrollTop;
     if (last && last.el === el) {
       const r = scrollReaction(top - last.top, now - last.t);
-      if (r.mood && useAiMood.getState().mood !== 'surprised') setMood(r.mood, 900);
-      useAiMood.setState({ glance: r.glance });
+      if (r.mood && useAiMood.getState().mood !== r.mood && useAiMood.getState().mood !== 'surprised') setMood(r.mood, 900);
+      if (useAiMood.getState().glance !== r.glance) useAiMood.setState({ glance: r.glance });
       clearTimeout(glanceTimer);
-      glanceTimer = setTimeout(() => useAiMood.setState({ glance: 0 }), 600);
+      glanceTimer = setTimeout(() => useAiMood.getState().glance && useAiMood.setState({ glance: 0 }), 600);
     }
     last = { el, top, t: now };
     wake();
   };
+  const onScroll = (e) => {
+    const el = e.target;
+    if (!el || typeof el.scrollTop !== 'number') return;
+    pending = el;
+    if (!frame) frame = (window.requestAnimationFrame || ((fn) => setTimeout(fn, 16)))(react);
+  };
   let sleepTimer = null;
+  let lastWake = 0;
   const wake = () => {
     if (useAiMood.getState().mood === 'sleepy') setMood('idle', 0);
+    // Re-arming the sleep timer on every scroll frame is wasted work: once a second is enough.
+    const now = Date.now();
+    if (now - lastWake < 1000) return;
+    lastWake = now;
     clearTimeout(sleepTimer);
     sleepTimer = setTimeout(() => setMood('sleepy', 0), 45_000);
   };

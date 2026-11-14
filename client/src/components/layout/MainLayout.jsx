@@ -242,6 +242,8 @@ const MainLayout = ({ children, sidePanel }) => {
 
     const workspaceId = activeWorkspace?.id || activeWorkspace?._id;
     const currentPath = location.pathname;
+    // The section a page belongs to ("home", "tasks"…), for the page-change animation.
+    const pageSection = (location.pathname.match(/^\/workspace\/[^/]+\/([^/]+)/) || [])[1] || location.pathname;
     const isDetailRoute = !!workspaceId && (
         currentPath.includes('/channel/') ||
         currentPath.includes('/dm/') ||
@@ -528,7 +530,11 @@ const MainLayout = ({ children, sidePanel }) => {
                     <div style={{ flex: 1, minWidth: 0, overflow: 'clip', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
                         {/* A page that crashes shows an inline error; moving to another page clears it. */}
                         <AppErrorBoundary label="This page" resetKey={location.pathname}>
-                            {children}
+                            {/* Moving to another section (Home → Tasks…) fades the new page in;
+                                moving within one (channel to channel) doesn't replay it. */}
+                            <div key={pageSection} className="oru-page-in" style={{ height: '100%' }}>
+                                {children}
+                            </div>
                         </AppErrorBoundary>
                     </div>
 

@@ -62,6 +62,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                             type="button"
                             aria-current={active ? 'page' : undefined}
                             onClick={() => handleTab(tab)}
+                            className={active ? 'mbn-tab is-active' : 'mbn-tab'}
                             style={{
                                 flex: 1, display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', justifyContent: 'center', gap: '4px',
@@ -73,7 +74,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                             }}
                         >
                             {}
-                            <div style={{
+                            <div className="mbn-indicator" style={{
                                 position: 'absolute', top: 0, left: '50%',
                                 transform: 'translateX(-50%)',
                                 width: active ? '24px' : 0, height: '2px',

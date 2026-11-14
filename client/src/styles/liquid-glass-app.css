@@ -913,3 +913,62 @@ html.lg .orw-prompt { border-radius: 999px; }
     html.lg .stg-content { max-width: 1040px; margin: 0; padding: 32px 40px 120px; }
 }
 html.lg .stg-intro h1 { font-size: 26px; font-weight: 750; letter-spacing: -0.03em; }
+
+/* ══ Smoothness ══════════════════════════════════════════════════════════════
+   Page changes: the new section fades and rises in (transform/opacity only, no layout). */
+@keyframes oru-page-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+.oru-page-in { animation: oru-page-in 180ms cubic-bezier(.22, 1, .36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .oru-page-in { animation: none; } }
+html[data-reduce-motion='true'] .oru-page-in { animation: none; }
+/* Dialogs are 88 % opaque: a light blur reads the same and costs far less while they animate in. */
+html.lg { --lg-frost-dense: blur(14px) saturate(160%); }
+/* Rail tooltips: no live blur (eight of them sat invisible with blur layers). */
+html.lg .gl-shell-tip { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-color: var(--lg-dense) !important; }
+/* Hover: lift without scaling (scaling large cards re-rasterises them: a blurry-then-sharp flicker). */
+html.lg .gl-card--interactive:hover { transform: translate3d(0, -2px, 0); }
+html.lg .gl-btn:hover:not(:disabled),
+html.lg .orw-btn:hover { transform: translate3d(0, -1px, 0); }
+
+/* ══ Phone-width web (MobileBottomNav, settings): the same floating glass dock and header
+   capsule as the phone app. ══ */
+html.lg nav.gl-shell-tabbar {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    height: 64px !important;
+    padding: 6px !important;
+    max-width: 600px;
+    margin: 0 auto;
+    border: 0;
+    border-radius: 32px;
+    background-color: var(--lg-bar);
+    background-image: none;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+    -webkit-backdrop-filter: var(--lg-frost);
+    backdrop-filter: var(--lg-frost);
+}
+html.lg.light nav.gl-shell-tabbar { background-image: none; box-shadow: var(--lg-bevel), var(--lg-drop); }
+html.lg .gl-shell-tabbar .mbn-indicator { display: none; }
+html.lg .gl-shell-tabbar .mbn-tab { border-radius: 999px !important; color: var(--text-secondary) !important; transition: background-color 0.25s ease, color 0.2s ease, transform 0.45s var(--lg-spring) !important; }
+html.lg .gl-shell-tabbar .mbn-tab.is-active { color: var(--text-primary) !important; background: rgba(255, 255, 255, 0.55) !important; box-shadow: var(--lg-bevel-sm), 0 4px 12px -6px rgba(0, 0, 0, 0.25); }
+html.lg.dark .gl-shell-tabbar .mbn-tab.is-active { background: rgba(255, 255, 255, 0.14) !important; }
+html.lg .gl-shell-tabbar .mbn-tab:active { transform: scale(0.92); }
+/* The page under it keeps clear of the floating dock. */
+@media (max-width: 767px) {
+    html.lg .gl-shell { padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 899px) {
+    html.lg .stg-topbar {
+        margin: 8px 10px 0;
+        height: 52px;
+        border-radius: 26px;
+        border-bottom: 0;
+        background: var(--lg-bar);
+        box-shadow: var(--lg-bevel), var(--lg-drop);
+        -webkit-backdrop-filter: var(--lg-frost);
+        backdrop-filter: var(--lg-frost);
+        position: relative;
+        z-index: 5;
+    }
+    html.lg .stg-content { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+}

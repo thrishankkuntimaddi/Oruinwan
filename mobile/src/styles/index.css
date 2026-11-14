@@ -314,9 +314,6 @@
 /* Every full screen paints the wallpaper, so a pushed screen still covers the one under it. */
 .bg-bg { background: var(--lg-paint); }
 
-/* Edge refraction (Chromium / Android WebView) on the floating bars, like the kit's .lg-bar. */
-html.lg-refract .glass-bar,
-html.lg-refract .glass-header.lg-header { backdrop-filter: var(--lg-frost) url(#lg-refract); }
 
 /* Screen headers float over their scrolling body (the kit's floatHeaders adds lg-float-root /
    lg-under): a frosted capsule below the status bar; the content scrolls under it. */
@@ -645,3 +642,17 @@ select:focus-visible,
 @media (pointer: coarse) {
   .glass-strong { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* ── Smoothness ───────────────────────────────────────────────────────────────
+   Live blur only where content moves under it (the header and the dock). Small floating glass
+   (pills, the AI button, banners) uses a denser fill on touch screens instead: each live blur
+   is a full re-render of what's behind it, every frame. */
+@media (pointer: coarse) {
+  .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background-color: rgb(250 250 252 / 0.92); }
+  [data-theme='dark'] .glass { background-color: rgb(36 36 40 / 0.92); }
+}
+/* The kit's touch press: scale only (its brightness filter repainted the whole row). */
+.lg-press { filter: none !important; }
+/* A screen covered by the one pushed over it stops rendering once the slide-in has finished
+   (its blurred header and lists were still drawn underneath); it shows again at once on Back. */
+.is-covered { visibility: hidden; transition: visibility 0s linear 280ms; }
