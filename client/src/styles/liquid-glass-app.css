@@ -754,3 +754,26 @@ html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):
     background-color: var(--bg-input) !important;
 }
 html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range'])[style*="border"]:focus { border-color: var(--border-accent) !important; box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16) !important; outline: none; }
+
+/* ══ Calls and huddles: the call screen covers the page, so it paints the full wallpaper
+   (never see-through: the page under it showed between the tiles); its panels are dense
+   frosted glass and the tiles glass cards on top. ══ */
+html.lg .cs-screen,
+html.lg .cs-floating-body { background: var(--lg-paint) !important; }
+html.lg .cs-head { background-color: transparent; background-image: none; border-bottom-color: var(--lg-hairline); }
+html.lg .cs-people,
+html.lg .hw-panel {
+    background-color: var(--lg-dense) !important;
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+    border-color: transparent !important;
+    box-shadow: var(--lg-bevel), var(--lg-shadow);
+}
+html.lg .cs-tile {
+    background: var(--lg-tile);
+    border-color: transparent;
+    border-radius: 22px;
+    box-shadow: var(--lg-bevel), var(--lg-drop);
+}
+html.lg .cs-status,
+html.lg .cs-screen [style*="var(--bg-base)"] { background-color: var(--lg-dense) !important; }
