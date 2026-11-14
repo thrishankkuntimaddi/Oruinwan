@@ -56,7 +56,7 @@ function MiniCard({ icon, label, value, detail, highlight, onClick, testId }) {
       onClick={onClick}
       data-testid={testId}
       aria-label={`${label}: ${value}${detail ? `, ${detail}` : ''}`}
-      className="pressable flex w-[118px] shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface px-3 py-2.5 text-left @lg:w-auto"
+      className="pressable flex w-[118px] shrink-0 snap-start flex-col rounded-card glass-tile px-3 py-2.5 text-left @lg:w-auto"
       style={{ backgroundImage: 'var(--glass)' }}
     >
       <span className="flex items-center gap-1.5">
@@ -108,7 +108,7 @@ function QuickBubble({ entry, channels, dms }) {
     if (!p) return null;
     label = p.label;
     visual = (
-      <span className="grid h-12 w-12 place-items-center rounded-2xl border border-line-soft bg-surface text-accent-ink">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl glass-tile text-accent-ink">
         <Icon as={p.icon} size={20} />
       </span>
     );
@@ -224,7 +224,7 @@ function QuickJumpEditor({ open, onClose, channels, dms, current }) {
 /** A Jump to tile: icon, name and a line of detail (2 per row). */
 function JumpTile({ icon, label, detail, onClick }) {
   return (
-    <button type="button" onClick={onClick} className="pressable flex items-center gap-3 rounded-card border border-line-soft bg-surface px-3 py-3 text-left">
+    <button type="button" onClick={onClick} className="pressable flex items-center gap-3 rounded-card glass-tile px-3 py-3 text-left">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-ink">
         <Icon as={icon} size={17} />
       </span>
@@ -323,7 +323,7 @@ export function HomeScreen() {
 
         <PushPrompt className="mx-4 mt-3" />
         {announcement && (
-          <div className="mx-4 mt-3 flex items-start gap-2.5 rounded-card border border-line bg-surface px-3.5 py-3 text-[13px]">
+          <div className="mx-4 mt-3 flex items-start gap-2.5 rounded-card glass-tile px-3.5 py-3 text-[13px]">
             <Icon as={Megaphone} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
             <span>{announcement}</span>
           </div>
@@ -369,7 +369,7 @@ export function HomeScreen() {
           <Segmented label="Activity" value={activityFilter} onChange={setActivityFilter} options={ACTIVITY_FILTERS} size="sm" />
         </div>
         {activity.length ? (
-          <div className="mx-4 mt-2 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-2 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {activity.map((n) => (
               <ActivityRow key={n.id} item={n} directory={directory} />
             ))}
@@ -381,7 +381,7 @@ export function HomeScreen() {
         {activeTasks.length > 0 && (
           <>
             <SectionHead title="Your tasks" action="See all" onAction={() => nav.setTab('tasks')} />
-            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+            <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
               {activeTasks.map((t) => (
                 <TaskRow key={t.id} task={t} directory={directory} compact />
               ))}
@@ -426,7 +426,7 @@ export function HomeScreen() {
                   key={n.id}
                   type="button"
                   onClick={() => nav.push('note', { id: n.id }, { tab: 'notes' })}
-                  className="pressable flex h-[128px] w-[150px] shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface p-3 text-left"
+                  className="pressable flex h-[128px] w-[150px] shrink-0 snap-start flex-col rounded-card glass-tile p-3 text-left"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-ink">{n.type === 'meeting' ? 'Meeting' : 'Document'}</span>
                   <span className="mt-1 line-clamp-2 text-[14px] font-semibold leading-snug">{n.title || 'Untitled'}</span>

@@ -401,7 +401,7 @@ export function TasksScreen() {
                 {STATUS_META[g.status].label}
                 <span className="font-normal text-text-3">{g.items.length}</span>
               </h2>
-              <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+              <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
                 {g.items.map((t) => (
                   <TaskRow key={t.id} task={t} directory={directory} />
                 ))}
@@ -658,7 +658,7 @@ export function TaskScreen({ id }) {
             </button>
           }
         >
-          <div className="mx-4 rounded-card border border-line-soft bg-surface p-4">
+          <div className="mx-4 rounded-card glass-tile p-4">
             {task.description ? <Markdown text={task.description} className="text-sm" /> : <p className="text-sm text-text-3">No description yet.</p>}
           </div>
           {aiOn && (

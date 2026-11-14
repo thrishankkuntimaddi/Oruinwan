@@ -17,7 +17,7 @@ import { WorkspaceTile } from './WorkspaceTile.jsx';
 
 function Fact({ icon, label, value }) {
   return (
-    <div className="flex-1 rounded-xl border border-line-soft bg-surface px-3.5 py-3">
+    <div className="flex-1 rounded-xl glass-tile px-3.5 py-3">
       <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-text-3 uppercase">
         <Icon as={icon} size={12} /> {label}
       </p>
@@ -119,7 +119,7 @@ export function JoinWorkspaceFlow() {
               )}
             </p>
             {details.description && (
-              <p className="mt-4 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[14px] text-text-2">{details.description}</p>
+              <p className="mt-4 rounded-xl glass-tile px-3.5 py-3 text-[14px] text-text-2">{details.description}</p>
             )}
             <div className="mt-5 flex gap-2.5">
               <Fact icon={Users} label="Members" value={details.memberCount ?? '—'} />

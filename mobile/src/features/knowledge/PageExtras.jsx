@@ -27,7 +27,7 @@ function Heading({ children, action }) {
 function PageList({ pages, onRemove, empty }) {
   if (!pages.length) return <p className="rounded-card border border-dashed border-line px-4 py-3 text-sm text-text-2">{empty}</p>;
   return (
-    <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+    <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
       {pages.map((p) => (
         <div key={p.id} className="flex items-center pr-1">
           <button type="button" onClick={() => nav.push('page', { id: p.id })} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left active:bg-surface-2">
@@ -177,7 +177,7 @@ export function PageExtras({ page }) {
         <>
           <Heading>Summary</Heading>
           {meta.data?.summary ? (
-            <div className="rounded-card border border-line-soft bg-surface p-4">
+            <div className="rounded-card glass-tile p-4">
               <Markdown text={meta.data.summary} className="text-sm" />
             </div>
           ) : null}

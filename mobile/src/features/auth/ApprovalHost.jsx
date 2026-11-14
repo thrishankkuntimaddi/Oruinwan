@@ -28,7 +28,7 @@ function where(r) {
 
 function RequesterCard({ requester }) {
   return (
-    <div className="flex items-start gap-3 rounded-card border border-line-soft bg-surface p-3.5">
+    <div className="flex items-start gap-3 rounded-card glass-tile p-3.5">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-ink">
         <Icon as={Laptop} size="sm" />
       </span>

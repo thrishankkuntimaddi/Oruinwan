@@ -10,7 +10,7 @@ export function EmptyState({ icon, title, body, action, className }) {
   return (
     <div className={cx('flex flex-col items-center px-8 py-14 text-center', className)}>
       {icon && (
-        <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+        <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl glass-tile text-accent-ink">
           <Icon as={icon} size="lg" />
         </span>
       )}

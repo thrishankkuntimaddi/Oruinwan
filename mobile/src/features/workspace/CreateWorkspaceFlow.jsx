@@ -163,7 +163,7 @@ export function CreateWorkspaceFlow() {
                   </button>
                 ))}
               </div>
-              <div className="mt-6 flex items-center gap-3 rounded-card border border-line-soft bg-surface px-4 py-3">
+              <div className="mt-6 flex items-center gap-3 rounded-card glass-tile px-4 py-3">
                 <WorkspaceTile workspace={{ name: name.trim() || 'W', color }} size={40} />
                 <span className="min-w-0 truncate text-[16px] font-semibold">{name.trim() || 'Your workspace'}</span>
               </div>
@@ -190,7 +190,7 @@ export function CreateWorkspaceFlow() {
                 ))}
               </div>
               <p className="mb-2 mt-7 text-[13px] font-medium text-text-2">Your channels</p>
-              <ul className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" data-testid="channel-preview">
+              <ul className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft" data-testid="channel-preview">
                 {channels.map((c) => (
                   <li key={c} className="flex items-center gap-3 px-4 py-3">
                     <Icon as={Hash} size="sm" className="text-text-3" />
@@ -210,7 +210,7 @@ export function CreateWorkspaceFlow() {
               <p className="mt-2 text-[15px] text-text-2">{created.name} is ready. Bring your teammates in.</p>
 
               {mode === 'live' && (
-                <div className="mt-6 rounded-card border border-line-soft bg-surface p-4">
+                <div className="mt-6 rounded-card glass-tile p-4">
                   <p className="text-[15px] font-semibold">Share an invite link</p>
                   <p className="mt-1 text-[13px] text-text-2">Anyone with the link can join for the next 7 days.</p>
                   <div className="mt-3 grid grid-cols-2 gap-2.5">

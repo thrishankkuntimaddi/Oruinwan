@@ -109,7 +109,7 @@ export function AskMeetingSheet({ open, onClose, ask, hint }) {
         )}
         {error && <p className="text-[13px] text-danger" role="alert">{error}</p>}
         {(answer || busy) && (
-          <div className="rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }} aria-live="polite">
+          <div className="rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }} aria-live="polite">
             <p className="mb-2 text-[12px] font-medium text-text-3">{asked}</p>
             {busy ? <p className="text-[14px] text-text-2">Thinking…</p> : <Markdown text={answer} />}
           </div>

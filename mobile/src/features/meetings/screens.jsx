@@ -117,7 +117,7 @@ export function ScheduleMeetingSheet({ open, onClose, channelId, meeting = null,
         )}
         <ClashNotice clash={clash} nameOf={(id) => directory[id]?.name} onPick={pickSlot} />
         {!editing && (
-          <div className="rounded-card border border-line-soft bg-surface p-3">
+          <div className="rounded-card glass-tile p-3">
             <div className="flex items-center gap-3">
               <Icon as={Wand2} size="sm" className="text-accent-ink" />
               <p className="min-w-0 flex-1 text-[14px]">Find a time that works</p>

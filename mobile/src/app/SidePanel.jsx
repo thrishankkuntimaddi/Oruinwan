@@ -96,7 +96,7 @@ export function SidePanel() {
           ref={panel}
           role="dialog"
           aria-label="You"
-          className="glass absolute inset-y-0 right-0 flex w-[86%] max-w-[360px] flex-col border-l border-line-soft bg-bg pt-safe pb-safe shadow-2xl"
+          className="side-pane absolute inset-y-0 right-0 flex w-[86%] max-w-[360px] flex-col bg-bg pt-safe pb-safe shadow-2xl"
           style={{
             transform: closing ? 'translateX(100%)' : `translateX(${dx}px)`,
             transition: drag.current?.active ? 'none' : 'transform 220ms var(--ease-out-soft)',
@@ -108,7 +108,7 @@ export function SidePanel() {
             <button
               type="button"
               onClick={go(() => nav.push('settings.profile'))}
-              className="flex w-full items-center gap-3.5 rounded-card border border-line-soft bg-surface p-3.5 text-left"
+              className="flex w-full items-center gap-3.5 rounded-card glass-tile p-3.5 text-left"
               style={{ backgroundImage: 'var(--glass)' }}
             >
               <Avatar name={user?.name} src={user?.avatarUrl} size="lg" presence={selfPresence(user)} />

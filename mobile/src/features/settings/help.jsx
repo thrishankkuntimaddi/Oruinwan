@@ -113,7 +113,7 @@ function Block({ b, onLink, slugify }) {
       <div className="space-y-2">
         {b.table.caption && <p className="text-xs font-medium uppercase tracking-wider text-text-3">{b.table.caption}</p>}
         {(b.table.rows || []).map((row, i) => (
-          <div key={i} className="rounded-card border border-line-soft bg-surface p-3 text-[14px]">
+          <div key={i} className="rounded-card glass-tile p-3 text-[14px]">
             {row.map((cell, j) => (
               <p key={j} className={cx('leading-relaxed', j === 0 ? 'font-semibold' : 'mt-1 text-text-2')}>
                 {j > 0 && head[j] ? <span className="text-text-3">{head[j]}: </span> : null}
@@ -143,7 +143,7 @@ function Block({ b, onLink, slugify }) {
     return (
       <div className="grid gap-2">
         {b.cards.map((c) => (
-          <button key={c.to} type="button" onClick={() => onLink(c.to)} className="pressable rounded-card border border-line-soft bg-surface p-3.5 text-left">
+          <button key={c.to} type="button" onClick={() => onLink(c.to)} className="pressable rounded-card glass-tile p-3.5 text-left">
             <span className="block text-[14px] font-semibold">{c.title}</span>
             {c.text && <span className="block text-[13px] text-text-2">{c.text}</span>}
           </button>
@@ -273,7 +273,7 @@ export function HelpPageScreen({ section: sectionId, page: pageId, anchor }) {
           <button
             type="button"
             onClick={() => nav.replace('settings.help.page', { section: next.section.id, page: next.page.id })}
-            className="pressable mx-4 mb-6 flex w-[calc(100%-2rem)] items-center gap-3 rounded-card border border-line-soft bg-surface px-3.5 py-3 text-left"
+            className="pressable mx-4 mb-6 flex w-[calc(100%-2rem)] items-center gap-3 rounded-card glass-tile px-3.5 py-3 text-left"
           >
             <span className="min-w-0 flex-1">
               <span className="block text-xs text-text-3">Next</span>

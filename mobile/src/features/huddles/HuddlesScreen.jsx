@@ -257,7 +257,7 @@ export function HuddleBanner({ scope, title }) {
   if (!available || !liveHere || (call && call.huddleId === liveHere.huddleId)) return null;
   const people = liveHere.participants?.length || 0;
   return (
-    <div data-testid="conversation-huddle-banner" className="mx-3 mt-2 flex shrink-0 items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2" style={{ borderLeft: '3px solid rgb(var(--c-success))' }}>
+    <div data-testid="conversation-huddle-banner" className="mx-3 mt-2 flex shrink-0 items-center gap-3 rounded-xl glass-tile px-3 py-2" style={{ borderLeft: '3px solid rgb(var(--c-success))' }}>
       <Icon as={Phone} size={16} className="shrink-0 text-success" />
       <span className="min-w-0 flex-1 truncate text-[14px]">
         <strong className="font-semibold">{liveHere.startedBy?.username || 'Someone'}</strong> started a huddle{people ? ` · ${people} in it` : ''}

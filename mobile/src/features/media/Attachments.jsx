@@ -146,7 +146,7 @@ function Video({ file, siblings, upload, onCancel }) {
 function Audio({ file, upload, onCancel }) {
   const { url, retry, retried } = useMediaUrl(upload ? null : file);
   return (
-    <div className="relative w-full max-w-[300px] overflow-hidden rounded-xl border border-line-soft bg-surface">
+    <div className="relative w-full max-w-[300px] overflow-hidden rounded-xl glass-tile">
       <div className="px-3 py-2.5">
         <p className={cx('flex items-center gap-2 text-[13px]', !upload && 'mb-1.5')}>
           <Icon as={FileAudio} size={15} className="shrink-0 text-accent-ink" />
@@ -170,7 +170,7 @@ function FileCard({ file, upload, onCancel }) {
   const kind = fileIconKind(file);
   const label = (extOf(file.name) || (previewKind(file) === 'pdf' ? 'pdf' : 'file')).toUpperCase();
   return (
-    <div className="relative w-full max-w-[300px] overflow-hidden rounded-xl border border-line-soft bg-surface">
+    <div className="relative w-full max-w-[300px] overflow-hidden rounded-xl glass-tile">
       <button
         type="button"
         onClick={() => !upload && openFile(file)}

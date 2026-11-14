@@ -263,7 +263,7 @@ function NewReviewSheet({ open, onClose }) {
         </div>
       ) : (
         <div className="space-y-4 px-5 pb-4">
-          <button type="button" onClick={() => setFile(null)} className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left">
+          <button type="button" onClick={() => setFile(null)} className="flex w-full items-center gap-3 rounded-xl glass-tile p-3 text-left">
             <Icon as={KIND_ICON[file.kind] || FileIcon} size="sm" className="text-accent-ink" />
             <span className="min-w-0 flex-1 truncate text-[15px]">{file.name}</span>
             <span className="text-[13px] text-accent-ink">Change</span>
@@ -477,7 +477,7 @@ function PdfStage({ review, file, url, page, setPage, annotations, pins, numbers
 
   const maxPage = Math.max(page, ...pages.map((p) => p.page), 1);
   return (
-    <div className="rounded-card border border-line-soft bg-surface p-4">
+    <div className="rounded-card glass-tile p-4">
       <div className="flex items-center gap-3">
         <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-accent/15 text-accent-ink">
           <Icon as={FileText} size="sm" />
@@ -858,7 +858,7 @@ export function DesignReviewScreen({ id }) {
     kind === 'pdf' ? (
       <PdfStage review={review} file={fileForOpen} url={media.url} page={page} setPage={setPage} annotations={ofVersion} pins={pins} numbers={numbers} draft={draft} activeId={openId} onPlace={setDraft} onOpen={(a) => setOpenId(a.id)} />
     ) : !media.url ? (
-      <div className="grid h-64 place-items-center rounded-card border border-line-soft bg-surface">
+      <div className="grid h-64 place-items-center rounded-card glass-tile">
         {media.error ? <Button variant="secondary" onClick={media.retry}>Couldn't load the design. Try again</Button> : <Spinner className="text-text-2" />}
       </div>
     ) : kind === 'video' ? (

@@ -491,7 +491,11 @@ const FILES_CSS = `
 .fl-thumb { height: 110px; display: flex; align-items: center; justify-content: center; background: var(--bg-hover); border-bottom: 1px solid var(--border-subtle); overflow: hidden; }
 .fl-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .fl-card-text { display: block; padding: 10px 12px 12px; min-width: 0; }
-.fl-card-actions { position: absolute; top: 6px; right: 6px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.fl-card-actions { position: absolute; top: 8px; right: 8px; padding: 2px; background: var(--lg-dense, var(--bg-surface)); -webkit-backdrop-filter: var(--lg-frost, none); backdrop-filter: var(--lg-frost, none); border-radius: 999px; box-shadow: var(--lg-bevel-sm, none); }
+@media (hover: hover) and (pointer: fine) {
+  .fl-card-actions { opacity: 0; transform: translateY(-2px); transition: opacity 160ms ease, transform 220ms ease; }
+  .fl-card:hover .fl-card-actions, .fl-card:focus-within .fl-card-actions { opacity: 1; transform: none; }
+}
 .fl-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .fl-row { display: flex; align-items: center; gap: 8px; padding: 2px 12px 2px 4px; }
 .fl-row:hover, .fl-row[data-active='true'] { background: var(--bg-hover); }

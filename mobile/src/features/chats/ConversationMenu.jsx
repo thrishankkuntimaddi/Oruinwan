@@ -64,7 +64,7 @@ function MessageRows({ list, conv, directory, onOpen, meta, action, empty }) {
   if (!list) return <SkeletonRows count={4} />;
   if (!list.length) return empty;
   return (
-    <div className="mx-4 mb-3 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+    <div className="mx-4 mb-3 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
       {list.map((item) => {
         // Saved and reminder entries wrap their message (null when it's gone); pins and threads are messages.
         const m = item && 'message' in item ? item.message : item;

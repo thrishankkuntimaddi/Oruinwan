@@ -45,7 +45,7 @@ function Tags({ file }) {
   };
   return (
     <Section title="Tags">
-      <div className="mx-4 rounded-card border border-line-soft bg-surface p-3">
+      <div className="mx-4 rounded-card glass-tile p-3">
         <div className="flex flex-wrap gap-2">
           {file.tags.map((t) => (
             <span key={t} className="inline-flex h-8 items-center gap-1 rounded-full border border-line bg-surface-2 pr-1 pl-3 text-[13px]">
@@ -183,7 +183,7 @@ function Comments({ file }) {
             {data.map((c) => (
               <div key={c.id} className="flex gap-3">
                 <Avatar name={c.author?.name} src={c.author?.avatarUrl} size="sm" />
-                <div className="min-w-0 flex-1 rounded-2xl border border-line-soft bg-surface px-3.5 py-2.5">
+                <div className="min-w-0 flex-1 rounded-2xl glass-tile px-3.5 py-2.5">
                   <p className="text-[13px] font-medium">
                     {c.author?.name} <span className="font-normal text-text-3">· {shortAgo(c.at)}</span>
                   </p>
@@ -336,7 +336,7 @@ export function FileScreen({ id }) {
     <Screen>
       <Header title={file.name} subtitle={`v${file.version}`} />
       <Body onRefresh={refetch}>
-        <div className="mx-4 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
+        <div className="mx-4 flex items-center gap-4 rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }}>
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/15 text-accent-ink">
             <Icon as={FILE_ICONS[file.kind] || File} />
           </span>

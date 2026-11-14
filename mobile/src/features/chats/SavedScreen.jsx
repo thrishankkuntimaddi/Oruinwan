@@ -104,7 +104,7 @@ export function SavedScreen({ tab: initialTab = 'saved' }) {
             <EmptyState icon={BellRing} title="No reminders" body="Long-press a message and choose Remind me about this." />
           )
         ) : (
-          <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-1 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {tab === 'saved'
               ? saved.data.map((item) => (
                   <MessageCard

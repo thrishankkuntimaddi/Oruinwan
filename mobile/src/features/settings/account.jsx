@@ -58,7 +58,7 @@ export function TwoFactorSettings() {
           <SkeletonRows count={3} />
         ) : enabled ? (
           <div className="px-4">
-            <div className="flex items-center gap-3 rounded-card border border-line-soft bg-surface p-4">
+            <div className="flex items-center gap-3 rounded-card glass-tile p-4">
               <Icon as={ShieldCheck} className="text-success" />
               <p className="text-[15px]">On. Signing in asks for a code from your authenticator app.</p>
             </div>

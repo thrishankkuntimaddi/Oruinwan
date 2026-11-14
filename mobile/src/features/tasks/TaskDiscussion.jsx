@@ -68,7 +68,7 @@ export function LinkedThread({ linked }) {
   }
   const where = linked.channelName ? `#${linked.channelName}` : 'a direct message';
   return (
-    <div data-testid="task-linked-thread" className="mx-4 rounded-card border border-line-soft bg-surface">
+    <div data-testid="task-linked-thread" className="mx-4 rounded-card glass-tile">
       <button type="button" onClick={() => openThread(linked)} className="flex w-full items-center gap-2 border-b border-line-soft px-4 py-3 text-left">
         <Icon as={Hash} size={15} />
         <span className="flex-1 text-sm font-medium">

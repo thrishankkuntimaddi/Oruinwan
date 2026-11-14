@@ -118,7 +118,7 @@ function Timeline({ items }) {
   const width = Math.max(quarters.length * 260, 640);
   return (
     <>
-      <div className="mx-4 mt-2 overflow-hidden rounded-card border border-line-soft bg-surface">
+      <div className="mx-4 mt-2 overflow-hidden rounded-card glass-tile">
         <div className="flex">
           <div className="w-60 shrink-0 border-r border-line-soft">
             <div className="h-10 border-b border-line-soft" />
@@ -268,7 +268,7 @@ function RoadmapIntro() {
   });
   if (hidden) return null;
   return (
-    <div className="mx-4 mt-2 mb-1 rounded-card border border-line-soft bg-surface px-4 py-3 text-[13px] text-text-2" data-testid="roadmap-intro">
+    <div className="mx-4 mt-2 mb-1 rounded-card glass-tile px-4 py-3 text-[13px] text-text-2" data-testid="roadmap-intro">
       <p className="font-semibold text-text">Plan the big picture</p>
       <p className="mt-1 leading-relaxed">
         Tasks are today's work; the roadmap is what they add up to. Each item is a goal for a quarter. Link its tasks and milestones and the progress bar moves as they're done, so anyone can see what's on track without asking.
@@ -520,7 +520,7 @@ export function RoadmapItemScreen({ id }) {
         }
       />
       <Body onRefresh={() => invalidate(`roadmapItem:${id}`, 'roadmap')}>
-        <div className="mx-4 mt-3 rounded-card border border-line-soft bg-surface p-4">
+        <div className="mx-4 mt-3 rounded-card glass-tile p-4">
           <div className="flex items-center justify-between gap-3">
             <StatusChip status={item.status} />
             <span className="text-[13px] text-text-2">{datesLabel(item) || 'No dates yet'}</span>
@@ -552,7 +552,7 @@ export function RoadmapItemScreen({ id }) {
 
         {item.description && (
           <Section title="About">
-            <p className="mx-4 whitespace-pre-wrap rounded-card border border-line-soft bg-surface p-4 text-[15px] leading-relaxed">{item.description}</p>
+            <p className="mx-4 whitespace-pre-wrap rounded-card glass-tile p-4 text-[15px] leading-relaxed">{item.description}</p>
           </Section>
         )}
 

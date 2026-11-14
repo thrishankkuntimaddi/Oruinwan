@@ -176,7 +176,7 @@ export function NotificationsScreen({ initial = 'all', asTab = false }) {
         ) : loading ? (
           <SkeletonRows />
         ) : list.length ? (
-          <div className="mx-4 mt-3 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-3 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {list.map((n) => (
               <ActivityRow key={n.id} item={n} directory={directory} />
             ))}
@@ -590,7 +590,7 @@ export function IntegrationsScreen() {
         ) : (
           <>
             {!isAdmin && (
-              <p className="mx-4 mt-2 rounded-xl border border-line-soft bg-surface px-3.5 py-2.5 text-[13px] text-text-2">
+              <p className="mx-4 mt-2 rounded-xl glass-tile px-3.5 py-2.5 text-[13px] text-text-2">
                 Owners and admins connect apps for the workspace. Tap one to see what it does.
               </p>
             )}

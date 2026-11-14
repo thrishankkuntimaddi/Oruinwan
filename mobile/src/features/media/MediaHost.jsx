@@ -17,7 +17,7 @@ import { clock, dayLabel } from '../../lib/time.js';
 function Failed({ file }) {
   return (
     <div className="flex max-w-xs flex-col items-center px-6 text-center">
-      <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-text-2">
+      <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl glass-tile text-text-2">
         <Icon as={TriangleAlert} size="lg" />
       </span>
       <p className="text-[15px] font-medium">This file couldn't be loaded.</p>

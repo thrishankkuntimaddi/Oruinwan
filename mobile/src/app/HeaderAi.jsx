@@ -10,6 +10,7 @@ import { nav } from './nav.js';
 import { AiEyes } from './AiEyes.jsx';
 import { pokeAi } from './aiMood.js';
 import { useAiHeaderSpot } from './aiFlight.js';
+import { useSession } from '../data/session.js';
 
 export function openQuickAi() {
   const show = useQuickAi.getState().show;
@@ -19,7 +20,9 @@ export function openQuickAi() {
 
 export function HeaderAiButton({ onPress, label = 'Oruinwan AI' }) {
   const aiOn = useFlag('ai');
-  if (!aiOn) return null;
+  // Not before sign-in: the sign-in screens have no assistant.
+  const signedIn = useSession((s) => Boolean(s.user));
+  if (!aiOn || !signedIn) return null;
   return <HeaderAiFace onPress={onPress} label={label} />;
 }
 

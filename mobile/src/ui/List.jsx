@@ -20,7 +20,7 @@ export function Section({ title, action, children, className, inset = true }) {
 export function RowGroup({ children, className, footer }) {
   return (
     <>
-      <div className={cx('mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft', className)}>
+      <div className={cx('mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft', className)}>
         {children}
       </div>
       {footer && <p className="mx-5 mt-2 text-xs leading-relaxed text-text-2">{footer}</p>}

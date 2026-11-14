@@ -117,7 +117,7 @@ export function UnlockSheet({ open, onClose }) {
           Oruinwan's server keeps a sealed copy of your key. Messages are encrypted in transit and at rest.
         </p>
         <Field type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)} error={error} autoFocus autoComplete="current-password" />
-        <div className="mt-4 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-sm">
+        <div className="mt-4 rounded-xl glass-tile px-3.5 py-3 text-sm">
           {other.asking ? (
             <p className="text-text-2" role="status">
               Waiting for your other device… Approve there (it asks for your password once).

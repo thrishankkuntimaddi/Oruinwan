@@ -122,7 +122,7 @@ export function SettingsScreen({ confirmSignOut = false }) {
           </Section>
         ) : (
         <>
-        <div className="mx-4 mt-1 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
+        <div className="mx-4 mt-1 flex items-center gap-4 rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }}>
           <Avatar name={user?.name} src={user?.avatarUrl} size="lg" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[17px] font-semibold">{user?.name}</p>
@@ -804,7 +804,7 @@ export function AppearanceSettings() {
         <Section title="Message text size">
           <div className="px-4">
             <Segmented value={textSize} onChange={setTextSize} options={TEXT_SIZES.map((t) => ({ value: t.value, label: t.label }))} />
-            <div className="mt-3 rounded-card border border-line-soft bg-surface p-4">
+            <div className="mt-3 rounded-card glass-tile p-4">
               <p style={{ fontSize: 'var(--msg-size)' }}>The quick brown fox ships the release on Friday.</p>
             </div>
           </div>
@@ -888,7 +888,7 @@ export function AiSettings() {
       <Header title="Oruinwan AI" />
       <Body>
         <Section title="What it can do">
-          <div className="mx-4 rounded-card border border-line-soft bg-surface p-4 text-sm leading-relaxed text-text-2">
+          <div className="mx-4 rounded-card glass-tile p-4 text-sm leading-relaxed text-text-2">
             Summarise conversations, find what's on your plate, draft messages, and create or update tasks and notes when you ask. It only acts on your
             behalf when you ask it to.
           </div>
@@ -955,7 +955,7 @@ export function UpdateSettings() {
     <Screen>
       <Header title="Updates" />
       <Body>
-        <div className="mx-4 mt-1 rounded-card border border-line-soft bg-surface p-5" style={{ backgroundImage: 'var(--glass)' }}>
+        <div className="mx-4 mt-1 rounded-card glass-tile p-5" style={{ backgroundImage: 'var(--glass)' }}>
           <div className="flex items-center gap-3.5">
             <BrandMark size={48} />
             <div className="min-w-0 flex-1">

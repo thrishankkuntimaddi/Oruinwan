@@ -1179,7 +1179,7 @@ export function ProfileScreen({ userId }) {
                   type="button"
                   onClick={act(a.id)}
                   disabled={Boolean(opening)}
-                  className="pressable flex flex-col items-center gap-1.5 rounded-card border border-line-soft bg-surface py-3 text-[13px] font-medium text-accent-ink disabled:opacity-60"
+                  className="pressable flex flex-col items-center gap-1.5 rounded-card glass-tile py-3 text-[13px] font-medium text-accent-ink disabled:opacity-60"
                   data-testid={`profile-${a.id}`}
                 >
                   {opening === a.id ? <Spinner /> : <Icon as={a.icon} size={20} />}
@@ -1326,7 +1326,7 @@ export function NewMessageScreen({ people: prefill = null } = {}) {
       </Header>
       <Body>
         {picked.length > 0 && (
-          <div data-testid="to-result" className="mx-4 mt-2 rounded-2xl border border-line-soft bg-surface p-4">
+          <div data-testid="to-result" className="mx-4 mt-2 rounded-2xl glass-tile p-4">
             {picked.length === 1 ? (
               <>
                 <p className="text-[15px] font-semibold text-text">{pickedMe ? 'Your notes to yourself' : `Your chat with ${picked[0].name}`}</p>

@@ -207,7 +207,7 @@ function OverviewTab({ meeting, inCall }) {
   const recordingNow = inCall && recorder;
   return (
     <div className="px-4">
-      <div className="rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
+      <div className="rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }}>
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={cx(
@@ -255,7 +255,7 @@ function OverviewTab({ meeting, inCall }) {
       {meeting.hasRecording && !recordingNow && <RecordingCard meetingId={meeting.id} className="mt-3" />}
       <Section title={joined ? `People · ${joined} joined` : 'People'} inset={false}>
         {people.length ? (
-          <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {people.map((p) => {
               const came = meeting.attendees.some((a) => a.id === p.id);
               return (
@@ -330,7 +330,7 @@ function AgendaTab({ meeting }) {
   };
   return (
     <>
-      <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+      <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
         {items.map((it, i) => (
           <div key={it.id} className="flex items-center gap-1 py-1 pr-1 pl-3">
             <span className="w-5 shrink-0 text-xs tabular-nums text-text-3">{i + 1}</span>
@@ -455,7 +455,7 @@ function MeetingNoteEditor({ noteId }) {
         onCompositionEnd={() => binding.current?.compositionEnd()}
         data-placeholder="Take notes together: decisions, questions, next steps…"
         data-testid="meeting-notes-editor"
-        className="prose-oru editor-empty selectable min-h-[calc(100dvh-15rem)] rounded-card border border-line-soft bg-surface p-4 outline-none"
+        className="prose-oru editor-empty selectable min-h-[calc(100dvh-15rem)] rounded-card glass-tile p-4 outline-none"
       />
     </div>
   );
@@ -480,7 +480,7 @@ function RecordingCard({ meetingId, className = 'mx-4 mb-3' }) {
   const size = rec.size ? `${Math.max(0.1, Math.round(rec.size / 104857.6) / 10)} MB` : null;
   const mins = rec.durationSec ? `${Math.max(1, Math.round(rec.durationSec / 60))} min` : null;
   return (
-    <div className={cx('rounded-card border border-line-soft bg-surface p-3.5', className)} style={{ backgroundImage: 'var(--glass)' }} data-testid="meeting-recording">
+    <div className={cx('rounded-card glass-tile p-3.5', className)} style={{ backgroundImage: 'var(--glass)' }} data-testid="meeting-recording">
       <div className="mb-2 flex items-center gap-2">
         <Icon as={Disc} size="sm" className="text-danger" />
         <p className="flex-1 text-[14px] font-semibold">Recording</p>
@@ -538,11 +538,11 @@ function TranscriptTab({ meeting, inCall }) {
       {loading && !data ? (
         <SkeletonRows count={3} avatar={false} />
       ) : segments.length ? (
-        <div className="mx-4 rounded-card border border-line-soft bg-surface p-4">
+        <div className="mx-4 rounded-card glass-tile p-4">
           <TranscriptList segments={segments} />
         </div>
       ) : legacy ? (
-        <div className="selectable mx-4 whitespace-pre-wrap rounded-card border border-line-soft bg-surface p-4 text-[14px] leading-relaxed">{legacy}</div>
+        <div className="selectable mx-4 whitespace-pre-wrap rounded-card glass-tile p-4 text-[14px] leading-relaxed">{legacy}</div>
       ) : (
         <EmptyState
           icon={FileText}
@@ -595,7 +595,7 @@ function SummaryCard({ meeting }) {
   return (
     <div>
       {editing ? (
-        <div className="rounded-card border border-line-soft bg-surface p-3">
+        <div className="rounded-card glass-tile p-3">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -614,7 +614,7 @@ function SummaryCard({ meeting }) {
           </div>
         </div>
       ) : text ? (
-        <div className="rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }} data-testid="meeting-summary">
+        <div className="rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }} data-testid="meeting-summary">
           <Markdown text={text} className="text-sm" />
           {meta && <p className="mt-3 text-[12px] text-text-3">{meta}</p>}
         </div>
@@ -795,7 +795,7 @@ export function ActionItemsList({ meeting }) {
   return (
     <div>
       {items.length ? (
-        <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" data-testid="action-items">
+        <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft" data-testid="action-items">
           {items.map((a) => {
             const who = a.assigneeId ? directory[a.assigneeId] || a.assignee : null;
             const dueAt = dueLabel(a.dueDate);
@@ -1338,7 +1338,7 @@ function BrainstormTab({ meeting }) {
 
   return (
     <div className="px-4">
-      <form onSubmit={add} className="rounded-card border border-line-soft bg-surface p-3">
+      <form onSubmit={add} className="rounded-card glass-tile p-3">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="Add an idea" aria-label="New sticky note" className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-text-3" />
         <div className="mt-2 flex items-center gap-2">
           {STICKY_COLORS.map((c) => (

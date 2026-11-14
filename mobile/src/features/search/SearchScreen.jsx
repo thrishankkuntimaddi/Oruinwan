@@ -330,7 +330,7 @@ export function SearchScreen({ q: initialQuery = '' }) {
             )}
             {results.tasks.length > 0 && (
               <Section title="Tasks" action={moreIn('tasks', results.tasks)}>
-                <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+                <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
                   {results.tasks.slice(0, limit).map((x) => (
                     <TaskRow key={x.id} task={x} directory={directory} compact />
                   ))}

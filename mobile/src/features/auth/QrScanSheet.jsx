@@ -118,7 +118,7 @@ export function QrScanSheet({ open, onClose, onCode, title = 'Scan QR code', hin
         )}
         {mode === 'idle' && (
           <div className="flex flex-col items-center py-6 text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl glass-tile text-accent-ink">
               <Icon as={QrCode} />
             </span>
             <Button className="mt-4" icon={Camera} onClick={start}>

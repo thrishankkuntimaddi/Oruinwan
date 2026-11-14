@@ -350,7 +350,7 @@ export function ChatsScreen() {
           <SkeletonRows count={8} />
         ) : (
           <>
-            <div role="list" aria-label="Chats" className="pt-1">
+            <div role="list" aria-label="Chats" className={cx('pt-1', list.length > 0 && 'mx-3 mt-1 overflow-hidden rounded-[22px] glass-tile py-1')}>
               {list.map((row) => (
                 <div role="listitem" key={row.key}>
                   <ChatRow

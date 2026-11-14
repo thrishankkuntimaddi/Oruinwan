@@ -179,7 +179,7 @@ export function SupportTicketScreen({ id }) {
       <Header title={ticket.subject} subtitle={STATUS[ticket.status]?.label} />
       <Body onRefresh={refetch}>
         <div className="space-y-3 px-4 pt-2 pb-4">
-          <div className="rounded-card border border-line-soft bg-surface p-3.5">
+          <div className="rounded-card glass-tile p-3.5">
             <p className="text-xs text-text-3">You · {shortAgo(ticket.createdAt)}</p>
             <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{ticket.description}</p>
           </div>

@@ -543,7 +543,7 @@ export function SummarySheet({ open, onClose, title = 'Summary', options = [] })
         )}
         {state.status === 'error' && <p className="rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">{state.error}</p>}
         {state.status === 'done' && (
-          <div className="rounded-xl border border-line-soft bg-surface px-3.5 py-3">
+          <div className="rounded-xl glass-tile px-3.5 py-3">
             <p className="mb-2 flex items-center gap-1.5 text-[12px] text-text-3">
               <Icon as={Sparkles} size={12} className="text-accent-ink" /> Oruinwan AI · from messages decrypted on this device
               <button type="button" onClick={copy} aria-label="Copy summary" className="ml-auto grid h-7 w-7 place-items-center rounded-full text-text-2 active:bg-surface-2">

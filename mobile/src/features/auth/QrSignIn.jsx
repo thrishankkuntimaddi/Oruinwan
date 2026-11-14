@@ -79,11 +79,11 @@ export function QrSignIn({ onBack, server = SERVER_URL }) {
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="Sign in with a QR code" onBack={onBack} />
+      <Header title="Sign in with a QR code" onBack={onBack} plain ai={false} />
       <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10">
         {claim ? (
           <div className="mt-8 flex flex-col items-center text-center" data-testid="qr-waiting">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl glass-tile text-accent-ink">
               <Icon as={Laptop} />
             </span>
             <h2 className="mt-4 text-xl font-bold tracking-tight">Confirm on your computer</h2>
@@ -100,7 +100,7 @@ export function QrSignIn({ onBack, server = SERVER_URL }) {
           </div>
         ) : (
           <div className="mt-8 flex flex-col items-center text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl glass-tile text-accent-ink">
               <Icon as={QrCode} />
             </span>
             <h2 className="mt-4 text-xl font-bold tracking-tight">Scan the code on your computer</h2>

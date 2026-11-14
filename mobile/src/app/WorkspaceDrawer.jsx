@@ -40,7 +40,7 @@ export function Leaders({ members, onOpen }) {
   if (!people.length) return null;
   people.sort((a, b) => (a.workspaceRole === b.workspaceRole ? a.name.localeCompare(b.name) : a.workspaceRole === 'owner' ? -1 : 1));
   return (
-    <div className="mt-3 rounded-xl border border-line-soft bg-surface px-1 py-1" data-testid="workspace-leaders">
+    <div className="mt-3 rounded-xl glass-tile px-1 py-1" data-testid="workspace-leaders">
       <p className="px-2.5 pt-1.5 pb-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Owner and admins</p>
       {people.slice(0, 6).map((p) => (
         <button key={p.id} type="button" onClick={() => onOpen?.(p.id)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left active:bg-surface-2">
@@ -118,7 +118,7 @@ export function WorkspaceDrawer() {
           role="dialog"
           aria-label="Workspace"
           data-testid="workspace-drawer"
-          className="glass absolute inset-y-0 left-0 flex w-[86%] max-w-[360px] flex-col border-r border-line-soft bg-bg pt-safe pb-safe shadow-2xl"
+          className="side-pane absolute inset-y-0 left-0 flex w-[86%] max-w-[360px] flex-col bg-bg pt-safe pb-safe shadow-2xl"
           style={{
             transform: closing ? 'translateX(-100%)' : `translateX(${dx}px)`,
             transition: drag.current?.active ? 'none' : 'transform 220ms var(--ease-out-soft)',

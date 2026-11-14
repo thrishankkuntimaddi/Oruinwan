@@ -331,7 +331,7 @@ export function SprintScreen({ id }) {
         }
       />
       <Body fluid onRefresh={() => invalidate('planning', 'sprints')}>
-        {sprint?.goal && <p className="mx-4 mb-2 rounded-card border border-line-soft bg-surface px-4 py-3 text-sm text-text-2">Goal: {sprint.goal}</p>}
+        {sprint?.goal && <p className="mx-4 mb-2 rounded-card glass-tile px-4 py-3 text-sm text-text-2">Goal: {sprint.goal}</p>}
         {loading ? (
           <SkeletonRows count={4} avatar={false} />
         ) : !count ? (
@@ -339,7 +339,7 @@ export function SprintScreen({ id }) {
         ) : (
           <div className={cx('px-4 pt-2 pb-4', wide ? 'grid gap-3' : 'no-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto')} style={wide ? { gridTemplateColumns: `repeat(${board.length}, minmax(0, 1fr))` } : undefined}>
             {board.map((col) => (
-              <section key={col.status} className={cx('flex flex-col rounded-card border border-line-soft bg-surface', !wide && 'w-[78%] max-w-80 shrink-0 snap-center')}>
+              <section key={col.status} className={cx('flex flex-col rounded-card glass-tile', !wide && 'w-[78%] max-w-80 shrink-0 snap-center')}>
                 <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">
                   <StatusIcon status={col.status} size={16} />
                   <h3 className="flex-1 truncate text-[14px] font-semibold">{STATUS_META[col.status].label}</h3>
@@ -448,7 +448,7 @@ function MilestonesView({ tasks }) {
           {data.map((m) => {
             const p = milestoneProgress(m, tasks);
             return (
-              <button key={m.id} type="button" onClick={() => setPicked(m)} className="block w-full rounded-card border border-line-soft bg-surface p-4 text-left active:bg-surface-2">
+              <button key={m.id} type="button" onClick={() => setPicked(m)} className="block w-full rounded-card glass-tile p-4 text-left active:bg-surface-2">
                 <div className="flex items-start gap-3">
                   <Milestone size={20} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
                   <div className="min-w-0 flex-1">
@@ -492,7 +492,7 @@ function TimelineView({ tasks }) {
   const today = Math.floor((Date.now() - from) / 86_400_000);
   const labelCol = wide ? 240 : 140;
   return (
-    <div className="mx-4 mt-2 overflow-hidden rounded-card border border-line-soft bg-surface">
+    <div className="mx-4 mt-2 overflow-hidden rounded-card glass-tile">
       <div className="flex">
         <div className="shrink-0 border-r border-line-soft" style={{ width: labelCol }}>
           <div className="h-9 border-b border-line-soft" />

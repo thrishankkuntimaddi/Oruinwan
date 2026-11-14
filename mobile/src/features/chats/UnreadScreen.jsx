@@ -43,7 +43,7 @@ export function UnreadScreen() {
         ) : (
           sections.map((s) => (
             <Section key={s.key} title={s.title}>
-              <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+              <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
                 {s.items.map((item) => (
                   <ConversationRow key={item.id} kind={s.kind} item={item} />
                 ))}

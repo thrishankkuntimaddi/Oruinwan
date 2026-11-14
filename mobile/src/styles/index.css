@@ -178,7 +178,6 @@
   body {
     margin: 0;
     background: var(--lg-paint);
-    background-attachment: fixed;
     letter-spacing: -0.01em;
     color: rgb(var(--c-text));
     font-family: var(--font-sans);
@@ -321,13 +320,17 @@ html.lg-refract .glass-header.lg-header { backdrop-filter: var(--lg-frost) url(#
 
 /* Screen headers float over their scrolling body (the kit's floatHeaders adds lg-float-root /
    lg-under): a frosted capsule below the status bar; the content scrolls under it. */
-.lg-float-root > .lg-header {
-  margin: calc(var(--sat) + 6px) 10px 0;
+/* Every screen header is the same frosted capsule (tab screens, conversations, threads,
+   settings…), whether it floats over a scrolling list or sits above a fixed layout. */
+.glass-header.lg-header {
+  margin: calc(var(--sat) + 6px) 10px 6px;
   padding-top: 0;
   border-radius: 26px;
+  border-bottom-width: 0;
   box-shadow: var(--lg-bevel), var(--lg-drop);
   transform: translateZ(0);
 }
+.lg-float-root > .lg-header { margin-bottom: 0; }
 .lg-float-root > .lg-header { border-bottom-width: 0; }
 .lg-float-root > .lg-under { padding-top: calc(var(--lg-hdr-h, 76px) + 10px); }
 
@@ -567,6 +570,24 @@ html.lg-refract .glass-header.lg-header { backdrop-filter: var(--lg-frost) url(#
   box-shadow: var(--lg-bevel-sm), 0 4px 12px -6px rgb(0 0 0 / 0.25);
 }
 [data-theme='dark'] .dock-pill { background: rgb(255 255 255 / 0.14); }
+/* The dock's drag handle: white glass, so it reads as something to pull. */
+.dock-handle {
+  background: var(--accent-grad);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 0.5px rgb(0 0 0 / 0.08), 0 4px 12px -4px rgb(0 0 0 / 0.3);
+}
+/* The drawer above the dock: dense frosted glass (blur only where it's cheap: mouse devices). */
+.dock-drawer {
+  background-color: var(--lg-dense);
+  box-shadow: var(--lg-bevel), 0 20px 50px -18px rgb(0 0 0 / 0.35);
+  will-change: transform, opacity;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dock-drawer { -webkit-backdrop-filter: var(--lg-frost-dense); backdrop-filter: var(--lg-frost-dense); }
+}
+@media (pointer: coarse) {
+  :root, [data-theme='light'] { --lg-dense: rgb(250 250 252 / 0.94); }
+  [data-theme='dark'] { --lg-dense: rgb(30 30 34 / 0.94); }
+}
 .animate-nudge-up { animation: nudge-up 2.6s ease-in-out 1.5s infinite; }
 @media (prefers-reduced-motion: reduce) {
   .animate-nudge-up { animation: none; }
@@ -606,4 +627,21 @@ html.lg-refract .glass-header.lg-header { backdrop-filter: var(--lg-frost) url(#
 @keyframes ai-leg-r { 0%, 20% { transform: rotate(0deg); } 45% { transform: rotate(-22deg); } 70% { transform: rotate(8deg); } 100% { transform: rotate(0deg); } }
 @media (prefers-reduced-motion: reduce) {
   .ai-fab-body.is-hopping, .ai-fab-body.is-hopping .ai-fab-legs, .ai-fab-body.is-hopping .ai-fab-legs i { animation: none; }
+}
+
+/* Text fields show focus on their glass field (Field, SearchField, the composer), so the input
+   inside draws no box of its own (it read as a rectangle inside the field). */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable]:focus-visible { outline: none; }
+
+/* Side panels (profile, workspace drawer): the wallpaper with a lit inner edge. No live blur:
+   it sat under an opaque wallpaper anyway and cost a re-blur on every frame of the slide. */
+.side-pane { box-shadow: var(--lg-bevel), 0 0 60px -10px rgb(0 0 0 / 0.35); will-change: transform; }
+
+/* Phones and tablets: sheets and dialogs are dense enough to read without a live blur, which
+   keeps opening and dragging them at 60 fps on mid-range phones. */
+@media (pointer: coarse) {
+  .glass-strong { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }

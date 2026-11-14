@@ -83,7 +83,7 @@ export function PollCard({ m, me, directory }) {
   const voterName = (v) => v.name || directory?.[v.id]?.name || 'Someone';
 
   return (
-    <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl border border-line bg-surface" {...stop} data-testid="poll-card">
+    <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl glass-tile" {...stop} data-testid="poll-card">
       <div className="flex items-center gap-2 px-3.5 pt-3">
         <Icon as={BarChart3} size={14} className="text-accent-ink" />
         <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-accent-ink uppercase">
@@ -220,7 +220,7 @@ export function ChecklistCard({ m }) {
   };
 
   return (
-    <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl border border-line bg-surface" {...stop} data-testid="checklist-card">
+    <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl glass-tile" {...stop} data-testid="checklist-card">
       <div className="flex items-center gap-2 px-3.5 pt-3">
         <Icon as={ListChecks} size={14} className={allDone ? 'text-success' : 'text-accent-ink'} />
         <span className={cx('rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase', allDone ? 'bg-success/12 text-success' : 'bg-accent/12 text-accent-ink')}>

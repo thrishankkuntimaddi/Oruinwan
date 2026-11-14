@@ -287,7 +287,7 @@ function Reactions({ m, me, directory, onReact }) {
                 onReact(m.id, who);
                 setWho(null);
               }}
-              className="pressable w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-[14px] font-medium"
+              className="pressable w-full rounded-xl glass-tile px-4 py-2.5 text-[14px] font-medium"
             >
               {(m.reactions?.[who] || []).includes(me) ? `Take back your ${who}` : `React ${who} too`}
             </button>

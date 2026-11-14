@@ -29,7 +29,7 @@ export function CollabBanner({ text, tone = 'offline', className }) {
   return (
     <p
       role="status"
-      className={cx('mt-3 flex items-start gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] leading-snug text-text-2', className)}
+      className={cx('mt-3 flex items-start gap-2 rounded-xl glass-tile px-3 py-2 text-[13px] leading-snug text-text-2', className)}
     >
       <Icon as={tone === 'locked' ? Lock : CloudOff} size={14} className="mt-0.5 shrink-0 text-text-3" />
       <span>{text}</span>

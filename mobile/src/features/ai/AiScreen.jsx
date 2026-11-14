@@ -405,7 +405,7 @@ export function AiScreen() {
                   key={s.text}
                   type="button"
                   onClick={() => ask(s.text)}
-                  className="pressable flex min-h-24 flex-col justify-between rounded-card border border-line-soft bg-surface p-3.5 text-left"
+                  className="pressable flex min-h-24 flex-col justify-between rounded-card glass-tile p-3.5 text-left"
                   style={{ backgroundImage: 'var(--glass)' }}
                 >
                   <Icon as={s.icon} size="sm" className="text-accent-ink" />
@@ -446,7 +446,7 @@ export function AiScreen() {
       </div>
       <div className="shrink-0 px-3 pt-2 pb-2">
         {suggestions.length > 0 && (
-          <div className="mb-2 overflow-hidden rounded-card border border-line-soft bg-surface" data-testid="ai-mention-suggestions">
+          <div className="mb-2 overflow-hidden rounded-card glass-tile" data-testid="ai-mention-suggestions">
             <MentionSuggestions items={suggestions} onPick={pickMention} />
           </div>
         )}

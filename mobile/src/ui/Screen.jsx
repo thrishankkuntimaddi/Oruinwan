@@ -16,7 +16,8 @@ export function Screen({ children, className }) {
 }
 
 /** `ai` (default on): Oruinwan AI's button after the actions; `onAi` replaces what it opens. */
-export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack, ai = true, onAi }) {
+/** `plain`: no glass bar (sign-in screens): just Back and the title on the page. */
+export function Header({ title, subtitle, back = true, actions, leading, large = false, border, children, onBack, ai = true, onAi, plain = false }) {
   const tabRootHere = useContext(TabRootContext);
   // Opened screens only (threads, a task, a note, calendar…): main screens have the floating button.
   const Ai = ai && !tabRootHere ? headerAiSlot() : null;
@@ -26,7 +27,7 @@ export function Header({ title, subtitle, back = true, actions, leading, large =
   const tabRoot = useContext(TabRootContext);
   const showBack = back && !tabRoot && !(split && depth === 0 && !onBack);
   return (
-    <header className={cx('glass-header lg-header shrink-0 pt-safe z-10', border && 'border-b border-line-soft')}>
+    <header className={cx(plain ? 'shrink-0 pt-safe z-10' : 'glass-header lg-header shrink-0 pt-safe z-10', border && !plain && 'border-b border-line-soft')}>
       <div className="flex h-14 items-center gap-1 px-2">
         {leading ||
           (showBack ? <IconButton icon={ArrowLeft} label="Back" onClick={onBack || (() => pop() || useNav.getState().back())} /> : <span className="w-2" />)}

@@ -94,7 +94,7 @@ function Subtasks({ task }) {
           <div className="h-full bg-accent transition-[width]" style={{ width: `${(done / subs.length) * 100}%` }} />
         </div>
       )}
-      <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+      <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
         {subs.map((s) => (
           <div key={s.id} className="flex min-h-[52px] items-center gap-3 px-3">
             <button
@@ -416,7 +416,7 @@ function TimeTracking({ task }) {
         </button>
       }
     >
-      <div className="mx-4 flex items-center gap-4 rounded-card border border-line-soft bg-surface p-4">
+      <div className="mx-4 flex items-center gap-4 rounded-card glass-tile p-4">
         <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-[12px]', running ? 'bg-accent/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
           <Icon as={Timer} />
         </span>

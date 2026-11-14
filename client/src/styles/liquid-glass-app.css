@@ -220,7 +220,7 @@ html.lg.dark {
 html.lg,
 html.lg body { background: var(--lg-wall); }
 html.lg body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
-html.lg #root { background: var(--lg-paint); background-attachment: fixed; }
+html.lg #root { background: var(--lg-paint); }
 /* No scrollbars drawn anywhere (everything still scrolls). */
 html.lg,
 html.lg * { scrollbar-width: none; }
@@ -451,7 +451,7 @@ html.lg:not(.dark) .orw.orw--auth {
     --o-shade: 0, 0, 0;
     --o-panel: 255, 255, 255;
     background: var(--lg-paint);
-    background-attachment: fixed;
+   
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
     letter-spacing: -0.01em;
 }
@@ -725,3 +725,32 @@ html.lg .gl-wsp-wizard__foot { background: transparent !important; }
 html.lg [data-testid='split-picker'],
 html.lg [role='combobox'] + [role='listbox'] { background-color: var(--lg-dense) !important; }
 html.lg .gl-card.gl-liquid { background: var(--lg-dense); -webkit-backdrop-filter: var(--lg-frost-dense); backdrop-filter: var(--lg-frost-dense); border-radius: 22px; }
+
+/* ══ Switches: Apple green when on, a grey well when off, a white knob (every switch markup
+   in the app is a button[role=switch], its knob a span or ::after). ══ */
+html.lg button[role='switch'] { border-color: transparent !important; border-radius: 999px !important; }
+html.lg button[role='switch'][aria-checked='true'] { background-color: #34c759 !important; }
+html.lg button[role='switch'][aria-checked='false'] { background-color: rgba(120, 120, 128, 0.24) !important; }
+html.lg button[role='switch'] > span { background-color: #fff !important; border-radius: 50% !important; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 1px 1px rgba(0, 0, 0, 0.06); }
+
+/* ══ Buttons drawn inline with the accent as their fill (Create, Save, Clone, Schedule…):
+   white glass with a dark label, like every primary button. Bars and dots keep the ink. ══ */
+html.lg button:is([style*="background: var(--accent)"], [style*="background-color: var(--accent)"], [style*="background: var(--color-primary)"], [style*="background-color: var(--color-primary)"]):not([role='switch']) {
+    color: #0a0a0c !important;
+    background: var(--lg-select-fill) !important;
+    border-color: transparent !important;
+    border-radius: 999px !important;
+    box-shadow: var(--lg-select-rim) !important;
+}
+html.lg button:is([style*="background: var(--accent)"], [style*="background-color: var(--accent)"]) svg { color: #0a0a0c !important; }
+/* Small inline action buttons (Cancel, filters, tabs drawn as bordered boxes): capsules. */
+html.lg button[style*="border: 1px solid"]:not([role='switch']):not([role='checkbox']) { border-radius: 999px !important; }
+/* Bordered boxes drawn inline with square corners (cards, notices, list frames): soft corners. */
+html.lg :is(div, li, section, ul, label)[style*="border: 1px solid"]:not([style*="border-radius"]) { border-radius: 14px; }
+/* Inline text fields and search boxes: the soft glass field. */
+html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range']):not(.sib-input)[style*="border"] {
+    border-radius: 14px !important;
+    border-color: var(--lg-hairline) !important;
+    background-color: var(--bg-input) !important;
+}
+html.lg :is(input, textarea, select):not([type='checkbox']):not([type='radio']):not([type='range'])[style*="border"]:focus { border-color: var(--border-accent) !important; box-shadow: 0 0 0 3px rgba(120, 120, 128, 0.16) !important; outline: none; }

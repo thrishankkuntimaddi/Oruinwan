@@ -289,7 +289,7 @@ export function PrivateChatScreen({ id }) {
           aria-label="Private message"
           placeholder={`Private message to ${otherName}`}
           onChange={(e) => setText(e.target.value)}
-          className="min-h-[40px] flex-1 resize-none rounded-2xl border border-line bg-surface px-3 py-2 text-[15px]"
+          className="min-h-[40px] flex-1 resize-none rounded-2xl glass-tile px-3 py-2 text-[15px]"
         />
         <IconButton icon={Send} label="Send" disabled={!text.trim() || sending || !chat} onClick={send} />
       </form>

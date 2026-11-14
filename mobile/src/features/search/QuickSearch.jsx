@@ -248,7 +248,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
             </RowGroup>
           )}
           {k === 'tasks' && (
-            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClick={onClose}>
+            <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft" onClick={onClose}>
               {results.tasks.slice(0, limit(k)).map((t) => (
                 <TaskRow key={t.id} task={t} directory={directory} compact />
               ))}
@@ -262,7 +262,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
             </RowGroup>
           )}
           {k === 'activity' && (
-            <div className="mx-4 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft" onClick={onClose}>
+            <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft" onClick={onClose}>
               {results.activity.slice(0, limit(k)).map((n) => (
                 <ActivityRow key={n.id} item={n} directory={directory} />
               ))}
@@ -274,7 +274,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
         <button
           type="button"
           onClick={go(() => nav.push('search', { q }))}
-          className="pressable flex w-full items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 text-left"
+          className="pressable flex w-full items-center gap-3 rounded-card glass-tile px-4 py-3 text-left"
           data-testid="quick-search-all"
         >
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/15 text-accent-ink">

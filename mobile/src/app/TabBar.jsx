@@ -220,26 +220,36 @@ export function TabBar() {
             onPointerUp={onHandleUp}
             onPointerCancel={onHandleUp}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((v) => !v))}
-            className="absolute inset-x-0 -top-3.5 z-10 flex h-7 touch-none cursor-grab items-start justify-center"
+            className="absolute inset-x-0 -top-4 z-10 flex h-8 touch-none cursor-grab items-start justify-center"
           >
-            {/* The handle: a small glass tab on the dock's top edge with an arrow (up while
+            {/* The handle: a white glass tab on the dock's top edge with a clear arrow (up while
                 closed, down while open); it nudges until the drawer has been opened once. */}
             <span
               aria-hidden
               data-testid="tabbar-handle-arrow"
-              className={cx('glass-ctl grid h-5 w-10 place-items-center rounded-full text-text-2', open && 'text-text', !open && !seenDrawer && 'animate-nudge-up')}
+              className={cx('dock-handle grid h-6 w-12 place-items-center rounded-full text-text', !open && !seenDrawer && 'animate-nudge-up')}
             >
-              <Icon as={open ? ChevronDown : ChevronUp} size={14} />
+              <Icon as={open ? ChevronDown : ChevronUp} size={16} strokeWidth={2.4} />
             </span>
           </div>
         )}
+        {/* The drawer: its own glass panel just above the dock. It slides and fades in with
+            transform/opacity only (resizing a frosted panel re-blurs every frame and stutters). */}
         <div
-          className="overflow-hidden"
-          style={{ height, transition: drag.current ? 'none' : 'height 320ms var(--lg-spring)' }}
+          className="dock-drawer absolute inset-x-0 overflow-hidden rounded-[28px]"
+          style={{
+            bottom: 'calc(100% + 12px)',
+            height: DRAWER_H,
+            transform: `translate3d(0, ${Math.round((1 - Math.min(height / DRAWER_H, 1)) * 24)}px, 0) scale(${0.96 + 0.04 * Math.min(height / DRAWER_H, 1)})`,
+            opacity: Math.min(height / DRAWER_H, 1),
+            pointerEvents: open ? 'auto' : 'none',
+            transformOrigin: '50% 100%',
+            transition: drag.current ? 'none' : 'transform 380ms var(--lg-spring), opacity 220ms ease',
+          }}
           aria-hidden={!open}
           data-testid="tabbar-drawer"
         >
-          <div className={cx('mx-auto grid max-w-[560px] gap-1 px-3 pt-4', tablet ? 'grid-cols-5' : 'grid-cols-4')}>
+          <div className={cx('mx-auto grid max-w-[560px] gap-1 px-3 pt-3', tablet ? 'grid-cols-5' : 'grid-cols-4')}>
             {drawerTabs.map((t) => (
               <button key={t} type="button" onClick={() => go(() => setTab(t))} className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-2.5 text-text-2" tabIndex={open ? 0 : -1}>
                 <span className="glass-ctl grid h-11 w-11 place-items-center rounded-[14px] text-text">

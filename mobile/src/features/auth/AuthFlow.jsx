@@ -173,7 +173,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="Sign in" onBack={onBack} />
+      <Header title="Sign in" onBack={onBack} plain ai={false} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
         <ServerSection addr={addr} verb="Signing in to" />
         {googleToken && (
@@ -259,7 +259,7 @@ function SignIn({ onBack, onCreate, onGoogleSignup, onUnverified, initialEmail, 
             Create an account
           </button>
         </p>
-        <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
+        <div className="mt-6 flex items-start gap-2.5 rounded-xl glass-tile px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>
             Encrypted on your device.
@@ -349,7 +349,7 @@ export function ProtectAccount() {
           run('set');
         }}
       >
-        <span className="grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl glass-tile text-accent-ink">
           <Icon as={ShieldCheck} />
         </span>
         <h1 className="mt-4 text-2xl font-bold tracking-tight">Add a password</h1>
@@ -470,10 +470,10 @@ function CheckEmail({ email, server, reason, onBack, onSignIn }) {
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="Check your email" onBack={onBack} />
+      <Header title="Check your email" onBack={onBack} plain ai={false} />
       <div className="flex-1 overflow-y-auto px-5 pb-10">
         <div className="mt-6 flex flex-col items-center text-center">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl glass-tile text-accent-ink">
             <Icon as={MailCheck} />
           </span>
           <h2 className="mt-4 text-xl font-bold tracking-tight">{reason === 'signup' ? 'Verify your email' : 'Verify your email first'}</h2>
@@ -553,7 +553,7 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="Create an account" onBack={onBack} />
+      <Header title="Create an account" onBack={onBack} plain ai={false} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
         <ServerSection addr={addr} verb="Creating an account on" />
         {providers.google && (
@@ -622,7 +622,7 @@ function SignUp({ onBack, onSignIn, onSent, onGoogleSignup, initialEmail }) {
             Sign in
           </button>
         </p>
-        <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-line-soft bg-surface px-3.5 py-3 text-[13px] text-text-2">
+        <div className="mt-6 flex items-start gap-2.5 rounded-xl glass-tile px-3.5 py-3 text-[13px] text-text-2">
           <Icon as={ShieldCheck} size="sm" className="mt-0.5 shrink-0 text-accent-ink" />
           <span>Encrypted on your device.</span>
         </div>
@@ -659,9 +659,9 @@ function GoogleSignUp({ ticket, onBack }) {
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="Create an account" onBack={onBack} />
+      <Header title="Create an account" onBack={onBack} plain ai={false} />
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 pb-10" noValidate>
-        <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+        <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl glass-tile text-accent-ink">
           <Icon as={Sparkles} />
         </span>
         <h1 className="mt-4 text-2xl font-bold tracking-tight">You're creating a new account</h1>
@@ -751,7 +751,7 @@ function EmailStart({ onBack, onExisting, onNew, onGoogleSignup, onGoogle2fa, on
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title="" onBack={onBack} />
+      <Header title="" onBack={onBack} plain ai={false} />
       <form onSubmit={submit} className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10" noValidate>
         <h1 className="text-[28px] font-bold leading-tight tracking-tight">Enter your email</h1>
         <p className="mb-6 mt-2 text-[15px] text-text-2">We'll sign you in, or help you create an account if you're new.</p>

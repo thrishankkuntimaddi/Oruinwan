@@ -123,14 +123,14 @@ function MfaStep({ challenge }) {
 
   return (
     <>
-      <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+      <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl glass-tile text-accent-ink">
         <Icon as={ShieldCheck} />
       </span>
       <h1 className="mt-4 text-2xl font-bold tracking-tight">Confirm it's you</h1>
       <p className="mt-2 text-sm text-text-2">Your account uses two-step verification. Use any one of these.</p>
 
       {methods.approve && (
-        <div className="mt-6 rounded-card border border-line-soft bg-surface p-4" data-testid="mfa-approve">
+        <div className="mt-6 rounded-card glass-tile p-4" data-testid="mfa-approve">
           <p className="flex items-center gap-2 text-[15px] font-semibold">
             <Icon as={BellRing} size="sm" className="text-accent-ink" /> Approve on another device
           </p>
@@ -149,7 +149,7 @@ function MfaStep({ challenge }) {
 
       {methods.totp && (
         <form
-          className="mt-4 rounded-card border border-line-soft bg-surface p-4"
+          className="mt-4 rounded-card glass-tile p-4"
           onSubmit={(e) => {
             e.preventDefault();
             if (otp.length === 6) run('totp', { otp });
@@ -171,7 +171,7 @@ function MfaStep({ challenge }) {
       )}
 
       {methods.email && (
-        <div className="mt-4 rounded-card border border-line-soft bg-surface p-4">
+        <div className="mt-4 rounded-card glass-tile p-4">
           {emailSent ? (
             <form
               onSubmit={(e) => {
@@ -214,12 +214,12 @@ function DeviceLimitStep({ challenge }) {
   const devices = challenge.devices || [];
   return (
     <>
-      <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl border border-line bg-surface text-accent-ink">
+      <span className="mt-2 grid h-12 w-12 place-items-center rounded-2xl glass-tile text-accent-ink">
         <Icon as={Laptop} />
       </span>
       <h1 className="mt-4 text-2xl font-bold tracking-tight">You're signed in on {challenge.limit || devices.length} devices</h1>
       <p className="mt-2 text-sm text-text-2">Sign out of one to continue on this {deviceNoun}.</p>
-      <ul className="mt-6 divide-y divide-line-soft overflow-hidden rounded-card border border-line-soft bg-surface" data-testid="device-limit-list">
+      <ul className="mt-6 divide-y divide-line-soft overflow-hidden rounded-card glass-tile" data-testid="device-limit-list">
         {devices.map((d) => (
           <li key={d.id} className="flex items-center gap-3 px-4 py-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-text-2">
@@ -251,7 +251,7 @@ export function SignInChallenge() {
   if (!challenge) return null;
   return (
     <div className="flex h-full flex-col bg-bg">
-      <Header title={challenge.code === 'DEVICE_LIMIT' ? 'Too many devices' : 'Two-step verification'} onBack={cancel} />
+      <Header title={challenge.code === 'DEVICE_LIMIT' ? 'Too many devices' : 'Two-step verification'} onBack={cancel} plain ai={false} />
       <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 pb-10">
         {challenge.code === 'DEVICE_LIMIT' ? <DeviceLimitStep key={challenge.pendingToken + 'd'} challenge={challenge} /> : <MfaStep key={challenge.pendingToken} challenge={challenge} />}
       </div>

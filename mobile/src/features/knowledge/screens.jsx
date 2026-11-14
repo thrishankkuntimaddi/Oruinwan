@@ -141,7 +141,7 @@ function KnowledgeWelcome({ onWrite, onImport, importing }) {
   ];
   return (
     <div className="px-4 pt-2 pb-6" data-testid="knowledge-welcome">
-      <div className="rounded-card border border-line-soft bg-surface px-5 py-6 text-center">
+      <div className="rounded-card glass-tile px-5 py-6 text-center">
         <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-line bg-surface-2 text-accent-ink">
           <Icon as={BookOpen} size="lg" />
         </span>
@@ -159,7 +159,7 @@ function KnowledgeWelcome({ onWrite, onImport, importing }) {
         </div>
       </div>
       <p className="mt-6 mb-2 px-1 text-[12px] font-semibold tracking-wider text-text-3 uppercase">Start from a template</p>
-      <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+      <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
         {PAGE_TEMPLATES.filter((t) => t.content).map((t) => (
           <button key={t.title} type="button" onClick={() => onWrite(t)} className="flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-2" data-testid="welcome-template">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink">
@@ -260,7 +260,7 @@ function RecentPages({ pages }) {
       <p className="px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">Recently updated</p>
       <div className="no-scrollbar flex snap-x gap-2.5 overflow-x-auto px-4 pb-1">
         {recent.map((p) => (
-          <button key={p.id} type="button" onClick={() => nav.push('page', { id: p.id })} className="flex w-40 shrink-0 snap-start flex-col rounded-card border border-line-soft bg-surface p-3 text-left active:bg-surface-2">
+          <button key={p.id} type="button" onClick={() => nav.push('page', { id: p.id })} className="flex w-40 shrink-0 snap-start flex-col rounded-card glass-tile p-3 text-left active:bg-surface-2">
             <span className="text-lg" aria-hidden>{p.icon || '📄'}</span>
             <span className="mt-1 truncate text-[14px] font-medium">{p.title || 'Untitled'}</span>
             <span className="text-[11px] text-text-3">{shortAgo(p.updatedAt)}</span>
@@ -356,7 +356,7 @@ export function KnowledgeScreen() {
           {!matches && aiOn && api().askKnowledge && <AskKnowledge />}
           {!matches && <RecentPages pages={pages} />}
           {!matches && <p className="px-5 pt-4 pb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-2">All pages · {pages.length}</p>}
-          <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-1 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {(matches || roots).map((p) => (
               <PageRow key={p.id} page={p} depth={0} open={matches ? {} : open} toggle={toggle} kidsOf={matches ? () => [] : kidsOf} />
             ))}
@@ -502,7 +502,7 @@ function PageEditor({ page, fresh, onDone }) {
             type="button"
             onClick={() => setIconSheet(true)}
             aria-label="Change the page's icon"
-            className="pressable grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-line bg-surface text-[26px]"
+            className="pressable grid h-12 w-12 shrink-0 place-items-center rounded-xl glass-tile text-[26px]"
           >
             {icon}
           </button>
@@ -656,7 +656,7 @@ export function PageScreen({ id, edit = false, fresh = false }) {
           {kids.length > 0 && (
             <div className="mt-8">
               <p className="mb-2 text-[12px] font-semibold tracking-wider text-text-3 uppercase">Sub-pages</p>
-              <div className="overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+              <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
                 {kids.map((k) => (
                   <button key={k.id} type="button" onClick={() => nav.push('page', { id: k.id })} className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2">
                     <span className="text-lg" aria-hidden>

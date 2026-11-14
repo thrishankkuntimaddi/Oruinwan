@@ -204,7 +204,7 @@ function NotesList({ section }) {
         {loading ? (
           <SkeletonRows count={6} avatar={false} />
         ) : notes.length ? (
-          <div className="mx-4 mt-1 overflow-hidden rounded-card border border-line-soft bg-surface divide-y divide-line-soft">
+          <div className="mx-4 mt-1 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
             {notes.map((n) => (
               <NoteRow key={n.id} note={n} directory={directory} onMenu={setMenu} selecting={selecting} checked={Boolean(picked?.has(n.id))} onToggle={toggle} />
             ))}
@@ -576,7 +576,7 @@ export function NoteScreen({ id, fresh }) {
         <CollabBanner text={view.banner} tone={collab.mode === 'closed' ? 'locked' : 'offline'} />
         {collab.message && <CollabBanner text={collab.message} tone="locked" />}
         {note.archived && (
-          <p className="mt-3 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] text-text-2">This note is archived. Restore it from the menu to edit.</p>
+          <p className="mt-3 rounded-xl glass-tile px-3 py-2 text-[13px] text-text-2">This note is archived. Restore it from the menu to edit.</p>
         )}
         <div
           ref={editorRef}

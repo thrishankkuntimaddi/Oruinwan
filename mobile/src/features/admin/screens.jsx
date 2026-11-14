@@ -60,7 +60,7 @@ function useAdminGuard() {
 
 function Stat({ label, value, hint }) {
   return (
-    <div className="rounded-card border border-line-soft bg-surface p-4" style={{ backgroundImage: 'var(--glass)' }}>
+    <div className="rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }}>
       <p className="text-[12px] font-medium tracking-wide text-text-2 uppercase">{label}</p>
       <p className="mt-1 text-[26px] font-bold tabular-nums leading-tight">{value ?? '–'}</p>
       {hint && <p className="mt-0.5 text-xs text-text-3">{hint}</p>}
@@ -171,7 +171,7 @@ export function AdminAnalyticsScreen() {
             </div>
             <Section title={`Tasks per day · last ${range} days`}>
               {days.length ? (
-                <div className="mx-4 rounded-card border border-line-soft bg-surface p-4">
+                <div className="mx-4 rounded-card glass-tile p-4">
                   <div className="flex h-32 items-end gap-[2px]" role="img" aria-label={`Tasks created and completed per day over the last ${range} days`}>
                     {days.map((d) => (
                       <div key={d.date} className="flex h-full min-w-0 flex-1 items-end gap-[1px]" title={`${d.date}: ${d.created} created, ${d.completed} completed`}>
@@ -262,7 +262,7 @@ function MatrixEditor({ canEdit }) {
   };
   if (wide) {
     return (
-      <div className="mx-4 overflow-x-auto rounded-card border border-line-soft bg-surface">
+      <div className="mx-4 overflow-x-auto rounded-card glass-tile">
         <table className="w-full text-[14px]">
           <thead>
             <tr className="border-b border-line-soft text-left text-xs text-text-2">
@@ -526,7 +526,7 @@ function PersonSheet({ person, canHold, onClose, workspaceMember = false }) {
         </Button>
         {workspaceMember && <MemberActions person={person} onDone={onClose} />}
         {canHold && (
-          <div className="mt-5 rounded-card border border-line-soft bg-surface p-4">
+          <div className="mt-5 rounded-card glass-tile p-4">
             <p className="flex items-center gap-2 text-[15px] font-medium">
               <Icon as={Gavel} size="sm" /> Legal hold
             </p>
@@ -606,7 +606,7 @@ export function AdminDirectoryScreen({ holds = false }) {
 function OrgNode({ node }) {
   return (
     <div className="flex flex-col items-center">
-      <button type="button" onClick={() => nav.push('profile', { userId: node.id })} className="flex w-44 items-center gap-2 rounded-card border border-line-soft bg-surface px-3 py-2.5 text-left active:bg-surface-2">
+      <button type="button" onClick={() => nav.push('profile', { userId: node.id })} className="flex w-44 items-center gap-2 rounded-card glass-tile px-3 py-2.5 text-left active:bg-surface-2">
         <Avatar name={node.name} src={node.avatarUrl} size="sm" />
         <span className="min-w-0">
           <span className="block truncate text-[14px] font-medium">{node.name}</span>
@@ -981,7 +981,7 @@ export function AdminDataScreen() {
       <Header title="Clone, export & import" subtitle={workspace.name} />
       <Body>
         <Section title="Clone">
-          <div className="mx-4 space-y-3 rounded-card border border-line-soft bg-surface p-4">
+          <div className="mx-4 space-y-3 rounded-card glass-tile p-4">
             <Field label="New workspace name" value={cloneName} onChange={(e) => setCloneName(e.target.value)} placeholder={`${workspace.name} (copy)`} />
             <div className="flex items-center justify-between gap-3">
               <span className="text-[15px]">Copy the members too</span>

@@ -228,7 +228,7 @@ export function PlanScreen() {
         ) : (
           <>
             <div
-              className="mx-4 mt-1 rounded-card border border-line-soft bg-surface p-4"
+              className="mx-4 mt-1 rounded-card glass-tile p-4"
               style={{ backgroundImage: 'var(--glass)' }}
               data-testid="plan-card"
             >
