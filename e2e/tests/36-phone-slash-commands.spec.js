@@ -54,12 +54,13 @@ test('phone: slash commands create a task, a poll and a reminder', async ({ brow
   const due = await page.evaluate((iso) => { const d = new Date(iso); return [d.getFullYear(), d.getMonth(), d.getDate()]; }, task.dueDate);
   expect(due).toEqual(tomorrow);
   expect(JSON.parse(taskRes.request().postData()).linkedMessage).toMatch(/^[a-f0-9]{24}$/);
-  await expect(page.getByText(`Task created: ${title}`).first()).toBeVisible({ timeout: 30_000 });
+  // The open conversation's copy (the chat list under it, which also previews it, isn't drawn while covered).
+  await expect(page.getByText(`Task created: ${title}`).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
 
   // /poll.
   await box.fill(`/poll "Phone lunch ${t}?" "Pizza" "Sushi"`);
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(page.getByText(`Phone lunch ${t}?`).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(`Phone lunch ${t}?`).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
 
   // Wrong arguments: explained, nothing sent.
   await box.fill('/remind me sometime');
