@@ -897,3 +897,19 @@ html.lg [style*="position: absolute"][style*="z-index"]:is([style*="var(--bg-sur
 html.lg .tk-tpl { border-radius: 18px; }
 html.lg .docs-search__input { border-radius: 999px; }
 html.lg .orw-prompt { border-radius: 999px; }
+
+/* ══ Settings follows the workspace layout (Home): the sidebar and the main area are two glass
+   panes side by side, the top bar sits inside the main pane, content starts at the left. ══ */
+@media (min-width: 900px) {
+    html.lg .stg-shell { padding: 10px; gap: 10px; box-sizing: border-box; }
+    html.lg .stg-sidebar { margin: 0; height: 100%; }
+    html.lg .stg-main {
+        border-radius: var(--lg-pane-r);
+        background: var(--lg-tile);
+        box-shadow: var(--lg-bevel), var(--lg-drop);
+        overflow: hidden;
+    }
+    html.lg .stg-topbar { height: 60px; padding: 0 28px; }
+    html.lg .stg-content { max-width: 1040px; margin: 0; padding: 32px 40px 120px; }
+}
+html.lg .stg-intro h1 { font-size: 26px; font-weight: 750; letter-spacing: -0.03em; }
