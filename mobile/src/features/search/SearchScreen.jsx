@@ -76,7 +76,7 @@ function FilterChip({ icon, label, value, onOpen, onClear }) {
     <span
       className={cx(
         'inline-flex h-8 shrink-0 items-center rounded-full border text-[13px] font-medium',
-        value ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2',
+        value ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2',
       )}
     >
       <button type="button" onClick={onOpen} className="flex h-full items-center gap-1.5 pr-1 pl-3">

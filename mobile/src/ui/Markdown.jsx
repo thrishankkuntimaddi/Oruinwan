@@ -52,7 +52,7 @@ function inline(text, keyBase = 'i', { onLink, names } = {}) {
       );
     } else if (m[7] || m[8]) {
       out.push(
-        <span key={key} className="rounded bg-accent/12 px-0.5 font-medium text-accent-ink">
+        <span key={key} className="rounded bg-accent-ink/12 px-0.5 font-medium text-accent-ink">
           {tok}
         </span>,
       );

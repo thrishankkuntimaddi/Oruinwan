@@ -192,7 +192,7 @@ export function PhoneTour() {
         </div>
         <div className="mt-3 flex gap-1" aria-hidden>
           {TOUR_STEPS.map((s, i) => (
-            <span key={s.target} className={cx('h-1 rounded-full transition-all', i === index ? 'w-5 bg-accent' : 'w-2.5 bg-line-strong')} />
+            <span key={s.target} className={cx('h-1 rounded-full transition-all', i === index ? 'w-5 bg-accent-ink' : 'w-2.5 bg-line-strong')} />
           ))}
         </div>
         <div className="mt-3 flex items-center gap-2">

@@ -52,7 +52,7 @@ export function PermissionPrompt() {
       cancelLabel="Not now"
       onConfirm={allowFromPrompt}
     >
-      <span className="mt-4 grid h-12 w-12 place-items-center rounded-full border border-accent/40 bg-accent/12 text-accent-ink">
+      <span className="mt-4 grid h-12 w-12 place-items-center rounded-full border border-accent-ink/40 bg-accent-ink/12 text-accent-ink">
         <Icon as={ask?.kind === 'camera' ? Camera : Mic} size={20} />
       </span>
     </Dialog>

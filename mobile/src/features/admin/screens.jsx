@@ -175,13 +175,13 @@ export function AdminAnalyticsScreen() {
                   <div className="flex h-32 items-end gap-[2px]" role="img" aria-label={`Tasks created and completed per day over the last ${range} days`}>
                     {days.map((d) => (
                       <div key={d.date} className="flex h-full min-w-0 flex-1 items-end gap-[1px]" title={`${d.date}: ${d.created} created, ${d.completed} completed`}>
-                        <span className="w-1/2 rounded-t-sm bg-accent/70" style={{ height: `${((d.created || 0) / max) * 100}%` }} />
+                        <span className="w-1/2 rounded-t-sm bg-accent-ink/70" style={{ height: `${((d.created || 0) / max) * 100}%` }} />
                         <span className="w-1/2 rounded-t-sm bg-success/70" style={{ height: `${((d.completed || 0) / max) * 100}%` }} />
                       </div>
                     ))}
                   </div>
                   <div className="mt-3 flex gap-4 text-xs text-text-2">
-                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent" /> Created</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-accent-ink" /> Created</span>
                     <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success" /> Completed</span>
                   </div>
                 </div>
@@ -804,7 +804,7 @@ export function AdminAuditScreen({ kind = 'audit' }) {
 function TemplateRow({ t, onPick }) {
   return (
     <Row
-      leading={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-lg">{t.icon || '🗂️'}</span>}
+      leading={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-accent-ink/15 text-lg">{t.icon || '🗂️'}</span>}
       title={t.name}
       subtitle={[t.description, t.channels?.length ? t.channels.map((c) => `#${Array.isArray(c) ? c[0] : c}`).join(' ') : t.category].filter(Boolean).join(' · ')}
       multiline

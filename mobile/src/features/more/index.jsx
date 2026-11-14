@@ -219,7 +219,7 @@ function FileThumb({ item, className, iconSize = 'sm' }) {
   const visual = kind === 'image' || kind === 'video';
   const { url } = useMediaUrl(visual ? item : null);
   return (
-    <span className={cx('relative grid shrink-0 place-items-center overflow-hidden bg-accent/12 text-accent-ink', className)}>
+    <span className={cx('relative grid shrink-0 place-items-center overflow-hidden bg-accent-ink/12 text-accent-ink', className)}>
       {visual && url ? (
         kind === 'image' ? (
           <img src={url} alt="" loading="lazy" draggable={false} className="h-full w-full object-cover" />
@@ -360,7 +360,7 @@ export function FilesScreen() {
             id="files-sort"
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="h-8 rounded-lg border border-line bg-input px-2 text-[13px] text-text"
+            className="h-8 rounded-full glass-ctl px-3 text-[13px] text-text"
           >
             {SHARED_SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -461,7 +461,7 @@ function IntegrationLogo({ item, size = 40 }) {
       id={item.id}
       size={size}
       fallback={
-        <span className="grid shrink-0 place-items-center rounded-[10px] bg-accent/12 text-accent-ink" style={{ width: size, height: size }}>
+        <span className="grid shrink-0 place-items-center rounded-[10px] bg-accent-ink/12 text-accent-ink" style={{ width: size, height: size }}>
           <Icon as={FALLBACK_ICON[item.id] || Plug} size="sm" />
         </span>
       }
@@ -604,7 +604,7 @@ export function IntegrationsScreen() {
                       title={it.name}
                       subtitle={it.connected ? it.detail || 'Connected' : it.description}
                       trailing={
-                        <span className={cx('whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium', it.connected ? 'bg-success/12 text-success' : isAdmin ? 'bg-accent/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
+                        <span className={cx('whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium', it.connected ? 'bg-success/12 text-success' : isAdmin ? 'bg-accent-ink/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
                           {it.connected ? 'On' : isAdmin ? 'Connect' : 'Off'}
                         </span>
                       }

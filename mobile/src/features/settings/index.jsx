@@ -763,7 +763,7 @@ function ThemeCard({ value, label, icon, selected, onSelect }) {
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={cx('pressable flex flex-1 flex-col items-center gap-2 rounded-card border p-3', selected ? 'border-accent bg-accent/10' : 'border-line bg-surface')}
+      className={cx('pressable flex flex-1 flex-col items-center gap-2 rounded-card border p-3', selected ? 'border-accent-ink/50 bg-accent-ink/10' : 'border-line bg-surface')}
     >
       <span className="flex h-16 w-full overflow-hidden rounded-lg border border-line">
         {value === 'system' ? (

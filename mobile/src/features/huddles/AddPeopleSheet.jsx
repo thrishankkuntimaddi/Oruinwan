@@ -65,7 +65,7 @@ export function AddPeopleSheet({ open, onClose }) {
                     <span className="block truncate text-[15px]">{u.name}</span>
                     <span className="block truncate text-[12px] text-text-2">{u.title || u.email}</span>
                   </span>
-                  <span className={cx('grid h-6 w-6 place-items-center rounded-full border', on ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')}>
+                  <span className={cx('grid h-6 w-6 place-items-center rounded-full border', on ? 'border-accent-ink/50 bg-gold text-on-accent' : 'border-line-strong')}>
                     {on && <Icon as={Check} size={14} />}
                   </span>
                 </button>

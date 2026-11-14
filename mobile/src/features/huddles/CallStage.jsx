@@ -184,8 +184,8 @@ export function PageDots({ page, pages, onPage, speakerPage = -1 }) {
           <span
             className={cx(
               'block rounded-full transition-all',
-              i === page ? 'h-2 w-4 bg-accent' : 'h-2 w-2 bg-line-strong',
-              i !== page && i === speakerPage && 'ring-2 ring-accent/60',
+              i === page ? 'h-2 w-4 bg-accent-ink' : 'h-2 w-2 bg-line-strong',
+              i !== page && i === speakerPage && 'ring-2 ring-accent-ink/60',
             )}
           />
         </button>

@@ -86,7 +86,7 @@ export function PollCard({ m, me, directory }) {
     <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl glass-tile" {...stop} data-testid="poll-card">
       <div className="flex items-center gap-2 px-3.5 pt-3">
         <Icon as={BarChart3} size={14} className="text-accent-ink" />
-        <span className="rounded bg-accent/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-accent-ink uppercase">
+        <span className="rounded bg-accent-ink/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-accent-ink uppercase">
           {poll.allowMultiple ? 'Multiple choice' : 'Poll'}
         </span>
         {closed && <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-text-2 uppercase">Closed</span>}
@@ -121,13 +121,13 @@ export function PollCard({ m, me, directory }) {
                 onClick={() => pick(i)}
                 className={cx(
                   'pressable relative w-full overflow-hidden rounded-lg border bg-input px-3 py-2.5 text-left',
-                  chosen ? 'border-accent' : 'border-line',
+                  chosen ? 'border-accent-ink/50' : 'border-line',
                 )}
               >
                 {showResults && (
                   <span
                     aria-hidden
-                    className={cx('absolute inset-y-0 left-0 transition-[width] duration-300', chosen ? 'bg-accent/18' : 'bg-surface-3')}
+                    className={cx('absolute inset-y-0 left-0 transition-[width] duration-300', chosen ? 'bg-[rgb(var(--c-text)/0.14)]' : 'bg-surface-3')}
                     style={{ width: `${pct}%` }}
                   />
                 )}
@@ -138,7 +138,7 @@ export function PollCard({ m, me, directory }) {
                       className={cx(
                         'grid h-4 w-4 shrink-0 place-items-center border-[1.5px]',
                         poll.allowMultiple ? 'rounded' : 'rounded-full',
-                        chosen ? 'border-accent bg-accent text-on-accent' : 'border-text-3',
+                        chosen ? 'border-accent-ink/50 bg-accent text-on-accent' : 'border-text-3',
                       )}
                     >
                       {chosen && <Icon as={Check} size={10} strokeWidth={3} />}
@@ -223,7 +223,7 @@ export function ChecklistCard({ m }) {
     <div className="mt-1 w-full max-w-[420px] overflow-hidden rounded-xl glass-tile" {...stop} data-testid="checklist-card">
       <div className="flex items-center gap-2 px-3.5 pt-3">
         <Icon as={ListChecks} size={14} className={allDone ? 'text-success' : 'text-accent-ink'} />
-        <span className={cx('rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase', allDone ? 'bg-success/12 text-success' : 'bg-accent/12 text-accent-ink')}>
+        <span className={cx('rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase', allDone ? 'bg-success/12 text-success' : 'bg-accent-ink/12 text-accent-ink')}>
           {allDone ? 'Done' : 'Checklist'}
         </span>
         {total > 0 && <span className="text-[11px] text-text-3">{done} of {total} done</span>}
@@ -231,7 +231,7 @@ export function ChecklistCard({ m }) {
       {data?.title && <p className="px-3.5 pt-1.5 text-[15px] font-semibold">{data.title}</p>}
       {total > 0 && (
         <div className="mx-3.5 mt-2 h-1 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Checklist progress">
-          <span className={cx('block h-full rounded-full transition-[width] duration-300', allDone ? 'bg-success' : 'bg-accent')} style={{ width: `${(done / total) * 100}%` }} />
+          <span className={cx('block h-full rounded-full transition-[width] duration-300', allDone ? 'bg-success' : 'bg-accent-ink')} style={{ width: `${(done / total) * 100}%` }} />
         </div>
       )}
       <ul className="px-1.5 py-1.5">
@@ -248,7 +248,7 @@ export function ChecklistCard({ m }) {
                 onClick={() => toggle(i)}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left active:bg-surface-2"
               >
-                <span className={cx('grid h-[18px] w-[18px] shrink-0 place-items-center rounded border-[1.5px]', it.checked ? 'border-accent bg-accent text-on-accent' : 'border-text-3')}>
+                <span className={cx('grid h-[18px] w-[18px] shrink-0 place-items-center rounded border-[1.5px]', it.checked ? 'border-accent-ink/50 bg-accent text-on-accent' : 'border-text-3')}>
                   {busy === i ? <Spinner className="h-3 w-3" /> : it.checked ? <Icon as={Check} size={11} strokeWidth={3} /> : null}
                 </span>
                 <span className={cx('text-[14px]', it.checked && 'text-text-3 line-through')}>{label}</span>

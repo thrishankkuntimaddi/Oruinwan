@@ -37,7 +37,7 @@ export function UpgradeSheet() {
       }
     >
       <div className="flex gap-3.5 px-5 pb-4" data-testid="upgrade-sheet">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-accent/15 text-accent-ink">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-accent-ink/15 text-accent-ink">
           <Icon as={Gauge} size="sm" />
         </span>
         <div className="min-w-0 flex-1">

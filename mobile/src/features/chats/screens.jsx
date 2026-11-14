@@ -1307,7 +1307,7 @@ export function NewMessageScreen({ people: prefill = null } = {}) {
                 data-testid="to-chip"
                 aria-label={`Remove ${p.name}`}
                 onClick={() => setPicked((list) => list.filter((x) => x.id !== p.id))}
-                className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-2 py-0.5 text-[13px] font-semibold text-accent-ink"
+                className="inline-flex items-center gap-1 rounded-lg border border-accent-ink/40 bg-accent-ink/10 px-2 py-0.5 text-[13px] font-semibold text-accent-ink"
               >
                 {p.name} <Icon as={X} size={12} />
               </button>

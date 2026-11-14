@@ -49,7 +49,7 @@ export function ReminderLayer() {
             className="glass-strong pointer-events-auto mt-2 flex w-full max-w-md animate-pop-in items-start gap-3 rounded-2xl border px-3.5 py-3"
             style={{ boxShadow: 'var(--glass-edge), var(--shadow-pop)' }}
           >
-            <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/15 text-accent-ink">
+            <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-ink/15 text-accent-ink">
               <Icon as={BellRing} size={16} />
             </span>
             <button

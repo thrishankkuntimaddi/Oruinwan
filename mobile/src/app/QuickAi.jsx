@@ -113,7 +113,7 @@ export function QuickAi() {
         style={{ bottom: 'calc(var(--sab) + 12px)' }}
       >
         <div className="flex items-center gap-2 px-3.5 pt-3">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 text-accent-ink">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-accent-ink/15 text-accent-ink">
             <AiEyes size={18} />
           </span>
           <span className="flex-1 text-[14px] font-semibold">Oruinwan AI</span>
@@ -156,9 +156,9 @@ export function QuickAi() {
         {ctx?.label && ctx.text && !turns.length && (
           <div className="flex items-center gap-1.5 px-3.5 pt-2 text-[12px]" data-testid="quick-ai-context">
             {useCtx ? (
-              <span className="flex min-w-0 items-center gap-1 rounded-full bg-accent/12 py-0.5 pr-1 pl-2.5 text-accent-ink">
+              <span className="flex min-w-0 items-center gap-1 rounded-full bg-accent-ink/12 py-0.5 pr-1 pl-2.5 text-accent-ink">
                 <span className="truncate">About: {ctx.label}</span>
-                <button type="button" aria-label="Don't use what's on screen" onClick={() => setUseCtx(false)} className="grid h-5 w-5 place-items-center rounded-full active:bg-accent/20">
+                <button type="button" aria-label="Don't use what's on screen" onClick={() => setUseCtx(false)} className="grid h-5 w-5 place-items-center rounded-full active:bg-accent-ink/20">
                   <Icon as={X} size={11} />
                 </button>
               </span>
@@ -183,7 +183,7 @@ export function QuickAi() {
             enterKeyHint="send"
             placeholder={turns.length ? 'Ask a follow-up' : useCtx && ctx?.text && ctx.label ? `Ask about ${ctx.label}` : 'Ask Oruinwan AI anything'}
             aria-label="Ask Oruinwan AI"
-            className="h-10 min-w-0 flex-1 rounded-full border border-line bg-input px-4 text-[15px] outline-none focus:border-accent/70"
+            className="h-10 min-w-0 flex-1 rounded-full border border-line bg-input px-4 text-[15px] outline-none focus:border-accent-ink/70"
           />
           {busy ? (
             <button type="button" aria-label="Stop" onClick={() => abort.current?.abort()} className="grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-text">

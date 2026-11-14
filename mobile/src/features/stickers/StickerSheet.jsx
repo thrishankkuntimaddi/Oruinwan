@@ -205,7 +205,7 @@ function MyStickers({ onSend, onCreate }) {
               key={t.name}
               type="button"
               onClick={() => setFilter(t.name)}
-              className={cx('h-7 shrink-0 rounded-full border px-3 text-[12px] font-medium', filter === t.name ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line text-text-2')}
+              className={cx('h-7 shrink-0 rounded-full border px-3 text-[12px] font-medium', filter === t.name ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line text-text-2')}
             >
               {t.label}
             </button>
@@ -380,7 +380,7 @@ function GiphyTab({ kind, onSend }) {
               disabled={Boolean(busyId)}
               aria-label="Save to my stickers"
               onClick={() => pick(r, true)}
-              className="absolute top-1 right-1 grid h-7 w-7 place-items-center rounded-full border border-line-soft bg-surface/90 text-text-2"
+              className="absolute top-1 right-1 grid h-7 w-7 place-items-center rounded-full glass-ctl text-text-2"
             >
               <Icon as={BookmarkPlus} size={14} />
             </button>

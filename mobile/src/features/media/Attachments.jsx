@@ -20,7 +20,7 @@ function Progress({ upload, onCancel, inline = false }) {
     <span
       className={cx(
         'flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-text-2',
-        inline ? 'border-t border-line-soft px-3' : 'absolute inset-x-0 bottom-0 bg-surface/90',
+        inline ? 'border-t border-line-soft px-3' : 'glass absolute inset-x-0 bottom-0',
       )}
     >
       <span
@@ -31,7 +31,7 @@ function Progress({ upload, onCancel, inline = false }) {
         aria-valuemax={100}
         aria-label="Uploading"
       >
-        <span className="block h-full rounded-full bg-accent transition-[width] duration-200" style={{ width: `${upload.progress || 0}%` }} />
+        <span className="block h-full rounded-full bg-accent-ink transition-[width] duration-200" style={{ width: `${upload.progress || 0}%` }} />
       </span>
       {upload.sending ? 'Sending…' : `${upload.progress || 0}%`}
       {onCancel && !upload.sending && (
@@ -134,7 +134,7 @@ function Video({ file, siblings, upload, onCancel }) {
         <span className="relative grid h-12 w-12 place-items-center rounded-full bg-gold text-on-accent" style={{ boxShadow: 'var(--shadow-pop)' }}>
           <Icon as={Play} size={20} className="translate-x-px" />
         </span>
-        <span className="absolute top-2 left-2 max-w-[80%] truncate rounded-md bg-surface/85 px-1.5 py-0.5 text-[11px] text-text-2">
+        <span className="absolute top-2 left-2 max-w-[80%] truncate rounded-full glass-ctl px-2 py-0.5 text-[11px] text-text-2">
           {[file.variant === 'screen_recording' && 'Screen recording', file.duration ? formatDuration(file.duration) : !file.variant && file.name].filter(Boolean).join(' · ')}
         </span>
       </button>
@@ -177,7 +177,7 @@ function FileCard({ file, upload, onCancel }) {
         aria-label={`File: ${file.name}`}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left active:bg-surface-2"
       >
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-ink/12 text-accent-ink">
           <Icon as={FILE_ICONS[kind] || File} size="sm" />
         </span>
         <span className="min-w-0 flex-1">

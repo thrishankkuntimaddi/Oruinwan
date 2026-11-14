@@ -8,8 +8,8 @@ import { dismissFullScreen, dismissPrompt, fullScreenDismissed, promptDismissed,
 
 function Card({ icon, title, body, primary, onPrimary, busy, onLater, testId }) {
   return (
-    <div className="flex gap-3 rounded-card border border-accent/30 bg-accent/10 p-4" data-testid={testId}>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent-ink">
+    <div className="flex gap-3 rounded-card border border-accent-ink/30 bg-accent-ink/10 p-4" data-testid={testId}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-ink/15 text-accent-ink">
         <Icon as={icon} />
       </span>
       <div className="min-w-0 flex-1">

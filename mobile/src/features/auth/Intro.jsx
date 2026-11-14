@@ -23,7 +23,7 @@ function Conversation() {
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-surface text-accent-ink">
           <Icon as={Sparkles} size={14} />
         </span>
-        <span className="rounded-2xl rounded-bl-md border border-accent/30 bg-accent/10 px-3 py-2 text-[13px]">3 people approved, 1 asked for darker buttons.</span>
+        <span className="rounded-2xl rounded-bl-md border border-accent-ink/30 bg-accent-ink/10 px-3 py-2 text-[13px]">3 people approved, 1 asked for darker buttons.</span>
       </div>
     </div>
   );

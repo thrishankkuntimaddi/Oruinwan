@@ -90,7 +90,7 @@ function NoteRow({ note, directory, onMenu, selecting = false, checked = false, 
       className={cx('relative flex w-full select-none flex-col gap-1 px-4 py-3.5 text-left active:bg-surface-2', (selected || checked) && 'bg-surface-2', selecting && 'pl-12')}
     >
       {selecting && (
-        <span className={cx('absolute top-4 left-4 grid h-5 w-5 place-items-center rounded-full border-2', checked ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
+        <span className={cx('absolute top-4 left-4 grid h-5 w-5 place-items-center rounded-full border-2', checked ? 'border-accent-ink/50 bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
           {checked && <Icon as={Check} size={12} strokeWidth={3} />}
         </span>
       )}
@@ -370,7 +370,7 @@ function ShareSheet({ open, onClose, note, onSave }) {
             <button key={u.id} type="button" onClick={() => toggle(u.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-surface-2">
               <Avatar name={u.name} src={u.avatarUrl} size="sm" />
               <span className="flex-1 text-[15px]">{u.name}</span>
-              <span className={cx('grid h-6 w-6 place-items-center rounded-md border', people.includes(u.id) ? 'border-accent bg-accent text-on-accent' : 'border-line-strong')}>
+              <span className={cx('grid h-6 w-6 place-items-center rounded-md border', people.includes(u.id) ? 'border-accent-ink/50 bg-accent text-on-accent' : 'border-line-strong')}>
                 {people.includes(u.id) && <Icon as={Check} size={14} />}
               </span>
             </button>

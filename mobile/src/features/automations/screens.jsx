@@ -87,7 +87,7 @@ function TemplatePicker({ ws, onCreated }) {
           {templates.map((t) => (
             <Row
               key={t.id}
-              leading={<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-lg" aria-hidden>{t.icon || '⚡'}</span>}
+              leading={<span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent-ink/15 text-lg" aria-hidden>{t.icon || '⚡'}</span>}
               title={t.name}
               subtitle={t.description}
               multiline
@@ -110,7 +110,7 @@ function TemplatePicker({ ws, onCreated }) {
           {needsChannel(picked) && (
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-text-2">Post in</span>
-              <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="h-11 w-full rounded-xl border border-line bg-input px-3 text-[15px]">
+              <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="h-11 w-full rounded-[14px] border border-line bg-input px-3 text-[15px]">
                 {mine.map((c) => (
                   <option key={c.id} value={c.id}>#{c.name}</option>
                 ))}

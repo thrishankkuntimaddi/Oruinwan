@@ -89,7 +89,7 @@ function NewPageSheet({ open, onClose, parentId = null }) {
             className="flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left active:bg-surface-2 disabled:opacity-60"
             data-testid="page-template"
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-ink/12 text-accent-ink">
               {busy === t.title ? <Spinner /> : <Icon as={t.icon} size="sm" />}
             </span>
             <span className="min-w-0">
@@ -162,7 +162,7 @@ function KnowledgeWelcome({ onWrite, onImport, importing }) {
       <div className="overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
         {PAGE_TEMPLATES.filter((t) => t.content).map((t) => (
           <button key={t.title} type="button" onClick={() => onWrite(t)} className="flex w-full items-center gap-3.5 px-4 py-3 text-left active:bg-surface-2" data-testid="welcome-template">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-ink/12 text-accent-ink">
               <Icon as={t.icon} size="sm" />
             </span>
             <span className="min-w-0">
@@ -213,7 +213,7 @@ function AskKnowledge() {
     }
   };
   return (
-    <div className="mx-4 mt-2 rounded-card border border-accent/30 bg-accent/5 p-3" data-testid="ask-knowledge">
+    <div className="mx-4 mt-2 rounded-card border border-accent-ink/30 bg-accent-ink/5 p-3" data-testid="ask-knowledge">
       <form onSubmit={ask} className="flex items-center gap-2">
         <Icon as={Sparkles} size={18} className="shrink-0 text-accent-ink" />
         <input
@@ -581,7 +581,7 @@ function PageEditor({ page, fresh, onDone }) {
                 change({ icon: e });
                 setIconSheet(false);
               }}
-              className={cx('pressable grid aspect-square place-items-center rounded-xl text-[22px]', e === icon ? 'bg-accent/15 ring-1 ring-accent/60' : 'bg-surface-2')}
+              className={cx('pressable grid aspect-square place-items-center rounded-xl text-[22px]', e === icon ? 'bg-accent-ink/15 ring-1 ring-accent-ink/60' : 'bg-surface-2')}
             >
               {e}
             </button>

@@ -94,7 +94,7 @@ export function RestoreSheet({ open, onClose, onDone }) {
                   key={r.key}
                   title={r.label}
                   subtitle={[r.present ? `${r.present} already here` : null, r.skipped ? `${r.skipped} not restored` : null].filter(Boolean).join(' · ') || null}
-                  trailing={r.restore ? <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent-ink">{r.restore} to restore</span> : null}
+                  trailing={r.restore ? <span className="rounded-full bg-accent-ink/15 px-2 py-0.5 text-xs font-semibold text-accent-ink">{r.restore} to restore</span> : null}
                 />
               ))}
             </RowGroup>

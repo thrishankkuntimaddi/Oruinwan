@@ -429,7 +429,7 @@ export function AiScreen() {
                           type="button"
                           data-testid="ai-person-chip"
                           onClick={() => nav.push('profile', { userId: part.person.id })}
-                          className="rounded-md bg-accent/10 px-1 font-medium text-accent-ink"
+                          className="rounded-md bg-accent-ink/10 px-1 font-medium text-accent-ink"
                         >
                           {part.text}
                         </button>
@@ -450,7 +450,7 @@ export function AiScreen() {
             <MentionSuggestions items={suggestions} onPick={pickMention} />
           </div>
         )}
-        <div className="flex items-end gap-2 rounded-[22px] border border-line bg-input py-1.5 pr-1.5 pl-4 focus-within:border-accent/70">
+        <div className="flex items-end gap-2 rounded-[22px] border border-line bg-input py-1.5 pr-1.5 pl-4 focus-within:border-accent-ink/70">
           <textarea
             ref={inputRef}
             rows={1}

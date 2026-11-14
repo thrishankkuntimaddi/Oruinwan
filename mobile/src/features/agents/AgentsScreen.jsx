@@ -30,7 +30,7 @@ function statusOf(a) {
 
 const PILL = {
   success: 'bg-success/12 text-success',
-  accent: 'bg-accent/15 text-accent-ink',
+  accent: 'glass-ctl text-text font-semibold',
   neutral: 'bg-surface-3 text-text-2',
 };
 
@@ -198,7 +198,7 @@ export function AgentsScreen({ connect = false }) {
                 <RowGroup footer="GitHub and Jira sign in with the provider: Connect opens the sign-in page in your browser, then come back here.">
                   {tools.map((t) => (
                     <Row key={t.id} title={t.name} multiline
-                      leading={<BrandLogo id={t.id} size={40} className="!rounded-xl" fallback={<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent-ink"><Icon as={Plug} size="sm" /></span>} />}
+                      leading={<BrandLogo id={t.id} size={40} className="!rounded-xl" fallback={<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-ink/12 text-accent-ink"><Icon as={Plug} size="sm" /></span>} />}
                       subtitle={t.connectedForYou ? `Connected for you${t.connectedForYou.login ? ` · ${t.connectedForYou.login}` : ''}` : t.actsAs}
                       trailing={t.connectedForYou ? <Pill tone="success">Connected</Pill> : webPage ? <Pill tone="accent">Connect <Icon as={ExternalLink} size={11} className="inline" /></Pill> : null}
                       onClick={webPage ? () => openExternal(webPage) : undefined} />

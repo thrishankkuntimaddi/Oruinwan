@@ -81,7 +81,7 @@ function ItemRow({ item, directory }) {
     <button
       type="button"
       onClick={() => nav.push('roadmapItem', { id: item.id })}
-      className={cx('flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-2', selected && 'bg-accent/8')}
+      className={cx('flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-2', selected && 'bg-accent-ink/8')}
     >
       <span className="h-10 w-1 shrink-0 rounded-full" style={{ background: colorOf(item.color) }} aria-hidden />
       <span className="min-w-0 flex-1">
@@ -139,7 +139,7 @@ function Timeline({ items }) {
                   </span>
                 ))}
               </div>
-              {today != null && <span className="absolute top-10 bottom-0 w-px bg-accent/70" style={{ left: `${today}%` }} aria-hidden />}
+              {today != null && <span className="absolute top-10 bottom-0 w-px bg-accent-ink/70" style={{ left: `${today}%` }} aria-hidden />}
               {rows.map((r) => (
                 <div key={r.item.id} className="relative h-12 border-b border-line-soft last:border-0">
                   <button
@@ -311,7 +311,7 @@ function Picker({ open, onClose, title, options, value, onChange, multi = true, 
                 <span className="block truncate text-[15px]">{o.label}</span>
                 {o.detail && <span className="block truncate text-[12px] text-text-2">{o.detail}</span>}
               </span>
-              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', on ? 'border-accent bg-accent text-on-accent' : 'border-line')}>
+              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', on ? 'border-accent-ink/50 bg-accent text-on-accent' : 'border-line')}>
                 {on && <Icon as={Check} size={14} />}
               </span>
             </button>

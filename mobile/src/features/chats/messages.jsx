@@ -49,7 +49,7 @@ const SEGMENT_CLASS = {
   italic: '[font-style:oblique_9deg]',
   strike: 'line-through decoration-text-2',
   code: 'rounded-[4px] bg-surface-3 text-accent-ink',
-  mention: 'rounded-[4px] bg-accent/12 text-accent-ink',
+  mention: 'rounded-[4px] bg-accent-ink/12 text-accent-ink',
   quote: 'text-text-2',
 };
 const segmentClass = (kind) => (kind ? kind.split(' ').map((k) => SEGMENT_CLASS[k] || '').join(' ') : '');
@@ -179,7 +179,7 @@ function ReactionChip({ emoji, count, mine, fresh, onClick, label }) {
       aria-label={label}
       className={cx(
         'pressable inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[13px]',
-        mine ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+        mine ? 'border-accent-ink/60 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
         bump.className || (fresh && motion('animate-pop-in', reduced)),
       )}
     >
@@ -261,7 +261,7 @@ function Reactions({ m, me, directory, onReact }) {
               onClick={() => setWho(key)}
               className={cx(
                 'pressable inline-flex h-8 shrink-0 items-center gap-1 rounded-full border px-3 text-[14px]',
-                who === key ? 'border-accent/60 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
+                who === key ? 'border-accent-ink/60 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface-2 text-text-2',
               )}
             >
               {key === 'all' ? 'All' : key} <span className="tabular-nums text-xs font-medium">{n}</span>
@@ -351,7 +351,7 @@ export function QuoteBlock({ quoted, directory, me, onJump, compact = false }) {
       data-no-tap
       onPointerDown={(e) => e.stopPropagation()}
       onClick={() => onJump?.(quoted.id)}
-      className={cx('mb-1 flex w-full max-w-md items-center rounded-lg border-l-[3px] border-accent bg-surface-2/80 px-2.5 text-left', compact ? 'py-1' : 'py-1.5')}
+      className={cx('mb-1 flex w-full max-w-md items-center rounded-lg border-l-[3px] border-accent-ink/50 bg-surface-2/80 px-2.5 text-left', compact ? 'py-1' : 'py-1.5')}
       data-testid="quote-block"
     >
       <span className="min-w-0 flex-1">
@@ -426,14 +426,14 @@ export function MessageItem({
       className={cx(
         'group relative flex gap-3 px-4 transition-colors select-none hover:bg-surface-2/40',
         grouped ? 'pt-0.5 pb-0.5' : 'pt-2.5 pb-0.5',
-        highlight && 'bg-accent/10',
+        highlight && 'bg-accent-ink/10',
         m.pending && !m.upload && 'opacity-60',
         arrived && motion('animate-msg-in', reduced),
       )}
     >
       {dx > 0 && (
         <span
-          className="pointer-events-none absolute top-1/2 -left-9 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-accent/15 text-accent-ink"
+          className="pointer-events-none absolute top-1/2 -left-9 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-accent-ink/15 text-accent-ink"
           style={{ opacity: Math.min(dx / SWIPE_TRIGGER, 1), transform: `translateY(-50%) scale(${dx >= SWIPE_TRIGGER ? 1.1 : 0.85})` }}
           aria-hidden
         >
@@ -443,7 +443,7 @@ export function MessageItem({
       <div className="w-9 shrink-0">
         {!grouped && (
           <button type="button" onClick={() => author.id && author.id !== me && onLongPress(m, 'profile')} aria-label={author.name}>
-            <Avatar name={author.name} src={author.avatarUrl} size="sm" className={cx('mt-0.5', author.id === me && 'ring-1 ring-accent/60 rounded-full')} />
+            <Avatar name={author.name} src={author.avatarUrl} size="sm" className={cx('mt-0.5', author.id === me && 'ring-1 ring-accent-ink/60 rounded-full')} />
           </button>
         )}
       </div>
@@ -503,7 +503,7 @@ export function MessageItem({
         title="More actions"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => onLongPress(m)}
-        className="absolute top-1 right-3 hidden h-8 w-8 place-items-center rounded-lg border border-line bg-surface text-text-2 hover:text-text group-hover:grid"
+        className="absolute top-1 right-3 hidden h-8 w-8 place-items-center rounded-full glass-ctl text-text-2 hover:text-text group-hover:grid"
       >
         <Icon as={Ellipsis} size={16} />
       </button>
@@ -516,7 +516,7 @@ export function MessageItem({
 export function AiLiveReply({ reply }) {
   return (
     <div className="flex gap-3 px-4 pt-3" role="status" aria-live="polite" data-testid="ai-live-reply">
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent-ink">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent-ink/30 bg-accent-ink/10 text-accent-ink">
         <Icon as={Sparkles} size={15} />
       </span>
       <div className="min-w-0 flex-1">
@@ -1107,7 +1107,7 @@ export function Composer({
             className="flex w-full items-center gap-3 border-b border-line-soft px-4 py-2.5 text-left active:bg-surface-2"
             data-testid="ai-mention-suggestion"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent-ink">
+            <span className="grid h-8 w-8 place-items-center rounded-full border border-accent-ink/30 bg-accent-ink/10 text-accent-ink">
               <Icon as={Sparkles} size={15} />
             </span>
             <span className="min-w-0 flex-1">
@@ -1192,7 +1192,7 @@ export function Composer({
           >
             <Icon as={Type} size={18} />
           </button>
-          <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input pr-1 pl-4 focus-within:border-accent/70">
+          <div className="flex min-h-10 flex-1 items-center rounded-[20px] border border-line bg-input pr-1 pl-4 focus-within:border-accent-ink/70">
             <div className="relative min-w-0 flex-1">
               {styled && <ComposerHighlight text={text} scrollRef={overlayRef} />}
               <textarea
@@ -1215,7 +1215,7 @@ export function Composer({
                 className={cx(
                   'relative block max-h-[140px] w-full resize-none bg-transparent py-2 text-[15px] leading-6 outline-none placeholder:text-text-3',
                   // Formatted text shows through from underneath; the caret and selection stay.
-                  styled && 'text-transparent caret-[rgb(var(--c-text))] selection:bg-accent/25',
+                  styled && 'text-transparent caret-[rgb(var(--c-text))] selection:bg-accent-ink/25',
                 )}
               />
             </div>
@@ -1365,7 +1365,7 @@ export function ComposerPlusSheet({ open, onClose, onAskAi, onTask, onPick, onPo
               }}
               className="flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left active:bg-surface-2 disabled:opacity-45"
             >
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent/12 text-accent-ink">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent-ink/12 text-accent-ink">
                 <Icon as={a.icon} size="sm" />
               </span>
               <span>

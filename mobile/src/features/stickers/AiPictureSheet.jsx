@@ -107,7 +107,7 @@ export function AiPictureSheet({ open, onClose, onUse }) {
               aria-pressed={look === l.id}
               onClick={() => setLook(l.id)}
               disabled={busy}
-              className={cx('flex flex-col items-center gap-0.5 rounded-xl border py-2 text-[11px] font-medium', look === l.id ? 'border-accent bg-accent/12 text-accent-ink' : 'border-line text-text-2')}
+              className={cx('flex flex-col items-center gap-0.5 rounded-xl border py-2 text-[11px] font-medium', look === l.id ? 'border-accent-ink/50 bg-accent-ink/12 text-accent-ink' : 'border-line text-text-2')}
             >
               <span className="text-[22px] leading-none" aria-hidden>
                 {l.emoji}

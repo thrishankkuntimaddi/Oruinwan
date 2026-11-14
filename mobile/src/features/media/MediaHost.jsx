@@ -94,7 +94,7 @@ function MediaItem({ file, zoom }) {
   if (kind === 'audio') {
     return (
       <div className="flex w-full max-w-sm flex-col items-center px-6 text-center">
-        <span className="mb-5 grid h-24 w-24 place-items-center rounded-3xl border border-accent/30 bg-accent/10 text-accent-ink">
+        <span className="mb-5 grid h-24 w-24 place-items-center rounded-3xl border border-accent-ink/30 bg-accent-ink/10 text-accent-ink">
           <Icon as={Music} size={40} />
         </span>
         <p className="mb-5 max-w-full truncate text-[15px] font-medium">{file.name}</p>
@@ -112,7 +112,7 @@ const VIEWABLE = new Set(['image', 'video', 'audio', 'pdf']);
 function FileCard({ file }) {
   return (
     <div className="flex max-w-xs flex-col items-center px-6 text-center">
-      <span className="mb-4 grid h-20 w-20 place-items-center rounded-3xl border border-accent/30 bg-accent/10 text-accent-ink">
+      <span className="mb-4 grid h-20 w-20 place-items-center rounded-3xl border border-accent-ink/30 bg-accent-ink/10 text-accent-ink">
         <Icon as={FileText} size={36} />
       </span>
       <p className="max-w-full truncate text-[15px] font-medium">{file.name || 'File'}</p>

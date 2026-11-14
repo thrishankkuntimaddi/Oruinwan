@@ -60,7 +60,7 @@ function MiniCard({ icon, label, value, detail, highlight, onClick, testId }) {
       style={{ backgroundImage: 'var(--glass)' }}
     >
       <span className="flex items-center gap-1.5">
-        <span className={cx('grid h-7 w-7 place-items-center rounded-lg', highlight ? 'bg-gold text-on-accent' : 'bg-accent/12 text-accent-ink')}>
+        <span className={cx('grid h-7 w-7 place-items-center rounded-lg', highlight ? 'bg-gold text-on-accent' : 'bg-accent-ink/12 text-accent-ink')}>
           <Icon as={icon} size={14} />
         </span>
         <span className="text-[20px] font-bold leading-none tabular-nums">{value}</span>
@@ -210,7 +210,7 @@ function QuickJumpEditor({ open, onClose, channels, dms, current }) {
             <button type="button" onClick={() => toggle(o)} aria-pressed={has(o)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left active:bg-surface-2">
               <Icon as={o.icon} size={18} className="text-text-2" />
               <span className="min-w-0 flex-1 truncate text-[15px]">{o.label}</span>
-              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', has(o) ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')}>
+              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', has(o) ? 'border-accent-ink/50 bg-gold text-on-accent' : 'border-line-strong')}>
                 {has(o) && <Icon as={Check} size={14} />}
               </span>
             </button>
@@ -332,7 +332,7 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => nav.push('settings.updates')}
-            className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center gap-3 rounded-card border border-accent/35 bg-surface px-3.5 py-3 text-left"
+            className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center gap-3 rounded-card border border-accent-ink/35 bg-surface px-3.5 py-3 text-left"
           >
             <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-gold text-on-accent">
               <Icon as={Download} size="sm" />

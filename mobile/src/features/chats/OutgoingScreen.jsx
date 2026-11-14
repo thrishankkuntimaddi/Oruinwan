@@ -20,7 +20,7 @@ const whenLabel = (d) => new Date(d).toLocaleString(undefined, { weekday: 'short
 function Item({ icon, tone, title, body, meta, onClick, testId }) {
   return (
     <button type="button" onClick={onClick} className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-surface-2" data-testid={testId}>
-      <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${tone === 'danger' ? 'bg-danger/12 text-danger' : 'bg-accent/12 text-accent-ink'}`}>
+      <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${tone === 'danger' ? 'bg-danger/12 text-danger' : 'bg-accent-ink/12 text-accent-ink'}`}>
         <Icon as={icon} size={16} />
       </span>
       <span className="min-w-0 flex-1">

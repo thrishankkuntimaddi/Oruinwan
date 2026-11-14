@@ -327,7 +327,7 @@ export function EditHistorySheet({ message, conv, onClose }) {
                 const older = versions[i + 1];
                 const readable = v.state === 'ok';
                 return (
-                  <li key={v.version} className={cx('rounded-xl border bg-surface px-3.5 py-3', v.current ? 'border-accent/50' : 'border-line-soft')}>
+                  <li key={v.version} className={cx('rounded-xl border bg-surface px-3.5 py-3', v.current ? 'border-accent-ink/50' : 'border-line-soft')}>
                     <p className="mb-1.5 flex items-center gap-2 text-[12px] text-text-2">
                       <span className="font-semibold text-text">{v.current ? 'Current' : `Version ${v.version}`}</span>
                       {v.at && <span>{shortAgo(v.at)}</span>}
@@ -406,7 +406,7 @@ export function AutoTranslateSetting({ autoLang, setAutoLang, fallback = 'en' })
           aria-label="Translate into"
           value={autoLang}
           onChange={(e) => setAutoLang(e.target.value)}
-          className="mt-2.5 h-10 w-full rounded-lg border border-line bg-surface px-2.5 text-[15px] text-text"
+          className="mt-2.5 h-10 w-full rounded-[14px] border border-line bg-input px-3 text-[15px] text-text"
         >
           {LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>
@@ -528,7 +528,7 @@ export function SummarySheet({ open, onClose, title = 'Summary', options = [] })
                 onClick={() => run(o)}
                 className={cx(
                   'pressable h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium disabled:opacity-45',
-                  active === o.id ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2',
+                  active === o.id ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2',
                 )}
               >
                 {o.label}

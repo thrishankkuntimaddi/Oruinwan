@@ -949,7 +949,7 @@ function WhiteboardPages({ meeting }) {
               type="button"
               onClick={() => setCurrent(p.id)}
               aria-current={p.id === page.id ? 'page' : undefined}
-              className={cx('h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p.id === page.id ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+              className={cx('h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p.id === page.id ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
             >
               {p.title || `Page ${i + 1}`}
             </button>
@@ -1161,7 +1161,7 @@ function WhiteboardTab({ meeting, boardId = meeting.id }) {
                 setColor(c);
                 setTool('pen');
               }}
-              className={cx('h-7 w-7 shrink-0 rounded-full border-2', tool === 'pen' && c === color ? 'border-accent' : 'border-line')}
+              className={cx('h-7 w-7 shrink-0 rounded-full border-2', tool === 'pen' && c === color ? 'border-accent-ink/50' : 'border-line')}
               style={{ background: c }}
             />
           ))}

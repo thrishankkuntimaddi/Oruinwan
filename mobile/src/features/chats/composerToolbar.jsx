@@ -37,7 +37,7 @@ export function FormatToolbar({ onFormat, onLinkOpen, onLink }) {
   if (linking) {
     return (
       <div className="flex items-center gap-2 px-3 pt-2" data-testid="composer-link-bar">
-        <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-input px-3 focus-within:border-accent/70">
+        <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border border-line bg-input px-3 focus-within:border-accent-ink/70">
           <Icon as={Link} size={14} className="shrink-0 text-text-3" />
           <input
             autoFocus

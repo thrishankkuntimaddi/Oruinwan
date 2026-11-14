@@ -192,7 +192,7 @@ export function CalendarView() {
           onClick={() => setSheet('filter')}
           aria-label={hidden.size ? `Filter, ${hidden.size} hidden` : 'Filter'}
           data-testid="calendar-filter"
-          className={cx('relative grid h-8 w-8 shrink-0 place-items-center rounded-full border active:bg-surface-2', hidden.size ? 'border-accent text-accent-ink' : 'border-line text-text-2')}
+          className={cx('relative grid h-8 w-8 shrink-0 place-items-center rounded-full border active:bg-surface-2', hidden.size ? 'border-accent-ink/50 text-accent-ink' : 'border-line text-text-2')}
         >
           <Icon as={ListFilter} size={15} />
           {hidden.size > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-on-accent">{hidden.size}</span>}
@@ -226,7 +226,7 @@ export function CalendarView() {
                 <Icon as={K.icon} size={16} />
               </span>
               <span className="flex-1 text-[15px]">{K.label}</span>
-              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', hidden.has(k) ? 'border-line-strong' : 'border-accent bg-gold text-on-accent')}>
+              <span className={cx('grid h-6 w-6 place-items-center rounded-full border', hidden.has(k) ? 'border-line-strong' : 'border-accent-ink/50 bg-gold text-on-accent')}>
                 {!hidden.has(k) && <Icon as={Check} size={14} />}
               </span>
             </button>

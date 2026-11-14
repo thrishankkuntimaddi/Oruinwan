@@ -63,7 +63,7 @@ export function NotePages({ note, canEdit }) {
               onClick={() => go(p)}
               aria-current={on ? 'page' : undefined}
               ref={on ? (el) => el?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' }) : undefined}
-              className={cx('pressable h-8 max-w-[160px] shrink-0 truncate rounded-full border px-3 text-[13px] font-medium', on ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+              className={cx('pressable h-8 max-w-[160px] shrink-0 truncate rounded-full border px-3 text-[13px] font-medium', on ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
             >
               {i === 0 ? `1 · ${p.title || 'Untitled'}` : `${i + 1} · ${p.title || `Page ${i + 1}`}`}
             </button>

@@ -869,3 +869,31 @@ html.lg :is(button, [role='tab'], a):focus-visible {
     border-radius: 10px;
 }
 html.lg :is(button, [role='tab'], a):focus:not(:focus-visible) { outline: none; }
+
+/* ══ Full-app audit: every remaining pop-up pattern gets the dense glass ══ */
+/* A menu right after an invisible click-catcher (role menus, row menus). */
+html.lg [style*="position: fixed"][style*="inset: 0"] + [style*="var(--bg-"],
+/* A panel inside a centred overlay wrapper (Member list…). */
+html.lg [style*="position: fixed"][style*="inset: 0"][style*="justify-content: center"] > [style*="var(--bg-"],
+/* A card inside a dialog wrapper (Remind me about this note…). */
+html.lg [role='dialog'] > .gl-card,
+html.lg [style*="position: fixed"][style*="inset: 0"] > .gl-card,
+/* Small dropdowns laid over content with a page-colour background. */
+html.lg [style*="position: absolute"][style*="z-index"]:is([style*="background: var(--bg-surface)"], [style*="background-color: var(--bg-surface)"], [style*="background: var(--bg-primary)"], [style*="background-color: var(--bg-primary)"], [style*="background: var(--bg-base)"], [style*="background-color: var(--bg-base)"], [style*="background: var(--bg-secondary)"], [style*="background-color: var(--bg-secondary)"]) {
+    background-color: var(--lg-dense) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: var(--lg-frost-dense);
+    backdrop-filter: var(--lg-frost-dense);
+    border-color: transparent !important;
+    box-shadow: var(--lg-bevel), var(--lg-shadow) !important;
+}
+html.lg [style*="position: fixed"][style*="inset: 0"][style*="justify-content: center"] > [style*="var(--bg-"],
+html.lg [role='dialog'] > .gl-card,
+html.lg [style*="position: fixed"][style*="inset: 0"] > .gl-card { border-radius: 28px !important; }
+html.lg [style*="position: fixed"][style*="inset: 0"] + [style*="var(--bg-"],
+html.lg [style*="position: absolute"][style*="z-index"]:is([style*="var(--bg-surface)"], [style*="var(--bg-primary)"], [style*="var(--bg-base)"], [style*="var(--bg-secondary)"]) { border-radius: 16px !important; }
+
+/* Square controls found by the audit: automation templates, docs search, blog filters. */
+html.lg .tk-tpl { border-radius: 18px; }
+html.lg .docs-search__input { border-radius: 999px; }
+html.lg .orw-prompt { border-radius: 999px; }

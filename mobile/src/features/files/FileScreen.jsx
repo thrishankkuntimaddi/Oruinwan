@@ -337,7 +337,7 @@ export function FileScreen({ id }) {
       <Header title={file.name} subtitle={`v${file.version}`} />
       <Body onRefresh={refetch}>
         <div className="mx-4 flex items-center gap-4 rounded-card glass-tile p-4" style={{ backgroundImage: 'var(--glass)' }}>
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/15 text-accent-ink">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent-ink/15 text-accent-ink">
             <Icon as={FILE_ICONS[file.kind] || File} />
           </span>
           <div className="min-w-0 flex-1">

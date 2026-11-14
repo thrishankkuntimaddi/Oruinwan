@@ -68,7 +68,7 @@ export function ActivityRow({ item, directory }) {
       {!item.read && (item.count > 1 ? (
         <span className="mt-1 shrink-0 rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-on-accent" aria-label={`${item.count} unread`}>{item.count > 99 ? '99+' : item.count}</span>
       ) : (
-        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />
+        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent-ink" aria-label="Unread" />
       ))}
     </button>
   );

@@ -28,7 +28,7 @@ export function UpdateProgress() {
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
         <div
-          className={download.state === 'failed' ? 'h-full bg-danger' : 'h-full bg-accent transition-[width] duration-300'}
+          className={download.state === 'failed' ? 'h-full bg-danger' : 'h-full bg-accent-ink transition-[width] duration-300'}
           style={{ width: `${download.state === 'failed' ? 100 : Math.max(4, download.percent)}%` }}
         />
       </div>

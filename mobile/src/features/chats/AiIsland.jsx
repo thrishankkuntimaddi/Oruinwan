@@ -135,7 +135,7 @@ export function AiIsland({ transcript, title }) {
     <div className="absolute inset-x-3 top-2 z-[6]" style={{ transform: dy ? `translateY(${dy}px)` : undefined, opacity: dy ? Math.max(0.3, 1 + dy / 120) : 1 }}>
       <div {...touch} className="glass-strong animate-drop-in overflow-hidden rounded-3xl border shadow-xl" data-testid="ai-island-open">
         <div className="flex items-center gap-2 px-3 pt-2.5">
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-accent/15 text-accent-ink">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-accent-ink/15 text-accent-ink">
             <AiEyes size={18} />
           </span>
           <span className="flex-1 text-[13px] font-semibold">Ask about {title}</span>
@@ -179,7 +179,7 @@ export function AiIsland({ transcript, title }) {
             onChange={(e) => setQ(e.target.value)}
             placeholder={answer ? 'Ask a follow-up' : 'Ask anything about this conversation'}
             aria-label="Ask Oruinwan AI about this conversation"
-            className="h-9 min-w-0 flex-1 rounded-full border border-line bg-input px-3.5 text-[14px] outline-none focus:border-accent/70"
+            className="h-9 min-w-0 flex-1 rounded-full border border-line bg-input px-3.5 text-[14px] outline-none focus:border-accent-ink/70"
           />
           <button
             type="submit"

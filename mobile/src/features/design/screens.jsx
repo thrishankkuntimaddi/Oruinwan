@@ -62,9 +62,9 @@ function ReviewRow({ review, directory }) {
     <button
       type="button"
       onClick={() => nav.push('designReview', { id: review.id })}
-      className={cx('flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-2', selected && 'bg-accent/8')}
+      className={cx('flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-2', selected && 'bg-accent-ink/8')}
     >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/15 text-accent-ink">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent-ink/15 text-accent-ink">
         <Icon as={KIND_ICON[kind] || FileIcon} size="sm" />
       </span>
       <span className="min-w-0 flex-1">
@@ -307,7 +307,7 @@ function Pin({ n, annotation, active, onOpen }) {
 
 function DraftPin({ draft }) {
   if (!draft) return null;
-  return <span className="pointer-events-none absolute h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full border-2 border-accent bg-accent/30" style={pinPosition(draft)} aria-hidden />;
+  return <span className="pointer-events-none absolute h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full border-2 border-accent-ink/50 bg-accent-ink/30" style={pinPosition(draft)} aria-hidden />;
 }
 
 function ImageStage({ src, alt, pins, numbers, draft, activeId, onPlace, onOpen }) {
@@ -394,7 +394,7 @@ function PdfPageButtons({ count, page, setPage, pages }) {
             type="button"
             onClick={() => setPage(p)}
             aria-current={p === page ? 'page' : undefined}
-            className={cx('pressable h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p === page ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+            className={cx('pressable h-8 shrink-0 rounded-full border px-3 text-[13px] font-medium', p === page ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
           >
             {`Page ${p}`}
             {info?.open ? ` · ${info.open}` : ''}
@@ -479,7 +479,7 @@ function PdfStage({ review, file, url, page, setPage, annotations, pins, numbers
   return (
     <div className="rounded-card glass-tile p-4">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-accent/15 text-accent-ink">
+        <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-accent-ink/15 text-accent-ink">
           <Icon as={FileText} size="sm" />
         </span>
         <div className="min-w-0 flex-1">

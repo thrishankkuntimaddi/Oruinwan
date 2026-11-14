@@ -19,7 +19,7 @@ import { toast } from '../../lib/bus.js';
 export const SUPPORT_EMAIL = 'admin@poelys.com';
 
 const STATUS = {
-  open: { label: 'Open', tone: 'bg-accent/15 text-accent-ink' },
+  open: { label: 'Open', tone: 'bg-accent-ink/15 text-accent-ink' },
   'in-progress': { label: 'In progress', tone: 'bg-warning/15 text-warning' },
   resolved: { label: 'Resolved', tone: 'bg-success/15 text-success' },
   closed: { label: 'Closed', tone: 'bg-surface-3 text-text-2' },
@@ -184,7 +184,7 @@ export function SupportTicketScreen({ id }) {
             <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{ticket.description}</p>
           </div>
           {ticket.replies.map((r) => (
-            <div key={r.id} className={cx('rounded-card border p-3.5', r.fromSupport ? 'border-accent/30 bg-accent/8' : 'border-line-soft bg-surface')}>
+            <div key={r.id} className={cx('rounded-card border p-3.5', r.fromSupport ? 'border-accent-ink/30 bg-accent-ink/8' : 'border-line-soft bg-surface')}>
               <p className="text-xs text-text-3">{r.fromSupport ? 'Oruinwan support' : 'You'} · {shortAgo(r.at)}</p>
               <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{r.text}</p>
             </div>

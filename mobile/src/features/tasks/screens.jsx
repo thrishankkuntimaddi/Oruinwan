@@ -266,7 +266,7 @@ function Board({ tasks, directory }) {
             data-status={col.status}
             className={cx(
               'flex w-[82%] max-w-80 shrink-0 snap-center flex-col rounded-card border bg-surface transition-colors',
-              drag && drag.over === col.status && drag.task.status !== col.status ? 'border-accent bg-accent/10' : 'border-line-soft',
+              drag && drag.over === col.status && drag.task.status !== col.status ? 'border-accent-ink/50 bg-accent-ink/10' : 'border-line-soft',
             )}
           >
             <header className="flex items-center gap-2 border-b border-line-soft px-3.5 py-3">
@@ -306,7 +306,7 @@ function Board({ tasks, directory }) {
       </div>
       {drag && (
         <div
-          className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 -translate-y-1/2 rotate-2 rounded-card border border-accent bg-surface px-3.5 py-2.5 text-[14px] font-medium shadow-2xl"
+          className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 -translate-y-1/2 rotate-2 rounded-card border border-accent-ink/50 bg-surface px-3.5 py-2.5 text-[14px] font-medium shadow-2xl"
           style={{ left: drag.x, top: drag.y }}
           aria-hidden
         >

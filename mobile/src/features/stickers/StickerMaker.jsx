@@ -66,7 +66,7 @@ export function PackPicker({ value, onChange }) {
               onChange(p);
             }}
             aria-pressed={!adding && p === current}
-            className={cx('h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium', !adding && p === current ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+            className={cx('h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium', !adding && p === current ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
           >
             {p}
           </button>
@@ -78,7 +78,7 @@ export function PackPicker({ value, onChange }) {
             onChange('');
           }}
           aria-pressed={adding}
-          className={cx('inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-dashed px-3.5 text-[13px] font-medium', adding ? 'border-accent text-accent-ink' : 'border-line text-text-2')}
+          className={cx('inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-dashed px-3.5 text-[13px] font-medium', adding ? 'border-accent-ink/50 text-accent-ink' : 'border-line text-text-2')}
         >
           <Icon as={Plus} size={13} /> New pack
         </button>
@@ -370,7 +370,7 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
                     aria-label="No background"
                     aria-pressed={background.kind === 'none'}
                     onClick={() => setBackground((b) => ({ ...b, kind: 'none' }))}
-                    className={cx('h-9 w-9 shrink-0 rounded-full border-2', background.kind === 'none' ? 'border-accent' : 'border-line')}
+                    className={cx('h-9 w-9 shrink-0 rounded-full border-2', background.kind === 'none' ? 'border-accent-ink/50' : 'border-line')}
                     style={CHECKER}
                   />
                   {BACKGROUND_COLORS.map((c) => (
@@ -380,7 +380,7 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
                       aria-label={`Background ${c}`}
                       aria-pressed={background.kind === 'color' && background.color === c}
                       onClick={() => setBackground((b) => ({ ...b, kind: 'color', color: c }))}
-                      className={cx('h-9 w-9 shrink-0 rounded-full border-2', background.kind === 'color' && background.color === c ? 'border-accent' : 'border-line')}
+                      className={cx('h-9 w-9 shrink-0 rounded-full border-2', background.kind === 'color' && background.color === c ? 'border-accent-ink/50' : 'border-line')}
                       style={{ background: c }}
                     />
                   ))}
@@ -389,7 +389,7 @@ export function StickerMakerSheet({ file, onCancel, onDone, canSend = true }) {
                     aria-label="Picture background"
                     aria-pressed={background.kind === 'image'}
                     onClick={() => bgInput.current?.click()}
-                    className={cx('grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 bg-surface text-text-2', background.kind === 'image' ? 'border-accent' : 'border-line')}
+                    className={cx('grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 bg-surface text-text-2', background.kind === 'image' ? 'border-accent-ink/50' : 'border-line')}
                   >
                     <Icon as={ImagePlus} size={16} />
                   </button>

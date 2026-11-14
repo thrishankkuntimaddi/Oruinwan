@@ -45,18 +45,18 @@ function Item({ icon, label, active, badge, dot, hint, onClick, tour }) {
       className={cx(
         'group relative flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] transition-colors',
         'justify-center xl:justify-start',
-        active ? 'bg-accent/15 font-medium text-accent-ink' : 'text-text-2 hover:bg-surface-3/70 hover:text-text',
+        active ? 'bg-accent-ink/15 font-medium text-accent-ink' : 'text-text-2 hover:bg-surface-3/70 hover:text-text',
       )}
     >
       <span className="relative shrink-0">
         <Icon as={icon} size={20} />
         {(badge > 0 || dot) && (
-          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-bg xl:hidden" aria-hidden />
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-ink ring-2 ring-bg xl:hidden" aria-hidden />
         )}
       </span>
       <span className="hidden min-w-0 flex-1 truncate xl:block">{label}</span>
       <span className="hidden xl:inline-flex">
-        {badge > 0 ? <Count value={badge} /> : dot ? <span className="h-2 w-2 rounded-full bg-accent" aria-hidden /> : null}
+        {badge > 0 ? <Count value={badge} /> : dot ? <span className="h-2 w-2 rounded-full bg-accent-ink" aria-hidden /> : null}
         {hint && !badge && <kbd className="font-sans text-[11px] text-text-3">{hint}</kbd>}
       </span>
     </button>
@@ -150,13 +150,13 @@ export function Sidebar() {
           aria-current={hub?.startsWith('settings') ? 'page' : undefined}
           className={cx(
             'flex w-full items-center justify-center gap-2.5 rounded-xl p-1.5 text-left transition-colors xl:justify-start',
-            hub?.startsWith('settings') ? 'bg-accent/12' : 'hover:bg-surface-2',
+            hub?.startsWith('settings') ? 'bg-accent-ink/12' : 'hover:bg-surface-2',
           )}
         >
           <span className="relative">
             <Avatar name={user?.name} src={user?.avatarUrl} size="sm" presence={selfPresence(user)} />
             {(update === 'available' || update === 'required') && (
-              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" aria-label="Update available" />
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent-ink ring-2 ring-bg" aria-label="Update available" />
             )}
           </span>
           <span className="hidden min-w-0 flex-1 xl:block">

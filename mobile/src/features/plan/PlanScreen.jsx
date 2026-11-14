@@ -31,7 +31,7 @@ function UsageBar({ used, max, atLimit }) {
       aria-valuenow={used}
       className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3"
     >
-      <div className={cx('h-full rounded-full transition-[width]', atLimit ? 'bg-warning' : 'bg-accent')} style={{ width: `${pct}%` }} />
+      <div className={cx('h-full rounded-full transition-[width]', atLimit ? 'bg-warning' : 'bg-accent-ink')} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -109,7 +109,7 @@ function PlanCards({ current, workspaceName, ws, billing }) {
           return (
             <div
               key={p.id}
-              className={cx('flex w-[78%] max-w-[300px] shrink-0 snap-start flex-col rounded-card border p-4', on ? 'border-accent bg-accent/8' : 'border-line-soft bg-surface')}
+              className={cx('flex w-[78%] max-w-[300px] shrink-0 snap-start flex-col rounded-card border p-4', on ? 'border-accent-ink/50 bg-accent-ink/8' : 'border-line-soft bg-surface')}
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[17px] font-semibold">{p.name}</p>
@@ -233,7 +233,7 @@ export function PlanScreen() {
               data-testid="plan-card"
             >
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-accent/15 text-accent-ink">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-accent-ink/15 text-accent-ink">
                   <Icon as={plan.exempt ? Building2 : Gauge} size="sm" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -253,7 +253,7 @@ export function PlanScreen() {
                           key={p.id}
                           className={cx(
                             'rounded-full border px-2.5 py-0.5 text-xs',
-                            p.id === plan.plan ? 'border-accent/40 bg-accent/12 font-medium text-accent-ink' : 'border-line text-text-2',
+                            p.id === plan.plan ? 'border-accent-ink/40 bg-accent-ink/12 font-medium text-accent-ink' : 'border-line text-text-2',
                           )}
                         >
                           {p.name}

@@ -29,7 +29,7 @@ export function RowGroup({ children, className, footer }) {
 }
 
 const TILE = {
-  accent: 'bg-accent/15 text-accent-ink',
+  accent: 'bg-accent-ink/15 text-accent-ink',
   neutral: 'bg-surface-3 text-text-2',
   danger: 'bg-danger/12 text-danger',
   success: 'bg-success/12 text-success',

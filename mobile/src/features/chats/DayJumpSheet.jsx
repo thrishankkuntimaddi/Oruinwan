@@ -85,7 +85,7 @@ export function DayJumpSheet({ open, onClose, items, initial, onJump, hasMore, o
                     disabled={!id}
                     onClick={() => onJump(id)}
                     aria-label={d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
-                    className={cx('grid h-10 place-items-center rounded-xl text-[14px] tabular-nums', id ? 'bg-accent/15 font-semibold text-accent-ink active:bg-accent/25' : 'text-text-3/60')}
+                    className={cx('grid h-10 place-items-center rounded-xl text-[14px] tabular-nums', id ? 'bg-accent-ink/15 font-semibold text-accent-ink active:bg-accent-ink/25' : 'text-text-3/60')}
                   >
                     {d.getDate()}
                   </button>

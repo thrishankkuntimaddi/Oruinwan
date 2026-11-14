@@ -120,7 +120,7 @@ export function CreateWorkspaceFlow() {
         )}
         <div className="flex flex-1 justify-center gap-1.5" aria-label={`Step ${step} of 3`}>
           {[1, 2, 3].map((n) => (
-            <span key={n} className={cx('h-1.5 rounded-full transition-all', n === step ? 'w-6 bg-accent' : n < step ? 'w-1.5 bg-accent/60' : 'w-1.5 bg-line')} />
+            <span key={n} className={cx('h-1.5 rounded-full transition-all', n === step ? 'w-6 bg-accent-ink' : n < step ? 'w-1.5 bg-accent-ink/60' : 'w-1.5 bg-line')} />
           ))}
         </div>
         <span className="w-10" />
@@ -183,7 +183,7 @@ export function CreateWorkspaceFlow() {
                     key={idea}
                     type="button"
                     onClick={() => setProject(idea)}
-                    className={cx('pressable h-9 rounded-full border px-3.5 text-[14px] font-medium', project === idea ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
+                    className={cx('pressable h-9 rounded-full border px-3.5 text-[14px] font-medium', project === idea ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface text-text-2')}
                   >
                     {idea}
                   </button>

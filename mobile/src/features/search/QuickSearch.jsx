@@ -277,7 +277,7 @@ export function QuickSearch({ context = 'home', query, onClose }) {
           className="pressable flex w-full items-center gap-3 rounded-card glass-tile px-4 py-3 text-left"
           data-testid="quick-search-all"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/15 text-accent-ink">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent-ink/15 text-accent-ink">
             <Icon as={Hash} size={16} />
           </span>
           <span className="min-w-0 flex-1">

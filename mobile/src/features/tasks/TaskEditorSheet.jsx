@@ -39,7 +39,7 @@ export function PriorityPicker({ value, onChange }) {
           onClick={() => onChange(p)}
           className={cx(
             'flex h-9 flex-1 items-center justify-center gap-1 rounded-lg border text-[12px] font-medium',
-            value === p ? 'border-accent bg-accent/12 text-text' : 'border-line bg-input text-text-2',
+            value === p ? 'border-accent-ink/50 bg-accent-ink/12 text-text' : 'border-line bg-input text-text-2',
           )}
         >
           <span className="h-2 w-2 rounded-full" style={{ background: PRIORITY_META[p].color }} />
@@ -73,7 +73,7 @@ export function PeoplePicker({ open, onClose, value, onChange, title = 'Assignee
             <span
               className={cx(
                 'grid h-6 w-6 place-items-center rounded-md border',
-                value.includes(u.id) ? 'border-accent bg-accent text-on-accent' : 'border-line-strong',
+                value.includes(u.id) ? 'border-accent-ink/50 bg-accent text-on-accent' : 'border-line-strong',
               )}
             >
               {value.includes(u.id) && <Icon as={Check} size={14} />}

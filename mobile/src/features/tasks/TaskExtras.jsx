@@ -91,7 +91,7 @@ function Subtasks({ task }) {
     <Section title={subs.length ? `Subtasks · ${done}/${subs.length}` : 'Subtasks'}>
       {subs.length > 0 && (
         <div className="mx-4 mb-2 h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden>
-          <div className="h-full bg-accent transition-[width]" style={{ width: `${(done / subs.length) * 100}%` }} />
+          <div className="h-full bg-accent-ink transition-[width]" style={{ width: `${(done / subs.length) * 100}%` }} />
         </div>
       )}
       <div className="mx-4 overflow-hidden rounded-card glass-tile divide-y divide-line-soft">
@@ -417,7 +417,7 @@ function TimeTracking({ task }) {
       }
     >
       <div className="mx-4 flex items-center gap-4 rounded-card glass-tile p-4">
-        <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-[12px]', running ? 'bg-accent/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
+        <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-[12px]', running ? 'bg-accent-ink/15 text-accent-ink' : 'bg-surface-3 text-text-2')}>
           <Icon as={Timer} />
         </span>
         <div className="min-w-0 flex-1">
@@ -541,7 +541,7 @@ export function RecurrenceSheet({ open, onClose, task }) {
                       onClick={() => toggleDay(d.id)}
                       className={cx(
                         'grid h-10 flex-1 place-items-center rounded-lg border text-[13px] font-medium',
-                        r.daysOfWeek.includes(d.id) ? 'border-accent bg-accent/12 text-accent-ink' : 'border-line bg-input text-text-2',
+                        r.daysOfWeek.includes(d.id) ? 'border-accent-ink/50 bg-accent-ink/12 text-accent-ink' : 'border-line bg-input text-text-2',
                       )}
                     >
                       {d.short}

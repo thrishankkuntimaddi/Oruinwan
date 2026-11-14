@@ -130,7 +130,7 @@ export function ScheduleMeetingSheet({ open, onClose, channelId, meeting = null,
                 {slots.map((s) => {
                   const active = combineDateTime(date, time) === new Date(s.start).toISOString();
                   return (
-                    <button key={s.start} type="button" onClick={() => pickSlot(s)} className={cx('pressable rounded-full border px-3 py-1.5 text-[13px]', active ? 'border-accent bg-accent/15 text-accent-ink' : 'border-line bg-surface-2')}>
+                    <button key={s.start} type="button" onClick={() => pickSlot(s)} className={cx('pressable rounded-full border px-3 py-1.5 text-[13px]', active ? 'border-accent-ink/50 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface-2')}>
                       {meetingWhen(s.start)}
                     </button>
                   );

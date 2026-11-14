@@ -73,7 +73,7 @@ export function usePlanningTasks() {
 function Progress({ percent }) {
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden>
-      <div className="h-full bg-accent" style={{ width: `${percent}%` }} />
+      <div className="h-full bg-accent-ink" style={{ width: `${percent}%` }} />
     </div>
   );
 }
@@ -517,7 +517,7 @@ function TimelineView({ tasks }) {
                 );
               })}
             </div>
-            {today >= 0 && today < days && <span className="absolute top-9 bottom-0 w-px bg-accent/60" style={{ left: `${((today + 0.5) / days) * 100}%` }} aria-hidden />}
+            {today >= 0 && today < days && <span className="absolute top-9 bottom-0 w-px bg-accent-ink/60" style={{ left: `${((today + 0.5) / days) * 100}%` }} aria-hidden />}
             {rows.map((r) => (
               <div key={r.task.id} className="relative h-11 border-b border-line-soft last:border-0">
                 <button

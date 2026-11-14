@@ -129,7 +129,7 @@ function Control({ icon, label, onClick, on = false, danger = false, disabled = 
       data-testid={testId}
       className={cx(
         'pressable grid h-12 w-12 shrink-0 place-items-center rounded-full border disabled:opacity-40 md:h-14 md:w-14',
-        danger ? 'border-transparent bg-danger text-white' : on ? 'border-accent/40 bg-accent/15 text-accent-ink' : 'border-line bg-surface-2 text-text',
+        danger ? 'border-transparent bg-danger text-white' : on ? 'border-accent-ink/40 bg-accent-ink/15 text-accent-ink' : 'border-line bg-surface-2 text-text',
       )}
     >
       <Icon as={icon} size={20} />
@@ -498,7 +498,7 @@ function MiniCall({ title }) {
             className="glass absolute bottom-1 left-1 flex max-w-[calc(100%-8px)] items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium"
             data-testid="huddle-bar-speaker"
           >
-            {speaking[star.userId] && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />}
+            {speaking[star.userId] && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-ink" aria-hidden />}
             {star.audioEnabled === false && <Icon as={MicOff} size={11} className="shrink-0 text-danger" />}
             <span className="truncate">{star.isLocal ? 'You' : star.username || 'Someone'}</span>
           </span>

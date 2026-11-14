@@ -108,7 +108,7 @@ export function ChatRow({ row, agentIcon, onMenu, selecting = false, checked = f
       className={cx('flex w-full select-none items-center gap-3 px-4 py-2.5 text-left active:bg-surface-2', (selected || checked) && 'bg-surface-2')}
     >
       {selecting && (
-        <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full border-2', checked ? 'border-accent bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
+        <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full border-2', checked ? 'border-accent-ink/50 bg-gold text-on-accent' : 'border-line-strong')} aria-hidden>
           {checked && <Icon as={Check} size={14} strokeWidth={3} />}
         </span>
       )}
