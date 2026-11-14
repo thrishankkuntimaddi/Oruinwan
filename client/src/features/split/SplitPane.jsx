@@ -149,12 +149,16 @@ export default function SplitPane({ workspaceId }) {
     const { label, Icon } = paneKind(pane.path);
     const mainPath = `${mainLocation.pathname}${mainLocation.search}`;
 
+    // The assistant isn't a page in the main view: it opens as the main view's AI panel.
+    const isAi = /\/ai(?:[/?]|$)/.test(pane.path);
     const swap = () => {
+        if (isAi) { window.dispatchEvent(new CustomEvent('oruinwan-ai:open')); split.close(); return; }
         split.navigate(mainPath);
         navigate(pane.path);
     };
     const openInMain = () => {
-        navigate(pane.path);
+        if (isAi) window.dispatchEvent(new CustomEvent('oruinwan-ai:open'));
+        else navigate(pane.path);
         split.close();
     };
 

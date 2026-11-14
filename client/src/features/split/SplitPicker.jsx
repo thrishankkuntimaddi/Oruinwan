@@ -66,7 +66,7 @@ export default function SplitPicker({ workspaceId }) {
         <div role="dialog" aria-modal="true" aria-label="Open beside" onKeyDown={onKey}
             onMouseDown={(e) => { if (e.target === e.currentTarget) split.closePicker(); }}
             style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.35)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '12vh' }}>
-            <div className="gl-card" style={{ width: 'min(520px, calc(100vw - 32px))', maxHeight: '64vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+            <div className="gl-card gl-liquid" style={{ width: 'min(520px, calc(100vw - 32px))', maxHeight: '64vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <Search size={15} style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
                     <input ref={inputRef} value={query} onChange={(e) => { setQuery(e.target.value); setActive(0); }}
