@@ -35,7 +35,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cx(
-        'pressable inline-flex items-center justify-center font-medium select-none whitespace-nowrap',
+        'ui-btn pressable inline-flex items-center justify-center font-medium select-none whitespace-nowrap',
         'disabled:opacity-45 disabled:active:scale-100',
         VARIANTS[variant],
         SIZES[size],

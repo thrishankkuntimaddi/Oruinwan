@@ -11,6 +11,12 @@ const THEMES = [
     { id: 'auto', label: 'System', description: 'Matches your device, live', icon: Laptop },
 ];
 
+// The two designs. Each preview is drawn in its own colours, whichever design is on.
+const LOOKS = [
+    { id: 'glass', label: 'Glass', description: 'Liquid Glass panes over a soft colour field' },
+    { id: 'unslop', label: 'Unslop', description: 'Quiet surfaces, one bronze accent, nothing see-through' },
+];
+
 const TEXT_SIZES = [
     { id: 'small', label: 'Small', px: 13 },
     { id: 'default', label: 'Default', px: 14 },
@@ -23,7 +29,7 @@ const TEXT_SIZES = [
  * (theme, text size) or to this device (reduce motion) by ThemeContext.
  */
 const AppearanceTab = () => {
-    const { theme, resolvedTheme, setTheme, textSize, setTextSize, reduceMotion, setReduceMotion } = useTheme();
+    const { theme, resolvedTheme, setTheme, textSize, setTextSize, reduceMotion, setReduceMotion, look, setLook, glassColour, setGlassColour } = useTheme();
     const { showToast } = useToast();
 
     const warnIfFailed = (ok) => {
@@ -39,11 +45,79 @@ const AppearanceTab = () => {
         e.currentTarget.parentElement?.children[(index + delta + THEMES.length) % THEMES.length]?.focus();
     };
 
+    const onLookKey = (e, index) => {
+        const delta = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!delta) return;
+        e.preventDefault();
+        const nextIndex = (index + delta + LOOKS.length) % LOOKS.length;
+        setLook(LOOKS[nextIndex].id);
+        e.currentTarget.parentElement?.children[nextIndex]?.focus();
+    };
+
     const sample = TEXT_SIZES.find((s) => s.id === textSize) || TEXT_SIZES[1];
 
     return (
         <>
             <PageIntro title="Appearance" description="How Oruinwan looks on your screens. Changes apply right away." />
+
+            <Section
+                title="Design"
+                description="Two complete designs for the whole app. Saved on this device."
+                pad
+            >
+                <div className="stg-pref-themes stg-pref-looks" role="radiogroup" aria-label="Design">
+                    {LOOKS.map((option, index) => {
+                        const active = look === option.id;
+                        return (
+                            <button
+                                key={option.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={active}
+                                tabIndex={active ? 0 : -1}
+                                className="stg-pref-theme"
+                                data-testid={`look-${option.id}`}
+                                onClick={() => setLook(option.id)}
+                                onKeyDown={(e) => onLookKey(e, index)}
+                            >
+                                <div className="stg-pref-look" data-look={option.id} data-mode={resolvedTheme} aria-hidden="true">
+                                    <div className="stg-pref-look-rail" />
+                                    <div className="stg-pref-look-side">
+                                        <i /><i className="is-on" /><i />
+                                    </div>
+                                    <div className="stg-pref-look-main">
+                                        <div className="stg-pref-look-day"><b /><b /><b /></div>
+                                        <div className="stg-pref-look-msg" />
+                                        <div className="stg-pref-look-msg is-short" />
+                                        <div className="stg-pref-look-btn" />
+                                    </div>
+                                </div>
+                                <div className="stg-pref-theme-label">
+                                    <div>
+                                        <div className="stg-pref-theme-name">{option.label}</div>
+                                        <div className="stg-pref-theme-desc">{option.description}</div>
+                                    </div>
+                                </div>
+                                {active && <Check size={14} className="stg-pref-theme-check" />}
+                            </button>
+                        );
+                    })}
+                </div>
+                {look === 'glass' && (
+                    <Row
+                        label="Background colour"
+                        description={glassColour === 'on' ? 'Soft colours behind the glass' : 'Only glass, on plain grey or black'}
+                    >
+                        <div className="stg-segmented" role="group" aria-label="Background colour">
+                            {[['on', 'On'], ['off', 'Off']].map(([id, label]) => (
+                                <button key={id} type="button" aria-pressed={glassColour === id} data-testid={`glass-colour-${id}`} onClick={() => setGlassColour(id)}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </Row>
+                )}
+            </Section>
 
             <Section
                 title="Theme"

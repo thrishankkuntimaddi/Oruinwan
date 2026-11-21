@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import api from '@services/api';
 import { Eye, EyeOff, ArrowRight, KeyRound, QrCode } from 'lucide-react';
 import { startAuthentication } from '@simplewebauthn/browser';
@@ -39,6 +40,8 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     const [unverifiedEmail, setUnverifiedEmail] = useState(null);
     const { login, setUser, adoptSession } = useContext(AuthContext);
     const { showToast } = useToast();
+    // Unslop: plain statements, no exclamation marks, the title names the action (copy pass).
+    const unslop = useTheme()?.look === 'unslop';
     const navigate = useNavigate();
     const uid = useId();
 
@@ -61,7 +64,7 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         setLoading(true);
         try {
             const response = await login(formData.email, formData.password);
-            showToast('Login successful!', 'success');
+            showToast(unslop ? 'Signed in' : 'Login successful!', 'success');
             await new Promise(r => setTimeout(r, 100));
             routeAfterPasswordLogin(response, navigate);
         } catch (err) {
@@ -91,7 +94,7 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
         setChallenge(null);
         if (step?.kind === 'password') {
             adoptSession(data, { password: step.password });
-            showToast('Login successful!', 'success');
+            showToast(unslop ? 'Signed in' : 'Login successful!', 'success');
             routeAfterPasswordLogin(data, navigate);
             return;
         }
@@ -215,8 +218,8 @@ const LoginForm = ({ initialEmail = '', onGoogleSignup }) => {
     return (
         <div>
             <div className="orw-auth__panel-head">
-                <h2>Welcome back</h2>
-                <p>Sign in to pick up where your team left off.</p>
+                <h2>{unslop ? 'Sign in' : 'Welcome back'}</h2>
+                <p>{unslop ? 'Pick up where your team left off' : 'Sign in to pick up where your team left off.'}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="orw-form">

@@ -1,4 +1,5 @@
-// Appearance is a per-device choice (never synced): theme, message text size, motion.
+// Appearance is a per-device choice (never synced): design (Glass | Unslop), theme, message text
+// size, motion. The design sets <html data-look>; styles/unslop.css is scoped to data-look='unslop'.
 import { create } from 'zustand';
 import { prefs } from '../native/storage.js';
 import { applySystemBars } from '../native/index.js';
@@ -10,13 +11,19 @@ function resolve(pref) {
   return media?.matches ? 'dark' : 'light';
 }
 
-function apply({ theme, textSize, reduceMotion }) {
+export const LOOKS = ['glass', 'unslop'];
+const normalizeLook = (l) => (LOOKS.includes(l) ? l : 'glass');
+
+function apply({ theme, textSize, reduceMotion, look, glassColour }) {
   const resolved = resolve(theme);
   const root = document.documentElement;
   root.dataset.theme = resolved;
+  root.dataset.look = normalizeLook(look);
+  // Glass only: Off drops the colour field behind the glass (styles/glass-plain.css).
+  root.dataset.glassColour = glassColour === 'off' ? 'off' : 'on';
   root.dataset.textSize = textSize;
   root.dataset.reduceMotion = reduceMotion ? 'true' : 'false';
-  applySystemBars(resolved);
+  applySystemBars(resolved, normalizeLook(look) === 'glass' && glassColour === 'off' ? 'plain' : normalizeLook(look));
   return resolved;
 }
 
@@ -33,6 +40,9 @@ export const useAppearance = create((set, get) => ({
   theme: prefs.raw('theme') || 'light',
   textSize: prefs.get('textSize', 'default'),
   reduceMotion: prefs.get('reduceMotion', false),
+  // Raw (not JSON) because theme-boot.js reads it before React loads.
+  look: normalizeLook(prefs.raw('look')),
+  glassColour: prefs.raw('glassColour') === 'off' ? 'off' : 'on',
   resolved: 'light',
   setTheme(theme) {
     prefs.setRaw('theme', theme);
@@ -41,6 +51,18 @@ export const useAppearance = create((set, get) => ({
   setTextSize(textSize) {
     prefs.set('textSize', textSize);
     set({ textSize });
+    apply(get());
+  },
+  setLook(look) {
+    const l = normalizeLook(look);
+    prefs.setRaw('look', l);
+    set({ look: l });
+    apply(get());
+  },
+  setGlassColour(glassColour) {
+    const c = glassColour === 'off' ? 'off' : 'on';
+    prefs.setRaw('glassColour', c);
+    set({ glassColour: c });
     apply(get());
   },
   setReduceMotion(reduceMotion) {

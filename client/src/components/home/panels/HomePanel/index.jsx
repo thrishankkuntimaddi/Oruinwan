@@ -424,7 +424,7 @@ const HomePanel = ({ title }) => {
             )}
 
             <SectionHeader
-                label="Direct Messages"
+                label="Direct messages"
                 isOpen={expanded.dms}
                 onClick={() => toggle("dms")}
                 onAdd={() => activeWorkspace?.id && navigate(`/workspace/${activeWorkspace.id}/home/new`)}
@@ -459,7 +459,7 @@ const HomePanel = ({ title }) => {
             )}
 
             <SectionHeader
-                label="Upcoming Schedules"
+                label="Upcoming schedules"
                 isOpen={expanded.schedules}
                 onClick={() => toggle('schedules')}
                 onAdd={() => setShowScheduleModal(true)}

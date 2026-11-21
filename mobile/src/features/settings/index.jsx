@@ -141,7 +141,7 @@ export function SettingsScreen({ confirmSignOut = false }) {
         <Section title="You">
           <RowGroup>
             <Row icon={User} tile="accent" title="Profile" subtitle="Name, photo, title and about" onClick={() => nav.push('settings.profile')} />
-            <Row icon={Palette} tile="accent" title="Appearance" subtitle="Theme and text size" onClick={() => nav.push('settings.appearance')} />
+            <Row icon={Palette} tile="accent" title="Appearance" subtitle="Design, theme and text size" onClick={() => nav.push('settings.appearance')} />
             <Row icon={Lock} tile="accent" title="Privacy" subtitle="Read receipts, typing, who can find you" onClick={() => nav.push('settings.privacy')} />
           </RowGroup>
         </Section>
@@ -787,12 +787,67 @@ function ThemeCard({ value, label, icon, selected, onSelect }) {
   );
 }
 
+// A miniature of each design, drawn in its own colours whichever design is on.
+function LookCard({ value, label, subtitle, selected, onSelect, dark }) {
+  const glass = value === 'glass';
+  const c = glass
+    ? dark
+      ? { bg: 'radial-gradient(60% 70% at 10% 0%, #3a2a3f, transparent 70%), radial-gradient(60% 70% at 100% 30%, #1d2a4a, transparent 70%), #06070b', pane: 'rgba(255,255,255,0.08)', line: 'rgba(255,255,255,0.16)', on: 'rgba(255,255,255,0.85)', dot: 'rgba(255,255,255,0.3)' }
+      : { bg: 'radial-gradient(60% 70% at 10% 0%, #ffd9c7, transparent 70%), radial-gradient(60% 70% at 100% 30%, #d9d4ff, transparent 70%), radial-gradient(70% 70% at 60% 110%, #c9f0e1, transparent 70%), #eef0f6', pane: 'rgba(255,255,255,0.5)', line: 'rgba(60,60,67,0.14)', on: '#ffffff', dot: 'rgba(60,60,67,0.25)' }
+    : dark
+      ? { bg: '#141312', pane: '#181716', line: 'rgba(238,235,230,0.12)', on: '#d6a86c', dot: '#d6a86c' }
+      : { bg: '#f6f5f2', pane: '#efede8', line: 'rgba(28,26,23,0.12)', on: '#8a5a24', dot: '#8a5a24' };
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cx('pressable flex flex-1 flex-col gap-2 rounded-card border p-2.5 text-left', selected ? 'border-accent-ink/50 bg-accent-ink/10' : 'border-line bg-surface')}
+    >
+      <span className="flex h-20 w-full gap-1 overflow-hidden rounded-lg p-1" style={{ background: c.bg, border: glass ? 0 : `1px solid ${c.line}` }} aria-hidden="true">
+        <span className="flex w-1/3 flex-col gap-1 p-1.5" style={{ background: c.pane, borderRadius: glass ? 10 : 4 }}>
+          <span className="h-1.5 rounded-sm" style={{ background: c.line }} />
+          <span className="h-1.5 rounded-sm" style={{ background: glass ? c.on : c.line, boxShadow: glass ? undefined : `inset 2px 0 0 ${c.on}` }} />
+          <span className="h-1.5 rounded-sm" style={{ background: c.line }} />
+        </span>
+        <span className="flex flex-1 flex-col gap-1.5 p-1.5" style={{ background: glass ? c.pane : 'transparent', borderRadius: glass ? 10 : 0 }}>
+          <span className="flex items-center gap-0.5">
+            {[3, 4, 5].map((d) => <span key={d} className="rounded-full" style={{ width: glass ? 4 : d, height: glass ? 4 : d, background: c.dot }} />)}
+          </span>
+          <span className="h-1.5 w-4/5 rounded-sm" style={{ background: c.line }} />
+          <span className="h-1.5 w-1/2 rounded-sm" style={{ background: c.line }} />
+          <span className="mt-auto h-2.5 w-7 self-end" style={{ background: c.on, borderRadius: glass ? 99 : 3 }} />
+        </span>
+      </span>
+      <span className="px-0.5">
+        <span className="block text-[13px] font-medium">{label}</span>
+        <span className="block text-xs text-text-2">{subtitle}</span>
+      </span>
+    </button>
+  );
+}
+
 export function AppearanceSettings() {
-  const { theme, textSize, reduceMotion, setTheme, setTextSize, setReduceMotion } = useAppearance();
+  const { theme, textSize, reduceMotion, look, resolved, glassColour, setTheme, setTextSize, setReduceMotion, setLook, setGlassColour } = useAppearance();
   return (
     <Screen>
       <Header title="Appearance" />
       <Body>
+        <Section title="Design">
+          <div className="flex gap-2.5 px-4">
+            <LookCard value="glass" label="Glass" subtitle="Liquid Glass over a soft colour field" selected={look === 'glass'} onSelect={() => setLook('glass')} dark={resolved === 'dark'} />
+            <LookCard value="unslop" label="Unslop" subtitle="Quiet surfaces, one bronze accent" selected={look === 'unslop'} onSelect={() => setLook('unslop')} dark={resolved === 'dark'} />
+          </div>
+          <p className="mx-5 mt-2 text-xs text-text-2">Two complete designs for the whole app.</p>
+        </Section>
+        {look === 'glass' && (
+          <Section title="Background colour">
+            <div className="px-4">
+              <Segmented value={glassColour} onChange={setGlassColour} options={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]} />
+            </div>
+            <p className="mx-5 mt-2 text-xs text-text-2">{glassColour === 'on' ? 'Soft colours behind the glass' : 'Only glass, on plain grey or black'}</p>
+          </Section>
+        )}
         <Section title="Theme">
           <div className="flex gap-2.5 px-4">
             <ThemeCard value="system" label="System" icon={SunMoon} selected={theme === 'system'} onSelect={() => setTheme('system')} />

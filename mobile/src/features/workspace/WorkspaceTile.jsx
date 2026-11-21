@@ -5,8 +5,9 @@ export function WorkspaceTile({ workspace, size = 32, className }) {
   return (
     <span
       aria-hidden
-      className={cx('inline-grid shrink-0 place-items-center overflow-hidden rounded-[9px] font-bold text-white', className)}
+      className={cx('ws-tile inline-grid shrink-0 place-items-center overflow-hidden rounded-[9px] font-bold text-white', className)}
       style={{
+        '--ws-color': workspace?.color || '#b8956a',
         width: size,
         height: size,
         fontSize: size * 0.42,

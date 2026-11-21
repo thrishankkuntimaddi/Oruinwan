@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useWorkspace } from '../../../contexts/WorkspaceContext';
 import { useContacts } from '../../../contexts/ContactsContext';
 import { useToast } from '../../../contexts/ToastContext';
@@ -107,6 +108,10 @@ export function HomeLanding() {
         }
     };
 
+    // Unslop names the place and the day instead of greeting (copy pass).
+    const unslop = useTheme()?.look === 'unslop';
+    const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+
     const summary = [
         unread ? `${unread} unread` : null,
         mentions ? `${mentions} mention${mentions === 1 ? '' : 's'}` : null,
@@ -116,8 +121,8 @@ export function HomeLanding() {
     return (
         <DashPage head={(
             <PageHead
-                eyebrow={activeWorkspace?.name || 'Workspace'}
-                title={`${greeting()}${firstName ? `, ${firstName}` : ''}`}
+                eyebrow={unslop ? today : (activeWorkspace?.name || 'Workspace')}
+                title={unslop ? (activeWorkspace?.name || 'Home') : `${greeting()}${firstName ? `, ${firstName}` : ''}`}
                 lead={summary || 'You’re all caught up.'}
                 actions={(
                     <>

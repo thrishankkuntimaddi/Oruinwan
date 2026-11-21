@@ -1,0 +1,33 @@
+/*
+ * Glass → Background colour: Off (Settings → Appearance, this device only). The same as the
+ * web client's client/src/styles/glass-plain.css: no colour field behind the glass, a plain
+ * light grey (light) or black (dark); tiles get a denser fill so they still read.
+ *
+ * Scoped to <html data-look='glass' data-glass-colour='off'> (app/theme.js, theme-boot.js) and
+ * unlayered, so it outranks the Tailwind layers. With the colour on, nothing here applies.
+ */
+html[data-look='glass'][data-glass-colour='off'] {
+  --c-bg: 242 242 247;
+  --lg-wall: #f2f2f7;
+  --lg-wall-1: transparent;
+  --lg-wall-2: transparent;
+  --lg-wall-3: transparent;
+  --lg-wall-4: transparent;
+  --lg-tile: rgb(255 255 255 / 0.78);
+  --lg-ctl: rgb(255 255 255 / 0.86);
+  --lg-bar: rgb(255 255 255 / 0.72);
+  --lg-hover: rgb(255 255 255 / 0.95);
+  --lg-out: rgb(0 0 0 / 0.07);
+  --a-surface: 0.78;
+  --lg-pane-wash: transparent;
+}
+html[data-look='glass'][data-glass-colour='off'][data-theme='dark'] {
+  --c-bg: 0 0 0;
+  --lg-wall: #000000;
+  --lg-tile: rgb(255 255 255 / 0.075);
+  --lg-ctl: rgb(255 255 255 / 0.12);
+  --lg-bar: rgb(30 30 32 / 0.6);
+  --lg-hover: rgb(255 255 255 / 0.12);
+  --lg-out: rgb(255 255 255 / 0.06);
+  --a-surface: 0.075;
+}

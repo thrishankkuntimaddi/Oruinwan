@@ -1,0 +1,1106 @@
+/*
+ * Unslop: Oruinwan's second design (Settings → Appearance → Design → Unslop).
+ *
+ * Made with the unslop method by Damir Sokolovsky (@heydamir), https://github.com/heydamir/unslop
+ * (CC BY 4.0). Audit → direction → nine passes (spacing, colour, icons, copy, type, layout,
+ * details, visuals, motion).
+ *
+ * Direction
+ *   Product    one workspace where a team's channels, DMs, huddles, tasks and notes sit
+ *              together, so everyone follows one place
+ *   Character  attentive, orderly, conversational
+ *   World      the round table of the logo: three people seated around one conversation,
+ *              three dots between them
+ *   Moments    the conversation itself (names, avatars, message text set to be read) and the
+ *              people (avatars, presence)
+ *   Signature  the logo's three graded dots, only where a conversation is marked: the day
+ *              divider in a conversation and the typing line
+ *
+ * Rules
+ *   • Quiet chrome on a warm graphite ramp; no wallpaper, glass, blur, gloss, glow or gradient.
+ *   • One accent, the logo's bronze (deepened for contrast): the primary action, the
+ *     selection, unread counts, the signature. Red only for danger and mentions, green only
+ *     for success and presence.
+ *   • IBM Plex Sans for the interface (400/500/600, nothing heavier is loaded), IBM Plex Mono
+ *     for times, counts and keycaps. Sentence case everywhere, tabular numbers.
+ *   • Radius by size: rows and controls 8, cards 12, panels and popovers 14, dialogs 16.
+ *   • One curve, 140–200ms; a press is scale(.97); no hover lift, no overshoot, no loops
+ *     except things that are live.
+ *
+ * It is a layer: everything is scoped to html.us (set instead of html.lg by ThemeContext and
+ * theme-boot.js), so Liquid Glass (styles/liquid-glass-app.css, html.lg) is never touched.
+ * Without html.lg the base tokens (index.css, gloss.css, palette.css) apply; this file maps
+ * them onto the Unslop ramp. Most pop-ups are inline-styled with those tokens, so the token
+ * map does most of the work; the rules below fix what is hard-coded.
+ */
+
+/* ── Tokens: light ──────────────────────────────────────────────────────── */
+html.us {
+    --us-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --us-fast: 140ms;
+    --us-base: 180ms;
+    --us-enter: 260ms;
+    --us-r-row: 8px;
+    --us-r-card: 12px;
+    --us-r-panel: 14px;
+    --us-r-dialog: 16px;
+    --us-font: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+    --us-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --r-sm: 8px;
+}
+html.us.light,
+html.us:not(.dark) {
+    /* the ramp: warm graphite, tinted a few degrees toward the logo's bronze */
+    --us-canvas: #f6f5f2;
+    --us-deep: #efede8;
+    --us-surface: #ffffff;
+    --us-raised: #f0eee9;
+    --us-hover: rgba(28, 26, 23, 0.045);
+    --us-active: rgba(28, 26, 23, 0.075);
+    --us-line: rgba(28, 26, 23, 0.09);
+    --us-line-2: rgba(28, 26, 23, 0.14);
+    --us-line-3: rgba(28, 26, 23, 0.24);
+    --us-text: #1c1a17;
+    --us-text-2: #57524b;
+    --us-text-3: #6f6961;
+    /* the bronze of the logo, deep enough for white text and for text on white (5.9:1) */
+    --us-accent: #8a5a24;
+    --us-accent-hover: #74491a;
+    --us-accent-soft: rgba(138, 90, 36, 0.09);
+    --us-accent-line: rgba(138, 90, 36, 0.32);
+    --us-on-accent: #ffffff;
+    --us-positive: #1f7a4d;
+    --us-negative: #c0392f;
+    --us-warning: #a8620c;
+    --us-shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05);
+    --us-shadow-pop: 0 1px 2px rgba(28, 26, 23, 0.06), 0 12px 32px -8px rgba(28, 26, 23, 0.16);
+    --us-scrim: rgba(28, 26, 23, 0.32);
+
+    --bg-base: var(--us-canvas);
+    --bg-primary: var(--us-canvas);
+    --bg-surface: var(--us-surface);
+    --bg-secondary: var(--us-surface);
+    --bg-hover: #eeece7;
+    --bg-active: #e8e5df;
+    --bg-tertiary: #e8e5df;
+    --bg-input: #ffffff;
+    --border-subtle: rgba(28, 26, 23, 0.08);
+    --border-default: rgba(28, 26, 23, 0.12);
+    --border-accent: rgba(28, 26, 23, 0.22);
+    --border-color: rgba(28, 26, 23, 0.12);
+    --border-hover: rgba(28, 26, 23, 0.22);
+    --text-primary: var(--us-text);
+    --text-secondary: var(--us-text-2);
+    --text-muted: var(--us-text-3);
+    --accent: var(--us-accent);
+    --accent-dim: var(--us-accent-soft);
+    --accent-hover: var(--us-accent-hover);
+    --text-on-accent: var(--us-on-accent);
+    --state-danger: var(--us-negative);
+    --state-success: var(--us-positive);
+    --color-primary: var(--us-accent);
+    --color-primary-hover: var(--us-accent-hover);
+    --color-primary-light: var(--us-accent-soft);
+    --color-success: var(--us-positive);
+    --color-warning: var(--us-warning);
+    --color-danger: var(--us-negative);
+    --input-bg: #ffffff;
+    --input-border: rgba(28, 26, 23, 0.14);
+    --input-text: var(--us-text);
+    --input-placeholder: #8a847b;
+    --input-ring: rgba(138, 90, 36, 0.18);
+    --card-bg: var(--us-surface);
+    --card-border: rgba(28, 26, 23, 0.09);
+    --card-shadow: var(--us-shadow-sm);
+    --highlight-bg-strong: rgba(138, 90, 36, 0.1);
+    --highlight-bg-weak: rgba(138, 90, 36, 0.05);
+    --bg-overlay: var(--us-scrim);
+    --font: var(--us-font);
+    --transition: var(--us-fast) var(--us-ease);
+    --transition-slow: var(--us-base) var(--us-ease);
+    --ls-display: -0.01em;
+    --ls-title: -0.005em;
+    --ls-label: 0em;
+    --ls-micro: 0em;
+
+    /* gloss.css: no glass, no gloss, no glow, no aurora */
+    --gl-radius: 8px;
+    --gl-radius-sm: 8px;
+    --gl-radius-md: 14px;
+    --gl-radius-lg: 16px;
+    --gl-line: var(--us-line);
+    --gl-line-2: var(--us-line-2);
+    --gl-glass: none;
+    --gl-glass-strong: none;
+    --gl-spec: 0 0 0 transparent;
+    --gl-spec-strong: 0 0 0 transparent;
+    --gl-drop: var(--us-shadow-pop);
+    --gl-accent-grad: linear-gradient(var(--us-accent), var(--us-accent));
+    --gl-accent-glow: 0 0 0 transparent;
+    --gl-accent-soft: var(--us-accent-soft);
+    --gl-accent-line: var(--us-accent-line);
+    --gl-grid: transparent;
+    --gl-aurora: transparent;
+    --gl-aurora-cool: transparent;
+    --gl-focus: rgba(138, 90, 36, 0.6);
+    --gl-focus-ring: 0 0 0 3px rgba(138, 90, 36, 0.16);
+    --gl-gloss: linear-gradient(transparent, transparent);
+    --gl-on-accent: var(--us-on-accent);
+    --gl-ease: var(--us-ease);
+    --gl-ease-press: var(--us-ease);
+    --gl-lift: none;
+    --gl-dur-1: var(--us-fast);
+    --gl-dur-2: var(--us-base);
+    --gl-dur-3: var(--us-enter);
+    --gl-shell-bg: var(--us-canvas);
+
+    /* the web client's floating-layer tokens → plain raised surfaces */
+    --lg-filter: none;
+    --lg-blur: 0px;
+    --lg-tint: var(--us-surface);
+    --lg-tint-strong: var(--us-surface);
+    --lg-solid: var(--us-surface);
+    --lg-chrome: var(--us-deep);
+    --lg-sheen: linear-gradient(transparent, transparent);
+    --lg-border: var(--us-line-2);
+    --lg-edge: 0 0 0 transparent;
+    --lg-shadow: var(--us-shadow-pop);
+    --lg-shadow-sm: var(--us-shadow-sm);
+    --lg-scrim: var(--us-scrim);
+    --lg-scrim-filter: none;
+
+    /* palette.css chrome (the old sand) → one step of the ramp */
+    --bg-chrome: var(--us-deep);
+    --bg-chrome-deep: #ebe9e3;
+    --bg-chrome-raised: #f8f7f4;
+    --bg-chrome-hover: rgba(28, 26, 23, 0.05);
+    --bg-chrome-active: rgba(28, 26, 23, 0.08);
+    --bg-chrome-input: #ffffff;
+    --border-chrome: rgba(28, 26, 23, 0.08);
+    --text-chrome-muted: #6a645c;
+}
+
+/* ── Tokens: dark (surface steps, no shadows) ───────────────────────────── */
+html.us.dark {
+    --us-canvas: #141312;
+    --us-deep: #0f0e0d;
+    --us-surface: #1b1a18;
+    --us-raised: #242220;
+    --us-hover: rgba(238, 235, 230, 0.05);
+    --us-active: rgba(238, 235, 230, 0.085);
+    --us-line: rgba(238, 235, 230, 0.08);
+    --us-line-2: rgba(238, 235, 230, 0.13);
+    --us-line-3: rgba(238, 235, 230, 0.22);
+    --us-text: #eeebe6;
+    --us-text-2: #aca69d;
+    --us-text-3: #8d877e;
+    --us-accent: #d6a86c;
+    --us-accent-hover: #e3bb86;
+    --us-accent-soft: rgba(214, 168, 108, 0.12);
+    --us-accent-line: rgba(214, 168, 108, 0.36);
+    --us-on-accent: #1a1209;
+    --us-positive: #4cc38a;
+    --us-negative: #e5534b;
+    --us-warning: #e09a3e;
+    --us-shadow-sm: 0 0 0 transparent;
+    --us-shadow-pop: 0 0 0 1px rgba(238, 235, 230, 0.06), 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+    --us-scrim: rgba(0, 0, 0, 0.55);
+
+    --bg-base: var(--us-canvas);
+    --bg-primary: var(--us-canvas);
+    --bg-surface: var(--us-surface);
+    --bg-secondary: var(--us-surface);
+    --bg-hover: #201f1d;
+    --bg-active: #2a2826;
+    --bg-tertiary: #2a2826;
+    --bg-input: #1b1a18;
+    --border-subtle: rgba(238, 235, 230, 0.07);
+    --border-default: rgba(238, 235, 230, 0.11);
+    --border-accent: rgba(238, 235, 230, 0.2);
+    --border-color: rgba(238, 235, 230, 0.11);
+    --border-hover: rgba(238, 235, 230, 0.2);
+    --text-primary: var(--us-text);
+    --text-secondary: var(--us-text-2);
+    --text-muted: var(--us-text-3);
+    --accent: var(--us-accent);
+    --accent-dim: var(--us-accent-soft);
+    --accent-hover: var(--us-accent-hover);
+    --text-on-accent: var(--us-on-accent);
+    --state-danger: var(--us-negative);
+    --state-success: var(--us-positive);
+    --color-primary: var(--us-accent);
+    --color-primary-hover: var(--us-accent-hover);
+    --color-primary-light: var(--us-accent-soft);
+    --color-success: var(--us-positive);
+    --color-warning: var(--us-warning);
+    --color-danger: var(--us-negative);
+    --input-bg: #1b1a18;
+    --input-border: rgba(238, 235, 230, 0.13);
+    --input-text: var(--us-text);
+    --input-placeholder: #7d776f;
+    --input-ring: rgba(214, 168, 108, 0.2);
+    --card-bg: var(--us-surface);
+    --card-border: rgba(238, 235, 230, 0.08);
+    --card-shadow: none;
+    --highlight-bg-strong: rgba(214, 168, 108, 0.12);
+    --highlight-bg-weak: rgba(214, 168, 108, 0.06);
+    --bg-overlay: var(--us-scrim);
+    --font: var(--us-font);
+    --transition: var(--us-fast) var(--us-ease);
+    --transition-slow: var(--us-base) var(--us-ease);
+    --ls-display: -0.01em;
+    --ls-title: -0.005em;
+    --ls-label: 0em;
+    --ls-micro: 0em;
+
+    --gl-radius: 8px;
+    --gl-radius-sm: 8px;
+    --gl-radius-md: 14px;
+    --gl-radius-lg: 16px;
+    --gl-line: var(--us-line);
+    --gl-line-2: var(--us-line-2);
+    --gl-glass: none;
+    --gl-glass-strong: none;
+    /* dark depth: a faint top highlight on raised things, never a glow */
+    --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    --gl-spec-strong: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    --gl-drop: var(--us-shadow-pop);
+    --gl-accent-grad: linear-gradient(var(--us-accent), var(--us-accent));
+    --gl-accent-glow: 0 0 0 transparent;
+    --gl-accent-soft: var(--us-accent-soft);
+    --gl-accent-line: var(--us-accent-line);
+    --gl-grid: transparent;
+    --gl-aurora: transparent;
+    --gl-aurora-cool: transparent;
+    --gl-focus: rgba(214, 168, 108, 0.65);
+    --gl-focus-ring: 0 0 0 3px rgba(214, 168, 108, 0.18);
+    --gl-gloss: linear-gradient(transparent, transparent);
+    --gl-on-accent: var(--us-on-accent);
+    --gl-ease: var(--us-ease);
+    --gl-ease-press: var(--us-ease);
+    --gl-lift: none;
+    --gl-dur-1: var(--us-fast);
+    --gl-dur-2: var(--us-base);
+    --gl-dur-3: var(--us-enter);
+    --gl-shell-bg: var(--us-canvas);
+
+    --lg-filter: none;
+    --lg-blur: 0px;
+    --lg-tint: var(--us-raised);
+    --lg-tint-strong: var(--us-raised);
+    --lg-solid: var(--us-raised);
+    --lg-chrome: var(--us-deep);
+    --lg-sheen: linear-gradient(transparent, transparent);
+    --lg-border: var(--us-line-2);
+    --lg-edge: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --lg-shadow: var(--us-shadow-pop);
+    --lg-shadow-sm: none;
+    --lg-scrim: var(--us-scrim);
+    --lg-scrim-filter: none;
+
+    --bg-chrome: #181716;
+    --bg-chrome-deep: var(--us-deep);
+    --bg-chrome-raised: #1f1e1c;
+    --bg-chrome-hover: rgba(238, 235, 230, 0.05);
+    --bg-chrome-active: rgba(238, 235, 230, 0.09);
+    --bg-chrome-input: #1f1e1c;
+    --border-chrome: rgba(238, 235, 230, 0.07);
+    --text-chrome-muted: #8d877e;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+html.us,
+html.us body,
+html.us #root { background: var(--us-canvas); }
+html.us body {
+    font-family: var(--us-font);
+    letter-spacing: 0;
+    color: var(--us-text);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'tnum' 1;
+    /* Only 400–600 are loaded: heavier requests use 600, never a faked bold. */
+    font-synthesis-weight: none;
+}
+/* Type pass: one family everywhere (inline styles name Inter in many places). */
+html.us body *:not(code):not(pre):not(kbd):not(samp):not([class*='mono']):not(svg):not(svg *) {
+    font-family: var(--us-font) !important;
+}
+html.us code,
+html.us pre,
+html.us kbd,
+html.us samp,
+html.us [class*='mono'] { font-family: var(--us-mono) !important; }
+/* Sentence case everywhere: no ALL-CAPS tracked labels, and no tracking left over from them.
+   Large display text sets its own (tighter) tracking with a more specific rule. */
+html.us body * { text-transform: none !important; letter-spacing: 0 !important; }
+html.us ::selection { background: rgba(138, 90, 36, 0.2); }
+html.us.dark ::selection { background: rgba(214, 168, 108, 0.28); }
+html.us :focus-visible { outline-color: var(--gl-focus); }
+
+/* Inline weights above 600 cap at 600 (hierarchy comes from size and colour). */
+html.us [style*='font-weight: 700'],
+html.us [style*='font-weight: 750'],
+html.us [style*='font-weight: 800'],
+html.us [style*='font-weight: 900'],
+html.us [style*='font-weight: bold'] { font-weight: 600 !important; }
+/* Uppercase labels used to carry wide tracking; in sentence case it reads as a gap. */
+html.us [style*='letter-spacing: 0.1'],
+html.us [style*='letter-spacing: 0.0'],
+html.us [style*='letter-spacing: 1px'],
+html.us [style*='letter-spacing: 2px'] { letter-spacing: 0 !important; }
+
+/* Decoration that says nothing: no ambient grids, auroras, glows or gradient text. */
+html.us .gl-ambient::before,
+html.us .gl-ambient::after { display: none; }
+html.us .gl-sheen,
+html.us.light .gl-sheen {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--us-text);
+    -webkit-text-fill-color: currentColor;
+}
+html.us .gl-display { font-weight: 500; letter-spacing: -0.015em; }
+html.us .gl-eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--us-text-3);
+}
+html.us .gl-eyebrow::before { display: none; }
+/* No blur anywhere: floating layers are opaque raised surfaces. */
+html.us *,
+html.us *::before,
+html.us *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+html.us [style*='background-clip: text'],
+html.us [style*='-webkit-background-clip: text'] {
+    background: none !important;
+    color: var(--us-text) !important;
+    -webkit-text-fill-color: currentColor !important;
+}
+
+/* ── Shell: rail, top bar, side panel, main ─────────────────────────────── */
+html.us .gl-shell { background: var(--us-canvas) !important; }
+html.us .gl-shell-topbar,
+html.us .gl-shell-topbar.gl-glass-bar,
+html.us.light .gl-shell-topbar.gl-glass-bar {
+    background: var(--us-canvas);
+    background-image: none;
+    border-bottom: 1px solid var(--us-line);
+    box-shadow: none;
+}
+html.us .gl-shell-rail,
+html.us.light .gl-shell-rail {
+    background: var(--bg-chrome-deep);
+    background-image: none;
+    border-right: 1px solid var(--us-line);
+    box-shadow: none;
+}
+html.us .gl-shell-rail-btn { border-radius: 8px; border: 1px solid transparent; }
+html.us .gl-shell-rail-btn:hover { background: var(--us-active); }
+html.us .gl-shell-rail-btn.is-active,
+html.us.light .gl-shell-rail .gl-shell-rail-btn.is-active,
+html.us .gl-shell-rail .gl-shell-rail-btn.is-active {
+    color: var(--us-accent);
+    background: var(--us-surface);
+    background-image: none;
+    border-color: var(--us-line-2);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-shell-rail-btn.is-active::before { display: none; }
+html.us .gl-shell-rail-sep { background: var(--us-line); }
+@media (min-width: 768px) {
+    html.us .gl-shell-panel-col {
+        background: var(--bg-chrome);
+        border-right: 1px solid var(--us-line);
+        box-shadow: none;
+    }
+}
+html.us .gl-shell > div > main { background: var(--us-canvas) !important; box-shadow: none; }
+html.us .gl-shell-resizer:hover,
+html.us .gl-shell-resizer.is-dragging { background: var(--us-line-2); }
+
+/* Counts: quiet mono text; unread is the accent, a mention is the one red. */
+html.us .gl-shell-badge,
+html.us .gl-shell-unread {
+    color: var(--us-on-accent);
+    background: var(--us-accent);
+    box-shadow: none;
+    font-family: var(--us-mono) !important;
+    font-weight: 500;
+}
+html.us .gl-shell-unread.is-mention { background: var(--us-negative); color: #fff; }
+html.us .gl-shell-dot { background: var(--us-accent); box-shadow: none; }
+html.us .gl-count,
+html.us .gl-shell-section-count {
+    font-family: var(--us-mono) !important;
+    font-weight: 400;
+    color: var(--us-text-3);
+    background: transparent;
+}
+
+/* ── Floating layers: popovers, menus, tooltips, dialogs, toasts ────────── */
+html.us .gl-liquid,
+html.us .gl-liquid--strong,
+html.us .gl-card.gl-shell-popover,
+html.us .gl-shell-popover,
+html.us .gl-dialog,
+html.us .gl-toast {
+    background-color: var(--lg-solid);
+    background-image: none;
+    border: 1px solid var(--us-line-2);
+    box-shadow: var(--us-shadow-pop);
+}
+html.us .gl-liquid--chrome { background-color: var(--lg-chrome); background-image: none; box-shadow: none; }
+html.us .gl-shell-popover,
+html.us .gl-card.gl-shell-popover { border-radius: var(--us-r-panel); }
+html.us .gl-dialog { border-radius: var(--us-r-dialog); }
+html.us .gl-toast { border-radius: var(--us-r-card); }
+html.us .gl-dialog-head { border-bottom-color: var(--us-line); }
+html.us .gl-dialog-foot { border-top-color: var(--us-line); background: var(--us-canvas); }
+html.us .gl-scrim,
+html.us .gl-shell-scrim,
+html.us .gl-shell-modal-scrim { background: var(--us-scrim); }
+html.us .gl-shell-tip {
+    color: var(--us-canvas);
+    background: var(--us-text);
+    border: 0;
+    border-radius: 6px;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 500;
+}
+html.us .gl-shell-menu-item { border-radius: var(--us-r-row); }
+html.us .gl-shell-menu-item.is-active { background: var(--us-active); border-color: transparent; }
+html.us .gl-shell-menu-item.is-accent,
+html.us .gl-shell-menu-item.is-accent > svg { color: var(--us-accent); }
+html.us .gl-shell-menu-label,
+html.us .gl-shell-field-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--us-text-3);
+}
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+html.us .gl-card,
+html.us :where(html.light) .gl-card {
+    background: var(--us-surface);
+    background-image: none;
+    border: 1px solid var(--us-line);
+    border-radius: var(--us-r-card);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-card--interactive { transition: border-color var(--us-fast) var(--us-ease), background-color var(--us-fast) var(--us-ease), transform var(--us-fast) var(--us-ease); }
+html.us .gl-card--interactive:hover,
+html.us :where(html.light) .gl-card--interactive:hover {
+    transform: none;
+    border-color: var(--us-line-3);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-card--interactive:active { transform: scale(0.99); }
+html.us .gl-glass-bar { background-color: var(--us-canvas); background-image: none; box-shadow: none; }
+html.us .gl-panel { background: transparent; }
+html.us .gl-panel-head { background-image: none; box-shadow: none; border-bottom-color: var(--us-line); }
+html.us .gl-panel-tools,
+html.us .gl-panel-foot { border-color: var(--us-line); }
+html.us .gl-panel-title,
+html.us button.gl-panel-title { font-weight: 600; letter-spacing: 0; }
+html.us .gl-panel-mark {
+    color: var(--us-text-2);
+    background: var(--us-surface);
+    border: 1px solid var(--us-line-2);
+    border-radius: 8px;
+    box-shadow: none;
+}
+html.us .gl-page-head { border-bottom-color: var(--us-line); padding: 24px 32px 20px; }
+html.us .gl-page-title { font-size: 24px; font-weight: 500; letter-spacing: -0.01em; }
+html.us .gl-page-lead { font-size: 14px; color: var(--us-text-2); }
+@media (max-width: 768px) {
+    html.us .gl-page-head { padding: 20px 16px 16px; }
+    html.us .gl-page-title { font-size: 20px; }
+}
+html.us .gl-empty-mark {
+    color: var(--us-text-2);
+    background: var(--us-surface);
+    background-image: none;
+    border: 1px solid var(--us-line-2);
+    border-radius: 12px;
+    box-shadow: none;
+}
+html.us .gl-empty-title { font-weight: 500; font-size: 14px; }
+html.us .gl-empty-text { font-size: 13px; line-height: 1.5; }
+
+/* Section labels: sentence case, closer to their own items than to the section above. */
+html.us .gl-section-label,
+html.us .gl-shell-section-toggle {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--us-text-3);
+}
+html.us .gl-section-label { padding: 16px 16px 4px; }
+
+/* ── Rows ───────────────────────────────────────────────────────────────── */
+html.us .gl-item {
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: var(--us-r-row);
+    color: var(--us-text-2);
+    transition: background-color var(--us-fast) var(--us-ease), color var(--us-fast) var(--us-ease);
+}
+html.us .gl-item:hover { background: var(--us-hover); color: var(--us-text); }
+html.us .gl-item:active { background: var(--us-active); }
+/* Selection: a small surface step with a hairline; the accent marks the seat. */
+html.us .gl-item.is-active,
+html.us .gl-item[aria-current='page'],
+html.us .gl-item.is-selected {
+    color: var(--us-text);
+    background: var(--us-surface);
+    background-image: none;
+    border-color: var(--us-line-2);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us.dark .gl-item.is-active,
+html.us.dark .gl-item[aria-current='page'],
+html.us.dark .gl-item.is-selected { background: var(--us-raised); }
+html.us .gl-item.is-active::before,
+html.us .gl-item[aria-current='page']::before {
+    left: -7px;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--us-accent);
+    box-shadow: none;
+}
+html.us .gl-item.is-active > svg,
+html.us .gl-item[aria-current='page'] > svg { color: var(--us-accent); }
+html.us .gl-item.is-unread .gl-shell-row-label { font-weight: 600; color: var(--us-text); }
+html.us .gl-shell-glyph {
+    border-radius: 6px;
+    border: 0;
+    background: transparent;
+    color: var(--us-text-3);
+}
+html.us .gl-shell-glyph--accent { color: var(--us-accent); background: transparent; }
+html.us .gl-item.is-active .gl-shell-glyph { color: var(--us-accent); background: transparent; box-shadow: none; }
+html.us .gl-shell-presence.is-online { background: var(--us-positive); }
+html.us .gl-shell-star.is-on { color: var(--us-accent); }
+html.us .gl-shell-join {
+    color: var(--us-text);
+    background: var(--us-surface);
+    border: 1px solid var(--us-line-2);
+    border-radius: 8px;
+    box-shadow: none;
+}
+html.us .gl-shell-live::before,
+html.us .gl-shell-live::after { animation: none; }
+html.us .gl-shell-skel > i { background: var(--us-active); animation: none; }
+html.us .gl-shell-notif-row.is-unread { background: var(--us-accent-soft); }
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+html.us .gl-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--us-text);
+    background: var(--us-surface);
+    background-image: none;
+    border: 1px solid var(--us-line-2);
+    border-radius: 8px;
+    box-shadow: var(--us-shadow-sm);
+    text-shadow: none;
+    transition: background-color var(--us-fast) var(--us-ease), border-color var(--us-fast) var(--us-ease), transform var(--us-fast) var(--us-ease);
+}
+html.us.dark .gl-btn { background: var(--us-raised); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+html.us .gl-btn--sm { height: 28px; padding: 0 10px; font-size: 12px; }
+html.us .gl-btn--lg { height: 40px; padding: 0 16px; font-size: 14px; }
+html.us .gl-btn:hover:not(:disabled) { border-color: var(--us-line-3); background-color: var(--bg-hover); transform: none; filter: none; }
+html.us .gl-btn:active:not(:disabled) { transform: scale(0.97); }
+html.us .gl-btn--primary,
+html.us.light .gl-btn--primary {
+    color: var(--us-on-accent);
+    background: var(--us-accent);
+    border-color: transparent;
+    text-shadow: none;
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-btn--primary:hover:not(:disabled) {
+    background: var(--us-accent-hover);
+    border-color: transparent;
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-btn--ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--us-text-2); }
+html.us .gl-btn--ghost:hover:not(:disabled) { background: var(--us-hover); color: var(--us-text); border-color: transparent; }
+html.us .gl-icon-btn {
+    border-radius: 8px;
+    color: var(--us-text-2);
+    transition: background-color var(--us-fast) var(--us-ease), color var(--us-fast) var(--us-ease), transform var(--us-fast) var(--us-ease);
+}
+html.us .gl-icon-btn:hover:not(:disabled) { background: var(--us-hover); color: var(--us-text); box-shadow: none; }
+html.us .gl-icon-btn:active:not(:disabled) { transform: scale(0.97); }
+html.us .gl-icon-btn[aria-pressed='true'],
+html.us .gl-icon-btn[aria-expanded='true'],
+html.us .gl-icon-btn.is-active {
+    color: var(--us-text);
+    background: var(--us-active);
+    border-color: transparent;
+    box-shadow: none;
+}
+html.us .gl-shell-topbar .gl-icon-btn { width: 32px; height: 32px; }
+html.us .gl-input {
+    height: 32px;
+    font-size: 13px;
+    border-radius: 8px;
+    border-color: var(--input-border);
+    background: var(--input-bg);
+}
+html.us .gl-input:hover:not(:focus):not(:disabled) { border-color: var(--us-line-3); }
+html.us .gl-input:focus { border-color: var(--us-accent); box-shadow: var(--gl-focus-ring); }
+html.us .gl-tabs {
+    padding: 2px;
+    background: var(--us-active);
+    border: 0;
+    border-radius: 8px;
+}
+html.us .gl-tab { border-radius: 6px; font-size: 12.5px; font-weight: 500; }
+html.us .gl-tab[aria-selected='true'],
+html.us .gl-tab.is-active,
+html.us.light .gl-tab[aria-selected='true'],
+html.us.light .gl-tab.is-active {
+    color: var(--us-text);
+    background: var(--us-surface);
+    background-image: none;
+    box-shadow: var(--us-shadow-sm), 0 0 0 1px var(--us-line);
+}
+html.us.dark .gl-tab[aria-selected='true'],
+html.us.dark .gl-tab.is-active { background: var(--us-raised); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+html.us .gl-shell-check.is-on { background: var(--us-accent); border-color: var(--us-accent); color: var(--us-on-accent); }
+
+/* Native form controls pick up the accent. */
+html.us { accent-color: var(--us-accent); }
+
+/* ── Conversations: the signature ───────────────────────────────────────── */
+/* Day divider: the label on a hairline, led by the logo's three graded dots. */
+html.us .date-divider { margin: 24px 0 !important; }
+html.us .date-divider > div[style*='height: 1px'] { background: var(--us-line) !important; }
+html.us .date-divider > span {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 12px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--us-text-2) !important;
+    background: var(--us-canvas) !important;
+    border: 1px solid var(--us-line-2) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+html.us .date-divider > span::before {
+    content: '';
+    flex: none;
+    width: 14px;
+    height: 6px;
+    background:
+        radial-gradient(circle 1.5px at 2px 3px, var(--us-accent) 98%, transparent) ,
+        radial-gradient(circle 2px at 7px 3px, var(--us-accent) 98%, transparent),
+        radial-gradient(circle 2.5px at 11.5px 3px, var(--us-accent) 98%, transparent);
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+/* No lifts on hover anywhere; transforms on hover are slop in this design. */
+html.us [class*='card']:hover,
+html.us [class*='tile']:hover { transform: none !important; }
+html.us .gl-scrim,
+html.us .gl-dialog,
+html.us .gl-toast { animation-duration: var(--us-enter); animation-timing-function: var(--us-ease); }
+html.us [class*='shimmer'],
+html.us [class*='glow'],
+html.us [class*='aurora'],
+html.us [class*='orb'] { animation: none !important; }
+html.us .animate-pulse:not([class*='skel']),
+html.us .animate-ping { animation: none !important; }
+html[data-reduce-motion='true'].us *,
+html[data-reduce-motion='true'].us *::before,
+html[data-reduce-motion='true'].us *::after { transition: none !important; animation: none !important; }
+
+/* ══ The website: landing, pricing, docs, legal, sign-in (the .orw pages) ══ */
+/* Tokens: the same ramp as the app, solid surfaces, the bronze accent. */
+html.us .orw,
+html.us.light .orw,
+html.us .orw.orw--auth,
+html.us.light .orw.orw--auth {
+    --o-bg: var(--us-canvas);
+    --o-bg-2: var(--us-canvas);
+    --o-slab: var(--us-surface);
+    --o-slab-2: var(--us-raised);
+    --o-sand: var(--us-deep);
+    --o-line: var(--us-line);
+    --o-line-2: var(--us-line-2);
+    --o-line-3: var(--us-line-3);
+    --o-text: var(--us-text);
+    --o-text-2: var(--us-text-2);
+    --o-text-3: var(--us-text-3);
+    --o-accent: var(--us-accent);
+    --o-accent-hi: var(--us-accent);
+    --o-accent-lo: var(--us-accent);
+    --o-accent-dim: var(--us-accent-soft);
+    --o-cool: var(--us-text-2);
+    --o-good: var(--us-positive);
+    --o-bad: var(--us-negative);
+    --o-warn: var(--us-warning);
+    --o-glass: linear-gradient(transparent, transparent);
+    --o-spec: 0 0 0 transparent;
+    --o-drop: var(--us-shadow-pop);
+    --o-ease: var(--us-ease);
+    --o-panel: 255, 255, 255;
+    background: var(--us-canvas);
+    font-family: var(--us-font);
+    font-feature-settings: 'tnum' 1;
+}
+html.us.dark .orw,
+html.us.dark .orw.orw--auth { --o-panel: 27, 26, 24; --o-ink: 238, 235, 230; --o-shade: 0, 0, 0; }
+html.us.light .orw,
+html.us.light .orw.orw--auth,
+html.us:not(.dark) .orw { --o-ink: 28, 26, 23; --o-shade: 28, 26, 23; }
+html.us .orw ::selection { background: rgba(138, 90, 36, 0.2); color: inherit; }
+
+/* Visuals pass: no grid backdrop, auroras, spotlights, sheens or giant gradient wordmark. */
+html.us .orw-backdrop,
+html.us .orw-footer__wordmark,
+html.us .orw-auth__aside::before,
+html.us .orw-card::before,
+html.us .orw-card::after,
+html.us .orw-final::before,
+html.us .orw-btn--primary::after,
+html.us .gl-wsp-card::before,
+html.us .gl-wsp-card::after { display: none !important; }
+html.us .orw-gloss-text,
+html.us.light .orw-gloss-text {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--us-text);
+    -webkit-text-fill-color: currentColor;
+    animation: none;
+}
+
+/* Type pass: 400–600, size and colour carry the hierarchy. */
+html.us .orw-hero__title,
+html.us .orw-phero__title,
+html.us .orw-auth__title {
+    font-weight: 500;
+    letter-spacing: -0.03em !important;
+    line-height: 1.04;
+}
+html.us .orw-hero__title { font-size: clamp(40px, 5.4vw, 72px); }
+html.us .orw-h2 { font-weight: 500; letter-spacing: -0.02em !important; line-height: 1.1; }
+html.us .orw-auth__panel-head h1,
+html.us .orw-auth__panel-head h2 { font-weight: 500; letter-spacing: -0.015em !important; }
+html.us .orw-logo__word { font-weight: 600; letter-spacing: -0.01em !important; }
+html.us .orw h3,
+html.us .orw h4,
+html.us .orw-card h3,
+html.us .orw-faq__q,
+html.us .orw-prose h2,
+html.us .orw-prose h3 { font-weight: 600; letter-spacing: 0 !important; }
+html.us .orw-prose h2 { font-weight: 500; letter-spacing: -0.01em !important; }
+/* Eyebrows, kickers and labels: quiet sentence case, no rule in front. */
+html.us .orw-eyebrow,
+html.us .orw-card__kicker,
+html.us .orw-label,
+html.us .orw-toc__label,
+html.us .orw-mock__label,
+html.us .orw-auth__divider,
+html.us .orw-auth-facts dt,
+html.us .orw-auth-next__title,
+html.us .orw-prose th {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    color: var(--us-text-3);
+}
+html.us .orw-eyebrow::before { display: none; }
+html.us .orw-label { color: var(--us-text-2); }
+html.us .orw-auth__divider { font-size: 12px; font-weight: 400; }
+
+/* Details pass: radius by size, hairlines, one accent. */
+html.us .orw-btn,
+html.us .orw-input,
+html.us .orw-select,
+html.us .orw-textarea,
+html.us .orw-auth__tabs,
+html.us .orw-chip,
+html.us .orw-tag,
+html.us .orw-faq__sign,
+html.us .orw-card__icon,
+html.us .orw-auth__points li span,
+html.us .orw-auth-mark,
+html.us .orw-feat__icon,
+html.us .orw-sec__icon,
+html.us .orw-plan__icon,
+html.us .orw-dl__icon,
+html.us .orw-float__icon,
+html.us .orw-tab__icon { border-radius: 8px; }
+html.us .orw-auth__tab { border-radius: 6px; }
+html.us .orw-card,
+html.us .orw-plan,
+html.us .orw-feat,
+html.us .orw-sec__item,
+html.us .orw-dl__item,
+html.us .orw-callout,
+html.us .orw-contact-card,
+html.us .orw-review__item,
+html.us .orw-table-wrap,
+html.us .orw-float,
+html.us .orw-console,
+html.us .orw-panel,
+html.us .orw-tab,
+html.us .orw-step,
+html.us .orw-auth__alert { border-radius: 12px; }
+html.us .orw-mock,
+html.us .orw-auth__panel,
+html.us .orw-drawer { border-radius: 14px; overflow: hidden; }
+html.us .orw-mock__item,
+html.us .orw-mock__url,
+html.us .orw-mock__composer,
+html.us .orw-msg__card,
+html.us .orw-kbd { border-radius: 6px; }
+html.us .orw-mock__ws b,
+html.us .orw-mock__avatar,
+html.us .orw-msg__av { border-radius: 6px; }
+
+html.us .orw-btn {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    box-shadow: none;
+    transition: background-color var(--us-fast) var(--us-ease), border-color var(--us-fast) var(--us-ease), transform var(--us-fast) var(--us-ease);
+}
+html.us .orw-btn--lg { height: 44px; padding: 0 20px; font-size: 15px; }
+html.us .orw-btn--primary,
+html.us.light .orw--auth .orw-btn--primary,
+html.us.light .orw .orw-btn--primary {
+    color: var(--us-on-accent);
+    background: var(--us-accent);
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow: none;
+}
+html.us .orw-btn--primary:hover,
+html.us.light .orw--auth .orw-btn--primary:hover { background: var(--us-accent-hover); box-shadow: none; transform: none; }
+html.us .orw-btn--primary:disabled { background: var(--us-accent); opacity: 0.45; }
+html.us .orw-btn--ghost,
+html.us.light .orw--auth .orw-btn--ghost,
+html.us.light .orw .orw-btn--ghost {
+    color: var(--us-text);
+    background: var(--us-surface);
+    border-color: var(--us-line-2);
+    box-shadow: none;
+}
+html.us .orw-btn--ghost:hover { background: var(--us-surface); border-color: var(--us-line-3); }
+html.us .orw-btn:active { transform: scale(0.97); }
+html.us .orw-input,
+html.us .orw-select,
+html.us .orw-textarea,
+html.us.light .orw--auth .orw-input,
+html.us.light .orw--auth .orw-select,
+html.us.light .orw--auth .orw-textarea {
+    background-color: var(--us-surface);
+    border-color: var(--us-line-2);
+    box-shadow: none;
+}
+html.us .orw-select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--us-text-2) 50%), linear-gradient(135deg, var(--us-text-2) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+    background-size: 5px 5px, 5px 5px;
+}
+html.us .orw-input:focus,
+html.us .orw-select:focus,
+html.us .orw-textarea:focus { border-color: var(--us-accent); box-shadow: var(--gl-focus-ring); background-color: var(--us-surface); }
+/* Segmented sign in / create account: a surface step, not a gold slab. */
+html.us .orw-auth__tabs { padding: 2px; background: var(--us-active); border: 0; }
+html.us .orw-auth__tab[aria-selected='true'],
+html.us.light .orw--auth .orw-auth__tab[aria-selected='true'] {
+    color: var(--us-text);
+    background: var(--us-surface);
+    box-shadow: var(--us-shadow-sm), 0 0 0 1px var(--us-line);
+}
+html.us.dark .orw-auth__tab[aria-selected='true'] { background: var(--us-raised); }
+html.us .orw-auth__panel,
+html.us.light .orw--auth .orw-auth__panel {
+    background: var(--us-surface);
+    border: 1px solid var(--us-line);
+    box-shadow: var(--us-shadow-pop);
+}
+html.us .orw-auth__aside { border-color: var(--us-line); }
+html.us .orw-auth__points li span,
+html.us.light .orw--auth .orw-auth__points li span,
+html.us .orw-card__icon,
+html.us .orw-auth-mark {
+    color: var(--us-text-2);
+    background: var(--us-surface);
+    border-color: var(--us-line-2);
+    box-shadow: none;
+}
+/* Cards on the website: plain raised surfaces, no hover lift or spotlight. */
+html.us .orw-card,
+html.us .orw-plan,
+html.us .orw-feat,
+html.us .orw-sec__item,
+html.us .orw-dl__item,
+html.us .orw-contact-card,
+html.us .orw-panel,
+html.us .orw-console,
+html.us .orw-float {
+    background: var(--us-surface);
+    border-color: var(--us-line);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .orw-card:hover,
+html.us .orw-plan:hover,
+html.us .orw-feat:hover,
+html.us .orw-dl__item:hover { transform: none; border-color: var(--us-line-3); box-shadow: var(--us-shadow-sm); }
+html.us .orw-card--featured,
+html.us .orw-plan--featured { background: var(--us-surface); border-color: var(--us-accent-line); }
+html.us .orw-callout,
+html.us.light .orw--auth .orw-callout { background: var(--us-surface); border-color: var(--us-line); border-left: 2px solid var(--us-accent); }
+html.us .orw-callout--good { border-left-color: var(--us-positive); }
+html.us .orw-callout--warn,
+html.us.light .orw--auth .orw-callout--warn { background: var(--us-surface); border-left-color: var(--us-warning); }
+html.us .orw-section--slab,
+html.us .orw-block--slab { background: var(--us-deep); }
+html.us .orw-nav.is-scrolled,
+html.us.light .orw-nav.is-scrolled,
+html.us .docs-bar,
+html.us.light .docs-bar {
+    background: var(--us-canvas);
+    box-shadow: inset 0 -1px 0 var(--us-line);
+}
+html.us .orw-nav__progress { background: var(--us-accent); }
+html.us .orw-footer,
+html.us.light .orw-footer,
+html.us .orw-marquee,
+html.us.light .orw-marquee { background: var(--us-deep); }
+html.us .orw-chip,
+html.us .orw-tag {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    color: var(--us-text-2);
+    background: var(--us-surface);
+    border: 1px solid var(--us-line-2);
+    box-shadow: none;
+}
+html.us .orw-tag--accent { color: var(--us-accent); border-color: var(--us-accent-line); background: var(--us-surface); }
+html.us .orw-switch[aria-checked='true'] { background: var(--us-accent); border-color: transparent; box-shadow: none; }
+html.us .orw-kbd {
+    font-family: var(--us-mono) !important;
+    background: var(--us-surface);
+    border-color: var(--us-line-2);
+}
+html.us .orw-stepper__bar::after,
+html.us .orw-auth-progress span { background: var(--us-accent); }
+html.us .orw-stepper__item.is-current .orw-stepper__label b,
+html.us .orw-reg-steps li.is-current b { color: var(--us-on-accent); background: var(--us-accent); }
+html.us .orw-status::before { box-shadow: none; }
+
+/* The product preview on the landing: the real app in this design. */
+html.us .orw-mock,
+html.us.light .orw-mock { background: var(--us-canvas); border: 1px solid var(--us-line-2); box-shadow: var(--us-shadow-pop); }
+html.us .orw-mock__bar,
+html.us.light .orw-mock__bar { background: var(--us-deep); border-color: var(--us-line); }
+html.us .orw-mock__side,
+html.us.light .orw-mock__side { background: var(--us-deep); border-color: var(--us-line); }
+html.us .orw-mock__url,
+html.us.light .orw-mock__url { background: var(--us-surface); border-color: var(--us-line); }
+html.us .orw-mock__lights i,
+html.us.light .orw-mock__lights i:first-child { background: var(--us-line-2); }
+html.us .orw-mock__ws b { color: var(--us-on-accent); background: var(--us-accent); }
+html.us .orw-mock__item.is-active {
+    color: var(--us-text);
+    background: var(--us-surface);
+    box-shadow: 0 0 0 1px var(--us-line-2);
+    border-left-color: var(--us-accent);
+}
+html.us .orw-mock__item .orw-mock__badge,
+html.us.light .orw-mock__item .orw-mock__badge { color: var(--us-on-accent); background: var(--us-accent); border-radius: 8px; font-family: var(--us-mono) !important; font-weight: 500; }
+html.us .orw-msg--ai .orw-msg__card,
+html.us .orw-msg__card { background: var(--us-surface); border-color: var(--us-line-2); }
+
+/* Motion pass on the website: nothing loops unless it is live. */
+html.us .orw-marquee__track,
+html.us .orw-dot,
+html.us .orw-float,
+html.us .orw-backdrop__aurora { animation: none !important; }
+html.us .orw-dot { box-shadow: none; }
+html.us .orw-faq__sign { transition: transform var(--us-base) var(--us-ease), border-color var(--us-fast) var(--us-ease); }
+
+/* ══ Workspace picker and wizard (gl-wsp-*) ════════════════════════════════ */
+html.us .gl-wsp-brand__name { font-weight: 600; letter-spacing: 0 !important; }
+html.us .gl-wsp-stat__value { font-size: 24px; font-weight: 500; letter-spacing: 0 !important; font-family: var(--us-mono) !important; }
+html.us .gl-wsp-stat__label,
+html.us .gl-wsp-section-title,
+html.us .gl-wsp-label,
+html.us .gl-wsp-empty__step b {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    color: var(--us-text-3);
+}
+html.us .gl-wsp-section-title { font-size: 14px; color: var(--us-text-2); }
+html.us .gl-wsp-empty__title,
+html.us .gl-wsp-dialog__title,
+html.us .gl-wsp-wizard__h2,
+html.us .gl-wsp-wizard__brand { font-weight: 500; letter-spacing: -0.015em !important; }
+/* Workspace tiles: one flat colour per workspace is content, but no glossy bevel or glow. */
+html.us .gl-wsp-tile {
+    border-radius: 10px;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+html.us .gl-wsp-card,
+html.us .gl-wsp-create {
+    border-radius: 12px;
+    background: var(--us-surface);
+    background-image: none;
+    border: 1px solid var(--us-line);
+    box-shadow: var(--us-shadow-sm);
+}
+html.us .gl-wsp-create { border-style: dashed; border-color: var(--us-line-3); background: transparent; box-shadow: none; }
+html.us .gl-wsp-card:hover,
+html.us .gl-wsp-create:hover:not(:disabled) { transform: none; border-color: var(--us-line-3); background-color: var(--us-surface); box-shadow: var(--us-shadow-sm); }
+html.us .gl-wsp-step.is-current { background: var(--us-surface); background-image: none; border-color: var(--us-line-2); box-shadow: none; }
+html.us .gl-wsp-step.is-current .gl-wsp-step__num { color: var(--us-on-accent); background: var(--us-accent); box-shadow: none; }
+html.us .gl-wsp-wizard__progress > span { background: var(--us-accent); box-shadow: none; }
+html.us [class*='gl-wsp'][class*='aurora'],
+html.us [class*='gl-wsp'][class*='glow'] { display: none !important; }
+
+/* ══ Dashboards and pages built on the shared page kit (cd-*) ══════════════ */
+/* Stat cards are numbers: a label, a figure, a change. No icon tiles to fill them. */
+html.us .cd-kpi { padding: 16px 20px; gap: 8px; }
+html.us .cd-kpi-icon,
+html.us .cd-head-icon { display: none; }
+html.us .cd-kpi-label { font-size: 13px; font-weight: 500; letter-spacing: 0 !important; color: var(--us-text-2); }
+html.us .cd-kpi-value {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.01em !important;
+    font-family: var(--us-mono) !important;
+}
+html.us .cd-kpi-delta { font-weight: 500; }
+html.us .cd-section-title { font-weight: 600; letter-spacing: 0 !important; }
+html.us .orw .orw-gloss-text,
+html.us.light .orw--auth .orw-gloss-text { background-image: none; }
+html.us .orw-nav__burger { border-radius: 8px; }
+@media (min-width: 900px) {
+    html.us .orw-hero__title { font-size: clamp(40px, 4.6vw, 64px); }
+}

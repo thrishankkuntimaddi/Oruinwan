@@ -3,6 +3,7 @@ import { Plus, Link2, Search, Lock } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
+import { useTheme } from "../contexts/ThemeContext";
 import api from '@services/api';
 import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
 import OruinwanAIChat from "../components/ai/OruinwanAIChat/OruinwanAIChat";
@@ -133,6 +134,8 @@ const WorkspaceSelect = () => {
 
     
     const firstName = user?.username?.split(' ')[0];
+    // Unslop titles the page instead of greeting (copy pass).
+    const unslop = useTheme()?.look === 'unslop';
     const { plan } = usePlan(null);
     const policy = getCreatePolicy(user, workspaces, plan);
     const openCreate = () => setIsCreateModalOpen(true);
@@ -170,10 +173,16 @@ const WorkspaceSelect = () => {
             <main className="gl-wsp-main">
                 <section className="gl-wsp-hero gl-ambient" aria-labelledby="gl-wsp-title">
                     <div>
-                        <span className="gl-eyebrow">Your workspaces</span>
-                        <h1 id="gl-wsp-title" className="gl-wsp-title">
-                            Welcome back, {firstName ? <span className="gl-sheen">{firstName}</span> : null}
-                        </h1>
+                        {unslop ? (
+                            <h1 id="gl-wsp-title" className="gl-wsp-title">Your workspaces</h1>
+                        ) : (
+                            <>
+                                <span className="gl-eyebrow">Your workspaces</span>
+                                <h1 id="gl-wsp-title" className="gl-wsp-title">
+                                    Welcome back, {firstName ? <span className="gl-sheen">{firstName}</span> : null}
+                                </h1>
+                            </>
+                        )}
                         <p className="gl-wsp-lead">
                             Select a workspace to jump back in, or create a new one to get started.
                         </p>

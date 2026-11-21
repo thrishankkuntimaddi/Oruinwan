@@ -22,6 +22,7 @@ import { Sheet } from '../../ui/Overlay.jsx';
 import { Button } from '../../ui/Button.jsx';
 import { cx } from '../../ui/cx.js';
 import { greeting, dueLabel, shortAgo } from '../../lib/time.js';
+import { useAppearance } from '../../app/theme.js';
 import { htmlToText } from '../../ui/sanitize.js';
 import { openChats, openConversation } from '../chats/chatsUi.js';
 import { PushPrompt } from '../push/PushPrompt.jsx';
@@ -309,13 +310,17 @@ export function HomeScreen() {
     return useSession.getState().loadWorkspaces();
   };
 
+  // Unslop names the day instead of greeting (copy pass); Glass keeps the greeting.
+  const unslop = useAppearance((s) => s.look) === 'unslop';
+
   return (
     <Screen>
       <TabHeader title="Home" />
       <Body tab="home" onRefresh={refresh}>
         <h2 className="px-4 pt-4 text-[22px] font-bold leading-tight tracking-tight">
-          {greeting()}
-          {firstName ? `, ${firstName}` : ''}
+          {unslop
+            ? new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+            : `${greeting()}${firstName ? `, ${firstName}` : ''}`}
         </h2>
         <p className="px-4 pt-0.5 text-[14px] text-text-2">
           {unreadMessages ? `${plural(unreadMessages, 'unread message')} in ${plural(unreadConvs, 'conversation')}` : overdue ? `${plural(overdue, 'task')} overdue` : 'You’re all caught up.'}

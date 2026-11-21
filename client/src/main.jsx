@@ -11,6 +11,10 @@ import './styles/palette.css';
 // Liquid Glass: the shared kit (also used by the phone app), then the web client's mapping onto it.
 import '@platform/theme/liquid-glass.css';
 import './styles/liquid-glass-app.css';
+// Glass with Background colour Off (Settings → Appearance), scoped to html.lg[data-glass-colour='off'].
+import './styles/glass-plain.css';
+// The second design (Settings → Appearance → Design → Unslop), scoped to html.us.
+import './styles/unslop-app.css';
 import './desktop/bridge';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';

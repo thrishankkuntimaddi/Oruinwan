@@ -82,3 +82,69 @@
 .stg-pref-link:hover { text-decoration: underline; }
 .stg-pref-linkbtn { text-decoration: none; }
 .stg-pref-row-notice { padding: 0 0 14px; }
+
+/* Settings → Appearance → Design: a miniature of each design, drawn in its own colours. */
+.stg-pref-looks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 520px) { .stg-pref-looks { grid-template-columns: 1fr; } }
+.stg-pref-look { position: relative; display: flex; gap: 4px; height: 88px; padding: 4px; overflow: hidden; border-radius: 10px; }
+.stg-pref-look-rail { width: 12px; border-radius: 6px; }
+.stg-pref-look-side { width: 30%; display: flex; flex-direction: column; gap: 4px; padding: 8px 6px; border-radius: 8px; }
+.stg-pref-look-side > i { display: block; height: 8px; border-radius: 3px; }
+.stg-pref-look-main { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 8px; }
+.stg-pref-look-day { display: flex; align-items: center; gap: 2px; height: 6px; }
+.stg-pref-look-day > b { display: block; border-radius: 50%; }
+.stg-pref-look-msg { height: 6px; width: 80%; border-radius: 3px; }
+.stg-pref-look-msg.is-short { width: 55%; }
+.stg-pref-look-btn { margin-top: auto; align-self: flex-end; width: 34px; height: 12px; }
+
+/* Glass: frosted panes over the colour field, white glass selection, capsules */
+.stg-pref-look[data-look='glass'] {
+    background:
+        radial-gradient(60% 70% at 10% 0%, #ffd9c7, transparent 70%),
+        radial-gradient(60% 70% at 100% 30%, #d9d4ff, transparent 70%),
+        radial-gradient(70% 70% at 60% 110%, #c9f0e1, transparent 70%),
+        #eef0f6;
+}
+.stg-pref-look[data-look='glass'] .stg-pref-look-rail,
+.stg-pref-look[data-look='glass'] .stg-pref-look-side,
+.stg-pref-look[data-look='glass'] .stg-pref-look-main { background: rgba(255, 255, 255, 0.45); box-shadow: inset 0 1px 0 #fff; border-radius: 10px; }
+.stg-pref-look[data-look='glass'] .stg-pref-look-side > i { background: rgba(60, 60, 67, 0.12); border-radius: 6px; }
+.stg-pref-look[data-look='glass'] .stg-pref-look-side > i.is-on { background: #fff; box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.25); }
+.stg-pref-look[data-look='glass'] .stg-pref-look-day > b { width: 4px; height: 4px; background: rgba(60, 60, 67, 0.25); }
+.stg-pref-look[data-look='glass'] .stg-pref-look-msg { background: rgba(60, 60, 67, 0.14); }
+.stg-pref-look[data-look='glass'] .stg-pref-look-btn { border-radius: 99px; background: #fff; box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.3); }
+.stg-pref-look[data-look='glass'][data-mode='dark'] {
+    background:
+        radial-gradient(60% 70% at 10% 0%, #3a2a3f, transparent 70%),
+        radial-gradient(60% 70% at 100% 30%, #1d2a4a, transparent 70%),
+        #06070b;
+}
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-rail,
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-side,
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-main { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-side > i,
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-msg { background: rgba(255, 255, 255, 0.14); }
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-side > i.is-on,
+.stg-pref-look[data-look='glass'][data-mode='dark'] .stg-pref-look-btn { background: rgba(255, 255, 255, 0.85); }
+
+/* Unslop: graphite steps and hairlines, a bronze seat marker and the three graded dots */
+.stg-pref-look[data-look='unslop'] { gap: 0; padding: 0; background: #f6f5f2; border: 1px solid rgba(28, 26, 23, 0.1); }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-rail { width: 14px; border-radius: 0; background: #ebe9e3; border-right: 1px solid rgba(28, 26, 23, 0.08); }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-side { border-radius: 0; background: #efede8; border-right: 1px solid rgba(28, 26, 23, 0.08); }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-side > i { background: rgba(28, 26, 23, 0.1); }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-side > i.is-on { background: #fff; box-shadow: inset 2px 0 0 #8a5a24, 0 0 0 1px rgba(28, 26, 23, 0.12); }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-main { border-radius: 0; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-day > b { background: #8a5a24; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-day > b:nth-child(1) { width: 3px; height: 3px; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-day > b:nth-child(2) { width: 4px; height: 4px; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-day > b:nth-child(3) { width: 5px; height: 5px; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-msg { background: rgba(28, 26, 23, 0.12); border-radius: 2px; }
+.stg-pref-look[data-look='unslop'] .stg-pref-look-btn { border-radius: 4px; background: #8a5a24; }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] { background: #141312; border-color: rgba(238, 235, 230, 0.1); }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-rail { background: #0f0e0d; border-color: rgba(238, 235, 230, 0.07); }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-side { background: #181716; border-color: rgba(238, 235, 230, 0.07); }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-side > i,
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-msg { background: rgba(238, 235, 230, 0.12); }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-side > i.is-on { background: #242220; box-shadow: inset 2px 0 0 #d6a86c, 0 0 0 1px rgba(238, 235, 230, 0.12); }
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-day > b,
+.stg-pref-look[data-look='unslop'][data-mode='dark'] .stg-pref-look-btn { background: #d6a86c; }

@@ -37,7 +37,7 @@ test.describe('group DMs', () => {
 
   test('start a named group with two people', async () => {
     // Home's "+" opens the To: bar: bob and carol have no group with alice yet, so it offers one.
-    await alice.locator('[title="Add Direct Messages"]').first().click();
+    await alice.locator('[title="Add Direct messages"]').first().click();
     const view = alice.getByTestId('new-message-view');
     for (const who of ['bob', 'carol']) {
       await view.getByLabel('To').fill(who);

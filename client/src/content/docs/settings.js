@@ -17,7 +17,7 @@ export default {
                     ['Password & security', '`?tab=security`', 'Change password, passkeys, two-factor sign-in.'],
                     ['Devices', '`?tab=sessions`', 'Where you are signed in; sign out of devices.'],
                     ['Notifications', '`?tab=notifications`', 'Desktop alerts, sound, mentions-only, email.'],
-                    ['Appearance', '`?tab=appearance`', 'Theme, text size, reduce motion.'],
+                    ['Appearance', '`?tab=appearance`', 'Design (Glass or Unslop), theme, text size, reduce motion.'],
                     ['Language & region', '`?tab=region`', 'Time zone, date and time format, auto-translate.'],
                     ['Privacy', '`?tab=privacy`', 'Read receipts, typing indicator, discoverability, blocked people.'],
                     ['Oruinwan AI', '`?tab=ai`', 'Memory, AI features, engine and assistants for the workspace.'],
@@ -99,7 +99,7 @@ export default {
             keywords: 'theme dark light system text size font reduce motion time zone date format 24-hour clock region language translate',
             blocks: [
                 { list: [
-                    '**Settings → Appearance**: Light, Dark or System theme, message text size, and **Reduce motion**.',
+                    '**Settings → Appearance**: the **Design** (Glass, the Liquid Glass look, or Unslop, quiet surfaces with one bronze accent; saved per device), Light, Dark or System theme, message text size, and **Reduce motion**.',
                     '**Settings → Language & region**: time zone, date format (for example DD/MM/YYYY or YYYY-MM-DD), 12- or 24-hour clock, and **Auto-translate messages**.',
                 ] },
             ],

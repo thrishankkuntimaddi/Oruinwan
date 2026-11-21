@@ -72,7 +72,7 @@ async function waitForComposerReady(scope) {
 async function openDm(page, otherUsername) {
   // Home's "+" opens the To: bar; one person opens our chat below it. Then open that chat on its
   // own page, as the tests expect (/dm/<id>).
-  await page.locator('[title="Add Direct Messages"]').first().click();
+  await page.locator('[title="Add Direct messages"]').first().click();
   const view = page.getByTestId('new-message-view');
   await view.getByLabel('To').fill(otherUsername);
   await view.getByTestId('to-option').filter({ hasText: otherUsername }).first().click();

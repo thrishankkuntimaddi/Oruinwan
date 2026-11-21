@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/index.css';
+// The second design (Settings → Appearance → Design → Unslop), scoped to <html data-look='unslop'>.
+import './styles/unslop.css';
+// Glass with Background colour Off, scoped to <html data-look='glass' data-glass-colour='off'>.
+import './styles/glass-plain.css';
 import { App } from './app/App.jsx';
 import { useAppearance } from './app/theme.js';
 import { LiquidGlass } from '../../platform/theme/liquid-glass.js';

@@ -1,0 +1,295 @@
+/*
+ * Unslop: the phone and tablet app's second design (Settings → Appearance → Design → Unslop).
+ * The same design as the web client's client/src/styles/unslop-app.css; the direction and the
+ * rules are written there.
+ *
+ * Made with the unslop method by Damir Sokolovsky (@heydamir), https://github.com/heydamir/unslop
+ * (CC BY 4.0).
+ *
+ * Scoped to <html data-look='unslop'> (app/theme.js, public/theme-boot.js), and unlayered, so
+ * it outranks the Tailwind utilities (which live in @layer utilities) without touching them:
+ * with data-look='glass' Liquid Glass is exactly what it was.
+ */
+
+/* IBM Plex (SIL OFL 1.1, see assets/fonts/IBMPlex-OFL.txt), Latin only, bundled so the app
+   works offline. The variable face is declared 400–600: heavier requests use 600. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 600;
+  src: url('../assets/fonts/ibm-plex-sans-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('../assets/fonts/ibm-plex-mono-latin-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500 600;
+  src: url('../assets/fonts/ibm-plex-mono-latin-500.woff2') format('woff2');
+}
+
+/* ── Tokens: light ──────────────────────────────────────────────────────── */
+[data-look='unslop'] {
+  color-scheme: light;
+  --us-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --us-canvas: #f6f5f2;
+  --us-deep: #efede8;
+  --us-surface: #ffffff;
+  --us-raised: #f0eee9;
+  --us-line: rgb(28 26 23 / 0.09);
+  --us-line-2: rgb(28 26 23 / 0.14);
+  --us-text: #1c1a17;
+  --us-accent: #8a5a24;
+  --us-shadow-sm: 0 1px 2px rgb(28 26 23 / 0.05);
+  --us-shadow-pop: 0 1px 2px rgb(28 26 23 / 0.06), 0 12px 32px -8px rgb(28 26 23 / 0.16);
+
+  --c-bg: 246 245 242;
+  --c-chrome: 246 245 242;        --a-chrome: 1;
+  --c-surface: 255 255 255;       --a-surface: 1;
+  --c-surface-2: 28 26 23;        --a-surface-2: 0.05;
+  --c-surface-3: 28 26 23;        --a-surface-3: 0.09;
+  --c-input: 255 255 255;         --a-input: 1;
+  --c-line: 28 26 23;             --a-line: 0.12;
+  --c-line-soft: 28 26 23;        --a-line-soft: 0.08;
+  --c-line-strong: 28 26 23;      --a-line-strong: 0.22;
+  --c-text: 28 26 23;
+  --c-text-2: 87 82 75;
+  --c-text-3: 111 105 97;
+  /* accent: the logo's bronze, a solid fill with white text (5.9:1) */
+  --c-accent: 138 90 36;
+  --c-accent-strong: 116 73 26;
+  --c-accent-ink: 138 90 36;
+  --c-on-accent: 255 255 255;
+  --c-danger: 192 57 47;
+  --c-success: 31 122 77;
+  --c-warning: 168 98 12;
+  --c-info: 87 82 75;
+  --accent-grad: linear-gradient(rgb(138 90 36), rgb(138 90 36));
+  --accent-glow: 0 0 0 transparent;
+  --accent-sheen: linear-gradient(transparent, transparent);
+  --accent-rim: 0 0 0 transparent;
+  --glass: linear-gradient(transparent, transparent);
+  --spec: 0 0 0 transparent;
+  --shadow-sheet: 0 -1px 0 var(--us-line), 0 -12px 32px -16px rgb(28 26 23 / 0.18);
+  --shadow-pop: var(--us-shadow-pop);
+  --glass-tint: var(--us-surface);
+  --glass-tint-strong: var(--us-surface);
+  --glass-tint-bar: var(--us-canvas);
+  --glass-edge: 0 0 0 transparent;
+  --glass-border: var(--us-line-2);
+  --glass-shadow: var(--us-shadow-pop);
+  --glass-shadow-up: var(--us-shadow-pop);
+  --glass-solid: var(--us-surface);
+  --glass-solid-bar: var(--us-canvas);
+  --glass-blur: none;
+  --scrim: rgb(28 26 23 / 0.32);
+  --lg-paint: var(--us-canvas);
+  --lg-selected: var(--us-surface);
+  --lg-tile: var(--us-surface);
+  --lg-ctl: var(--us-surface);
+  --lg-well: rgb(28 26 23 / 0.06);
+  --lg-bar: var(--us-canvas);
+  --lg-dense: var(--us-surface);
+  --lg-frost: none;
+  --lg-frost-dense: none;
+  --lg-bevel: 0 0 0 1px var(--us-line);
+  --lg-bevel-sm: 0 0 0 1px var(--us-line);
+  --lg-drop: var(--us-shadow-sm);
+  --lg-drop-lift: var(--us-shadow-pop);
+  --lg-pane-wash: transparent;
+  --radius-card: 0.75rem;
+  --ease-spring: var(--us-ease);
+  --ease-out-soft: var(--us-ease);
+  --lg-spring: var(--us-ease);
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, Roboto, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+  --color-switch: #8a5a24;
+}
+
+/* ── Tokens: dark (surface steps, no shadows) ───────────────────────────── */
+[data-look='unslop'][data-theme='dark'] {
+  color-scheme: dark;
+  --us-canvas: #141312;
+  --us-deep: #0f0e0d;
+  --us-surface: #1b1a18;
+  --us-raised: #242220;
+  --us-line: rgb(238 235 230 / 0.08);
+  --us-line-2: rgb(238 235 230 / 0.13);
+  --us-text: #eeebe6;
+  --us-accent: #d6a86c;
+  --us-shadow-sm: 0 0 0 transparent;
+  --us-shadow-pop: 0 0 0 1px rgb(238 235 230 / 0.06), 0 16px 40px -12px rgb(0 0 0 / 0.6);
+
+  --c-bg: 20 19 18;
+  --c-chrome: 20 19 18;           --a-chrome: 1;
+  --c-surface: 27 26 24;          --a-surface: 1;
+  --c-surface-2: 238 235 230;     --a-surface-2: 0.06;
+  --c-surface-3: 238 235 230;     --a-surface-3: 0.1;
+  --c-input: 27 26 24;            --a-input: 1;
+  --c-line: 238 235 230;          --a-line: 0.11;
+  --c-line-soft: 238 235 230;     --a-line-soft: 0.07;
+  --c-line-strong: 238 235 230;   --a-line-strong: 0.2;
+  --c-text: 238 235 230;
+  --c-text-2: 172 166 157;
+  --c-text-3: 141 135 126;
+  --c-accent: 214 168 108;
+  --c-accent-strong: 227 187 134;
+  --c-accent-ink: 214 168 108;
+  --c-on-accent: 26 18 9;
+  --c-danger: 229 83 75;
+  --c-success: 76 195 138;
+  --c-warning: 224 154 62;
+  --c-info: 172 166 157;
+  --accent-grad: linear-gradient(rgb(214 168 108), rgb(214 168 108));
+  --shadow-sheet: 0 -1px 0 var(--us-line);
+  --scrim: rgb(0 0 0 / 0.55);
+  --lg-well: rgb(238 235 230 / 0.07);
+  --lg-bevel: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 0 0 1px var(--us-line);
+  --lg-bevel-sm: 0 0 0 1px var(--us-line);
+  --color-switch: #d6a86c;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+[data-look='unslop'] body {
+  background: var(--us-canvas);
+  letter-spacing: 0;
+  font-family: var(--font-sans);
+  font-feature-settings: 'tnum' 1;
+  font-synthesis-weight: none;
+}
+/* Sentence case everywhere, no tracking left over from uppercase labels. */
+[data-look='unslop'] body * { text-transform: none !important; letter-spacing: 0 !important; }
+[data-look='unslop'] .font-mono,
+[data-look='unslop'] code,
+[data-look='unslop'] pre { font-family: var(--font-mono); }
+/* No blur anywhere: floating layers are opaque surfaces. */
+[data-look='unslop'] *,
+[data-look='unslop'] *::before,
+[data-look='unslop'] *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* Screens paint the plain canvas, not the wallpaper. */
+[data-look='unslop'] .bg-bg { background: var(--us-canvas); }
+
+/* ── Glass building blocks → plain surfaces with hairlines ──────────────── */
+[data-look='unslop'] .glass-tile {
+  background-color: var(--us-surface);
+  box-shadow: 0 0 0 1px var(--us-line), var(--us-shadow-sm);
+}
+[data-look='unslop'] .glass-ctl {
+  background-color: var(--us-surface);
+  box-shadow: 0 0 0 1px var(--us-line-2);
+}
+[data-look='unslop'] .glass-well { background-color: var(--lg-well); box-shadow: none; }
+/* Selected (a segment, a chip): a surface step with a hairline; the text stays ink. */
+[data-look='unslop'] .glass-selected {
+  background: var(--us-surface);
+  color: var(--us-text);
+  box-shadow: 0 0 0 1px var(--us-line-2), var(--us-shadow-sm);
+}
+[data-look='unslop'][data-theme='dark'] .glass-selected { background: var(--us-raised); }
+/* Primary: the bronze, solid. */
+[data-look='unslop'] .bg-gold { background: rgb(var(--c-accent)); box-shadow: none; }
+[data-look='unslop'] .glass,
+[data-look='unslop'] .glass-strong {
+  background-color: var(--us-surface);
+  border-color: var(--us-line-2);
+  box-shadow: var(--us-shadow-pop);
+  transform: none;
+}
+[data-look='unslop'][data-theme='dark'] .glass,
+[data-look='unslop'][data-theme='dark'] .glass-strong { background-color: var(--us-raised); }
+@media (pointer: coarse) {
+  [data-look='unslop'] .glass { background-color: var(--us-surface); }
+  [data-look='unslop'][data-theme='dark'] .glass { background-color: var(--us-raised); }
+}
+/* Bars (tab dock, composer): the canvas with a hairline on the edge facing the content. */
+[data-look='unslop'] .glass-bar {
+  background-color: var(--us-canvas);
+  box-shadow: 0 0 0 1px var(--us-line);
+  transform: none;
+}
+[data-look='unslop'] .glass-header { background-color: var(--us-canvas); }
+
+/* Layout pass: headers are a flat bar on the canvas, not a floating capsule. */
+[data-look='unslop'] .glass-header.lg-header {
+  margin: 0;
+  padding-top: var(--sat);
+  border-radius: 0;
+  border-bottom: 1px solid var(--us-line);
+  box-shadow: none;
+  transform: none;
+}
+[data-look='unslop'] .lg-float-root > .lg-header { border-bottom-width: 1px; }
+[data-look='unslop'] .lg-float-root > .lg-under { padding-top: calc(var(--lg-hdr-h, 76px) + 8px); }
+
+/* Tablet panes: plain columns split by a hairline. */
+[data-look='unslop'] .lg-pane {
+  border-radius: 14px;
+  background: var(--us-canvas);
+  box-shadow: 0 0 0 1px var(--us-line);
+}
+[data-look='unslop'] .lg-pane::after { box-shadow: none; }
+[data-look='unslop'] .lg-pane .bg-bg { background: var(--us-canvas); }
+
+/* The dock: the active tab is a surface step; the drawer an opaque sheet. */
+[data-look='unslop'] .dock-pill {
+  background: var(--us-surface);
+  box-shadow: 0 0 0 1px var(--us-line-2);
+}
+[data-look='unslop'][data-theme='dark'] .dock-pill { background: var(--us-raised); }
+[data-look='unslop'] .dock-handle { background: var(--us-line-2); box-shadow: none; }
+[data-look='unslop'] .dock-drawer { background-color: var(--us-surface); box-shadow: var(--us-shadow-pop); }
+[data-look='unslop'][data-theme='dark'] .dock-drawer { background-color: var(--us-raised); }
+[data-look='unslop'] .side-pane { box-shadow: 0 0 0 1px var(--us-line), var(--us-shadow-pop); }
+
+/* ── Motion: one curve, a press is scale(.97), nothing bounces or loops ─── */
+[data-look='unslop'] .pressable { transition: transform 160ms var(--us-ease), background-color 160ms var(--us-ease), opacity 160ms; }
+[data-look='unslop'] .pressable:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  [data-look='unslop'] .pressable:not(:disabled):hover { transform: none; }
+}
+[data-look='unslop'] .intro-breathe,
+[data-look='unslop'] .animate-nudge-up { animation: none; }
+[data-look='unslop'] .animate-bump { animation: none; }
+
+/* ── Type: weights 400–600, quiet labels ────────────────────────────────── */
+[data-look='unslop'] .font-bold,
+[data-look='unslop'] .font-extrabold,
+[data-look='unslop'] .font-black { font-weight: 600; }
+[data-look='unslop'] .prose-oru h1 { font-weight: 600; }
+[data-look='unslop'] .hl .hl-comment { font-style: normal; }
+
+/* Workspace tiles: the workspace's own colour, flat (no gradient or bevel). */
+[data-look='unslop'] .ws-tile { background: var(--ws-color) !important; box-shadow: none !important; border-radius: 8px !important; }
+
+/* Layout pass: on a phone the dock is a plain tab bar along the bottom edge, not a floating
+   capsule; on a tablet it stays centred with control-sized corners. */
+[data-look='unslop'] nav[aria-label='Main'].glass-bar:not([data-testid='tabbar-tablet']) {
+  left: 0;
+  right: 0;
+  bottom: 0 !important;
+  max-width: none;
+  margin: 0;
+  padding-bottom: var(--sab);
+  border-radius: 0;
+  box-shadow: 0 -1px 0 var(--us-line);
+}
+[data-look='unslop'] nav[data-testid='tabbar-tablet'].glass-bar { border-radius: 14px; }
+[data-look='unslop'] .dock-pill { border-radius: 10px; }
+
+/* Buttons: control radius, not pills. */
+[data-look='unslop'] .ui-btn { border-radius: 10px; }
+/* Welcome screen: no glow behind the mark, one ink headline. */
+[data-look='unslop'] .intro-glow,
+[data-look='unslop'] .brand-glow { display: none; }
+[data-look='unslop'] .intro-accent { color: inherit; }
+[data-look='unslop'] .intro-title { font-weight: 500; letter-spacing: -0.02em !important; }

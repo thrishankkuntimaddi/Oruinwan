@@ -12,6 +12,11 @@ import '../styles/userPreferences.css';
  *               Light unless the person chose otherwise.
  *   textSize    'small' | 'default' | 'large' | 'larger'   → data-text-size
  *   reduceMotion (this device only)                        → data-reduce-motion
+ *   look        'glass' | 'unslop' (this device only)      → class lg | us, data-look
+ *               Glass is Liquid Glass (styles/liquid-glass-app.css, html.lg); Unslop is the
+ *               second design (styles/unslop-app.css, html.us). Glass unless chosen.
+ *   glassColour 'on' | 'off' (this device only)        → data-glass-colour
+ *               Glass only: Off drops the colour field behind the glass (styles/glass-plain.css).
  * Theme and text size are saved to the account (PUT /api/auth/me) and cached in
  * localStorage so they apply before the user has loaded. This provider also
  * mirrors user.preferences into the useUserPreferences store.
@@ -26,6 +31,26 @@ export const useTheme = () => useContext(ThemeContext);
 const THEME_KEY = 'oruinwan.theme';
 const TEXT_SIZE_KEY = 'oruinwan.textSize';
 const REDUCE_MOTION_KEY = 'oruinwan.reduceMotion';
+const LOOK_KEY = 'oruinwan.look';
+const GLASS_COLOUR_KEY = 'oruinwan.glassColour';
+const normalizeGlassColour = (c) => (c === 'off' ? 'off' : 'on');
+export const LOOKS = ['glass', 'unslop'];
+const normalizeLook = (l) => (LOOKS.includes(l) ? l : 'glass');
+
+/** Window colour behind the app for each look and theme (meta theme-color, native bars). */
+const WINDOW_COLOUR = {
+    glass: { light: '#EEF0F6', dark: '#06070B' },
+    unslop: { light: '#F6F5F2', dark: '#141312' },
+};
+
+/** Switches <html> between the two designs. Only one of html.lg / html.us is ever set. */
+export function applyLook(look) {
+    const root = document.documentElement;
+    const l = normalizeLook(look);
+    root.classList.toggle('lg', l === 'glass');
+    root.classList.toggle('us', l === 'unslop');
+    root.setAttribute('data-look', l);
+}
 
 const store = {
     get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -42,6 +67,8 @@ if (typeof document !== 'undefined') {
     const root = document.documentElement;
     root.setAttribute('data-text-size', normalizeTextSize(store.get(TEXT_SIZE_KEY)));
     if (store.get(REDUCE_MOTION_KEY) === 'true') root.setAttribute('data-reduce-motion', 'true');
+    applyLook(store.get(LOOK_KEY));
+    root.setAttribute('data-glass-colour', normalizeGlassColour(store.get(GLASS_COLOUR_KEY)));
 }
 
 export const ThemeProvider = ({ children }) => {
@@ -53,6 +80,8 @@ export const ThemeProvider = ({ children }) => {
     const [systemDark, setSystemDark] = useState(() => darkQuery()?.matches ?? true);
     const [textSize, setTextSizeState] = useState(() => normalizeTextSize(store.get(TEXT_SIZE_KEY)));
     const [reduceMotion, setReduceMotionState] = useState(() => store.get(REDUCE_MOTION_KEY) === 'true');
+    const [look, setLookState] = useState(() => normalizeLook(store.get(LOOK_KEY)));
+    const [glassColour, setGlassColourState] = useState(() => normalizeGlassColour(store.get(GLASS_COLOUR_KEY)));
 
     // Account values win once the user has loaded.
     const serverTheme = normalizeTheme(user?.preferences?.theme);
@@ -92,12 +121,16 @@ export const ThemeProvider = ({ children }) => {
         // Liquid Glass (platform/theme/liquid-glass.css) reads data-theme.
         root.setAttribute('data-theme', resolvedTheme);
         root.style.colorScheme = resolvedTheme;
+        applyLook(look);
+        const windowColour = WINDOW_COLOUR[look][resolvedTheme];
+        root.setAttribute('data-glass-colour', glassColour);
+        root.style.background = look === 'glass' && glassColour === 'off' ? (resolvedTheme === 'dark' ? '#000000' : '#F2F2F7') : windowColour;
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#06070B' : '#EEF0F6');
+        if (meta) meta.setAttribute('content', windowColour);
         applyNativeBars(resolvedTheme);
         // Desktop app (2.3.5+): the dock / taskbar icon follows the theme.
         try { window.oruinwanDesktop?.setAppearance?.(resolvedTheme); } catch { /* older desktop app */ }
-    }, [resolvedTheme]);
+    }, [resolvedTheme, look, glassColour]);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-text-size', textSize);
@@ -146,11 +179,28 @@ export const ThemeProvider = ({ children }) => {
 
     const setReduceMotion = useCallback((on) => setReduceMotionState(!!on), []);
 
+    // The design is a per-device choice, like reduce motion: it is not saved to the account.
+    const setLook = useCallback((next) => {
+        const l = normalizeLook(next);
+        setLookState(l);
+        store.set(LOOK_KEY, l);
+        return true;
+    }, []);
+
+    const setGlassColour = useCallback((next) => {
+        const c = normalizeGlassColour(next);
+        setGlassColourState(c);
+        store.set(GLASS_COLOUR_KEY, c);
+        return true;
+    }, []);
+
     const value = useMemo(() => ({
         theme, resolvedTheme, setTheme, toggleTheme,
         textSize, setTextSize,
         reduceMotion, setReduceMotion,
-    }), [theme, resolvedTheme, setTheme, toggleTheme, textSize, setTextSize, reduceMotion, setReduceMotion]);
+        look, setLook,
+        glassColour, setGlassColour,
+    }), [theme, resolvedTheme, setTheme, toggleTheme, textSize, setTextSize, reduceMotion, setReduceMotion, look, setLook, glassColour, setGlassColour]);
 
     return (
         <ThemeContext.Provider value={value}>
